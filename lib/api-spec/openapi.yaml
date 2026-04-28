@@ -3,20 +3,27 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: LocalSpot Mailer API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: campaigns
+    description: Campaign operations
+  - name: spots
+    description: Spot operations
+  - name: checkout
+    description: Payment operations
+  - name: admin
+    description: Admin operations
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +31,213 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /campaigns/active:
+    get:
+      operationId: getActiveCampaign
+      tags: [campaigns]
+      summary: Get active campaign with all spots
+      responses:
+        "200":
+          description: Active campaign with spots
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignWithSpots"
+        "404":
+          description: No active campaign
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /spots/{id}/reserve:
+    post:
+      operationId: reserveSpot
+      tags: [spots]
+      summary: Reserve a spot
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReserveSpotBody"
+      responses:
+        "200":
+          description: Spot reserved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Spot"
+        "400":
+          description: Bad request or category taken
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Spot not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /checkout/create-payment-intent:
+    post:
+      operationId: createPaymentIntent
+      tags: [checkout]
+      summary: Create a Stripe PaymentIntent for a spot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePaymentIntentBody"
+      responses:
+        "200":
+          description: PaymentIntent created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentIntentResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /checkout/confirm:
+    post:
+      operationId: confirmPayment
+      tags: [checkout]
+      summary: Confirm payment and mark spot as paid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmPaymentBody"
+      responses:
+        "200":
+          description: Payment confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfirmPaymentResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /spots/{id}/upload-ad:
+    post:
+      operationId: uploadAd
+      tags: [spots]
+      summary: Submit ad file URL or request design
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadAdBody"
+      responses:
+        "200":
+          description: Ad uploaded or design requested
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Spot"
+        "404":
+          description: Spot not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/login:
+    post:
+      operationId: adminLogin
+      tags: [admin]
+      summary: Admin login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminLoginBody"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminLoginResponse"
+        "401":
+          description: Invalid password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/campaign:
+    get:
+      operationId: getAdminCampaign
+      tags: [admin]
+      summary: Get admin campaign overview with all spots
+      responses:
+        "200":
+          description: Campaign with spots and stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminCampaignResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/spots/{id}/approve:
+    post:
+      operationId: approveAd
+      tags: [admin]
+      summary: Approve an ad
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Ad approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Spot"
+        "404":
+          description: Spot not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +248,213 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    Campaign:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        territory:
+          type: string
+        zipCode:
+          type: string
+        mailDate:
+          type: ["string", "null"]
+        homesCount:
+          type: integer
+        status:
+          type: string
+          enum: [active, closed, mailed]
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - territory
+        - zipCode
+        - homesCount
+        - status
+        - createdAt
+
+    Spot:
+      type: object
+      properties:
+        id:
+          type: integer
+        campaignId:
+          type: integer
+        size:
+          type: string
+          enum: [large, medium, small]
+        gridArea:
+          type: string
+        price:
+          type: integer
+        categoryLock:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [available, reserved, paid]
+        businessName:
+          type: ["string", "null"]
+        businessCategory:
+          type: ["string", "null"]
+        contactEmail:
+          type: ["string", "null"]
+        contactPhone:
+          type: ["string", "null"]
+        adFileUrl:
+          type: ["string", "null"]
+        adStatus:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - campaignId
+        - size
+        - gridArea
+        - price
+        - status
+        - createdAt
+
+    CampaignWithSpots:
+      allOf:
+        - $ref: "#/components/schemas/Campaign"
+        - type: object
+          properties:
+            spots:
+              type: array
+              items:
+                $ref: "#/components/schemas/Spot"
+          required:
+            - spots
+
+    ReserveSpotBody:
+      type: object
+      properties:
+        businessName:
+          type: string
+        businessCategory:
+          type: string
+        contactEmail:
+          type: string
+        contactPhone:
+          type: string
+      required:
+        - businessName
+        - businessCategory
+        - contactEmail
+
+    CreatePaymentIntentBody:
+      type: object
+      properties:
+        spotId:
+          type: integer
+      required:
+        - spotId
+
+    PaymentIntentResponse:
+      type: object
+      properties:
+        clientSecret:
+          type: string
+        spotId:
+          type: integer
+        amount:
+          type: integer
+      required:
+        - clientSecret
+        - spotId
+        - amount
+
+    ConfirmPaymentBody:
+      type: object
+      properties:
+        paymentIntentId:
+          type: string
+        spotId:
+          type: integer
+      required:
+        - paymentIntentId
+        - spotId
+
+    ConfirmPaymentResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        orderId:
+          type: integer
+      required:
+        - success
+        - orderId
+
+    UploadAdBody:
+      type: object
+      properties:
+        adFileUrl:
+          type: ["string", "null"]
+        designRequested:
+          type: boolean
+      required:
+        - designRequested
+
+    AdminLoginBody:
+      type: object
+      properties:
+        password:
+          type: string
+      required:
+        - password
+
+    AdminLoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+      required:
+        - token
+
+    AdminSpotRow:
+      allOf:
+        - $ref: "#/components/schemas/Spot"
+        - type: object
+          properties:
+            isPaid:
+              type: boolean
+            stripePaymentIntentId:
+              type: ["string", "null"]
+          required:
+            - isPaid
+
+    AdminCampaignResponse:
+      type: object
+      properties:
+        campaign:
+          $ref: "#/components/schemas/Campaign"
+        spots:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminSpotRow"
+        totalRevenue:
+          type: integer
+        totalSpots:
+          type: integer
+        paidSpots:
+          type: integer
+      required:
+        - campaign
+        - spots
+        - totalRevenue
+        - totalSpots
+        - paidSpots
