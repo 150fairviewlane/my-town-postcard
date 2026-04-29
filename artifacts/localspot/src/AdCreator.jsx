@@ -68,7 +68,10 @@ function shuffle(arr) {
 export function selectTemplates(industry) {
   const ids = INDUSTRY_TEMPLATES[industry] || ["GENERAL-A","GENERAL-B"];
   if (RESTAURANT_INDUSTRIES.has(industry) && ids.length > 2) {
-    return shuffle(ids).slice(0, 2);
+    // Always pin the polished RESTAURANT-A so customers see the showcase
+    // template; rotate the second slot across the remaining variants.
+    const others = ids.filter(id => id !== "RESTAURANT-A");
+    return ["RESTAURANT-A", shuffle(others)[0]];
   }
   return ids.slice(0, 2);
 }
