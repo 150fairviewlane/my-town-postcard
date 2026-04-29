@@ -1,14 +1,14 @@
 import { useState } from "react";
 
+const BASE = import.meta.env.BASE_URL;
+const MR_BISCUITS_LOGO = `${BASE}mr-biscuits-logo.jpg`;
+
 export const SIZES = {
   large:  { label: "Large",  price: 399, dim: '4" × 5"',  desc: "Prime placement, maximum impact" },
   medium: { label: "Medium", price: 299, dim: '3" × 4"',  desc: "Great visibility, popular choice" },
   small:  { label: "Small",  price: 199, dim: '3" × 2"',  desc: "Affordable local reach" },
 };
 
-// Grid: 12 cols × 9 rows — each unit = 1 inch, matches the 12"×9" printed postcard
-// Top half (rows 1-5): three large ads (4 cols × 5 rows each)
-// Bottom half (rows 6-9): two medium (3 cols × 4 rows) + four small (3 cols × 2 rows)
 export const GRID_AREAS = [
   "mb mb mb mb dn dn dn dn re re re re",
   "mb mb mb mb dn dn dn dn re re re re",
@@ -21,309 +21,726 @@ export const GRID_AREAS = [
   "hv hv hv ins ins ins lw lw lw a2 a2 a2",
 ].map(r => `"${r}"`).join(" ");
 
-// Font scale per size — proportional to rendered cell dimensions
-export const FONT = {
-  large:  { name: 16, cat: 10.5, tagline: 13, sub: 11, detail: 10, coupon: 15, couponSub: 10, addr: 9.5, phone: 10.5 },
-  medium: { name: 12, cat: 9,    tagline: 10, sub: 9,  detail: 8.5,coupon: 11, couponSub: 8.5,addr: 8,   phone: 9.5  },
-  small:  { name: 11, cat: 8,    tagline: 9,  sub: 8,  detail: 7.5,coupon: 10, couponSub: 7.5,addr: 7.5, phone: 8.5  },
-};
-
-// Unsplash photo URLs — stable IDs for each business category
-const PHOTOS = {
-  cafe:      "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=600&h=300&q=80&auto=format&fit=crop",
-  dental:    "https://images.unsplash.com/photo-1588776814546-1ffeddfec4a4?w=600&h=300&q=80&auto=format&fit=crop",
-  hvac:      "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600&h=300&q=80&auto=format&fit=crop",
-  insurance: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=300&q=80&auto=format&fit=crop",
-  pizza:     "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=600&h=300&q=80&auto=format&fit=crop",
-  lawn:      "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&h=300&q=80&auto=format&fit=crop",
-};
-
-export const ADS = {
-  "Mr. Biscuit's Café": {
-    name: "Mr. Biscuit's Café", cat: "Café & Breakfast",
-    tagline: "From-Scratch Biscuits & Boba!", sub: "Drive-thru or dine-in daily.",
-    addr: "596 W Louise Dr, Ste D · Clarkesville", phone: "(706) 555-0596",
-    hours: "Mon–Sat  6am – 2pm",
-    coupons: [
-      { label: "BUY ONE", sub: "BISCUIT SANDWICH", value: "GET ONE FREE", note: "Must show ad · dine-in or drive-thru" },
-      { label: "$2 OFF", sub: "Any Boba Drink", value: "", note: "Must show ad · limit one" },
-    ],
-    bg: "#2c1000", accent: "#c8541a", light: true,
-    photo: PHOTOS.cafe,
-    socials: ["📘","📸"],
-  },
-  "Clarkesville Family Dental": {
-    name: "Clarkesville Family Dental", cat: "General Dentistry",
-    tagline: "Accepting New Patients!", sub: "Gentle care for the whole family.",
-    addr: "142 Commerce St · Clarkesville, GA", phone: "(706) 555-0142",
-    hours: "Mon–Fri  8am – 5pm",
-    coupons: [
-      { label: "FREE", sub: "Whitening Kit", value: "", note: "w/ new patient exam · show this ad" },
-      { label: "$99", sub: "New Patient Exam", value: "", note: "X-rays + cleaning included · expires 6/30" },
-    ],
-    bg: "#0a2a5e", accent: "#d4a017", light: true,
-    photo: PHOTOS.dental,
-    socials: ["📘","📸"],
-  },
-  "Blue Ridge Air & Heat": {
-    name: "Blue Ridge Air & Heat", cat: "HVAC Service & Repair",
-    tagline: "24/7 Emergency Service!", sub: "Heating & cooling experts since 2001.",
-    addr: "88 Industrial Blvd · Gainesville, GA", phone: "(706) 555-0188",
-    hours: "Open 24/7 · Emergency Available",
-    coupons: [
-      { label: "$89", sub: "A/C Tune-Up", value: "", note: "Expires June 30 · mention this ad" },
-      { label: "FREE", sub: "Service Call", value: "", note: "w/ any repair · $89 value · show ad" },
-    ],
-    bg: "#003f6b", accent: "#00bcd4", light: true,
-    photo: PHOTOS.hvac,
-    socials: ["📘"],
-  },
-  "Tanner Insurance Agency": {
-    name: "Tanner Insurance Agency", cat: "Auto · Home · Life",
-    tagline: "Local Agent. Real Savings.", sub: "We shop dozens of carriers for you.",
-    addr: "55 S Main St · Cornelia, GA", phone: "(706) 555-0055",
-    hours: "Mon–Fri  9am – 5pm",
-    coupons: [
-      { label: "Save up to", sub: "$500/yr", value: "", note: "Free quote · no obligation · call today" },
-    ],
-    bg: "#1a1a2e", accent: "#e2b714", light: true,
-    photo: PHOTOS.insurance,
-    socials: ["📘","🔗"],
-  },
-  "Roma's Pizza & Subs": {
-    name: "Roma's Pizza & Subs", cat: "Italian Restaurant",
-    tagline: "Hand-Tossed. Oven Fresh.", sub: "Dine-in, carry-out & delivery.",
-    addr: "712 Washington St · Clarkesville", phone: "(706) 555-0712",
-    hours: "Daily  11am – 9pm",
-    coupons: [
-      { label: "BOGO", sub: "Medium Pizza", value: "", note: "Tues & Wed · dine-in only · show this ad" },
-    ],
-    bg: "#fff8f0", accent: "#c0392b", light: false,
-    photo: PHOTOS.pizza,
-    socials: [],
-  },
-  "Green Acres Lawn Care": {
-    name: "Green Acres Lawn Care", cat: "Lawn & Landscaping",
-    tagline: "Your Yard. Our Pride.", sub: "Mowing, mulching & clean-ups.",
-    addr: "Serving All of Habersham County", phone: "(706) 555-0399",
-    hours: "Mon–Sat  7am – 6pm",
-    coupons: [
-      { label: "$25 OFF", sub: "First Service", value: "", note: "New customers only · show this ad" },
-    ],
-    bg: "#052e07", accent: "#22c55e", light: true,
-    photo: PHOTOS.lawn,
-    socials: [],
-  },
-};
-
-export function sizeKey(spotSize) {
-  return spotSize; // only three sizes: large, medium, small
-}
-
-// ─── Large Ad (4"×5") ────────────────────────────────────────────────────────
-function LargeAd({ d }) {
-  const f = FONT.large;
-  const tc = d.light ? "#fff" : "#111";
-  const tc2 = d.light ? "rgba(255,255,255,0.82)" : "#555";
+// ─── 1. MR. BISCUIT'S CAFÉ — Hero Ad, Sunrise Gradient, Real Logo Badge ──────
+// Layout: Full background treatment, logo centered top, headline below, two coupons bottom
+function MrBiscuitsAd({ size }) {
+  const L = size === "large";
+  const M = size === "medium";
 
   return (
-    <div style={{ width: "100%", height: "100%", background: d.bg, overflow: "hidden",
-      fontFamily: "sans-serif", display: "flex", flexDirection: "column" }}>
+    <div style={{
+      width: "100%", height: "100%", overflow: "hidden", position: "relative",
+      background: "linear-gradient(to bottom, #f5b84a 0%, #d4701a 45%, #6a1f00 100%)",
+      fontFamily: "sans-serif",
+    }}>
+      {/* Radial sunrise glow at top */}
+      <div style={{
+        position: "absolute", top: "-15%", left: "50%", transform: "translateX(-50%)",
+        width: "130%", height: "55%",
+        background: "radial-gradient(ellipse at top, rgba(255,220,100,0.38) 0%, transparent 70%)",
+        pointerEvents: "none",
+      }} />
 
-      {/* Photo + overlay header */}
-      <div style={{ position: "relative", flexShrink: 0, height: "44%", overflow: "hidden" }}>
-        <div style={{ position: "absolute", inset: 0,
-          backgroundImage: `url(${d.photo})`,
-          backgroundSize: "cover", backgroundPosition: "center" }} />
-        {/* Gradient overlay */}
-        <div style={{ position: "absolute", inset: 0,
-          background: `linear-gradient(to bottom, transparent 20%, ${d.bg} 100%)` }} />
-        {/* Social badges */}
-        {d.socials?.length > 0 && (
-          <div style={{ position: "absolute", top: 6, right: 8, display: "flex", gap: 3 }}>
-            {d.socials.map((s, i) => (
-              <span key={i} style={{ fontSize: 10, background: "rgba(0,0,0,0.45)",
-                borderRadius: 4, padding: "2px 4px" }}>{s}</span>
+      {/* Decorative corner accent top-right */}
+      <div style={{
+        position: "absolute", top: 0, right: 0, width: 0, height: 0,
+        borderStyle: "solid",
+        borderWidth: `0 ${L ? 52 : 34}px ${L ? 52 : 34}px 0`,
+        borderColor: `transparent rgba(255,200,80,0.35) transparent transparent`,
+      }} />
+
+      {/* Logo badge — centered */}
+      <div style={{
+        display: "flex", flexDirection: "column", alignItems: "center",
+        paddingTop: L ? 14 : 9, position: "relative", zIndex: 2,
+      }}>
+        <div style={{
+          width: L ? 80 : M ? 58 : 42, height: L ? 80 : M ? 58 : 42,
+          borderRadius: "50%",
+          border: `${L ? 3 : 2}px solid #f5b84a`,
+          boxShadow: "0 4px 18px rgba(0,0,0,0.45), 0 0 0 3px rgba(245,184,74,0.3)",
+          overflow: "hidden", flexShrink: 0,
+        }}>
+          <img src={MR_BISCUITS_LOGO} alt="Mr. Biscuit's"
+            style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        </div>
+
+        {/* Business name — Georgia "script feel" */}
+        <div style={{
+          color: "#fff", fontWeight: 900,
+          fontSize: L ? 19 : M ? 13.5 : 10.5,
+          fontFamily: "Georgia, 'Times New Roman', serif",
+          marginTop: L ? 7 : 4,
+          textShadow: "0 2px 8px rgba(0,0,0,0.55)",
+          textAlign: "center", lineHeight: 1.1, letterSpacing: 0.3,
+        }}>Mr. Biscuit's Café</div>
+
+        <div style={{
+          color: "#fde8a0", fontSize: L ? 9 : 7.5,
+          fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginTop: 2,
+        }}>Café &amp; Breakfast · Clarkesville, GA</div>
+      </div>
+
+      {/* Tagline + selling points */}
+      <div style={{
+        position: "relative", zIndex: 2,
+        padding: L ? "9px 14px 6px" : "5px 9px 4px",
+      }}>
+        <div style={{
+          color: "#fff", fontWeight: 800,
+          fontSize: L ? 14.5 : M ? 10.5 : 8.5,
+          lineHeight: 1.25, textAlign: "center",
+          textShadow: "0 1px 4px rgba(0,0,0,0.4)",
+        }}>From-Scratch Biscuits &amp; Fresh Boba!</div>
+
+        {L && (
+          <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
+            {[
+              "☕  Drive-thru or dine-in daily",
+              "🥐  Made from scratch every morning",
+              "🧋  30+ boba flavors in stock",
+            ].map((pt, i) => (
+              <div key={i} style={{
+                color: "rgba(255,255,255,0.9)", fontSize: 10.5,
+                display: "flex", alignItems: "center", gap: 6,
+              }}>{pt}</div>
             ))}
+          </div>
+        )}
+
+        {L && (
+          <div style={{
+            marginTop: 8, display: "flex", alignItems: "center", gap: 6,
+            background: "rgba(0,0,0,0.22)", borderRadius: 6, padding: "5px 10px",
+          }}>
+            <span style={{ color: "#fde8a0", fontSize: 9.5 }}>⏰</span>
+            <span style={{ color: "rgba(255,255,255,0.85)", fontSize: 9.5 }}>Mon–Sat 6am–2pm · 596 W Louise Dr, Ste D</span>
           </div>
         )}
       </div>
 
-      {/* Business name strip */}
-      <div style={{ background: d.accent, padding: "5px 10px", flexShrink: 0,
-        display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ color: "#fff", fontWeight: 900, fontSize: f.name, lineHeight: 1.1 }}>
-          {d.name}
-        </div>
-        <div style={{ color: "rgba(255,255,255,0.9)", fontSize: f.cat, fontWeight: 600,
-          textAlign: "right", lineHeight: 1.2 }}>{d.cat}</div>
-      </div>
-
-      {/* Tagline + contact */}
-      <div style={{ padding: "6px 10px 4px", flexShrink: 0 }}>
-        <div style={{ fontWeight: 800, fontSize: f.tagline, color: tc, lineHeight: 1.2 }}>
-          {d.tagline}
-        </div>
-        <div style={{ fontSize: f.detail, color: tc2, marginTop: 2 }}>⏰ {d.hours}</div>
-      </div>
-
-      {/* Coupons row */}
-      <div style={{ flex: 1, padding: "4px 8px 6px", display: "flex", gap: 5, minHeight: 0 }}>
-        {d.coupons.map((c, i) => (
-          <div key={i} style={{
-            flex: 1, border: `2px dashed ${d.light ? "rgba(255,255,255,0.55)" : d.accent}`,
-            borderRadius: 6, padding: "5px 6px", textAlign: "center",
-            display: "flex", flexDirection: "column", justifyContent: "center", gap: 2,
-            background: d.light ? "rgba(255,255,255,0.08)" : `${d.accent}15`,
-          }}>
-            <div style={{ fontSize: f.coupon + 2, fontWeight: 900, color: d.light ? "#fff" : d.accent,
-              lineHeight: 1 }}>{c.label}</div>
-            <div style={{ fontSize: f.couponSub + 2, fontWeight: 700,
-              color: d.light ? "rgba(255,255,255,0.9)" : "#222", lineHeight: 1.2 }}>{c.sub}</div>
-            {c.note && (
-              <div style={{ fontSize: 7.5, color: d.light ? "rgba(255,255,255,0.62)" : "#888",
-                lineHeight: 1.25, marginTop: 1 }}>{c.note}</div>
-            )}
+      {/* Coupons — bottom anchored */}
+      <div style={{
+        position: "absolute", bottom: 0, left: 0, right: 0,
+        background: "linear-gradient(to bottom, transparent, rgba(30,8,0,0.72))",
+        padding: L ? "18px 10px 10px" : "10px 8px 8px",
+        display: "flex", gap: L ? 8 : 5, zIndex: 2,
+      }}>
+        {/* Coupon 1 */}
+        <div style={{
+          flex: 1, border: "2px dashed rgba(253,232,160,0.75)",
+          borderRadius: 7, padding: L ? "7px 8px" : "5px 6px",
+          textAlign: "center", background: "rgba(0,0,0,0.28)",
+          position: "relative",
+        }}>
+          <div style={{ position: "absolute", top: -9, left: "50%", transform: "translateX(-50%)",
+            color: "rgba(253,232,160,0.8)", fontSize: 12, lineHeight: 1 }}>✂</div>
+          <div style={{ color: "#fde8a0", fontWeight: 900, fontSize: L ? 11 : 9, lineHeight: 1 }}>
+            BUY ONE
           </div>
-        ))}
+          <div style={{ color: "#fff", fontSize: L ? 9.5 : 8, fontWeight: 700, lineHeight: 1.3 }}>
+            Biscuit Sandwich
+          </div>
+          <div style={{ color: "#fde8a0", fontWeight: 900, fontSize: L ? 12 : 10, marginTop: 1 }}>
+            GET ONE FREE
+          </div>
+          {L && <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 7, marginTop: 3, lineHeight: 1.3 }}>
+            Show this ad · 1 per visit · no other offers
+          </div>}
+        </div>
+
+        {/* Coupon 2 */}
+        <div style={{
+          flex: 1, border: "2px dashed rgba(253,232,160,0.75)",
+          borderRadius: 7, padding: L ? "7px 8px" : "5px 6px",
+          textAlign: "center", background: "rgba(0,0,0,0.28)",
+          position: "relative",
+        }}>
+          <div style={{ position: "absolute", top: -9, left: "50%", transform: "translateX(-50%)",
+            color: "rgba(253,232,160,0.8)", fontSize: 12, lineHeight: 1 }}>✂</div>
+          <div style={{ color: "#fde8a0", fontWeight: 900, fontSize: L ? 19 : 15, lineHeight: 1 }}>
+            $2 OFF
+          </div>
+          <div style={{ color: "#fff", fontSize: L ? 9.5 : 8, fontWeight: 700, lineHeight: 1.3 }}>
+            Any Boba Drink
+          </div>
+          {L && <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 7, marginTop: 3, lineHeight: 1.3 }}>
+            Cannot combine · expires 6/30/25
+          </div>}
+        </div>
       </div>
 
-      {/* Footer address */}
-      <div style={{ background: "rgba(0,0,0,0.18)", padding: "3px 10px",
-        display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
-        <div style={{ color: tc2, fontSize: f.addr, overflow: "hidden",
-          textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>📍 {d.addr}</div>
-        <div style={{ color: d.light ? "#fff" : d.accent, fontSize: f.phone,
-          fontWeight: 800, flexShrink: 0, whiteSpace: "nowrap", marginLeft: 6 }}>{d.phone}</div>
+      {/* Phone pill */}
+      {L && (
+        <div style={{
+          position: "absolute", top: 18, right: 10, zIndex: 3,
+          background: "#c8541a", borderRadius: 20, padding: "3px 10px",
+          color: "#fff", fontSize: 9, fontWeight: 800,
+          boxShadow: "0 2px 6px rgba(0,0,0,0.4)",
+        }}>(706) 555-0596</div>
+      )}
+    </div>
+  );
+}
+
+// ─── 2. CLARKESVILLE FAMILY DENTAL — White + Navy/Gold, Badge Logo ─────────
+// Layout: White background, navy header band, badge logomark, navy coupon strip bottom
+function FamilyDentalAd({ size }) {
+  const L = size === "large";
+  const M = size === "medium";
+
+  return (
+    <div style={{
+      width: "100%", height: "100%", overflow: "hidden", position: "relative",
+      background: "#ffffff", fontFamily: "sans-serif",
+      display: "flex", flexDirection: "column",
+    }}>
+      {/* Navy header band */}
+      <div style={{
+        background: "linear-gradient(135deg, #0a2a5e 0%, #0d3575 100%)",
+        padding: L ? "12px 14px" : "8px 10px", flexShrink: 0,
+        display: "flex", alignItems: "center", gap: L ? 12 : 8,
+      }}>
+        {/* Badge logo */}
+        <div style={{
+          width: L ? 54 : M ? 40 : 30, height: L ? 54 : M ? 40 : 30,
+          borderRadius: "50%", flexShrink: 0,
+          background: "linear-gradient(135deg, #d4a017 0%, #f0c840 100%)",
+          border: "2px solid rgba(255,255,255,0.5)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
+        }}>
+          <span style={{ fontSize: L ? 22 : M ? 16 : 12 }}>🦷</span>
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            color: "#fff", fontWeight: 900,
+            fontSize: L ? 14 : M ? 11 : 9,
+            fontFamily: "Georgia, serif", lineHeight: 1.15,
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          }}>Clarkesville Family Dental</div>
+          <div style={{
+            color: "#d4a017", fontSize: L ? 9 : 7.5,
+            fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginTop: 1,
+          }}>General Dentistry · Clarkesville, GA</div>
+        </div>
+      </div>
+
+      {/* White body */}
+      <div style={{ flex: 1, padding: L ? "12px 14px" : "8px 10px", minHeight: 0, overflow: "hidden" }}>
+        {/* Headline */}
+        <div style={{
+          color: "#0a2a5e", fontWeight: 900,
+          fontSize: L ? 19 : M ? 14 : 11,
+          fontFamily: "Georgia, serif", lineHeight: 1.2, marginBottom: L ? 6 : 4,
+        }}>Accepting New Patients!</div>
+
+        <div style={{
+          color: "#555", fontSize: L ? 11 : M ? 9 : 8,
+          lineHeight: 1.4, marginBottom: L ? 10 : 6,
+        }}>Gentle, compassionate care for the whole family — from first visits to full smiles.</div>
+
+        {/* Services list with gold checkmarks */}
+        {L && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 10 }}>
+            {[
+              "Preventive Care & Cleanings",
+              "Cosmetic & Whitening Treatments",
+              "Family &amp; Children's Dentistry",
+            ].map((s, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                <div style={{
+                  width: 16, height: 16, borderRadius: "50%",
+                  background: "#d4a017", display: "flex", alignItems: "center",
+                  justifyContent: "center", flexShrink: 0,
+                }}>
+                  <span style={{ color: "#fff", fontSize: 8, fontWeight: 900 }}>✓</span>
+                </div>
+                <span style={{ color: "#333", fontSize: 10.5, lineHeight: 1.2 }}
+                  dangerouslySetInnerHTML={{ __html: s }} />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Hours + address */}
+        {(L || M) && (
+          <div style={{
+            fontSize: L ? 9.5 : 8, color: "#666",
+            borderTop: "1px solid #e5e7eb", paddingTop: L ? 8 : 5,
+          }}>
+            <div>⏰ Mon–Fri 8am–5pm · Sat by appt</div>
+            {L && <div style={{ marginTop: 2 }}>📍 142 Commerce St, Clarkesville, GA</div>}
+            <div style={{ marginTop: 2, color: "#0a2a5e", fontWeight: 800 }}>☎ (706) 555-0142</div>
+          </div>
+        )}
+      </div>
+
+      {/* Navy coupon strip at bottom */}
+      <div style={{
+        background: "#0a2a5e", padding: L ? "8px 14px" : "6px 10px",
+        flexShrink: 0, borderTop: "3px solid #d4a017",
+      }}>
+        <div style={{
+          border: "2px dashed rgba(212,160,23,0.75)",
+          borderRadius: 6, padding: L ? "5px 10px" : "4px 8px",
+          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
+          background: "rgba(0,0,0,0.2)",
+        }}>
+          <div>
+            <div style={{ color: "#d4a017", fontSize: L ? 7.5 : 7,
+              fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>New Patient Special</div>
+            <div style={{ color: "#fff", fontWeight: 900, fontSize: L ? 12 : 10, lineHeight: 1.1 }}>
+              FREE Whitening Kit
+            </div>
+            <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 7, marginTop: 1 }}>
+              w/ exam &amp; cleaning · show this ad
+            </div>
+          </div>
+          <div style={{
+            width: L ? 40 : 32, height: L ? 40 : 32, borderRadius: "50%",
+            border: "2px solid #d4a017",
+            display: "flex", flexDirection: "column", alignItems: "center",
+            justifyContent: "center", flexShrink: 0,
+          }}>
+            <div style={{ color: "#d4a017", fontWeight: 900, fontSize: L ? 11 : 9, lineHeight: 1 }}>$99</div>
+            <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 6, lineHeight: 1 }}>value</div>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-// ─── Medium Ad (3"×4") ───────────────────────────────────────────────────────
-function MediumAd({ d }) {
-  const f = FONT.medium;
-  const tc = d.light ? "#fff" : "#111";
-  const tc2 = d.light ? "rgba(255,255,255,0.78)" : "#555";
+// ─── 3. BLUE RIDGE AIR & HEAT — Diagonal Split, Ice Blue + White ─────────────
+// Layout: Diagonal split design — dark steel blue left, ice white right, snowflake center
+function BlueRidgeAd({ size }) {
+  const L = size === "large";
+  const M = size === "medium";
 
   return (
-    <div style={{ width: "100%", height: "100%", background: d.bg, overflow: "hidden",
-      fontFamily: "sans-serif", display: "flex", flexDirection: "column" }}>
+    <div style={{
+      width: "100%", height: "100%", overflow: "hidden", position: "relative",
+      fontFamily: "sans-serif",
+    }}>
+      {/* Dark steel blue left triangle */}
+      <div style={{
+        position: "absolute", inset: 0,
+        background: "#003f6b",
+        clipPath: "polygon(0 0, 62% 0, 38% 100%, 0 100%)",
+      }} />
+      {/* Ice blue right triangle */}
+      <div style={{
+        position: "absolute", inset: 0,
+        background: "linear-gradient(to bottom right, #e8f4fd, #cce8f8)",
+        clipPath: "polygon(62% 0, 100% 0, 100% 100%, 38% 100%)",
+      }} />
 
-      {/* Photo header */}
-      <div style={{ position: "relative", flexShrink: 0, height: "38%", overflow: "hidden" }}>
-        <div style={{ position: "absolute", inset: 0,
-          backgroundImage: `url(${d.photo})`,
-          backgroundSize: "cover", backgroundPosition: "center" }} />
-        <div style={{ position: "absolute", inset: 0,
-          background: `linear-gradient(to bottom, transparent 10%, ${d.bg} 100%)` }} />
-        {d.socials?.length > 0 && (
-          <div style={{ position: "absolute", top: 5, right: 6, display: "flex", gap: 3 }}>
-            {d.socials.map((s, i) => (
-              <span key={i} style={{ fontSize: 9, background: "rgba(0,0,0,0.45)",
-                borderRadius: 3, padding: "2px 3px" }}>{s}</span>
-            ))}
+      {/* Giant snowflake decoration — centered over split */}
+      <div style={{
+        position: "absolute", top: "50%", left: "50%",
+        transform: "translate(-50%, -50%)",
+        fontSize: L ? 56 : M ? 44 : 34,
+        opacity: 0.22, userSelect: "none", pointerEvents: "none",
+        filter: "blur(0.5px)",
+      }}>❄</div>
+
+      {/* Emergency service badge — top left */}
+      <div style={{
+        position: "absolute", top: L ? 10 : 7, left: L ? 10 : 7,
+        background: "#c0392b", borderRadius: 4,
+        padding: L ? "3px 8px" : "2px 6px",
+        boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
+      }}>
+        <div style={{ color: "#fff", fontWeight: 900, fontSize: L ? 8 : 7,
+          letterSpacing: 1, textTransform: "uppercase" }}>24/7 Emergency</div>
+      </div>
+
+      {/* Left dark area content */}
+      <div style={{
+        position: "absolute", top: L ? 38 : 28, left: 0, width: "54%",
+        padding: L ? "0 0 0 12px" : "0 0 0 8px",
+      }}>
+        <div style={{
+          color: "#fff", fontWeight: 900,
+          fontSize: L ? 28 : M ? 21 : 16,
+          lineHeight: 1, textShadow: "0 2px 6px rgba(0,0,0,0.5)",
+        }}>24/7</div>
+        <div style={{
+          color: "#00bcd4", fontWeight: 800,
+          fontSize: L ? 11 : M ? 9 : 7.5,
+          lineHeight: 1.2, marginTop: 2,
+        }}>Emergency{"\n"}Service</div>
+
+        {L && (
+          <div style={{ marginTop: 8 }}>
+            <div style={{ color: "rgba(255,255,255,0.65)", fontSize: 8.5, lineHeight: 1.6 }}>
+              Heating &amp; Cooling<br />Experts Since 2001
+            </div>
           </div>
+        )}
+
+        {/* Phone — bottom left */}
+        <div style={{
+          marginTop: L ? 10 : 6,
+          color: "#fff", fontWeight: 900, fontSize: L ? 10.5 : M ? 9 : 8,
+        }}>(706) 555-0188</div>
+      </div>
+
+      {/* Right light area content */}
+      <div style={{
+        position: "absolute", top: L ? 12 : 8, right: 0, width: "44%",
+        padding: L ? "0 10px 0 0" : "0 7px 0 0",
+        display: "flex", flexDirection: "column", alignItems: "flex-end",
+      }}>
+        <div style={{
+          color: "#003f6b", fontWeight: 900,
+          fontSize: L ? 12 : M ? 10 : 8.5,
+          textAlign: "right", lineHeight: 1.2,
+          fontFamily: "Georgia, serif",
+        }}>Blue Ridge{"\n"}Air &amp; Heat</div>
+
+        {(L || M) && (
+          <div style={{
+            color: "#555", fontSize: L ? 9 : 8, textAlign: "right", marginTop: 4, lineHeight: 1.4,
+          }}>Clarkesville, GA<br />{L ? "Licensed & Insured" : ""}</div>
         )}
       </div>
 
-      {/* Accent name bar */}
-      <div style={{ background: d.accent, padding: "4px 8px", flexShrink: 0 }}>
-        <div style={{ color: "#fff", fontWeight: 900, fontSize: f.name, lineHeight: 1.15 }}>
-          {d.name}
+      {/* Offer box — bottom right area */}
+      <div style={{
+        position: "absolute", bottom: L ? 10 : 7, right: L ? 8 : 6,
+        width: L ? "46%" : "43%",
+        border: "2px dashed #003f6b",
+        borderRadius: 6, padding: L ? "6px 8px" : "4px 6px",
+        background: "rgba(255,255,255,0.88)", textAlign: "center",
+      }}>
+        <div style={{ position: "absolute", top: -8, left: "50%", transform: "translateX(-50%)",
+          color: "#003f6b", fontSize: 12 }}>✂</div>
+        <div style={{ color: "#003f6b", fontWeight: 900, fontSize: L ? 16 : M ? 13 : 10, lineHeight: 1 }}>
+          $89
         </div>
-        <div style={{ color: "rgba(255,255,255,0.88)", fontSize: f.cat, lineHeight: 1.15 }}>
-          {d.cat}
-        </div>
+        <div style={{ color: "#333", fontWeight: 700, fontSize: L ? 9 : 8, lineHeight: 1.2 }}>A/C Tune-Up</div>
+        {(L || M) && (
+          <div style={{ color: "#777", fontSize: 6.5, marginTop: 2 }}>Show this ad · exp. 6/30</div>
+        )}
       </div>
 
-      {/* Tagline */}
-      <div style={{ padding: "5px 8px 3px", flexShrink: 0 }}>
-        <div style={{ fontWeight: 800, fontSize: f.tagline, color: tc, lineHeight: 1.2 }}>
-          {d.tagline}
+      {/* Address — bottom left */}
+      {L && (
+        <div style={{
+          position: "absolute", bottom: 10, left: 10,
+          color: "rgba(255,255,255,0.65)", fontSize: 7.5, lineHeight: 1.4,
+        }}>
+          📍 88 Industrial Blvd<br />Gainesville, GA
         </div>
-        <div style={{ fontSize: f.detail, color: tc2, marginTop: 2 }}>⏰ {d.hours}</div>
-      </div>
-
-      {/* Coupon */}
-      <div style={{ flex: 1, padding: "3px 7px 5px", minHeight: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-        {d.coupons.slice(0, 1).map((c, i) => (
-          <div key={i} style={{
-            border: `2px dashed ${d.light ? "rgba(255,255,255,0.5)" : d.accent}`,
-            borderRadius: 5, padding: "5px 6px", textAlign: "center",
-            background: d.light ? "rgba(255,255,255,0.08)" : `${d.accent}15`,
-          }}>
-            <div style={{ fontSize: f.coupon + 1, fontWeight: 900,
-              color: d.light ? "#fff" : d.accent, lineHeight: 1 }}>{c.label}</div>
-            <div style={{ fontSize: f.couponSub + 1, fontWeight: 700,
-              color: d.light ? "rgba(255,255,255,0.88)" : "#333", lineHeight: 1.2 }}>{c.sub}</div>
-            {c.note && (
-              <div style={{ fontSize: 7, color: d.light ? "rgba(255,255,255,0.6)" : "#888",
-                marginTop: 2, lineHeight: 1.2 }}>{c.note}</div>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Footer */}
-      <div style={{ background: "rgba(0,0,0,0.18)", padding: "3px 8px",
-        display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
-        <div style={{ color: tc2, fontSize: f.addr, overflow: "hidden",
-          textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>📍 {d.addr.split("·")[0]}</div>
-        <div style={{ color: d.light ? "#fff" : d.accent, fontSize: f.phone,
-          fontWeight: 800, flexShrink: 0, whiteSpace: "nowrap", marginLeft: 4 }}>
-          {d.phone.replace("(706) ", "")}
-        </div>
-      </div>
+      )}
     </div>
   );
 }
 
-// ─── Small Ad (3"×2") ────────────────────────────────────────────────────────
-function SmallAd({ d }) {
-  const f = FONT.small;
-  const tc = d.light ? "#fff" : "#111";
-  const tc2 = d.light ? "rgba(255,255,255,0.78)" : "#555";
+// ─── 4. TANNER INSURANCE AGENCY — Dark Navy Full-Bleed, Gold Shield ───────────
+// Layout: Logo on left with text stacked on right + full dark bleed
+function TannerAd({ size }) {
+  const L = size === "large";
+  const M = size === "medium";
 
   return (
-    <div style={{ width: "100%", height: "100%", background: d.bg, overflow: "hidden",
-      fontFamily: "sans-serif", display: "flex", flexDirection: "column" }}>
+    <div style={{
+      width: "100%", height: "100%", overflow: "hidden", position: "relative",
+      background: "linear-gradient(160deg, #1a1a2e 0%, #12122a 100%)",
+      fontFamily: "sans-serif",
+      display: "flex", flexDirection: "column",
+    }}>
+      {/* Subtle hex pattern overlay */}
+      <div style={{
+        position: "absolute", inset: 0, opacity: 0.06,
+        backgroundImage: "repeating-linear-gradient(60deg, #e2b714 0, #e2b714 1px, transparent 0, transparent 50%)",
+        backgroundSize: "18px 18px",
+        pointerEvents: "none",
+      }} />
 
-      {/* Compact header */}
-      <div style={{ background: d.accent, padding: "4px 8px", flexShrink: 0 }}>
-        <div style={{ color: "#fff", fontWeight: 900, fontSize: f.name, lineHeight: 1.15 }}>
-          {d.name}
+      {/* Header: shield badge left + agency name right */}
+      <div style={{
+        padding: L ? "14px 14px 10px" : "9px 10px 7px",
+        display: "flex", alignItems: "center", gap: L ? 12 : 8,
+        flexShrink: 0, position: "relative", zIndex: 1,
+      }}>
+        {/* Shield badge */}
+        <div style={{
+          width: L ? 58 : M ? 44 : 34, height: L ? 68 : M ? 52 : 40,
+          flexShrink: 0, position: "relative",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          {/* Shield shape using clip-path */}
+          <div style={{
+            position: "absolute", inset: 0,
+            background: "linear-gradient(to bottom, #e2b714 0%, #c89a0c 100%)",
+            clipPath: "polygon(50% 0%, 100% 18%, 100% 55%, 50% 100%, 0% 55%, 0% 18%)",
+          }} />
+          <span style={{ position: "relative", zIndex: 1, fontSize: L ? 22 : M ? 17 : 13 }}>🛡️</span>
         </div>
-        <div style={{ color: "rgba(255,255,255,0.88)", fontSize: f.cat - 0.5, lineHeight: 1.1 }}>
-          {d.cat}
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ color: "#e2b714", fontSize: L ? 8.5 : 7.5,
+            fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>
+            Your Local Agent
+          </div>
+          <div style={{
+            color: "#fff", fontWeight: 900, fontSize: L ? 14 : M ? 11 : 9,
+            fontFamily: "Georgia, serif", lineHeight: 1.15, marginTop: 2,
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          }}>Tanner Insurance</div>
+          <div style={{
+            color: "rgba(255,255,255,0.6)", fontSize: L ? 9 : 8, marginTop: 2,
+          }}>Agency</div>
         </div>
       </div>
 
-      {/* Coupon — center focus */}
-      <div style={{ flex: 1, padding: "4px 7px", display: "flex", gap: 5, alignItems: "center", minHeight: 0 }}>
-        <div style={{ flex: 1, border: `1.5px dashed ${d.light ? "rgba(255,255,255,0.5)" : d.accent}`,
-          borderRadius: 4, padding: "4px 5px", textAlign: "center",
-          background: d.light ? "rgba(255,255,255,0.08)" : `${d.accent}15` }}>
-          <div style={{ fontSize: f.coupon + 1, fontWeight: 900,
-            color: d.light ? "#fff" : d.accent, lineHeight: 1 }}>
-            {d.coupons[0]?.label}
+      {/* Divider */}
+      <div style={{ height: 1, background: "linear-gradient(to right, #e2b714, transparent)",
+        margin: "0 14px", flexShrink: 0, position: "relative", zIndex: 1 }} />
+
+      {/* Body */}
+      <div style={{ flex: 1, padding: L ? "10px 14px" : "7px 10px",
+        minHeight: 0, position: "relative", zIndex: 1 }}>
+
+        {/* Coverage types */}
+        <div style={{
+          color: "#e2b714", fontWeight: 700,
+          fontSize: L ? 11 : M ? 9.5 : 8.5,
+          letterSpacing: 1, marginBottom: L ? 8 : 5,
+        }}>AUTO · HOME · LIFE</div>
+
+        {L && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 10 }}>
+            {[
+              "We shop dozens of carriers for you",
+              "Free quotes — no obligation",
+              "Local agent you can count on",
+            ].map((s, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 7 }}>
+                <span style={{ color: "#e2b714", fontSize: 9, marginTop: 1 }}>★</span>
+                <span style={{ color: "rgba(255,255,255,0.78)", fontSize: 10 }}>{s}</span>
+              </div>
+            ))}
           </div>
-          <div style={{ fontSize: f.couponSub, fontWeight: 700,
-            color: d.light ? "rgba(255,255,255,0.85)" : "#333", lineHeight: 1.2 }}>
-            {d.coupons[0]?.sub}
+        )}
+
+        {/* Big savings call-out */}
+        <div style={{
+          background: "rgba(226,183,20,0.12)", border: "1px solid rgba(226,183,20,0.35)",
+          borderRadius: 7, padding: L ? "7px 10px" : "5px 8px",
+          textAlign: "center",
+        }}>
+          <div style={{ color: "rgba(255,255,255,0.6)", fontSize: L ? 7.5 : 7,
+            textTransform: "uppercase", letterSpacing: 1 }}>Save up to</div>
+          <div style={{ color: "#e2b714", fontWeight: 900, fontSize: L ? 22 : M ? 17 : 14, lineHeight: 1 }}>
+            $500/yr
           </div>
-          {d.coupons[0]?.note && (
-            <div style={{ fontSize: 6.5, color: d.light ? "rgba(255,255,255,0.55)" : "#888",
-              marginTop: 1, lineHeight: 1.2 }}>{d.coupons[0].note}</div>
+          {(L || M) && (
+            <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 7.5 }}>Free quote · no obligation</div>
           )}
         </div>
-        <div style={{ flexShrink: 0, textAlign: "right" }}>
-          <div style={{ fontSize: f.phone - 0.5, fontWeight: 800,
-            color: d.light ? "#fff" : d.accent, lineHeight: 1.3 }}>
-            {d.phone.replace("(706) ", "")}
+      </div>
+
+      {/* Footer strip */}
+      <div style={{
+        background: "rgba(226,183,20,0.12)", borderTop: "1px solid rgba(226,183,20,0.25)",
+        padding: L ? "6px 14px" : "4px 10px",
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        flexShrink: 0, position: "relative", zIndex: 1,
+      }}>
+        <div style={{ color: "rgba(255,255,255,0.5)", fontSize: L ? 8 : 7 }}>
+          📍 55 S Main St, Cornelia, GA
+        </div>
+        <div style={{ color: "#e2b714", fontWeight: 800, fontSize: L ? 9.5 : 8.5 }}>
+          (706) 555-0055
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── 5. ROMA'S PIZZA & SUBS — Bold Single Color, White Text, Coupon Strip ────
+// Layout: Bold dark red bg, BOGO hero headline, white coupon strip at bottom
+function RomasPizzaAd({ size }) {
+  const L = size === "large";
+
+  return (
+    <div style={{
+      width: "100%", height: "100%", overflow: "hidden", position: "relative",
+      background: "#7f0c0c", fontFamily: "sans-serif",
+      display: "flex", flexDirection: "column",
+    }}>
+      {/* Checkered accent stripe at top */}
+      <div style={{
+        height: L ? 8 : 5, flexShrink: 0,
+        backgroundImage: "repeating-linear-gradient(90deg, #fff 0px, #fff 6px, transparent 6px, transparent 12px)",
+        opacity: 0.25,
+      }} />
+
+      {/* Header */}
+      <div style={{
+        background: "rgba(0,0,0,0.25)", padding: L ? "6px 10px" : "4px 8px",
+        display: "flex", alignItems: "center", gap: L ? 10 : 7, flexShrink: 0,
+      }}>
+        {/* Circular logo badge */}
+        <div style={{
+          width: L ? 42 : 32, height: L ? 42 : 32, borderRadius: "50%",
+          background: "linear-gradient(135deg, #c0392b, #922b21)",
+          border: "2px solid rgba(255,255,255,0.5)",
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        }}>
+          <span style={{ fontSize: L ? 20 : 15 }}>🍕</span>
+        </div>
+        <div>
+          <div style={{ color: "#fff", fontWeight: 900, fontSize: L ? 13 : 10.5,
+            fontFamily: "Georgia, serif" }}>Roma's Pizza &amp; Subs</div>
+          <div style={{ color: "rgba(255,255,255,0.65)", fontSize: L ? 8.5 : 7.5 }}>
+            Italian Restaurant · Clarkesville
           </div>
-          <div style={{ fontSize: 6.5, color: tc2, lineHeight: 1.3 }}>
-            {d.hours.split(" ")[0]}
+        </div>
+      </div>
+
+      {/* Hero offer — BOGO */}
+      <div style={{
+        flex: 1, display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center",
+        padding: L ? "8px 12px" : "5px 8px", minHeight: 0,
+      }}>
+        <div style={{ color: "rgba(255,255,255,0.25)", fontSize: L ? 10 : 8,
+          letterSpacing: 3, textTransform: "uppercase", marginBottom: 2 }}>
+          This Week Only
+        </div>
+        <div style={{ color: "#fff", fontWeight: 900, fontSize: L ? 38 : 29,
+          lineHeight: 1, letterSpacing: -1, textShadow: "0 3px 10px rgba(0,0,0,0.5)" }}>
+          BOGO
+        </div>
+        <div style={{ color: "rgba(255,255,255,0.88)", fontWeight: 800,
+          fontSize: L ? 13 : 10, lineHeight: 1.2, textAlign: "center", marginTop: 3 }}>
+          Medium Pizza
+        </div>
+        <div style={{ color: "rgba(255,255,255,0.5)", fontSize: L ? 9 : 7.5,
+          marginTop: 4, textAlign: "center" }}>
+          Hand-tossed · Oven fresh · Dine-in, carry-out &amp; delivery
+        </div>
+      </div>
+
+      {/* White coupon strip at bottom */}
+      <div style={{
+        background: "#fff", padding: L ? "7px 10px" : "5px 8px",
+        flexShrink: 0, display: "flex", justifyContent: "space-between", alignItems: "center",
+        borderTop: "3px solid rgba(0,0,0,0.15)",
+      }}>
+        <div style={{ position: "relative" }}>
+          <div style={{ position: "absolute", top: -14, left: 0, color: "#c0392b", fontSize: 12 }}>✂</div>
+          <div style={{ color: "#c0392b", fontWeight: 900, fontSize: L ? 9 : 8,
+            textTransform: "uppercase", letterSpacing: 0.5 }}>
+            Tues &amp; Wed only · Dine-in
+          </div>
+          <div style={{ color: "#555", fontSize: L ? 8.5 : 7.5 }}>Show this ad · 1 per table</div>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ color: "#c0392b", fontWeight: 900, fontSize: L ? 10.5 : 9 }}>
+            (706) 555-0712
+          </div>
+          <div style={{ color: "#888", fontSize: 7 }}>Daily 11am–9pm</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── 6. GREEN ACRES LAWN CARE — Fresh Green Gradient, Logo Left / Text Right ──
+// Layout: Left strip with leaf badge, right = white with offer and phone
+function GreenAcresAd({ size }) {
+  const L = size === "large";
+
+  return (
+    <div style={{
+      width: "100%", height: "100%", overflow: "hidden", position: "relative",
+      background: "#f0fdf4", fontFamily: "sans-serif",
+      display: "flex",
+    }}>
+      {/* Left green strip */}
+      <div style={{
+        width: L ? "38%" : "36%", flexShrink: 0,
+        background: "linear-gradient(to bottom, #16a34a 0%, #14532d 100%)",
+        display: "flex", flexDirection: "column", alignItems: "center",
+        justifyContent: "center", gap: L ? 6 : 4, padding: L ? "8px 0" : "5px 0",
+        position: "relative", overflow: "hidden",
+      }}>
+        {/* Decorative circle bg */}
+        <div style={{
+          position: "absolute", bottom: "-20%", left: "-20%",
+          width: "140%", height: "70%",
+          background: "radial-gradient(ellipse, rgba(255,255,255,0.08) 0%, transparent 70%)",
+          borderRadius: "50%",
+        }} />
+        {/* Leaf badge */}
+        <div style={{
+          width: L ? 46 : 34, height: L ? 46 : 34, borderRadius: "50%",
+          background: "rgba(255,255,255,0.18)",
+          border: "2px solid rgba(255,255,255,0.55)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          position: "relative", zIndex: 1,
+        }}>
+          <span style={{ fontSize: L ? 22 : 16 }}>🌿</span>
+        </div>
+        {/* Vertical business name */}
+        <div style={{
+          color: "rgba(255,255,255,0.75)", fontSize: L ? 7.5 : 6.5,
+          fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase",
+          writingMode: "vertical-rl", textOrientation: "mixed",
+          transform: "rotate(180deg)", position: "relative", zIndex: 1,
+        }}>Green Acres</div>
+
+        {/* Sun decorative */}
+        <div style={{
+          position: "absolute", top: L ? 6 : 4, right: L ? 6 : 4,
+          color: "rgba(255,255,255,0.3)", fontSize: L ? 14 : 10,
+        }}>☀</div>
+      </div>
+
+      {/* Right white content area */}
+      <div style={{
+        flex: 1, padding: L ? "10px 10px" : "7px 8px",
+        display: "flex", flexDirection: "column", justifyContent: "space-between", minWidth: 0,
+      }}>
+        <div>
+          <div style={{ color: "#14532d", fontWeight: 900, fontSize: L ? 12 : 10,
+            lineHeight: 1.2, fontFamily: "Georgia, serif" }}>Green Acres{"\n"}Lawn Care</div>
+          <div style={{ color: "#555", fontSize: L ? 9 : 7.5, marginTop: 3 }}>
+            Mowing · Mulching · Clean-ups
+          </div>
+        </div>
+
+        {/* Offer */}
+        <div style={{
+          border: "2px dashed #16a34a", borderRadius: 6,
+          padding: L ? "5px 7px" : "4px 6px", textAlign: "center",
+          background: "#f0fdf4", position: "relative",
+        }}>
+          <div style={{ position: "absolute", top: -8, left: "50%",
+            transform: "translateX(-50%)", color: "#16a34a", fontSize: 12 }}>✂</div>
+          <div style={{ color: "#14532d", fontWeight: 900, fontSize: L ? 16 : 13, lineHeight: 1 }}>
+            $25 OFF
+          </div>
+          <div style={{ color: "#15803d", fontSize: L ? 9 : 8, fontWeight: 700 }}>
+            First Service
+          </div>
+          <div style={{ color: "#888", fontSize: L ? 7 : 6.5, marginTop: 1 }}>
+            New customers · show this ad
+          </div>
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+          <div style={{ color: "#14532d", fontWeight: 800, fontSize: L ? 10 : 8.5 }}>
+            (706) 555-0399
+          </div>
+          <div style={{ color: "#888", fontSize: L ? 7.5 : 7, textAlign: "right" }}>
+            Mon–Sat{"\n"}7am–6pm
           </div>
         </div>
       </div>
@@ -331,29 +748,35 @@ function SmallAd({ d }) {
   );
 }
 
-// ─── Public Components ────────────────────────────────────────────────────────
-export function PaidAd({ spot }) {
-  const d = ADS[spot.businessName];
-
-  if (!d) {
-    return (
-      <div style={{ width: "100%", height: "100%", background: "#f9fafb",
-        border: "1px solid #e5e7eb", display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "center", gap: 4, fontFamily: "sans-serif" }}>
-        <span style={{ fontSize: 22 }}>📌</span>
-        <div style={{ fontSize: 11, fontWeight: 700, color: "#374151", textAlign: "center", padding: "0 6px" }}>
-          {spot.businessName}
-        </div>
-        <div style={{ fontSize: 9, color: "#9ca3af" }}>Reserved</div>
-      </div>
-    );
-  }
-
-  if (spot.size === "large") return <LargeAd d={d} />;
-  if (spot.size === "medium") return <MediumAd d={d} />;
-  return <SmallAd d={d} />;
+// ─── Fallback Ad ──────────────────────────────────────────────────────────────
+function DefaultAd({ spot }) {
+  return (
+    <div style={{ width: "100%", height: "100%", background: "#f9fafb",
+      border: "1px solid #e5e7eb", display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center", gap: 4, fontFamily: "sans-serif" }}>
+      <span style={{ fontSize: 22 }}>📌</span>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "#374151",
+        textAlign: "center", padding: "0 6px" }}>{spot.businessName}</div>
+      <div style={{ fontSize: 9, color: "#9ca3af" }}>Reserved</div>
+    </div>
+  );
 }
 
+// ─── Public: PaidAd Dispatcher ────────────────────────────────────────────────
+export function PaidAd({ spot }) {
+  const s = { size: spot.size };
+  switch (spot.businessName) {
+    case "Mr. Biscuit's Café":          return <MrBiscuitsAd    {...s} />;
+    case "Clarkesville Family Dental":  return <FamilyDentalAd  {...s} />;
+    case "Blue Ridge Air & Heat":       return <BlueRidgeAd     {...s} />;
+    case "Tanner Insurance Agency":     return <TannerAd        {...s} />;
+    case "Roma's Pizza & Subs":         return <RomasPizzaAd    {...s} />;
+    case "Green Acres Lawn Care":       return <GreenAcresAd    {...s} />;
+    default:                            return <DefaultAd spot={spot} />;
+  }
+}
+
+// ─── Public: AvailableSpot ────────────────────────────────────────────────────
 export function AvailableSpot({ spot, isSelected, onClick }) {
   const sz = SIZES[spot.size];
   const isSmall = spot.size === "small";
@@ -381,6 +804,7 @@ export function AvailableSpot({ spot, isSelected, onClick }) {
   );
 }
 
+// ─── Public: Modal ─────────────────────────────────────────────────────────────
 export function Modal({ spot, onClose, onSubmit, isLoading, error }) {
   const sz = SIZES[spot.size];
   const [f, setF] = useState({ biz: "", cat: "", email: "", phone: "" });
