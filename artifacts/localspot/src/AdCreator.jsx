@@ -1259,10 +1259,10 @@ function Step1Form({ data, setData, images, setImages, email, setEmail, onNext }
           <ImageSlot slot={2} label="Photo 3" dataUrl={images.photos?.[2]} />
         </div>
         <div style={{ fontSize: 11, color: "#888", marginTop: 8, lineHeight: 1.5 }}>
-          All photos are optional. If you don't upload one, we'll auto-fill
-          empty slots from our industry-matched photo library so your ad
-          always looks polished. Logos appear as a circular badge. PNG/JPG,
-          5MB max.
+          All photos are optional. For restaurant categories, empty slots
+          auto-fill from our curated food-photo library so your ad always
+          looks polished — you can swap in your own at any time. Logos
+          appear as a circular badge. PNG/JPG, 5MB max.
         </div>
       </div>
 

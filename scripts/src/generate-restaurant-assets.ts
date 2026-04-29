@@ -243,6 +243,38 @@ async function generateImages(): Promise<ManifestEntry[]> {
   return entries;
 }
 
+// Path of the generated JS module the web app imports at build time. We write
+// it here (not by hand) so manifest.json and the app library stay in sync.
+const GENERATED_LIB = path.join(
+  REPO_ROOT,
+  "artifacts",
+  "localspot",
+  "src",
+  "industryLibrary.generated.js",
+);
+
+function writeGeneratedLib(images: ManifestEntry[]): string {
+  const REL_DIR = "industries/restaurants/mr-biscuits";
+  const entries = images
+    .map(
+      (img) =>
+        `  { url: \`\${BASE}${REL_DIR}/${img.file}\`, tag: ${JSON.stringify(
+          img.tag,
+        )}, caption: ${JSON.stringify(img.caption)}, width: ${img.width}, height: ${img.height} },`,
+    )
+    .join("\n");
+  return `// AUTO-GENERATED — do not edit by hand.
+// Source: artifacts/localspot/public/${REL_DIR}/manifest.json
+// Regenerate with: pnpm --filter @workspace/scripts run gen-restaurant-assets
+
+const BASE = import.meta.env.BASE_URL;
+
+export const RESTAURANT_LIBRARY = [
+${entries}
+];
+`;
+}
+
 async function main(): Promise<void> {
   await ensureDir(OUT_DIR);
   console.log(`Output dir: ${OUT_DIR}\n`);
@@ -253,17 +285,21 @@ async function main(): Promise<void> {
   console.log("\n[2/2] Generating restaurant images via gpt-image-1…");
   const generated = await generateImages();
 
+  const allImages = [...cropped, ...generated];
   const manifest = {
     industry: "restaurants",
     business: "mr-biscuits",
     description:
       "Image library for Mr. Biscuit's Café — used as the showcase for Restaurant Template 1 and as a fallback pool when restaurant ads ship without uploaded photos.",
-    images: [...cropped, ...generated],
+    images: allImages,
   };
   const manifestPath = path.join(OUT_DIR, "manifest.json");
   await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
   console.log(`\nWrote manifest → ${manifestPath}`);
-  console.log(`Total images: ${manifest.images.length}`);
+
+  await fs.writeFile(GENERATED_LIB, writeGeneratedLib(allImages));
+  console.log(`Wrote generated lib → ${GENERATED_LIB}`);
+  console.log(`Total images: ${allImages.length}`);
 }
 
 main().catch((err) => {
