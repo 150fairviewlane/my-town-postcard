@@ -1212,6 +1212,18 @@ function Step1Form({ data, setData, images, setImages, email, setEmail, onNext }
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           <div>
+            <label style={labelStyle}>Second Offer / Coupon <span style={{ color: "#9ca3af", fontWeight: 400 }}>(optional)</span></label>
+            <input style={inputStyle} value={data.offer2} onChange={handleField("offer2")}
+              placeholder="e.g. FREE Coffee w/ breakfast" />
+          </div>
+          <div>
+            <label style={labelStyle}>Second Offer Fine Print</label>
+            <input style={inputStyle} value={data.offer2FinePrint} onChange={handleField("offer2FinePrint")}
+              placeholder="e.g. one per visit" />
+          </div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div>
             <label style={labelStyle}>Phone</label>
             <input style={inputStyle} value={data.phone} onChange={handleField("phone")}
               placeholder="(706) 555-0100" />
@@ -1445,6 +1457,7 @@ export default function AdCreator({ spotId, spotSize, spotPrice, onComplete, onC
   const [step, setStep] = useState(1);
   const [data, setData] = useState({
     businessName: "", category: "", tagline: "", offer: "", offerFinePrint: "",
+    offer2: "", offer2FinePrint: "",
     address: "", phone: "", website: "", hours: "", accentColor: "#374151",
   });
   const [images, setImages] = useState({ logo: "", photos: ["", "", ""] });
