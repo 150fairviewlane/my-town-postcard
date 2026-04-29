@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
+import PostcardPickerSection from "../PostcardPickerSection";
 
 const RED = "#7B1418";
-const RED_DARK = "#5a0e12";
 
 const NAV_LINKS = [
   { label: "How It Works", href: "#how-it-works" },
@@ -15,7 +14,6 @@ function scrollTo(id: string) {
 }
 
 function NavBar() {
-  const [, nav] = useLocation();
   return (
     <header style={{
       position: "sticky", top: 0, zIndex: 50, background: "#fff",
@@ -42,7 +40,7 @@ function NavBar() {
             {l.label}
           </button>
         ))}
-        <button onClick={() => nav("/book")}
+        <button onClick={() => scrollTo("book")}
           style={{ background: RED, color: "#fff", border: "none", borderRadius: 8,
             padding: "9px 22px", fontSize: 14, fontWeight: 800, cursor: "pointer",
             fontFamily: "sans-serif", letterSpacing: 0.2 }}>
@@ -54,7 +52,6 @@ function NavBar() {
 }
 
 function Hero() {
-  const [, nav] = useLocation();
   return (
     <section style={{ background: "#fff", padding: "72px 32px 80px", maxWidth: 1180, margin: "0 auto",
       display: "flex", alignItems: "center", gap: 64, flexWrap: "wrap" }}>
@@ -85,7 +82,7 @@ function Hero() {
         </div>
 
         <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-          <button onClick={() => nav("/book")}
+          <button onClick={() => scrollTo("book")}
             style={{ background: RED, color: "#fff", border: "none", borderRadius: 9,
               padding: "14px 32px", fontSize: 16, fontWeight: 800, cursor: "pointer",
               fontFamily: "sans-serif", boxShadow: `0 4px 18px ${RED}55` }}>
@@ -201,8 +198,25 @@ function WhyChooseUs() {
   );
 }
 
+function PostcardBook() {
+  return (
+    <section id="book" style={{ background: "#dde3ea", padding: "80px 32px" }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+        <h2 style={{ textAlign: "center", fontSize: 36, fontWeight: 900, color: "#111",
+          fontFamily: "Georgia,serif", marginBottom: 10 }}>
+          Reserve Your Spot on the Postcard
+        </h2>
+        <p style={{ textAlign: "center", color: "#555", fontSize: 16, marginBottom: 28,
+          fontFamily: "sans-serif" }}>
+          Click any <span style={{ color: "#16a34a", fontWeight: 700 }}>green spot</span> on the live postcard below to claim yours.
+        </p>
+        <PostcardPickerSection />
+      </div>
+    </section>
+  );
+}
+
 function Pricing() {
-  const [, nav] = useLocation();
   const plans = [
     { label: "Small Ad",  price: 199, dim: '2"×2"', tag: "Ideal for getting started",
       features: ["Your ad in 5,000 local homes", "No Competition", "Professional design"],
@@ -259,7 +273,7 @@ function Pricing() {
                   </div>
                 ))}
               </div>
-              <button onClick={() => nav("/book")}
+              <button onClick={() => scrollTo("book")}
                 style={{ width: "100%", padding: "12px 0", borderRadius: 9,
                   background: p.highlight ? RED : "#fff",
                   color: p.highlight ? "#fff" : RED,
@@ -305,12 +319,11 @@ function Features() {
 }
 
 function CTABanner() {
-  const [, nav] = useLocation();
   return (
     <section style={{ background: RED, padding: "60px 32px", textAlign: "center" }}>
       <h2 style={{ color: "#fff", fontSize: 32, fontWeight: 900, fontFamily: "Georgia,serif",
         margin: "0 0 20px" }}>Don't Miss Out.</h2>
-      <button onClick={() => nav("/book")}
+      <button onClick={() => scrollTo("book")}
         style={{ background: "#fff", color: RED, border: "none", borderRadius: 9,
           padding: "14px 36px", fontSize: 16, fontWeight: 800, cursor: "pointer",
           fontFamily: "sans-serif", boxShadow: "0 4px 16px rgba(0,0,0,0.15)" }}>
@@ -481,22 +494,23 @@ function Footer() {
             fontFamily: "sans-serif" }}>Quick Links</div>
           {["How It Works", "Pricing & Availability", "FAQ"].map(l => (
             <div key={l} style={{ marginBottom: 8 }}>
-              <span style={{ fontSize: 13, color: "#9ca3af", cursor: "pointer",
-                fontFamily: "sans-serif" }}>{l}</span>
+              <a href="#" onClick={e => { e.preventDefault(); scrollTo(l === "How It Works" ? "how-it-works" : l === "FAQ" ? "faq" : "pricing"); }}
+                style={{ fontSize: 13, color: "#9ca3af", textDecoration: "none", fontFamily: "sans-serif" }}>
+                {l}
+              </a>
             </div>
           ))}
         </div>
         <div>
           <div style={{ fontWeight: 700, color: "#fff", fontSize: 14, marginBottom: 14,
             fontFamily: "sans-serif" }}>Contact</div>
-          <p style={{ fontSize: 13, color: "#9ca3af", fontFamily: "sans-serif", lineHeight: 1.7 }}>
-            Clarkesville, GA<br />
-            Local Service Area<br />
-            Habersham County
+          <p style={{ fontSize: 13, color: "#9ca3af", lineHeight: 1.6, fontFamily: "sans-serif" }}>
+            Serving Clarkesville, GA &amp; all of Habersham County.<br />
+            Questions? Email us at hello@localspotmailer.com
           </p>
         </div>
       </div>
-      <div style={{ maxWidth: 1100, margin: "32px auto 0", borderTop: "1px solid #333",
+      <div style={{ maxWidth: 1100, margin: "32px auto 0", borderTop: "1px solid #222",
         paddingTop: 20, textAlign: "center" }}>
         <span style={{ fontSize: 12, color: "#6b7280", fontFamily: "sans-serif" }}>
           © 2025 LocalSpot Mailer · 9×12 Co-op Postcard · Clarkesville, GA
@@ -513,6 +527,7 @@ export default function LandingPage() {
       <Hero />
       <HowItWorks />
       <WhyChooseUs />
+      <PostcardBook />
       <Pricing />
       <Features />
       <CTABanner />
