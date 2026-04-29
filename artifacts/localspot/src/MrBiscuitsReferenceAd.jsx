@@ -56,7 +56,7 @@ overflow:"hidden", fontFamily:"Georgia,serif",
 
   {/* ── ROW 2: 4 photos side by side ── */}
   <div style={{ display:"flex", gap:2, padding:"3px 3px 2px", flexShrink:0, height:"34%" }}>
-    {[CHICKEN_BISC, BAGEL_CREAM, EGG_SAND, CROISSANT].map((src, i) => (
+    {[BAGEL_NEW, BAGEL_CREAM, EGG_SAND, CROISSANT].map((src, i) => (
       <div key={i} style={{ flex:1, overflow:"hidden", borderRadius:3 }}>
         <Photo src={src} />
       </div>
@@ -86,7 +86,7 @@ overflow:"hidden", fontFamily:"Georgia,serif",
   {/* ── ROW 4: 3 coupons ── */}
   <div style={{ flex:1, display:"flex", gap:3, padding:"4px 8px 4px", minHeight:0 }}>
     {[
-      { val:"$1 OFF",  headline:"Bacon Biscuit",     sub:"1 per visit · no other offers",    fine:"with this postcard", photo: BAGEL_NEW },
+      { val:"$1 OFF",  headline:"Bacon Biscuit",     sub:"1 per visit · no other offers",    fine:"with this postcard", photo: CHICKEN_BISC },
       { val:"FREE",    headline:"Coffee",             sub:"with any breakfast plate",          fine:"with this postcard", photo: PLAIN_BAGEL },
       { val:"$2 OFF",  headline:"Any Boba Drink",    sub:"Cannot combine",                    fine:"Expires 6/30/25",    photo: BAGEL_SAND },
     ].map((c, i) => (
@@ -102,7 +102,7 @@ overflow:"hidden", fontFamily:"Georgia,serif",
         {/* photo */}
         {c.photo && (
           <div style={{ height:50, width:"100%", overflow:"hidden", flexShrink:0 }}>
-            <img src={c.photo} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+            <img src={c.photo} alt="" style={{ width:"100%", height:50, objectFit:"cover", display:"block" }} />
           </div>
         )}
         {/* coupon body */}
@@ -170,7 +170,7 @@ padding:"2px 7px", border:"1px solid rgba(255,212,158,0.4)", flexShrink:0 }}>
 
   {/* 4 photos */}
   <div style={{ display:"flex", gap:2, padding:"3px 3px 2px", flexShrink:0, height:"34%" }}>
-    {[CHICKEN_BISC, BAGEL_CREAM, EGG_SAND, CROISSANT].map((src,i) => (
+    {[BAGEL_NEW, BAGEL_CREAM, EGG_SAND, CROISSANT].map((src,i) => (
       <div key={i} style={{ flex:1, overflow:"hidden", borderRadius:3 }}>
         <Photo src={src} />
       </div>
@@ -196,7 +196,7 @@ padding:"2px 7px", border:"1px solid rgba(255,212,158,0.4)", flexShrink:0 }}>
   {/* 3 coupons with photos */}
   <div style={{ flex:1, display:"flex", gap:3, padding:"3px 6px 3px", minHeight:0 }}>
     {[
-      { val:"$1 OFF",  headline:"Bacon Biscuit",   sub:"1 per visit · no other offers",  fine:"with this postcard", photo:BAGEL_NEW },
+      { val:"$1 OFF",  headline:"Bacon Biscuit",   sub:"1 per visit · no other offers",  fine:"with this postcard", photo:CHICKEN_BISC },
       { val:"FREE",    headline:"Coffee",           sub:"with any breakfast plate",        fine:"with this postcard", photo:PLAIN_BAGEL },
       { val:"$2 OFF",  headline:"Any Boba Drink",  sub:"Cannot combine",                  fine:"Expires 6/30/25",    photo:BAGEL_SAND },
     ].map((c,i) => (
@@ -210,7 +210,7 @@ padding:"2px 7px", border:"1px solid rgba(255,212,158,0.4)", flexShrink:0 }}>
         </div>
         {c.photo && (
           <div style={{ height:40, width:"100%", overflow:"hidden", flexShrink:0 }}>
-            <img src={c.photo} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+            <img src={c.photo} alt="" style={{ width:"100%", height:40, objectFit:"cover", display:"block" }} />
           </div>
         )}
         <div style={{ flex:1, display:"flex", flexDirection:"column",
