@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { RestaurantA } from "./AdCreator.jsx";
 
 const BASE = import.meta.env.BASE_URL;
 const MR_BISCUITS_LOGO = `${BASE}mr-biscuits-logo.jpg`;
+const MR_BISCUITS_HERO = `${BASE}industries/restaurants/mr-biscuits/menu-chicken-biscuit.jpg`;
 
 export const SIZES = {
   large:  { label: "Large",  price: 399, dim: '4" × 5"',  desc: "Prime placement, maximum impact" },
@@ -21,165 +23,28 @@ export const GRID_AREAS = [
   "hv hv hv ins ins ins lw lw lw a2 a2 a2",
 ].map(r => `"${r}"`).join(" ");
 
-// ─── 1. MR. BISCUIT'S CAFÉ — Hero Ad, Sunrise Gradient, Real Logo Badge ──────
-// Layout: Full background treatment, logo centered top, headline below, two coupons bottom
+// ─── 1. MR. BISCUIT'S CAFÉ — Showcase ad rendered with the RestaurantA template
+// This is the on-postcard sample so it stays in sync with the template a real
+// customer would pick. Uses real Mr. Biscuit's Café data + an in-library hero
+// photo (cropped from their menu) so the visual matches the live product.
 function MrBiscuitsAd({ size }) {
-  const L = size === "large";
-  const M = size === "medium";
-
   return (
-    <div style={{
-      width: "100%", height: "100%", overflow: "hidden", position: "relative",
-      background: "linear-gradient(to bottom, #f5b84a 0%, #d4701a 45%, #6a1f00 100%)",
-      fontFamily: "sans-serif",
-    }}>
-      {/* Radial sunrise glow at top */}
-      <div style={{
-        position: "absolute", top: "-15%", left: "50%", transform: "translateX(-50%)",
-        width: "130%", height: "55%",
-        background: "radial-gradient(ellipse at top, rgba(255,220,100,0.38) 0%, transparent 70%)",
-        pointerEvents: "none",
-      }} />
-
-      {/* Decorative corner accent top-right */}
-      <div style={{
-        position: "absolute", top: 0, right: 0, width: 0, height: 0,
-        borderStyle: "solid",
-        borderWidth: `0 ${L ? 52 : 34}px ${L ? 52 : 34}px 0`,
-        borderColor: `transparent rgba(255,200,80,0.35) transparent transparent`,
-      }} />
-
-      {/* Logo badge — centered */}
-      <div style={{
-        display: "flex", flexDirection: "column", alignItems: "center",
-        paddingTop: L ? 14 : 9, position: "relative", zIndex: 2,
-      }}>
-        <div style={{
-          width: L ? 80 : M ? 58 : 42, height: L ? 80 : M ? 58 : 42,
-          borderRadius: "50%",
-          border: `${L ? 3 : 2}px solid #f5b84a`,
-          boxShadow: "0 4px 18px rgba(0,0,0,0.45), 0 0 0 3px rgba(245,184,74,0.3)",
-          overflow: "hidden", flexShrink: 0,
-        }}>
-          <img src={MR_BISCUITS_LOGO} alt="Mr. Biscuit's"
-            style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-        </div>
-
-        {/* Business name — Georgia "script feel" */}
-        <div style={{
-          color: "#fff", fontWeight: 900,
-          fontSize: L ? 19 : M ? 13.5 : 10.5,
-          fontFamily: "Georgia, 'Times New Roman', serif",
-          marginTop: L ? 7 : 4,
-          textShadow: "0 2px 8px rgba(0,0,0,0.55)",
-          textAlign: "center", lineHeight: 1.1, letterSpacing: 0.3,
-        }}>Mr. Biscuit's Café</div>
-
-        <div style={{
-          color: "#fde8a0", fontSize: L ? 9 : 7.5,
-          fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginTop: 2,
-        }}>Café &amp; Breakfast · Clarkesville, GA</div>
-      </div>
-
-      {/* Tagline + selling points */}
-      <div style={{
-        position: "relative", zIndex: 2,
-        padding: L ? "9px 14px 6px" : "5px 9px 4px",
-      }}>
-        <div style={{
-          color: "#fff", fontWeight: 800,
-          fontSize: L ? 14.5 : M ? 10.5 : 8.5,
-          lineHeight: 1.25, textAlign: "center",
-          textShadow: "0 1px 4px rgba(0,0,0,0.4)",
-        }}>From-Scratch Biscuits &amp; Fresh Boba!</div>
-
-        {L && (
-          <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
-            {[
-              "☕  Drive-thru or dine-in daily",
-              "🥐  Made from scratch every morning",
-              "🧋  30+ boba flavors in stock",
-            ].map((pt, i) => (
-              <div key={i} style={{
-                color: "rgba(255,255,255,0.9)", fontSize: 10.5,
-                display: "flex", alignItems: "center", gap: 6,
-              }}>{pt}</div>
-            ))}
-          </div>
-        )}
-
-        {L && (
-          <div style={{
-            marginTop: 8, display: "flex", alignItems: "center", gap: 6,
-            background: "rgba(0,0,0,0.22)", borderRadius: 6, padding: "5px 10px",
-          }}>
-            <span style={{ color: "#fde8a0", fontSize: 9.5 }}>⏰</span>
-            <span style={{ color: "rgba(255,255,255,0.85)", fontSize: 9.5 }}>Mon–Sat 6am–2pm · 596 W Louise Dr, Ste D</span>
-          </div>
-        )}
-      </div>
-
-      {/* Coupons — bottom anchored */}
-      <div style={{
-        position: "absolute", bottom: 0, left: 0, right: 0,
-        background: "linear-gradient(to bottom, transparent, rgba(30,8,0,0.72))",
-        padding: L ? "18px 10px 10px" : "10px 8px 8px",
-        display: "flex", gap: L ? 8 : 5, zIndex: 2,
-      }}>
-        {/* Coupon 1 */}
-        <div style={{
-          flex: 1, border: "2px dashed rgba(253,232,160,0.75)",
-          borderRadius: 7, padding: L ? "7px 8px" : "5px 6px",
-          textAlign: "center", background: "rgba(0,0,0,0.28)",
-          position: "relative",
-        }}>
-          <div style={{ position: "absolute", top: -9, left: "50%", transform: "translateX(-50%)",
-            color: "rgba(253,232,160,0.8)", fontSize: 12, lineHeight: 1 }}>✂</div>
-          <div style={{ color: "#fde8a0", fontWeight: 900, fontSize: L ? 11 : 9, lineHeight: 1 }}>
-            BUY ONE
-          </div>
-          <div style={{ color: "#fff", fontSize: L ? 9.5 : 8, fontWeight: 700, lineHeight: 1.3 }}>
-            Biscuit Sandwich
-          </div>
-          <div style={{ color: "#fde8a0", fontWeight: 900, fontSize: L ? 12 : 10, marginTop: 1 }}>
-            GET ONE FREE
-          </div>
-          {L && <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 7, marginTop: 3, lineHeight: 1.3 }}>
-            Show this ad · 1 per visit · no other offers
-          </div>}
-        </div>
-
-        {/* Coupon 2 */}
-        <div style={{
-          flex: 1, border: "2px dashed rgba(253,232,160,0.75)",
-          borderRadius: 7, padding: L ? "7px 8px" : "5px 6px",
-          textAlign: "center", background: "rgba(0,0,0,0.28)",
-          position: "relative",
-        }}>
-          <div style={{ position: "absolute", top: -9, left: "50%", transform: "translateX(-50%)",
-            color: "rgba(253,232,160,0.8)", fontSize: 12, lineHeight: 1 }}>✂</div>
-          <div style={{ color: "#fde8a0", fontWeight: 900, fontSize: L ? 19 : 15, lineHeight: 1 }}>
-            $2 OFF
-          </div>
-          <div style={{ color: "#fff", fontSize: L ? 9.5 : 8, fontWeight: 700, lineHeight: 1.3 }}>
-            Any Boba Drink
-          </div>
-          {L && <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 7, marginTop: 3, lineHeight: 1.3 }}>
-            Cannot combine · expires 6/30/25
-          </div>}
-        </div>
-      </div>
-
-      {/* Phone pill */}
-      {L && (
-        <div style={{
-          position: "absolute", top: 18, right: 10, zIndex: 3,
-          background: "#c8541a", borderRadius: 20, padding: "3px 10px",
-          color: "#fff", fontSize: 9, fontWeight: 800,
-          boxShadow: "0 2px 6px rgba(0,0,0,0.4)",
-        }}>(706) 555-0596</div>
-      )}
-    </div>
+    <RestaurantA
+      size={size}
+      industry="Breakfast and Cafe"
+      businessName="Mr. Biscuit's Café"
+      tagline="From-scratch biscuits & fresh boba"
+      offer="$1 OFF"
+      offerFinePrint="Bacon Biscuit · 1 per visit"
+      offer2="FREE COFFEE"
+      offer2FinePrint="with any breakfast plate"
+      address="596 W Louise St Ste D, Clarkesville GA"
+      phone="(706) 754-0105"
+      hours="Tue–Fri 7a–12p · Sat 8a–12p"
+      logo={MR_BISCUITS_LOGO}
+      photos={[MR_BISCUITS_HERO]}
+      accentColor="#6a1f00"
+    />
   );
 }
 

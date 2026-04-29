@@ -1,0 +1,95 @@
+{
+  "industry": "restaurants",
+  "business": "mr-biscuits",
+  "description": "Image library for Mr. Biscuit's Café — used as the showcase for Restaurant Template 1 and as a fallback pool when restaurant ads ship without uploaded photos.",
+  "images": [
+    {
+      "file": "menu-bagel-cream-cheese.jpg",
+      "source": "menu-crop",
+      "tag": "food-detail",
+      "caption": "New York kettle-boiled bagel with cream cheese",
+      "width": 510,
+      "height": 480
+    },
+    {
+      "file": "menu-bagel-plain.jpg",
+      "source": "menu-crop",
+      "tag": "food-detail",
+      "caption": "Golden plain bagel close-up",
+      "width": 510,
+      "height": 460
+    },
+    {
+      "file": "menu-biscuit-egg-cheese.jpg",
+      "source": "menu-crop",
+      "tag": "hero",
+      "caption": "Buttermilk biscuit with egg and American cheese",
+      "width": 510,
+      "height": 480
+    },
+    {
+      "file": "menu-chicken-biscuit.jpg",
+      "source": "menu-crop",
+      "tag": "hero",
+      "caption": "Crispy chicken tender biscuit on red checker paper",
+      "width": 510,
+      "height": 480
+    },
+    {
+      "file": "menu-croissant.jpg",
+      "source": "menu-crop",
+      "tag": "food-detail",
+      "caption": "Flaky French butter croissant",
+      "width": 510,
+      "height": 500
+    },
+    {
+      "file": "menu-croissant-breakfast.jpg",
+      "source": "menu-crop",
+      "tag": "hero",
+      "caption": "Croissant breakfast sandwich with bacon, egg, and cheese",
+      "width": 510,
+      "height": 500
+    },
+    {
+      "file": "gen-buttermilk-biscuit-hero.jpg",
+      "source": "gpt-image-1",
+      "tag": "hero",
+      "caption": "Tall, golden, hand-rolled buttermilk biscuit (hero shot)",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "file": "gen-breakfast-plate.jpg",
+      "source": "gpt-image-1",
+      "tag": "hero",
+      "caption": "Country breakfast plate with biscuit, eggs, bacon, sausage gravy",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "file": "gen-cafe-interior.jpg",
+      "source": "gpt-image-1",
+      "tag": "interior",
+      "caption": "Cozy small-town Georgia café interior, morning",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "file": "gen-iced-boba-lineup.jpg",
+      "source": "gpt-image-1",
+      "tag": "drink",
+      "caption": "Lineup of three colorful iced boba teas",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "file": "gen-chicken-biscuit-detail.jpg",
+      "source": "gpt-image-1",
+      "tag": "food-detail",
+      "caption": "Crispy chicken tender biscuit close-up on checker paper",
+      "width": 1024,
+      "height": 1024
+    }
+  ]
+}

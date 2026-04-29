@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo, useEffect } from "react";
+import { resolvePhotos } from "./industryImages.js";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -136,52 +137,142 @@ function LogoBadge({ logo, businessName, size = 56, bg = "#fff", color = "#111",
   );
 }
 
-// ─── RESTAURANT-A: The Feast ─────────────────────────────────────────────────
-function RestaurantA({ businessName, tagline, offer, offerFinePrint, address, phone,
-  hours, logo, photos = [], size, accentColor }) {
+// ─── RESTAURANT-A: Hero Photo + Logo Band + Coupon Row + Contact Strip ───────
+// Industry-leading layout for restaurants: full-bleed hero food photo, dark
+// scrim, big serif name with logo badge, 1-2 dashed coupons, and a tight
+// contact strip footer. If no photo is uploaded, we deterministically pick a
+// fallback from the industry library so the ad always looks professional.
+export function RestaurantA({ businessName, tagline, offer, offerFinePrint,
+  offer2, offer2FinePrint, address, phone, hours, website, logo,
+  photos = [], size, accentColor, industry = "Restaurant" }) {
   const f = scaleFactor(size);
-  const heroPhoto = photos[0] || photos[1] || null;
+  const resolved = resolvePhotos(industry, businessName, photos, 1);
+  const heroPhoto = resolved[0];
+  const isLarge = size === "large";
+  const isMedium = size === "medium";
+
+  // Hero band height: keep food the visual hero, leave room for coupons
+  const heroPct = (offer && offer2) ? "50%" : offer ? "55%" : "62%";
+
+  // Coupon helper
+  const Coupon = ({ headline, fineline, sub, accent = "#fde8a0" }) => (
+    <div style={{
+      flex: 1, position: "relative",
+      border: `${1.5 * f}px dashed ${accent}`,
+      borderRadius: 6 * f,
+      padding: `${5 * f}px ${6 * f}px`,
+      background: "rgba(0,0,0,0.32)",
+      textAlign: "center",
+      minWidth: 0,
+    }}>
+      <div style={{ position: "absolute", top: -7 * f, left: "50%",
+        transform: "translateX(-50%)", color: accent,
+        fontSize: 11 * f, lineHeight: 1, background: accentColor, padding: "0 3px" }}>✂</div>
+      <div style={{ color: accent, fontWeight: 900,
+        fontSize: 12 * f, lineHeight: 1.05,
+        fontFamily: "Georgia, serif", letterSpacing: 0.2 }}>
+        {headline}
+      </div>
+      {sub && <div style={{ color: "#fff", fontWeight: 700,
+        fontSize: 8.5 * f, marginTop: 1.5 * f, lineHeight: 1.2 }}>{sub}</div>}
+      {fineline && isLarge && <div style={{ color: "rgba(255,255,255,0.6)",
+        fontSize: 6.5 * f, marginTop: 2.5 * f, lineHeight: 1.25 }}>{fineline}</div>}
+    </div>
+  );
+
   return (
-    <div style={{ ...baseBox, background: "#1a0a08" }}>
-      {heroPhoto && (
-        <div style={{ position: "absolute", inset: 0,
-          backgroundImage: `url(${heroPhoto})`, backgroundSize: "cover", backgroundPosition: "center" }} />
-      )}
-      <div style={{ position: "absolute", inset: 0,
-        background: `linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.85) 100%)` }} />
-      <div style={{ position: "absolute", top: 8 * f, left: 8 * f, zIndex: 2 }}>
-        <LogoBadge logo={logo} businessName={businessName} size={42 * f}
-          bg={accentColor} color={contrastText(accentColor)} border={`2px solid #fff`} />
-      </div>
+    <div style={{ ...baseBox, background: shade(accentColor, -40), color: "#fff" }}>
+      {/* Hero photo band — falls back to a tinted gradient if no photo is available */}
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: heroPct,
+        ...(heroPhoto
+          ? { backgroundImage: `url(${heroPhoto})`,
+              backgroundSize: "cover", backgroundPosition: "center" }
+          : { background: `linear-gradient(135deg, ${shade(accentColor, 10)} 0%, ${shade(accentColor, -25)} 100%)` })
+      }} />
+      {/* Bottom-fade scrim over the hero photo so the title is legible */}
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: heroPct,
+        background: `linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.05) 45%, ${shade(accentColor, -50)} 100%)` }} />
+
+      {/* Phone pill — top right of hero */}
       {phone && (
-        <div style={{ position: "absolute", top: 10 * f, right: 10 * f, zIndex: 2,
-          color: "#fff", fontWeight: 800, fontSize: 11 * f,
-          background: accentColor, padding: `${3 * f}px ${10 * f}px`, borderRadius: 20,
-          boxShadow: "0 2px 6px rgba(0,0,0,0.5)" }}>{phone}</div>
-      )}
-      <div style={{ position: "absolute", left: 0, right: 0, top: "42%",
-        textAlign: "center", padding: `0 ${10 * f}px`, zIndex: 2 }}>
-        <div style={{ color: "#fff", fontWeight: 900, fontSize: 22 * f,
-          fontFamily: "Georgia, serif", lineHeight: 1.1,
-          textShadow: "0 2px 12px rgba(0,0,0,0.8)" }}>{businessName || "Your Restaurant"}</div>
-        {tagline && <div style={{ color: "rgba(255,255,255,0.85)", fontSize: 11 * f,
-          fontStyle: "italic", marginTop: 4 * f }}>{tagline}</div>}
-      </div>
-      {offer && (
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0,
+        <div style={{ position: "absolute", top: 7 * f, right: 7 * f, zIndex: 3,
           background: accentColor, color: contrastText(accentColor),
-          padding: `${8 * f}px ${10 * f}px`, textAlign: "center", zIndex: 2 }}>
-          <div style={{ fontWeight: 900, fontSize: 16 * f, lineHeight: 1.1 }}>{offer}</div>
-          {offerFinePrint && <div style={{ fontSize: 8 * f, opacity: 0.85, marginTop: 2 }}>{offerFinePrint}</div>}
+          padding: `${3 * f}px ${8 * f}px`,
+          borderRadius: 999, fontWeight: 800, fontSize: 9.5 * f,
+          letterSpacing: 0.3,
+          border: "1.5px solid rgba(255,255,255,0.85)",
+          boxShadow: "0 2px 6px rgba(0,0,0,0.4)" }}>
+          ☎ {phone}
         </div>
       )}
-      {(address || hours) && size === "large" && (
-        <div style={{ position: "absolute", bottom: offer ? 50 : 8, left: 0, right: 0,
-          textAlign: "center", color: "rgba(255,255,255,0.7)", fontSize: 9 * f, zIndex: 2 }}>
-          {address && <div>📍 {address}</div>}
-          {hours && <div style={{ marginTop: 1 }}>⏰ {hours}</div>}
+
+      {/* Logo + Business Name band — overlapping bottom of hero */}
+      <div style={{ position: "absolute",
+        top: `calc(${heroPct} - ${22 * f}px)`, left: 0, right: 0, zIndex: 3,
+        display: "flex", alignItems: "center", gap: 8 * f,
+        padding: `0 ${10 * f}px` }}>
+        <LogoBadge logo={logo} businessName={businessName}
+          size={(isLarge ? 50 : isMedium ? 40 : 32) * f}
+          bg="#fff" color={accentColor}
+          border={`2.5px solid ${accentColor}`} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ color: "#fff", fontWeight: 900,
+            fontSize: (isLarge ? 17 : isMedium ? 14 : 11) * f,
+            fontFamily: "Georgia, 'Times New Roman', serif",
+            lineHeight: 1.05, letterSpacing: 0.2,
+            textShadow: "0 2px 8px rgba(0,0,0,0.7)",
+            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {businessName || "Your Restaurant"}
+          </div>
+          {tagline && <div style={{ color: "rgba(255,236,196,0.95)",
+            fontSize: (isLarge ? 9.5 : 8) * f, fontStyle: "italic",
+            fontFamily: "Georgia, serif", marginTop: 1 * f,
+            textShadow: "0 1px 4px rgba(0,0,0,0.6)",
+            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {tagline}
+          </div>}
+        </div>
+      </div>
+
+      {/* Coupon row */}
+      {offer && (
+        <div style={{ position: "absolute", left: 0, right: 0,
+          top: `calc(${heroPct} + ${(isLarge ? 16 : 12) * f}px)`,
+          padding: `0 ${8 * f}px`,
+          display: "flex", gap: 6 * f, zIndex: 2 }}>
+          <Coupon
+            headline={offer}
+            fineline={offerFinePrint}
+            sub={offer2 ? null : "with this card"} />
+          {offer2 && (
+            <Coupon
+              headline={offer2}
+              fineline={offer2FinePrint}
+              sub={null} />
+          )}
         </div>
       )}
+
+      {/* Contact strip — bottom */}
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0,
+        background: shade(accentColor, -55),
+        borderTop: `${1.5 * f}px solid rgba(255,255,255,0.18)`,
+        padding: `${4 * f}px ${8 * f}px`,
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        gap: 6 * f, zIndex: 4 }}>
+        <div style={{ color: "rgba(255,255,255,0.92)",
+          fontSize: (isLarge ? 8.5 : 7.5) * f, fontWeight: 600,
+          lineHeight: 1.25, minWidth: 0, flex: 1 }}>
+          {address && <div style={{ whiteSpace: "nowrap", overflow: "hidden",
+            textOverflow: "ellipsis" }}>📍 {address}</div>}
+          {hours && <div style={{ whiteSpace: "nowrap", overflow: "hidden",
+            textOverflow: "ellipsis", marginTop: 0.5 * f }}>⏰ {hours}</div>}
+        </div>
+        {website && isLarge && (
+          <div style={{ color: "#fde8a0", fontSize: 7.5 * f, fontWeight: 700,
+            whiteSpace: "nowrap" }}>🌐 {website}</div>
+        )}
+      </div>
     </div>
   );
 }
@@ -964,10 +1055,13 @@ function TemplatePreview({ templateId, data, images, size, width, aspectSize }) 
       overflow: "hidden", boxShadow: "0 4px 16px rgba(0,0,0,0.15)" }}>
       <Tpl
         size={size}
+        industry={data.category}
         businessName={data.businessName}
         tagline={data.tagline}
         offer={data.offer}
         offerFinePrint={data.offerFinePrint}
+        offer2={data.offer2}
+        offer2FinePrint={data.offer2FinePrint}
         address={data.address}
         phone={data.phone}
         website={data.website}
@@ -1165,8 +1259,10 @@ function Step1Form({ data, setData, images, setImages, email, setEmail, onNext }
           <ImageSlot slot={2} label="Photo 3" dataUrl={images.photos?.[2]} />
         </div>
         <div style={{ fontSize: 11, color: "#888", marginTop: 8, lineHeight: 1.5 }}>
-          Logos appear as a circular badge. Hero photos can be used as
-          backgrounds in some templates. PNG/JPG, 5MB max.
+          All photos are optional. If you don't upload one, we'll auto-fill
+          empty slots from our industry-matched photo library so your ad
+          always looks polished. Logos appear as a circular badge. PNG/JPG,
+          5MB max.
         </div>
       </div>
 
