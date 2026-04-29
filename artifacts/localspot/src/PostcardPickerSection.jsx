@@ -6,6 +6,56 @@ import AdCreator from "./AdCreator";
 
 const GRID_ORDER = ["mb","dn","re","hv","ins","pz","lw","a1","a2","a3"];
 
+// ─── Permanent house / self-promotion ad ─────────────────────────────────────
+function HouseAd() {
+  return (
+    <div style={{
+      width: "100%", height: "100%",
+      background: "linear-gradient(160deg,#0f1923 0%,#1a2a3a 100%)",
+      display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center",
+      fontFamily: "sans-serif", padding: "6px 5px",
+      boxSizing: "border-box", gap: 2.5, overflow: "hidden",
+    }}>
+      <div style={{ width: "72%", height: 2, background: "#991b1b", borderRadius: 1 }} />
+      <div style={{ color: "#fff", fontWeight: 900, fontSize: 9,
+        textAlign: "center", lineHeight: 1.15, letterSpacing: 0.3 }}>
+        Shop, Dine<br />&amp; Buy Local
+      </div>
+      <div style={{ color: "rgba(255,255,255,0.52)", fontSize: 6.5,
+        textAlign: "center", letterSpacing: 0.8, textTransform: "uppercase" }}>
+        Your Ad Here
+      </div>
+      <div style={{ color: "#fff", fontWeight: 800, fontSize: 8,
+        textAlign: "center", fontFamily: "Georgia,serif", lineHeight: 1.1 }}>
+        My Town Postcard
+      </div>
+      <div style={{ color: "#991b1b", fontSize: 7, fontWeight: 700 }}>
+        mytownpostcard.com
+      </div>
+      <div style={{
+        border: "1.5px dashed rgba(255,255,255,0.3)", borderRadius: 3,
+        padding: "3px 7px", display: "flex", alignItems: "center", gap: 3,
+      }}>
+        <div style={{
+          width: 12, height: 12,
+          border: "1.5px solid rgba(255,255,255,0.45)",
+          borderRadius: 2, flexShrink: 0,
+          display: "grid", gridTemplateColumns: "1fr 1fr",
+          gridTemplateRows: "1fr 1fr", gap: 1.5, padding: 1.5,
+          boxSizing: "border-box",
+        }}>
+          {[0,1,2,3].map(i => (
+            <div key={i} style={{ background: "rgba(255,255,255,0.4)", borderRadius: 0.5 }} />
+          ))}
+        </div>
+        <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 6 }}>QR Code</div>
+      </div>
+      <div style={{ width: "72%", height: 2, background: "#991b1b", borderRadius: 1 }} />
+    </div>
+  );
+}
+
 // Module-level in-memory cache for ad image data (base64).
 // Survives SPA navigation between checkout steps without exhausting the
 // sessionStorage quota. Lost on full page reload, which is acceptable —
@@ -144,6 +194,11 @@ export default function PostcardPickerSection() {
               )}
             </div>
           ))}
+          {/* Permanent house ad — not a sellable spot, no click, not counted */}
+          <div style={{ gridArea: "hs", overflow: "hidden", borderRadius: 0,
+            minWidth: 0, minHeight: 0, cursor: "default", pointerEvents: "none" }}>
+            <HouseAd />
+          </div>
         </div>
 
         {/* EDDM footer strip */}

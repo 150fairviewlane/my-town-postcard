@@ -7,14 +7,16 @@ export const SIZES = {
   small:  { label: "Small",  price: 199, dim: '3" × 2"',  desc: "Affordable local reach" },
 };
 
+// "hs" = permanent house ad (cols 9-10, rows 6-7 — center-right of bottom half).
+// pz and a1 narrowed from 3 cols to 2 cols to make room; lw and a2 unchanged.
 export const GRID_AREAS = [
   "mb mb mb mb dn dn dn dn re re re re",
   "mb mb mb mb dn dn dn dn re re re re",
   "mb mb mb mb dn dn dn dn re re re re",
   "mb mb mb mb dn dn dn dn re re re re",
   "mb mb mb mb dn dn dn dn re re re re",
-  "hv hv hv ins ins ins pz pz pz a1 a1 a1",
-  "hv hv hv ins ins ins pz pz pz a1 a1 a1",
+  "hv hv hv ins ins ins pz pz hs hs a1 a1",
+  "hv hv hv ins ins ins pz pz hs hs a1 a1",
   "hv hv hv ins ins ins lw lw lw a2 a2 a2",
   "hv hv hv ins ins ins lw lw lw a2 a2 a2",
 ].map(r => `"${r}"`).join(" ");
