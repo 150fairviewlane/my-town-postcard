@@ -115,7 +115,7 @@ export default function PostcardPickerSection() {
             📮 Clarkesville Community Mailer
           </div>
           <div style={{ color: "#fca5a5", fontSize: 9 }}>
-            Reaching {campaign.homesCount?.toLocaleString()} Local Homes · Spring 2025
+            Reaching {campaign.homesCount?.toLocaleString()} Local Homes · Spring 2026
           </div>
         </div>
 
