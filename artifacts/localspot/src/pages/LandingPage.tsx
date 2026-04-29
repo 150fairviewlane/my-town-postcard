@@ -360,8 +360,6 @@ const FAQ_ITEMS = [
     a: "Not at all. Professional ad design is included with every spot. Just provide your logo, photos, and key details — we handle the rest." },
   { q: "How big will my ad be on the postcard?",
     a: "Large ads are 4\"×5\", Medium ads are 3\"×4\", and Small ads are 2\"×2\". On the 9\"×12\" postcard, every ad is clearly visible and impactful." },
-  { q: "Will there always be a spot available for my business?",
-    a: "Yes — we maintain a standing rule that at least one spot of each size (Large, Medium, and Small) is always kept open for new advertisers. No matter when you're ready to advertise, you'll always have a selectable option in every size category." },
 ];
 
 function FAQSection() {
