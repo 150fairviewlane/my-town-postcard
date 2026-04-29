@@ -210,10 +210,6 @@ function PostcardBook() {
           fontFamily: "sans-serif" }}>
           Click any <span style={{ color: "#16a34a", fontWeight: 700 }}>green spot</span> on the live postcard below to claim yours.
         </p>
-        <p style={{ textAlign: "center", color: "#888", fontSize: 13, marginBottom: 28,
-          fontFamily: "sans-serif" }}>
-          We always keep at least one spot of each size — Large, Medium, and Small — open for new advertisers.
-        </p>
         <PostcardPickerSection />
       </div>
     </section>
