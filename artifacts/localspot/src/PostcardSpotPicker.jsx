@@ -14,15 +14,17 @@ function formatPrice(price) {
 
 // Grid: 12 cols × 9 rows — each unit = 1 inch, matches the 12"×9" printed postcard
 // Top half (rows 1-5): three large ads side by side
-// Bottom half (rows 6-9): two medium paid + 1 available column (small/medium slots)
+// Bottom half (rows 6-9): two medium paid + small/medium slots + 1 house ad (hs)
+// Note: "hs" is the permanent house ad occupying rows 6-7, cols 9-10 (center-right).
+//       a1 occupies rows 8-9, cols 9-10 (visual small in preview; database size unchanged).
 const GRID_AREAS = [
   "mb mb mb mb dn dn dn dn re re re re",
   "mb mb mb mb dn dn dn dn re re re re",
   "mb mb mb mb dn dn dn dn re re re re",
   "mb mb mb mb dn dn dn dn re re re re",
   "mb mb mb mb dn dn dn dn re re re re",
-  "hv hv hv ins ins ins pz pz a1 a1 a2 a2",
-  "hv hv hv ins ins ins pz pz a1 a1 a2 a2",
+  "hv hv hv ins ins ins pz pz hs hs a2 a2",
+  "hv hv hv ins ins ins pz pz hs hs a2 a2",
   "hv hv hv ins ins ins lw lw a1 a1 a3 a3",
   "hv hv hv ins ins ins lw lw a1 a1 a3 a3",
 ].map(r => `"${r}"`).join(" ");
@@ -200,6 +202,70 @@ function PaidAd({ spot }) {
           {isSmall ? d.phone.replace("(706) ", "") : d.phone}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Permanent house / self-promotion ad ─────────────────────────────────────
+function HouseAd() {
+  return (
+    <div style={{
+      width: "100%", height: "100%",
+      background: "linear-gradient(160deg,#0f1923 0%,#1a2a3a 100%)",
+      display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center",
+      fontFamily: "sans-serif", padding: "5px 5px",
+      boxSizing: "border-box", gap: 2, overflow: "hidden", cursor: "default",
+    }}>
+      {/* Top red rule */}
+      <div style={{ width: "70%", height: 2, background: "#991b1b", borderRadius: 1, marginBottom: 1 }} />
+
+      {/* Main headline */}
+      <div style={{ color: "#fff", fontWeight: 900, fontSize: 8.5,
+        textAlign: "center", lineHeight: 1.15, letterSpacing: 0.3 }}>
+        Shop, Dine<br />&amp; Buy Local
+      </div>
+
+      {/* Subhead */}
+      <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 6,
+        textAlign: "center", letterSpacing: 0.5, textTransform: "uppercase" }}>
+        Your Ad Here
+      </div>
+
+      {/* Brand name */}
+      <div style={{ color: "#fff", fontWeight: 800, fontSize: 7.5,
+        textAlign: "center", fontFamily: "Georgia,serif", lineHeight: 1.1 }}>
+        My Town Postcard
+      </div>
+
+      {/* URL */}
+      <div style={{ color: "#991b1b", fontSize: 6.5, fontWeight: 700 }}>
+        mytownpostcard.com
+      </div>
+
+      {/* QR code placeholder */}
+      <div style={{
+        border: "1.5px dashed rgba(255,255,255,0.3)", borderRadius: 3,
+        padding: "3px 6px", marginTop: 1,
+        display: "flex", alignItems: "center", gap: 3,
+      }}>
+        <div style={{
+          width: 11, height: 11,
+          border: "1.5px solid rgba(255,255,255,0.45)",
+          borderRadius: 2, flexShrink: 0,
+          display: "grid", gridTemplateColumns: "1fr 1fr",
+          gridTemplateRows: "1fr 1fr", gap: 1.5, padding: 1.5,
+          boxSizing: "border-box",
+        }}>
+          {[...Array(4)].map((_, i) => (
+            <div key={i} style={{ background: "rgba(255,255,255,0.4)", borderRadius: 0.5 }} />
+          ))}
+        </div>
+        <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 5.5 }}>QR Code</div>
+      </div>
+
+      {/* Bottom red rule */}
+      <div style={{ width: "70%", height: 2, background: "#991b1b", borderRadius: 1, marginTop: 1 }} />
     </div>
   );
 }
@@ -464,6 +530,11 @@ export default function PostcardSpotPicker() {
                 )}
               </div>
             ))}
+            {/* Permanent house ad — not a sellable spot, no click, not counted */}
+            <div style={{ gridArea: "hs", overflow: "hidden", borderRadius: 3,
+              minWidth: 0, minHeight: 0, cursor: "default", pointerEvents: "none" }}>
+              <HouseAd />
+            </div>
           </div>
 
           {/* EDDM footer strip */}
