@@ -1,5 +1,5 @@
 import { useState, useRef, useMemo, useEffect } from "react";
-import { resolvePhotos, pickFallbackPhoto } from "./industryImages.js";
+import { pickFallbackPhoto } from "./industryImages.js";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
