@@ -175,7 +175,7 @@ export default function PostcardPickerSection() {
         <AdCreator
           spotId={creatorSpot.id}
           spotSize={creatorSpot.size}
-          spotPrice={creatorSpot.price}
+          spotPrice={Math.round(creatorSpot.price / 100)}
           onComplete={handleAdComplete}
           onClose={closeCreator}
           isLoading={reserveMutation.isPending}
