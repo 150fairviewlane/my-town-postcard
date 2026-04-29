@@ -1,5 +1,5 @@
 import { useState, useRef, useMemo, useEffect } from "react";
-import { resolvePhotos } from "./industryImages.js";
+import { resolvePhotos, pickFallbackPhoto } from "./industryImages.js";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -149,8 +149,11 @@ export function RestaurantA({ businessName, tagline, offer, offerFinePrint,
   offer2, offer2FinePrint, address, phone, hours, website, logo,
   photos = [], size, accentColor, industry = "Restaurant" }) {
   const f = scaleFactor(size);
-  const resolved = resolvePhotos(industry, businessName, photos, 1);
-  const heroPhoto = resolved[0];
+  // Hero uses the first uploaded photo from any slot (so a customer who
+  // uploads only Photo 2 or 3 still overrides the fallback). If nothing
+  // was uploaded at all, fall back to a deterministic library photo.
+  const userHero = (photos || []).find(p => p);
+  const heroPhoto = userHero || pickFallbackPhoto(industry, businessName, "hero", 0);
   const isLarge = size === "large";
   const isMedium = size === "medium";
 
