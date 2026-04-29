@@ -97,7 +97,7 @@ export default function PostcardPickerSection() {
   return (
     <div style={{ fontFamily: "sans-serif" }}>
       {/* Postcard card */}
-      <div style={{ background: "#fff", borderRadius: 12, padding: "10px 10px 6px",
+      <div style={{ background: "#000", borderRadius: 12, padding: "10px 10px 6px",
         boxShadow: "0 16px 56px rgba(0,0,0,0.18)", position: "relative" }}>
 
         {/* Label chip */}
@@ -127,10 +127,11 @@ export default function PostcardPickerSection() {
           gridTemplateColumns: "repeat(12, 1fr)",
           gridTemplateRows: "repeat(9, 1fr)",
           gridTemplateAreas: GRID_AREAS,
-          gap: "3px",
+          gap: "6px",
+          background: "#000",
         }}>
           {sortedSpots.map(spot => (
-            <div key={spot.id} style={{ gridArea: spot.gridArea, overflow: "hidden", borderRadius: 3,
+            <div key={spot.id} style={{ gridArea: spot.gridArea, overflow: "hidden", borderRadius: 0,
               minWidth: 0, minHeight: 0 }}>
               {(spot.status === "paid" || spot.status === "reserved") ? (
                 <PaidAd spot={spot} />
@@ -146,10 +147,10 @@ export default function PostcardPickerSection() {
         </div>
 
         {/* EDDM footer strip */}
-        <div style={{ marginTop: 3, padding: "3px 12px", background: "#f8fafc",
+        <div style={{ marginTop: 3, padding: "3px 12px", background: "#000",
           borderRadius: "0 0 6px 6px", display: "flex", justifyContent: "space-between" }}>
-          <div style={{ fontSize: 7.5, color: "#9ca3af" }}>LOCAL POSTAL CUSTOMER · EDDM</div>
-          <div style={{ fontSize: 7.5, color: "#9ca3af" }}>
+          <div style={{ fontSize: 7.5, color: "#666" }}>LOCAL POSTAL CUSTOMER · EDDM</div>
+          <div style={{ fontSize: 7.5, color: "#666" }}>
             PRESORTED STD · U.S. POSTAGE PAID · CLARKESVILLE GA {campaign.zipCode}
           </div>
         </div>
