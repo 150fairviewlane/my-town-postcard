@@ -1,14 +1,21 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useGetActiveCampaign, useReserveSpot } from "@workspace/api-client-react";
-import { GRID_AREAS, PaidAd, AvailableSpot, Modal } from "./postcardCore";
+import { GRID_AREAS, PaidAd, AvailableSpot } from "./postcardCore";
+import AdCreator from "./AdCreator";
 
 const GRID_ORDER = ["mb","dn","re","hv","ins","pz","lw","a1","a2","a3"];
+
+// Module-level in-memory cache for ad image data (base64).
+// Survives SPA navigation between checkout steps without exhausting the
+// sessionStorage quota. Lost on full page reload, which is acceptable —
+// the upload page collects images again at that point.
+export const AD_IMAGE_CACHE = new Map();
 
 export default function PostcardPickerSection() {
   const [, navigate] = useLocation();
   const [selected, setSelected] = useState(null);
-  const [modal, setModal] = useState(null);
+  const [creatorSpot, setCreatorSpot] = useState(null);
   const [reserveError, setReserveError] = useState(null);
 
   const { data: campaign, isLoading } = useGetActiveCampaign();
@@ -31,24 +38,42 @@ export default function PostcardPickerSection() {
   }
 
   const spots = campaign.spots || [];
-  const openSpots = spots.filter(s => s.status === "available");
   const sortedSpots = [...spots].sort((a, b) =>
     (GRID_ORDER.indexOf(a.gridArea) ?? 99) - (GRID_ORDER.indexOf(b.gridArea) ?? 99)
   );
 
-  const handleSubmit = async (form) => {
+  const handleAdComplete = async (payload) => {
     setReserveError(null);
     try {
       const result = await reserveMutation.mutateAsync({
-        id: modal.id,
+        id: creatorSpot.id,
         data: {
-          businessName: form.biz,
-          businessCategory: form.cat,
-          contactEmail: form.email,
-          contactPhone: form.phone || undefined,
+          businessName: payload.businessName,
+          businessCategory: payload.category,
+          contactEmail: payload.email,
+          contactPhone: payload.phone || undefined,
         },
       });
-      setModal(null);
+
+      // Persist the ad design data so checkout/upload pages can use it later.
+      // Only store small text (templateId + adData) in sessionStorage; base64
+      // images can easily blow the 5–10MB sessionStorage quota, so we cache
+      // them in module-level memory instead (survives SPA navigation, lost on
+      // full reload — the upload page will re-collect them in that case).
+      try {
+        sessionStorage.setItem(
+          `localspot:ad:${result.id}`,
+          JSON.stringify({
+            templateId: payload.templateId,
+            adData: payload.adData,
+          })
+        );
+      } catch {
+        // sessionStorage may be unavailable — non-fatal
+      }
+      AD_IMAGE_CACHE.set(result.id, payload.imageData);
+
+      setCreatorSpot(null);
       setSelected(null);
       navigate(`/checkout/${result.id}`);
     } catch (err) {
@@ -56,7 +81,18 @@ export default function PostcardPickerSection() {
     }
   };
 
-  const openModal = (spot) => { setSelected(spot); setModal(spot); setReserveError(null); };
+  const openCreator = (spot) => {
+    setSelected(spot);
+    setCreatorSpot(spot);
+    setReserveError(null);
+  };
+
+  const closeCreator = () => {
+    if (reserveMutation.isPending) return;
+    setCreatorSpot(null);
+    setSelected(null);
+    setReserveError(null);
+  };
 
   return (
     <div style={{ fontFamily: "sans-serif" }}>
@@ -102,7 +138,7 @@ export default function PostcardPickerSection() {
                 <AvailableSpot
                   spot={spot}
                   isSelected={selected?.id === spot.id}
-                  onClick={() => openModal(spot)}
+                  onClick={() => openCreator(spot)}
                 />
               )}
             </div>
@@ -134,12 +170,14 @@ export default function PostcardPickerSection() {
         ))}
       </div>
 
-      {/* Modal */}
-      {modal && (
-        <Modal
-          spot={modal}
-          onClose={() => { setModal(null); setSelected(null); setReserveError(null); }}
-          onSubmit={handleSubmit}
+      {/* Ad Creator (replaces the old reservation modal) */}
+      {creatorSpot && (
+        <AdCreator
+          spotId={creatorSpot.id}
+          spotSize={creatorSpot.size}
+          spotPrice={creatorSpot.price}
+          onComplete={handleAdComplete}
+          onClose={closeCreator}
           isLoading={reserveMutation.isPending}
           error={reserveError}
         />
