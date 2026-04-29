@@ -408,9 +408,8 @@ function ReserveForm() {
 
   return (
     <section style={{ background: "#f9f9f9", padding: "80px 32px" }}>
-      <div style={{ maxWidth: 900, margin: "0 auto", display: "flex",
-        alignItems: "flex-start", gap: 64, flexWrap: "wrap" }}>
-        <div style={{ flex: "1 1 340px", background: "#fff", borderRadius: 16,
+      <div style={{ maxWidth: 520, margin: "0 auto" }}>
+        <div style={{ background: "#fff", borderRadius: 16,
           padding: "36px 32px", boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
           {sent ? (
             <div style={{ textAlign: "center", padding: "40px 0" }}>
@@ -463,15 +462,6 @@ function ReserveForm() {
           )}
         </div>
 
-        <div style={{ flex: "1 1 240px", paddingTop: 24, textAlign: "center" }}>
-          <img src={`${import.meta.env.BASE_URL}mr-biscuits-logo.jpg`}
-            alt="Mr. Biscuit's Cafe — sample advertiser"
-            style={{ width: 220, height: 220, borderRadius: "50%", objectFit: "cover",
-              boxShadow: "0 8px 32px rgba(0,0,0,0.15)", display: "block", margin: "0 auto 16px" }} />
-          <p style={{ color: "#888", fontSize: 13, fontFamily: "sans-serif", lineHeight: 1.5 }}>
-            Mr. Biscuit's Café — one of our featured advertisers on the Spring 2025 postcard.
-          </p>
-        </div>
       </div>
     </section>
   );
