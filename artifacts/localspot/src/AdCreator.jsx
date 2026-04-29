@@ -141,141 +141,146 @@ function LogoBadge({ logo, businessName, size = 56, bg = "#fff", color = "#111",
 }
 
 // ─── RESTAURANT-A: Hero Photo + Logo Band + Coupon Row + Contact Strip ───────
-// Industry-leading layout for restaurants: full-bleed hero food photo, dark
-// scrim, big serif name with logo badge, 1-2 dashed coupons, and a tight
-// contact strip footer. If no photo is uploaded, we deterministically pick a
-// fallback from the industry library so the ad always looks professional.
+// Flex-column layout so every pixel is filled: hero band, name/logo row,
+// coupon block (flex:1 — fills all remaining space), contact strip footer.
 export function RestaurantA({ businessName, tagline, offer, offerFinePrint,
   offer2, offer2FinePrint, address, phone, hours, website, logo,
   photos = [], size, accentColor, industry = "Restaurant" }) {
   const f = scaleFactor(size);
-  // Hero uses the first uploaded photo from any slot (so a customer who
-  // uploads only Photo 2 or 3 still overrides the fallback). If nothing
-  // was uploaded at all, fall back to a deterministic library photo.
   const userHero = (photos || []).find(p => p);
   const heroPhoto = userHero || pickFallbackPhoto(industry, businessName, "hero", 0);
   const isLarge = size === "large";
   const isMedium = size === "medium";
+  const darkBg = shade(accentColor, -45);
+  const deepBg = shade(accentColor, -60);
 
-  // Hero band height: keep food the visual hero, leave room for coupons
-  const heroPct = (offer && offer2) ? "50%" : offer ? "55%" : "62%";
+  // Hero height: taller when no coupons, shorter when 2 coupons so coupon area is generous
+  const heroFlex = (offer && offer2) ? "0 0 36%" : offer ? "0 0 42%" : "0 0 52%";
 
-  // Coupon helper
-  const Coupon = ({ headline, fineline, sub, accent = "#fde8a0" }) => (
+  const Coupon = ({ headline, fineline }) => (
     <div style={{
-      flex: 1, position: "relative",
-      border: `${1.5 * f}px dashed ${accent}`,
-      borderRadius: 6 * f,
-      padding: `${5 * f}px ${6 * f}px`,
-      background: "rgba(0,0,0,0.32)",
+      flex: 1,
+      position: "relative",
+      border: `${2 * f}px dashed rgba(253,232,160,0.75)`,
+      borderRadius: 5 * f,
+      padding: `${6 * f}px ${7 * f}px`,
+      background: "rgba(0,0,0,0.38)",
       textAlign: "center",
       minWidth: 0,
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 3 * f,
     }}>
-      <div style={{ position: "absolute", top: -7 * f, left: "50%",
-        transform: "translateX(-50%)", color: accent,
-        fontSize: 11 * f, lineHeight: 1, background: accentColor, padding: "0 3px" }}>✂</div>
-      <div style={{ color: accent, fontWeight: 900,
-        fontSize: 12 * f, lineHeight: 1.05,
-        fontFamily: "Georgia, serif", letterSpacing: 0.2 }}>
+      {/* Scissors notch */}
+      <div style={{ position: "absolute", top: -8 * f, left: "50%",
+        transform: "translateX(-50%)", color: "#fde8a0",
+        fontSize: 10 * f, lineHeight: 1, background: deepBg, padding: "0 4px" }}>✂</div>
+
+      <div style={{ color: "#fde8a0", fontWeight: 900,
+        fontSize: (isLarge ? 19 : isMedium ? 15 : 11) * f,
+        lineHeight: 1.0, fontFamily: "Georgia, serif", letterSpacing: 0.3 }}>
         {headline}
       </div>
-      {sub && <div style={{ color: "#fff", fontWeight: 700,
-        fontSize: 8.5 * f, marginTop: 1.5 * f, lineHeight: 1.2 }}>{sub}</div>}
-      {fineline && isLarge && <div style={{ color: "rgba(255,255,255,0.6)",
-        fontSize: 6.5 * f, marginTop: 2.5 * f, lineHeight: 1.25 }}>{fineline}</div>}
+      {fineline && (
+        <div style={{ color: "rgba(255,255,255,0.75)", fontWeight: 600,
+          fontSize: (isLarge ? 8 : 7) * f, lineHeight: 1.3,
+          marginTop: 1 * f }}>
+          {fineline}
+        </div>
+      )}
+      <div style={{ color: "rgba(255,255,255,0.5)",
+        fontSize: (isLarge ? 7 : 6) * f, fontStyle: "italic", marginTop: 1 * f }}>
+        with this postcard
+      </div>
     </div>
   );
 
   return (
-    <div style={{ ...baseBox, background: shade(accentColor, -40), color: "#fff" }}>
-      {/* Hero photo band — falls back to a tinted gradient if no photo is available */}
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: heroPct,
-        ...(heroPhoto
-          ? { backgroundImage: `url(${heroPhoto})`,
-              backgroundSize: "cover", backgroundPosition: "center" }
-          : { background: `linear-gradient(135deg, ${shade(accentColor, 10)} 0%, ${shade(accentColor, -25)} 100%)` })
-      }} />
-      {/* Bottom-fade scrim over the hero photo so the title is legible */}
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: heroPct,
-        background: `linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.05) 45%, ${shade(accentColor, -50)} 100%)` }} />
+    <div style={{ ...baseBox, background: darkBg, color: "#fff",
+      display: "flex", flexDirection: "column" }}>
 
-      {/* Phone pill — top right of hero */}
-      {phone && (
-        <div style={{ position: "absolute", top: 7 * f, right: 7 * f, zIndex: 3,
-          background: accentColor, color: contrastText(accentColor),
-          padding: `${3 * f}px ${8 * f}px`,
-          borderRadius: 999, fontWeight: 800, fontSize: 9.5 * f,
-          letterSpacing: 0.3,
-          border: "1.5px solid rgba(255,255,255,0.85)",
-          boxShadow: "0 2px 6px rgba(0,0,0,0.4)" }}>
-          ☎ {phone}
-        </div>
-      )}
+      {/* ── HERO BAND ── full-bleed food photo */}
+      <div style={{ flex: heroFlex, position: "relative", overflow: "hidden", flexShrink: 0 }}>
+        <div style={{ position: "absolute", inset: 0,
+          ...(heroPhoto
+            ? { backgroundImage: `url(${heroPhoto})`,
+                backgroundSize: "cover", backgroundPosition: "center" }
+            : { background: `linear-gradient(135deg, ${shade(accentColor, 10)}, ${shade(accentColor, -20)})` })
+        }} />
+        {/* bottom fade into the dark bg */}
+        <div style={{ position: "absolute", inset: 0,
+          background: `linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0) 50%, ${darkBg} 100%)` }} />
+        {/* Phone pill top-right */}
+        {phone && (
+          <div style={{ position: "absolute", top: 5 * f, right: 6 * f,
+            background: accentColor, color: contrastText(accentColor),
+            padding: `${2 * f}px ${7 * f}px`, borderRadius: 999,
+            fontWeight: 800, fontSize: 9 * f, letterSpacing: 0.3,
+            border: "1.5px solid rgba(255,255,255,0.8)",
+            boxShadow: "0 2px 5px rgba(0,0,0,0.45)", zIndex: 2 }}>
+            ☎ {phone}
+          </div>
+        )}
+      </div>
 
-      {/* Logo + Business Name band — overlapping bottom of hero */}
-      <div style={{ position: "absolute",
-        top: `calc(${heroPct} - ${22 * f}px)`, left: 0, right: 0, zIndex: 3,
-        display: "flex", alignItems: "center", gap: 8 * f,
-        padding: `0 ${10 * f}px` }}>
+      {/* ── LOGO + NAME ROW ── sits just below the hero */}
+      <div style={{ flexShrink: 0,
+        display: "flex", alignItems: "center", gap: 7 * f,
+        padding: `${5 * f}px ${9 * f}px`,
+        background: shade(accentColor, -50),
+        borderBottom: `${1 * f}px solid rgba(255,255,255,0.12)` }}>
         <LogoBadge logo={logo} businessName={businessName}
-          size={(isLarge ? 50 : isMedium ? 40 : 32) * f}
+          size={(isLarge ? 44 : isMedium ? 34 : 26) * f}
           bg="#fff" color={accentColor}
-          border={`2.5px solid ${accentColor}`} />
+          border={`2px solid ${accentColor}`} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ color: "#fff", fontWeight: 900,
-            fontSize: (isLarge ? 17 : isMedium ? 14 : 11) * f,
-            fontFamily: "Georgia, 'Times New Roman', serif",
-            lineHeight: 1.05, letterSpacing: 0.2,
-            textShadow: "0 2px 8px rgba(0,0,0,0.7)",
-            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {businessName || "Your Restaurant"}
+            fontSize: (isLarge ? 15 : isMedium ? 12 : 9.5) * f,
+            fontFamily: "Georgia, serif", lineHeight: 1.1,
+            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+            textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>
+            {businessName || "Your Business"}
           </div>
-          {tagline && <div style={{ color: "rgba(255,236,196,0.95)",
-            fontSize: (isLarge ? 9.5 : 8) * f, fontStyle: "italic",
-            fontFamily: "Georgia, serif", marginTop: 1 * f,
-            textShadow: "0 1px 4px rgba(0,0,0,0.6)",
-            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {tagline}
-          </div>}
+          {tagline && (
+            <div style={{ color: "rgba(253,232,160,0.9)",
+              fontSize: (isLarge ? 8.5 : 7.5) * f, fontStyle: "italic",
+              fontFamily: "Georgia, serif", marginTop: 1 * f,
+              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {tagline}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Coupon row */}
+      {/* ── COUPON BLOCK ── fills all remaining space */}
       {offer && (
-        <div style={{ position: "absolute", left: 0, right: 0,
-          top: `calc(${heroPct} + ${(isLarge ? 16 : 12) * f}px)`,
-          padding: `0 ${8 * f}px`,
-          display: "flex", gap: 6 * f, zIndex: 2 }}>
-          <Coupon
-            headline={offer}
-            fineline={offerFinePrint}
-            sub={offer2 ? null : "with this card"} />
-          {offer2 && (
-            <Coupon
-              headline={offer2}
-              fineline={offer2FinePrint}
-              sub={null} />
-          )}
+        <div style={{ flex: 1, minHeight: 0,
+          display: "flex", gap: 6 * f,
+          padding: `${8 * f}px ${8 * f}px`,
+          alignItems: "stretch" }}>
+          <Coupon headline={offer} fineline={offerFinePrint} />
+          {offer2 && <Coupon headline={offer2} fineline={offer2FinePrint} />}
         </div>
       )}
 
-      {/* Contact strip — bottom */}
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0,
-        background: shade(accentColor, -55),
-        borderTop: `${1.5 * f}px solid rgba(255,255,255,0.18)`,
-        padding: `${4 * f}px ${8 * f}px`,
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        gap: 6 * f, zIndex: 4 }}>
-        <div style={{ color: "rgba(255,255,255,0.92)",
-          fontSize: (isLarge ? 8.5 : 7.5) * f, fontWeight: 600,
-          lineHeight: 1.25, minWidth: 0, flex: 1 }}>
+      {/* ── CONTACT STRIP ── pinned at the very bottom */}
+      <div style={{ flexShrink: 0,
+        background: deepBg,
+        borderTop: `${1 * f}px solid rgba(255,255,255,0.15)`,
+        padding: `${3 * f}px ${8 * f}px`,
+        display: "flex", alignItems: "center", justifyContent: "space-between", gap: 5 * f }}>
+        <div style={{ color: "rgba(255,255,255,0.85)",
+          fontSize: (isLarge ? 8 : 7) * f, fontWeight: 600,
+          lineHeight: 1.3, minWidth: 0, flex: 1 }}>
           {address && <div style={{ whiteSpace: "nowrap", overflow: "hidden",
             textOverflow: "ellipsis" }}>📍 {address}</div>}
           {hours && <div style={{ whiteSpace: "nowrap", overflow: "hidden",
-            textOverflow: "ellipsis", marginTop: 0.5 * f }}>⏰ {hours}</div>}
+            textOverflow: "ellipsis", marginTop: 1 * f }}>⏰ {hours}</div>}
         </div>
         {website && isLarge && (
-          <div style={{ color: "#fde8a0", fontSize: 7.5 * f, fontWeight: 700,
+          <div style={{ color: "#fde8a0", fontSize: 7 * f, fontWeight: 700,
             whiteSpace: "nowrap" }}>🌐 {website}</div>
         )}
       </div>
