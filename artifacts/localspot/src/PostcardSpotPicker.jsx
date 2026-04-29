@@ -8,6 +8,10 @@ const SIZES = {
   small:  { label: "Small",  price: 199, dim: '2" × 2"',  desc: "Affordable local reach" },
 };
 
+function formatPrice(price) {
+  return `$${price}`;
+}
+
 // Grid: 12 cols × 9 rows — each unit = 1 inch, matches the 12"×9" printed postcard
 // Top half (rows 1-5): three large ads side by side
 // Bottom half (rows 6-9): two medium paid + 1 available column (small/medium slots)
@@ -219,8 +223,8 @@ function AvailableSpot({ spot, isSelected, onClick }) {
         color: isSelected ? "#92400e" : "#15803d", fontFamily: "sans-serif", lineHeight: 1.2 }}>
         {isSelected ? "SELECTED" : sz.label + " Spot"}
       </div>
-      <div style={{ fontSize: isSmall ? 10 : 14, color: isSelected ? "#b45309" : "#166534",
-        fontWeight: 900, fontFamily: "sans-serif" }}>${sz.price}</div>
+        <div style={{ fontSize: isSmall ? 10 : 14, color: isSelected ? "#b45309" : "#166534",
+        fontWeight: 900, fontFamily: "sans-serif" }}>{formatPrice(sz.price)}</div>
       {!isSmall && (
         <div style={{ fontSize: 9, color: "#6b7280", fontFamily: "sans-serif" }}>{sz.dim}</div>
       )}
@@ -246,7 +250,7 @@ function Modal({ spot, onClose, onSubmit, isLoading, error }) {
               {sz.label} Ad · {sz.dim}
             </div>
             <div style={{ fontSize: 36, fontWeight: 900, color: "#111", fontFamily: "Georgia,serif", lineHeight: 1 }}>
-              ${sz.price}
+              {formatPrice(sz.price)}
             </div>
             <div style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>
               Reaches 5,000 Clarkesville-area homes
@@ -286,7 +290,7 @@ function Modal({ spot, onClose, onSubmit, isLoading, error }) {
           color: "#fff", fontSize: 15, fontWeight: 800,
           cursor: ok && !isLoading ? "pointer" : "not-allowed", fontFamily: "sans-serif",
         }}>
-          {isLoading ? "Reserving..." : `Reserve This Spot — $${sz.price}`}
+          {isLoading ? "Reserving..." : `Reserve This Spot — ${formatPrice(sz.price)}`}
         </button>
         <p style={{ textAlign: "center", fontSize: 11, color: "#9ca3af", margin: "10px 0 0" }}>
           No charge now. You'll pay on the next screen.
@@ -502,7 +506,7 @@ export default function PostcardSpotPicker() {
                   <div style={{ fontWeight: 700, fontSize: 13.5, color: "#111" }}>{sz.label}</div>
                   <div style={{ fontSize: 11.5, color: "#9ca3af" }}>{sz.dim} · {sz.desc}</div>
                 </div>
-                <div style={{ fontWeight: 900, fontSize: 20, color: "#991b1b" }}>${sz.price}</div>
+                <div style={{ fontWeight: 900, fontSize: 20, color: "#991b1b" }}>{formatPrice(sz.price)}</div>
               </div>
             ))}
             <div style={{ marginTop: 12, fontSize: 12, color: "#6b7280", lineHeight: 1.6 }}>
