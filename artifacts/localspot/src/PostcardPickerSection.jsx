@@ -127,7 +127,7 @@ export default function PostcardPickerSection() {
           gridTemplateColumns: "repeat(12, 1fr)",
           gridTemplateRows: "repeat(9, 1fr)",
           gridTemplateAreas: GRID_AREAS,
-          gap: "6px",
+          gap: "10px",
           background: "#000",
         }}>
           {sortedSpots.map(spot => (
