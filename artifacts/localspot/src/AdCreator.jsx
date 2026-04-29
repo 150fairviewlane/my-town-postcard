@@ -289,744 +289,1037 @@ export function RestaurantA({ businessName, tagline, offer, offerFinePrint,
 }
 
 // ─── RESTAURANT-B: The Board (chalkboard) ────────────────────────────────────
-function RestaurantB({ businessName, tagline, offer, offerFinePrint, address, phone, hours,
-  logo, size, accentColor }) {
+function RestaurantB({ businessName, tagline, offer, offerFinePrint, offer2, offer2FinePrint,
+  address, phone, hours, logo, photos = [], size, accentColor, industry = "Restaurant" }) {
   const f = scaleFactor(size);
+  const isL = size === "large";
+  const heroPhoto = (photos || []).find(p => p) || pickFallbackPhoto(industry, businessName, "hero", 0);
+  const chalkBg = "radial-gradient(ellipse at center, #2d3a2d 0%, #1a2118 100%)";
   return (
-    <div style={{ ...baseBox,
-      background: "radial-gradient(ellipse at center, #2d3a2d 0%, #1a2118 100%)",
-      border: `${4 * f}px solid #4a3520`, color: "#f5f1e6" }}>
-      <div style={{ position: "absolute", inset: 0, opacity: 0.05,
+    <div style={{ ...baseBox, background: chalkBg, color: "#f5f1e6", display: "flex", flexDirection: "column" }}>
+      <div style={{ position: "absolute", inset: 0, opacity: 0.04,
         backgroundImage: "repeating-linear-gradient(45deg, #fff 0px, #fff 1px, transparent 1px, transparent 6px)",
-        pointerEvents: "none" }} />
-      <div style={{ position: "relative", padding: `${10 * f}px ${10 * f}px`,
-        textAlign: "center", display: "flex", flexDirection: "column",
-        alignItems: "center", height: "100%", boxSizing: "border-box" }}>
-        <LogoBadge logo={logo} businessName={businessName} size={50 * f}
-          bg="#f5f1e6" color="#1a2118" border="3px solid #f5f1e6" />
-        <div style={{ width: "85%", height: 1, background: "rgba(245,241,230,0.4)",
-          margin: `${6 * f}px 0` }} />
-        <div style={{ color: "#f5f1e6", fontWeight: 900, fontSize: 18 * f,
-          fontFamily: "'Caveat', 'Comic Sans MS', cursive, Georgia, serif", lineHeight: 1.1 }}>
-          {businessName || "Your Restaurant"}
-        </div>
-        {tagline && <div style={{ color: "#d4c896", fontSize: 11 * f, fontStyle: "italic",
-          marginTop: 3 * f, fontFamily: "Georgia, serif" }}>~ {tagline} ~</div>}
-        <div style={{ width: "60%", height: 1, background: "rgba(245,241,230,0.25)",
-          margin: `${6 * f}px 0` }} />
-        {offer && (
-          <div style={{ marginTop: "auto", border: `2px dashed ${accentColor === "#fff" ? "#d4c896" : "#d4c896"}`,
-            borderRadius: 6, padding: `${5 * f}px ${10 * f}px`, background: "rgba(0,0,0,0.25)",
-            color: "#f5f1e6", fontWeight: 900, fontSize: 13 * f, lineHeight: 1.2 }}>
-            {offer}
-            {offerFinePrint && <div style={{ fontSize: 8 * f, fontWeight: 400,
-              opacity: 0.7, marginTop: 2 }}>{offerFinePrint}</div>}
+        pointerEvents: "none", zIndex: 0 }} />
+      {/* Hero photo */}
+      <div style={{ flex: "0 0 38%", position: "relative", overflow: "hidden", flexShrink: 0, zIndex: 1 }}>
+        <div style={{ position: "absolute", inset: 0,
+          backgroundImage: `url(${heroPhoto})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+        <div style={{ position: "absolute", inset: 0,
+          background: "linear-gradient(180deg, rgba(0,0,0,0.08) 0%, rgba(26,33,24,0.92) 100%)" }} />
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0,
+          padding: `${4 * f}px ${8 * f}px`, display: "flex", alignItems: "center", gap: 6 * f }}>
+          <LogoBadge logo={logo} businessName={businessName}
+            size={(isL ? 36 : 28) * f} bg="#f5f1e6" color="#1a2118" border="2px solid #d4c896" />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ color: "#f5f1e6", fontWeight: 900, fontSize: (isL ? 15 : 12) * f,
+              fontFamily: "'Caveat', cursive, Georgia, serif", lineHeight: 1.1,
+              textShadow: "0 1px 4px rgba(0,0,0,0.8)", whiteSpace: "nowrap",
+              overflow: "hidden", textOverflow: "ellipsis" }}>
+              {businessName || "Your Restaurant"}
+            </div>
+            {tagline && <div style={{ color: "#d4c896", fontSize: (isL ? 8 : 7) * f,
+              fontStyle: "italic", fontFamily: "Georgia, serif" }}>~ {tagline} ~</div>}
           </div>
-        )}
-        <div style={{ marginTop: 6 * f, fontSize: 10 * f, color: "#d4c896", lineHeight: 1.4 }}>
-          {phone && <div style={{ fontWeight: 700 }}>☎ {phone}</div>}
-          {address && size === "large" && <div>{address}</div>}
-          {hours && size === "large" && <div>{hours}</div>}
         </div>
+      </div>
+      {/* Coupon area */}
+      <div style={{ flex: 1, minHeight: 0, display: "flex", gap: 6 * f,
+        padding: `${7 * f}px ${8 * f}px`, alignItems: "stretch", position: "relative", zIndex: 1 }}>
+        {[{ h: offer, fp: offerFinePrint }, ...(offer2 ? [{ h: offer2, fp: offer2FinePrint }] : [])].map(({ h, fp }, i) => h && (
+          <div key={i} style={{ flex: 1, position: "relative",
+            border: "2px dashed rgba(212,200,150,0.7)", borderRadius: 5 * f,
+            background: "rgba(0,0,0,0.3)", display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center", padding: `${6 * f}px ${5 * f}px`, gap: 3 * f }}>
+            <div style={{ position: "absolute", top: -9 * f, left: "50%", transform: "translateX(-50%)",
+              color: "#d4c896", fontSize: 11 * f, background: "#1a2118", padding: "0 4px" }}>✂</div>
+            <div style={{ color: "rgba(212,200,150,0.9)", fontSize: (isL ? 7.5 : 6.5) * f,
+              letterSpacing: 2, textTransform: "uppercase", fontFamily: "sans-serif" }}>Bring This Ad</div>
+            <div style={{ color: "#fff", fontWeight: 900, fontSize: (isL ? 21 : 16) * f,
+              lineHeight: 1, fontFamily: "'Caveat', cursive, Georgia, serif", textAlign: "center" }}>{h}</div>
+            {fp && <div style={{ color: "rgba(245,241,230,0.65)", fontSize: (isL ? 7.5 : 6.5) * f,
+              textAlign: "center", fontFamily: "sans-serif", lineHeight: 1.3 }}>{fp}</div>}
+            <div style={{ color: "rgba(212,200,150,0.5)", fontSize: (isL ? 7 : 6) * f,
+              fontFamily: "sans-serif", fontStyle: "italic" }}>with this postcard</div>
+          </div>
+        ))}
+      </div>
+      {/* Footer */}
+      <div style={{ flexShrink: 0, position: "relative", zIndex: 1,
+        background: "rgba(0,0,0,0.45)", padding: `${3 * f}px ${8 * f}px`,
+        display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        {phone && <div style={{ color: "#d4c896", fontWeight: 700, fontSize: (isL ? 7.5 : 7) * f }}>☎ {phone}</div>}
+        {address && <div style={{ color: "rgba(212,200,150,0.7)", fontSize: 7 * f,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "60%" }}>📍 {address}</div>}
       </div>
     </div>
   );
 }
 
 // ─── RESTAURANT-C: The Fresh ─────────────────────────────────────────────────
-function RestaurantC({ businessName, tagline, offer, offerFinePrint, address, phone, hours,
-  logo, photos = [], size, accentColor }) {
+function RestaurantC({ businessName, tagline, offer, offerFinePrint, offer2, offer2FinePrint,
+  address, phone, hours, logo, photos = [], size, accentColor, industry = "Restaurant" }) {
   const f = scaleFactor(size);
-  const heroPhoto = photos[0] || photos[1] || null;
-  const horizontal = size === "small";
+  const isL = size === "large";
+  const ct = contrastText(accentColor);
+  const heroPhoto = (photos || []).find(p => p) || pickFallbackPhoto(industry, businessName, "hero", 0);
   return (
-    <div style={{ ...baseBox, background: "#ffffff", color: "#111",
-      display: "flex", flexDirection: horizontal ? "row" : "column" }}>
-      <div style={{ flex: horizontal ? "0 0 38%" : "0 0 45%", position: "relative",
-        background: heroPhoto ? `url(${heroPhoto}) center/cover` : shade(accentColor, 60) }}>
-        {!heroPhoto && (
-          <div style={{ position: "absolute", inset: 0, display: "flex",
-            alignItems: "center", justifyContent: "center",
-            color: "rgba(255,255,255,0.7)", fontSize: 36 * f }}>🍽️</div>
-        )}
+    <div style={{ ...baseBox, background: "#fff", color: "#111", display: "flex", flexDirection: "column" }}>
+      {/* Hero photo */}
+      <div style={{ flex: "0 0 40%", position: "relative", overflow: "hidden", flexShrink: 0 }}>
+        <div style={{ position: "absolute", inset: 0,
+          backgroundImage: `url(${heroPhoto})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+        <div style={{ position: "absolute", inset: 0,
+          background: `linear-gradient(180deg, rgba(0,0,0,0.05) 60%, ${shade(accentColor, -15)} 100%)` }} />
       </div>
-      <div style={{ flex: 1, padding: `${8 * f}px ${10 * f}px`, display: "flex",
-        flexDirection: "column", justifyContent: "space-between", minWidth: 0 }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 * f }}>
-            <LogoBadge logo={logo} businessName={businessName} size={26 * f}
-              bg={accentColor} color={contrastText(accentColor)} border="none" />
-            <div style={{ color: accentColor, fontWeight: 900, fontSize: 13 * f,
-              fontFamily: "Georgia, serif", lineHeight: 1.1, overflow: "hidden",
-              textOverflow: "ellipsis" }}>{businessName || "Your Restaurant"}</div>
+      {/* Name/logo band */}
+      <div style={{ flexShrink: 0, background: accentColor,
+        padding: `${5 * f}px ${9 * f}px`, display: "flex", alignItems: "center", gap: 7 * f }}>
+        <LogoBadge logo={logo} businessName={businessName}
+          size={(isL ? 36 : 28) * f} bg="#fff" color={accentColor} border="none" />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ color: ct, fontWeight: 900, fontSize: (isL ? 14 : 11) * f,
+            fontFamily: "Georgia, serif", lineHeight: 1.1,
+            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {businessName || "Your Restaurant"}
           </div>
-          {tagline && <div style={{ color: "#555", fontSize: 10 * f, marginTop: 4 * f,
-            lineHeight: 1.3 }}>{tagline}</div>}
+          {tagline && <div style={{ color: ct === "#fff" ? "rgba(255,255,255,0.8)" : "rgba(0,0,0,0.65)",
+            fontSize: (isL ? 8 : 7) * f, marginTop: 1 * f,
+            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tagline}</div>}
         </div>
-        {offer && (
-          <div style={{ background: accentColor, color: contrastText(accentColor),
-            borderRadius: 999, padding: `${4 * f}px ${10 * f}px`, fontWeight: 900,
-            fontSize: 11 * f, textAlign: "center", alignSelf: "flex-start", margin: `${6 * f}px 0` }}>
-            {offer}
+        {phone && <div style={{ color: ct === "#fff" ? "#fde8a0" : shade(accentColor, -40),
+          fontWeight: 800, fontSize: (isL ? 8 : 7.5) * f, flexShrink: 0 }}>☎ {phone}</div>}
+      </div>
+      {/* Coupon block */}
+      <div style={{ flex: 1, minHeight: 0, display: "flex", gap: 6 * f,
+        padding: `${7 * f}px ${8 * f}px`, alignItems: "stretch",
+        background: shade(accentColor, -20) }}>
+        {[{ h: offer, fp: offerFinePrint }, ...(offer2 ? [{ h: offer2, fp: offer2FinePrint }] : [])].map(({ h, fp }, i) => h && (
+          <div key={i} style={{ flex: 1, position: "relative",
+            border: `2px dashed rgba(255,255,255,0.6)`, borderRadius: 5 * f,
+            background: "rgba(0,0,0,0.25)", display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center",
+            padding: `${6 * f}px ${5 * f}px`, gap: 3 * f }}>
+            <div style={{ position: "absolute", top: -9 * f, left: "50%", transform: "translateX(-50%)",
+              color: "#fde8a0", fontSize: 11 * f, background: shade(accentColor, -20), padding: "0 4px" }}>✂</div>
+            <div style={{ color: "rgba(255,255,255,0.85)", fontSize: (isL ? 7 : 6.5) * f,
+              letterSpacing: 2, textTransform: "uppercase", fontFamily: "sans-serif" }}>Bring This Ad</div>
+            <div style={{ color: "#fff", fontWeight: 900, fontSize: (isL ? 21 : 16) * f,
+              lineHeight: 1, fontFamily: "Georgia, serif", textAlign: "center" }}>{h}</div>
+            {fp && <div style={{ color: "rgba(255,255,255,0.7)", fontSize: (isL ? 7.5 : 6.5) * f,
+              textAlign: "center", fontFamily: "sans-serif", lineHeight: 1.3 }}>{fp}</div>}
+            <div style={{ color: "rgba(255,255,255,0.45)", fontSize: (isL ? 7 : 6) * f,
+              fontStyle: "italic" }}>with this postcard</div>
           </div>
-        )}
-        <div style={{ fontSize: 9 * f, color: "#555", lineHeight: 1.4 }}>
-          {phone && <div style={{ color: accentColor, fontWeight: 800 }}>☎ {phone}</div>}
-          {size === "large" && address && <div>📍 {address}</div>}
-          {size === "large" && hours && <div>⏰ {hours}</div>}
-          {offerFinePrint && size !== "small" && (
-            <div style={{ fontSize: 7 * f, color: "#999", marginTop: 2 }}>{offerFinePrint}</div>
-          )}
+        ))}
+      </div>
+      {/* Footer */}
+      <div style={{ flexShrink: 0, background: shade(accentColor, -35),
+        padding: `${3 * f}px ${8 * f}px`, display: "flex", alignItems: "center",
+        justifyContent: "space-between", gap: 4 * f }}>
+        <div style={{ color: "rgba(255,255,255,0.75)", fontSize: (isL ? 7.5 : 7) * f, lineHeight: 1.3 }}>
+          {address && <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            📍 {address}
+          </span>}
         </div>
+        {hours && isL && <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 7 * f,
+          whiteSpace: "nowrap" }}>⏰ {hours}</div>}
       </div>
     </div>
   );
 }
 
 // ─── RESTAURANT-D: The Corner Spot ───────────────────────────────────────────
-function RestaurantD({ businessName, tagline, offer, offerFinePrint, address, phone,
-  logo, photos = [], size, accentColor }) {
+function RestaurantD({ businessName, tagline, offer, offerFinePrint, offer2, offer2FinePrint,
+  address, phone, logo, photos = [], size, accentColor, industry = "Restaurant" }) {
   const f = scaleFactor(size);
-  const heroPhoto = photos[0] || photos[1] || null;
+  const isL = size === "large";
+  const ct = contrastText(accentColor);
+  const dark = shade(accentColor, -30);
+  const heroPhoto = (photos || []).find(p => p) || pickFallbackPhoto(industry, businessName, "hero", 0);
   return (
-    <div style={{ ...baseBox, background: "#fafafa", color: "#111" }}>
-      <div style={{ position: "absolute", inset: 0, background: accentColor,
-        clipPath: "polygon(0 0, 70% 0, 0 70%)" }} />
-      {heroPhoto && (
-        <div style={{ position: "absolute", bottom: 30 * f, right: 8 * f,
-          width: 50 * f, height: 50 * f, borderRadius: "50%",
-          background: `url(${heroPhoto}) center/cover`,
-          border: `3px solid #fff`, boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }} />
-      )}
-      <div style={{ position: "absolute", top: 6 * f, left: 6 * f, zIndex: 2 }}>
-        <LogoBadge logo={logo} businessName={businessName} size={40 * f}
-          bg="#fff" color={accentColor} border={`2px solid ${shade(accentColor, -20)}`} />
-      </div>
-      <div style={{ position: "absolute", top: "42%", left: 10 * f, right: 10 * f,
-        textAlign: "center", zIndex: 2 }}>
-        {offer && (
-          <div style={{ color: accentColor, fontWeight: 900, fontSize: 22 * f,
-            fontFamily: "Georgia, serif", lineHeight: 1, letterSpacing: -0.5 }}>
-            {offer}
+    <div style={{ ...baseBox, display: "flex", flexDirection: "column", background: dark }}>
+      {/* Full-bleed hero with accent-triangle overlay */}
+      <div style={{ flex: "0 0 42%", position: "relative", overflow: "hidden", flexShrink: 0 }}>
+        <div style={{ position: "absolute", inset: 0,
+          backgroundImage: `url(${heroPhoto})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+        <div style={{ position: "absolute", inset: 0,
+          background: "linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.55) 100%)" }} />
+        {/* Logo + name */}
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0,
+          padding: `${4 * f}px ${8 * f}px`, display: "flex", alignItems: "center", gap: 6 * f }}>
+          <LogoBadge logo={logo} businessName={businessName}
+            size={(isL ? 36 : 28) * f} bg="#fff" color={accentColor}
+            border={`2px solid ${accentColor}`} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ color: "#fff", fontWeight: 900, fontSize: (isL ? 14 : 11) * f,
+              fontFamily: "Georgia, serif", lineHeight: 1.1, textShadow: "0 1px 4px rgba(0,0,0,0.8)",
+              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {businessName || "Your Restaurant"}
+            </div>
+            {tagline && <div style={{ color: "rgba(255,255,255,0.8)", fontSize: (isL ? 8 : 7) * f,
+              fontStyle: "italic", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {tagline}
+            </div>}
           </div>
-        )}
-        {tagline && <div style={{ color: "#444", fontSize: 11 * f, fontStyle: "italic",
-          marginTop: 4 * f }}>{tagline}</div>}
+        </div>
       </div>
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0,
-        background: shade(accentColor, -30), color: "#fff",
-        padding: `${5 * f}px ${10 * f}px`, fontSize: 9 * f, zIndex: 2,
-        display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis",
-          whiteSpace: "nowrap" }}>{businessName || "Your Restaurant"}</div>
-        {phone && <div style={{ fontWeight: 800 }}>{phone}</div>}
+      {/* Coupon block */}
+      <div style={{ flex: 1, minHeight: 0, display: "flex", gap: 6 * f,
+        padding: `${7 * f}px ${8 * f}px`, alignItems: "stretch" }}>
+        {[{ h: offer, fp: offerFinePrint }, ...(offer2 ? [{ h: offer2, fp: offer2FinePrint }] : [])].map(({ h, fp }, i) => h && (
+          <div key={i} style={{ flex: 1, position: "relative",
+            border: `2px dashed ${accentColor}`, borderRadius: 5 * f,
+            background: "rgba(255,255,255,0.07)", display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center",
+            padding: `${5 * f}px ${5 * f}px`, gap: 3 * f }}>
+            <div style={{ position: "absolute", top: -9 * f, left: "50%", transform: "translateX(-50%)",
+              color: accentColor, fontSize: 11 * f, background: dark, padding: "0 4px" }}>✂</div>
+            <div style={{ color: "rgba(255,255,255,0.8)", fontSize: (isL ? 7 : 6.5) * f,
+              letterSpacing: 2, textTransform: "uppercase" }}>Bring This Ad</div>
+            <div style={{ color: accentColor, fontWeight: 900, fontSize: (isL ? 22 : 17) * f,
+              lineHeight: 1, fontFamily: "Georgia, serif", textAlign: "center" }}>{h}</div>
+            {fp && <div style={{ color: "rgba(255,255,255,0.65)", fontSize: (isL ? 7.5 : 6.5) * f,
+              textAlign: "center", lineHeight: 1.3 }}>{fp}</div>}
+            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: (isL ? 7 : 6) * f,
+              fontStyle: "italic" }}>with this postcard</div>
+          </div>
+        ))}
       </div>
-      {address && size === "large" && (
-        <div style={{ position: "absolute", bottom: 24, left: 10, right: 10,
-          textAlign: "center", color: "#666", fontSize: 8 * f, zIndex: 2 }}>📍 {address}</div>
-      )}
-      {offerFinePrint && size === "large" && (
-        <div style={{ position: "absolute", bottom: 38, left: 10, right: 10,
-          textAlign: "center", color: "#666", fontSize: 7 * f, zIndex: 2 }}>{offerFinePrint}</div>
-      )}
+      {/* Footer */}
+      <div style={{ flexShrink: 0, background: "rgba(0,0,0,0.4)",
+        padding: `${3 * f}px ${8 * f}px`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        {phone && <span style={{ color: accentColor, fontWeight: 800, fontSize: (isL ? 8 : 7) * f }}>☎ {phone}</span>}
+        {address && <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 7 * f,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "60%" }}>📍 {address}</span>}
+      </div>
     </div>
   );
 }
 
 // ─── DENTAL-A: Clean Smile ───────────────────────────────────────────────────
-function DentalA({ businessName, tagline, offer, offerFinePrint, address, phone, hours,
-  logo, size, accentColor }) {
+function DentalA({ businessName, tagline, offer, offerFinePrint, offer2, offer2FinePrint,
+  address, phone, hours, logo, photos = [], size, accentColor, industry = "Dentist" }) {
   const f = scaleFactor(size);
+  const isL = size === "large";
   const gold = "#d4a017";
+  const heroPhoto = (photos || []).find(p => p) || pickFallbackPhoto(industry, businessName, "hero", 0);
   return (
-    <div style={{ ...baseBox, background: "#fff", color: "#111",
-      display: "flex", flexDirection: "column" }}>
-      <div style={{ background: accentColor, padding: `${10 * f}px ${10 * f}px`,
-        display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
-        <LogoBadge logo={logo} businessName={businessName} size={42 * f}
-          bg={gold} color="#fff" border="2px solid rgba(255,255,255,0.6)" />
-        <div style={{ color: "#fff", fontWeight: 900, fontSize: 13 * f,
-          fontFamily: "Georgia, serif", marginTop: 5 * f, textAlign: "center", lineHeight: 1.15 }}>
-          {businessName || "Your Practice"}
-        </div>
-      </div>
-      <div style={{ flex: 1, padding: `${8 * f}px ${10 * f}px`, minHeight: 0 }}>
-        <div style={{ color: accentColor, fontWeight: 900, fontSize: 14 * f,
-          fontFamily: "Georgia, serif", lineHeight: 1.2, marginBottom: 5 * f }}>
-          {tagline || "Accepting New Patients!"}
-        </div>
-        {size === "large" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            {["Preventive Care", "Cosmetic Dentistry", "Family-Friendly"].map((s, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <div style={{ width: 14, height: 14, borderRadius: "50%", background: gold,
-                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                  color: "#fff", fontSize: 7, fontWeight: 900 }}>✓</div>
-                <span style={{ color: "#333", fontSize: 10 * f }}>{s}</span>
-              </div>
-            ))}
-          </div>
-        )}
-        <div style={{ fontSize: 9 * f, color: "#555", marginTop: 6 * f, lineHeight: 1.4 }}>
-          {phone && <div style={{ color: accentColor, fontWeight: 800 }}>☎ {phone}</div>}
-          {address && size !== "small" && <div>📍 {address}</div>}
-          {hours && size === "large" && <div>⏰ {hours}</div>}
-        </div>
-      </div>
-      {offer && (
-        <div style={{ background: accentColor, padding: `${6 * f}px ${10 * f}px`,
-          borderTop: `3px solid ${gold}`, flexShrink: 0 }}>
-          <div style={{ border: `2px dashed ${gold}`, borderRadius: 5,
-            padding: `${4 * f}px ${8 * f}px`, textAlign: "center" }}>
-            <div style={{ color: gold, fontWeight: 900, fontSize: 12 * f, lineHeight: 1.1 }}>{offer}</div>
-            {offerFinePrint && <div style={{ color: "rgba(255,255,255,0.7)",
-              fontSize: 7 * f, marginTop: 1 }}>{offerFinePrint}</div>}
+    <div style={{ ...baseBox, background: "#fff", color: "#111", display: "flex", flexDirection: "column" }}>
+      {/* Hero photo */}
+      <div style={{ flex: "0 0 36%", position: "relative", overflow: "hidden", flexShrink: 0 }}>
+        <div style={{ position: "absolute", inset: 0,
+          backgroundImage: `url(${heroPhoto})`, backgroundSize: "cover", backgroundPosition: "center top" }} />
+        <div style={{ position: "absolute", inset: 0,
+          background: `linear-gradient(180deg, rgba(0,0,0,0.05) 40%, ${shade(accentColor, -10)} 100%)` }} />
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0,
+          padding: `${4 * f}px ${8 * f}px`, display: "flex", alignItems: "center", gap: 6 * f }}>
+          <LogoBadge logo={logo} businessName={businessName}
+            size={(isL ? 34 : 27) * f} bg={gold} color="#fff" border="2px solid rgba(255,255,255,0.6)" />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ color: "#fff", fontWeight: 900, fontSize: (isL ? 13 : 11) * f,
+              fontFamily: "Georgia, serif", lineHeight: 1.1, textShadow: "0 1px 4px rgba(0,0,0,0.7)",
+              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {businessName || "Your Practice"}
+            </div>
+            <div style={{ color: "rgba(255,255,255,0.85)", fontSize: (isL ? 8 : 7) * f }}>
+              {tagline || "Accepting New Patients"}
+            </div>
           </div>
         </div>
-      )}
+      </div>
+      {/* Coupon block */}
+      <div style={{ flex: 1, minHeight: 0, display: "flex", gap: 6 * f,
+        padding: `${7 * f}px ${8 * f}px`, alignItems: "stretch", background: shade(accentColor, -5) }}>
+        {[{ h: offer, fp: offerFinePrint }, ...(offer2 ? [{ h: offer2, fp: offer2FinePrint }] : [])].map(({ h, fp }, i) => h && (
+          <div key={i} style={{ flex: 1, position: "relative",
+            border: `2px dashed ${gold}`, borderRadius: 5 * f,
+            background: "rgba(0,0,0,0.2)", display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center",
+            padding: `${5 * f}px ${5 * f}px`, gap: 3 * f }}>
+            <div style={{ position: "absolute", top: -9 * f, left: "50%", transform: "translateX(-50%)",
+              color: gold, fontSize: 11 * f, background: shade(accentColor, -5), padding: "0 4px" }}>✂</div>
+            <div style={{ color: "rgba(255,255,255,0.8)", fontSize: (isL ? 7 : 6.5) * f,
+              letterSpacing: 2, textTransform: "uppercase", fontFamily: "sans-serif" }}>Bring This Ad</div>
+            <div style={{ color: gold, fontWeight: 900, fontSize: (isL ? 21 : 16) * f,
+              lineHeight: 1, fontFamily: "Georgia, serif", textAlign: "center" }}>{h}</div>
+            {fp && <div style={{ color: "rgba(255,255,255,0.7)", fontSize: (isL ? 7.5 : 6.5) * f,
+              textAlign: "center", lineHeight: 1.3 }}>{fp}</div>}
+            <div style={{ color: "rgba(255,255,255,0.45)", fontSize: (isL ? 7 : 6) * f,
+              fontStyle: "italic" }}>with this postcard</div>
+          </div>
+        ))}
+      </div>
+      {/* Footer */}
+      <div style={{ flexShrink: 0, background: shade(accentColor, -25),
+        padding: `${3 * f}px ${8 * f}px`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        {phone && <span style={{ color: gold, fontWeight: 800, fontSize: (isL ? 7.5 : 7) * f }}>☎ {phone}</span>}
+        {address && <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 7 * f,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "62%" }}>📍 {address}</span>}
+      </div>
     </div>
   );
 }
 
 // ─── DENTAL-B: Modern Care ───────────────────────────────────────────────────
-function DentalB({ businessName, tagline, offer, offerFinePrint, address, phone, hours,
-  logo, size, accentColor }) {
+function DentalB({ businessName, tagline, offer, offerFinePrint, offer2, offer2FinePrint,
+  address, phone, hours, logo, photos = [], size, accentColor, industry = "Dentist" }) {
   const f = scaleFactor(size);
-  const horiz = size !== "small";
+  const isL = size === "large";
+  const heroPhoto = (photos || []).find(p => p) || pickFallbackPhoto(industry, businessName, "hero", 1);
+  const light = shade(accentColor, 120);
   return (
-    <div style={{ ...baseBox,
-      background: "linear-gradient(135deg, #ffffff 0%, #e0f2fe 100%)", color: "#111",
-      display: "flex", flexDirection: horiz ? "row" : "column",
-      padding: `${8 * f}px ${10 * f}px`, gap: 10 * f }}>
-      <div style={{ flexShrink: 0, display: "flex",
-        flexDirection: horiz ? "column" : "row",
-        alignItems: "center", justifyContent: horiz ? "flex-start" : "center", gap: 6 * f }}>
-        <LogoBadge logo={logo} businessName={businessName} size={50 * f}
-          bg={accentColor} color="#fff" border={`2px solid ${shade(accentColor, 80)}`} />
-      </div>
-      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column",
-        justifyContent: "space-between" }}>
-        <div>
-          <div style={{ color: accentColor, fontWeight: 900, fontSize: 13 * f,
-            fontFamily: "Georgia, serif", lineHeight: 1.15, marginBottom: 3 }}>
-            {businessName || "Your Practice"}
-          </div>
-          <div style={{ color: "#333", fontWeight: 800, fontSize: 11 * f, lineHeight: 1.2 }}>
-            {tagline || "Now Accepting New Patients"}
-          </div>
-          {size === "large" && (
-            <div style={{ marginTop: 5, display: "flex", flexDirection: "column", gap: 3 }}>
-              {["✓ Preventive Care", "✓ Whitening", "✓ Family Dentistry"].map((s, i) => (
-                <div key={i} style={{ color: "#444", fontSize: 9 * f }}>{s}</div>
-              ))}
+    <div style={{ ...baseBox, display: "flex", flexDirection: "column",
+      background: "linear-gradient(160deg, #f0f9ff 0%, #dbeafe 100%)" }}>
+      {/* Hero photo */}
+      <div style={{ flex: "0 0 36%", position: "relative", overflow: "hidden", flexShrink: 0 }}>
+        <div style={{ position: "absolute", inset: 0,
+          backgroundImage: `url(${heroPhoto})`, backgroundSize: "cover", backgroundPosition: "center top" }} />
+        <div style={{ position: "absolute", inset: 0,
+          background: `linear-gradient(180deg, rgba(0,0,0,0.05) 50%, ${accentColor} 100%)` }} />
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0,
+          padding: `${4 * f}px ${8 * f}px`, display: "flex", alignItems: "center", gap: 6 * f }}>
+          <LogoBadge logo={logo} businessName={businessName}
+            size={(isL ? 34 : 27) * f} bg={accentColor} color="#fff"
+            border="2px solid rgba(255,255,255,0.5)" />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ color: "#fff", fontWeight: 900, fontSize: (isL ? 13 : 11) * f,
+              fontFamily: "Georgia, serif", lineHeight: 1.1, textShadow: "0 1px 4px rgba(0,0,0,0.7)",
+              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {businessName || "Your Practice"}
             </div>
-          )}
-        </div>
-        {offer && (
-          <div style={{ background: "#fff", border: `2px solid ${accentColor}`,
-            borderRadius: 10, padding: `${4 * f}px ${8 * f}px`, marginTop: 4 * f,
-            textAlign: "center" }}>
-            <div style={{ color: accentColor, fontWeight: 900, fontSize: 11 * f, lineHeight: 1.1 }}>{offer}</div>
-            {offerFinePrint && <div style={{ color: "#888", fontSize: 7 * f }}>{offerFinePrint}</div>}
+            <div style={{ color: "rgba(255,255,255,0.85)", fontSize: (isL ? 8 : 7) * f }}>
+              {tagline || "Now Accepting New Patients"}
+            </div>
           </div>
-        )}
-        <div style={{ fontSize: 8.5 * f, color: "#555", marginTop: 4, lineHeight: 1.4 }}>
-          {phone && <div style={{ fontWeight: 800, color: accentColor }}>☎ {phone}</div>}
-          {address && size === "large" && <div>📍 {address}</div>}
-          {hours && size === "large" && <div>⏰ {hours}</div>}
+          {phone && <div style={{ color: "#fde8a0", fontWeight: 800, fontSize: (isL ? 8 : 7) * f, flexShrink: 0 }}>
+            ☎ {phone}
+          </div>}
         </div>
+      </div>
+      {/* Coupon block */}
+      <div style={{ flex: 1, minHeight: 0, display: "flex", gap: 6 * f,
+        padding: `${7 * f}px ${8 * f}px`, alignItems: "stretch", background: accentColor }}>
+        {[{ h: offer, fp: offerFinePrint }, ...(offer2 ? [{ h: offer2, fp: offer2FinePrint }] : [])].map(({ h, fp }, i) => h && (
+          <div key={i} style={{ flex: 1, position: "relative",
+            border: "2px dashed rgba(255,255,255,0.6)", borderRadius: 5 * f,
+            background: "rgba(0,0,0,0.2)", display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center",
+            padding: `${5 * f}px ${5 * f}px`, gap: 3 * f }}>
+            <div style={{ position: "absolute", top: -9 * f, left: "50%", transform: "translateX(-50%)",
+              color: "#fde8a0", fontSize: 11 * f, background: accentColor, padding: "0 4px" }}>✂</div>
+            <div style={{ color: "rgba(255,255,255,0.8)", fontSize: (isL ? 7 : 6.5) * f,
+              letterSpacing: 2, textTransform: "uppercase" }}>Bring This Ad</div>
+            <div style={{ color: "#fff", fontWeight: 900, fontSize: (isL ? 21 : 16) * f,
+              lineHeight: 1, fontFamily: "Georgia, serif", textAlign: "center" }}>{h}</div>
+            {fp && <div style={{ color: "rgba(255,255,255,0.7)", fontSize: (isL ? 7.5 : 6.5) * f,
+              textAlign: "center", lineHeight: 1.3 }}>{fp}</div>}
+            <div style={{ color: "rgba(255,255,255,0.45)", fontSize: (isL ? 7 : 6) * f,
+              fontStyle: "italic" }}>with this postcard</div>
+          </div>
+        ))}
+      </div>
+      {/* Footer */}
+      <div style={{ flexShrink: 0, background: shade(accentColor, -25),
+        padding: `${3 * f}px ${8 * f}px`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        {address && <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 7 * f,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>📍 {address}</span>}
+        {hours && isL && <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 7 * f }}>⏰ {hours}</span>}
       </div>
     </div>
   );
 }
 
 // ─── HVAC-A: Emergency ───────────────────────────────────────────────────────
-function HvacA({ businessName, tagline, offer, offerFinePrint, address, phone,
-  logo, size, accentColor }) {
+function HvacA({ businessName, tagline, offer, offerFinePrint, offer2, offer2FinePrint,
+  address, phone, photos = [], logo, size, accentColor, industry = "HVAC and Heating and Cooling" }) {
   const f = scaleFactor(size);
+  const isL = size === "large";
+  const heroPhoto = (photos || []).find(p => p) || pickFallbackPhoto(industry, businessName, "hero", 0);
+  const red = "#dc2626";
+  const darkBg = "linear-gradient(160deg, #001a2e 0%, #000c18 100%)";
   return (
-    <div style={{ ...baseBox,
-      background: "linear-gradient(160deg, #001a2e 0%, #000 100%)", color: "#fff" }}>
-      <div style={{ position: "absolute", top: 8 * f, left: 8 * f,
-        background: "#dc2626", color: "#fff", padding: `${3 * f}px ${8 * f}px`,
-        borderRadius: 4, fontSize: 9 * f, fontWeight: 900, letterSpacing: 1.5,
-        boxShadow: "0 2px 8px rgba(220,38,38,0.6)" }}>24/7 EMERGENCY</div>
-      <div style={{ position: "absolute", top: 6 * f, right: 6 * f,
-        color: "rgba(255,255,255,0.18)", fontSize: 28 * f, lineHeight: 1 }}>❄</div>
-      <div style={{ position: "absolute", bottom: "30%", right: 10 * f,
-        color: "rgba(255,150,50,0.18)", fontSize: 24 * f, lineHeight: 1 }}>🔥</div>
-      <div style={{ position: "absolute", inset: 0, padding: `${36 * f}px ${10 * f}px ${44 * f}px`,
-        display: "flex", flexDirection: "column", justifyContent: "center", textAlign: "center" }}>
-        <LogoBadge logo={logo} businessName={businessName} size={36 * f}
-          bg={accentColor} color="#fff"
-          border="2px solid rgba(255,255,255,0.4)" />
-        <div style={{ alignSelf: "center" }}>
-          <div style={{ color: "#fff", fontWeight: 900, fontSize: 13 * f,
-            fontFamily: "Georgia, serif", marginTop: 5 * f, lineHeight: 1.15 }}>
-            {businessName || "Your HVAC Co."}
-          </div>
-          {tagline && <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 9 * f,
-            marginTop: 2 }}>{tagline}</div>}
-        </div>
-        {phone && (
-          <div style={{ color: "#fbbf24", fontWeight: 900, fontSize: 22 * f,
-            marginTop: 8 * f, letterSpacing: 0.5 }}>☎ {phone}</div>
-        )}
-        {size === "large" && address && (
-          <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 8 * f, marginTop: 4 }}>📍 {address}</div>
-        )}
-      </div>
-      {offer && (
+    <div style={{ ...baseBox, display: "flex", flexDirection: "column",
+      background: "linear-gradient(160deg, #001a2e 0%, #000c18 100%)" }}>
+      {/* Hero photo with emergency banner */}
+      <div style={{ flex: "0 0 38%", position: "relative", overflow: "hidden", flexShrink: 0 }}>
+        <div style={{ position: "absolute", inset: 0,
+          backgroundImage: `url(${heroPhoto})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+        <div style={{ position: "absolute", inset: 0,
+          background: "linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,12,24,0.9) 100%)" }} />
+        {/* Emergency badge */}
+        <div style={{ position: "absolute", top: 6 * f, left: 6 * f,
+          background: red, color: "#fff", padding: `${3 * f}px ${8 * f}px`,
+          borderRadius: 4, fontSize: 9 * f, fontWeight: 900, letterSpacing: 1.5,
+          boxShadow: "0 2px 8px rgba(220,38,38,0.7)", zIndex: 2 }}>24/7 EMERGENCY</div>
         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0,
-          background: "#dc2626", color: "#fff", padding: `${6 * f}px ${10 * f}px`,
-          textAlign: "center" }}>
-          <div style={{ fontWeight: 900, fontSize: 13 * f, lineHeight: 1.1 }}>{offer}</div>
-          {offerFinePrint && <div style={{ fontSize: 7 * f, opacity: 0.85, marginTop: 1 }}>{offerFinePrint}</div>}
+          padding: `${4 * f}px ${8 * f}px`, display: "flex", alignItems: "center", gap: 6 * f }}>
+          <LogoBadge logo={logo} businessName={businessName}
+            size={(isL ? 34 : 27) * f} bg={accentColor} color="#fff"
+            border="2px solid rgba(255,255,255,0.4)" />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ color: "#fff", fontWeight: 900, fontSize: (isL ? 13 : 11) * f,
+              fontFamily: "Georgia, serif", lineHeight: 1.1, textShadow: "0 1px 4px rgba(0,0,0,0.9)",
+              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {businessName || "Your HVAC Co."}
+            </div>
+            {phone && <div style={{ color: "#fbbf24", fontWeight: 900, fontSize: (isL ? 9 : 8) * f }}>
+              ☎ {phone}
+            </div>}
+          </div>
         </div>
-      )}
+      </div>
+      {/* Coupon block */}
+      <div style={{ flex: 1, minHeight: 0, display: "flex", gap: 6 * f,
+        padding: `${7 * f}px ${8 * f}px`, alignItems: "stretch" }}>
+        {[{ h: offer, fp: offerFinePrint }, ...(offer2 ? [{ h: offer2, fp: offer2FinePrint }] : [])].map(({ h, fp }, i) => h && (
+          <div key={i} style={{ flex: 1, position: "relative",
+            border: `2px dashed ${red}`, borderRadius: 5 * f,
+            background: "rgba(220,38,38,0.12)", display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center",
+            padding: `${5 * f}px ${5 * f}px`, gap: 3 * f }}>
+            <div style={{ position: "absolute", top: -9 * f, left: "50%", transform: "translateX(-50%)",
+              color: red, fontSize: 11 * f, background: "#000c18", padding: "0 4px" }}>✂</div>
+            <div style={{ color: "rgba(255,255,255,0.8)", fontSize: (isL ? 7 : 6.5) * f,
+              letterSpacing: 2, textTransform: "uppercase" }}>Bring This Ad</div>
+            <div style={{ color: "#fbbf24", fontWeight: 900, fontSize: (isL ? 21 : 16) * f,
+              lineHeight: 1, fontFamily: "Georgia, serif", textAlign: "center" }}>{h}</div>
+            {fp && <div style={{ color: "rgba(255,255,255,0.7)", fontSize: (isL ? 7.5 : 6.5) * f,
+              textAlign: "center", lineHeight: 1.3 }}>{fp}</div>}
+            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: (isL ? 7 : 6) * f,
+              fontStyle: "italic" }}>with this postcard</div>
+          </div>
+        ))}
+      </div>
+      {/* Footer */}
+      <div style={{ flexShrink: 0, background: "rgba(0,0,0,0.5)",
+        padding: `${3 * f}px ${8 * f}px`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        {tagline && <span style={{ color: "rgba(255,255,255,0.6)", fontSize: (isL ? 7.5 : 7) * f,
+          fontStyle: "italic" }}>{tagline}</span>}
+        {address && <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 7 * f,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "65%" }}>📍 {address}</span>}
+      </div>
     </div>
   );
 }
 
 // ─── HVAC-B: Pro Service ─────────────────────────────────────────────────────
-function HvacB({ businessName, tagline, offer, offerFinePrint, address, phone, hours,
-  logo, size, accentColor }) {
+function HvacB({ businessName, tagline, offer, offerFinePrint, offer2, offer2FinePrint,
+  address, phone, hours, logo, photos = [], size, accentColor, industry = "HVAC and Heating and Cooling" }) {
   const f = scaleFactor(size);
+  const isL = size === "large";
+  const heroPhoto = (photos || []).find(p => p) || pickFallbackPhoto(industry, businessName, "hero", 1);
+  const ct = contrastText(accentColor);
+  const dark = shade(accentColor, -25);
   return (
-    <div style={{ ...baseBox, background: "#fff", color: "#111" }}>
-      <div style={{ position: "absolute", inset: 0, background: accentColor,
-        clipPath: "polygon(0 0, 100% 0, 100% 50%, 0 65%)" }} />
-      <div style={{ position: "absolute", top: 6 * f, left: 10 * f, right: 10 * f,
-        zIndex: 2, color: "#fff" }}>
-        <div style={{ fontWeight: 900, fontSize: 16 * f, fontFamily: "Georgia, serif",
-          lineHeight: 1.1, textShadow: "0 1px 4px rgba(0,0,0,0.4)" }}>
-          {businessName || "Your HVAC Co."}
-        </div>
-        {tagline && <div style={{ color: "rgba(255,255,255,0.85)", fontSize: 10 * f,
-          marginTop: 2 }}>{tagline}</div>}
-      </div>
-      <div style={{ position: "absolute", top: "48%", left: "50%",
-        transform: "translate(-50%, -50%)", zIndex: 3 }}>
-        <LogoBadge logo={logo} businessName={businessName} size={42 * f}
-          bg="#fff" color={accentColor} border={`3px solid ${accentColor}`} />
-      </div>
-      <div style={{ position: "absolute", left: 10 * f, right: 10 * f,
-        bottom: offer ? 36 : 8, top: "65%", zIndex: 2, color: "#222" }}>
-        {size === "large" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 2, fontSize: 9 * f }}>
-            <div>✓ Heating &amp; Cooling Repair</div>
-            <div>✓ A/C Tune-Ups</div>
-            <div>✓ New System Install</div>
+    <div style={{ ...baseBox, display: "flex", flexDirection: "column", background: dark }}>
+      {/* Hero photo */}
+      <div style={{ flex: "0 0 38%", position: "relative", overflow: "hidden", flexShrink: 0 }}>
+        <div style={{ position: "absolute", inset: 0,
+          backgroundImage: `url(${heroPhoto})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+        <div style={{ position: "absolute", inset: 0,
+          background: `linear-gradient(180deg, rgba(0,0,0,0.1) 0%, ${dark} 100%)` }} />
+        <div style={{ position: "absolute", top: 6 * f, left: 6 * f,
+          background: accentColor, color: ct, padding: `${3 * f}px ${8 * f}px`,
+          borderRadius: 4, fontSize: 9 * f, fontWeight: 900, letterSpacing: 1 }}>PRO SERVICE</div>
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0,
+          padding: `${4 * f}px ${8 * f}px`, display: "flex", alignItems: "center", gap: 6 * f }}>
+          <LogoBadge logo={logo} businessName={businessName}
+            size={(isL ? 34 : 27) * f} bg="#fff" color={accentColor}
+            border={`2px solid ${accentColor}`} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ color: "#fff", fontWeight: 900, fontSize: (isL ? 13 : 11) * f,
+              fontFamily: "Georgia, serif", lineHeight: 1.1, textShadow: "0 1px 4px rgba(0,0,0,0.8)",
+              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {businessName || "Your HVAC Co."}
+            </div>
+            {phone && <div style={{ color: accentColor, fontWeight: 800, fontSize: (isL ? 9 : 8) * f }}>
+              ☎ {phone}
+            </div>}
           </div>
-        )}
-        <div style={{ fontSize: 9 * f, color: "#555", marginTop: 4 }}>
-          {phone && <div style={{ color: accentColor, fontWeight: 800 }}>☎ {phone}</div>}
-          {address && size !== "small" && <div>{address}</div>}
-          {hours && size === "large" && <div>{hours}</div>}
         </div>
       </div>
-      {offer && (
-        <div style={{ position: "absolute", bottom: 6 * f, left: 8 * f, right: 8 * f,
-          border: `2px solid ${accentColor}`, borderRadius: 6, padding: `${3 * f}px ${6 * f}px`,
-          textAlign: "center", background: "#fff", zIndex: 4 }}>
-          <div style={{ color: accentColor, fontWeight: 900, fontSize: 11 * f, lineHeight: 1.1 }}>{offer}</div>
-          {offerFinePrint && <div style={{ color: "#777", fontSize: 7 * f }}>{offerFinePrint}</div>}
-        </div>
-      )}
+      {/* Coupon block */}
+      <div style={{ flex: 1, minHeight: 0, display: "flex", gap: 6 * f,
+        padding: `${7 * f}px ${8 * f}px`, alignItems: "stretch" }}>
+        {[{ h: offer, fp: offerFinePrint }, ...(offer2 ? [{ h: offer2, fp: offer2FinePrint }] : [])].map(({ h, fp }, i) => h && (
+          <div key={i} style={{ flex: 1, position: "relative",
+            border: `2px dashed ${accentColor}`, borderRadius: 5 * f,
+            background: "rgba(255,255,255,0.07)", display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center",
+            padding: `${5 * f}px ${5 * f}px`, gap: 3 * f }}>
+            <div style={{ position: "absolute", top: -9 * f, left: "50%", transform: "translateX(-50%)",
+              color: accentColor, fontSize: 11 * f, background: dark, padding: "0 4px" }}>✂</div>
+            <div style={{ color: "rgba(255,255,255,0.8)", fontSize: (isL ? 7 : 6.5) * f,
+              letterSpacing: 2, textTransform: "uppercase" }}>Bring This Ad</div>
+            <div style={{ color: accentColor, fontWeight: 900, fontSize: (isL ? 21 : 16) * f,
+              lineHeight: 1, fontFamily: "Georgia, serif", textAlign: "center" }}>{h}</div>
+            {fp && <div style={{ color: "rgba(255,255,255,0.7)", fontSize: (isL ? 7.5 : 6.5) * f,
+              textAlign: "center", lineHeight: 1.3 }}>{fp}</div>}
+            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: (isL ? 7 : 6) * f,
+              fontStyle: "italic" }}>with this postcard</div>
+          </div>
+        ))}
+      </div>
+      {/* Footer */}
+      <div style={{ flexShrink: 0, background: "rgba(0,0,0,0.4)",
+        padding: `${3 * f}px ${8 * f}px`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        {address && <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 7 * f,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>📍 {address}</span>}
+        {hours && isL && <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 7 * f }}>⏰ {hours}</span>}
+      </div>
     </div>
   );
 }
 
 // ─── REALTY-A: The Listing ───────────────────────────────────────────────────
-function RealtyA({ businessName, tagline, offer, offerFinePrint, address, phone, website,
-  logo, photos = [], size, accentColor }) {
+function RealtyA({ businessName, tagline, offer, offerFinePrint, offer2, offer2FinePrint,
+  address, phone, website, logo, photos = [], size, accentColor, industry = "Real Estate" }) {
   const f = scaleFactor(size);
-  const agentPhoto = photos[0] || null;
+  const isL = size === "large";
   const gold = "#c9a227";
+  const heroPhoto = (photos || []).find(p => p) || pickFallbackPhoto(industry, businessName, "hero", 0);
+  const dark = shade(accentColor, -20);
   return (
-    <div style={{ ...baseBox, background: "#faf6ed", color: "#1a1a1a",
-      border: `${3 * f}px solid ${gold}`, padding: `${6 * f}px`, boxSizing: "border-box" }}>
-      <div style={{ width: "100%", height: "100%", border: `1px solid ${accentColor}`,
-        padding: `${8 * f}px ${10 * f}px`, boxSizing: "border-box",
-        display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
-        {agentPhoto ? (
-          <div style={{ width: 56 * f, height: 56 * f, borderRadius: "50%",
-            background: `url(${agentPhoto}) center/cover`,
-            border: `3px solid ${gold}`, flexShrink: 0 }} />
-        ) : (
-          <div style={{ width: 56 * f, height: 56 * f, borderRadius: "50%",
-            background: shade(accentColor, 100), display: "flex", alignItems: "center",
-            justifyContent: "center", border: `3px solid ${gold}`, flexShrink: 0,
-            fontSize: 28 * f }}>👤</div>
-        )}
-        <div style={{ color: accentColor, fontWeight: 900, fontSize: 14 * f,
-          fontFamily: "Georgia, serif", marginTop: 5 * f, lineHeight: 1.15 }}>
-          {businessName || "Your Realty"}
-        </div>
-        {tagline && <div style={{ color: "#666", fontSize: 10 * f, fontStyle: "italic",
-          marginTop: 2, fontFamily: "Georgia, serif" }}>"{tagline}"</div>}
-        {size === "large" && (
-          <div style={{ marginTop: 5, display: "flex", gap: 8, color: "#555", fontSize: 9 * f }}>
-            <span>Buy</span><span style={{ color: gold }}>·</span>
-            <span>Sell</span><span style={{ color: gold }}>·</span>
-            <span>Invest</span>
+    <div style={{ ...baseBox, display: "flex", flexDirection: "column", background: "#faf6ed" }}>
+      {/* Property photo */}
+      <div style={{ flex: "0 0 40%", position: "relative", overflow: "hidden", flexShrink: 0 }}>
+        <div style={{ position: "absolute", inset: 0,
+          backgroundImage: `url(${heroPhoto})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+        <div style={{ position: "absolute", inset: 0,
+          background: `linear-gradient(180deg, rgba(0,0,0,0.05) 40%, ${dark} 100%)` }} />
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0,
+          padding: `${4 * f}px ${8 * f}px`, display: "flex", alignItems: "center", gap: 6 * f }}>
+          <LogoBadge logo={logo} businessName={businessName}
+            size={(isL ? 34 : 27) * f} bg={gold} color="#fff" border="2px solid rgba(255,255,255,0.5)" />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ color: "#fff", fontWeight: 900, fontSize: (isL ? 13 : 11) * f,
+              fontFamily: "Georgia, serif", lineHeight: 1.1, textShadow: "0 1px 4px rgba(0,0,0,0.8)",
+              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {businessName || "Your Realty"}
+            </div>
+            {tagline && <div style={{ color: gold, fontSize: (isL ? 8 : 7) * f,
+              fontStyle: "italic" }}>"{tagline}"</div>}
           </div>
-        )}
-        {offer && (
-          <div style={{ marginTop: 6, background: gold, color: "#fff",
-            padding: `${3 * f}px ${10 * f}px`, borderRadius: 4, fontSize: 10 * f, fontWeight: 800 }}>
-            {offer}
-          </div>
-        )}
-        <div style={{ marginTop: "auto", paddingTop: 5, fontSize: 9 * f, color: "#555",
-          lineHeight: 1.4 }}>
-          {phone && <div style={{ fontWeight: 800, color: accentColor }}>☎ {phone}</div>}
-          {website && size !== "small" && <div>{website}</div>}
-          {address && size === "large" && <div>{address}</div>}
+          {phone && <div style={{ color: gold, fontWeight: 800, fontSize: (isL ? 8 : 7) * f, flexShrink: 0 }}>
+            ☎ {phone}
+          </div>}
         </div>
+      </div>
+      {/* Coupon block */}
+      <div style={{ flex: 1, minHeight: 0, display: "flex", gap: 6 * f,
+        padding: `${7 * f}px ${8 * f}px`, alignItems: "stretch", background: dark }}>
+        {[{ h: offer, fp: offerFinePrint }, ...(offer2 ? [{ h: offer2, fp: offer2FinePrint }] : [])].map(({ h, fp }, i) => h && (
+          <div key={i} style={{ flex: 1, position: "relative",
+            border: `2px dashed ${gold}`, borderRadius: 5 * f,
+            background: "rgba(0,0,0,0.2)", display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center",
+            padding: `${5 * f}px ${5 * f}px`, gap: 3 * f }}>
+            <div style={{ position: "absolute", top: -9 * f, left: "50%", transform: "translateX(-50%)",
+              color: gold, fontSize: 11 * f, background: dark, padding: "0 4px" }}>✂</div>
+            <div style={{ color: "rgba(255,255,255,0.8)", fontSize: (isL ? 7 : 6.5) * f,
+              letterSpacing: 2, textTransform: "uppercase" }}>Bring This Ad</div>
+            <div style={{ color: gold, fontWeight: 900, fontSize: (isL ? 21 : 16) * f,
+              lineHeight: 1, fontFamily: "Georgia, serif", textAlign: "center" }}>{h}</div>
+            {fp && <div style={{ color: "rgba(255,255,255,0.7)", fontSize: (isL ? 7.5 : 6.5) * f,
+              textAlign: "center", lineHeight: 1.3 }}>{fp}</div>}
+            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: (isL ? 7 : 6) * f,
+              fontStyle: "italic" }}>with this postcard</div>
+          </div>
+        ))}
+      </div>
+      {/* Footer */}
+      <div style={{ flexShrink: 0, background: shade(accentColor, -35),
+        padding: `${3 * f}px ${8 * f}px`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        {address && <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 7 * f,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>📍 {address}</span>}
+        {website && isL && <span style={{ color: "rgba(255,255,255,0.55)", fontSize: 7 * f }}>🌐 {website}</span>}
       </div>
     </div>
   );
 }
 
 // ─── REALTY-B: Bold Sale ─────────────────────────────────────────────────────
-function RealtyB({ businessName, tagline, offer, offerFinePrint, address, phone,
-  logo, size, accentColor }) {
+function RealtyB({ businessName, tagline, offer, offerFinePrint, offer2, offer2FinePrint,
+  address, phone, logo, photos = [], size, accentColor, industry = "Real Estate" }) {
   const f = scaleFactor(size);
+  const isL = size === "large";
   const gold = "#fbbf24";
+  const bg = "#0f3a2e";
+  const heroPhoto = (photos || []).find(p => p) || pickFallbackPhoto(industry, businessName, "hero", 1);
   return (
-    <div style={{ ...baseBox, background: "#0f3a2e", color: "#fff" }}>
-      <div style={{ position: "absolute", inset: 0,
-        backgroundImage: "radial-gradient(circle at top right, rgba(251,191,36,0.15), transparent 60%)" }} />
-      <div style={{ position: "relative", padding: `${10 * f}px ${10 * f}px`,
-        height: "100%", boxSizing: "border-box", display: "flex", flexDirection: "column" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 * f, paddingBottom: 6 * f,
+    <div style={{ ...baseBox, display: "flex", flexDirection: "column", background: bg }}>
+      {/* Property photo */}
+      <div style={{ flex: "0 0 38%", position: "relative", overflow: "hidden", flexShrink: 0 }}>
+        <div style={{ position: "absolute", inset: 0,
+          backgroundImage: `url(${heroPhoto})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+        <div style={{ position: "absolute", inset: 0,
+          background: "linear-gradient(180deg, rgba(15,58,46,0.2) 0%, rgba(15,58,46,0.9) 100%)" }} />
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0,
+          padding: `${4 * f}px ${8 * f}px`, display: "flex", alignItems: "center", gap: 6 * f,
           borderBottom: `1px solid ${gold}` }}>
-          <LogoBadge logo={logo} businessName={businessName} size={36 * f}
-            bg={gold} color="#0f3a2e" border="none" />
-          <div style={{ color: "#fff", fontWeight: 900, fontSize: 13 * f,
-            fontFamily: "Georgia, serif", lineHeight: 1.1, overflow: "hidden",
-            textOverflow: "ellipsis" }}>{businessName || "Your Realty"}</div>
-        </div>
-        <div style={{ flex: 1, display: "flex", flexDirection: "column",
-          justifyContent: "center", textAlign: "center", padding: `${4 * f}px 0` }}>
-          <div style={{ color: gold, fontSize: 9 * f, fontWeight: 700,
-            letterSpacing: 2, textTransform: "uppercase" }}>Buying or Selling?</div>
-          <div style={{ color: "#fff", fontWeight: 900, fontSize: 18 * f,
-            fontFamily: "Georgia, serif", lineHeight: 1.1, margin: `${4 * f}px 0` }}>
-            {tagline || "Let's Make It Happen"}
+          <LogoBadge logo={logo} businessName={businessName}
+            size={(isL ? 34 : 27) * f} bg={gold} color={bg} border="none" />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ color: "#fff", fontWeight: 900, fontSize: (isL ? 13 : 11) * f,
+              fontFamily: "Georgia, serif", lineHeight: 1.1, textShadow: "0 1px 4px rgba(0,0,0,0.8)",
+              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {businessName || "Your Realty"}
+            </div>
+            <div style={{ color: gold, fontSize: (isL ? 8 : 7) * f, fontWeight: 700,
+              letterSpacing: 1, textTransform: "uppercase" }}>Buying or Selling?</div>
           </div>
-          {offer && (
-            <div style={{ alignSelf: "center", background: gold, color: "#0f3a2e",
-              padding: `${4 * f}px ${10 * f}px`, borderRadius: 4, fontWeight: 900,
-              fontSize: 11 * f, marginTop: 4 }}>{offer}</div>
-          )}
+          {phone && <div style={{ color: gold, fontWeight: 800, fontSize: (isL ? 8 : 7) * f, flexShrink: 0 }}>
+            ☎ {phone}
+          </div>}
         </div>
-        <div style={{ paddingTop: 5, borderTop: `1px solid rgba(251,191,36,0.4)`,
-          display: "flex", justifyContent: "space-between", fontSize: 9 * f, color: gold }}>
-          {phone && <span style={{ fontWeight: 800 }}>☎ {phone}</span>}
-          {address && size !== "small" && <span style={{ color: "rgba(255,255,255,0.6)",
-            overflow: "hidden", textOverflow: "ellipsis" }}>{address}</span>}
-        </div>
+      </div>
+      {/* Coupon block */}
+      <div style={{ flex: 1, minHeight: 0, display: "flex", gap: 6 * f,
+        padding: `${7 * f}px ${8 * f}px`, alignItems: "stretch" }}>
+        {[{ h: offer, fp: offerFinePrint }, ...(offer2 ? [{ h: offer2, fp: offer2FinePrint }] : [])].map(({ h, fp }, i) => h && (
+          <div key={i} style={{ flex: 1, position: "relative",
+            border: `2px dashed ${gold}`, borderRadius: 5 * f,
+            background: "rgba(251,191,36,0.08)", display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center",
+            padding: `${5 * f}px ${5 * f}px`, gap: 3 * f }}>
+            <div style={{ position: "absolute", top: -9 * f, left: "50%", transform: "translateX(-50%)",
+              color: gold, fontSize: 11 * f, background: bg, padding: "0 4px" }}>✂</div>
+            <div style={{ color: "rgba(255,255,255,0.8)", fontSize: (isL ? 7 : 6.5) * f,
+              letterSpacing: 2, textTransform: "uppercase" }}>Bring This Ad</div>
+            <div style={{ color: gold, fontWeight: 900, fontSize: (isL ? 21 : 16) * f,
+              lineHeight: 1, fontFamily: "Georgia, serif", textAlign: "center" }}>{h}</div>
+            {fp && <div style={{ color: "rgba(255,255,255,0.7)", fontSize: (isL ? 7.5 : 6.5) * f,
+              textAlign: "center", lineHeight: 1.3 }}>{fp}</div>}
+            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: (isL ? 7 : 6) * f,
+              fontStyle: "italic" }}>with this postcard</div>
+          </div>
+        ))}
+      </div>
+      {/* Footer */}
+      <div style={{ flexShrink: 0, background: "rgba(0,0,0,0.4)",
+        borderTop: `1px solid rgba(251,191,36,0.3)`,
+        padding: `${3 * f}px ${8 * f}px`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        {address && <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 7 * f,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>📍 {address}</span>}
+        {tagline && isL && <span style={{ color: gold, fontSize: 7 * f, fontStyle: "italic" }}>{tagline}</span>}
       </div>
     </div>
   );
 }
 
 // ─── INSURANCE-A: The Shield ─────────────────────────────────────────────────
-function InsuranceA({ businessName, tagline, offer, offerFinePrint, address, phone,
-  logo, size, accentColor }) {
+function InsuranceA({ businessName, tagline, offer, offerFinePrint, offer2, offer2FinePrint,
+  address, phone, logo, photos = [], size, accentColor, industry = "Insurance" }) {
   const f = scaleFactor(size);
+  const isL = size === "large";
   const gold = "#e2b714";
+  const heroPhoto = (photos || []).find(p => p) || pickFallbackPhoto(industry, businessName, "hero", 0);
+  const dark = shade(accentColor, -20);
   return (
-    <div style={{ ...baseBox, background: accentColor, color: "#fff" }}>
-      <div style={{ position: "absolute", inset: 0, opacity: 0.05,
-        backgroundImage: "repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 1px, transparent 12px)" }} />
-      <div style={{ position: "absolute", right: -20, bottom: -20, width: 120 * f,
-        height: 140 * f, opacity: 0.15,
-        background: gold,
-        clipPath: "polygon(50% 0%, 100% 18%, 100% 55%, 50% 100%, 0% 55%, 0% 18%)" }} />
-      <div style={{ position: "relative", padding: `${10 * f}px ${10 * f}px`,
-        height: "100%", boxSizing: "border-box", display: "flex", flexDirection: "column" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 * f }}>
-          <div style={{ width: 36 * f, height: 42 * f, position: "relative",
+    <div style={{ ...baseBox, display: "flex", flexDirection: "column", background: accentColor }}>
+      {/* Hero photo */}
+      <div style={{ flex: "0 0 38%", position: "relative", overflow: "hidden", flexShrink: 0 }}>
+        <div style={{ position: "absolute", inset: 0,
+          backgroundImage: `url(${heroPhoto})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+        <div style={{ position: "absolute", inset: 0,
+          background: `linear-gradient(180deg, rgba(0,0,0,0.2) 0%, ${accentColor} 100%)` }} />
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0,
+          padding: `${4 * f}px ${8 * f}px`, display: "flex", alignItems: "center", gap: 6 * f }}>
+          <div style={{ width: (isL ? 32 : 26) * f, height: (isL ? 38 : 31) * f, position: "relative",
             display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <div style={{ position: "absolute", inset: 0, background: gold,
               clipPath: "polygon(50% 0%, 100% 18%, 100% 55%, 50% 100%, 0% 55%, 0% 18%)" }} />
-            <span style={{ position: "relative", fontSize: 16 * f, color: accentColor }}>🛡</span>
+            <LogoBadge logo={logo} businessName={businessName}
+              size={(isL ? 22 : 18) * f} bg="transparent" color={accentColor} border="none" />
           </div>
-          <div>
-            <div style={{ color: gold, fontSize: 8 * f, fontWeight: 700, letterSpacing: 2,
-              textTransform: "uppercase" }}>Your Local Agent</div>
-            <div style={{ color: "#fff", fontWeight: 900, fontSize: 13 * f,
-              fontFamily: "Georgia, serif", lineHeight: 1.1 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ color: gold, fontSize: (isL ? 7.5 : 6.5) * f, fontWeight: 700,
+              letterSpacing: 2, textTransform: "uppercase" }}>Your Local Agent</div>
+            <div style={{ color: "#fff", fontWeight: 900, fontSize: (isL ? 13 : 10) * f,
+              fontFamily: "Georgia, serif", lineHeight: 1.1,
+              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               {businessName || "Your Insurance"}
             </div>
           </div>
+          {phone && <div style={{ color: gold, fontWeight: 800, fontSize: (isL ? 8 : 7) * f, flexShrink: 0 }}>
+            ☎ {phone}
+          </div>}
         </div>
-        <div style={{ color: gold, fontWeight: 700, fontSize: 11 * f, marginTop: 6 * f,
-          letterSpacing: 1 }}>AUTO · HOME · LIFE</div>
-        {tagline && <div style={{ color: "rgba(255,255,255,0.78)", fontSize: 10 * f,
-          marginTop: 3, lineHeight: 1.3 }}>{tagline}</div>}
-        {offer && (
-          <div style={{ marginTop: "auto", background: "rgba(226,183,20,0.15)",
-            border: `1px solid ${gold}`, borderRadius: 6, padding: `${5 * f}px ${8 * f}px`,
-            textAlign: "center" }}>
-            <div style={{ color: gold, fontWeight: 900, fontSize: 13 * f, lineHeight: 1.1 }}>{offer}</div>
-            {offerFinePrint && <div style={{ color: "rgba(255,255,255,0.6)",
-              fontSize: 7 * f, marginTop: 1 }}>{offerFinePrint}</div>}
+      </div>
+      {/* Coupon block */}
+      <div style={{ flex: 1, minHeight: 0, display: "flex", gap: 6 * f,
+        padding: `${7 * f}px ${8 * f}px`, alignItems: "stretch" }}>
+        {[{ h: offer, fp: offerFinePrint }, ...(offer2 ? [{ h: offer2, fp: offer2FinePrint }] : [])].map(({ h, fp }, i) => h && (
+          <div key={i} style={{ flex: 1, position: "relative",
+            border: `2px dashed ${gold}`, borderRadius: 5 * f,
+            background: "rgba(226,183,20,0.12)", display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center",
+            padding: `${5 * f}px ${5 * f}px`, gap: 3 * f }}>
+            <div style={{ position: "absolute", top: -9 * f, left: "50%", transform: "translateX(-50%)",
+              color: gold, fontSize: 11 * f, background: accentColor, padding: "0 4px" }}>✂</div>
+            <div style={{ color: "rgba(255,255,255,0.8)", fontSize: (isL ? 7 : 6.5) * f,
+              letterSpacing: 2, textTransform: "uppercase" }}>Bring This Ad</div>
+            <div style={{ color: gold, fontWeight: 900, fontSize: (isL ? 21 : 16) * f,
+              lineHeight: 1, fontFamily: "Georgia, serif", textAlign: "center" }}>{h}</div>
+            {fp && <div style={{ color: "rgba(255,255,255,0.7)", fontSize: (isL ? 7.5 : 6.5) * f,
+              textAlign: "center", lineHeight: 1.3 }}>{fp}</div>}
+            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: (isL ? 7 : 6) * f,
+              fontStyle: "italic" }}>with this postcard</div>
           </div>
-        )}
-        <div style={{ marginTop: 6, paddingTop: 5, borderTop: `1px solid rgba(226,183,20,0.3)`,
-          fontSize: 9 * f, color: gold, fontWeight: 800 }}>
-          {phone && <span>☎ {phone}</span>}
-          {address && size === "large" && (
-            <span style={{ color: "rgba(255,255,255,0.6)", marginLeft: 8, fontWeight: 400 }}>
-              · {address}
-            </span>
-          )}
-        </div>
+        ))}
+      </div>
+      {/* Footer */}
+      <div style={{ flexShrink: 0, background: dark,
+        borderTop: `1px solid rgba(226,183,20,0.3)`,
+        padding: `${3 * f}px ${8 * f}px`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        {tagline && <span style={{ color: "rgba(255,255,255,0.7)", fontSize: (isL ? 7.5 : 7) * f,
+          fontStyle: "italic" }}>{tagline}</span>}
+        {address && <span style={{ color: "rgba(255,255,255,0.55)", fontSize: 7 * f,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "60%" }}>📍 {address}</span>}
       </div>
     </div>
   );
 }
 
 // ─── INSURANCE-B: The Trustworthy ────────────────────────────────────────────
-function InsuranceB({ businessName, tagline, offer, offerFinePrint, address, phone, hours,
-  logo, size, accentColor }) {
+function InsuranceB({ businessName, tagline, offer, offerFinePrint, offer2, offer2FinePrint,
+  address, phone, hours, logo, photos = [], size, accentColor, industry = "Insurance" }) {
   const f = scaleFactor(size);
+  const isL = size === "large";
   const gold = "#d4a017";
+  const heroPhoto = (photos || []).find(p => p) || pickFallbackPhoto(industry, businessName, "hero", 1);
+  const dark = shade(accentColor, -22);
   return (
-    <div style={{ ...baseBox, background: "#f8fafc", color: "#111", display: "flex" }}>
-      <div style={{ width: "22%", background: accentColor, display: "flex",
-        alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-        <div style={{ color: "#fff", fontWeight: 900, fontSize: 12 * f,
-          letterSpacing: 3, textTransform: "uppercase",
-          writingMode: "vertical-rl", transform: "rotate(180deg)",
-          fontFamily: "Georgia, serif",
-          maxHeight: "90%", overflow: "hidden" }}>
-          {businessName || "Your Insurance"}
+    <div style={{ ...baseBox, display: "flex", flexDirection: "column", background: dark }}>
+      {/* Hero photo */}
+      <div style={{ flex: "0 0 38%", position: "relative", overflow: "hidden", flexShrink: 0 }}>
+        <div style={{ position: "absolute", inset: 0,
+          backgroundImage: `url(${heroPhoto})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+        <div style={{ position: "absolute", inset: 0,
+          background: `linear-gradient(180deg, rgba(0,0,0,0.1) 0%, ${dark} 100%)` }} />
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0,
+          padding: `${4 * f}px ${8 * f}px`, display: "flex", alignItems: "center", gap: 6 * f }}>
+          <LogoBadge logo={logo} businessName={businessName}
+            size={(isL ? 34 : 27) * f} bg={accentColor} color="#fff" border="none" />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ color: "#fff", fontWeight: 900, fontSize: (isL ? 13 : 10) * f,
+              fontFamily: "Georgia, serif", lineHeight: 1.1,
+              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {businessName || "Your Insurance"}
+            </div>
+            <div style={{ color: gold, fontWeight: 700, fontSize: (isL ? 8 : 7) * f,
+              letterSpacing: 1 }}>AUTO · HOME · LIFE</div>
+          </div>
+          {phone && <div style={{ color: gold, fontWeight: 800, fontSize: (isL ? 8 : 7) * f, flexShrink: 0 }}>
+            ☎ {phone}
+          </div>}
         </div>
       </div>
-      <div style={{ flex: 1, padding: `${8 * f}px ${10 * f}px`, display: "flex",
-        flexDirection: "column", minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 * f, marginBottom: 4 }}>
-          <LogoBadge logo={logo} businessName={businessName} size={28 * f}
-            bg={accentColor} color="#fff" border="none" />
-          <div style={{ color: accentColor, fontWeight: 900, fontSize: 12 * f,
-            fontFamily: "Georgia, serif", lineHeight: 1.1, overflow: "hidden",
-            textOverflow: "ellipsis" }}>{businessName || "Your Insurance"}</div>
-        </div>
-        <div style={{ color: "#333", fontWeight: 700, fontSize: 10 * f, marginBottom: 4 }}>
-          {tagline || "Coverage You Can Trust"}
-        </div>
-        {size === "large" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 2,
-            fontSize: 9 * f, color: "#444", marginBottom: 5 }}>
-            <div>✓ Auto Insurance</div>
-            <div>✓ Home Insurance</div>
-            <div>✓ Life Insurance</div>
+      {/* Coupon block */}
+      <div style={{ flex: 1, minHeight: 0, display: "flex", gap: 6 * f,
+        padding: `${7 * f}px ${8 * f}px`, alignItems: "stretch" }}>
+        {[{ h: offer, fp: offerFinePrint }, ...(offer2 ? [{ h: offer2, fp: offer2FinePrint }] : [])].map(({ h, fp }, i) => h && (
+          <div key={i} style={{ flex: 1, position: "relative",
+            border: `2px dashed ${gold}`, borderRadius: 5 * f,
+            background: "rgba(0,0,0,0.2)", display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center",
+            padding: `${5 * f}px ${5 * f}px`, gap: 3 * f }}>
+            <div style={{ position: "absolute", top: -9 * f, left: "50%", transform: "translateX(-50%)",
+              color: gold, fontSize: 11 * f, background: dark, padding: "0 4px" }}>✂</div>
+            <div style={{ color: "rgba(255,255,255,0.8)", fontSize: (isL ? 7 : 6.5) * f,
+              letterSpacing: 2, textTransform: "uppercase" }}>Bring This Ad</div>
+            <div style={{ color: gold, fontWeight: 900, fontSize: (isL ? 21 : 16) * f,
+              lineHeight: 1, fontFamily: "Georgia, serif", textAlign: "center" }}>{h}</div>
+            {fp && <div style={{ color: "rgba(255,255,255,0.7)", fontSize: (isL ? 7.5 : 6.5) * f,
+              textAlign: "center", lineHeight: 1.3 }}>{fp}</div>}
+            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: (isL ? 7 : 6) * f,
+              fontStyle: "italic" }}>with this postcard</div>
           </div>
-        )}
-        <div style={{ marginTop: "auto", fontSize: 9 * f, color: "#555", lineHeight: 1.4 }}>
-          {phone && <div style={{ color: accentColor, fontWeight: 800 }}>☎ {phone}</div>}
-          {address && size !== "small" && <div>📍 {address}</div>}
-        </div>
-        {offer && (
-          <div style={{ marginTop: 5, background: gold, color: "#1a1a2e",
-            padding: `${4 * f}px ${8 * f}px`, borderRadius: 4, fontWeight: 900,
-            fontSize: 11 * f, textAlign: "center" }}>{offer}</div>
-        )}
+        ))}
+      </div>
+      {/* Footer */}
+      <div style={{ flexShrink: 0, background: "rgba(0,0,0,0.4)",
+        padding: `${3 * f}px ${8 * f}px`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        {address && <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 7 * f,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>📍 {address}</span>}
+        {tagline && isL && <span style={{ color: "rgba(255,255,255,0.55)", fontSize: 7 * f,
+          fontStyle: "italic" }}>{tagline}</span>}
       </div>
     </div>
   );
 }
 
 // ─── LAWN-A: The Outdoor ─────────────────────────────────────────────────────
-function LawnA({ businessName, tagline, offer, offerFinePrint, address, phone,
-  logo, size, accentColor }) {
+function LawnA({ businessName, tagline, offer, offerFinePrint, offer2, offer2FinePrint,
+  address, phone, logo, photos = [], size, accentColor, industry = "Lawn and Landscaping" }) {
   const f = scaleFactor(size);
+  const isL = size === "large";
+  const heroPhoto = (photos || []).find(p => p) || pickFallbackPhoto(industry, businessName, "hero", 0);
+  const dark = shade(accentColor, -22);
+  const sun = "#fbbf24";
   return (
-    <div style={{ ...baseBox,
-      background: `linear-gradient(180deg, ${shade(accentColor, -20)} 0%, ${shade(accentColor, 60)} 100%)`,
-      color: "#fff" }}>
-      <div style={{ position: "absolute", top: 6 * f, right: 8 * f, width: 24 * f,
-        height: 24 * f, borderRadius: "50%", background: "#fbbf24",
-        boxShadow: "0 0 16px rgba(251,191,36,0.6)" }}>
-        <div style={{ position: "absolute", inset: -6 * f, borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(251,191,36,0.4) 0%, transparent 70%)" }} />
-      </div>
-      <div style={{ position: "relative", padding: `${10 * f}px ${10 * f}px`,
-        height: "100%", boxSizing: "border-box", display: "flex", flexDirection: "column" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 * f }}>
-          <LogoBadge logo={logo} businessName={businessName} size={42 * f}
-            bg="rgba(255,255,255,0.2)" color="#fff" border="2px solid rgba(255,255,255,0.6)" />
-          <div>
-            <div style={{ color: "#fff", fontWeight: 900, fontSize: 13 * f,
-              fontFamily: "Georgia, serif", lineHeight: 1.1 }}>
+    <div style={{ ...baseBox, display: "flex", flexDirection: "column", background: dark }}>
+      {/* Hero photo */}
+      <div style={{ flex: "0 0 40%", position: "relative", overflow: "hidden", flexShrink: 0 }}>
+        <div style={{ position: "absolute", inset: 0,
+          backgroundImage: `url(${heroPhoto})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+        <div style={{ position: "absolute", inset: 0,
+          background: `linear-gradient(180deg, rgba(0,0,0,0.05) 0%, ${dark} 100%)` }} />
+        {/* Sun decoration */}
+        <div style={{ position: "absolute", top: 6 * f, right: 8 * f,
+          width: 22 * f, height: 22 * f, borderRadius: "50%", background: sun,
+          boxShadow: "0 0 12px rgba(251,191,36,0.7)", opacity: 0.9 }} />
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0,
+          padding: `${4 * f}px ${8 * f}px`, display: "flex", alignItems: "center", gap: 6 * f }}>
+          <LogoBadge logo={logo} businessName={businessName}
+            size={(isL ? 34 : 27) * f} bg="rgba(255,255,255,0.2)" color="#fff"
+            border="2px solid rgba(255,255,255,0.6)" />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ color: "#fff", fontWeight: 900, fontSize: (isL ? 13 : 10) * f,
+              fontFamily: "Georgia, serif", lineHeight: 1.1, textShadow: "0 1px 4px rgba(0,0,0,0.8)",
+              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               {businessName || "Your Lawn Care"}
             </div>
-            {tagline && <div style={{ color: "rgba(255,255,255,0.8)", fontSize: 9 * f,
-              marginTop: 2 }}>{tagline}</div>}
+            {tagline && <div style={{ color: "rgba(255,255,255,0.8)", fontSize: (isL ? 8 : 7) * f }}>
+              {tagline}
+            </div>}
           </div>
+          {phone && <div style={{ color: sun, fontWeight: 800, fontSize: (isL ? 8 : 7) * f, flexShrink: 0 }}>
+            ☎ {phone}
+          </div>}
         </div>
-        {size === "large" && (
-          <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 3,
-            fontSize: 10 * f }}>
-            {["Mowing", "Mulching", "Clean-ups"].map((s, i) => (
-              <div key={i}>✓ {s}</div>
-            ))}
+      </div>
+      {/* Coupon block */}
+      <div style={{ flex: 1, minHeight: 0, display: "flex", gap: 6 * f,
+        padding: `${7 * f}px ${8 * f}px`, alignItems: "stretch" }}>
+        {[{ h: offer, fp: offerFinePrint }, ...(offer2 ? [{ h: offer2, fp: offer2FinePrint }] : [])].map(({ h, fp }, i) => h && (
+          <div key={i} style={{ flex: 1, position: "relative",
+            border: "2px dashed rgba(255,255,255,0.55)", borderRadius: 5 * f,
+            background: "rgba(0,0,0,0.25)", display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center",
+            padding: `${5 * f}px ${5 * f}px`, gap: 3 * f }}>
+            <div style={{ position: "absolute", top: -9 * f, left: "50%", transform: "translateX(-50%)",
+              color: sun, fontSize: 11 * f, background: dark, padding: "0 4px" }}>✂</div>
+            <div style={{ color: "rgba(255,255,255,0.8)", fontSize: (isL ? 7 : 6.5) * f,
+              letterSpacing: 2, textTransform: "uppercase" }}>Bring This Ad</div>
+            <div style={{ color: "#fff", fontWeight: 900, fontSize: (isL ? 21 : 16) * f,
+              lineHeight: 1, fontFamily: "Georgia, serif", textAlign: "center" }}>{h}</div>
+            {fp && <div style={{ color: "rgba(255,255,255,0.7)", fontSize: (isL ? 7.5 : 6.5) * f,
+              textAlign: "center", lineHeight: 1.3 }}>{fp}</div>}
+            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: (isL ? 7 : 6) * f,
+              fontStyle: "italic" }}>with this postcard</div>
           </div>
-        )}
-        {offer && (
-          <div style={{ marginTop: "auto", background: "rgba(0,0,0,0.3)",
-            border: "2px dashed rgba(255,255,255,0.6)", borderRadius: 6,
-            padding: `${4 * f}px ${8 * f}px`, textAlign: "center" }}>
-            <div style={{ color: "#fff", fontWeight: 900, fontSize: 13 * f, lineHeight: 1.1 }}>{offer}</div>
-            {offerFinePrint && <div style={{ color: "rgba(255,255,255,0.7)",
-              fontSize: 7 * f, marginTop: 1 }}>{offerFinePrint}</div>}
-          </div>
-        )}
-        <div style={{ marginTop: 6, fontSize: 9 * f, color: "#fff", lineHeight: 1.4 }}>
-          {phone && <div style={{ fontWeight: 800 }}>☎ {phone}</div>}
-          {address && size === "large" && <div style={{ opacity: 0.8 }}>📍 {address}</div>}
-        </div>
+        ))}
+      </div>
+      {/* Footer */}
+      <div style={{ flexShrink: 0, background: "rgba(0,0,0,0.4)",
+        padding: `${3 * f}px ${8 * f}px`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        {address && <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 7 * f,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>📍 {address}</span>}
       </div>
     </div>
   );
 }
 
 // ─── LAWN-B: The Clean Cut ───────────────────────────────────────────────────
-function LawnB({ businessName, tagline, offer, offerFinePrint, address, phone, hours,
-  logo, size, accentColor }) {
+function LawnB({ businessName, tagline, offer, offerFinePrint, offer2, offer2FinePrint,
+  address, phone, hours, logo, photos = [], size, accentColor, industry = "Lawn and Landscaping" }) {
   const f = scaleFactor(size);
+  const isL = size === "large";
+  const heroPhoto = (photos || []).find(p => p) || pickFallbackPhoto(industry, businessName, "hero", 1);
+  const ct = contrastText(accentColor);
+  const dark = shade(accentColor, -20);
   return (
-    <div style={{ ...baseBox, background: "#fff", color: "#111",
-      display: "flex", flexDirection: "column" }}>
-      <div style={{ background: accentColor, padding: `${6 * f}px ${10 * f}px`,
-        display: "flex", alignItems: "center", justifyContent: "center", gap: 6 * f, flexShrink: 0 }}>
-        <LogoBadge logo={logo} businessName={businessName} size={28 * f}
-          bg="#fff" color={accentColor} border="none" />
-        <div style={{ color: "#fff", fontWeight: 900, fontSize: 12 * f,
-          fontFamily: "Georgia, serif", overflow: "hidden", textOverflow: "ellipsis" }}>
-          {businessName || "Your Lawn Care"}
+    <div style={{ ...baseBox, display: "flex", flexDirection: "column", background: "#fff" }}>
+      {/* Hero photo */}
+      <div style={{ flex: "0 0 38%", position: "relative", overflow: "hidden", flexShrink: 0 }}>
+        <div style={{ position: "absolute", inset: 0,
+          backgroundImage: `url(${heroPhoto})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+        <div style={{ position: "absolute", inset: 0,
+          background: `linear-gradient(180deg, rgba(0,0,0,0.05) 40%, ${accentColor} 100%)` }} />
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0,
+          padding: `${4 * f}px ${8 * f}px`, display: "flex", alignItems: "center", gap: 6 * f }}>
+          <LogoBadge logo={logo} businessName={businessName}
+            size={(isL ? 32 : 26) * f} bg="#fff" color={accentColor} border="none" />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ color: ct, fontWeight: 900, fontSize: (isL ? 13 : 10) * f,
+              fontFamily: "Georgia, serif", lineHeight: 1.1, textShadow: "0 1px 3px rgba(0,0,0,0.6)",
+              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {businessName || "Your Lawn Care"}
+            </div>
+            {tagline && <div style={{ color: ct === "#fff" ? "rgba(255,255,255,0.85)" : "rgba(0,0,0,0.7)",
+              fontSize: (isL ? 8 : 7) * f }}>{tagline}</div>}
+          </div>
+          {phone && <div style={{ color: ct === "#fff" ? "#fde8a0" : dark,
+            fontWeight: 800, fontSize: (isL ? 8 : 7) * f, flexShrink: 0 }}>☎ {phone}</div>}
         </div>
       </div>
-      <div style={{ flex: 1, padding: `${8 * f}px ${10 * f}px`, minHeight: 0 }}>
-        {tagline && <div style={{ color: accentColor, fontWeight: 800, fontSize: 11 * f,
-          textAlign: "center", marginBottom: 4 }}>{tagline}</div>}
-        {size === "large" && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 3,
-            fontSize: 9 * f, color: "#444", marginBottom: 5 }}>
-            <div>✓ Mowing</div>
-            <div>✓ Mulching</div>
-            <div>✓ Cleanups</div>
-            <div>✓ Edging</div>
+      {/* Coupon block */}
+      <div style={{ flex: 1, minHeight: 0, display: "flex", gap: 6 * f,
+        padding: `${7 * f}px ${8 * f}px`, alignItems: "stretch", background: accentColor }}>
+        {[{ h: offer, fp: offerFinePrint }, ...(offer2 ? [{ h: offer2, fp: offer2FinePrint }] : [])].map(({ h, fp }, i) => h && (
+          <div key={i} style={{ flex: 1, position: "relative",
+            border: "2px dashed rgba(255,255,255,0.55)", borderRadius: 5 * f,
+            background: "rgba(0,0,0,0.2)", display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center",
+            padding: `${5 * f}px ${5 * f}px`, gap: 3 * f }}>
+            <div style={{ position: "absolute", top: -9 * f, left: "50%", transform: "translateX(-50%)",
+              color: ct === "#fff" ? "#fde8a0" : "#fff", fontSize: 11 * f,
+              background: accentColor, padding: "0 4px" }}>✂</div>
+            <div style={{ color: "rgba(255,255,255,0.8)", fontSize: (isL ? 7 : 6.5) * f,
+              letterSpacing: 2, textTransform: "uppercase" }}>Bring This Ad</div>
+            <div style={{ color: "#fff", fontWeight: 900, fontSize: (isL ? 21 : 16) * f,
+              lineHeight: 1, fontFamily: "Georgia, serif", textAlign: "center" }}>{h}</div>
+            {fp && <div style={{ color: "rgba(255,255,255,0.7)", fontSize: (isL ? 7.5 : 6.5) * f,
+              textAlign: "center", lineHeight: 1.3 }}>{fp}</div>}
+            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: (isL ? 7 : 6) * f,
+              fontStyle: "italic" }}>with this postcard</div>
           </div>
-        )}
-        {offer && (
-          <div style={{ background: shade(accentColor, 130), color: shade(accentColor, -40),
-            border: `2px solid ${accentColor}`, borderRadius: 12,
-            padding: `${4 * f}px ${10 * f}px`, fontWeight: 900, fontSize: 12 * f,
-            textAlign: "center", margin: `${4 * f}px 0` }}>
-            {offer}
-            {offerFinePrint && size !== "small" && <div style={{ fontSize: 7 * f,
-              fontWeight: 400, marginTop: 1 }}>{offerFinePrint}</div>}
-          </div>
-        )}
-        <div style={{ fontSize: 9 * f, color: "#555", textAlign: "center",
-          lineHeight: 1.4, marginTop: 4 }}>
-          {phone && <div style={{ fontWeight: 800, color: accentColor }}>☎ {phone}</div>}
-          {address && size !== "small" && <div>{address}</div>}
-        </div>
+        ))}
       </div>
-      <div style={{ background: accentColor, padding: `${3 * f}px`, flexShrink: 0 }} />
+      {/* Footer */}
+      <div style={{ flexShrink: 0, background: dark,
+        padding: `${3 * f}px ${8 * f}px`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        {address && <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 7 * f,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>📍 {address}</span>}
+        {hours && isL && <span style={{ color: "rgba(255,255,255,0.55)", fontSize: 7 * f }}>⏰ {hours}</span>}
+      </div>
     </div>
   );
 }
 
 // ─── GENERAL-A: Bold Block ───────────────────────────────────────────────────
-function GeneralA({ businessName, tagline, offer, offerFinePrint, address, phone,
-  logo, size, accentColor }) {
+function GeneralA({ businessName, tagline, offer, offerFinePrint, offer2, offer2FinePrint,
+  address, phone, logo, photos = [], size, accentColor, industry = "Other" }) {
   const f = scaleFactor(size);
-  const txt = contrastText(accentColor);
-  const accent2 = txt === "#fff" ? "#fbbf24" : accentColor;
+  const isL = size === "large";
+  const ct = contrastText(accentColor);
+  const heroPhoto = (photos || []).find(p => p) || pickFallbackPhoto(industry, businessName, "hero", 0);
+  const dark = shade(accentColor, -25);
+  const accent2 = ct === "#fff" ? "#fbbf24" : accentColor;
   return (
-    <div style={{ ...baseBox, background: accentColor, color: txt }}>
-      <div style={{ position: "absolute", top: 6 * f, left: 8 * f }}>
-        <LogoBadge logo={logo} businessName={businessName} size={32 * f}
-          bg={txt === "#fff" ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)"}
-          color={txt} border={`2px solid ${txt === "#fff" ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.2)"}`} />
-      </div>
-      <div style={{ padding: `${44 * f}px ${10 * f}px ${42 * f}px`, textAlign: "center",
-        height: "100%", boxSizing: "border-box", display: "flex", flexDirection: "column",
-        justifyContent: "center" }}>
-        <div style={{ fontWeight: 900, fontSize: 18 * f, fontFamily: "Georgia, serif",
-          lineHeight: 1.1, color: txt }}>{businessName || "Your Business"}</div>
-        {tagline && <div style={{ fontSize: 11 * f, marginTop: 4,
-          opacity: 0.85 }}>{tagline}</div>}
-      </div>
-      {offer && (
-        <div style={{ position: "absolute", bottom: 22 * f, left: 8 * f, right: 8 * f,
-          background: accent2, color: txt === "#fff" ? "#111" : "#fff",
-          padding: `${4 * f}px ${8 * f}px`, fontWeight: 900, fontSize: 12 * f,
-          textAlign: "center", borderRadius: 4 }}>
-          {offer}
-          {offerFinePrint && <div style={{ fontSize: 7 * f, fontWeight: 400, opacity: 0.85,
-            marginTop: 1 }}>{offerFinePrint}</div>}
+    <div style={{ ...baseBox, display: "flex", flexDirection: "column", background: dark }}>
+      {/* Hero photo */}
+      <div style={{ flex: "0 0 38%", position: "relative", overflow: "hidden", flexShrink: 0 }}>
+        <div style={{ position: "absolute", inset: 0,
+          backgroundImage: `url(${heroPhoto})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+        <div style={{ position: "absolute", inset: 0,
+          background: `linear-gradient(180deg, rgba(0,0,0,0.1) 0%, ${dark} 100%)` }} />
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0,
+          padding: `${4 * f}px ${8 * f}px`, display: "flex", alignItems: "center", gap: 6 * f }}>
+          <LogoBadge logo={logo} businessName={businessName}
+            size={(isL ? 34 : 27) * f}
+            bg={ct === "#fff" ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.15)"}
+            color={ct} border={`2px solid ${ct === "#fff" ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.2)"}`} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ color: "#fff", fontWeight: 900, fontSize: (isL ? 14 : 11) * f,
+              fontFamily: "Georgia, serif", lineHeight: 1.1, textShadow: "0 1px 4px rgba(0,0,0,0.8)",
+              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {businessName || "Your Business"}
+            </div>
+            {tagline && <div style={{ color: "rgba(255,255,255,0.8)", fontSize: (isL ? 8 : 7) * f,
+              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tagline}</div>}
+          </div>
+          {phone && <div style={{ color: accent2, fontWeight: 800, fontSize: (isL ? 8 : 7) * f, flexShrink: 0 }}>
+            ☎ {phone}
+          </div>}
         </div>
-      )}
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0,
-        padding: `${4 * f}px ${10 * f}px`, fontSize: 9 * f,
-        background: "rgba(0,0,0,0.2)", display: "flex", justifyContent: "space-between" }}>
-        {phone && <span style={{ fontWeight: 800 }}>☎ {phone}</span>}
-        {address && size !== "small" && <span style={{ opacity: 0.85, overflow: "hidden",
-          textOverflow: "ellipsis", whiteSpace: "nowrap", marginLeft: 6 }}>{address}</span>}
+      </div>
+      {/* Coupon block */}
+      <div style={{ flex: 1, minHeight: 0, display: "flex", gap: 6 * f,
+        padding: `${7 * f}px ${8 * f}px`, alignItems: "stretch" }}>
+        {[{ h: offer, fp: offerFinePrint }, ...(offer2 ? [{ h: offer2, fp: offer2FinePrint }] : [])].map(({ h, fp }, i) => h && (
+          <div key={i} style={{ flex: 1, position: "relative",
+            border: `2px dashed ${accent2}`, borderRadius: 5 * f,
+            background: "rgba(0,0,0,0.2)", display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center",
+            padding: `${5 * f}px ${5 * f}px`, gap: 3 * f }}>
+            <div style={{ position: "absolute", top: -9 * f, left: "50%", transform: "translateX(-50%)",
+              color: accent2, fontSize: 11 * f, background: dark, padding: "0 4px" }}>✂</div>
+            <div style={{ color: "rgba(255,255,255,0.8)", fontSize: (isL ? 7 : 6.5) * f,
+              letterSpacing: 2, textTransform: "uppercase" }}>Bring This Ad</div>
+            <div style={{ color: accent2, fontWeight: 900, fontSize: (isL ? 21 : 16) * f,
+              lineHeight: 1, fontFamily: "Georgia, serif", textAlign: "center" }}>{h}</div>
+            {fp && <div style={{ color: "rgba(255,255,255,0.7)", fontSize: (isL ? 7.5 : 6.5) * f,
+              textAlign: "center", lineHeight: 1.3 }}>{fp}</div>}
+            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: (isL ? 7 : 6) * f,
+              fontStyle: "italic" }}>with this postcard</div>
+          </div>
+        ))}
+      </div>
+      {/* Footer */}
+      <div style={{ flexShrink: 0, background: "rgba(0,0,0,0.4)",
+        padding: `${3 * f}px ${8 * f}px`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        {address && <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 7 * f,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>📍 {address}</span>}
       </div>
     </div>
   );
 }
 
 // ─── GENERAL-B: The Split ────────────────────────────────────────────────────
-function GeneralB({ businessName, tagline, offer, offerFinePrint, address, phone, hours,
-  logo, size, accentColor }) {
+function GeneralB({ businessName, tagline, offer, offerFinePrint, offer2, offer2FinePrint,
+  address, phone, hours, logo, photos = [], size, accentColor, industry = "Other" }) {
   const f = scaleFactor(size);
+  const isL = size === "large";
+  const heroPhoto = (photos || []).find(p => p) || pickFallbackPhoto(industry, businessName, "hero", 1);
+  const ct = contrastText(accentColor);
+  const dark = shade(accentColor, -22);
   return (
-    <div style={{ ...baseBox, background: "#fff", color: "#111", display: "flex" }}>
-      <div style={{ width: "32%", background: accentColor, color: "#fff",
-        padding: `${8 * f}px ${6 * f}px`, display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "space-between", flexShrink: 0,
-        textAlign: "center", boxSizing: "border-box" }}>
-        <LogoBadge logo={logo} businessName={businessName} size={36 * f}
-          bg="rgba(255,255,255,0.2)" color="#fff" border="2px solid rgba(255,255,255,0.4)" />
-        {phone && (
-          <div style={{ color: "#fff", fontWeight: 800, fontSize: 9 * f,
-            lineHeight: 1.2, marginTop: 6 * f }}>☎<br />{phone}</div>
-        )}
+    <div style={{ ...baseBox, display: "flex", flexDirection: "column", background: dark }}>
+      {/* Hero photo */}
+      <div style={{ flex: "0 0 38%", position: "relative", overflow: "hidden", flexShrink: 0 }}>
+        <div style={{ position: "absolute", inset: 0,
+          backgroundImage: `url(${heroPhoto})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+        <div style={{ position: "absolute", inset: 0,
+          background: `linear-gradient(180deg, rgba(0,0,0,0.05) 0%, ${dark} 100%)` }} />
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0,
+          padding: `${4 * f}px ${8 * f}px`, display: "flex", alignItems: "center", gap: 6 * f }}>
+          <LogoBadge logo={logo} businessName={businessName}
+            size={(isL ? 34 : 27) * f} bg="rgba(255,255,255,0.2)" color="#fff"
+            border="2px solid rgba(255,255,255,0.4)" />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ color: "#fff", fontWeight: 900, fontSize: (isL ? 14 : 11) * f,
+              fontFamily: "Georgia, serif", lineHeight: 1.1, textShadow: "0 1px 4px rgba(0,0,0,0.8)",
+              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {businessName || "Your Business"}
+            </div>
+            {tagline && <div style={{ color: "rgba(255,255,255,0.8)", fontSize: (isL ? 8 : 7) * f }}>
+              {tagline}
+            </div>}
+          </div>
+          {phone && <div style={{ color: accentColor, fontWeight: 800,
+            fontSize: (isL ? 8 : 7) * f, flexShrink: 0 }}>☎ {phone}</div>}
+        </div>
       </div>
-      <div style={{ flex: 1, padding: `${8 * f}px ${10 * f}px`, display: "flex",
-        flexDirection: "column", justifyContent: "space-between", minWidth: 0 }}>
-        <div>
-          <div style={{ color: accentColor, fontWeight: 900, fontSize: 13 * f,
-            fontFamily: "Georgia, serif", lineHeight: 1.1 }}>
-            {businessName || "Your Business"}
+      {/* Coupon block */}
+      <div style={{ flex: 1, minHeight: 0, display: "flex", gap: 6 * f,
+        padding: `${7 * f}px ${8 * f}px`, alignItems: "stretch" }}>
+        {[{ h: offer, fp: offerFinePrint }, ...(offer2 ? [{ h: offer2, fp: offer2FinePrint }] : [])].map(({ h, fp }, i) => h && (
+          <div key={i} style={{ flex: 1, position: "relative",
+            border: `2px dashed ${accentColor}`, borderRadius: 5 * f,
+            background: "rgba(255,255,255,0.06)", display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center",
+            padding: `${5 * f}px ${5 * f}px`, gap: 3 * f }}>
+            <div style={{ position: "absolute", top: -9 * f, left: "50%", transform: "translateX(-50%)",
+              color: accentColor, fontSize: 11 * f, background: dark, padding: "0 4px" }}>✂</div>
+            <div style={{ color: "rgba(255,255,255,0.8)", fontSize: (isL ? 7 : 6.5) * f,
+              letterSpacing: 2, textTransform: "uppercase" }}>Bring This Ad</div>
+            <div style={{ color: accentColor, fontWeight: 900, fontSize: (isL ? 21 : 16) * f,
+              lineHeight: 1, fontFamily: "Georgia, serif", textAlign: "center" }}>{h}</div>
+            {fp && <div style={{ color: "rgba(255,255,255,0.7)", fontSize: (isL ? 7.5 : 6.5) * f,
+              textAlign: "center", lineHeight: 1.3 }}>{fp}</div>}
+            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: (isL ? 7 : 6) * f,
+              fontStyle: "italic" }}>with this postcard</div>
           </div>
-          {tagline && <div style={{ color: "#555", fontSize: 10 * f, marginTop: 3,
-            lineHeight: 1.3 }}>{tagline}</div>}
-        </div>
-        {offer && (
-          <div style={{ border: `2px solid ${accentColor}`, borderRadius: 6,
-            padding: `${4 * f}px ${8 * f}px`, textAlign: "center" }}>
-            <div style={{ color: accentColor, fontWeight: 900, fontSize: 11 * f,
-              lineHeight: 1.1 }}>{offer}</div>
-            {offerFinePrint && size !== "small" && <div style={{ color: "#777",
-              fontSize: 7 * f }}>{offerFinePrint}</div>}
-          </div>
-        )}
-        <div style={{ fontSize: 8.5 * f, color: "#555", lineHeight: 1.4 }}>
-          {address && size !== "small" && <div>📍 {address}</div>}
-          {hours && size === "large" && <div>⏰ {hours}</div>}
-        </div>
+        ))}
+      </div>
+      {/* Footer */}
+      <div style={{ flexShrink: 0, background: "rgba(0,0,0,0.4)",
+        padding: `${3 * f}px ${8 * f}px`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        {address && <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 7 * f,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>📍 {address}</span>}
+        {hours && isL && <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 7 * f }}>⏰ {hours}</span>}
       </div>
     </div>
   );

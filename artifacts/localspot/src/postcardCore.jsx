@@ -1,9 +1,5 @@
 import { useState } from "react";
-import { RestaurantA } from "./AdCreator.jsx";
-
-const BASE = import.meta.env.BASE_URL;
-const MR_BISCUITS_LOGO = `${BASE}mr-biscuits-logo.jpg`;
-const MR_BISCUITS_HERO = `${BASE}industries/restaurants/mr-biscuits/menu-chicken-biscuit.jpg`;
+import { MrBiscuitsLarge, MrBiscuitsMedium, MrBiscuitsSmall } from "./MrBiscuitsReferenceAd.jsx";
 
 export const SIZES = {
   large:  { label: "Large",  price: 399, dim: '4" × 5"',  desc: "Prime placement, maximum impact" },
@@ -23,30 +19,6 @@ export const GRID_AREAS = [
   "hv hv hv ins ins ins lw lw lw a2 a2 a2",
 ].map(r => `"${r}"`).join(" ");
 
-// ─── 1. MR. BISCUIT'S CAFÉ — Showcase ad rendered with the RestaurantA template
-// This is the on-postcard sample so it stays in sync with the template a real
-// customer would pick. Uses real Mr. Biscuit's Café data + an in-library hero
-// photo (cropped from their menu) so the visual matches the live product.
-function MrBiscuitsAd({ size }) {
-  return (
-    <RestaurantA
-      size={size}
-      industry="Breakfast and Cafe"
-      businessName="Mr. Biscuit's Café"
-      tagline="From-scratch biscuits & fresh boba"
-      offer="$1 OFF"
-      offerFinePrint="Bacon Biscuit · 1 per visit"
-      offer2="FREE COFFEE"
-      offer2FinePrint="with any breakfast plate"
-      address="596 W Louise St Ste D, Clarkesville GA"
-      phone="(706) 754-0105"
-      hours="Tue–Fri 7a–12p · Sat 8a–12p"
-      logo={MR_BISCUITS_LOGO}
-      photos={[MR_BISCUITS_HERO]}
-      accentColor="#6a1f00"
-    />
-  );
-}
 
 // ─── 2. CLARKESVILLE FAMILY DENTAL — White + Navy/Gold, Badge Logo ─────────
 // Layout: White background, navy header band, badge logomark, navy coupon strip bottom
@@ -631,7 +603,10 @@ function DefaultAd({ spot }) {
 export function PaidAd({ spot }) {
   const s = { size: spot.size };
   switch (spot.businessName) {
-    case "Mr. Biscuit's Café":          return <MrBiscuitsAd    {...s} />;
+    case "Mr. Biscuit's Café":
+      if (spot.size === "large")  return <MrBiscuitsLarge />;
+      if (spot.size === "medium") return <MrBiscuitsMedium />;
+      return <MrBiscuitsSmall />;
     case "Clarkesville Family Dental":  return <FamilyDentalAd  {...s} />;
     case "Blue Ridge Air & Heat":       return <BlueRidgeAd     {...s} />;
     case "Tanner Insurance Agency":     return <TannerAd        {...s} />;
