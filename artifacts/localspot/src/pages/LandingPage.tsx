@@ -1,5 +1,6 @@
 import { useState } from "react";
 import PostcardPickerSection from "../PostcardPickerSection";
+import PostcardHeroPreview from "../PostcardHeroPreview";
 
 const RED = "#7B1418";
 
@@ -97,13 +98,8 @@ function Hero() {
         </div>
       </div>
 
-      <div style={{ flex: "1 1 420px", minWidth: 300, position: "relative" }}>
-        <img
-          src={`${import.meta.env.BASE_URL}postcard-hero.png`}
-          alt="Sample 9×12 co-op postcard"
-          style={{ width: "100%", maxWidth: 560, borderRadius: 12,
-            boxShadow: "0 24px 60px rgba(0,0,0,0.18)", display: "block" }}
-        />
+      <div style={{ flex: "1 1 420px", minWidth: 300, maxWidth: 560, position: "relative" }}>
+        <PostcardHeroPreview />
         <div style={{
           position: "absolute", bottom: 24, left: -12,
           background: "#d4a017", color: "#fff",
@@ -186,12 +182,7 @@ function WhyChooseUs() {
           </div>
         </div>
         <div style={{ flex: "1 1 360px" }}>
-          <img
-            src={`${import.meta.env.BASE_URL}postcard-hero.png`}
-            alt="9×12 postcard sample"
-            style={{ width: "100%", maxWidth: 520, borderRadius: 12,
-              boxShadow: "0 16px 48px rgba(0,0,0,0.14)", display: "block" }}
-          />
+          <PostcardHeroPreview />
         </div>
       </div>
     </section>
