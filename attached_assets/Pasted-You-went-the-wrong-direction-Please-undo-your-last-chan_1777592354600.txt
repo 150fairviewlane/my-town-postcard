@@ -1,0 +1,35 @@
+You went the wrong direction. Please undo your last change and follow these instructions exactly.
+
+PART 1 - REVERT THE HERO CHANGE
+
+Revert whatever you did to the hero section in the last change. The hero postcard images are now broken with overflowing text, oversized starbursts, and cut off ads. Restore the original static hero image (postcard-hero.png) so the top of the page goes back to using the original PNG file. Do not try to render a live JSX postcard in the hero. Just put the static image back.
+
+PART 2 - FIX THE ACTUAL INTERACTIVE PICKER
+
+The interactive postcard grid in the “Reserve Your Spot on the Postcard” section still looks bad and is what we actually need to fix. You said earlier that this section IS using PostcardSampleAds.jsx via PostcardPickerSection.jsx. If that is true, then one of these things is wrong:
+
+Option A: The spot IDs in PostcardPickerSection.jsx do not match the keys in SPOT_SAMPLE_MAP. If the IDs do not match, getSampleAd returns null and falls back to old ugly placeholder code.
+
+Option B: PostcardPickerSection.jsx has its own internal ad rendering code that runs BEFORE or INSTEAD of getSampleAd, masking the new templates.
+
+To debug, open PostcardPickerSection.jsx and do these things:
+
+1. Find the SPOTS array or whatever defines the postcard spots. Print out the exact ID of every spot.
+1. Open PostcardSampleAds.jsx and look at the SPOT_SAMPLE_MAP keys at the bottom. The keys are placeholders like front-xl-1, front-l-1, etc.
+1. Update the keys in SPOT_SAMPLE_MAP to match the EXACT spot IDs from step 1. If your spot IDs are something like spot-a, spot-b, spot-c, then change the map keys to spot-a, spot-b, spot-c. Map roughly half of your spots to sample ad config keys (mrbiscuits, dental, pizza, autorepair, mexican, insurance, lawn, salon, vet, gym) and leave the other half NOT in the map so they show as available green plus signs.
+1. In PostcardPickerSection.jsx find the function that renders each spot. Show me what it currently looks like by printing the relevant code. Then replace it with code that does this and ONLY this for each spot:
+- Look up the spot ID in SPOT_SAMPLE_MAP using its actual ID property
+- If found, render: getSampleAd(theKey, spot.size)
+- If not found, render the green available plus button
+1. Delete any other ad-creation code that exists in PostcardPickerSection.jsx. If there is any code in that file that builds ads using divs, hardcoded text, or anything other than calling getSampleAd, delete it. The file should ONLY call getSampleAd to render ads.
+1. After making changes, take a screenshot of the live interactive grid in the Reserve Your Spot section (not the hero). The ads in this grid must show:
+- Real photo backgrounds from Unsplash (food photos, dental photos, etc)
+- Starburst badges with text like BOGO, FREE, 20% OFF
+- Gradient overlays
+- Bold business names
+- Bold phone numbers
+- At least 3 spots showing as available green plus signs across different sizes
+
+If after step 6 the live grid STILL does not show photos and starbursts, paste me the contents of PostcardPickerSection.jsx so I can see exactly what code is rendering the spots. Do not guess - show me the actual file contents.
+
+Do not modify AdGenerator.jsx, industryAssets.js, the hero image, Stripe, the database, routing, or any backend code. Only fix PostcardPickerSection.jsx and the SPOT_SAMPLE_MAP keys in PostcardSampleAds.jsx.
