@@ -248,6 +248,7 @@ function Pricing() {
               borderRadius: 16, padding: "28px 20px",
               boxShadow: p.highlight ? `0 8px 32px ${RED}22` : "0 2px 10px rgba(0,0,0,0.05)",
               position: "relative", background: "#fff",
+              display: "flex", flexDirection: "column",
             }}>
               {p.highlight && (
                 <div style={{ position: "absolute", top: -14, left: "50%", transform: "translateX(-50%)",
@@ -278,7 +279,7 @@ function Pricing() {
                 ))}
               </div>
               <button onClick={() => scrollTo("book")}
-                style={{ width: "100%", padding: "12px 0", borderRadius: 9,
+                style={{ width: "100%", padding: "12px 0", borderRadius: 9, marginTop: "auto",
                   background: p.highlight ? RED : "#fff",
                   color: p.highlight ? "#fff" : RED,
                   border: `2px solid ${RED}`,
