@@ -85,7 +85,7 @@ function EditableText({ value, onChange, style = {}, multiline = false, placehol
 const EDITABLE_CSS = `.editable-text:hover { outline: 1.5px dashed rgba(255,255,255,0.5) !important; border-radius: 2px; } .editable-text:hover .edit-hint { opacity: 1 !important; } .editable-text { cursor: text !important; }`;
 
 // ─────────────────────────────────────────────────────────────────────────────
-//   AD SIZES — 4 sizes × 4 template styles = 16 unique looks
+//   AD SIZES
 // ─────────────────────────────────────────────────────────────────────────────
 const AD_SIZES = {
   XL: { label: "Extra Large", price: 450, ratio: "4:5",   width: 4, height: 5,   desc: "Hero spot · maximum impact" },
@@ -119,26 +119,26 @@ function Coupon({ offer, fine, accent, scale = 1, dark = false, onEditOffer, onE
   if (!offer) return null;
   return (
     <div style={{
-      border: `${1.5*scale}px dashed ${accent}`, background: dark ? "rgba(0,0,0,0.3)" : `${accent}15`,
-      borderRadius: 4*scale, padding: `${5*scale}px ${10*scale}px ${4*scale}px`,
+      border: `${1.5 * scale}px dashed ${accent}`, background: dark ? "rgba(0,0,0,0.3)" : `${accent}15`,
+      borderRadius: 4 * scale, padding: `${5 * scale}px ${10 * scale}px ${4 * scale}px`,
       textAlign: "center", position: "relative", flexShrink: 0,
     }}>
-      <div style={{ position: "absolute", top: -1, left: 0, right: 0, display: "flex", alignItems: "center", padding: `0 ${4*scale}px` }}>
-        <span style={{ fontSize: 9*scale, lineHeight: 1, flexShrink: 0, opacity: 0.75 }}>✂</span>
-        <div style={{ flex: 1, marginLeft: 3*scale, borderTop: `${1.2*scale}px dashed ${accent}88` }} />
-        <span style={{ fontSize: 9*scale, lineHeight: 1, flexShrink: 0, opacity: 0.75, transform: "scaleX(-1)", display: "inline-block" }}>✂</span>
+      <div style={{ position: "absolute", top: -1, left: 0, right: 0, display: "flex", alignItems: "center", padding: `0 ${4 * scale}px` }}>
+        <span style={{ fontSize: 9 * scale, lineHeight: 1, flexShrink: 0, opacity: 0.75 }}>✂</span>
+        <div style={{ flex: 1, marginLeft: 3 * scale, borderTop: `${1.2 * scale}px dashed ${accent}88` }} />
+        <span style={{ fontSize: 9 * scale, lineHeight: 1, flexShrink: 0, opacity: 0.75, transform: "scaleX(-1)", display: "inline-block" }}>✂</span>
       </div>
       {onEditOffer ? (
         <EditableText value={offer} onChange={onEditOffer}
-          style={{ color: accent, fontWeight: 900, fontSize: 12*scale, lineHeight: 1, letterSpacing: 0.3, marginTop: 3*scale }} />
+          style={{ color: accent, fontWeight: 900, fontSize: 12 * scale, lineHeight: 1, letterSpacing: 0.3, marginTop: 3 * scale }} />
       ) : (
-        <div style={{ color: accent, fontWeight: 900, fontSize: 12*scale, lineHeight: 1, letterSpacing: 0.3, marginTop: 3*scale }}>{offer}</div>
+        <div style={{ color: accent, fontWeight: 900, fontSize: 12 * scale, lineHeight: 1, letterSpacing: 0.3, marginTop: 3 * scale }}>{offer}</div>
       )}
       {fine && onEditFine ? (
         <EditableText value={fine} onChange={onEditFine}
-          style={{ color: dark ? "rgba(255,255,255,0.7)" : "#666", fontSize: 6.5*scale, marginTop: 2, fontFamily: "sans-serif" }} />
+          style={{ color: dark ? "rgba(255,255,255,0.7)" : "#666", fontSize: 6.5 * scale, marginTop: 2, fontFamily: "sans-serif" }} />
       ) : fine ? (
-        <div style={{ color: dark ? "rgba(255,255,255,0.7)" : "#666", fontSize: 6.5*scale, marginTop: 2, fontFamily: "sans-serif" }}>{fine}</div>
+        <div style={{ color: dark ? "rgba(255,255,255,0.7)" : "#666", fontSize: 6.5 * scale, marginTop: 2, fontFamily: "sans-serif" }}>{fine}</div>
       ) : null}
     </div>
   );
@@ -146,7 +146,6 @@ function Coupon({ offer, fine, accent, scale = 1, dark = false, onEditOffer, onE
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TEMPLATE 1: PHOTO-BOLD
-// Full-bleed photo background with overlay text
 // ─────────────────────────────────────────────────────────────────────────────
 function PhotoBoldTemplate({ data, sizeKey, onEdit }) {
   const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
@@ -160,38 +159,35 @@ function PhotoBoldTemplate({ data, sizeKey, onEdit }) {
       <img src={photo} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
       <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${ind.colors.dark}99 0%, ${ind.colors.dark}55 40%, ${ind.colors.dark}f0 100%)` }} />
 
-      {/* Top: logo + name */}
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, padding: `${10*fScale}px ${12*fScale}px`, display: "flex", alignItems: "center", gap: 8*fScale }}>
-        <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji} size={36*fScale} bg={`${ind.colors.primary}cc`} color="#fff" />
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, padding: `${10 * fScale}px ${12 * fScale}px`, display: "flex", alignItems: "center", gap: 8 * fScale }}>
+        <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji} size={36 * fScale} bg={`${ind.colors.primary}cc`} color="#fff" />
         <div style={{ flex: 1, minWidth: 0 }}>
           <EditableText value={data.businessName} onChange={edit("businessName")}
-            style={{ color: "#fff", fontWeight: 900, fontSize: 16*fScale, lineHeight: 1.05, textShadow: "0 2px 8px rgba(0,0,0,0.7)" }} />
+            style={{ color: "#fff", fontWeight: 900, fontSize: 16 * fScale, lineHeight: 1.05, textShadow: "0 2px 8px rgba(0,0,0,0.7)" }} />
           {!isS && (
             <EditableText value={data.industry} onChange={edit("industry")}
-              style={{ color: "rgba(255,255,255,0.85)", fontSize: 8*fScale, marginTop: 2, fontFamily: "sans-serif", letterSpacing: 1, textTransform: "uppercase" }} />
+              style={{ color: "rgba(255,255,255,0.85)", fontSize: 8 * fScale, marginTop: 2, fontFamily: "sans-serif", letterSpacing: 1, textTransform: "uppercase" }} />
           )}
         </div>
       </div>
 
-      {/* Center: tagline */}
       {!isS && (
-        <div style={{ position: "absolute", top: "42%", left: 12*fScale, right: 12*fScale, textAlign: "center" }}>
+        <div style={{ position: "absolute", top: "42%", left: 12 * fScale, right: 12 * fScale, textAlign: "center" }}>
           <EditableText value={data.tagline || ind.taglines[0]} onChange={edit("tagline")}
-            style={{ color: "#fff", fontWeight: 800, fontSize: (isXL?22:isL?18:14)*fScale, lineHeight: 1.1, fontStyle: "italic", textShadow: "0 2px 12px rgba(0,0,0,0.8)", textAlign: "center" }} />
+            style={{ color: "#fff", fontWeight: 800, fontSize: (isXL ? 22 : isL ? 18 : 14) * fScale, lineHeight: 1.1, fontStyle: "italic", textShadow: "0 2px 12px rgba(0,0,0,0.8)", textAlign: "center" }} />
         </div>
       )}
 
-      {/* Bottom: coupon + contact */}
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: `${8*fScale}px ${12*fScale}px`, display: "flex", flexDirection: "column", gap: 4*fScale }}>
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: `${8 * fScale}px ${12 * fScale}px`, display: "flex", flexDirection: "column", gap: 4 * fScale }}>
         {data.offer && <Coupon offer={data.offer} fine={data.offerFine} accent="#fff" scale={fScale} dark={true} onEditOffer={edit("offer")} onEditFine={edit("offerFine")} />}
-        <div style={{ display: "flex", justifyContent: "space-between", color: "rgba(255,255,255,0.85)", fontSize: 7.5*fScale, fontFamily: "sans-serif" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", color: "rgba(255,255,255,0.85)", fontSize: 7.5 * fScale, fontFamily: "sans-serif" }}>
           {data.address && (
             <EditableText value={data.address} onChange={edit("address")}
-              style={{ color: "rgba(255,255,255,0.85)", fontSize: 7.5*fScale, fontFamily: "sans-serif" }} />
+              style={{ color: "rgba(255,255,255,0.85)", fontSize: 7.5 * fScale, fontFamily: "sans-serif" }} />
           )}
           {data.phone && (
             <EditableText value={data.phone} onChange={edit("phone")}
-              style={{ color: "rgba(255,255,255,0.85)", fontSize: 7.5*fScale, fontWeight: 800, fontFamily: "sans-serif" }} />
+              style={{ color: "rgba(255,255,255,0.85)", fontSize: 7.5 * fScale, fontWeight: 800, fontFamily: "sans-serif" }} />
           )}
         </div>
       </div>
@@ -201,7 +197,6 @@ function PhotoBoldTemplate({ data, sizeKey, onEdit }) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TEMPLATE 2: SPLIT-CLEAN
-// 50/50 split: photo on one side, white content on the other
 // ─────────────────────────────────────────────────────────────────────────────
 function SplitCleanTemplate({ data, sizeKey, onEdit }) {
   const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
@@ -213,59 +208,48 @@ function SplitCleanTemplate({ data, sizeKey, onEdit }) {
   const editMenu = (i) => (val) => onEdit("menuItems", data.menuItems.map((m, j) => j === i ? val : m));
 
   return (
-    <div style={{
-      width: "100%", height: "100%", overflow: "hidden", display: "flex",
-      flexDirection: isVertical ? "column" : "row",
-      background: ind.colors.light, fontFamily: "sans-serif",
-    }}>
-      {/* Photo half */}
-      <div style={{
-        width: isVertical ? "100%" : "45%",
-        height: isVertical ? "45%" : "100%",
-        position: "relative", flexShrink: 0,
-      }}>
+    <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: isVertical ? "column" : "row", background: ind.colors.light, fontFamily: "sans-serif" }}>
+      <div style={{ width: isVertical ? "100%" : "45%", height: isVertical ? "45%" : "100%", position: "relative", flexShrink: 0 }}>
         <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         <div style={{ position: "absolute", top: 8 * fScale, left: 8 * fScale }}>
-          <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji}
-            size={36 * fScale} bg={ind.colors.primary} color="#fff" border="2px solid #fff" />
+          <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji} size={36 * fScale} bg={ind.colors.primary} color="#fff" border="2px solid #fff" />
         </div>
       </div>
 
-      {/* Content half */}
-      <div style={{ flex: 1, padding: `${10*fScale}px ${12*fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", background: ind.colors.light, minWidth: 0 }}>
+      <div style={{ flex: 1, padding: `${10 * fScale}px ${12 * fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", background: ind.colors.light, minWidth: 0 }}>
         <div>
-          <div style={{ color: ind.colors.accent, fontSize: 8*fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 3 }}>{data.industry}</div>
+          <div style={{ color: ind.colors.accent, fontSize: 8 * fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 3 }}>{data.industry}</div>
           <EditableText value={data.businessName} onChange={edit("businessName")}
-            style={{ color: ind.colors.dark, fontWeight: 900, fontSize: 16*fScale, fontFamily: "Georgia, serif", lineHeight: 1.05 }} />
+            style={{ color: ind.colors.dark, fontWeight: 900, fontSize: 16 * fScale, fontFamily: "Georgia, serif", lineHeight: 1.05 }} />
           {!isS && (
             <EditableText value={data.tagline || ind.taglines[0]} onChange={edit("tagline")}
-              style={{ fontSize: 10*fScale, color: ind.colors.primary, fontWeight: 700, marginTop: 4, fontStyle: "italic" }} />
+              style={{ fontSize: 10 * fScale, color: ind.colors.primary, fontWeight: 700, marginTop: 4, fontStyle: "italic" }} />
           )}
         </div>
 
         {!isS && !isM && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 2*fScale, margin: `${4*fScale}px 0` }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 * fScale, margin: `${4 * fScale}px 0` }}>
             {(data.menuItems || ind.menu).slice(0, isXL ? 2 : 3).map((item, i) => (
               <div key={i} style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                <div style={{ width: 13*fScale, height: 13*fScale, borderRadius: "50%", background: ind.colors.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <span style={{ color: "#fff", fontSize: 7*fScale, fontWeight: 900 }}>✓</span>
+                <div style={{ width: 13 * fScale, height: 13 * fScale, borderRadius: "50%", background: ind.colors.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <span style={{ color: "#fff", fontSize: 7 * fScale, fontWeight: 900 }}>✓</span>
                 </div>
                 <EditableText value={item} onChange={editMenu(i)}
-                  style={{ fontSize: 8.5*fScale, color: "#333" }} />
+                  style={{ fontSize: 8.5 * fScale, color: "#333" }} />
               </div>
             ))}
           </div>
         )}
 
         <div style={{ flexShrink: 0 }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 1, marginBottom: data.offer ? 5*fScale : 0 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 1, marginBottom: data.offer ? 5 * fScale : 0 }}>
             {data.address && (
               <EditableText value={data.address.split(",")[0]} onChange={edit("address")}
-                style={{ fontSize: 7*fScale, color: "#555", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} />
+                style={{ fontSize: 7 * fScale, color: "#555", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} />
             )}
             {data.phone && (
               <EditableText value={data.phone} onChange={edit("phone")}
-                style={{ fontSize: 10*fScale, color: ind.colors.primary, fontWeight: 800 }} />
+                style={{ fontSize: 10 * fScale, color: ind.colors.primary, fontWeight: 800 }} />
             )}
           </div>
           <Coupon offer={data.offer} fine={data.offerFine} accent={ind.colors.primary} scale={fScale}
@@ -278,7 +262,6 @@ function SplitCleanTemplate({ data, sizeKey, onEdit }) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TEMPLATE 3: MAGAZINE
-// Editorial style with photo strip + dense content
 // ─────────────────────────────────────────────────────────────────────────────
 function MagazineTemplate({ data, sizeKey, onEdit }) {
   const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
@@ -289,33 +272,21 @@ function MagazineTemplate({ data, sizeKey, onEdit }) {
   const editMenu = (i) => (val) => onEdit("menuItems", data.menuItems.map((m, j) => j === i ? val : m));
 
   return (
-    <div style={{
-      width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: "column",
-      background: "#fff", fontFamily: "Georgia, serif",
-      border: `${3 * fScale}px solid ${ind.colors.primary}`, boxSizing: "border-box",
-    }}>
-      {/* Header bar */}
-      <div style={{
-        background: ind.colors.primary, padding: `${5 * fScale}px ${10 * fScale}px`,
-        display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0,
-      }}>
+    <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: "column", background: "#fff", fontFamily: "Georgia, serif", border: `${3 * fScale}px solid ${ind.colors.primary}`, boxSizing: "border-box" }}>
+      <div style={{ background: ind.colors.primary, padding: `${5 * fScale}px ${10 * fScale}px`, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 * fScale }}>
-          <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji}
-            size={28 * fScale} bg={ind.colors.accent} color="#fff" />
+          <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji} size={28 * fScale} bg={ind.colors.accent} color="#fff" />
           <div style={{ color: "#fff", fontWeight: 900, fontSize: 13 * fScale, fontFamily: "Georgia, serif" }}>
             {data.businessName}
           </div>
         </div>
         {!isS && data.phone && (
-          <div style={{
-            color: "#fff", fontSize: 10 * fScale, fontWeight: 800,
-            background: "rgba(0,0,0,0.25)", padding: `${2 * fScale}px ${7 * fScale}px`, borderRadius: 3,
-            fontFamily: "sans-serif",
-          }}>{data.phone}</div>
+          <div style={{ color: "#fff", fontSize: 10 * fScale, fontWeight: 800, background: "rgba(0,0,0,0.25)", padding: `${2 * fScale}px ${7 * fScale}px`, borderRadius: 3, fontFamily: "sans-serif" }}>
+            {data.phone}
+          </div>
         )}
       </div>
 
-      {/* Photo strip — max 2 photos to prevent broken middle image */}
       {!isS && (
         <div style={{ display: "flex", gap: 1, height: isXL ? "30%" : isL ? "35%" : "40%", flexShrink: 0 }}>
           {photos.slice(0, 2).map((src, i) => (
@@ -327,35 +298,34 @@ function MagazineTemplate({ data, sizeKey, onEdit }) {
         </div>
       )}
 
-      {/* Content */}
-      <div style={{ flex: 1, padding: `${4*fScale}px ${10*fScale}px ${5*fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 0 }}>
+      <div style={{ flex: 1, padding: `${4 * fScale}px ${10 * fScale}px ${5 * fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 0 }}>
         <div>
-          <div style={{ color: ind.colors.accent, fontSize: 7.5*fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>{data.industry}</div>
+          <div style={{ color: ind.colors.accent, fontSize: 7.5 * fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>{data.industry}</div>
           <EditableText value={data.tagline || ind.taglines[0]} onChange={edit("tagline")}
-            style={{ color: ind.colors.dark, fontSize: 14*fScale, fontWeight: 900, fontFamily: "Georgia, serif", lineHeight: 1.1, marginTop: 2 }} />
+            style={{ color: ind.colors.dark, fontSize: 14 * fScale, fontWeight: 900, fontFamily: "Georgia, serif", lineHeight: 1.1, marginTop: 2 }} />
         </div>
 
         {!isS && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: `2px ${10*fScale}px`, margin: `${3*fScale}px 0` }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: `2px ${10 * fScale}px`, margin: `${3 * fScale}px 0` }}>
             {(data.menuItems || ind.menu).slice(0, 4).map((item, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 3 }}>
                 <span style={{ color: ind.colors.primary, fontSize: 6 }}>●</span>
                 <EditableText value={item} onChange={editMenu(i)}
-                  style={{ fontSize: 8*fScale, color: "#444", fontFamily: "sans-serif" }} />
+                  style={{ fontSize: 8 * fScale, color: "#444", fontFamily: "sans-serif" }} />
               </div>
             ))}
           </div>
         )}
 
-        <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 3*fScale }}>
+        <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 3 * fScale }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 }}>
             {data.address && (
               <EditableText value={data.address.split(",")[0]} onChange={edit("address")}
-                style={{ fontSize: 7*fScale, color: "#666", fontFamily: "sans-serif", flex: 1 }} />
+                style={{ fontSize: 7 * fScale, color: "#666", fontFamily: "sans-serif", flex: 1 }} />
             )}
             {data.phone && (
               <EditableText value={data.phone} onChange={edit("phone")}
-                style={{ fontSize: 8*fScale, color: ind.colors.primary, fontWeight: 800, fontFamily: "sans-serif", flexShrink: 0 }} />
+                style={{ fontSize: 8 * fScale, color: ind.colors.primary, fontWeight: 800, fontFamily: "sans-serif", flexShrink: 0 }} />
             )}
           </div>
           <Coupon offer={data.offer} fine={data.offerFine} accent={ind.colors.primary} scale={fScale}
@@ -368,7 +338,6 @@ function MagazineTemplate({ data, sizeKey, onEdit }) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TEMPLATE 4: STAMP
-// Diagonal split, oversized offer text, retro stamp feel
 // ─────────────────────────────────────────────────────────────────────────────
 function StampTemplate({ data, sizeKey, onEdit }) {
   const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
@@ -378,77 +347,59 @@ function StampTemplate({ data, sizeKey, onEdit }) {
   const edit = (field) => (val) => onEdit(field, val);
 
   return (
-    <div style={{
-      width: "100%", height: "100%", overflow: "hidden", position: "relative",
-      background: ind.colors.dark, fontFamily: "sans-serif",
-    }}>
-      {/* Diagonal photo on top half */}
-      <div style={{
-        position: "absolute", inset: 0,
-        clipPath: "polygon(0 0, 100% 0, 100% 55%, 0 75%)",
-        overflow: "hidden",
-      }}>
+    <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative", background: ind.colors.dark, fontFamily: "sans-serif" }}>
+      <div style={{ position: "absolute", inset: 0, clipPath: "polygon(0 0, 100% 0, 100% 55%, 0 75%)", overflow: "hidden" }}>
         <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-        <div style={{
-          position: "absolute", inset: 0,
-          background: `linear-gradient(180deg, ${ind.colors.dark}50 0%, ${ind.colors.dark}cc 100%)`
-        }} />
+        <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${ind.colors.dark}50 0%, ${ind.colors.dark}cc 100%)` }} />
       </div>
 
-      {/* Top: feature badge */}
       <div style={{ position: "absolute", top: 8 * fScale, left: 10 * fScale, zIndex: 3 }}>
-        <div style={{
-          background: ind.colors.accent, color: ind.colors.dark, padding: `${3 * fScale}px ${8 * fScale}px`,
-          fontSize: 8 * fScale, fontWeight: 900, letterSpacing: 1.5,
-          borderRadius: 3, display: "inline-block",
-        }}>
+        <div style={{ background: ind.colors.accent, color: ind.colors.dark, padding: `${3 * fScale}px ${8 * fScale}px`, fontSize: 8 * fScale, fontWeight: 900, letterSpacing: 1.5, borderRadius: 3, display: "inline-block" }}>
           {ind.menu[0]?.toUpperCase() || "FEATURED"}
         </div>
       </div>
 
-      {/* Logo top-right */}
       <div style={{ position: "absolute", top: 8 * fScale, right: 10 * fScale, zIndex: 3 }}>
         <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji}
           size={36 * fScale} bg="rgba(255,255,255,0.15)" color="#fff" border="2px solid rgba(255,255,255,0.5)" />
       </div>
 
-      {/* Center: business name + huge phone */}
-      <div style={{ position: "absolute", top: "32%", left: 0, right: 0, padding: `0 ${12*fScale}px`, textAlign: "center", zIndex: 3 }}>
+      <div style={{ position: "absolute", top: "32%", left: 0, right: 0, padding: `0 ${12 * fScale}px`, textAlign: "center", zIndex: 3 }}>
         <EditableText value={data.businessName} onChange={edit("businessName")}
-          style={{ color: "#fff", fontWeight: 900, fontSize: 13*fScale, fontFamily: "Georgia, serif", textShadow: "0 2px 8px rgba(0,0,0,0.6)", lineHeight: 1.1, textAlign: "center" }} />
+          style={{ color: "#fff", fontWeight: 900, fontSize: 13 * fScale, fontFamily: "Georgia, serif", textShadow: "0 2px 8px rgba(0,0,0,0.6)", lineHeight: 1.1, textAlign: "center" }} />
         {!isS && data.phone && (
           <EditableText value={data.phone} onChange={edit("phone")}
-            style={{ color: ind.colors.accent, fontWeight: 900, fontSize: (isXL?28:isL?24:18)*fScale, lineHeight: 1, marginTop: 4, letterSpacing: -0.5, textShadow: "0 2px 12px rgba(0,0,0,0.8)", textAlign: "center" }} />
+            style={{ color: ind.colors.accent, fontWeight: 900, fontSize: (isXL ? 28 : isL ? 24 : 18) * fScale, lineHeight: 1, marginTop: 4, letterSpacing: -0.5, textShadow: "0 2px 12px rgba(0,0,0,0.8)", textAlign: "center" }} />
         )}
         {!isS && (
           <EditableText value={data.tagline || ind.taglines[0]} onChange={edit("tagline")}
-            style={{ color: "rgba(255,255,255,0.85)", fontSize: 9*fScale, marginTop: 4, fontStyle: "italic", textAlign: "center" }} />
+            style={{ color: "rgba(255,255,255,0.85)", fontSize: 9 * fScale, marginTop: 4, fontStyle: "italic", textAlign: "center" }} />
         )}
       </div>
 
-      {/* Bottom */}
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: `${8*fScale}px ${10*fScale}px`, display: "flex", flexDirection: "column", gap: 4*fScale, zIndex: 3 }}>
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: `${8 * fScale}px ${10 * fScale}px`, display: "flex", flexDirection: "column", gap: 4 * fScale, zIndex: 3 }}>
         {!isS && !isM && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: `2px ${8*fScale}px`, justifyContent: "center" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: `2px ${8 * fScale}px`, justifyContent: "center" }}>
             {(data.menuItems || ind.menu).slice(0, 3).map((item, i) => (
-              <EditableText key={i} value={`✓ ${item}`} onChange={(v) => edit("menuItems")(data.menuItems.map((m, j) => j === i ? v.replace("✓ ", "") : m))}
-                style={{ color: "rgba(255,255,255,0.85)", fontSize: 8*fScale }} />
+              <EditableText key={i} value={`✓ ${item}`}
+                onChange={(v) => edit("menuItems")(data.menuItems.map((m, j) => j === i ? v.replace("✓ ", "") : m))}
+                style={{ color: "rgba(255,255,255,0.85)", fontSize: 8 * fScale }} />
             ))}
           </div>
         )}
         {data.offer && (
-          <div style={{ background: `linear-gradient(90deg, ${ind.colors.accent}, ${ind.colors.accent}dd)`, padding: `${4*fScale}px ${8*fScale}px`, borderRadius: 3, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ background: `linear-gradient(90deg, ${ind.colors.accent}, ${ind.colors.accent}dd)`, padding: `${4 * fScale}px ${8 * fScale}px`, borderRadius: 3, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <EditableText value={data.offer} onChange={edit("offer")}
-              style={{ color: ind.colors.dark, fontWeight: 900, fontSize: 12*fScale }} />
+              style={{ color: ind.colors.dark, fontWeight: 900, fontSize: 12 * fScale }} />
             {data.offerFine && !isS && (
               <EditableText value={data.offerFine} onChange={edit("offerFine")}
-                style={{ color: ind.colors.dark, fontSize: 7*fScale, opacity: 0.8 }} />
+                style={{ color: ind.colors.dark, fontSize: 7 * fScale, opacity: 0.8 }} />
             )}
           </div>
         )}
-        <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 7*fScale, textAlign: "center", fontFamily: "sans-serif" }}>
-          {data.address && <EditableText value={data.address.split(",")[0]} onChange={edit("address")} style={{ color: "rgba(255,255,255,0.7)", fontSize: 7*fScale, display: "inline" }} />}
-          {isS && data.phone && <EditableText value={data.phone} onChange={edit("phone")} style={{ color: "rgba(255,255,255,0.85)", fontSize: 7*fScale, fontWeight: 700, marginLeft: 8, display: "inline" }} />}
+        <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 7 * fScale, textAlign: "center", fontFamily: "sans-serif" }}>
+          {data.address && <EditableText value={data.address.split(",")[0]} onChange={edit("address")} style={{ color: "rgba(255,255,255,0.7)", fontSize: 7 * fScale, display: "inline" }} />}
+          {isS && data.phone && <EditableText value={data.phone} onChange={edit("phone")} style={{ color: "rgba(255,255,255,0.85)", fontSize: 7 * fScale, fontWeight: 700, marginLeft: 8, display: "inline" }} />}
         </div>
       </div>
     </div>
@@ -457,21 +408,17 @@ function StampTemplate({ data, sizeKey, onEdit }) {
 
 // ─── Template Registry ────────────────────────────────────────────────────────
 const TEMPLATES = {
-  "photo-bold":  { name: "Photo Bold",    desc: "Hero photo, bold overlay text", Component: PhotoBoldTemplate },
-  "split-clean": { name: "Split Clean",   desc: "50/50 photo + content split",   Component: SplitCleanTemplate },
-  "magazine":    { name: "Magazine",      desc: "Editorial multi-photo layout",  Component: MagazineTemplate },
-  "stamp":       { name: "Service Stamp", desc: "Diagonal cut, oversized phone", Component: StampTemplate },
+  "photo-bold":  { name: "Photo Bold",    desc: "Hero photo, bold overlay text",  Component: PhotoBoldTemplate },
+  "split-clean": { name: "Split Clean",   desc: "50/50 photo + content split",     Component: SplitCleanTemplate },
+  "magazine":    { name: "Magazine",      desc: "Editorial multi-photo layout",    Component: MagazineTemplate },
+  "stamp":       { name: "Service Stamp", desc: "Diagonal cut, oversized phone",   Component: StampTemplate },
 };
 
-// ─── Smart template suggestion ────────────────────────────────────────────────
 function suggestTemplate(industry) {
-  const restaurantTypes = ["Pizza Restaurant", "Mexican Restaurant", "Chinese Restaurant",
-    "Breakfast & Cafe", "Bar & Grill", "Italian Restaurant", "Bakery", "Coffee Shop"];
+  const restaurantTypes = ["Pizza Restaurant", "Mexican Restaurant", "Chinese Restaurant", "Breakfast & Cafe", "Bar & Grill", "Italian Restaurant", "Bakery", "Coffee Shop"];
   const medicalTypes = ["Dentist", "Medical & Healthcare", "Chiropractor", "Veterinarian"];
-  const editorialTypes = ["Real Estate", "Insurance", "Financial Services", "Photography",
-    "Retail Shop", "Daycare", "Salon & Beauty"];
-  const serviceTypes = ["HVAC", "Plumber", "Electrician", "Lawn & Landscaping",
-    "Roofing", "Painting", "Cleaning Service", "Pest Control", "Auto Repair"];
+  const editorialTypes = ["Real Estate", "Insurance", "Financial Services", "Photography", "Retail Shop", "Daycare", "Salon & Beauty"];
+  const serviceTypes = ["HVAC", "Plumber", "Electrician", "Lawn & Landscaping", "Roofing", "Painting", "Cleaning Service", "Pest Control", "Auto Repair"];
 
   if (restaurantTypes.includes(industry)) return "photo-bold";
   if (medicalTypes.includes(industry)) return "split-clean";
@@ -480,14 +427,15 @@ function suggestTemplate(industry) {
   return "split-clean";
 }
 
-// ─── Render dimensions for preview ───────────────────────────────────────────
 function getRenderDimensions(sizeKey) {
   const s = AD_SIZES[sizeKey];
   const baseWidth = sizeKey === "XL" ? 280 : sizeKey === "L" ? 360 : sizeKey === "M" ? 320 : 380;
   return { width: baseWidth, height: baseWidth * (s.height / s.width) };
 }
 
-// ─── Image Upload ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+//   IMAGE UPLOAD INPUT
+// ─────────────────────────────────────────────────────────────────────────────
 function ImageUpload({ label, hint, value, onChange }) {
   const ref = useRef();
   const handleFile = e => {
@@ -536,12 +484,12 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose, is
   const [formData, setFormData] = useState({
     businessName: "",
     industry: "",
+    email: "",
     tagline: "",
     offer: "",
     offerFine: "",
     address: "",
     phone: "",
-    email: "",
     logo: null,
     photo: null,
     menuItems: [],
@@ -594,7 +542,7 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose, is
           }}>×</button>
         </div>
 
-        {/* Body — split: form left, preview right */}
+        {/* Body */}
         <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0 }}>
 
           {/* LEFT: form */}
@@ -696,7 +644,6 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose, is
                   placeholder="123 Main St, Your Town" style={inputStyle} />
               </div>
 
-              {/* Image uploads */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, paddingTop: 8, borderTop: "1px solid #f3f4f6" }}>
                 <ImageUpload label="Your Logo" hint="Optional"
                   value={formData.logo} onChange={v => setFormData(d => ({ ...d, logo: v }))} />
@@ -777,7 +724,7 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose, is
                     fontWeight: 800, cursor: isLoading ? "not-allowed" : "pointer", letterSpacing: 0.5,
                     opacity: isLoading ? 0.7 : 1,
                   }}>
-                  {isLoading ? "Reserving…" : `Approve & Reserve Spot — $${sizeInfo.price}`}
+                  {isLoading ? "Reserving..." : `Approve & Reserve Spot — $${sizeInfo.price}`}
                 </button>
               </>
             ) : (
