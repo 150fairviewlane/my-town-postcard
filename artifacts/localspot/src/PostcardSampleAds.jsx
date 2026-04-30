@@ -184,28 +184,28 @@ function PhotoBoldAd({ data, sizeKey }) {
   return (
     <div style={{ width: "100%", height: "100%", position: "relative", overflow: "hidden", fontFamily: "Georgia, serif" }}>
       <img src={photo} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-      <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${ind.colors.dark}99 0%, ${ind.colors.dark}55 40%, ${ind.colors.dark}f0 100%)` }} />
+      <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${ind.colors.dark}bb 0%, ${ind.colors.dark}44 28%, ${ind.colors.dark}11 52%, ${ind.colors.dark}99 76%, ${ind.colors.dark}f2 100%)` }} />
 
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, padding: `${10 * fScale}px ${12 * fScale}px`, display: "flex", alignItems: "center", gap: 8 * fScale }}>
-        <LogoBadge emoji={ind.emoji} size={36 * fScale} bg={`${ind.colors.primary}cc`} color="#fff" />
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, padding: `${8 * fScale}px ${10 * fScale}px`, display: "flex", alignItems: "center", gap: 7 * fScale }}>
+        <LogoBadge emoji={ind.emoji} size={32 * fScale} bg={`${ind.colors.primary}cc`} color="#fff" />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ color: "#fff", fontWeight: 900, fontSize: 16 * fScale, lineHeight: 1.05, textShadow: "0 2px 8px rgba(0,0,0,0.7)" }}>{data.businessName}</div>
-          {!isS && <div style={{ color: "rgba(255,255,255,0.85)", fontSize: 8 * fScale, marginTop: 2, fontFamily: "sans-serif", letterSpacing: 1, textTransform: "uppercase" }}>{data.industry}</div>}
+          <div style={{ color: "#fff", fontWeight: 900, fontSize: 22 * fScale, lineHeight: 1.0, textShadow: "0 2px 10px rgba(0,0,0,0.9)" }}>{data.businessName}</div>
+          {!isS && <div style={{ color: "rgba(255,255,255,0.9)", fontSize: 8 * fScale, marginTop: 1, fontFamily: "sans-serif", letterSpacing: 1, textTransform: "uppercase" }}>{data.industry}</div>}
         </div>
       </div>
 
       {!isS && (
-        <div style={{ position: "absolute", top: "42%", left: 12 * fScale, right: 12 * fScale, textAlign: "center" }}>
-          <div style={{ color: "#fff", fontWeight: 800, fontSize: (isXL ? 22 : isL ? 18 : 14) * fScale, lineHeight: 1.1, fontStyle: "italic", textShadow: "0 2px 12px rgba(0,0,0,0.8)" }}>"{data.tagline}"</div>
+        <div style={{ position: "absolute", top: "44%", left: 12 * fScale, right: 12 * fScale, textAlign: "center" }}>
+          <div style={{ color: "#fff", fontWeight: 800, fontSize: (isXL ? 20 : isL ? 16 : 12) * fScale, lineHeight: 1.15, fontStyle: "italic", textShadow: "0 2px 14px rgba(0,0,0,0.9)" }}>"{data.tagline}"</div>
         </div>
       )}
 
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: `${8 * fScale}px ${12 * fScale}px`, display: "flex", flexDirection: "column", gap: 4 * fScale }}>
-        {data.offer && <Coupon offer={data.offer} fine={data.offerFine} accent="#fff" scale={fScale} dark={true} />}
-        <div style={{ display: "flex", justifyContent: "space-between", color: "rgba(255,255,255,0.85)", fontSize: 7.5 * fScale, fontFamily: "sans-serif" }}>
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: `${5 * fScale}px ${10 * fScale}px ${4 * fScale}px`, display: "flex", flexDirection: "column", gap: 3 * fScale }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", color: "rgba(255,255,255,0.9)", fontSize: 7.5 * fScale, fontFamily: "sans-serif" }}>
           {data.address && <div>📍 {isS ? data.address.split(",")[0] : data.address}</div>}
           {data.phone && <div style={{ fontWeight: 800 }}>📞 {data.phone}</div>}
         </div>
+        {data.offer && <Coupon offer={data.offer} fine={data.offerFine} accent="#fff" scale={fScale * 0.82} dark={true} />}
       </div>
     </div>
   );
@@ -220,17 +220,17 @@ function SplitCleanAd({ data, sizeKey }) {
 
   return (
     <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: isVertical ? "column" : "row", background: ind.colors.light, fontFamily: "sans-serif" }}>
-      <div style={{ width: isVertical ? "100%" : "45%", height: isVertical ? "45%" : "100%", position: "relative", flexShrink: 0 }}>
+      <div style={{ width: isVertical ? "100%" : "50%", height: isVertical ? "48%" : "100%", position: "relative", flexShrink: 0 }}>
         <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         <div style={{ position: "absolute", top: 8 * fScale, left: 8 * fScale }}>
           <LogoBadge emoji={ind.emoji} size={36 * fScale} bg={ind.colors.primary} color="#fff" border="2px solid #fff" />
         </div>
       </div>
 
-      <div style={{ flex: 1, padding: `${10 * fScale}px ${12 * fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", background: ind.colors.light, minWidth: 0 }}>
+      <div style={{ flex: 1, padding: `${8 * fScale}px ${10 * fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", background: ind.colors.light, minWidth: 0 }}>
         <div>
-          <div style={{ color: ind.colors.accent, fontSize: 8 * fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 3 }}>{data.industry}</div>
-          <div style={{ color: ind.colors.dark, fontWeight: 900, fontSize: 16 * fScale, fontFamily: "Georgia, serif", lineHeight: 1.05 }}>{data.businessName}</div>
+          <div style={{ color: ind.colors.accent, fontSize: 8 * fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 2 }}>{data.industry}</div>
+          <div style={{ color: ind.colors.dark, fontWeight: 900, fontSize: 21 * fScale, fontFamily: "Georgia, serif", lineHeight: 1.0 }}>{data.businessName}</div>
           {!isS && <div style={{ fontSize: 10 * fScale, color: ind.colors.primary, fontWeight: 700, marginTop: 4, fontStyle: "italic" }}>{data.tagline}</div>}
         </div>
 
@@ -269,28 +269,26 @@ function MagazineAd({ data, sizeKey }) {
     <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: "column", background: "#fff", fontFamily: "Georgia, serif", border: `${3 * fScale}px solid ${ind.colors.primary}`, boxSizing: "border-box" }}>
       <div style={{ background: ind.colors.primary, padding: `${5 * fScale}px ${10 * fScale}px`, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 * fScale }}>
-          <LogoBadge emoji={ind.emoji} size={28 * fScale} bg={ind.colors.accent} color="#fff" />
-          <div style={{ color: "#fff", fontWeight: 900, fontSize: 13 * fScale, fontFamily: "Georgia, serif" }}>{data.businessName}</div>
+          <LogoBadge emoji={ind.emoji} size={30 * fScale} bg={ind.colors.accent} color="#fff" />
+          <div style={{ color: "#fff", fontWeight: 900, fontSize: 18 * fScale, fontFamily: "Georgia, serif", lineHeight: 1.0 }}>{data.businessName}</div>
         </div>
         {!isS && data.phone && (
-          <div style={{ color: "#fff", fontSize: 10 * fScale, fontWeight: 800, background: "rgba(0,0,0,0.25)", padding: `${2 * fScale}px ${7 * fScale}px`, borderRadius: 3, fontFamily: "sans-serif" }}>{data.phone}</div>
+          <div style={{ color: "#fff", fontSize: 10 * fScale, fontWeight: 800, background: "rgba(0,0,0,0.25)", padding: `${2 * fScale}px ${7 * fScale}px`, borderRadius: 3, fontFamily: "sans-serif", flexShrink: 0 }}>{data.phone}</div>
         )}
       </div>
 
-      {!isS && (
-        <div style={{ display: "flex", gap: 1, height: isXL ? "30%" : isL ? "35%" : "40%", flexShrink: 0 }}>
-          {photos.map((src, i) => (
-            <div key={i} style={{ flex: 1, overflow: "hidden", background: ind.colors.dark }}>
-              <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} onError={e => { e.target.style.display = "none"; }} />
-            </div>
-          ))}
-        </div>
-      )}
+      <div style={{ display: "flex", gap: 1, height: isXL ? "32%" : isL ? "38%" : isM ? "34%" : "28%", flexShrink: 0 }}>
+        {photos.map((src, i) => (
+          <div key={i} style={{ flex: 1, overflow: "hidden", background: ind.colors.dark }}>
+            <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} onError={e => { e.target.style.display = "none"; }} />
+          </div>
+        ))}
+      </div>
 
       <div style={{ flex: 1, padding: `${4 * fScale}px ${10 * fScale}px ${5 * fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 0 }}>
         <div>
           <div style={{ color: ind.colors.accent, fontSize: 7.5 * fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>{data.industry}</div>
-          <div style={{ color: ind.colors.dark, fontSize: 14 * fScale, fontWeight: 900, fontFamily: "Georgia, serif", lineHeight: 1.1, marginTop: 2 }}>{data.tagline}</div>
+          <div style={{ color: ind.colors.dark, fontSize: 16 * fScale, fontWeight: 900, fontFamily: "Georgia, serif", lineHeight: 1.1, marginTop: 2 }}>{data.tagline}</div>
         </div>
 
         {!isS && (
@@ -324,27 +322,27 @@ function StampAd({ data, sizeKey }) {
 
   return (
     <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative", background: ind.colors.dark, fontFamily: "sans-serif" }}>
-      <div style={{ position: "absolute", inset: 0, clipPath: "polygon(0 0, 100% 0, 100% 55%, 0 75%)", overflow: "hidden" }}>
+      <div style={{ position: "absolute", inset: 0, clipPath: "polygon(0 0, 100% 0, 100% 65%, 0 85%)", overflow: "hidden" }}>
         <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-        <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${ind.colors.dark}50 0%, ${ind.colors.dark}cc 100%)` }} />
+        <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${ind.colors.dark}33 0%, ${ind.colors.dark}88 100%)` }} />
       </div>
 
-      <div style={{ position: "absolute", top: 8 * fScale, left: 10 * fScale, zIndex: 3 }}>
-        <div style={{ background: ind.colors.accent, color: ind.colors.dark, padding: `${3 * fScale}px ${8 * fScale}px`, fontSize: 8 * fScale, fontWeight: 900, letterSpacing: 1.5, borderRadius: 3 }}>
+      <div style={{ position: "absolute", top: 7 * fScale, left: 9 * fScale, zIndex: 3 }}>
+        <div style={{ background: ind.colors.accent, color: ind.colors.dark, padding: `${3 * fScale}px ${7 * fScale}px`, fontSize: 8 * fScale, fontWeight: 900, letterSpacing: 1.5, borderRadius: 3 }}>
           {(data.menuItems?.[0] || ind.menu[0] || "FEATURED").toUpperCase()}
         </div>
       </div>
 
-      <div style={{ position: "absolute", top: 8 * fScale, right: 10 * fScale, zIndex: 3 }}>
-        <LogoBadge emoji={ind.emoji} size={36 * fScale} bg="rgba(255,255,255,0.15)" color="#fff" border="2px solid rgba(255,255,255,0.5)" />
+      <div style={{ position: "absolute", top: 7 * fScale, right: 9 * fScale, zIndex: 3 }}>
+        <LogoBadge emoji={ind.emoji} size={34 * fScale} bg="rgba(255,255,255,0.18)" color="#fff" border="2px solid rgba(255,255,255,0.6)" />
       </div>
 
-      <div style={{ position: "absolute", top: "32%", left: 0, right: 0, padding: `0 ${12 * fScale}px`, textAlign: "center", zIndex: 3 }}>
-        <div style={{ color: "#fff", fontWeight: 900, fontSize: 13 * fScale, fontFamily: "Georgia, serif", textShadow: "0 2px 8px rgba(0,0,0,0.6)", lineHeight: 1.1 }}>{data.businessName}</div>
+      <div style={{ position: "absolute", top: isS ? "48%" : "38%", left: 0, right: 0, padding: `0 ${10 * fScale}px`, textAlign: "center", zIndex: 3 }}>
+        <div style={{ color: "#fff", fontWeight: 900, fontSize: 19 * fScale, fontFamily: "Georgia, serif", textShadow: "0 2px 10px rgba(0,0,0,0.85)", lineHeight: 1.05 }}>{data.businessName}</div>
         {!isS && data.phone && (
-          <div style={{ color: ind.colors.accent, fontWeight: 900, fontSize: (isXL ? 28 : isL ? 24 : 18) * fScale, lineHeight: 1, marginTop: 4, letterSpacing: -0.5, textShadow: "0 2px 12px rgba(0,0,0,0.8)" }}>{data.phone}</div>
+          <div style={{ color: ind.colors.accent, fontWeight: 900, fontSize: (isXL ? 26 : isL ? 22 : 17) * fScale, lineHeight: 1, marginTop: 3, letterSpacing: -0.5, textShadow: "0 2px 12px rgba(0,0,0,0.8)" }}>{data.phone}</div>
         )}
-        {!isS && <div style={{ color: "rgba(255,255,255,0.85)", fontSize: 9 * fScale, marginTop: 4, fontStyle: "italic" }}>{data.tagline}</div>}
+        {!isS && <div style={{ color: "rgba(255,255,255,0.9)", fontSize: 9 * fScale, marginTop: 3, fontStyle: "italic" }}>{data.tagline}</div>}
       </div>
 
       <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: `${8 * fScale}px ${10 * fScale}px`, display: "flex", flexDirection: "column", gap: 4 * fScale, zIndex: 3 }}>
