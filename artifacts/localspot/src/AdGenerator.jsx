@@ -2,9 +2,9 @@ import { useState, useRef } from "react";
 import { INDUSTRIES, INDUSTRY_LIST } from "./industryAssets";
 
 const AD_SIZES = {
-  XL: { label: "Extra Large", price: 599, ratio: "4:5",  width: 4, height: 5,   desc: "Hero spot · maximum impact" },
-  L:  { label: "Large",       price: 399, ratio: "4:3",  width: 4, height: 3,   desc: "Premium placement" },
-  M:  { label: "Medium",      price: 299, ratio: "3:2",  width: 3, height: 2,   desc: "Great visibility" },
+  XL: { label: "Extra Large", price: 450, ratio: "4:5",  width: 4, height: 5,   desc: "Hero spot · maximum impact" },
+  L:  { label: "Large",       price: 350, ratio: "4:3",  width: 4, height: 3,   desc: "Premium placement" },
+  M:  { label: "Medium",      price: 250, ratio: "3:2",  width: 3, height: 2,   desc: "Great visibility" },
   S:  { label: "Small",       price: 199, ratio: "3:1.5",width: 3, height: 1.5, desc: "Affordable local reach" },
 };
 
@@ -491,7 +491,7 @@ function ImageUpload({ label, hint, value, onChange }) {
   );
 }
 
-export default function AdGenerator({ initialSize = "L", onComplete, onClose }) {
+export default function AdGenerator({ initialSize = "L", onComplete, onClose, isLoading = false, error = null }) {
   const [sizeKey, setSizeKey] = useState(initialSize);
   const [formData, setFormData] = useState({
     businessName: "",
@@ -736,14 +736,26 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
                   )}
                 </div>
 
+                {error && (
+                  <div style={{
+                    marginTop: 16, padding: "10px 16px", background: "#fef2f2",
+                    border: "1px solid #fca5a5", borderRadius: 8,
+                    color: "#991b1b", fontSize: 13, fontWeight: 600, textAlign: "center",
+                  }}>
+                    {error}
+                  </div>
+                )}
                 <button
+                  disabled={isLoading}
                   onClick={() => onComplete?.({ sizeKey, price: sizeInfo.price, template: selectedTemplate, ...formData })}
                   style={{
-                    marginTop: 20, padding: "14px 32px", background: "#991b1b",
+                    marginTop: 20, padding: "14px 32px",
+                    background: isLoading ? "#b91c1c99" : "#991b1b",
                     color: "#fff", border: "none", borderRadius: 10, fontSize: 15,
-                    fontWeight: 800, cursor: "pointer", letterSpacing: 0.5,
+                    fontWeight: 800, cursor: isLoading ? "not-allowed" : "pointer", letterSpacing: 0.5,
+                    opacity: isLoading ? 0.7 : 1,
                   }}>
-                  Approve &amp; Reserve Spot — ${sizeInfo.price}
+                  {isLoading ? "Reserving…" : `Approve & Reserve Spot — $${sizeInfo.price}`}
                 </button>
               </>
             ) : (

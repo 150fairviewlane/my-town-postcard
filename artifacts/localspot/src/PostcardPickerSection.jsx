@@ -235,6 +235,8 @@ export default function PostcardPickerSection() {
           initialSize={SIZE_MAP[creatorSpot.size] || "S"}
           onComplete={handleAdComplete}
           onClose={closeCreator}
+          isLoading={reserveMutation.isPending}
+          error={reserveError}
         />
       )}
     </div>

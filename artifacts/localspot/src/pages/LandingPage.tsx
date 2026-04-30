@@ -218,7 +218,7 @@ function PostcardBook() {
 
 function Pricing() {
   const plans = [
-    { label: "Small Ad",       price: 150, dim: '2"×2"', tag: "Affordable local reach",
+    { label: "Small Ad",       price: 199, dim: '2"×2"', tag: "Affordable local reach",
       features: ["Your ad in 5,000 local homes", "No Competition", "Professional design"],
       highlight: false },
     { label: "Medium Ad",      price: 250, dim: '3"×2"', tag: "Growing reach, great value",
@@ -351,7 +351,7 @@ const FAQ_ITEMS = [
   { q: "When will my ad hit mailboxes?",
     a: "The Spring 2025 mailing is scheduled for May 15, 2025. Once all spots are filled, your ad is designed, printed, and mailed." },
   { q: "How much does it cost?",
-    a: "Spots range from $150 (Small, 2\"×2\") to $450 (Extra-Large, 4\"×5\"). All sizes include professional ad design and mailing to 5,000 homes." },
+    a: "Spots range from $199 (Small, 2\"×2\") to $450 (Extra-Large, 4\"×5\"). All sizes include professional ad design and mailing to 5,000 homes." },
   { q: "Is my business good for this postcard?",
     a: "Any local business that serves Clarkesville-area residents is a great fit — restaurants, home services, medical, legal, retail, and more." },
   { q: "What happens if another business like mine is already on it?",
