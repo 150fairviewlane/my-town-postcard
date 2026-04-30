@@ -37,6 +37,7 @@ export interface Campaign {
 export type SpotSize = (typeof SpotSize)[keyof typeof SpotSize];
 
 export const SpotSize = {
+  xl: "xl",
   large: "large",
   medium: "medium",
   small: "small",

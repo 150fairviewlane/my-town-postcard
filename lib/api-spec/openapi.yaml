@@ -294,7 +294,7 @@ components:
           type: integer
         size:
           type: string
-          enum: [large, medium, small]
+          enum: [xl, large, medium, small]
         gridArea:
           type: string
         price:

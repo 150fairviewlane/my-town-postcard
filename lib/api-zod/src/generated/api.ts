@@ -34,7 +34,7 @@ export const GetActiveCampaignResponse = zod
         zod.object({
           id: zod.number(),
           campaignId: zod.number(),
-          size: zod.enum(["large", "medium", "small"]),
+          size: zod.enum(["xl", "large", "medium", "small"]),
           gridArea: zod.string(),
           price: zod.number(),
           categoryLock: zod.string().nullish(),
@@ -68,7 +68,7 @@ export const ReserveSpotBody = zod.object({
 export const ReserveSpotResponse = zod.object({
   id: zod.number(),
   campaignId: zod.number(),
-  size: zod.enum(["large", "medium", "small"]),
+  size: zod.enum(["xl", "large", "medium", "small"]),
   gridArea: zod.string(),
   price: zod.number(),
   categoryLock: zod.string().nullish(),
@@ -123,7 +123,7 @@ export const UploadAdBody = zod.object({
 export const UploadAdResponse = zod.object({
   id: zod.number(),
   campaignId: zod.number(),
-  size: zod.enum(["large", "medium", "small"]),
+  size: zod.enum(["xl", "large", "medium", "small"]),
   gridArea: zod.string(),
   price: zod.number(),
   categoryLock: zod.string().nullish(),
@@ -167,7 +167,7 @@ export const GetAdminCampaignResponse = zod.object({
       .object({
         id: zod.number(),
         campaignId: zod.number(),
-        size: zod.enum(["large", "medium", "small"]),
+        size: zod.enum(["xl", "large", "medium", "small"]),
         gridArea: zod.string(),
         price: zod.number(),
         categoryLock: zod.string().nullish(),
@@ -202,7 +202,7 @@ export const ApproveAdParams = zod.object({
 export const ApproveAdResponse = zod.object({
   id: zod.number(),
   campaignId: zod.number(),
-  size: zod.enum(["large", "medium", "small"]),
+  size: zod.enum(["xl", "large", "medium", "small"]),
   gridArea: zod.string(),
   price: zod.number(),
   categoryLock: zod.string().nullish(),

@@ -218,15 +218,19 @@ function PostcardBook() {
 
 function Pricing() {
   const plans = [
-    { label: "Small Ad",  price: 199, dim: '2"×2"', tag: "Ideal for getting started",
+    { label: "Small Ad",       price: 150, dim: '2"×2"', tag: "Affordable local reach",
       features: ["Your ad in 5,000 local homes", "No Competition", "Professional design"],
       highlight: false },
-    { label: "Medium Ad", price: 299, dim: '3"×4"', tag: "Sweet Spot for Growing",
+    { label: "Medium Ad",      price: 250, dim: '3"×2"', tag: "Growing reach, great value",
       features: ["Your ad in 5,000 local homes", "No Competition", "Professional design"],
       highlight: false },
-    { label: "Large Ad",  price: 399, dim: '4"×5"', tag: "Maximum Impact",
+    { label: "Large Ad",       price: 350, dim: '3"×4"', tag: "Great visibility, popular choice",
       features: ["Your ad in 5,000 local homes", "No Competition", "Professional design",
-        "Largest ad space", "Priority placement"],
+        "Prominent placement"],
+      highlight: false },
+    { label: "Extra-Large Ad", price: 450, dim: '4"×5"', tag: "Maximum impact, prime spot",
+      features: ["Your ad in 5,000 local homes", "No Competition", "Professional design",
+        "Largest ad space", "Top-of-postcard placement"],
       highlight: true },
   ];
   return (
@@ -347,7 +351,7 @@ const FAQ_ITEMS = [
   { q: "When will my ad hit mailboxes?",
     a: "The Spring 2025 mailing is scheduled for May 15, 2025. Once all spots are filled, your ad is designed, printed, and mailed." },
   { q: "How much does it cost?",
-    a: "Spots range from $199 (small, 2\"×2\") to $399 (large, 4\"×5\"). All sizes include professional ad design and mailing to 5,000 homes." },
+    a: "Spots range from $150 (Small, 2\"×2\") to $450 (Extra-Large, 4\"×5\"). All sizes include professional ad design and mailing to 5,000 homes." },
   { q: "Is my business good for this postcard?",
     a: "Any local business that serves Clarkesville-area residents is a great fit — restaurants, home services, medical, legal, retail, and more." },
   { q: "What happens if another business like mine is already on it?",
@@ -355,7 +359,7 @@ const FAQ_ITEMS = [
   { q: "Do I have to design the ad myself?",
     a: "Not at all. Professional ad design is included with every spot. Just provide your logo, photos, and key details — we handle the rest." },
   { q: "How big will my ad be on the postcard?",
-    a: "Large ads are 4\"×5\", Medium ads are 3\"×4\", and Small ads are 2\"×2\". On the 9\"×12\" postcard, every ad is clearly visible and impactful." },
+    a: "Extra-Large ads are 4\"×5\", Large ads are 3\"×4\", Medium ads are 3\"×2\", and Small ads are 2\"×2\". On the 9\"×12\" postcard, every ad is clearly visible and impactful." },
 ];
 
 function FAQSection() {

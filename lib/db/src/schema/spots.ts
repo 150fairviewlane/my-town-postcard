@@ -5,7 +5,7 @@ import { z } from "zod/v4";
 export const spotsTable = pgTable("spots", {
   id: serial("id").primaryKey(),
   campaignId: integer("campaign_id").notNull(),
-  size: text("size", { enum: ["large", "medium", "small"] }).notNull(),
+  size: text("size", { enum: ["xl", "large", "medium", "small"] }).notNull(),
   gridArea: text("grid_area").notNull(),
   price: integer("price").notNull(),
   categoryLock: text("category_lock"),

@@ -2,9 +2,10 @@ import { useState } from "react";
 import { MrBiscuitsLarge, MrBiscuitsMedium, MrBiscuitsSmall } from "./MrBiscuitsReferenceAd.jsx";
 
 export const SIZES = {
-  large:  { label: "Large",  price: 399, dim: '4" × 5"',  desc: "Prime placement, maximum impact" },
-  medium: { label: "Medium", price: 299, dim: '3" × 4"',  desc: "Great visibility, popular choice" },
-  small:  { label: "Small",  price: 199, dim: '3" × 2"',  desc: "Affordable local reach" },
+  xl:     { label: "Extra-Large", dim: '4" × 5"', desc: "Prime placement, maximum impact" },
+  large:  { label: "Large",       dim: '3" × 4"', desc: "Great visibility, popular choice" },
+  medium: { label: "Medium",      dim: '3" × 2"', desc: "Growing reach, great value" },
+  small:  { label: "Small",       dim: '2" × 2"', desc: "Affordable local reach" },
 };
 
 // "hs" = permanent house ad (cols 9-10, rows 6-7 — center-right of bottom half).
@@ -602,12 +603,14 @@ function DefaultAd({ spot }) {
 }
 
 // ─── Public: PaidAd Dispatcher ────────────────────────────────────────────────
+// "xl" maps to the large visual variant in all ad templates.
 export function PaidAd({ spot }) {
-  const s = { size: spot.size };
+  const renderSize = spot.size === "xl" ? "large" : spot.size;
+  const s = { size: renderSize };
   switch (spot.businessName) {
     case "Mr. Biscuit's Café":
-      if (spot.size === "large")  return <MrBiscuitsLarge />;
-      if (spot.size === "medium") return <MrBiscuitsMedium />;
+      if (renderSize === "large")  return <MrBiscuitsLarge />;
+      if (renderSize === "medium") return <MrBiscuitsMedium />;
       return <MrBiscuitsSmall />;
     case "Clarkesville Family Dental":  return <FamilyDentalAd  {...s} />;
     case "Blue Ridge Air & Heat":       return <BlueRidgeAd     {...s} />;
@@ -620,8 +623,10 @@ export function PaidAd({ spot }) {
 
 // ─── Public: AvailableSpot ────────────────────────────────────────────────────
 export function AvailableSpot({ spot, isSelected, onClick }) {
-  const sz = SIZES[spot.size];
-  const isSmall = spot.size === "small";
+  const sz = SIZES[spot.size] ?? SIZES.small;
+  // "small" = 2×2 grid units — compact layout. Everything else has more room.
+  const isCompact = spot.size === "small";
+  const displayPrice = Math.round((spot.price ?? 0) / 100);
 
   return (
     <div onClick={onClick} style={{
@@ -629,18 +634,18 @@ export function AvailableSpot({ spot, isSelected, onClick }) {
       background: isSelected ? "#fef9c3" : "#f0fdf4",
       border: isSelected ? "2.5px solid #ca8a04" : "2px dashed #22c55e",
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-      gap: isSmall ? 3 : 6, padding: isSmall ? "6px 4px" : "10px 8px",
+      gap: isCompact ? 2 : 5, padding: isCompact ? "5px 4px" : "8px 6px",
       textAlign: "center", transition: "all 0.15s", boxSizing: "border-box",
     }}>
-      <div style={{ fontSize: isSmall ? 18 : 26 }}>{isSelected ? "✅" : "➕"}</div>
-      <div style={{ fontWeight: 800, fontSize: isSmall ? 9 : 11,
+      <div style={{ fontSize: isCompact ? 16 : 22 }}>{isSelected ? "✅" : "➕"}</div>
+      <div style={{ fontWeight: 800, fontSize: isCompact ? 8.5 : 10.5,
         color: isSelected ? "#92400e" : "#15803d", fontFamily: "sans-serif", lineHeight: 1.2 }}>
         {isSelected ? "SELECTED" : sz.label + " Spot"}
       </div>
-      <div style={{ fontSize: isSmall ? 10 : 14, color: isSelected ? "#b45309" : "#166534",
-        fontWeight: 900, fontFamily: "sans-serif" }}>${sz.price}</div>
-      {!isSmall && (
-        <div style={{ fontSize: 9, color: "#6b7280", fontFamily: "sans-serif" }}>{sz.dim}</div>
+      <div style={{ fontSize: isCompact ? 11 : 15, color: isSelected ? "#b45309" : "#166534",
+        fontWeight: 900, fontFamily: "sans-serif" }}>${displayPrice}</div>
+      {!isCompact && (
+        <div style={{ fontSize: 8.5, color: "#6b7280", fontFamily: "sans-serif" }}>{sz.dim}</div>
       )}
     </div>
   );
@@ -648,7 +653,8 @@ export function AvailableSpot({ spot, isSelected, onClick }) {
 
 // ─── Public: Modal ─────────────────────────────────────────────────────────────
 export function Modal({ spot, onClose, onSubmit, isLoading, error }) {
-  const sz = SIZES[spot.size];
+  const sz = SIZES[spot.size] ?? SIZES.small;
+  const displayPrice = Math.round((spot.price ?? 0) / 100);
   const [f, setF] = useState({ biz: "", cat: "", email: "", phone: "" });
   const ok = f.biz.trim() && f.cat.trim() && f.email.includes("@");
   const set = k => e => setF(p => ({ ...p, [k]: e.target.value }));
@@ -665,7 +671,7 @@ export function Modal({ spot, onClose, onSubmit, isLoading, error }) {
               {sz.label} Ad · {sz.dim}
             </div>
             <div style={{ fontSize: 36, fontWeight: 900, color: "#111", fontFamily: "Georgia,serif", lineHeight: 1 }}>
-              ${sz.price}
+              ${displayPrice}
             </div>
             <div style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>
               Reaches 5,000 Clarkesville-area homes
@@ -705,7 +711,7 @@ export function Modal({ spot, onClose, onSubmit, isLoading, error }) {
           color: "#fff", fontSize: 15, fontWeight: 800,
           cursor: ok && !isLoading ? "pointer" : "not-allowed", fontFamily: "sans-serif",
         }}>
-          {isLoading ? "Reserving..." : `Reserve This Spot — $${sz.price}`}
+          {isLoading ? "Reserving..." : `Reserve This Spot — $${displayPrice}`}
         </button>
         <p style={{ textAlign: "center", fontSize: 11, color: "#9ca3af", margin: "10px 0 0" }}>
           No charge now. You'll pay on the next screen.
