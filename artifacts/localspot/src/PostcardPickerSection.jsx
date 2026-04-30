@@ -130,7 +130,19 @@ export default function PostcardPickerSection() {
       setSelected(null);
       navigate(`/checkout/${result.id}`);
     } catch (err) {
-      setReserveError(err?.data?.error || err?.message || "Something went wrong. Please try again.");
+      const apiMessage = typeof err?.data === "object" && err?.data !== null ? err.data.error : null;
+      const status = err?.status;
+      let friendly;
+      if (apiMessage) {
+        friendly = apiMessage;
+      } else if (status === 404) {
+        friendly = "Could not reach the reservation server. Please refresh and try again.";
+      } else if (status >= 500) {
+        friendly = "Server error. Please try again in a moment.";
+      } else {
+        friendly = err?.message || "Something went wrong. Please try again.";
+      }
+      setReserveError(friendly);
     }
   };
 
