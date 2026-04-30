@@ -43,20 +43,22 @@ function Coupon({ offer, fine, accent, scale = 1, dark = false }) {
 // SAMPLE AD DATA CONFIGS
 // ─────────────────────────────────────────────────────────────────────────────
 export const SAMPLE_AD_CONFIGS = {
-  "mrbiscuits": {
+
+  "pizza": {
     template: "photo-bold",
-    sizeKey: "XL",
+    sizeKey: "L",
     data: {
-      businessName: "Mr. Biscuit's Café",
-      industry: "Breakfast & Cafe",
-      tagline: "From-Scratch Biscuits & Fresh Boba!",
-      offer: "$1 OFF Any Biscuit",
-      offerFine: "1 per visit · with this postcard",
-      phone: "(706) 754-0105",
-      address: "596 W Louise St Ste D, Clarkesville, GA",
-      menuItems: ["Plain Biscuit $2.99", "Bacon Biscuit $4.99", "Chicken Tender $5.99", "NY Bagels $5.49"],
+      businessName: "Roma's Pizza & Subs",
+      industry: "Pizza Restaurant",
+      tagline: "Hand-Tossed. Oven Fresh. Delivered Hot.",
+      offer: "BOGO Medium Pizza",
+      offerFine: "Tues & Wed only · Dine-in · show ad",
+      phone: "(706) 555-0712",
+      address: "182 Main St, Clarkesville, GA",
+      menuItems: ["Large Pizza $14.99", "Family Special $24.99", "Wings & Pizza Combo", "Free Delivery"],
     },
   },
+
   "dental": {
     template: "split-clean",
     sizeKey: "L",
@@ -71,34 +73,7 @@ export const SAMPLE_AD_CONFIGS = {
       menuItems: ["Preventive Care & Cleanings", "Cosmetic & Whitening Treatments", "Family & Children's Dentistry"],
     },
   },
-  "realty": {
-    template: "magazine",
-    sizeKey: "L",
-    data: {
-      businessName: "Mountain View Realty",
-      industry: "Real Estate",
-      tagline: "Buying or Selling in NE Georgia?",
-      offer: "Free Home Valuation",
-      offerFine: "No obligation · call today",
-      phone: "(706) 555-0177",
-      address: "Clarkesville, GA",
-      menuItems: ["Buyer Representation", "Listing Services", "Investment Properties", "Free Consultation"],
-    },
-  },
-  "hvac": {
-    template: "stamp",
-    sizeKey: "M",
-    data: {
-      businessName: "Blue Ridge HVAC",
-      industry: "HVAC",
-      tagline: "24/7 Emergency Service",
-      offer: "$59 A/C Tune-Up",
-      offerFine: "Expires 6/30 · mention this ad",
-      phone: "(706) 555-0433",
-      address: "Clarkesville, GA",
-      menuItems: ["A/C Repair & Install", "Heating Systems", "Emergency Service 24/7", "Free Estimates"],
-    },
-  },
+
   "insurance": {
     template: "magazine",
     sizeKey: "M",
@@ -113,23 +88,10 @@ export const SAMPLE_AD_CONFIGS = {
       menuItems: ["Auto Insurance", "Home & Property", "Life Coverage", "Business Policies"],
     },
   },
-  "pizza": {
-    template: "photo-bold",
-    sizeKey: "S",
-    data: {
-      businessName: "Roma's Pizza & Subs",
-      industry: "Pizza Restaurant",
-      tagline: "Hand-Tossed. Oven Fresh. Delivered Hot.",
-      offer: "BOGO Medium Pizza",
-      offerFine: "Tues & Wed only · show ad",
-      phone: "(706) 555-0712",
-      address: "182 Main St, Clarkesville, GA",
-      menuItems: ["Large Pizza $14.99", "Family Special $24.99", "Wings & Pizza Combo", "Free Delivery"],
-    },
-  },
+
   "lawn": {
     template: "stamp",
-    sizeKey: "S",
+    sizeKey: "M",
     data: {
       businessName: "Green Acres Lawn Care",
       industry: "Lawn & Landscaping",
@@ -141,6 +103,37 @@ export const SAMPLE_AD_CONFIGS = {
       menuItems: ["Weekly Mowing", "Spring Cleanup", "Mulch Installation", "Free Estimates"],
     },
   },
+
+  "realty": {
+    template: "magazine",
+    sizeKey: "S",
+    data: {
+      businessName: "Mountain View Realty",
+      industry: "Real Estate",
+      tagline: "Buying or Selling in NE Georgia?",
+      offer: "Free Home Valuation",
+      offerFine: "No obligation · call today",
+      phone: "(706) 555-0177",
+      address: "Clarkesville, GA",
+      menuItems: ["Buyer Representation", "Listing Services", "Investment Properties", "Free Consultation"],
+    },
+  },
+
+  "hvac": {
+    template: "stamp",
+    sizeKey: "S",
+    data: {
+      businessName: "Blue Ridge HVAC",
+      industry: "HVAC",
+      tagline: "24/7 Emergency Service",
+      offer: "$59 A/C Tune-Up",
+      offerFine: "Expires 6/30 · mention this ad",
+      phone: "(706) 555-0433",
+      address: "Clarkesville, GA",
+      menuItems: ["A/C Repair & Install", "Heating Systems", "Emergency Service 24/7", "Free Estimates"],
+    },
+  },
+
   "salon": {
     template: "photo-bold",
     sizeKey: "S",
@@ -155,6 +148,97 @@ export const SAMPLE_AD_CONFIGS = {
       menuItems: ["Cut & Color", "Wedding Hair", "Bridal Packages", "Walk-Ins Welcome"],
     },
   },
+
+  "autorepair": {
+    template: "stamp",
+    sizeKey: "L",
+    data: {
+      businessName: "Shadetree Auto Repair",
+      industry: "Auto Repair",
+      tagline: "Honest Auto Repair. Fair Prices.",
+      offer: "Free Diagnostic Check",
+      offerFine: "With any repair · show this ad",
+      phone: "(770) 678-7890",
+      address: "Clarkesville, GA",
+      menuItems: ["Oil Change Special", "Brake Service", "AC Repair", "Free Estimates"],
+    },
+  },
+
+  "mexican": {
+    template: "photo-bold",
+    sizeKey: "L",
+    data: {
+      businessName: "El Rancho Mexican Grill",
+      industry: "Mexican Restaurant",
+      tagline: "Auténtico Mexican Cuisine",
+      offer: "Free Chips & Queso",
+      offerFine: "With entrée purchase · show ad",
+      phone: "(706) 555-0644",
+      address: "Clarkesville, GA",
+      menuItems: ["Taco Tuesday $1 Each", "Margarita Happy Hour", "Family Fajita Platter", "Free Chips & Salsa"],
+    },
+  },
+
+  "gym": {
+    template: "photo-bold",
+    sizeKey: "M",
+    data: {
+      businessName: "Peak Performance Gym",
+      industry: "Gym & Fitness",
+      tagline: "Get Fit. Feel Great.",
+      offer: "Free 7-Day Trial",
+      offerFine: "New members only · no credit card",
+      phone: "(706) 555-0788",
+      address: "Clarkesville, GA",
+      menuItems: ["Personal Training", "Group Classes", "24/7 Access", "No Contract"],
+    },
+  },
+
+  "vet": {
+    template: "split-clean",
+    sizeKey: "M",
+    data: {
+      businessName: "Clarkesville Animal Clinic",
+      industry: "Veterinarian",
+      tagline: "Compassionate Care for Pets",
+      offer: "Free First Exam",
+      offerFine: "New patients only · call to schedule",
+      phone: "(706) 555-0322",
+      address: "Clarkesville, GA",
+      menuItems: ["Wellness Exams", "Vaccinations", "Surgery & Dental", "Emergency Care"],
+    },
+  },
+
+  "bakery": {
+    template: "photo-bold",
+    sizeKey: "S",
+    data: {
+      businessName: "Sunrise Bakery & Café",
+      industry: "Bakery",
+      tagline: "Fresh Baked Every Morning",
+      offer: "Buy 6 Get 2 Free",
+      offerFine: "Any pastry · show this ad",
+      phone: "(706) 555-0211",
+      address: "Clarkesville, GA",
+      menuItems: ["Custom Cakes", "Fresh Bread Daily", "Wedding Cakes", "Special Orders"],
+    },
+  },
+
+  "cleaning": {
+    template: "split-clean",
+    sizeKey: "S",
+    data: {
+      businessName: "Sparkle Home Cleaning",
+      industry: "Cleaning Service",
+      tagline: "Sparkling Clean, Every Time",
+      offer: "$30 OFF Deep Clean",
+      offerFine: "First-time customers · show ad",
+      phone: "(706) 555-0166",
+      address: "Clarkesville, GA",
+      menuItems: ["Weekly Service", "Deep Cleaning", "Move In/Out", "Eco-Friendly"],
+    },
+  },
+
   "coffee": {
     template: "photo-bold",
     sizeKey: "S",
@@ -169,12 +253,28 @@ export const SAMPLE_AD_CONFIGS = {
       menuItems: ["Specialty Lattes", "Cold Brew on Tap", "Pastries Daily", "Free WiFi"],
     },
   },
+
+  "mrbiscuits": {
+    template: "photo-bold",
+    sizeKey: "XL",
+    data: {
+      businessName: "Mr. Biscuit's Café",
+      industry: "Breakfast & Cafe",
+      tagline: "From-Scratch Biscuits & Fresh Boba!",
+      offer: "$1 OFF Any Biscuit",
+      offerFine: "1 per visit · with this postcard",
+      phone: "(706) 754-0105",
+      address: "596 W Louise St Ste D, Clarkesville, GA",
+      menuItems: ["Plain Biscuit $2.99", "Bacon Biscuit $4.99", "Chicken Tender $5.99", "NY Bagels $5.49"],
+    },
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TEMPLATE COMPONENTS — read-only versions (no inline editing)
+// TEMPLATE COMPONENTS
 // ─────────────────────────────────────────────────────────────────────────────
 
+// PHOTO-BOLD — flex column layout so the coupon NEVER overlaps the photo
 function PhotoBoldAd({ data, sizeKey }) {
   const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
   const photo = ind.photos[0];
@@ -182,35 +282,51 @@ function PhotoBoldAd({ data, sizeKey }) {
   const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.55;
 
   return (
-    <div style={{ width: "100%", height: "100%", position: "relative", overflow: "hidden", fontFamily: "Georgia, serif" }}>
-      <img src={photo} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-      <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${ind.colors.dark}bb 0%, ${ind.colors.dark}44 28%, ${ind.colors.dark}11 52%, ${ind.colors.dark}99 76%, ${ind.colors.dark}f2 100%)` }} />
+    <div style={{
+      width: "100%", height: "100%", display: "flex", flexDirection: "column",
+      overflow: "hidden", fontFamily: "Georgia, serif", position: "relative",
+      background: ind.colors.dark,
+    }}>
+      {/* Full-bleed background photo */}
+      <img
+        src={photo}
+        alt=""
+        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+        onError={e => { e.target.style.display = "none"; }}
+      />
+      <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${ind.colors.dark}bb 0%, ${ind.colors.dark}44 35%, ${ind.colors.dark}ee 75%, ${ind.colors.dark} 100%)` }} />
 
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, padding: `${8 * fScale}px ${10 * fScale}px`, display: "flex", alignItems: "center", gap: 7 * fScale }}>
+      {/* Top: logo + name */}
+      <div style={{ position: "relative", zIndex: 2, padding: `${8 * fScale}px ${10 * fScale}px`, display: "flex", alignItems: "center", gap: 7 * fScale, flexShrink: 0 }}>
         <LogoBadge emoji={ind.emoji} size={32 * fScale} bg={`${ind.colors.primary}cc`} color="#fff" />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ color: "#fff", fontWeight: 900, fontSize: 22 * fScale, lineHeight: 1.0, textShadow: "0 2px 10px rgba(0,0,0,0.9)" }}>{data.businessName}</div>
-          {!isS && <div style={{ color: "rgba(255,255,255,0.9)", fontSize: 8 * fScale, marginTop: 1, fontFamily: "sans-serif", letterSpacing: 1, textTransform: "uppercase" }}>{data.industry}</div>}
+          <div style={{ color: "#fff", fontWeight: 900, fontSize: 15 * fScale, lineHeight: 1.05, textShadow: "0 2px 8px rgba(0,0,0,0.8)" }}>{data.businessName}</div>
+          {!isS && <div style={{ color: "rgba(255,255,255,0.85)", fontSize: 7.5 * fScale, fontFamily: "sans-serif", letterSpacing: 1, textTransform: "uppercase" }}>{data.industry}</div>}
         </div>
       </div>
 
-      {!isS && (
-        <div style={{ position: "absolute", top: "44%", left: 12 * fScale, right: 12 * fScale, textAlign: "center" }}>
-          <div style={{ color: "#fff", fontWeight: 800, fontSize: (isXL ? 20 : isL ? 16 : 12) * fScale, lineHeight: 1.15, fontStyle: "italic", textShadow: "0 2px 14px rgba(0,0,0,0.9)" }}>"{data.tagline}"</div>
-        </div>
-      )}
+      {/* Center: tagline — flex grows to fill space, pushes coupon down */}
+      <div style={{ position: "relative", zIndex: 2, flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: `0 ${12 * fScale}px` }}>
+        {!isS && (
+          <div style={{ color: "#fff", fontWeight: 800, fontSize: (isXL ? 20 : isL ? 16 : 13) * fScale, lineHeight: 1.15, fontStyle: "italic", textShadow: "0 2px 12px rgba(0,0,0,0.9)", textAlign: "center" }}>
+            &ldquo;{data.tagline}&rdquo;
+          </div>
+        )}
+      </div>
 
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: `${5 * fScale}px ${10 * fScale}px ${4 * fScale}px`, display: "flex", flexDirection: "column", gap: 3 * fScale }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", color: "rgba(255,255,255,0.9)", fontSize: 7.5 * fScale, fontFamily: "sans-serif" }}>
+      {/* Bottom: coupon then contact — always at bottom, never overlapping */}
+      <div style={{ position: "relative", zIndex: 2, padding: `${6 * fScale}px ${10 * fScale}px ${8 * fScale}px`, display: "flex", flexDirection: "column", gap: 4 * fScale, flexShrink: 0 }}>
+        {data.offer && <Coupon offer={data.offer} fine={data.offerFine} accent="#fff" scale={fScale} dark={true} />}
+        <div style={{ display: "flex", justifyContent: "space-between", color: "rgba(255,255,255,0.9)", fontSize: 7 * fScale, fontFamily: "sans-serif" }}>
           {data.address && <div>📍 {isS ? data.address.split(",")[0] : data.address}</div>}
           {data.phone && <div style={{ fontWeight: 800 }}>📞 {data.phone}</div>}
         </div>
-        {data.offer && <Coupon offer={data.offer} fine={data.offerFine} accent="#fff" scale={fScale * 0.82} dark={true} />}
       </div>
     </div>
   );
 }
 
+// SPLIT-CLEAN — photo always shows; narrow strip for S size
 function SplitCleanAd({ data, sizeKey }) {
   const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
   const photo = ind.photos[0];
@@ -220,17 +336,37 @@ function SplitCleanAd({ data, sizeKey }) {
 
   return (
     <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: isVertical ? "column" : "row", background: ind.colors.light, fontFamily: "sans-serif" }}>
-      <div style={{ width: isVertical ? "100%" : "50%", height: isVertical ? "48%" : "100%", position: "relative", flexShrink: 0 }}>
-        <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-        <div style={{ position: "absolute", top: 8 * fScale, left: 8 * fScale }}>
-          <LogoBadge emoji={ind.emoji} size={36 * fScale} bg={ind.colors.primary} color="#fff" border="2px solid #fff" />
-        </div>
+      {/* Photo — always rendered, width adjusts by size */}
+      <div style={{
+        width: isVertical ? "100%" : isS ? "30%" : "45%",
+        height: isVertical ? "42%" : "100%",
+        position: "relative", flexShrink: 0, overflow: "hidden",
+        background: ind.colors.dark,
+      }}>
+        <img
+          src={photo}
+          alt=""
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          onError={e => { e.target.style.display = "none"; }}
+        />
+        {!isS && (
+          <div style={{ position: "absolute", top: 8 * fScale, left: 8 * fScale }}>
+            <LogoBadge emoji={ind.emoji} size={36 * fScale} bg={ind.colors.primary} color="#fff" border="2px solid #fff" />
+          </div>
+        )}
       </div>
 
-      <div style={{ flex: 1, padding: `${8 * fScale}px ${10 * fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", background: ind.colors.light, minWidth: 0 }}>
+      {/* Content */}
+      <div style={{ flex: 1, padding: `${isS ? 5 : 10}px ${isS ? 6 : 12}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", minWidth: 0 }}>
         <div>
-          <div style={{ color: ind.colors.accent, fontSize: 8 * fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 2 }}>{data.industry}</div>
-          <div style={{ color: ind.colors.dark, fontWeight: 900, fontSize: 21 * fScale, fontFamily: "Georgia, serif", lineHeight: 1.0 }}>{data.businessName}</div>
+          {isS && (
+            <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 3 }}>
+              <LogoBadge emoji={ind.emoji} size={18 * fScale} bg={ind.colors.primary} color="#fff" />
+              <div style={{ color: ind.colors.accent, fontSize: 6.5 * fScale, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase" }}>{data.industry}</div>
+            </div>
+          )}
+          {!isS && <div style={{ color: ind.colors.accent, fontSize: 8 * fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 3 }}>{data.industry}</div>}
+          <div style={{ color: ind.colors.dark, fontWeight: 900, fontSize: (isS ? 10 : 16) * fScale, fontFamily: "Georgia, serif", lineHeight: 1.05 }}>{data.businessName}</div>
           {!isS && <div style={{ fontSize: 10 * fScale, color: ind.colors.primary, fontWeight: 700, marginTop: 4, fontStyle: "italic" }}>{data.tagline}</div>}
         </div>
 
@@ -248,17 +384,18 @@ function SplitCleanAd({ data, sizeKey }) {
         )}
 
         <div style={{ flexShrink: 0 }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 1, marginBottom: data.offer ? 5 * fScale : 0 }}>
-            {data.address && <div style={{ fontSize: 7 * fScale, color: "#555" }}>📍 {data.address.split(",")[0]}</div>}
-            {data.phone && <div style={{ fontSize: 10 * fScale, color: ind.colors.primary, fontWeight: 800 }}>📞 {data.phone}</div>}
+          <div style={{ display: "flex", flexDirection: "column", gap: 1, marginBottom: data.offer ? 4 * fScale : 0 }}>
+            {data.address && <div style={{ fontSize: 6.5 * fScale, color: "#555" }}>📍 {data.address.split(",")[0]}</div>}
+            {data.phone && <div style={{ fontSize: (isS ? 8 : 10) * fScale, color: ind.colors.primary, fontWeight: 800 }}>📞 {data.phone}</div>}
           </div>
-          <Coupon offer={data.offer} fine={data.offerFine} accent={ind.colors.primary} scale={fScale} />
+          <Coupon offer={data.offer} fine={isS ? null : data.offerFine} accent={ind.colors.primary} scale={fScale} />
         </div>
       </div>
     </div>
   );
 }
 
+// MAGAZINE — photo strip at top, content below
 function MagazineAd({ data, sizeKey }) {
   const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
   const photos = ind.photos.slice(0, 2);
@@ -267,28 +404,38 @@ function MagazineAd({ data, sizeKey }) {
 
   return (
     <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: "column", background: "#fff", fontFamily: "Georgia, serif", border: `${3 * fScale}px solid ${ind.colors.primary}`, boxSizing: "border-box" }}>
+      {/* Header */}
       <div style={{ background: ind.colors.primary, padding: `${5 * fScale}px ${10 * fScale}px`, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 * fScale }}>
-          <LogoBadge emoji={ind.emoji} size={30 * fScale} bg={ind.colors.accent} color="#fff" />
-          <div style={{ color: "#fff", fontWeight: 900, fontSize: 18 * fScale, fontFamily: "Georgia, serif", lineHeight: 1.0 }}>{data.businessName}</div>
+          <LogoBadge emoji={ind.emoji} size={28 * fScale} bg={ind.colors.accent} color="#fff" />
+          <div style={{ color: "#fff", fontWeight: 900, fontSize: 13 * fScale, fontFamily: "Georgia, serif" }}>{data.businessName}</div>
         </div>
         {!isS && data.phone && (
-          <div style={{ color: "#fff", fontSize: 10 * fScale, fontWeight: 800, background: "rgba(0,0,0,0.25)", padding: `${2 * fScale}px ${7 * fScale}px`, borderRadius: 3, fontFamily: "sans-serif", flexShrink: 0 }}>{data.phone}</div>
+          <div style={{ color: "#fff", fontSize: 10 * fScale, fontWeight: 800, background: "rgba(0,0,0,0.25)", padding: `${2 * fScale}px ${7 * fScale}px`, borderRadius: 3, fontFamily: "sans-serif" }}>{data.phone}</div>
         )}
       </div>
 
-      <div style={{ display: "flex", gap: 1, height: isXL ? "32%" : isL ? "38%" : isM ? "34%" : "28%", flexShrink: 0 }}>
-        {photos.map((src, i) => (
-          <div key={i} style={{ flex: 1, overflow: "hidden", background: ind.colors.dark }}>
-            <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} onError={e => { e.target.style.display = "none"; }} />
-          </div>
-        ))}
-      </div>
+      {/* Photo strip */}
+      {!isS && (
+        <div style={{ display: "flex", gap: 1, height: isXL ? "30%" : isL ? "35%" : "40%", flexShrink: 0 }}>
+          {photos.map((src, i) => (
+            <div key={i} style={{ flex: 1, overflow: "hidden", background: ind.colors.dark }}>
+              <img
+                src={src}
+                alt=""
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                onError={e => { e.target.style.display = "none"; }}
+              />
+            </div>
+          ))}
+        </div>
+      )}
 
+      {/* Content */}
       <div style={{ flex: 1, padding: `${4 * fScale}px ${10 * fScale}px ${5 * fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 0 }}>
         <div>
           <div style={{ color: ind.colors.accent, fontSize: 7.5 * fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>{data.industry}</div>
-          <div style={{ color: ind.colors.dark, fontSize: 16 * fScale, fontWeight: 900, fontFamily: "Georgia, serif", lineHeight: 1.1, marginTop: 2 }}>{data.tagline}</div>
+          <div style={{ color: ind.colors.dark, fontSize: 14 * fScale, fontWeight: 900, fontFamily: "Georgia, serif", lineHeight: 1.1, marginTop: 2 }}>{data.tagline}</div>
         </div>
 
         {!isS && (
@@ -314,6 +461,7 @@ function MagazineAd({ data, sizeKey }) {
   );
 }
 
+// STAMP — diagonal photo cut, strong phone number
 function StampAd({ data, sizeKey }) {
   const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
   const photo = ind.photos[0];
@@ -322,29 +470,39 @@ function StampAd({ data, sizeKey }) {
 
   return (
     <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative", background: ind.colors.dark, fontFamily: "sans-serif" }}>
-      <div style={{ position: "absolute", inset: 0, clipPath: "polygon(0 0, 100% 0, 100% 65%, 0 85%)", overflow: "hidden" }}>
-        <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-        <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${ind.colors.dark}33 0%, ${ind.colors.dark}88 100%)` }} />
+      {/* Diagonal photo */}
+      <div style={{ position: "absolute", inset: 0, clipPath: "polygon(0 0, 100% 0, 100% 55%, 0 75%)", overflow: "hidden" }}>
+        <img
+          src={photo}
+          alt=""
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          onError={e => { e.target.style.display = "none"; }}
+        />
+        <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${ind.colors.dark}50 0%, ${ind.colors.dark}cc 100%)` }} />
       </div>
 
-      <div style={{ position: "absolute", top: 7 * fScale, left: 9 * fScale, zIndex: 3 }}>
-        <div style={{ background: ind.colors.accent, color: ind.colors.dark, padding: `${3 * fScale}px ${7 * fScale}px`, fontSize: 8 * fScale, fontWeight: 900, letterSpacing: 1.5, borderRadius: 3 }}>
+      {/* Feature badge */}
+      <div style={{ position: "absolute", top: 8 * fScale, left: 10 * fScale, zIndex: 3 }}>
+        <div style={{ background: ind.colors.accent, color: ind.colors.dark, padding: `${3 * fScale}px ${8 * fScale}px`, fontSize: 8 * fScale, fontWeight: 900, letterSpacing: 1.5, borderRadius: 3 }}>
           {(data.menuItems?.[0] || ind.menu[0] || "FEATURED").toUpperCase()}
         </div>
       </div>
 
-      <div style={{ position: "absolute", top: 7 * fScale, right: 9 * fScale, zIndex: 3 }}>
-        <LogoBadge emoji={ind.emoji} size={34 * fScale} bg="rgba(255,255,255,0.18)" color="#fff" border="2px solid rgba(255,255,255,0.6)" />
+      {/* Logo */}
+      <div style={{ position: "absolute", top: 8 * fScale, right: 10 * fScale, zIndex: 3 }}>
+        <LogoBadge emoji={ind.emoji} size={36 * fScale} bg="rgba(255,255,255,0.15)" color="#fff" border="2px solid rgba(255,255,255,0.5)" />
       </div>
 
-      <div style={{ position: "absolute", top: isS ? "48%" : "38%", left: 0, right: 0, padding: `0 ${10 * fScale}px`, textAlign: "center", zIndex: 3 }}>
-        <div style={{ color: "#fff", fontWeight: 900, fontSize: 19 * fScale, fontFamily: "Georgia, serif", textShadow: "0 2px 10px rgba(0,0,0,0.85)", lineHeight: 1.05 }}>{data.businessName}</div>
+      {/* Center text */}
+      <div style={{ position: "absolute", top: "32%", left: 0, right: 0, padding: `0 ${12 * fScale}px`, textAlign: "center", zIndex: 3 }}>
+        <div style={{ color: "#fff", fontWeight: 900, fontSize: 13 * fScale, fontFamily: "Georgia, serif", textShadow: "0 2px 8px rgba(0,0,0,0.6)", lineHeight: 1.1 }}>{data.businessName}</div>
         {!isS && data.phone && (
-          <div style={{ color: ind.colors.accent, fontWeight: 900, fontSize: (isXL ? 26 : isL ? 22 : 17) * fScale, lineHeight: 1, marginTop: 3, letterSpacing: -0.5, textShadow: "0 2px 12px rgba(0,0,0,0.8)" }}>{data.phone}</div>
+          <div style={{ color: ind.colors.accent, fontWeight: 900, fontSize: (isXL ? 28 : isL ? 24 : 18) * fScale, lineHeight: 1, marginTop: 4, letterSpacing: -0.5, textShadow: "0 2px 12px rgba(0,0,0,0.8)" }}>{data.phone}</div>
         )}
-        {!isS && <div style={{ color: "rgba(255,255,255,0.9)", fontSize: 9 * fScale, marginTop: 3, fontStyle: "italic" }}>{data.tagline}</div>}
+        {!isS && <div style={{ color: "rgba(255,255,255,0.85)", fontSize: 9 * fScale, marginTop: 4, fontStyle: "italic" }}>{data.tagline}</div>}
       </div>
 
+      {/* Bottom */}
       <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: `${8 * fScale}px ${10 * fScale}px`, display: "flex", flexDirection: "column", gap: 4 * fScale, zIndex: 3 }}>
         {!isS && !isM && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: `2px ${8 * fScale}px`, justifyContent: "center" }}>
@@ -380,7 +538,6 @@ const TEMPLATE_RENDERERS = {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // getSampleAd(configKey, sizeKeyOverride)
-// Returns a rendered React element for the given config + size.
 // ─────────────────────────────────────────────────────────────────────────────
 export function getSampleAd(configKey, sizeKeyOverride) {
   const config = SAMPLE_AD_CONFIGS[configKey];
@@ -394,16 +551,16 @@ export function getSampleAd(configKey, sizeKeyOverride) {
 // ─────────────────────────────────────────────────────────────────────────────
 // SPOT_SAMPLE_MAP
 // Maps postcard gridArea values to sample ad config keys.
-// Keys must match the gridArea field on each spot in the DB.
+// Only ~half the spots are mapped — the rest render as green AvailableSpots,
+// giving the realistic look of a nearly-full postcard with spots still open.
+//
+// Mapped  (show sample ad):  mb, dn, ins, pz, a1
+// Available (green spot):    re, hv, lw, a2
 // ─────────────────────────────────────────────────────────────────────────────
 export const SPOT_SAMPLE_MAP = {
   "mb":  "mrbiscuits",
   "dn":  "dental",
-  "re":  "realty",
-  "hv":  "hvac",
   "ins": "insurance",
   "pz":  "pizza",
-  "lw":  "lawn",
   "a1":  "salon",
-  "a2":  "coffee",
 };
