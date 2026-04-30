@@ -1,0 +1,770 @@
+import { useState, useRef } from "react";
+import { INDUSTRIES, INDUSTRY_LIST } from "./industryAssets";
+
+const AD_SIZES = {
+  XL: { label: "Extra Large", price: 599, ratio: "4:5",  width: 4, height: 5,   desc: "Hero spot · maximum impact" },
+  L:  { label: "Large",       price: 399, ratio: "4:3",  width: 4, height: 3,   desc: "Premium placement" },
+  M:  { label: "Medium",      price: 299, ratio: "3:2",  width: 3, height: 2,   desc: "Great visibility" },
+  S:  { label: "Small",       price: 199, ratio: "3:1.5",width: 3, height: 1.5, desc: "Affordable local reach" },
+};
+
+const TEMPLATE_STYLES = ["photo-bold", "split-clean", "magazine", "stamp"];
+
+function LogoBadge({ logo, name, emoji, size = 40, bg = "rgba(255,255,255,0.15)", color = "#fff", border }) {
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: "50%", background: bg,
+      border: border || `2px solid ${color}55`,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      overflow: "hidden", flexShrink: 0,
+    }}>
+      {logo ? (
+        <img src={logo} alt="logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      ) : (
+        <span style={{ fontSize: size * 0.5 }}>{emoji}</span>
+      )}
+    </div>
+  );
+}
+
+function Coupon({ offer, fine, accent, scale = 1, dark = false }) {
+  if (!offer) return null;
+  return (
+    <div style={{
+      border: `${1.5 * scale}px dashed ${accent}`,
+      background: dark ? "rgba(0,0,0,0.3)" : `${accent}15`,
+      borderRadius: 4 * scale,
+      padding: `${4 * scale}px ${8 * scale}px`,
+      textAlign: "center", position: "relative", flexShrink: 0,
+    }}>
+      <div style={{
+        position: "absolute", top: -7 * scale, left: 5,
+        background: dark ? "#000" : "#fff", padding: `0 ${3 * scale}px`,
+        fontSize: 9 * scale, opacity: 0.7,
+      }}>✂</div>
+      <div style={{ color: accent, fontWeight: 900, fontSize: 11 * scale, lineHeight: 1, letterSpacing: 0.3 }}>{offer}</div>
+      {fine && <div style={{ color: dark ? "rgba(255,255,255,0.7)" : "#666", fontSize: 6.5 * scale, marginTop: 2, fontFamily: "sans-serif" }}>{fine}</div>}
+    </div>
+  );
+}
+
+function PhotoBoldTemplate({ data, sizeKey }) {
+  const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
+  const photo = data.photo || ind.photos[0];
+  const isXL = sizeKey === "XL", isL = sizeKey === "L", isM = sizeKey === "M", isS = sizeKey === "S";
+  const fScale = isXL ? 1.25 : isL ? 1 : isM ? 0.75 : 0.55;
+
+  return (
+    <div style={{
+      width: "100%", height: "100%", position: "relative", overflow: "hidden",
+      fontFamily: "Georgia, serif",
+    }}>
+      <img src={photo} alt="" style={{
+        position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover"
+      }} />
+      <div style={{
+        position: "absolute", inset: 0,
+        background: `linear-gradient(180deg, ${ind.colors.dark}99 0%, ${ind.colors.dark}55 40%, ${ind.colors.dark}f0 100%)`
+      }} />
+
+      <div style={{
+        position: "absolute", top: 0, left: 0, right: 0,
+        padding: `${10 * fScale}px ${12 * fScale}px`,
+        display: "flex", alignItems: "center", gap: 8 * fScale,
+      }}>
+        <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji}
+          size={36 * fScale} bg={`${ind.colors.primary}cc`} color="#fff" />
+        <div>
+          <div style={{
+            color: "#fff", fontWeight: 900, fontSize: 16 * fScale, lineHeight: 1.05,
+            textShadow: "0 2px 8px rgba(0,0,0,0.7)",
+          }}>{data.businessName}</div>
+          {!isS && (
+            <div style={{
+              color: "rgba(255,255,255,0.85)", fontSize: 8 * fScale, marginTop: 2,
+              fontFamily: "sans-serif", letterSpacing: 1, textTransform: "uppercase",
+            }}>{data.industry}</div>
+          )}
+        </div>
+      </div>
+
+      {!isS && (
+        <div style={{
+          position: "absolute", top: "42%", left: 12 * fScale, right: 12 * fScale,
+          textAlign: "center",
+        }}>
+          <div style={{
+            color: "#fff", fontWeight: 800, fontSize: (isXL ? 22 : isL ? 18 : 14) * fScale,
+            lineHeight: 1.1, fontStyle: "italic",
+            textShadow: "0 2px 12px rgba(0,0,0,0.8)",
+          }}>"{data.tagline || ind.taglines[0]}"</div>
+        </div>
+      )}
+
+      <div style={{
+        position: "absolute", bottom: 0, left: 0, right: 0,
+        padding: `${8 * fScale}px ${12 * fScale}px`,
+        display: "flex", flexDirection: "column", gap: 4 * fScale,
+      }}>
+        {data.offer && (
+          <div style={{
+            background: ind.colors.primary, color: "#fff", padding: `${5 * fScale}px ${10 * fScale}px`,
+            borderRadius: 4, display: "flex", justifyContent: "space-between", alignItems: "center",
+          }}>
+            <div>
+              <div style={{ fontWeight: 900, fontSize: 13 * fScale, lineHeight: 1 }}>{data.offer}</div>
+              {data.offerFine && !isS && (
+                <div style={{ fontSize: 7 * fScale, opacity: 0.85, fontFamily: "sans-serif", marginTop: 1 }}>
+                  {data.offerFine}
+                </div>
+              )}
+            </div>
+            {!isS && (
+              <div style={{
+                background: "rgba(255,255,255,0.2)", border: "1.5px dashed rgba(255,255,255,0.6)",
+                borderRadius: 3, padding: "2px 6px", fontSize: 7 * fScale, fontWeight: 700, fontFamily: "sans-serif",
+              }}>SHOW AD</div>
+            )}
+          </div>
+        )}
+        <div style={{
+          display: "flex", justifyContent: "space-between", color: "rgba(255,255,255,0.85)",
+          fontSize: 7.5 * fScale, fontFamily: "sans-serif",
+        }}>
+          {data.address && <div>📍 {isS ? data.address.split(",")[0] : data.address}</div>}
+          {data.phone && <div style={{ fontWeight: 800 }}>📞 {data.phone}</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SplitCleanTemplate({ data, sizeKey }) {
+  const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
+  const photo = data.photo || ind.photos[0];
+  const isXL = sizeKey === "XL", isL = sizeKey === "L", isM = sizeKey === "M", isS = sizeKey === "S";
+  const fScale = isXL ? 1.25 : isL ? 1 : isM ? 0.75 : 0.55;
+  const isVertical = isXL;
+
+  return (
+    <div style={{
+      width: "100%", height: "100%", overflow: "hidden", display: "flex",
+      flexDirection: isVertical ? "column" : "row",
+      background: ind.colors.light, fontFamily: "sans-serif",
+    }}>
+      <div style={{
+        width: isVertical ? "100%" : "45%",
+        height: isVertical ? "45%" : "100%",
+        position: "relative", flexShrink: 0,
+      }}>
+        <img src={photo} alt="" style={{
+          width: "100%", height: "100%", objectFit: "cover", display: "block"
+        }} />
+        <div style={{
+          position: "absolute", top: 8 * fScale, left: 8 * fScale,
+        }}>
+          <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji}
+            size={36 * fScale} bg={ind.colors.primary} color="#fff" border={`2px solid #fff`} />
+        </div>
+      </div>
+
+      <div style={{
+        flex: 1, padding: `${10 * fScale}px ${12 * fScale}px`,
+        display: "flex", flexDirection: "column", justifyContent: "space-between",
+        background: ind.colors.light, minWidth: 0,
+      }}>
+        <div>
+          <div style={{
+            color: ind.colors.accent, fontSize: 8 * fScale, fontWeight: 700,
+            letterSpacing: 2, textTransform: "uppercase", marginBottom: 3,
+          }}>{data.industry}</div>
+          <div style={{
+            color: ind.colors.dark, fontWeight: 900, fontSize: 16 * fScale,
+            fontFamily: "Georgia, serif", lineHeight: 1.05,
+          }}>{data.businessName}</div>
+          {!isS && (
+            <div style={{
+              fontSize: 10 * fScale, color: ind.colors.primary, fontWeight: 700,
+              marginTop: 4, fontStyle: "italic",
+            }}>{data.tagline || ind.taglines[0]}</div>
+          )}
+        </div>
+
+        {!isS && !isM && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 * fScale, margin: `${6 * fScale}px 0` }}>
+            {ind.menu.slice(0, 3).map(item => (
+              <div key={item} style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <div style={{
+                  width: 14 * fScale, height: 14 * fScale, borderRadius: "50%",
+                  background: ind.colors.accent, display: "flex", alignItems: "center", justifyContent: "center",
+                  flexShrink: 0,
+                }}>
+                  <span style={{ color: "#fff", fontSize: 8 * fScale, fontWeight: 900 }}>✓</span>
+                </div>
+                <span style={{ fontSize: 9 * fScale, color: "#333" }}>{item}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 1, marginBottom: data.offer ? 6 * fScale : 0 }}>
+            {data.address && (
+              <div style={{ fontSize: 7.5 * fScale, color: "#555" }}>
+                📍 {isS ? data.address.split(",")[0] : data.address}
+              </div>
+            )}
+            {data.phone && (
+              <div style={{ fontSize: 11 * fScale, color: ind.colors.primary, fontWeight: 800 }}>
+                📞 {data.phone}
+              </div>
+            )}
+          </div>
+          <Coupon offer={data.offer} fine={data.offerFine} accent={ind.colors.primary} scale={fScale} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MagazineTemplate({ data, sizeKey }) {
+  const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
+  const photos = data.photo ? [data.photo] : ind.photos.slice(0, 3);
+  const isXL = sizeKey === "XL", isL = sizeKey === "L", isM = sizeKey === "M", isS = sizeKey === "S";
+  const fScale = isXL ? 1.25 : isL ? 1 : isM ? 0.75 : 0.55;
+
+  return (
+    <div style={{
+      width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: "column",
+      background: "#fff", fontFamily: "Georgia, serif",
+      border: `${3 * fScale}px solid ${ind.colors.primary}`, boxSizing: "border-box",
+    }}>
+      <div style={{
+        background: ind.colors.primary, padding: `${5 * fScale}px ${10 * fScale}px`,
+        display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 * fScale }}>
+          <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji}
+            size={28 * fScale} bg={ind.colors.accent} color="#fff" />
+          <div style={{ color: "#fff", fontWeight: 900, fontSize: 13 * fScale, fontFamily: "Georgia, serif" }}>
+            {data.businessName}
+          </div>
+        </div>
+        {!isS && data.phone && (
+          <div style={{
+            color: "#fff", fontSize: 10 * fScale, fontWeight: 800,
+            background: "rgba(0,0,0,0.25)", padding: `${2 * fScale}px ${7 * fScale}px`, borderRadius: 3,
+            fontFamily: "sans-serif",
+          }}>{data.phone}</div>
+        )}
+      </div>
+
+      {!isS && (
+        <div style={{ display: "flex", gap: 1, height: isXL ? "32%" : isL ? "38%" : "42%", flexShrink: 0 }}>
+          {photos.slice(0, isXL ? 3 : 2).map((src, i) => (
+            <div key={i} style={{ flex: 1, overflow: "hidden" }}>
+              <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{
+        flex: 1, padding: `${6 * fScale}px ${10 * fScale}px`,
+        display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 0,
+      }}>
+        <div>
+          <div style={{
+            color: ind.colors.accent, fontSize: 7.5 * fScale, fontWeight: 700,
+            letterSpacing: 2, textTransform: "uppercase",
+          }}>{data.industry}</div>
+          <div style={{
+            color: ind.colors.dark, fontSize: 14 * fScale, fontWeight: 900,
+            fontFamily: "Georgia, serif", lineHeight: 1.1, marginTop: 2,
+          }}>{data.tagline || ind.taglines[0]}</div>
+        </div>
+
+        {!isS && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: `2px ${10 * fScale}px`, margin: `${3 * fScale}px 0` }}>
+            {ind.menu.slice(0, 4).map(item => (
+              <div key={item} style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                <span style={{ color: ind.colors.primary, fontSize: 6 }}>●</span>
+                <span style={{ fontSize: 8 * fScale, color: "#444", fontFamily: "sans-serif" }}>{item}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 6 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {data.address && (
+              <div style={{ fontSize: 7 * fScale, color: "#666", fontFamily: "sans-serif" }}>
+                📍 {isS ? data.address.split(",")[0] : data.address}
+              </div>
+            )}
+            {isS && data.phone && (
+              <div style={{ fontSize: 10 * fScale, color: ind.colors.primary, fontWeight: 800, fontFamily: "sans-serif" }}>
+                📞 {data.phone}
+              </div>
+            )}
+          </div>
+          <Coupon offer={data.offer} fine={data.offerFine} accent={ind.colors.primary} scale={fScale} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StampTemplate({ data, sizeKey }) {
+  const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
+  const photo = data.photo || ind.photos[0];
+  const isXL = sizeKey === "XL", isL = sizeKey === "L", isM = sizeKey === "M", isS = sizeKey === "S";
+  const fScale = isXL ? 1.25 : isL ? 1 : isM ? 0.75 : 0.55;
+
+  return (
+    <div style={{
+      width: "100%", height: "100%", overflow: "hidden", position: "relative",
+      background: ind.colors.dark, fontFamily: "sans-serif",
+    }}>
+      <div style={{
+        position: "absolute", inset: 0,
+        clipPath: "polygon(0 0, 100% 0, 100% 55%, 0 75%)",
+        overflow: "hidden",
+      }}>
+        <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        <div style={{
+          position: "absolute", inset: 0,
+          background: `linear-gradient(180deg, ${ind.colors.dark}50 0%, ${ind.colors.dark}cc 100%)`
+        }} />
+      </div>
+
+      <div style={{
+        position: "absolute", top: 8 * fScale, left: 10 * fScale, zIndex: 3,
+      }}>
+        <div style={{
+          background: ind.colors.accent, color: ind.colors.dark, padding: `${3 * fScale}px ${8 * fScale}px`,
+          fontSize: 8 * fScale, fontWeight: 900, letterSpacing: 1.5,
+          borderRadius: 3, display: "inline-block",
+        }}>
+          {ind.menu[0]?.toUpperCase() || "FEATURED"}
+        </div>
+      </div>
+
+      <div style={{
+        position: "absolute", top: 8 * fScale, right: 10 * fScale, zIndex: 3,
+      }}>
+        <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji}
+          size={36 * fScale} bg="rgba(255,255,255,0.15)" color="#fff" border="2px solid rgba(255,255,255,0.5)" />
+      </div>
+
+      <div style={{
+        position: "absolute", top: "32%", left: 0, right: 0, padding: `0 ${12 * fScale}px`,
+        textAlign: "center", zIndex: 3,
+      }}>
+        <div style={{
+          color: "#fff", fontWeight: 900, fontSize: 13 * fScale,
+          fontFamily: "Georgia, serif", textShadow: "0 2px 8px rgba(0,0,0,0.6)",
+          lineHeight: 1.1,
+        }}>{data.businessName}</div>
+        {!isS && data.phone && (
+          <div style={{
+            color: ind.colors.accent, fontWeight: 900,
+            fontSize: (isXL ? 28 : isL ? 24 : 18) * fScale, lineHeight: 1, marginTop: 4,
+            letterSpacing: -0.5, textShadow: "0 2px 12px rgba(0,0,0,0.8)",
+          }}>{data.phone}</div>
+        )}
+        {!isS && (
+          <div style={{
+            color: "rgba(255,255,255,0.85)", fontSize: 9 * fScale,
+            marginTop: 4, fontStyle: "italic",
+          }}>{data.tagline || ind.taglines[0]}</div>
+        )}
+      </div>
+
+      <div style={{
+        position: "absolute", bottom: 0, left: 0, right: 0,
+        padding: `${8 * fScale}px ${10 * fScale}px`,
+        display: "flex", flexDirection: "column", gap: 4 * fScale, zIndex: 3,
+      }}>
+        {!isS && !isM && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: `2px ${8 * fScale}px`, justifyContent: "center" }}>
+            {ind.menu.slice(0, 3).map(item => (
+              <div key={item} style={{ color: "rgba(255,255,255,0.85)", fontSize: 8 * fScale }}>
+                ✓ {item}
+              </div>
+            ))}
+          </div>
+        )}
+        {data.offer && (
+          <div style={{
+            background: `linear-gradient(90deg, ${ind.colors.accent}, ${ind.colors.accent}dd)`,
+            padding: `${4 * fScale}px ${8 * fScale}px`, borderRadius: 3,
+            display: "flex", justifyContent: "space-between", alignItems: "center",
+          }}>
+            <div style={{ color: ind.colors.dark, fontWeight: 900, fontSize: 12 * fScale }}>
+              {data.offer}
+            </div>
+            {data.offerFine && !isS && (
+              <div style={{ color: ind.colors.dark, fontSize: 7 * fScale, opacity: 0.8 }}>
+                {data.offerFine}
+              </div>
+            )}
+          </div>
+        )}
+        <div style={{
+          color: "rgba(255,255,255,0.7)", fontSize: 7 * fScale, textAlign: "center",
+        }}>
+          {data.address && <span>📍 {isS ? data.address.split(",")[0] : data.address}</span>}
+          {isS && data.phone && <span style={{ marginLeft: 8, fontWeight: 700 }}>📞 {data.phone}</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const TEMPLATES = {
+  "photo-bold":  { name: "Photo Bold",    desc: "Hero photo, bold overlay text",  Component: PhotoBoldTemplate },
+  "split-clean": { name: "Split Clean",   desc: "50/50 photo + content split",    Component: SplitCleanTemplate },
+  "magazine":    { name: "Magazine",      desc: "Editorial multi-photo layout",   Component: MagazineTemplate },
+  "stamp":       { name: "Service Stamp", desc: "Diagonal cut, oversized phone",  Component: StampTemplate },
+};
+
+function suggestTemplate(industry) {
+  const restaurantTypes = ["Pizza Restaurant", "Mexican Restaurant", "Chinese Restaurant",
+    "Breakfast & Cafe", "Bar & Grill", "Italian Restaurant", "Bakery", "Coffee Shop"];
+  const medicalTypes = ["Dentist", "Medical & Healthcare", "Chiropractor", "Veterinarian"];
+  const editorialTypes = ["Real Estate", "Insurance", "Financial Services", "Photography",
+    "Retail Shop", "Daycare", "Salon & Beauty"];
+  const serviceTypes = ["HVAC", "Plumber", "Electrician", "Lawn & Landscaping",
+    "Roofing", "Painting", "Cleaning Service", "Pest Control", "Auto Repair"];
+
+  if (restaurantTypes.includes(industry)) return "photo-bold";
+  if (medicalTypes.includes(industry)) return "split-clean";
+  if (editorialTypes.includes(industry)) return "magazine";
+  if (serviceTypes.includes(industry)) return "stamp";
+  return "split-clean";
+}
+
+function getRenderDimensions(sizeKey) {
+  const s = AD_SIZES[sizeKey];
+  const baseWidth = sizeKey === "XL" ? 280 : sizeKey === "L" ? 360 : sizeKey === "M" ? 320 : 380;
+  return { width: baseWidth, height: baseWidth * (s.height / s.width) };
+}
+
+function ImageUpload({ label, hint, value, onChange }) {
+  const ref = useRef();
+  const handleFile = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => onChange(ev.target.result);
+    reader.readAsDataURL(file);
+  };
+  return (
+    <div>
+      <div style={{ fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 3 }}>{label}</div>
+      {hint && <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 5 }}>{hint}</div>}
+      <div onClick={() => ref.current.click()}
+        style={{
+          border: `2px dashed ${value ? "#16a34a" : "#d1d5db"}`,
+          borderRadius: 8, padding: value ? "5px" : "10px",
+          cursor: "pointer", textAlign: "center", background: value ? "#f0fdf4" : "#fafafa",
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+        }}>
+        {value ? (
+          <>
+            <img src={value} alt="" style={{ height: 40, maxWidth: 60, objectFit: "contain", borderRadius: 3 }} />
+            <div style={{ fontSize: 11, color: "#16a34a", fontWeight: 700 }}>
+              ✓ Uploaded<br />
+              <span style={{ color: "#6b7280", fontWeight: 400 }}>Click to change</span>
+            </div>
+          </>
+        ) : (
+          <>
+            <span style={{ fontSize: 18 }}>📁</span>
+            <div style={{ fontSize: 11, color: "#6b7280" }}>Click to upload</div>
+          </>
+        )}
+      </div>
+      <input ref={ref} type="file" accept="image/*" onChange={handleFile} style={{ display: "none" }} />
+    </div>
+  );
+}
+
+export default function AdGenerator({ initialSize = "L", onComplete, onClose }) {
+  const [sizeKey, setSizeKey] = useState(initialSize);
+  const [formData, setFormData] = useState({
+    businessName: "",
+    industry: "",
+    tagline: "",
+    offer: "",
+    offerFine: "",
+    address: "",
+    phone: "",
+    email: "",
+    logo: null,
+    photo: null,
+  });
+  const [selectedTemplate, setSelectedTemplate] = useState("photo-bold");
+
+  const handleIndustryChange = (e) => {
+    const industry = e.target.value;
+    setFormData(d => ({ ...d, industry }));
+    if (industry) setSelectedTemplate(suggestTemplate(industry));
+  };
+
+  const dims = getRenderDimensions(sizeKey);
+  const sizeInfo = AD_SIZES[sizeKey];
+  const Tpl = TEMPLATES[selectedTemplate].Component;
+  const formValid = formData.businessName.trim() && formData.industry && formData.email.trim();
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)",
+      display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16,
+    }}>
+      <div style={{
+        background: "#f8fafc", borderRadius: 18, width: "100%", maxWidth: 1100, maxHeight: "94vh",
+        overflow: "hidden", display: "flex", flexDirection: "column",
+        boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
+      }}>
+
+        {/* Header */}
+        <div style={{
+          padding: "16px 24px", borderBottom: "1px solid #e5e7eb", background: "#fff",
+          display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0,
+        }}>
+          <div>
+            <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>
+              Build Your Ad
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: "#111", fontFamily: "Georgia, serif" }}>
+              {sizeInfo.label} Ad &nbsp;<span style={{ color: "#991b1b" }}>${sizeInfo.price}</span>
+            </div>
+          </div>
+          <button onClick={onClose} style={{
+            background: "#f3f4f6", border: "none", borderRadius: "50%", width: 36, height: 36,
+            cursor: "pointer", fontSize: 20, color: "#374151",
+          }}>×</button>
+        </div>
+
+        {/* Body — split: form left, preview right */}
+        <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0 }}>
+
+          {/* LEFT: form */}
+          <div style={{ width: 420, padding: "20px 24px", overflowY: "auto", borderRight: "1px solid #e5e7eb", background: "#fff" }}>
+
+            {/* Size selector */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: "#111", marginBottom: 8, letterSpacing: 1, textTransform: "uppercase" }}>
+                Ad Size
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                {Object.entries(AD_SIZES).map(([k, s]) => (
+                  <button key={k} onClick={() => setSizeKey(k)}
+                    style={{
+                      padding: "8px 10px", borderRadius: 8, border: `2px solid ${sizeKey === k ? "#991b1b" : "#e5e7eb"}`,
+                      background: sizeKey === k ? "#fef2f2" : "#fff", cursor: "pointer", textAlign: "left",
+                    }}>
+                    <div style={{ fontWeight: 800, fontSize: 12, color: "#111" }}>{s.label}</div>
+                    <div style={{ fontSize: 10, color: "#6b7280", marginTop: 1 }}>${s.price} · {s.ratio}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Form fields */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>
+                  Business Name *
+                </label>
+                <input
+                  value={formData.businessName}
+                  onChange={e => setFormData(d => ({ ...d, businessName: e.target.value }))}
+                  placeholder="e.g. Joe's Pizza"
+                  style={inputStyle}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>
+                  Industry *
+                </label>
+                <select value={formData.industry} onChange={handleIndustryChange} style={inputStyle}>
+                  <option value="">Select your industry...</option>
+                  {INDUSTRY_LIST.map(i => <option key={i} value={i}>{i}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>
+                  Tagline / Slogan
+                </label>
+                <input
+                  value={formData.tagline}
+                  onChange={e => setFormData(d => ({ ...d, tagline: e.target.value }))}
+                  placeholder={formData.industry ? INDUSTRIES[formData.industry]?.taglines[0] : "Your catchy slogan"}
+                  style={inputStyle}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>
+                    Special Offer
+                  </label>
+                  <input
+                    value={formData.offer}
+                    onChange={e => setFormData(d => ({ ...d, offer: e.target.value }))}
+                    placeholder="$10 OFF"
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>
+                    Offer Fine Print
+                  </label>
+                  <input
+                    value={formData.offerFine}
+                    onChange={e => setFormData(d => ({ ...d, offerFine: e.target.value }))}
+                    placeholder="Expires 6/30"
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>
+                  Phone Number
+                </label>
+                <input
+                  value={formData.phone}
+                  onChange={e => setFormData(d => ({ ...d, phone: e.target.value }))}
+                  placeholder="(555) 123-4567"
+                  style={inputStyle}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>
+                  Address
+                </label>
+                <input
+                  value={formData.address}
+                  onChange={e => setFormData(d => ({ ...d, address: e.target.value }))}
+                  placeholder="123 Main St, Your Town"
+                  style={inputStyle}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>
+                  Contact Email *
+                </label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={e => setFormData(d => ({ ...d, email: e.target.value }))}
+                  placeholder="you@yourbusiness.com"
+                  style={inputStyle}
+                />
+              </div>
+
+              {/* Image uploads */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, paddingTop: 8, borderTop: "1px solid #f3f4f6" }}>
+                <ImageUpload label="Your Logo" hint="Optional"
+                  value={formData.logo} onChange={v => setFormData(d => ({ ...d, logo: v }))} />
+                <ImageUpload label="Your Photo" hint="Or use stock"
+                  value={formData.photo} onChange={v => setFormData(d => ({ ...d, photo: v }))} />
+              </div>
+              {formData.industry && !formData.photo && (
+                <div style={{ fontSize: 11, color: "#6b7280", padding: "6px 10px", background: "#f0fdf4", borderRadius: 6 }}>
+                  💡 We'll use a professional stock photo for {formData.industry} since you didn't upload one.
+                </div>
+              )}
+            </div>
+
+            {/* Template picker */}
+            <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid #f3f4f6" }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: "#111", marginBottom: 8, letterSpacing: 1, textTransform: "uppercase" }}>
+                Design Style
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                {TEMPLATE_STYLES.map(tpl => (
+                  <button key={tpl} onClick={() => setSelectedTemplate(tpl)}
+                    style={{
+                      padding: "8px 10px", borderRadius: 8,
+                      border: `2px solid ${selectedTemplate === tpl ? "#991b1b" : "#e5e7eb"}`,
+                      background: selectedTemplate === tpl ? "#fef2f2" : "#fff",
+                      cursor: "pointer", textAlign: "left",
+                    }}>
+                    <div style={{ fontWeight: 800, fontSize: 12, color: "#111" }}>
+                      {TEMPLATES[tpl].name}
+                    </div>
+                    <div style={{ fontSize: 10, color: "#6b7280", marginTop: 1, lineHeight: 1.3 }}>
+                      {TEMPLATES[tpl].desc}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT: live preview */}
+          <div style={{
+            flex: 1, padding: "24px", overflowY: "auto", display: "flex",
+            flexDirection: "column", alignItems: "center", justifyContent: "flex-start",
+            background: "linear-gradient(135deg, #1e293b, #0f172a)",
+          }}>
+            <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 }}>
+              Live Preview · {sizeInfo.label} · {sizeInfo.ratio}
+            </div>
+
+            {formValid ? (
+              <>
+                <div style={{
+                  width: dims.width, height: dims.height, borderRadius: 6, overflow: "hidden",
+                  boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+                }}>
+                  <Tpl data={formData} sizeKey={sizeKey} />
+                </div>
+                <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 10, marginTop: 12, textAlign: "center" }}>
+                  Style: <strong style={{ color: "#fff" }}>{TEMPLATES[selectedTemplate].name}</strong>
+                  {!formData.photo && formData.industry && (
+                    <> · Using stock photo for {formData.industry}</>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => onComplete?.({ sizeKey, price: sizeInfo.price, template: selectedTemplate, ...formData })}
+                  style={{
+                    marginTop: 20, padding: "14px 32px", background: "#991b1b",
+                    color: "#fff", border: "none", borderRadius: 10, fontSize: 15,
+                    fontWeight: 800, cursor: "pointer", letterSpacing: 0.5,
+                  }}>
+                  Approve &amp; Reserve Spot — ${sizeInfo.price}
+                </button>
+              </>
+            ) : (
+              <div style={{
+                width: dims.width, height: dims.height, borderRadius: 6,
+                border: "2px dashed rgba(255,255,255,0.3)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: "rgba(255,255,255,0.4)", fontSize: 13, textAlign: "center", padding: 20,
+              }}>
+                Fill in business name, industry, and email<br />to see your ad preview
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const inputStyle = {
+  width: "100%", padding: "9px 12px", borderRadius: 7,
+  border: "1.5px solid #e5e7eb", fontSize: 13, outline: "none",
+  fontFamily: "system-ui, sans-serif", boxSizing: "border-box", background: "#fff",
+};

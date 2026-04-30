@@ -2,7 +2,9 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useGetActiveCampaign, useReserveSpot } from "@workspace/api-client-react";
 import { GRID_AREAS, PaidAd, AvailableSpot } from "./postcardCore";
-import AdCreator from "./AdCreator";
+import AdGenerator from "./AdGenerator";
+
+const SIZE_MAP = { xl: "XL", large: "L", medium: "M", small: "S" };
 
 const GRID_ORDER = ["mb","dn","re","hv","ins","pz","lw","a1","a2","a3"];
 
@@ -99,7 +101,7 @@ export default function PostcardPickerSection() {
         id: creatorSpot.id,
         data: {
           businessName: payload.businessName,
-          businessCategory: payload.category,
+          businessCategory: payload.industry,
           contactEmail: payload.email,
           contactPhone: payload.phone || undefined,
         },
@@ -111,17 +113,18 @@ export default function PostcardPickerSection() {
       // them in module-level memory instead (survives SPA navigation, lost on
       // full reload — the upload page will re-collect them in that case).
       try {
+        const { sizeKey, price, template, photo, logo, ...adFields } = payload;
         sessionStorage.setItem(
           `localspot:ad:${result.id}`,
           JSON.stringify({
-            templateId: payload.templateId,
-            adData: payload.adData,
+            templateId: template,
+            adData: adFields,
           })
         );
       } catch {
         // sessionStorage may be unavailable — non-fatal
       }
-      AD_IMAGE_CACHE.set(result.id, payload.imageData);
+      AD_IMAGE_CACHE.set(result.id, payload.photo);
 
       setCreatorSpot(null);
       setSelected(null);
@@ -226,16 +229,12 @@ export default function PostcardPickerSection() {
         ))}
       </div>
 
-      {/* Ad Creator (replaces the old reservation modal) */}
+      {/* Ad Generator */}
       {creatorSpot && (
-        <AdCreator
-          spotId={creatorSpot.id}
-          spotSize={creatorSpot.size}
-          spotPrice={Math.round(creatorSpot.price / 100)}
+        <AdGenerator
+          initialSize={SIZE_MAP[creatorSpot.size] || "S"}
           onComplete={handleAdComplete}
           onClose={closeCreator}
-          isLoading={reserveMutation.isPending}
-          error={reserveError}
         />
       )}
     </div>

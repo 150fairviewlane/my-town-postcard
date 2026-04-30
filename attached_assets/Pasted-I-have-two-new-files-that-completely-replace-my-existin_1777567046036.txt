@@ -1,0 +1,13 @@
+I have two new files that completely replace my existing ad creation system. Both files are attached to this message. Please integrate them into the app.
+STEP 1 — Add both files to the project. Save AdGenerator.jsx at src/AdGenerator.jsx. Save industryAssets.js at src/industryAssets.js. Both files must be in the same directory because AdGenerator.jsx imports from ./industryAssets.
+STEP 2 — Find the existing ad creation component in the project. It is likely called AdCreator or AdCreator.jsx and is rendered when a user clicks an available spot on the postcard in PostcardSpotPicker.jsx. Identify every place where this old component is imported and used.
+STEP 3 — Replace all imports of the old component with the new one. Change every instance of import AdCreator from ‘./AdCreator’ to import AdGenerator from ‘./AdGenerator’. Change every JSX usage of AdCreator to AdGenerator.
+STEP 4 — Update the props passed to the component. The new AdGenerator accepts these props:
+	•	initialSize: a string that is one of XL, L, M, or S based on which spot was clicked
+	•	onComplete: a callback that receives an object with sizeKey, price, template, businessName, industry, tagline, offer, offerFine, phone, address, logo, and photo
+	•	onClose: a callback to close the modal
+When a user clicks a spot on the postcard, map the spot size to the correct initialSize value. If the existing code uses size names like large, medium, small, map them as follows: extra-large or xlarge maps to XL, large maps to L, medium maps to M, small maps to S.
+STEP 5 — Update the onComplete handler. The data returned from AdGenerator should flow into the existing reservation logic, Stripe checkout, and database save the same way the old AdCreator data did. The field names are very similar so most existing code should still work. The new fields are sizeKey instead of size, price as a number, template as a string identifying which design was chosen, and photo for the customer-uploaded or stock photo.
+STEP 6 — Do not modify anything else. Do not change the postcard spot picker layout, Stripe integration, database schema, routing, authentication, or backend code. Only swap out the ad creation component and update the import and prop wiring.
+STEP 7 — After integration, the old AdCreator.jsx file can be deleted or left in place as a backup. Your call.
+The new AdGenerator includes 4 ad sizes, 4 visually distinct templates, automatic stock photos for 30+ industries via Unsplash URLs, live preview, and template auto-suggestion based on industry. It is fully self-contained and requires no additional npm packages or API keys.
