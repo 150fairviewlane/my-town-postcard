@@ -1,0 +1,30 @@
+The PostcardSampleAds.jsx file I provided is NOT being used. The postcard is still showing the old ugly ad code. You need to actually wire up the new file.
+
+DEBUGGING STEPS - do these in order:
+
+Step 1: Open PostcardSpotPicker.jsx and search for “getSampleAd”. If it does not appear in the file, that is the problem - you never imported or called it.
+
+Step 2: At the very top of PostcardSpotPicker.jsx add this exact import line: import { getSampleAd, SPOT_SAMPLE_MAP } from ‘./PostcardSampleAds’;
+
+Step 3: Find the SPOTS array in PostcardSpotPicker.jsx. List out every spot ID. For example they might look like spot1, spot2, frontLarge1, etc.
+
+Step 4: Open PostcardSampleAds.jsx and update the SPOT_SAMPLE_MAP keys to match the EXACT spot IDs you found in step 3. The current keys say things like front-xl-1 and front-l-1 but those are placeholders. You must change them to match your real spot IDs. For example if your spot IDs are spot1 through spot10, change the map keys to spot1, spot2, etc. Map about half of your spots to sample ad keys and leave the other half not in the map.
+
+Step 5: Find where each spot renders in PostcardSpotPicker.jsx. There is probably a function or JSX block that renders each cell of the postcard grid. It currently has its own code that creates ugly ads with no images. You must REMOVE that old ad rendering code and replace it with this exact pattern:
+
+For each spot, check if its ID is a key in SPOT_SAMPLE_MAP. If yes, render the sample ad. If no, render the available green plus sign. Use this code structure:
+
+const sampleKey = SPOT_SAMPLE_MAP[spot.id];
+if (sampleKey) {
+return <div style={{width: “100%”, height: “100%”}}>{getSampleAd(sampleKey, spot.size)}</div>;
+} else {
+return <YourExistingAvailableSpotComponent />;
+}
+
+Step 6: DELETE any old code in PostcardSpotPicker.jsx that creates fake ads with text like “Sample Restaurant” or “Local Business” or that builds ads using divs and text. The ONLY way ads should be created in PostcardSpotPicker.jsx is by calling getSampleAd. If you see any other ad-creation code, remove it.
+
+Step 7: Save the file and take a screenshot of the result. The ads MUST now show real photos from Unsplash with starbursts, gradients, and the rich design from PostcardSampleAds.jsx. If they still look ugly with no images, you did not actually replace the old ad rendering code in step 5 and step 6.
+
+The new sample ads contain Unsplash image URLs. If those images are not loading, the problem is either: A) the network is blocking Unsplash, or B) you replaced the file but the spot picker is still using old hardcoded ad data instead of calling getSampleAd. 99% of the time it is option B.
+
+Do not change AdGenerator.jsx, industryAssets.js, or any backend code. Only modify PostcardSpotPicker.jsx to actually use getSampleAd from PostcardSampleAds.jsx.
