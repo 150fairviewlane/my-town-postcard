@@ -241,11 +241,11 @@ function Pricing() {
         <p style={{ textAlign: "center", color: "#666", fontSize: 16, marginBottom: 52, maxWidth: 480, margin: "0 auto 52px" }}>
           All spots include professional ad design and direct mailing to 5,000 homes.
         </p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
           {plans.map(p => (
             <div key={p.label} style={{
               border: p.highlight ? `2px solid ${RED}` : "1.5px solid #e5e7eb",
-              borderRadius: 16, padding: "32px 28px",
+              borderRadius: 16, padding: "28px 20px",
               boxShadow: p.highlight ? `0 8px 32px ${RED}22` : "0 2px 10px rgba(0,0,0,0.05)",
               position: "relative", background: "#fff",
             }}>
@@ -287,14 +287,6 @@ function Pricing() {
               </button>
             </div>
           ))}
-        </div>
-        <div style={{ marginTop: 28, textAlign: "center", padding: "14px 20px",
-          background: "#f0fdf4", borderRadius: 10, border: "1px solid #bbf7d0",
-          maxWidth: 600, margin: "28px auto 0" }}>
-          <span style={{ fontSize: 15, marginRight: 8 }}>🟢</span>
-          <span style={{ fontSize: 13.5, color: "#14532d", fontFamily: "sans-serif", fontWeight: 600 }}>
-            Availability guaranteed: we always keep at least one spot of each size open for new advertisers.
-          </span>
         </div>
       </div>
     </section>
