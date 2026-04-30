@@ -274,119 +274,115 @@ export const SAMPLE_AD_CONFIGS = {
 // TEMPLATE COMPONENTS
 // ─────────────────────────────────────────────────────────────────────────────
 
-// PHOTO-BOLD — flex column layout so the coupon NEVER overlaps the photo
+// PHOTO-BOLD — flex column so coupon never overlaps the photo
 function PhotoBoldAd({ data, sizeKey }) {
   const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
   const photo = ind.photos[0];
   const isXL = sizeKey === "XL", isL = sizeKey === "L", isM = sizeKey === "M", isS = sizeKey === "S";
-  const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.55;
+  const fScale = isXL ? 1.7 : isL ? 1.35 : isM ? 0.88 : 0.65;
 
   return (
-    <div style={{
-      width: "100%", height: "100%", display: "flex", flexDirection: "column",
-      overflow: "hidden", fontFamily: "Georgia, serif", position: "relative",
-      background: ind.colors.dark,
-    }}>
-      {/* Full-bleed background photo */}
-      <img
-        src={photo}
-        alt=""
-        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
-        onError={e => { e.target.style.display = "none"; }}
-      />
-      <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${ind.colors.dark}bb 0%, ${ind.colors.dark}44 35%, ${ind.colors.dark}ee 75%, ${ind.colors.dark} 100%)` }} />
+    <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: "Georgia, serif", position: "relative", background: ind.colors.dark }}>
+      <img src={photo} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+        onError={e => { e.target.style.display = "none"; }} />
+      <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${ind.colors.dark}cc 0%, ${ind.colors.dark}33 38%, ${ind.colors.dark}dd 70%, ${ind.colors.dark}ff 100%)` }} />
 
-      {/* Top: logo + name */}
-      <div style={{ position: "relative", zIndex: 2, padding: `${8 * fScale}px ${10 * fScale}px`, display: "flex", alignItems: "center", gap: 7 * fScale, flexShrink: 0 }}>
-        <LogoBadge emoji={ind.emoji} size={32 * fScale} bg={`${ind.colors.primary}cc`} color="#fff" />
+      {/* Top: logo + business name */}
+      <div style={{ position: "relative", zIndex: 2, padding: `${9 * fScale}px ${10 * fScale}px ${4 * fScale}px`, display: "flex", alignItems: "center", gap: 8 * fScale, flexShrink: 0 }}>
+        <LogoBadge emoji={ind.emoji} size={38 * fScale} bg={`${ind.colors.primary}cc`} color="#fff" />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ color: "#fff", fontWeight: 900, fontSize: 15 * fScale, lineHeight: 1.05, textShadow: "0 2px 8px rgba(0,0,0,0.8)" }}>{data.businessName}</div>
-          {!isS && <div style={{ color: "rgba(255,255,255,0.85)", fontSize: 7.5 * fScale, fontFamily: "sans-serif", letterSpacing: 1, textTransform: "uppercase" }}>{data.industry}</div>}
+          <div style={{ color: "#fff", fontWeight: 900, fontSize: 19 * fScale, lineHeight: 1.0, textShadow: "0 2px 10px rgba(0,0,0,0.9)", letterSpacing: -0.3 }}>{data.businessName}</div>
+          <div style={{ color: ind.colors.accent, fontSize: 8 * fScale, marginTop: 2, fontFamily: "sans-serif", fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase" }}>{data.industry}</div>
         </div>
       </div>
 
-      {/* Center: tagline — flex grows to fill space, pushes coupon down */}
-      <div style={{ position: "relative", zIndex: 2, flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: `0 ${12 * fScale}px` }}>
+      {/* Center: tagline + phone for L/XL */}
+      <div style={{ position: "relative", zIndex: 2, flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: `${4 * fScale}px ${12 * fScale}px`, gap: 6 * fScale }}>
         {!isS && (
-          <div style={{ color: "#fff", fontWeight: 800, fontSize: (isXL ? 20 : isL ? 16 : 13) * fScale, lineHeight: 1.15, fontStyle: "italic", textShadow: "0 2px 12px rgba(0,0,0,0.9)", textAlign: "center" }}>
+          <div style={{ color: "#fff", fontWeight: 800, fontSize: (isXL ? 22 : isL ? 18 : 13) * fScale, lineHeight: 1.15, fontStyle: "italic", textShadow: "0 2px 14px rgba(0,0,0,0.95)", textAlign: "center" }}>
             &ldquo;{data.tagline}&rdquo;
+          </div>
+        )}
+        {(isXL || isL) && data.phone && (
+          <div style={{ color: ind.colors.accent, fontWeight: 900, fontSize: (isXL ? 26 : 21) * fScale, fontFamily: "sans-serif", textShadow: "0 2px 10px rgba(0,0,0,0.9)", letterSpacing: 0.5 }}>
+            {data.phone}
           </div>
         )}
       </div>
 
-      {/* Bottom: coupon then contact — always at bottom, never overlapping */}
-      <div style={{ position: "relative", zIndex: 2, padding: `${6 * fScale}px ${10 * fScale}px ${8 * fScale}px`, display: "flex", flexDirection: "column", gap: 4 * fScale, flexShrink: 0 }}>
+      {/* Bottom: coupon + contact */}
+      <div style={{ position: "relative", zIndex: 2, padding: `${5 * fScale}px ${10 * fScale}px ${8 * fScale}px`, display: "flex", flexDirection: "column", gap: 4 * fScale, flexShrink: 0 }}>
         {data.offer && <Coupon offer={data.offer} fine={data.offerFine} accent="#fff" scale={fScale} dark={true} />}
-        <div style={{ display: "flex", justifyContent: "space-between", color: "rgba(255,255,255,0.9)", fontSize: 7 * fScale, fontFamily: "sans-serif" }}>
-          {data.address && <div>📍 {isS ? data.address.split(",")[0] : data.address}</div>}
-          {data.phone && <div style={{ fontWeight: 800 }}>📞 {data.phone}</div>}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", color: "rgba(255,255,255,0.9)", fontFamily: "sans-serif" }}>
+          {data.address && <div style={{ fontSize: 8.5 * fScale }}>📍 {isS ? data.address.split(",")[0] : data.address}</div>}
+          {isS && data.phone && <div style={{ fontWeight: 900, fontSize: 10 * fScale, color: ind.colors.accent }}>{data.phone}</div>}
+          {isM && data.phone && <div style={{ fontWeight: 900, fontSize: 10 * fScale, color: ind.colors.accent }}>📞 {data.phone}</div>}
         </div>
       </div>
     </div>
   );
 }
 
-// SPLIT-CLEAN — photo always shows; narrow strip for S size
+// SPLIT-CLEAN — photo on left, content on right
 function SplitCleanAd({ data, sizeKey }) {
   const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
   const photo = ind.photos[0];
   const isXL = sizeKey === "XL", isL = sizeKey === "L", isM = sizeKey === "M", isS = sizeKey === "S";
-  const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.55;
+  const fScale = isXL ? 1.7 : isL ? 1.35 : isM ? 0.88 : 0.65;
   const isVertical = isXL;
 
   return (
     <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: isVertical ? "column" : "row", background: ind.colors.light, fontFamily: "sans-serif" }}>
-      {/* Photo — always rendered, width adjusts by size */}
-      <div style={{
-        width: isVertical ? "100%" : isS ? "30%" : "45%",
-        height: isVertical ? "42%" : "100%",
-        position: "relative", flexShrink: 0, overflow: "hidden",
-        background: ind.colors.dark,
-      }}>
-        <img
-          src={photo}
-          alt=""
-          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-          onError={e => { e.target.style.display = "none"; }}
-        />
+      {/* Photo — always shown */}
+      <div style={{ width: isVertical ? "100%" : isS ? "32%" : "44%", height: isVertical ? "40%" : "100%", position: "relative", flexShrink: 0, overflow: "hidden", background: ind.colors.dark }}>
+        <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          onError={e => { e.target.style.display = "none"; }} />
         {!isS && (
           <div style={{ position: "absolute", top: 8 * fScale, left: 8 * fScale }}>
-            <LogoBadge emoji={ind.emoji} size={36 * fScale} bg={ind.colors.primary} color="#fff" border="2px solid #fff" />
+            <LogoBadge emoji={ind.emoji} size={38 * fScale} bg={ind.colors.primary} color="#fff" border="2px solid #fff" />
           </div>
         )}
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, padding: `${isS ? 5 : 10}px ${isS ? 6 : 12}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", minWidth: 0 }}>
+      <div style={{ flex: 1, padding: `${(isS ? 6 : 11) * fScale}px ${(isS ? 7 : 13) * fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", minWidth: 0 }}>
         <div>
           {isS && (
             <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 3 }}>
-              <LogoBadge emoji={ind.emoji} size={18 * fScale} bg={ind.colors.primary} color="#fff" />
-              <div style={{ color: ind.colors.accent, fontSize: 6.5 * fScale, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase" }}>{data.industry}</div>
+              <LogoBadge emoji={ind.emoji} size={20 * fScale} bg={ind.colors.primary} color="#fff" />
+              <div style={{ color: ind.colors.accent, fontSize: 7 * fScale, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase" }}>{data.industry}</div>
             </div>
           )}
-          {!isS && <div style={{ color: ind.colors.accent, fontSize: 8 * fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 3 }}>{data.industry}</div>}
-          <div style={{ color: ind.colors.dark, fontWeight: 900, fontSize: (isS ? 10 : 16) * fScale, fontFamily: "Georgia, serif", lineHeight: 1.05 }}>{data.businessName}</div>
-          {!isS && <div style={{ fontSize: 10 * fScale, color: ind.colors.primary, fontWeight: 700, marginTop: 4, fontStyle: "italic" }}>{data.tagline}</div>}
+          {!isS && (
+            <div style={{ color: ind.colors.accent, fontSize: 8.5 * fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 3 }}>{data.industry}</div>
+          )}
+          <div style={{ color: ind.colors.dark, fontWeight: 900, fontSize: (isS ? 11 : 20) * fScale, fontFamily: "Georgia, serif", lineHeight: 1.0, marginBottom: 3 * fScale }}>{data.businessName}</div>
+          {!isS && (
+            <div style={{ fontSize: 11 * fScale, color: ind.colors.primary, fontWeight: 700, fontStyle: "italic", lineHeight: 1.2 }}>{data.tagline}</div>
+          )}
         </div>
 
-        {!isS && !isM && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 2 * fScale, margin: `${4 * fScale}px 0` }}>
-            {(data.menuItems || []).slice(0, isXL ? 2 : 3).map((item, i) => (
-              <div key={i} style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                <div style={{ width: 13 * fScale, height: 13 * fScale, borderRadius: "50%", background: ind.colors.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <span style={{ color: "#fff", fontSize: 7 * fScale, fontWeight: 900 }}>✓</span>
+        {(isXL || isL) && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 3 * fScale, margin: `${5 * fScale}px 0` }}>
+            {(data.menuItems || []).slice(0, 3).map((item, i) => (
+              <div key={i} style={{ display: "flex", gap: 7, alignItems: "center" }}>
+                <div style={{ width: 15 * fScale, height: 15 * fScale, borderRadius: "50%", background: ind.colors.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <span style={{ color: "#fff", fontSize: 8 * fScale, fontWeight: 900 }}>✓</span>
                 </div>
-                <span style={{ fontSize: 8.5 * fScale, color: "#333" }}>{item}</span>
+                <span style={{ fontSize: 10 * fScale, color: "#333" }}>{item}</span>
               </div>
             ))}
           </div>
         )}
 
         <div style={{ flexShrink: 0 }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 1, marginBottom: data.offer ? 4 * fScale : 0 }}>
-            {data.address && <div style={{ fontSize: 6.5 * fScale, color: "#555" }}>📍 {data.address.split(",")[0]}</div>}
-            {data.phone && <div style={{ fontSize: (isS ? 8 : 10) * fScale, color: ind.colors.primary, fontWeight: 800 }}>📞 {data.phone}</div>}
+          <div style={{ display: "flex", flexDirection: "column", gap: 2, marginBottom: data.offer ? 5 * fScale : 0 }}>
+            {data.address && (
+              <div style={{ fontSize: (isS ? 7.5 : 8.5) * fScale, color: "#555" }}>📍 {data.address.split(",")[0]}</div>
+            )}
+            {data.phone && (
+              <div style={{ fontSize: (isS ? 10 : 14) * fScale, color: ind.colors.primary, fontWeight: 900, letterSpacing: 0.3 }}>📞 {data.phone}</div>
+            )}
           </div>
           <Coupon offer={data.offer} fine={isS ? null : data.offerFine} accent={ind.colors.primary} scale={fScale} />
         </div>
@@ -395,131 +391,136 @@ function SplitCleanAd({ data, sizeKey }) {
   );
 }
 
-// MAGAZINE — photo strip at top, content below
+// MAGAZINE — header bar + photo strip + content
 function MagazineAd({ data, sizeKey }) {
   const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
   const photos = ind.photos.slice(0, 2);
   const isXL = sizeKey === "XL", isL = sizeKey === "L", isM = sizeKey === "M", isS = sizeKey === "S";
-  const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.55;
+  const fScale = isXL ? 1.7 : isL ? 1.35 : isM ? 0.88 : 0.65;
 
   return (
     <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: "column", background: "#fff", fontFamily: "Georgia, serif", border: `${3 * fScale}px solid ${ind.colors.primary}`, boxSizing: "border-box" }}>
       {/* Header */}
-      <div style={{ background: ind.colors.primary, padding: `${5 * fScale}px ${10 * fScale}px`, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 * fScale }}>
-          <LogoBadge emoji={ind.emoji} size={28 * fScale} bg={ind.colors.accent} color="#fff" />
-          <div style={{ color: "#fff", fontWeight: 900, fontSize: 13 * fScale, fontFamily: "Georgia, serif" }}>{data.businessName}</div>
+      <div style={{ background: ind.colors.primary, padding: `${6 * fScale}px ${10 * fScale}px`, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 7 * fScale }}>
+          <LogoBadge emoji={ind.emoji} size={32 * fScale} bg={ind.colors.accent} color="#fff" />
+          <div style={{ color: "#fff", fontWeight: 900, fontSize: 16 * fScale, fontFamily: "Georgia, serif", lineHeight: 1.0 }}>{data.businessName}</div>
         </div>
         {!isS && data.phone && (
-          <div style={{ color: "#fff", fontSize: 10 * fScale, fontWeight: 800, background: "rgba(0,0,0,0.25)", padding: `${2 * fScale}px ${7 * fScale}px`, borderRadius: 3, fontFamily: "sans-serif" }}>{data.phone}</div>
+          <div style={{ color: "#fff", fontSize: 12 * fScale, fontWeight: 900, background: "rgba(0,0,0,0.3)", padding: `${3 * fScale}px ${8 * fScale}px`, borderRadius: 4, fontFamily: "sans-serif", letterSpacing: 0.3 }}>{data.phone}</div>
+        )}
+        {isS && data.phone && (
+          <div style={{ color: ind.colors.accent, fontSize: 10 * fScale, fontWeight: 900, fontFamily: "sans-serif" }}>{data.phone}</div>
         )}
       </div>
 
-      {/* Photo strip */}
-      {!isS && (
-        <div style={{ display: "flex", gap: 1, height: isXL ? "30%" : isL ? "35%" : "40%", flexShrink: 0 }}>
-          {photos.map((src, i) => (
-            <div key={i} style={{ flex: 1, overflow: "hidden", background: ind.colors.dark }}>
-              <img
-                src={src}
-                alt=""
-                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                onError={e => { e.target.style.display = "none"; }}
-              />
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Photo strip — always shown; S shows one photo, others show two */}
+      <div style={{ display: "flex", gap: 1, height: isXL ? "28%" : isL ? "33%" : isM ? "38%" : "35%", flexShrink: 0 }}>
+        {(isS ? photos.slice(0, 1) : photos).map((src, i) => (
+          <div key={i} style={{ flex: 1, overflow: "hidden", background: ind.colors.dark }}>
+            <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+              onError={e => { e.target.style.display = "none"; }} />
+          </div>
+        ))}
+      </div>
 
       {/* Content */}
-      <div style={{ flex: 1, padding: `${4 * fScale}px ${10 * fScale}px ${5 * fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 0 }}>
+      <div style={{ flex: 1, padding: `${5 * fScale}px ${10 * fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 0 }}>
         <div>
-          <div style={{ color: ind.colors.accent, fontSize: 7.5 * fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>{data.industry}</div>
-          <div style={{ color: ind.colors.dark, fontSize: 14 * fScale, fontWeight: 900, fontFamily: "Georgia, serif", lineHeight: 1.1, marginTop: 2 }}>{data.tagline}</div>
+          <div style={{ color: ind.colors.accent, fontSize: 8 * fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>{data.industry}</div>
+          <div style={{ color: ind.colors.dark, fontSize: (isS ? 11 : 15) * fScale, fontWeight: 900, fontFamily: "Georgia, serif", lineHeight: 1.1, marginTop: 2 }}>{data.tagline}</div>
         </div>
 
         {!isS && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: `2px ${10 * fScale}px`, margin: `${3 * fScale}px 0` }}>
-            {(data.menuItems || []).slice(0, 4).map((item, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                <span style={{ color: ind.colors.primary, fontSize: 6 }}>●</span>
-                <span style={{ fontSize: 8 * fScale, color: "#444", fontFamily: "sans-serif" }}>{item}</span>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: `${3 * fScale}px ${10 * fScale}px`, margin: `${4 * fScale}px 0` }}>
+            {(data.menuItems || []).slice(0, isXL || isL ? 4 : 3).map((item, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <span style={{ color: ind.colors.primary, fontSize: 7 * fScale }}>●</span>
+                <span style={{ fontSize: 9.5 * fScale, color: "#333", fontFamily: "sans-serif" }}>{item}</span>
               </div>
             ))}
           </div>
         )}
 
         <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 3 * fScale }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 }}>
-            {data.address && <div style={{ fontSize: 7 * fScale, color: "#666", fontFamily: "sans-serif", flex: 1 }}>📍 {data.address.split(",")[0]}</div>}
-            {!isS && data.phone && <div style={{ fontSize: 8 * fScale, color: ind.colors.primary, fontWeight: 800, fontFamily: "sans-serif" }}>📞 {data.phone}</div>}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            {data.address && (
+              <div style={{ fontSize: (isS ? 8 : 9) * fScale, color: "#555", fontFamily: "sans-serif" }}>📍 {data.address.split(",")[0]}</div>
+            )}
+            {isS && data.phone && (
+              <div style={{ fontSize: 10 * fScale, color: ind.colors.primary, fontWeight: 900, fontFamily: "sans-serif" }}>📞 {data.phone}</div>
+            )}
           </div>
-          <Coupon offer={data.offer} fine={data.offerFine} accent={ind.colors.primary} scale={fScale} />
+          <Coupon offer={data.offer} fine={isS ? null : data.offerFine} accent={ind.colors.primary} scale={fScale} />
         </div>
       </div>
     </div>
   );
 }
 
-// STAMP — diagonal photo cut, strong phone number
+// STAMP — diagonal photo, large phone number
 function StampAd({ data, sizeKey }) {
   const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
   const photo = ind.photos[0];
   const isXL = sizeKey === "XL", isL = sizeKey === "L", isM = sizeKey === "M", isS = sizeKey === "S";
-  const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.55;
+  const fScale = isXL ? 1.7 : isL ? 1.35 : isM ? 0.88 : 0.65;
 
   return (
     <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative", background: ind.colors.dark, fontFamily: "sans-serif" }}>
-      {/* Diagonal photo */}
-      <div style={{ position: "absolute", inset: 0, clipPath: "polygon(0 0, 100% 0, 100% 55%, 0 75%)", overflow: "hidden" }}>
-        <img
-          src={photo}
-          alt=""
-          style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          onError={e => { e.target.style.display = "none"; }}
-        />
-        <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${ind.colors.dark}50 0%, ${ind.colors.dark}cc 100%)` }} />
+      {/* Diagonal photo top section */}
+      <div style={{ position: "absolute", inset: 0, clipPath: "polygon(0 0, 100% 0, 100% 52%, 0 70%)", overflow: "hidden" }}>
+        <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          onError={e => { e.target.style.display = "none"; }} />
+        <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${ind.colors.dark}40 0%, ${ind.colors.dark}bb 100%)` }} />
       </div>
 
       {/* Feature badge */}
       <div style={{ position: "absolute", top: 8 * fScale, left: 10 * fScale, zIndex: 3 }}>
-        <div style={{ background: ind.colors.accent, color: ind.colors.dark, padding: `${3 * fScale}px ${8 * fScale}px`, fontSize: 8 * fScale, fontWeight: 900, letterSpacing: 1.5, borderRadius: 3 }}>
-          {(data.menuItems?.[0] || ind.menu[0] || "FEATURED").toUpperCase()}
+        <div style={{ background: ind.colors.accent, color: ind.colors.dark, padding: `${3 * fScale}px ${9 * fScale}px`, fontSize: 8.5 * fScale, fontWeight: 900, letterSpacing: 1.5, borderRadius: 3 }}>
+          {(data.menuItems?.[0] || "FEATURED").toUpperCase()}
         </div>
       </div>
 
       {/* Logo */}
       <div style={{ position: "absolute", top: 8 * fScale, right: 10 * fScale, zIndex: 3 }}>
-        <LogoBadge emoji={ind.emoji} size={36 * fScale} bg="rgba(255,255,255,0.15)" color="#fff" border="2px solid rgba(255,255,255,0.5)" />
+        <LogoBadge emoji={ind.emoji} size={40 * fScale} bg="rgba(255,255,255,0.15)" color="#fff" border="2px solid rgba(255,255,255,0.5)" />
       </div>
 
-      {/* Center text */}
-      <div style={{ position: "absolute", top: "32%", left: 0, right: 0, padding: `0 ${12 * fScale}px`, textAlign: "center", zIndex: 3 }}>
-        <div style={{ color: "#fff", fontWeight: 900, fontSize: 13 * fScale, fontFamily: "Georgia, serif", textShadow: "0 2px 8px rgba(0,0,0,0.6)", lineHeight: 1.1 }}>{data.businessName}</div>
-        {!isS && data.phone && (
-          <div style={{ color: ind.colors.accent, fontWeight: 900, fontSize: (isXL ? 28 : isL ? 24 : 18) * fScale, lineHeight: 1, marginTop: 4, letterSpacing: -0.5, textShadow: "0 2px 12px rgba(0,0,0,0.8)" }}>{data.phone}</div>
+      {/* Center: name + phone */}
+      <div style={{ position: "absolute", top: "30%", left: 0, right: 0, padding: `0 ${12 * fScale}px`, textAlign: "center", zIndex: 3 }}>
+        <div style={{ color: "#fff", fontWeight: 900, fontSize: (isS ? 12 : 16) * fScale, fontFamily: "Georgia, serif", textShadow: "0 2px 10px rgba(0,0,0,0.8)", lineHeight: 1.05 }}>
+          {data.businessName}
+        </div>
+        {data.phone && !isS && (
+          <div style={{ color: ind.colors.accent, fontWeight: 900, fontSize: (isXL ? 30 : isL ? 25 : 20) * fScale, lineHeight: 1.05, marginTop: 5 * fScale, letterSpacing: -0.5, textShadow: "0 2px 14px rgba(0,0,0,0.9)" }}>
+            {data.phone}
+          </div>
         )}
-        {!isS && <div style={{ color: "rgba(255,255,255,0.85)", fontSize: 9 * fScale, marginTop: 4, fontStyle: "italic" }}>{data.tagline}</div>}
+        {!isS && (
+          <div style={{ color: "rgba(255,255,255,0.9)", fontSize: 10 * fScale, marginTop: 4 * fScale, fontStyle: "italic" }}>
+            {data.tagline}
+          </div>
+        )}
       </div>
 
-      {/* Bottom */}
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: `${8 * fScale}px ${10 * fScale}px`, display: "flex", flexDirection: "column", gap: 4 * fScale, zIndex: 3 }}>
-        {!isS && !isM && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: `2px ${8 * fScale}px`, justifyContent: "center" }}>
-            {(data.menuItems || []).slice(0, 3).map((item, i) => (
-              <div key={i} style={{ color: "rgba(255,255,255,0.85)", fontSize: 8 * fScale }}>✓ {item}</div>
+      {/* Bottom: menu items + offer bar + address */}
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: `${6 * fScale}px ${10 * fScale}px ${8 * fScale}px`, display: "flex", flexDirection: "column", gap: 4 * fScale, zIndex: 3 }}>
+        {(isXL || isL) && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: `2px ${10 * fScale}px`, justifyContent: "center" }}>
+            {(data.menuItems || []).slice(1, 4).map((item, i) => (
+              <div key={i} style={{ color: "rgba(255,255,255,0.9)", fontSize: 9 * fScale }}>✓ {item}</div>
             ))}
           </div>
         )}
         {data.offer && (
-          <div style={{ background: `linear-gradient(90deg, ${ind.colors.accent}, ${ind.colors.accent}dd)`, padding: `${4 * fScale}px ${8 * fScale}px`, borderRadius: 3, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ color: ind.colors.dark, fontWeight: 900, fontSize: 12 * fScale }}>{data.offer}</div>
-            {data.offerFine && !isS && <div style={{ color: ind.colors.dark, fontSize: 7 * fScale, opacity: 0.8 }}>{data.offerFine}</div>}
+          <div style={{ background: `linear-gradient(90deg, ${ind.colors.accent}, ${ind.colors.accent}ee)`, padding: `${5 * fScale}px ${9 * fScale}px`, borderRadius: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ color: ind.colors.dark, fontWeight: 900, fontSize: 13 * fScale }}>{data.offer}</div>
+            {data.offerFine && !isS && <div style={{ color: ind.colors.dark, fontSize: 7.5 * fScale, opacity: 0.85 }}>{data.offerFine}</div>}
           </div>
         )}
-        <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 7 * fScale, textAlign: "center", fontFamily: "sans-serif" }}>
-          📍 {data.address?.split(",")[0]}
-          {isS && data.phone && <span style={{ marginLeft: 8, fontWeight: 700 }}>📞 {data.phone}</span>}
+        <div style={{ color: "rgba(255,255,255,0.8)", fontSize: (isS ? 8 : 9) * fScale, textAlign: "center", fontFamily: "sans-serif", display: "flex", justifyContent: "center", gap: 10 * fScale }}>
+          {data.address && <span>📍 {data.address.split(",")[0]}</span>}
+          {isS && data.phone && <span style={{ fontWeight: 900, color: ind.colors.accent }}>📞 {data.phone}</span>}
         </div>
       </div>
     </div>
@@ -527,7 +528,7 @@ function StampAd({ data, sizeKey }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TEMPLATE REGISTRY
+// TEMPLATE REGISTRY + EXPORTS
 // ─────────────────────────────────────────────────────────────────────────────
 const TEMPLATE_RENDERERS = {
   "photo-bold":  PhotoBoldAd,
@@ -536,9 +537,6 @@ const TEMPLATE_RENDERERS = {
   "stamp":       StampAd,
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// getSampleAd(configKey, sizeKeyOverride)
-// ─────────────────────────────────────────────────────────────────────────────
 export function getSampleAd(configKey, sizeKeyOverride) {
   const config = SAMPLE_AD_CONFIGS[configKey];
   if (!config) return null;
@@ -550,9 +548,8 @@ export function getSampleAd(configKey, sizeKeyOverride) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SPOT_SAMPLE_MAP
-// Maps postcard gridArea values to sample ad config keys.
-// Only ~half the spots are mapped — the rest render as green AvailableSpots,
-// giving the realistic look of a nearly-full postcard with spots still open.
+// Keys are the actual gridArea values used by the postcard grid.
+// Only ~half the spots are mapped — the rest render as green AvailableSpots.
 //
 // Mapped  (show sample ad):  mb, dn, ins, pz, a1
 // Available (green spot):    re, hv, lw, a2

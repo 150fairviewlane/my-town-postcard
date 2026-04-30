@@ -1,0 +1,633 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// POSTCARD SAMPLE ADS
+//
+// These are the placeholder/demo ads shown in the PostcardSpotPicker before
+// a real customer purchases a spot. They use the EXACT same template components
+// as the AdGenerator, so they look identical to real customer ads.
+//
+// Usage in PostcardSpotPicker:
+//   import { getSampleAd, SAMPLE_AD_CONFIGS } from ‘./PostcardSampleAds’;
+//   // Then render: getSampleAd(spot.sampleAdId, spot.size)
+// ─────────────────────────────────────────────────────────────────────────────
+
+import { INDUSTRIES } from “./industryAssets”;
+
+// ─── Re-export the template components from AdGenerator ──────────────────────
+// We import all 4 template components directly so sample ads render identically
+// NOTE: These are exported from AdGenerator.jsx — make sure that file exists.
+
+// ─── Helper: Logo Badge (mirrors AdGenerator’s LogoBadge) ────────────────────
+function LogoBadge({ logo, name, emoji, size = 40, bg = “rgba(255,255,255,0.15)”, color = “#fff”, border }) {
+return (
+<div style={{
+width: size, height: size, borderRadius: “50%”, background: bg,
+border: border || `2px solid ${color}55`,
+display: “flex”, alignItems: “center”, justifyContent: “center”,
+overflow: “hidden”, flexShrink: 0,
+}}>
+{logo
+? <img src={logo} alt=“logo” style={{ width: “100%”, height: “100%”, objectFit: “cover” }} />
+: <span style={{ fontSize: size * 0.5 }}>{emoji}</span>
+}
+</div>
+);
+}
+
+// ─── Helper: Coupon (mirrors AdGenerator’s Coupon) ────────────────────────────
+function Coupon({ offer, fine, accent, scale = 1, dark = false }) {
+if (!offer) return null;
+return (
+<div style={{
+border: `${1.5 * scale}px dashed ${accent}`,
+background: dark ? “rgba(0,0,0,0.3)” : `${accent}15`,
+borderRadius: 4 * scale,
+padding: `${5 * scale}px ${10 * scale}px ${4 * scale}px`,
+textAlign: “center”, position: “relative”, flexShrink: 0,
+}}>
+<div style={{ position: “absolute”, top: -1, left: 0, right: 0, display: “flex”, alignItems: “center”, padding: `0 ${4 * scale}px` }}>
+<span style={{ fontSize: 9 * scale, lineHeight: 1, flexShrink: 0, opacity: 0.75 }}>✂</span>
+<div style={{ flex: 1, marginLeft: 3 * scale, borderTop: `${1.2 * scale}px dashed ${accent}88` }} />
+<span style={{ fontSize: 9 * scale, lineHeight: 1, flexShrink: 0, opacity: 0.75, transform: “scaleX(-1)”, display: “inline-block” }}>✂</span>
+</div>
+<div style={{ color: accent, fontWeight: 900, fontSize: 12 * scale, lineHeight: 1, letterSpacing: 0.3, marginTop: 3 * scale }}>{offer}</div>
+{fine && <div style={{ color: dark ? “rgba(255,255,255,0.7)” : “#666”, fontSize: 6.5 * scale, marginTop: 2, fontFamily: “sans-serif” }}>{fine}</div>}
+</div>
+);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SAMPLE AD DATA CONFIGS
+// Each entry maps to a real industry in industryAssets.js
+// sizeKey: XL | L | M | S  (matches PostcardSpotPicker spot sizes)
+// template: photo-bold | split-clean | magazine | stamp
+// ─────────────────────────────────────────────────────────────────────────────
+export const SAMPLE_AD_CONFIGS = {
+
+// ── FRONT SIDE ──────────────────────────────────────────────────────────────
+
+“pizza”: {
+template: “photo-bold”,
+sizeKey: “L”,
+data: {
+businessName: “Roma’s Pizza & Subs”,
+industry: “Pizza Restaurant”,
+tagline: “Hand-Tossed. Oven Fresh. Delivered Hot.”,
+offer: “BOGO Medium Pizza”,
+offerFine: “Tues & Wed only · Dine-in · show ad”,
+phone: “(706) 555-0712”,
+address: “182 Main St, Clarkesville, GA”,
+menuItems: [“Large Pizza $14.99”, “Family Special $24.99”, “Wings & Pizza Combo”, “Free Delivery”],
+},
+},
+
+“dental”: {
+template: “split-clean”,
+sizeKey: “L”,
+data: {
+businessName: “Clarkesville Family Dental”,
+industry: “Dentist”,
+tagline: “Accepting New Patients!”,
+offer: “FREE Whitening Kit”,
+offerFine: “w/ exam & cleaning · show this ad”,
+phone: “(706) 555-0142”,
+address: “142 Commerce St, Clarkesville, GA”,
+menuItems: [“Preventive Care & Cleanings”, “Cosmetic & Whitening Treatments”, “Family & Children’s Dentistry”],
+},
+},
+
+“insurance”: {
+template: “magazine”,
+sizeKey: “M”,
+data: {
+businessName: “Tanner Insurance Agency”,
+industry: “Insurance”,
+tagline: “Local Agent. Real Savings.”,
+offer: “Save up to $500/yr”,
+offerFine: “Free quote · no obligation”,
+phone: “(706) 555-0388”,
+address: “55 Green St, Clarkesville, GA”,
+menuItems: [“Auto Insurance”, “Home & Property”, “Life Coverage”, “Business Policies”],
+},
+},
+
+“lawn”: {
+template: “stamp”,
+sizeKey: “M”,
+data: {
+businessName: “Green Acres Lawn Care”,
+industry: “Lawn & Landscaping”,
+tagline: “Your Yard. Our Pride.”,
+offer: “$25 OFF First Service”,
+offerFine: “New customers only · expires 6/30”,
+phone: “(706) 555-0291”,
+address: “Clarkesville, GA”,
+menuItems: [“Weekly Mowing”, “Spring Cleanup”, “Mulch Installation”, “Free Estimates”],
+},
+},
+
+“realty”: {
+template: “magazine”,
+sizeKey: “S”,
+data: {
+businessName: “Mountain View Realty”,
+industry: “Real Estate”,
+tagline: “Buying or Selling in NE Georgia?”,
+offer: “Free Home Valuation”,
+offerFine: “No obligation · call today”,
+phone: “(706) 555-0177”,
+address: “Clarkesville, GA”,
+menuItems: [“Buyer Representation”, “Listing Services”, “Investment Properties”, “Free Consultation”],
+},
+},
+
+“hvac”: {
+template: “stamp”,
+sizeKey: “S”,
+data: {
+businessName: “Blue Ridge HVAC”,
+industry: “HVAC”,
+tagline: “24/7 Emergency Service”,
+offer: “$59 A/C Tune-Up”,
+offerFine: “Expires 6/30 · mention this ad”,
+phone: “(706) 555-0433”,
+address: “Clarkesville, GA”,
+menuItems: [“A/C Repair & Install”, “Heating Systems”, “Emergency Service 24/7”, “Free Estimates”],
+},
+},
+
+“salon”: {
+template: “photo-bold”,
+sizeKey: “S”,
+data: {
+businessName: “The Cut Above Salon”,
+industry: “Salon & Beauty”,
+tagline: “Look Beautiful. Feel Confident.”,
+offer: “20% OFF First Visit”,
+offerFine: “New clients · show this ad”,
+phone: “(706) 555-0519”,
+address: “Clarkesville, GA”,
+menuItems: [“Cut & Color”, “Wedding Hair”, “Bridal Packages”, “Walk-Ins Welcome”],
+},
+},
+
+// ── BACK SIDE ───────────────────────────────────────────────────────────────
+
+“autorepair”: {
+template: “stamp”,
+sizeKey: “L”,
+data: {
+businessName: “Shadetree Auto Repair”,
+industry: “Auto Repair”,
+tagline: “Honest Auto Repair. Fair Prices.”,
+offer: “Free Diagnostic Check”,
+offerFine: “With any repair · show this ad”,
+phone: “(770) 678-7890”,
+address: “Clarkesville, GA”,
+menuItems: [“Oil Change Special”, “Brake Service”, “AC Repair”, “Free Estimates”],
+},
+},
+
+“mexican”: {
+template: “photo-bold”,
+sizeKey: “L”,
+data: {
+businessName: “El Rancho Mexican Grill”,
+industry: “Mexican Restaurant”,
+tagline: “Auténtico Mexican Cuisine”,
+offer: “Free Chips & Queso”,
+offerFine: “With entrée purchase · show ad”,
+phone: “(706) 555-0644”,
+address: “Clarkesville, GA”,
+menuItems: [“Taco Tuesday $1 Each”, “Margarita Happy Hour”, “Family Fajita Platter”, “Free Chips & Salsa”],
+},
+},
+
+“gym”: {
+template: “photo-bold”,
+sizeKey: “M”,
+data: {
+businessName: “Peak Performance Gym”,
+industry: “Gym & Fitness”,
+tagline: “Get Fit. Feel Great.”,
+offer: “Free 7-Day Trial”,
+offerFine: “New members only · no credit card”,
+phone: “(706) 555-0788”,
+address: “Clarkesville, GA”,
+menuItems: [“Personal Training”, “Group Classes”, “24/7 Access”, “No Contract”],
+},
+},
+
+“vet”: {
+template: “split-clean”,
+sizeKey: “M”,
+data: {
+businessName: “Clarkesville Animal Clinic”,
+industry: “Veterinarian”,
+tagline: “Compassionate Care for Pets”,
+offer: “Free First Exam”,
+offerFine: “New patients only · call to schedule”,
+phone: “(706) 555-0322”,
+address: “Clarkesville, GA”,
+menuItems: [“Wellness Exams”, “Vaccinations”, “Surgery & Dental”, “Emergency Care”],
+},
+},
+
+“bakery”: {
+template: “photo-bold”,
+sizeKey: “S”,
+data: {
+businessName: “Sunrise Bakery & Café”,
+industry: “Bakery”,
+tagline: “Fresh Baked Every Morning”,
+offer: “Buy 6 Get 2 Free”,
+offerFine: “Any pastry · show this ad”,
+phone: “(706) 555-0211”,
+address: “Clarkesville, GA”,
+menuItems: [“Custom Cakes”, “Fresh Bread Daily”, “Wedding Cakes”, “Special Orders”],
+},
+},
+
+“cleaning”: {
+template: “split-clean”,
+sizeKey: “S”,
+data: {
+businessName: “Sparkle Home Cleaning”,
+industry: “Cleaning Service”,
+tagline: “Sparkling Clean, Every Time”,
+offer: “$30 OFF Deep Clean”,
+offerFine: “First-time customers · show ad”,
+phone: “(706) 555-0166”,
+address: “Clarkesville, GA”,
+menuItems: [“Weekly Service”, “Deep Cleaning”, “Move In/Out”, “Eco-Friendly”],
+},
+},
+
+“coffee”: {
+template: “photo-bold”,
+sizeKey: “S”,
+data: {
+businessName: “Summit Coffee Co.”,
+industry: “Coffee Shop”,
+tagline: “Locally Roasted. Locally Loved.”,
+offer: “Buy 1 Get 1 Free”,
+offerFine: “Any specialty drink · show this ad”,
+phone: “(706) 555-0844”,
+address: “Clarkesville, GA”,
+menuItems: [“Specialty Lattes”, “Cold Brew on Tap”, “Pastries Daily”, “Free WiFi”],
+},
+},
+
+“mrbiscuits”: {
+template: “photo-bold”,
+sizeKey: “XL”,
+data: {
+businessName: “Mr. Biscuit’s Café”,
+industry: “Breakfast & Cafe”,
+tagline: “From-Scratch Biscuits & Fresh Boba!”,
+offer: “$1 OFF Any Biscuit”,
+offerFine: “1 per visit · with this postcard”,
+phone: “(706) 754-0105”,
+address: “596 W Louise St Ste D, Clarkesville, GA”,
+menuItems: [“Plain Biscuit $2.99”, “Bacon Biscuit $4.99”, “Chicken Tender $5.99”, “NY Bagels $5.49”],
+},
+},
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SAMPLE AD RENDERER COMPONENTS
+// One per template type — these match AdGenerator 1:1
+// ─────────────────────────────────────────────────────────────────────────────
+
+function PhotoBoldAd({ data, sizeKey }) {
+const ind = INDUSTRIES[data.industry] || INDUSTRIES[“Other Service”];
+const photo = ind.photos[0];
+const isXL = sizeKey === “XL”, isL = sizeKey === “L”, isM = sizeKey === “M”, isS = sizeKey === “S”;
+// Larger base scales — L and XL get a significant bump
+const fScale = isXL ? 1.7 : isL ? 1.35 : isM ? 0.88 : 0.65;
+
+return (
+<div style={{ width: “100%”, height: “100%”, display: “flex”, flexDirection: “column”, overflow: “hidden”, fontFamily: “Georgia, serif”, position: “relative” }}>
+<img src={photo} alt=”” style={{ position: “absolute”, inset: 0, width: “100%”, height: “100%”, objectFit: “cover” }} />
+<div style={{ position: “absolute”, inset: 0, background: `linear-gradient(180deg, ${ind.colors.dark}cc 0%, ${ind.colors.dark}33 38%, ${ind.colors.dark}dd 70%, ${ind.colors.dark}ff 100%)` }} />
+
+```
+  {/* Top: logo + LARGE business name */}
+  <div style={{ position: "relative", zIndex: 2, padding: `${9*fScale}px ${10*fScale}px ${4*fScale}px`, display: "flex", alignItems: "center", gap: 8*fScale, flexShrink: 0 }}>
+    <LogoBadge emoji={ind.emoji} size={38*fScale} bg={`${ind.colors.primary}cc`} color="#fff" />
+    <div style={{ flex: 1, minWidth: 0 }}>
+      {/* Business name — dominant, always the biggest text */}
+      <div style={{ color: "#fff", fontWeight: 900, fontSize: 19*fScale, lineHeight: 1.0, textShadow: "0 2px 10px rgba(0,0,0,0.9)", letterSpacing: -0.3 }}>{data.businessName}</div>
+      <div style={{ color: ind.colors.accent, fontSize: 8*fScale, marginTop: 2, fontFamily: "sans-serif", fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase" }}>{data.industry}</div>
+    </div>
+  </div>
+
+  {/* Center: tagline fills the dead space */}
+  <div style={{ position: "relative", zIndex: 2, flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: `${4*fScale}px ${12*fScale}px`, gap: 6*fScale }}>
+    {!isS && (
+      <div style={{ color: "#fff", fontWeight: 800, fontSize: (isXL ? 22 : isL ? 18 : 13)*fScale, lineHeight: 1.15, fontStyle: "italic", textShadow: "0 2px 14px rgba(0,0,0,0.95)", textAlign: "center" }}>
+        "{data.tagline}"
+      </div>
+    )}
+    {/* Phone number in center — big and prominent */}
+    {(isXL || isL) && data.phone && (
+      <div style={{ color: ind.colors.accent, fontWeight: 900, fontSize: (isXL ? 26 : 21)*fScale, fontFamily: "sans-serif", textShadow: "0 2px 10px rgba(0,0,0,0.9)", letterSpacing: 0.5 }}>
+        {data.phone}
+      </div>
+    )}
+  </div>
+
+  {/* Bottom: coupon + contact row */}
+  <div style={{ position: "relative", zIndex: 2, padding: `${5*fScale}px ${10*fScale}px ${8*fScale}px`, display: "flex", flexDirection: "column", gap: 4*fScale, flexShrink: 0 }}>
+    {data.offer && <Coupon offer={data.offer} fine={data.offerFine} accent="#fff" scale={fScale} dark={true} />}
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", color: "rgba(255,255,255,0.9)", fontFamily: "sans-serif" }}>
+      {data.address && <div style={{ fontSize: 8.5*fScale }}>📍 {isS ? data.address.split(",")[0] : data.address}</div>}
+      {/* Phone on small only (shown in center on L/XL) */}
+      {isS && data.phone && <div style={{ fontWeight: 900, fontSize: 10*fScale, color: ind.colors.accent }}>{data.phone}</div>}
+      {isM && data.phone && <div style={{ fontWeight: 900, fontSize: 10*fScale, color: ind.colors.accent }}>📞 {data.phone}</div>}
+    </div>
+  </div>
+</div>
+```
+
+);
+}
+
+function SplitCleanAd({ data, sizeKey }) {
+const ind = INDUSTRIES[data.industry] || INDUSTRIES[“Other Service”];
+const photo = ind.photos[0];
+const isXL = sizeKey === “XL”, isL = sizeKey === “L”, isM = sizeKey === “M”, isS = sizeKey === “S”;
+const fScale = isXL ? 1.7 : isL ? 1.35 : isM ? 0.88 : 0.65;
+const isVertical = isXL;
+
+return (
+<div style={{ width: “100%”, height: “100%”, overflow: “hidden”, display: “flex”, flexDirection: isVertical ? “column” : “row”, background: ind.colors.light, fontFamily: “sans-serif” }}>
+{/* Photo — always shown */}
+<div style={{ width: isVertical ? “100%” : isS ? “32%” : “44%”, height: isVertical ? “40%” : “100%”, position: “relative”, flexShrink: 0, overflow: “hidden” }}>
+<img src={photo} alt=”” style={{ width: “100%”, height: “100%”, objectFit: “cover”, display: “block” }} />
+{!isS && (
+<div style={{ position: “absolute”, top: 8*fScale, left: 8*fScale }}>
+<LogoBadge emoji={ind.emoji} size={38*fScale} bg={ind.colors.primary} color="#fff" border="2px solid #fff" />
+</div>
+)}
+</div>
+
+```
+  {/* Content */}
+  <div style={{ flex: 1, padding: `${isS ? 6 : 11}*${fScale}px`.replace("*", "").split("px")[0] + "px " + `${isS ? 7 : 13}*${fScale}px`.replace("*", "").split("px")[0] + "px", display: "flex", flexDirection: "column", justifyContent: "space-between", minWidth: 0, padding: `${(isS?6:11)*fScale}px ${(isS?7:13)*fScale}px` }}>
+    <div>
+      {isS && (
+        <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 3 }}>
+          <LogoBadge emoji={ind.emoji} size={20*fScale} bg={ind.colors.primary} color="#fff" />
+          <div style={{ color: ind.colors.accent, fontSize: 7*fScale, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase" }}>{data.industry}</div>
+        </div>
+      )}
+      {!isS && (
+        <div style={{ color: ind.colors.accent, fontSize: 8.5*fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 3 }}>{data.industry}</div>
+      )}
+      {/* Business name — clearly the dominant element */}
+      <div style={{ color: ind.colors.dark, fontWeight: 900, fontSize: (isS ? 11 : 20)*fScale, fontFamily: "Georgia, serif", lineHeight: 1.0, marginBottom: 3*fScale }}>{data.businessName}</div>
+      {!isS && (
+        <div style={{ fontSize: 11*fScale, color: ind.colors.primary, fontWeight: 700, fontStyle: "italic", lineHeight: 1.2 }}>{data.tagline}</div>
+      )}
+    </div>
+
+    {/* Menu items */}
+    {(isXL || isL) && (
+      <div style={{ display: "flex", flexDirection: "column", gap: 3*fScale, margin: `${5*fScale}px 0` }}>
+        {(data.menuItems || []).slice(0, isXL ? 3 : 3).map((item, i) => (
+          <div key={i} style={{ display: "flex", gap: 7, alignItems: "center" }}>
+            <div style={{ width: 15*fScale, height: 15*fScale, borderRadius: "50%", background: ind.colors.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <span style={{ color: "#fff", fontSize: 8*fScale, fontWeight: 900 }}>✓</span>
+            </div>
+            <span style={{ fontSize: 10*fScale, color: "#333" }}>{item}</span>
+          </div>
+        ))}
+      </div>
+    )}
+
+    {/* Contact + coupon */}
+    <div style={{ flexShrink: 0 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 2, marginBottom: data.offer ? 5*fScale : 0 }}>
+        {data.address && (
+          <div style={{ fontSize: (isS ? 7.5 : 8.5)*fScale, color: "#555" }}>📍 {data.address.split(",")[0]}</div>
+        )}
+        {/* Phone — second most prominent element after business name */}
+        {data.phone && (
+          <div style={{ fontSize: (isS ? 10 : 14)*fScale, color: ind.colors.primary, fontWeight: 900, letterSpacing: 0.3 }}>📞 {data.phone}</div>
+        )}
+      </div>
+      <Coupon offer={data.offer} fine={isS ? null : data.offerFine} accent={ind.colors.primary} scale={fScale} />
+    </div>
+  </div>
+</div>
+```
+
+);
+}
+
+function MagazineAd({ data, sizeKey }) {
+const ind = INDUSTRIES[data.industry] || INDUSTRIES[“Other Service”];
+const photos = ind.photos.slice(0, 2);
+const isXL = sizeKey === “XL”, isL = sizeKey === “L”, isM = sizeKey === “M”, isS = sizeKey === “S”;
+const fScale = isXL ? 1.7 : isL ? 1.35 : isM ? 0.88 : 0.65;
+
+return (
+<div style={{ width: “100%”, height: “100%”, overflow: “hidden”, display: “flex”, flexDirection: “column”, background: “#fff”, fontFamily: “Georgia, serif”, border: `${3*fScale}px solid ${ind.colors.primary}`, boxSizing: “border-box” }}>
+{/* Header bar */}
+<div style={{ background: ind.colors.primary, padding: `${6*fScale}px ${10*fScale}px`, display: “flex”, alignItems: “center”, justifyContent: “space-between”, flexShrink: 0 }}>
+<div style={{ display: “flex”, alignItems: “center”, gap: 7*fScale }}>
+<LogoBadge emoji={ind.emoji} size={32*fScale} bg={ind.colors.accent} color="#fff" />
+{/* Business name in header — large and dominant */}
+<div style={{ color: “#fff”, fontWeight: 900, fontSize: 16*fScale, fontFamily: “Georgia, serif”, lineHeight: 1.0 }}>{data.businessName}</div>
+</div>
+{/* Phone prominent in header */}
+{!isS && data.phone && (
+<div style={{ color: “#fff”, fontSize: 12*fScale, fontWeight: 900, background: “rgba(0,0,0,0.3)”, padding: `${3*fScale}px ${8*fScale}px`, borderRadius: 4, fontFamily: “sans-serif”, letterSpacing: 0.3 }}>{data.phone}</div>
+)}
+{isS && data.phone && (
+<div style={{ color: ind.colors.accent, fontSize: 10*fScale, fontWeight: 900, fontFamily: “sans-serif” }}>{data.phone}</div>
+)}
+</div>
+
+```
+  {/* Photo strip — always shown */}
+  <div style={{ display: "flex", gap: 1, height: isXL ? "28%" : isL ? "33%" : isM ? "38%" : "35%", flexShrink: 0 }}>
+    {(isS ? photos.slice(0,1) : photos).map((src, i) => (
+      <div key={i} style={{ flex: 1, overflow: "hidden", background: ind.colors.dark }}>
+        <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          onError={e => { e.target.style.display = "none"; }} />
+      </div>
+    ))}
+  </div>
+
+  {/* Content */}
+  <div style={{ flex: 1, padding: `${5*fScale}px ${10*fScale}px ${5*fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 0 }}>
+    <div>
+      <div style={{ color: ind.colors.accent, fontSize: 8*fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>{data.industry}</div>
+      {/* Tagline — second most prominent text */}
+      <div style={{ color: ind.colors.dark, fontSize: (isS ? 11 : 15)*fScale, fontWeight: 900, fontFamily: "Georgia, serif", lineHeight: 1.1, marginTop: 2 }}>{data.tagline}</div>
+    </div>
+
+    {/* Menu items fill dead space */}
+    {!isS && (
+      <div style={{ display: "flex", flexWrap: "wrap", gap: `${3*fScale}px ${10*fScale}px`, margin: `${4*fScale}px 0` }}>
+        {(data.menuItems || []).slice(0, isXL || isL ? 4 : 3).map((item, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ color: ind.colors.primary, fontSize: 7*fScale }}>●</span>
+            <span style={{ fontSize: 9.5*fScale, color: "#333", fontFamily: "sans-serif" }}>{item}</span>
+          </div>
+        ))}
+      </div>
+    )}
+
+    {/* Address + coupon */}
+    <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 3*fScale }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        {data.address && (
+          <div style={{ fontSize: (isS ? 8 : 9)*fScale, color: "#555", fontFamily: "sans-serif" }}>📍 {data.address.split(",")[0]}</div>
+        )}
+        {isS && data.phone && (
+          <div style={{ fontSize: 10*fScale, color: ind.colors.primary, fontWeight: 900, fontFamily: "sans-serif" }}>📞 {data.phone}</div>
+        )}
+      </div>
+      <Coupon offer={data.offer} fine={isS ? null : data.offerFine} accent={ind.colors.primary} scale={fScale} />
+    </div>
+  </div>
+</div>
+```
+
+);
+}
+
+function StampAd({ data, sizeKey }) {
+const ind = INDUSTRIES[data.industry] || INDUSTRIES[“Other Service”];
+const photo = ind.photos[0];
+const isXL = sizeKey === “XL”, isL = sizeKey === “L”, isM = sizeKey === “M”, isS = sizeKey === “S”;
+const fScale = isXL ? 1.7 : isL ? 1.35 : isM ? 0.88 : 0.65;
+
+return (
+<div style={{ width: “100%”, height: “100%”, overflow: “hidden”, position: “relative”, background: ind.colors.dark, fontFamily: “sans-serif” }}>
+{/* Diagonal photo top section */}
+<div style={{ position: “absolute”, inset: 0, clipPath: “polygon(0 0, 100% 0, 100% 52%, 0 70%)”, overflow: “hidden” }}>
+<img src={photo} alt=”” style={{ width: “100%”, height: “100%”, objectFit: “cover” }} />
+<div style={{ position: “absolute”, inset: 0, background: `linear-gradient(180deg, ${ind.colors.dark}40 0%, ${ind.colors.dark}bb 100%)` }} />
+</div>
+
+```
+  {/* Feature badge top-left */}
+  <div style={{ position: "absolute", top: 8*fScale, left: 10*fScale, zIndex: 3 }}>
+    <div style={{ background: ind.colors.accent, color: ind.colors.dark, padding: `${3*fScale}px ${9*fScale}px`, fontSize: 8.5*fScale, fontWeight: 900, letterSpacing: 1.5, borderRadius: 3 }}>
+      {(data.menuItems?.[0] || "FEATURED").toUpperCase()}
+    </div>
+  </div>
+
+  {/* Logo top-right */}
+  <div style={{ position: "absolute", top: 8*fScale, right: 10*fScale, zIndex: 3 }}>
+    <LogoBadge emoji={ind.emoji} size={40*fScale} bg="rgba(255,255,255,0.15)" color="#fff" border="2px solid rgba(255,255,255,0.5)" />
+  </div>
+
+  {/* Center: name + HUGE phone fills the dead space */}
+  <div style={{ position: "absolute", top: "30%", left: 0, right: 0, padding: `0 ${12*fScale}px`, textAlign: "center", zIndex: 3 }}>
+    {/* Business name — dominant */}
+    <div style={{ color: "#fff", fontWeight: 900, fontSize: (isS ? 12 : 16)*fScale, fontFamily: "Georgia, serif", textShadow: "0 2px 10px rgba(0,0,0,0.8)", lineHeight: 1.05 }}>
+      {data.businessName}
+    </div>
+    {/* Phone — second most prominent, fills space */}
+    {data.phone && !isS && (
+      <div style={{ color: ind.colors.accent, fontWeight: 900, fontSize: (isXL ? 30 : isL ? 25 : 20)*fScale, lineHeight: 1.05, marginTop: 5*fScale, letterSpacing: -0.5, textShadow: "0 2px 14px rgba(0,0,0,0.9)" }}>
+        {data.phone}
+      </div>
+    )}
+    {/* Tagline below phone */}
+    {!isS && (
+      <div style={{ color: "rgba(255,255,255,0.9)", fontSize: 10*fScale, marginTop: 4*fScale, fontStyle: "italic" }}>
+        {data.tagline}
+      </div>
+    )}
+  </div>
+
+  {/* Bottom: menu items + offer bar + address */}
+  <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: `${6*fScale}px ${10*fScale}px ${8*fScale}px`, display: "flex", flexDirection: "column", gap: 4*fScale, zIndex: 3 }}>
+    {/* Menu items fill remaining space */}
+    {(isXL || isL) && (
+      <div style={{ display: "flex", flexWrap: "wrap", gap: `2px ${10*fScale}px`, justifyContent: "center" }}>
+        {(data.menuItems || []).slice(1, 4).map((item, i) => (
+          <div key={i} style={{ color: "rgba(255,255,255,0.9)", fontSize: 9*fScale }}>✓ {item}</div>
+        ))}
+      </div>
+    )}
+    {/* Offer bar */}
+    {data.offer && (
+      <div style={{ background: `linear-gradient(90deg, ${ind.colors.accent}, ${ind.colors.accent}ee)`, padding: `${5*fScale}px ${9*fScale}px`, borderRadius: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ color: ind.colors.dark, fontWeight: 900, fontSize: 13*fScale }}>{data.offer}</div>
+        {data.offerFine && !isS && <div style={{ color: ind.colors.dark, fontSize: 7.5*fScale, opacity: 0.85 }}>{data.offerFine}</div>}
+      </div>
+    )}
+    {/* Address + phone on small */}
+    <div style={{ color: "rgba(255,255,255,0.8)", fontSize: (isS ? 8 : 9)*fScale, textAlign: "center", fontFamily: "sans-serif", display: "flex", justifyContent: "center", gap: 10*fScale }}>
+      {data.address && <span>📍 {data.address.split(",")[0]}</span>}
+      {isS && data.phone && <span style={{ fontWeight: 900, color: ind.colors.accent }}>📞 {data.phone}</span>}
+    </div>
+  </div>
+</div>
+```
+
+);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN EXPORT: getSampleAd(configKey, sizeKey)
+// Use this in PostcardSpotPicker to render a sample ad in any spot
+//
+// Example:
+//   import { getSampleAd } from ‘./PostcardSampleAds’;
+//   …
+//   <div style={{ width: “100%”, height: “100%” }}>
+//     {getSampleAd(“pizza”, “L”)}
+//   </div>
+// ─────────────────────────────────────────────────────────────────────────────
+const TEMPLATE_RENDERERS = {
+“photo-bold”: PhotoBoldAd,
+“split-clean”: SplitCleanAd,
+“magazine”:    MagazineAd,
+“stamp”:       StampAd,
+};
+
+export function getSampleAd(configKey, sizeKeyOverride) {
+const config = SAMPLE_AD_CONFIGS[configKey];
+if (!config) return null;
+const sizeKey = sizeKeyOverride || config.sizeKey;
+const Renderer = TEMPLATE_RENDERERS[config.template];
+if (!Renderer) return null;
+return <Renderer data={config.data} sizeKey={sizeKey} />;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SPOT ASSIGNMENT MAP
+// Maps your postcard spot IDs to sample ad config keys.
+// Update these IDs to match your actual spot IDs in PostcardSpotPicker.
+//
+// Front side: 9 paid spots + 1 house ad
+// Back side:  7 paid spots
+// ─────────────────────────────────────────────────────────────────────────────
+export const SPOT_SAMPLE_MAP = {
+// ── FRONT ──
+“front-xl-1”:  “mrbiscuits”,   // XL spot — Mr. Biscuit’s as the anchor example
+“front-l-1”:   “pizza”,        // Large — Restaurant
+“front-l-2”:   “dental”,       // Large — Dental
+“front-m-1”:   “insurance”,    // Medium — Insurance
+“front-m-2”:   “lawn”,         // Medium — Lawn
+“front-s-1”:   “realty”,       // Small — Real Estate
+“front-s-2”:   “hvac”,         // Small — HVAC
+“front-s-3”:   “salon”,        // Small — Salon
+// front-house: rendered separately as HouseAd, not in this map
+
+// ── BACK ──
+“back-l-1”:    “autorepair”,   // Large — Auto Repair
+“back-l-2”:    “mexican”,      // Large — Mexican Restaurant
+“back-m-1”:    “gym”,          // Medium — Gym
+“back-m-2”:    “vet”,          // Medium — Vet
+“back-s-1”:    “bakery”,       // Small — Bakery
+“back-s-2”:    “cleaning”,     // Small — Cleaning
+“back-s-3”:    “coffee”,       // Small — Coffee
+};
