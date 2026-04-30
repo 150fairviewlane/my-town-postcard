@@ -1,0 +1,11 @@
+Replace src/PostcardSampleAds.jsx with the new file I am providing. The new file has two important changes that you must preserve:
+
+CHANGE 1 - The sample ads now have starbursts, dramatic gradients, photo strips, gradient header bars, and bigger phone badges. Do NOT simplify or remove any of these visual elements. They are intentional and make the sample ads look professional.
+
+CHANGE 2 - The SPOT_SAMPLE_MAP at the bottom of the file is intentionally sparse. It only fills SOME spots with sample ads and leaves OTHER spots empty so customers can purchase them. The current map fills: 1 XL on front, 1 large on front, 1 medium on front, 1 small on front, 1 large on back, 1 medium on back, 1 small on back. All OTHER spots must render as the green available plus sign so customers can click them to purchase.
+
+In PostcardSpotPicker.jsx, find the spot rendering logic. For every spot in the SPOTS array, check if its ID exists as a key in SPOT_SAMPLE_MAP. If it exists, render the sample ad using getSampleAd. If it does NOT exist, render the green available state with the plus sign so the customer can click to purchase. The IDs in SPOT_SAMPLE_MAP are placeholders like front-xl-1, front-l-1, front-l-2, front-m-1, front-m-2, front-s-1, front-s-2, front-s-3, and the same pattern for back. You must update the keys in SPOT_SAMPLE_MAP to match your actual spot IDs in the SPOTS array. Look at your SPOTS array, find the spot IDs, and rename the keys in SPOT_SAMPLE_MAP to match them. Make sure that for each ad size (XL, L, M, S) at least one spot is NOT in the map so it remains available for purchase.
+
+Verify the result by counting: there should be at least 1 large, 1 medium, and 2 small spots showing as available green plus signs on the front, plus 1 large, 1 medium, and 2 small available on the back. If you cannot see all of these as available, check your SPOT_SAMPLE_MAP keys and remove sample ads from spots until you have the right balance.
+
+Do not modify any backend code, AdGenerator.jsx, industryAssets.js, Stripe integration, database, or routing.
