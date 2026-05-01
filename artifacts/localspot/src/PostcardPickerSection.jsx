@@ -70,7 +70,6 @@ export default function PostcardPickerSection() {
   const [selected, setSelected] = useState(null);
   const [creatorSpot, setCreatorSpot] = useState(null);
   const [reserveError, setReserveError] = useState(null);
-  const [hoveredSpot, setHoveredSpot] = useState(null);
 
   const { data: campaign, isLoading } = useGetActiveCampaign();
   const reserveMutation = useReserveSpot();
@@ -199,7 +198,6 @@ export default function PostcardPickerSection() {
         }}>
           {sortedSpots.map(spot => {
             const isSelected = selected?.id === spot.id;
-            const isHovered = hoveredSpot === spot.id;
             const isPaid = (spot.status === "paid" || spot.status === "reserved") && spot.gridArea !== "mb";
             const sampleKey = SPOT_SAMPLE_MAP[spot.gridArea];
             const sampleContent = !isPaid && sampleKey
@@ -212,33 +210,8 @@ export default function PostcardPickerSection() {
                 {isPaid ? (
                   <PaidAd spot={spot} />
                 ) : sampleContent ? (
-                  <div
-                    style={{ position: "relative", width: "100%", height: "100%", cursor: "pointer",
-                      outline: isSelected ? "2px solid #ca8a04" : "none", outlineOffset: "-2px" }}
-                    onClick={() => openCreator(spot)}
-                    onMouseEnter={() => setHoveredSpot(spot.id)}
-                    onMouseLeave={() => setHoveredSpot(null)}
-                  >
-                    <div style={{ position: "absolute", inset: 0, opacity: 0.92 }}>
-                      {sampleContent}
-                    </div>
-                    <div style={{
-                      position: "absolute", inset: 0,
-                      background: isSelected ? "rgba(0,160,0,0.22)" : "rgba(0,160,0,0.15)",
-                      opacity: isHovered || isSelected ? 1 : 0,
-                      transition: "opacity 0.2s",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      pointerEvents: "none",
-                    }}>
-                      <div style={{
-                        background: "#16a34a", color: "#fff", fontWeight: 800,
-                        fontSize: 11, padding: "6px 14px", borderRadius: 20,
-                        boxShadow: "0 2px 12px rgba(0,0,0,0.35)", letterSpacing: 0.5,
-                        fontFamily: "sans-serif",
-                      }}>
-                        Reserve This Spot
-                      </div>
-                    </div>
+                  <div style={{ position: "relative", width: "100%", height: "100%", cursor: "default" }}>
+                    {sampleContent}
                   </div>
                 ) : (
                   <AvailableSpot
