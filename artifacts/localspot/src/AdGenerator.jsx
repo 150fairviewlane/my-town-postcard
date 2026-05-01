@@ -722,12 +722,8 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose, is
                 <div style={{ width: dims.width, height: dims.height, borderRadius: 6, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.5)" }}>
                   <Tpl data={formData} sizeKey={sizeKey} onEdit={handleInlineEdit} />
                 </div>
-                <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 10, marginTop: 10, textAlign: "center", fontStyle: "italic" }}>
+                <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, marginTop: 10, textAlign: "center", fontStyle: "italic", fontWeight: 600 }}>
                   ✎ Click any text in the preview to edit it directly
-                </div>
-                <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 10, marginTop: 4, textAlign: "center" }}>
-                  Style: <strong style={{ color: "#fff" }}>{TEMPLATES[selectedTemplate].name}</strong>
-                  {!formData.photo && formData.industry && <> · Using stock photo for {formData.industry}</>}
                 </div>
 
                 {error && (
