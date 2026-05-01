@@ -19,9 +19,9 @@ function getResendClient() {
   return new Resend(apiKey);
 }
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@localspotmailer.com";
-const FROM_EMAIL = process.env.FROM_EMAIL || "noreply@localspotmailer.com";
-const APP_URL = process.env.APP_URL || "https://localspotmailer.com";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "info@mytownpostcard.com";
+const FROM_EMAIL = process.env.FROM_EMAIL || "noreply@mytownpostcard.com";
+const APP_URL = process.env.APP_URL || "https://mytownpostcard.com";
 
 export async function sendReservationConfirmation(order: OrderInfo): Promise<void> {
   const resend = getResendClient();
@@ -31,11 +31,11 @@ export async function sendReservationConfirmation(order: OrderInfo): Promise<voi
     await resend.emails.send({
       from: FROM_EMAIL,
       to: order.contactEmail,
-      subject: `Your ${order.spotSize} ad spot is reserved — LocalSpot Mailer`,
+      subject: `Your ${order.spotSize} ad spot is reserved — My Town Postcard`,
       html: `
         <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; padding: 32px;">
           <div style="background: #991b1b; padding: 16px 24px; border-radius: 8px 8px 0 0;">
-            <h1 style="color: #fff; margin: 0; font-size: 20px;">📮 LocalSpot Mailer</h1>
+            <h1 style="color: #fff; margin: 0; font-size: 20px;">📮 My Town Postcard</h1>
           </div>
           <div style="background: #fff; border: 1px solid #e5e7eb; padding: 32px; border-radius: 0 0 8px 8px;">
             <h2 style="color: #111; font-size: 22px; margin-top: 0;">Your Spot is Reserved!</h2>
@@ -50,7 +50,7 @@ export async function sendReservationConfirmation(order: OrderInfo): Promise<voi
             <a href="${APP_URL}/upload/${order.spotId}" style="display: inline-block; background: #991b1b; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; margin-top: 8px;">
               Upload Your Ad →
             </a>
-            <p style="color: #9ca3af; font-size: 12px; margin-top: 32px;">LocalSpot Mailer · Clarkesville, GA · Mailing to 5,000 homes</p>
+            <p style="color: #9ca3af; font-size: 12px; margin-top: 32px;">My Town Postcard · mytownpostcard.com · Clarkesville, GA · Mailing to 5,000 homes</p>
           </div>
         </div>
       `,

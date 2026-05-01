@@ -171,7 +171,7 @@ function WhyChooseUs() {
         <div style={{ flex: "1 1 360px" }}>
           <h2 style={{ fontSize: 28, fontWeight: 900, color: "#111", fontFamily: "Georgia,serif",
             marginBottom: 24, lineHeight: 1.3 }}>
-            Why Local Businesses<br />Choose LocalSpot
+            Why Local Businesses<br />Choose My Town Postcard
           </h2>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {bullets.map((b, i) => (
@@ -476,7 +476,7 @@ function Footer() {
         display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 40 }}>
         <div>
           <div style={{ fontWeight: 900, fontSize: 17, color: "#fff", fontFamily: "Georgia,serif",
-            marginBottom: 8 }}>LocalSpot Mailer</div>
+            marginBottom: 8 }}>My Town Postcard</div>
           <p style={{ fontSize: 13, lineHeight: 1.6, color: "#9ca3af", fontFamily: "sans-serif", maxWidth: 220 }}>
             Helping local businesses connect with their neighbors through cost-effective postcard marketing.
           </p>
@@ -498,14 +498,14 @@ function Footer() {
             fontFamily: "sans-serif" }}>Contact</div>
           <p style={{ fontSize: 13, color: "#9ca3af", lineHeight: 1.6, fontFamily: "sans-serif" }}>
             Serving Clarkesville, GA &amp; all of Habersham County.<br />
-            Questions? Email us at hello@localspotmailer.com
+            Questions? Email us at info@mytownpostcard.com
           </p>
         </div>
       </div>
       <div style={{ maxWidth: 1100, margin: "32px auto 0", borderTop: "1px solid #222",
         paddingTop: 20, textAlign: "center" }}>
         <span style={{ fontSize: 12, color: "#6b7280", fontFamily: "sans-serif" }}>
-          © 2025 LocalSpot Mailer · 9×12 Co-op Postcard · Clarkesville, GA
+          © 2025 My Town Postcard · mytownpostcard.com · Clarkesville, GA
         </span>
       </div>
     </footer>

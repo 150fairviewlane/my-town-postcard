@@ -25,7 +25,7 @@ function LoginForm({ onLogin }) {
     <div style={{ minHeight: "100vh", background: "#f9fafb", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "sans-serif" }}>
       <div style={{ background: "#fff", borderRadius: 16, padding: 40, maxWidth: 380, width: "100%", boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
         <div style={{ fontWeight: 900, fontSize: 22, color: "#111", fontFamily: "Georgia,serif", marginBottom: 4 }}>📮 Admin Dashboard</div>
-        <div style={{ color: "#9ca3af", fontSize: 13, marginBottom: 28 }}>LocalSpot Mailer</div>
+        <div style={{ color: "#9ca3af", fontSize: 13, marginBottom: 28 }}>My Town Postcard</div>
         <form onSubmit={handleSubmit}>
           <input
             type="password"

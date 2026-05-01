@@ -130,7 +130,7 @@ export default function CheckoutPage() {
     <div style={{ minHeight: "100vh", background: "#f9fafb", fontFamily: "sans-serif" }}>
       <div style={{ background: "#fff", borderBottom: "1px solid #e5e7eb", padding: "12px 24px", display: "flex", alignItems: "center", gap: 12 }}>
         <button onClick={() => navigate("/")} style={{ background: "none", border: "none", cursor: "pointer", color: "#6b7280", fontSize: 14 }}>← Back</button>
-        <div style={{ fontWeight: 900, fontSize: 18, color: "#111", fontFamily: "Georgia,serif" }}>📮 LocalSpot Mailer</div>
+        <div style={{ fontWeight: 900, fontSize: 18, color: "#111", fontFamily: "Georgia,serif" }}>📮 My Town Postcard</div>
       </div>
 
       <div style={{ maxWidth: 480, margin: "48px auto", padding: "0 20px" }}>

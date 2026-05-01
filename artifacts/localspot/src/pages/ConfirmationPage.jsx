@@ -6,7 +6,7 @@ export default function ConfirmationPage() {
   return (
     <div style={{ minHeight: "100vh", background: "#f9fafb", fontFamily: "sans-serif", display: "flex", flexDirection: "column" }}>
       <div style={{ background: "#fff", borderBottom: "1px solid #e5e7eb", padding: "12px 24px" }}>
-        <div style={{ fontWeight: 900, fontSize: 18, color: "#111", fontFamily: "Georgia,serif" }}>📮 LocalSpot Mailer</div>
+        <div style={{ fontWeight: 900, fontSize: 18, color: "#111", fontFamily: "Georgia,serif" }}>📮 My Town Postcard</div>
       </div>
 
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "48px 20px" }}>

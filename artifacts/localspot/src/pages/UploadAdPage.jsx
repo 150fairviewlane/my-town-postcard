@@ -62,7 +62,7 @@ export default function UploadAdPage() {
     return (
       <div style={{ minHeight: "100vh", background: "#f9fafb", fontFamily: "sans-serif" }}>
         <div style={{ background: "#fff", borderBottom: "1px solid #e5e7eb", padding: "12px 24px" }}>
-          <div style={{ fontWeight: 900, fontSize: 18, color: "#111", fontFamily: "Georgia,serif" }}>📮 LocalSpot Mailer</div>
+          <div style={{ fontWeight: 900, fontSize: 18, color: "#111", fontFamily: "Georgia,serif" }}>📮 My Town Postcard</div>
         </div>
         <div style={{ maxWidth: 480, margin: "80px auto", padding: "0 20px", textAlign: "center" }}>
           <div style={{ fontSize: 64, marginBottom: 16 }}>🎉</div>
