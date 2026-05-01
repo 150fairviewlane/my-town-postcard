@@ -186,7 +186,7 @@ function PhotoBoldTemplate({ data, sizeKey, onEdit }) {
           )}
           {data.phone && (
             <EditableText value={data.phone} onChange={edit("phone")}
-              style={{ color: "rgba(255,255,255,0.9)", fontSize: 7.5 * fScale, fontWeight: 800, fontFamily: "sans-serif" }} />
+              style={{ color: "rgba(255,255,255,0.9)", fontSize: 7.5 * fScale, fontWeight: 800, fontFamily: "sans-serif", whiteSpace: "nowrap" }} />
           )}
         </div>
         {data.offer && <Coupon offer={data.offer} fine={data.offerFine} accent="#fff" scale={fScale * 0.82} dark={true} onEditOffer={edit("offer")} onEditFine={edit("offerFine")} />}
@@ -249,7 +249,7 @@ function SplitCleanTemplate({ data, sizeKey, onEdit }) {
             )}
             {data.phone && (
               <EditableText value={data.phone} onChange={edit("phone")}
-                style={{ fontSize: 10 * fScale, color: ind.colors.primary, fontWeight: 800 }} />
+                style={{ fontSize: 10 * fScale, color: ind.colors.primary, fontWeight: 800, whiteSpace: "nowrap" }} />
             )}
           </div>
           <Coupon offer={data.offer} fine={data.offerFine} accent={ind.colors.primary} scale={fScale}
@@ -281,7 +281,7 @@ function MagazineTemplate({ data, sizeKey, onEdit }) {
           </div>
         </div>
         {!isS && data.phone && (
-          <div style={{ color: "#fff", fontSize: 10 * fScale, fontWeight: 800, background: "rgba(0,0,0,0.25)", padding: `${2 * fScale}px ${7 * fScale}px`, borderRadius: 3, fontFamily: "sans-serif", flexShrink: 0 }}>
+          <div style={{ color: "#fff", fontSize: 10 * fScale, fontWeight: 800, background: "rgba(0,0,0,0.25)", padding: `${2 * fScale}px ${7 * fScale}px`, borderRadius: 3, fontFamily: "sans-serif", flexShrink: 0, whiteSpace: "nowrap" }}>
             {data.phone}
           </div>
         )}
@@ -323,7 +323,7 @@ function MagazineTemplate({ data, sizeKey, onEdit }) {
             )}
             {data.phone && (
               <EditableText value={data.phone} onChange={edit("phone")}
-                style={{ fontSize: 8 * fScale, color: ind.colors.primary, fontWeight: 800, fontFamily: "sans-serif", flexShrink: 0 }} />
+                style={{ fontSize: 8 * fScale, color: ind.colors.primary, fontWeight: 800, fontFamily: "sans-serif", flexShrink: 0, whiteSpace: "nowrap" }} />
             )}
           </div>
           <Coupon offer={data.offer} fine={data.offerFine} accent={ind.colors.primary} scale={fScale}
@@ -367,7 +367,7 @@ function StampTemplate({ data, sizeKey, onEdit }) {
           style={{ color: "#fff", fontWeight: 900, fontSize: 19 * fScale, fontFamily: "Georgia, serif", textShadow: "0 2px 10px rgba(0,0,0,0.85)", lineHeight: 1.05, textAlign: "center" }} />
         {!isS && data.phone && (
           <EditableText value={data.phone} onChange={edit("phone")}
-            style={{ color: ind.colors.accent, fontWeight: 900, fontSize: (isXL ? 26 : isL ? 22 : 17) * fScale, lineHeight: 1, marginTop: 3, letterSpacing: -0.5, textShadow: "0 2px 12px rgba(0,0,0,0.8)", textAlign: "center" }} />
+            style={{ color: ind.colors.accent, fontWeight: 900, fontSize: (isXL ? 26 : isL ? 22 : 17) * fScale, lineHeight: 1, marginTop: 3, letterSpacing: -0.5, textShadow: "0 2px 12px rgba(0,0,0,0.8)", textAlign: "center", whiteSpace: "nowrap" }} />
         )}
         {!isS && (
           <EditableText value={data.tagline || ind.taglines[0]} onChange={edit("tagline")}
@@ -397,7 +397,7 @@ function StampTemplate({ data, sizeKey, onEdit }) {
         )}
         <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 7 * fScale, textAlign: "center", fontFamily: "sans-serif" }}>
           {data.address && <EditableText value={data.address.split(",")[0]} onChange={edit("address")} style={{ color: "rgba(255,255,255,0.7)", fontSize: 7 * fScale, display: "inline" }} />}
-          {isS && data.phone && <EditableText value={data.phone} onChange={edit("phone")} style={{ color: "rgba(255,255,255,0.85)", fontSize: 7 * fScale, fontWeight: 700, marginLeft: 8, display: "inline" }} />}
+          {isS && data.phone && <EditableText value={data.phone} onChange={edit("phone")} style={{ color: "rgba(255,255,255,0.85)", fontSize: 7 * fScale, fontWeight: 700, marginLeft: 8, display: "inline", whiteSpace: "nowrap" }} />}
         </div>
       </div>
     </div>
