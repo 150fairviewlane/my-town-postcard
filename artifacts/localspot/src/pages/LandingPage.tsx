@@ -23,12 +23,9 @@ function NavBar() {
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
-        <span style={{ fontSize: 28 }}>📮</span>
-        <div>
-          <div style={{ fontWeight: 900, fontSize: 17, color: "#111", fontFamily: "Georgia,serif", lineHeight: 1.1 }}>
-            LocalSpot Mailer
-          </div>
-          <div style={{ fontSize: 10.5, color: "#9ca3af", letterSpacing: 0.3 }}>9×12 Co-op Postcard · Clarkesville, GA</div>
+        <span style={{ fontSize: 32 }}>📮</span>
+        <div style={{ fontWeight: 900, fontSize: 30, color: "#111", fontFamily: "Georgia,serif", lineHeight: 1 }}>
+          My Town Postcard
         </div>
       </div>
 
