@@ -314,14 +314,14 @@ function MagazineAd({ data, sizeKey }) {
   return (
     <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: "column", background: "#fff", fontFamily: "Georgia, serif", border: `${3 * fScale}px solid ${ind.colors.primary}`, boxSizing: "border-box", position: "relative" }}>
       {/* Gradient header */}
-      <div style={{ background: `linear-gradient(135deg, ${ind.colors.primary}, ${ind.colors.dark})`, padding: `${7 * fScale}px ${10 * fScale}px`, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 * fScale }}>
-          <LogoBadge emoji={ind.emoji} size={36 * fScale} bg={ind.colors.accent} color="#fff" border="2px solid rgba(255,255,255,0.4)" />
+      <div style={{ background: `linear-gradient(135deg, ${ind.colors.primary}, ${ind.colors.dark})`, padding: `${7 * fScale}px ${10 * fScale}px`, display: "flex", alignItems: "center", gap: 8 * fScale, flexShrink: 0 }}>
+        <LogoBadge emoji={ind.emoji} size={36 * fScale} bg={ind.colors.accent} color="#fff" border="2px solid rgba(255,255,255,0.4)" />
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ color: "#fff", fontWeight: 900, fontSize: 17 * fScale, fontFamily: "Georgia, serif", lineHeight: 1.0, textShadow: "0 1px 4px rgba(0,0,0,0.4)" }}>{data.businessName}</div>
+          {!isS && data.phone && (
+            <div style={{ color: "#fff", fontSize: 11 * fScale, fontWeight: 900, fontFamily: "sans-serif", letterSpacing: 0.3, whiteSpace: "nowrap", marginTop: 3 * fScale, opacity: 0.95 }}>{data.phone}</div>
+          )}
         </div>
-        {!isS && data.phone && (
-          <div style={{ color: "#fff", fontSize: 13 * fScale, fontWeight: 900, background: "rgba(0,0,0,0.4)", padding: `${4 * fScale}px ${10 * fScale}px`, borderRadius: 5, fontFamily: "sans-serif", letterSpacing: 0.3, border: "1px solid rgba(255,255,255,0.3)", whiteSpace: "nowrap" }}>{data.phone}</div>
-        )}
       </div>
 
       {/* Photo strip — always shown; S gets 1 photo, others get 2 */}
