@@ -67,22 +67,22 @@ function FamilyDentalAd({ size }) {
       </div>
 
       {/* White body */}
-      <div style={{ flex: 1, padding: L ? "12px 14px" : "8px 10px", minHeight: 0, overflow: "hidden" }}>
+      <div style={{ flex: 1, padding: L ? "9px 14px" : "7px 10px", minHeight: 0, overflow: "hidden" }}>
         {/* Headline */}
         <div style={{
           color: "#0a2a5e", fontWeight: 900,
           fontSize: L ? 19 : M ? 14 : 11,
-          fontFamily: "Georgia, serif", lineHeight: 1.2, marginBottom: L ? 6 : 4,
+          fontFamily: "Georgia, serif", lineHeight: 1.2, marginBottom: L ? 5 : 4,
         }}>Accepting New Patients!</div>
 
         <div style={{
           color: "#555", fontSize: L ? 11 : M ? 9 : 8,
-          lineHeight: 1.4, marginBottom: L ? 10 : 6,
+          lineHeight: 1.4, marginBottom: L ? 8 : 5,
         }}>Gentle, compassionate care for the whole family — from first visits to full smiles.</div>
 
         {/* Services list with gold checkmarks */}
         {L && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 10 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 8 }}>
             {[
               "Preventive Care & Cleanings",
               "Cosmetic & Whitening Treatments",
