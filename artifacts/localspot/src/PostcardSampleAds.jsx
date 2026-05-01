@@ -79,7 +79,7 @@ export const SAMPLE_AD_CONFIGS = {
       businessName: "Clarkesville Family Dental", industry: "Dentist",
       tagline: "Accepting New Patients!", starburst: "NEW!",
       offer: "FREE Whitening Kit", offerFine: "w/ exam & cleaning · show this ad",
-      phone: "(706) 555-0142", address: "142 Commerce St, Clarkesville",
+      phone: "(706) 555-0142", address: "142 Commerce St, Clarkesville, GA 30523",
       menuItems: ["Preventive Care & Cleanings", "Cosmetic & Whitening", "Family & Children's Care"],
     },
   },
@@ -89,7 +89,7 @@ export const SAMPLE_AD_CONFIGS = {
       businessName: "Tanner Insurance", industry: "Insurance",
       tagline: "Local Agent. Real Savings.",
       offer: "Save up to $500/yr", offerFine: "Free quote · no obligation",
-      phone: "(706) 555-0388", address: "55 Green St, Clarkesville",
+      phone: "(706) 555-0388", address: "55 Green St, Clarkesville, GA 30523",
       menuItems: ["Auto", "Home", "Life", "Business"],
     },
   },
@@ -159,7 +159,7 @@ export const SAMPLE_AD_CONFIGS = {
       businessName: "Mr. Biscuit's Café", industry: "Breakfast & Cafe",
       tagline: "From-Scratch Biscuits & Boba!", starburst: "$1 OFF",
       offer: "$1 OFF Any Biscuit", offerFine: "1 per visit · with this postcard",
-      phone: "(706) 754-0105", address: "596 W Louise St D, Clarkesville",
+      phone: "(706) 754-0105", address: "596 W Louise St D, Clarkesville, GA 30523",
       menuItems: ["Plain Biscuit $2.99", "Bacon Biscuit $4.99", "Chicken Tender $5.99", "NY Bagels $5.49"],
     },
   },
@@ -292,7 +292,7 @@ function SplitCleanAd({ data, sizeKey }) {
 
         <div style={{ flexShrink: 0 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 2, marginBottom: data.offer ? 5 * fScale : 0 }}>
-            {data.address && <div style={{ fontSize: (isS ? 8 : 9) * fScale, color: "#555" }}>📍 {data.address.split(",")[0]}</div>}
+            {data.address && <div style={{ fontSize: (isS ? 8 : 9) * fScale, color: "#555" }}>📍 {data.address}</div>}
             {data.phone && <div style={{ fontSize: (isS ? 11 : 15) * fScale, color: ind.colors.primary, fontWeight: 900, letterSpacing: 0.3, whiteSpace: "nowrap" }}>📞 {data.phone}</div>}
           </div>
           <Coupon offer={data.offer} fine={isS ? null : data.offerFine} accent={ind.colors.primary} scale={fScale} />
@@ -354,7 +354,7 @@ function MagazineAd({ data, sizeKey }) {
 
         <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 3 * fScale }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            {data.address && <div style={{ fontSize: (isS ? 8 : 9) * fScale, color: "#555", fontFamily: "sans-serif" }}>📍 {data.address.split(",")[0]}</div>}
+            {data.address && <div style={{ fontSize: (isS ? 8 : 9) * fScale, color: "#555", fontFamily: "sans-serif" }}>📍 {data.address}</div>}
             {isS && data.phone && <div style={{ fontSize: 11 * fScale, color: ind.colors.primary, fontWeight: 900, fontFamily: "sans-serif", whiteSpace: "nowrap" }}>📞 {data.phone}</div>}
           </div>
           <Coupon offer={data.offer} fine={isS ? null : data.offerFine} accent={ind.colors.primary} scale={fScale} />
