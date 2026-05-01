@@ -273,18 +273,17 @@ function MagazineTemplate({ data, sizeKey, onEdit }) {
 
   return (
     <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: "column", background: "#fff", fontFamily: "Georgia, serif", border: `${3 * fScale}px solid ${ind.colors.primary}`, boxSizing: "border-box" }}>
-      <div style={{ background: ind.colors.primary, padding: `${5 * fScale}px ${10 * fScale}px`, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 * fScale }}>
-          <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji} size={30 * fScale} bg={ind.colors.accent} color="#fff" />
+      <div style={{ background: ind.colors.primary, padding: `${5 * fScale}px ${10 * fScale}px`, display: "flex", alignItems: "center", gap: 6 * fScale, flexShrink: 0 }}>
+        <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji} size={30 * fScale} bg={ind.colors.accent} color="#fff" />
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ color: "#fff", fontWeight: 900, fontSize: 18 * fScale, fontFamily: "Georgia, serif", lineHeight: 1.0 }}>
             {data.businessName}
           </div>
+          {!isS && data.phone && (
+            <EditableText value={data.phone} onChange={edit("phone")}
+              style={{ color: "#fff", fontSize: 10 * fScale, fontWeight: 800, fontFamily: "sans-serif", whiteSpace: "nowrap", marginTop: 2 * fScale, opacity: 0.95 }} />
+          )}
         </div>
-        {!isS && data.phone && (
-          <div style={{ color: "#fff", fontSize: 10 * fScale, fontWeight: 800, background: "rgba(0,0,0,0.25)", padding: `${2 * fScale}px ${7 * fScale}px`, borderRadius: 3, fontFamily: "sans-serif", flexShrink: 0, whiteSpace: "nowrap" }}>
-            {data.phone}
-          </div>
-        )}
       </div>
 
       <div style={{ display: "flex", gap: 1, height: isXL ? "32%" : isL ? "38%" : isM ? "34%" : "28%", flexShrink: 0 }}>
