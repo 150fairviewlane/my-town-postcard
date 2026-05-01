@@ -56,11 +56,11 @@ function Hero() {
         <h1 style={{ fontSize: "clamp(32px, 4vw, 50px)", fontWeight: 900, color: "#111",
           fontFamily: "Georgia,serif", lineHeight: 1.18, margin: "0 0 18px" }}>
           Save Your Spot on<br />
-          <span style={{ color: RED }}>Clarkesville's</span> 9×12<br />
+          <span style={{ color: RED }}>Habersham County's</span> 9×12<br />
           Postcard
         </h1>
         <p style={{ fontSize: 17, color: "#444", lineHeight: 1.6, margin: "0 0 24px", maxWidth: 460 }}>
-          Reaching <strong>5,000 Clarkesville homes</strong> this Spring.
+          Reaching <strong>5,000 Clarkesville, Demorest, Cornelia and Alto homes</strong> this Summer.
           Will it feature you — or your competitor?
         </p>
 
@@ -497,7 +497,7 @@ function Footer() {
           <div style={{ fontWeight: 700, color: "#fff", fontSize: 14, marginBottom: 14,
             fontFamily: "sans-serif" }}>Contact</div>
           <p style={{ fontSize: 13, color: "#9ca3af", lineHeight: 1.6, fontFamily: "sans-serif" }}>
-            Serving Clarkesville, GA &amp; all of Habersham County.<br />
+            Serving Clarkesville, Demorest, Cornelia &amp; Alto.<br />
             Questions? Email us at info@mytownpostcard.com
           </p>
         </div>

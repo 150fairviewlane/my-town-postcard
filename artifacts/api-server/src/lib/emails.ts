@@ -50,7 +50,7 @@ export async function sendReservationConfirmation(order: OrderInfo): Promise<voi
             <a href="${APP_URL}/upload/${order.spotId}" style="display: inline-block; background: #991b1b; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; margin-top: 8px;">
               Upload Your Ad →
             </a>
-            <p style="color: #9ca3af; font-size: 12px; margin-top: 32px;">My Town Postcard · mytownpostcard.com · Clarkesville, GA · Mailing to 5,000 homes</p>
+            <p style="color: #9ca3af; font-size: 12px; margin-top: 32px;">My Town Postcard · mytownpostcard.com · Habersham County, GA · Mailing to 5,000 homes</p>
           </div>
         </div>
       `,

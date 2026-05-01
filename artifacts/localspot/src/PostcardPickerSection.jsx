@@ -178,10 +178,10 @@ export default function PostcardPickerSection() {
           padding: "6px 16px", display: "flex", justifyContent: "space-between", alignItems: "center",
           marginBottom: 3 }}>
           <div style={{ color: "#fff", fontWeight: 800, fontSize: 13, fontFamily: "Georgia,serif" }}>
-            📮 Clarkesville Community Mailer
+            📮 My Town Postcard
           </div>
           <div style={{ color: "#fca5a5", fontSize: 9 }}>
-            Reaching {campaign.homesCount?.toLocaleString()} Local Homes · Spring 2026
+            Reaching {campaign.homesCount?.toLocaleString()} Local Homes · Summer 2026
           </div>
         </div>
 

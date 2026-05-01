@@ -674,7 +674,7 @@ export function Modal({ spot, onClose, onSubmit, isLoading, error }) {
               ${displayPrice}
             </div>
             <div style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>
-              Reaches 5,000 Clarkesville-area homes
+              Reaches 5,000 Habersham County homes
             </div>
           </div>
           <button onClick={onClose} style={{ background: "#f3f4f6", border: "none", borderRadius: "50%",
