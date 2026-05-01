@@ -1,0 +1,29 @@
+I see exactly what is happening now. The ads on the postcard that don’t look like the new templates (Tanner Insurance, Roma’s Pizza, Clarkesville Family Dental, The Cut Above Salon, Green Acres Lawn Care) are stored in the database as PAID or RESERVED spots from earlier development. Because they have status “paid” or “reserved”, the picker renders them through the old PaidAd component instead of using the new sample ad templates from PostcardSampleAds.jsx.
+
+I need you to do these things in order:
+
+ONE: Open your database or seed file or wherever the campaign spots data is defined. Find the spots for the active campaign. For ALL spots EXCEPT mb (which can stay as the Mr. Biscuit’s example), change the status from “paid” or “reserved” to “available”. This will make all the other spots fall through to the sample ad rendering path.
+
+TWO: Specifically, also make sure there is at least one SMALL spot in the available state. Looking at the current postcard there are spots a1, a2, and a3 which appear to be small spots. Make sure at least one of those (specifically a2) has status “available” so it shows the green plus sign for purchase.
+
+THREE: After clearing the paid statuses, the sample ads from SPOT_SAMPLE_MAP will automatically render in the spots that are mapped. Currently SPOT_SAMPLE_MAP maps these grid areas: mb, dn, ins, pz, lw, a1, a3 to sample ads. Spots re, hv, and a2 are not mapped, which means they will render as the green available plus signs.
+
+FOUR: After making the database changes, the postcard should show:
+
+- mb: Mr. Biscuit’s sample ad (already working)
+- dn: Clarkesville Family Dental sample ad with new template
+- ins: Tanner Insurance sample ad with new template
+- pz: Roma’s Pizza sample ad with new template
+- lw: Green Acres Lawn sample ad with new template
+- a1: The Cut Above Salon sample ad with new template
+- a3: Vet sample ad with new template
+- re: AVAILABLE green plus spot (Large)
+- hv: AVAILABLE green plus spot (Medium)
+- a2: AVAILABLE green plus spot (Small)
+- hs: House ad (My Town Postcard)
+
+FIVE: Take a screenshot and confirm. The previously-paid ads should now display with starburst badges, photo backgrounds, gradient overlays, and the rich design from PostcardSampleAds.jsx. There should be three available green plus spots: one large (re), one medium (hv), and one small (a2).
+
+If you cannot find where the spots are stored as paid in the database, look for a seed file, a migration file, a useGetActiveCampaign mock, or wherever the initial campaign data is created. The campaign has spots and each spot has a status field. We need all statuses except for “mb” set to “available”.
+
+Do not modify AdGenerator, industryAssets, PostcardSampleAds, the hero, Stripe, or routing. Only change the database/seed data so the spots are not marked as paid.
