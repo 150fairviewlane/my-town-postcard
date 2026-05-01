@@ -40,7 +40,7 @@ export async function sendReservationConfirmation(order: OrderInfo): Promise<voi
           <div style="background: #fff; border: 1px solid #e5e7eb; padding: 32px; border-radius: 0 0 8px 8px;">
             <h2 style="color: #111; font-size: 22px; margin-top: 0;">Your Spot is Reserved!</h2>
             <p style="color: #374151;">Hi <strong>${order.businessName}</strong>,</p>
-            <p style="color: #374151;">You've successfully reserved a <strong>${order.spotSize} ad spot</strong> on our Spring 2025 Clarkesville Co-op Postcard.</p>
+            <p style="color: #374151;">You've successfully reserved a <strong>${order.spotSize} ad spot</strong> on our Summer 2026 Habersham County Co-op Postcard.</p>
             <div style="background: #f8fafc; border-radius: 8px; padding: 16px; margin: 24px 0;">
               <p style="margin: 4px 0; color: #374151;"><strong>Spot Size:</strong> ${order.spotSize}</p>
               <p style="margin: 4px 0; color: #374151;"><strong>Price:</strong> $${(order.spotPrice / 100).toFixed(2)}</p>

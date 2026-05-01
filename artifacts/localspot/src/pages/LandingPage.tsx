@@ -295,10 +295,10 @@ function Features() {
   const items = [
     { icon: "🛡️", title: "Category Exclusive",
       desc: "Only one business per category is featured on each postcard. No direct competition on your ad." },
-    { icon: "⏰", title: "Spring 2025 Mailing",
-      desc: "Timed to reach 5,000 Clarkesville-area homes at the height of peak local shopping season." },
+    { icon: "⏰", title: "Summer 2026 Mailing",
+      desc: "Timed to reach 5,000 Habersham County homes during peak local shopping season — targeted for the first week of June 2026." },
     { icon: "🎯", title: "Targeted Areas",
-      desc: "We focus on specific Clarkesville neighborhoods where your customers already live." },
+      desc: "We focus on specific Habersham County neighborhoods where your customers already live." },
   ];
   return (
     <section style={{ background: "#fafafa", padding: "72px 32px" }}>
@@ -337,13 +337,13 @@ function CTABanner() {
 
 const FAQ_ITEMS = [
   { q: "How do you pick which homes get the postcard?",
-    a: "We use USPS Every Door Direct Mail (EDDM) to target specific Clarkesville postal routes — reaching 5,000 households in your most relevant neighborhoods." },
+    a: "We use USPS Every Door Direct Mail (EDDM) to target specific Habersham County postal routes — reaching 5,000 households across Clarkesville, Demorest, Cornelia, and Alto." },
   { q: "When will my ad hit mailboxes?",
-    a: "The Spring 2025 mailing is scheduled for May 15, 2025. Once all spots are filled, your ad is designed, printed, and mailed." },
+    a: "The Summer 2026 mailing is targeted for the first week of June 2026. Once all spots are filled, your ad is designed, printed, and mailed." },
   { q: "How much does it cost?",
     a: "Spots range from $199 (Small, 2\"×2\") to $450 (Extra-Large, 4\"×5\"). All sizes include professional ad design and mailing to 5,000 homes." },
   { q: "Is my business good for this postcard?",
-    a: "Any local business that serves Clarkesville-area residents is a great fit — restaurants, home services, medical, legal, retail, and more." },
+    a: "Any local business that serves Habersham County residents is a great fit — restaurants, home services, medical, legal, retail, and more." },
   { q: "What happens if another business like mine is already on it?",
     a: "We guarantee exclusivity by category. If a competing business is already in your category, we'll let you know before you pay anything." },
   { q: "Do I have to design the ad myself?",
