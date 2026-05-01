@@ -179,11 +179,17 @@ function PhotoBoldTemplate({ data, sizeKey, onEdit }) {
       )}
 
       <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: `${5 * fScale}px ${10 * fScale}px ${4 * fScale}px`, display: "flex", flexDirection: "column", gap: 3 * fScale }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", color: "rgba(255,255,255,0.9)", fontSize: 7.5 * fScale, fontFamily: "sans-serif" }}>
-          {data.address && (
-            <EditableText value={data.address} onChange={edit("address")}
-              style={{ color: "rgba(255,255,255,0.9)", fontSize: 7.5 * fScale, fontFamily: "sans-serif" }} />
-          )}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", color: "rgba(255,255,255,0.9)", fontSize: 7.5 * fScale, fontFamily: "sans-serif" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 1, flex: 1, minWidth: 0 }}>
+            {data.address && (
+              <EditableText value={data.address} onChange={edit("address")}
+                style={{ color: "rgba(255,255,255,0.9)", fontSize: 7.5 * fScale, fontFamily: "sans-serif" }} />
+            )}
+            {data.website && (
+              <EditableText value={data.website} onChange={edit("website")}
+                style={{ color: "rgba(255,255,255,0.75)", fontSize: 7 * fScale, fontFamily: "sans-serif" }} />
+            )}
+          </div>
           {data.phone && (
             <EditableText value={data.phone} onChange={edit("phone")}
               style={{ color: "rgba(255,255,255,0.9)", fontSize: 7.5 * fScale, fontWeight: 800, fontFamily: "sans-serif", whiteSpace: "nowrap" }} />
@@ -246,6 +252,10 @@ function SplitCleanTemplate({ data, sizeKey, onEdit }) {
             {data.address && (
               <EditableText value={data.address.split(",")[0]} onChange={edit("address")}
                 style={{ fontSize: 7 * fScale, color: "#555", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} />
+            )}
+            {data.website && (
+              <EditableText value={data.website} onChange={edit("website")}
+                style={{ fontSize: 7 * fScale, color: "#666", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} />
             )}
             {data.phone && (
               <EditableText value={data.phone} onChange={edit("phone")}
@@ -325,6 +335,10 @@ function MagazineTemplate({ data, sizeKey, onEdit }) {
                 style={{ fontSize: 8 * fScale, color: ind.colors.primary, fontWeight: 800, fontFamily: "sans-serif", flexShrink: 0, whiteSpace: "nowrap" }} />
             )}
           </div>
+          {data.website && (
+            <EditableText value={data.website} onChange={edit("website")}
+              style={{ fontSize: 7 * fScale, color: "#666", fontFamily: "sans-serif" }} />
+          )}
           <Coupon offer={data.offer} fine={data.offerFine} accent={ind.colors.primary} scale={fScale}
             onEditOffer={edit("offer")} onEditFine={edit("offerFine")} />
         </div>
@@ -394,9 +408,15 @@ function StampTemplate({ data, sizeKey, onEdit }) {
             )}
           </div>
         )}
-        <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 7 * fScale, textAlign: "center", fontFamily: "sans-serif" }}>
-          {data.address && <EditableText value={data.address.split(",")[0]} onChange={edit("address")} style={{ color: "rgba(255,255,255,0.7)", fontSize: 7 * fScale, display: "inline" }} />}
-          {isS && data.phone && <EditableText value={data.phone} onChange={edit("phone")} style={{ color: "rgba(255,255,255,0.85)", fontSize: 7 * fScale, fontWeight: 700, marginLeft: 8, display: "inline", whiteSpace: "nowrap" }} />}
+        <div style={{ display: "flex", flexDirection: "column", gap: 1, alignItems: "center" }}>
+          <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 7 * fScale, textAlign: "center", fontFamily: "sans-serif", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
+            {data.address && <EditableText value={data.address.split(",")[0]} onChange={edit("address")} style={{ color: "rgba(255,255,255,0.7)", fontSize: 7 * fScale, display: "inline" }} />}
+            {isS && data.phone && <EditableText value={data.phone} onChange={edit("phone")} style={{ color: "rgba(255,255,255,0.85)", fontSize: 7 * fScale, fontWeight: 700, display: "inline", whiteSpace: "nowrap" }} />}
+          </div>
+          {data.website && (
+            <EditableText value={data.website} onChange={edit("website")}
+              style={{ color: "rgba(255,255,255,0.7)", fontSize: 7 * fScale, fontFamily: "sans-serif", textAlign: "center" }} />
+          )}
         </div>
       </div>
     </div>
@@ -487,6 +507,7 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose, is
     offerFine: "",
     address: "",
     phone: "",
+    website: "",
     logo: null,
     photo: null,
     menuItems: [],
@@ -639,6 +660,15 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose, is
                 <input value={formData.address}
                   onChange={e => setFormData(d => ({ ...d, address: e.target.value }))}
                   placeholder="123 Main St, Your Town" style={inputStyle} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>
+                  Website
+                </label>
+                <input value={formData.website}
+                  onChange={e => setFormData(d => ({ ...d, website: e.target.value }))}
+                  placeholder="www.yourbusiness.com" style={inputStyle} />
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, paddingTop: 8, borderTop: "1px solid #f3f4f6" }}>
