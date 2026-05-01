@@ -200,7 +200,7 @@ export default function PostcardPickerSection() {
           {sortedSpots.map(spot => {
             const isSelected = selected?.id === spot.id;
             const isHovered = hoveredSpot === spot.id;
-            const isPaid = spot.status === "paid" || spot.status === "reserved";
+            const isPaid = (spot.status === "paid" || spot.status === "reserved") && spot.gridArea !== "mb";
             const sampleKey = SPOT_SAMPLE_MAP[spot.gridArea];
             const sampleContent = !isPaid && sampleKey
               ? getSampleAd(sampleKey, SIZE_MAP[spot.size] || "S")

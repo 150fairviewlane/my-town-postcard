@@ -470,5 +470,8 @@ export const SPOT_SAMPLE_MAP = {
   "mb":  "mrbiscuits",
   "dn":  "dental",
   "ins": "insurance",
+  "pz":  "pizza",
+  "lw":  "lawn",
   "a1":  "salon",
+  "a3":  "vet",
 };

@@ -1,0 +1,33 @@
+I now know exactly what is wrong. Two specific problems and two specific fixes.
+
+PROBLEM 1: The SPOT_SAMPLE_MAP in PostcardSampleAds.jsx uses old placeholder keys like front-xl-1 and front-l-1. The actual spots in the picker use these gridArea values: mb, dn, re, hv, ins, pz, lw, a1, a2, a3. Only mb, dn, ins, and a1 are mapped, so spots re, hv, pz, lw, a2, a3 fall through to the plain green available state instead of showing sample ads.
+
+FIX 1: Open src/PostcardSampleAds.jsx. Find the SPOT_SAMPLE_MAP export at the bottom of the file. Replace its entire contents with this exact mapping:
+
+export const SPOT_SAMPLE_MAP = {
+“mb”:  “mrbiscuits”,
+“dn”:  “dental”,
+“ins”: “insurance”,
+“pz”:  “pizza”,
+“lw”:  “lawn”,
+“a1”:  “salon”,
+“a3”:  “vet”,
+};
+
+This maps 7 spots to sample ads. The remaining grid areas re, hv, and a2 will stay as available spots customers can purchase. This guarantees there are always at least 3 available spots: one large (re), one medium (hv), and one small (a2).
+
+PROBLEM 2: The Mr. Biscuit’s ad in the top-left of the postcard does NOT use getSampleAd. It is using a separate old reference component. Looking at the picker code, the spot rendering has a check “if isPaid then render PaidAd”. Mr. Biscuit’s is being marked as paid in the campaign data, which is why it shows the old PaidAd component instead of the new sample ad template.
+
+FIX 2: For demo purposes, force Mr. Biscuit’s to render through the new sample ad path instead of the PaidAd path. In PostcardPickerSection.jsx, find this line:
+
+const isPaid = spot.status === “paid” || spot.status === “reserved”;
+
+Replace it with:
+
+const isPaid = (spot.status === “paid” || spot.status === “reserved”) && spot.gridArea !== “mb”;
+
+This single line change makes the mb spot always use the new sample ad rendering, which will give it the rich photo-bold template with starburst, photo background, gradient overlays, and proper styling - matching all the other ads on the postcard.
+
+After both fixes, take a screenshot of the live picker. Every visible ad should look professional with photo backgrounds and starbursts where appropriate, and there should be exactly 3 available green plus spots: one large in the upper right area (re), one medium (hv), and one small (a2).
+
+Do not change anything else. Do not modify AdGenerator, industryAssets, the hero, the backend, Stripe, or routing. Only make the two fixes above.
