@@ -243,6 +243,29 @@ paths:
       operationId: getAdminScans
       tags: [admin]
       summary: Get QR scan stats grouped by spot
+      parameters:
+        - name: from
+          in: query
+          required: false
+          description: |
+            Optional inclusive lower bound (YYYY-MM-DD, in the server's
+            timezone). When set, totalScans and lastScannedAt are scoped
+            to scans on or after this date. The 7-day / 30-day windows
+            are always relative to "now" and are not affected.
+          schema:
+            type: string
+        - name: to
+          in: query
+          required: false
+          description: Optional inclusive upper bound (YYYY-MM-DD).
+          schema:
+            type: string
+        - name: campaignId
+          in: query
+          required: false
+          description: Optional campaign filter (numeric campaign id).
+          schema:
+            type: integer
       responses:
         "200":
           description: Per-spot scan stats
@@ -763,6 +786,15 @@ components:
           type: integer
         businessName:
           type: ["string", "null"]
+        industry:
+          type: ["string", "null"]
+        size:
+          type: string
+          enum: [xl, large, medium, small]
+        campaignId:
+          type: integer
+        campaignName:
+          type: ["string", "null"]
         trackingCode:
           type: ["string", "null"]
         totalScans:
@@ -775,6 +807,8 @@ components:
           type: ["string", "null"]
       required:
         - spotId
+        - size
+        - campaignId
         - totalScans
         - scansLast7Days
         - scansLast30Days

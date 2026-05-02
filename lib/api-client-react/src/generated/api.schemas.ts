@@ -155,10 +155,25 @@ export type AdminSpotRow = Spot & {
   stripePaymentIntentId?: string | null;
 };
 
+export type ScanStatsSize = (typeof ScanStatsSize)[keyof typeof ScanStatsSize];
+
+export const ScanStatsSize = {
+  xl: "xl",
+  large: "large",
+  medium: "medium",
+  small: "small",
+} as const;
+
 export interface ScanStats {
   spotId: number;
   /** @nullable */
   businessName?: string | null;
+  /** @nullable */
+  industry?: string | null;
+  size: ScanStatsSize;
+  campaignId: number;
+  /** @nullable */
+  campaignName?: string | null;
   /** @nullable */
   trackingCode?: string | null;
   totalScans: number;
@@ -355,4 +370,23 @@ export interface DeleteOutreachLeadResponse {
 
 export type AdminCampaignDetailResponse = AdminCampaignResponse & {
   availableSpots: number;
+};
+
+export type GetAdminScansParams = {
+  /**
+ * Optional inclusive lower bound (YYYY-MM-DD, in the server's
+timezone). When set, totalScans and lastScannedAt are scoped
+to scans on or after this date. The 7-day / 30-day windows
+are always relative to "now" and are not affected.
+
+ */
+  from?: string;
+  /**
+   * Optional inclusive upper bound (YYYY-MM-DD).
+   */
+  to?: string;
+  /**
+   * Optional campaign filter (numeric campaign id).
+   */
+  campaignId?: number;
 };

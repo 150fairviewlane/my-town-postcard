@@ -30,6 +30,7 @@ import type {
   CreatePaymentIntentBody,
   DeleteOutreachLeadResponse,
   ErrorResponse,
+  GetAdminScansParams,
   HealthStatus,
   OutreachLead,
   OutreachLeadInput,
@@ -787,41 +788,57 @@ export function useGetAdminCampaign<
 /**
  * @summary Get QR scan stats grouped by spot
  */
-export const getGetAdminScansUrl = () => {
-  return `/api/admin/scans`;
+export const getGetAdminScansUrl = (params?: GetAdminScansParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/admin/scans?${stringifiedParams}`
+    : `/api/admin/scans`;
 };
 
 export const getAdminScans = async (
+  params?: GetAdminScansParams,
   options?: RequestInit,
 ): Promise<AdminScansResponse> => {
-  return customFetch<AdminScansResponse>(getGetAdminScansUrl(), {
+  return customFetch<AdminScansResponse>(getGetAdminScansUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export const getGetAdminScansQueryKey = () => {
-  return [`/api/admin/scans`] as const;
+export const getGetAdminScansQueryKey = (params?: GetAdminScansParams) => {
+  return [`/api/admin/scans`, ...(params ? [params] : [])] as const;
 };
 
 export const getGetAdminScansQueryOptions = <
   TData = Awaited<ReturnType<typeof getAdminScans>>,
   TError = ErrorType<ErrorResponse>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof getAdminScans>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}) => {
+>(
+  params?: GetAdminScansParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAdminScans>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getGetAdminScansQueryKey();
+  const queryKey = queryOptions?.queryKey ?? getGetAdminScansQueryKey(params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminScans>>> = ({
     signal,
-  }) => getAdminScans({ signal, ...requestOptions });
+  }) => getAdminScans(params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getAdminScans>>,
@@ -842,15 +859,18 @@ export type GetAdminScansQueryError = ErrorType<ErrorResponse>;
 export function useGetAdminScans<
   TData = Awaited<ReturnType<typeof getAdminScans>>,
   TError = ErrorType<ErrorResponse>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof getAdminScans>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getGetAdminScansQueryOptions(options);
+>(
+  params?: GetAdminScansParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAdminScans>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAdminScansQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

@@ -318,6 +318,16 @@ function Dashboard({ token }) {
           >
             📞 Outreach Tracker
           </a>
+          <a
+            href={`${import.meta.env.BASE_URL}admin/scans`}
+            style={{
+              fontSize: 13, fontWeight: 700, color: "#374151",
+              background: "#fff", border: "1px solid #d1d5db",
+              borderRadius: 8, padding: "7px 12px", textDecoration: "none",
+            }}
+          >
+            📊 Scan Analytics
+          </a>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>

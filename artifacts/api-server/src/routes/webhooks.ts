@@ -1,7 +1,7 @@
 import { type Request, type Response } from "express";
 import { eq } from "drizzle-orm";
-import { db, spotsTable, ordersTable } from "@workspace/db";
-import { sendReservationConfirmation, sendAdminNewOrder } from "../lib/emails";
+import { db, spotsTable, ordersTable, campaignsTable } from "@workspace/db";
+import { sendAdProofEmail, sendAdminNewOrder } from "../lib/emails";
 import { ensureTrackingCode } from "../lib/trackingCode";
 import { releaseReservedSpot } from "../lib/expirationCleanup";
 import { logger } from "../lib/logger";
@@ -311,8 +311,22 @@ async function markSpotPaidAndNotify(
   // Fire customer + admin notifications in parallel. emails.ts already
   // swallows individual send failures and logs them, so a Resend outage
   // won't fail the webhook (Stripe would otherwise keep retrying for hours).
+  // Look up the campaign so the customer email can include the campaign
+  // name + scheduled mail date.
+  const [campaign] = await db
+    .select()
+    .from(campaignsTable)
+    .where(eq(campaignsTable.id, spot.campaignId));
+
   await Promise.all([
-    sendReservationConfirmation(orderInfo),
+    sendAdProofEmail({
+      ...orderInfo,
+      campaignName: campaign?.name ?? null,
+      mailDate: campaign?.mailDate ?? null,
+      contactPhone: spot.contactPhone ?? null,
+      website: spot.website ?? null,
+      industry: spot.businessCategory ?? null,
+    }),
     sendAdminNewOrder(orderInfo),
   ]);
 }

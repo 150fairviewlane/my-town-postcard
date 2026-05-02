@@ -97,13 +97,57 @@ router.get("/admin/campaign", requireAdmin, async (req, res): Promise<void> => {
 });
 
 router.get("/admin/scans", requireAdmin, async (req, res): Promise<void> => {
-  // One round-trip per-spot aggregate: total / 7-day / 30-day windows plus
-  // the last-scanned-at timestamp. We list every spot that has been issued
-  // a tracking code (i.e. paid spots) so admins can see "0 scans yet" rows
-  // alongside actively scanned ones.
+  // Optional date-range filter scopes the totalScans aggregate and the
+  // lastScannedAt timestamp. The 7-day / 30-day rolling windows are always
+  // relative to now() so the trend numbers stay meaningful regardless of
+  // what the admin has filtered on.
+  //
+  // The `from` and `to` params are inclusive YYYY-MM-DD dates; we expand
+  // them to a half-open timestamp range [from 00:00, to+1day 00:00) in the
+  // server timezone. When `to` is omitted but `from` is set, we treat it
+  // as "from <date> until now".
+  const fromRaw = typeof req.query.from === "string" ? req.query.from : null;
+  const toRaw = typeof req.query.to === "string" ? req.query.to : null;
+  const campaignIdRaw =
+    typeof req.query.campaignId === "string" ? req.query.campaignId : null;
+
+  const isYmd = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
+  if (fromRaw && !isYmd(fromRaw)) {
+    res.status(400).json({ error: "Invalid 'from' date — expected YYYY-MM-DD" });
+    return;
+  }
+  if (toRaw && !isYmd(toRaw)) {
+    res.status(400).json({ error: "Invalid 'to' date — expected YYYY-MM-DD" });
+    return;
+  }
+  const campaignIdNum = campaignIdRaw !== null ? Number(campaignIdRaw) : null;
+  if (campaignIdNum !== null && !Number.isFinite(campaignIdNum)) {
+    res.status(400).json({ error: "Invalid 'campaignId'" });
+    return;
+  }
+
+  // Build the scan-row predicate. We always need to keep paid spots that
+  // received zero scans inside the chosen window (the LEFT JOIN preserves
+  // them as NULLs), so the date filter goes inside the join condition,
+  // not into a top-level WHERE.
+  const fromCond = fromRaw
+    ? sql`AND q.scanned_at >= ${fromRaw}::date`
+    : sql``;
+  const toCond = toRaw
+    ? sql`AND q.scanned_at < (${toRaw}::date + interval '1 day')`
+    : sql``;
+  const campaignCond =
+    campaignIdNum !== null
+      ? sql`AND s.campaign_id = ${campaignIdNum}`
+      : sql``;
+
   const rows = await db.execute<{
     spot_id: number;
     business_name: string | null;
+    industry: string | null;
+    size: string;
+    campaign_id: number;
+    campaign_name: string | null;
     tracking_code: string | null;
     total_scans: number;
     scans_last_7_days: number;
@@ -111,17 +155,27 @@ router.get("/admin/scans", requireAdmin, async (req, res): Promise<void> => {
     last_scanned_at: Date | string | null;
   }>(sql`
     SELECT
-      s.id            AS spot_id,
-      s.business_name AS business_name,
-      s.tracking_code AS tracking_code,
+      s.id                AS spot_id,
+      s.business_name     AS business_name,
+      s.business_category AS industry,
+      s.size              AS size,
+      s.campaign_id       AS campaign_id,
+      c.name              AS campaign_name,
+      s.tracking_code     AS tracking_code,
       COUNT(q.id)::int                                                              AS total_scans,
       COUNT(q.id) FILTER (WHERE q.scanned_at > now() - interval '7 days')::int      AS scans_last_7_days,
       COUNT(q.id) FILTER (WHERE q.scanned_at > now() - interval '30 days')::int     AS scans_last_30_days,
       MAX(q.scanned_at)                                                             AS last_scanned_at
     FROM spots s
-    LEFT JOIN qr_scans q ON q.spot_id = s.id
+    LEFT JOIN campaigns c ON c.id = s.campaign_id
+    LEFT JOIN qr_scans q
+      ON q.spot_id = s.id
+      ${fromCond}
+      ${toCond}
     WHERE s.tracking_code IS NOT NULL
-    GROUP BY s.id, s.business_name, s.tracking_code
+      ${campaignCond}
+    GROUP BY s.id, s.business_name, s.business_category, s.size,
+             s.campaign_id, c.name, s.tracking_code
     ORDER BY total_scans DESC, s.id ASC
   `);
 
@@ -135,9 +189,13 @@ router.get("/admin/scans", requireAdmin, async (req, res): Promise<void> => {
     return Number.isNaN(d.getTime()) ? String(v) : d.toISOString();
   };
 
-  const scans = rows.rows.map(r => ({
+  const scans = rows.rows.map((r) => ({
     spotId: Number(r.spot_id),
     businessName: r.business_name,
+    industry: r.industry,
+    size: r.size as "xl" | "large" | "medium" | "small",
+    campaignId: Number(r.campaign_id),
+    campaignName: r.campaign_name,
     trackingCode: r.tracking_code,
     totalScans: Number(r.total_scans ?? 0),
     scansLast7Days: Number(r.scans_last_7_days ?? 0),

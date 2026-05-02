@@ -1,13 +1,13 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
-import { db, spotsTable, ordersTable } from "@workspace/db";
+import { db, spotsTable, ordersTable, campaignsTable } from "@workspace/db";
 import {
   CreatePaymentIntentBody,
   CreatePaymentIntentResponse,
   ConfirmPaymentBody,
   ConfirmPaymentResponse,
 } from "@workspace/api-zod";
-import { sendReservationConfirmation, sendAdminNewOrder } from "../lib/emails";
+import { sendAdProofEmail, sendAdminNewOrder } from "../lib/emails";
 import { ensureTrackingCode } from "../lib/trackingCode";
 import { logger } from "../lib/logger";
 
@@ -140,8 +140,23 @@ router.post("/checkout/confirm", async (req, res): Promise<void> => {
     orderId: order.id,
   };
 
+  // Look up the campaign so the customer email can include the campaign
+  // name + scheduled mail date. A missing campaign row is unlikely (FK is
+  // enforced at the application layer) but we degrade gracefully.
+  const [campaign] = await db
+    .select()
+    .from(campaignsTable)
+    .where(eq(campaignsTable.id, spot.campaignId));
+
   await Promise.all([
-    sendReservationConfirmation(orderInfo),
+    sendAdProofEmail({
+      ...orderInfo,
+      campaignName: campaign?.name ?? null,
+      mailDate: campaign?.mailDate ?? null,
+      contactPhone: spot.contactPhone ?? null,
+      website: spot.website ?? null,
+      industry: spot.businessCategory ?? null,
+    }),
     sendAdminNewOrder(orderInfo),
   ]);
 

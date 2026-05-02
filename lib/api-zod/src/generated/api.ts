@@ -247,11 +247,32 @@ export const GetAdminCampaignResponse = zod.object({
 /**
  * @summary Get QR scan stats grouped by spot
  */
+export const GetAdminScansQueryParams = zod.object({
+  from: zod.coerce
+    .string()
+    .optional()
+    .describe(
+      'Optional inclusive lower bound (YYYY-MM-DD, in the server\'s\ntimezone). When set, totalScans and lastScannedAt are scoped\nto scans on or after this date. The 7-day \/ 30-day windows\nare always relative to \"now\" and are not affected.\n',
+    ),
+  to: zod.coerce
+    .string()
+    .optional()
+    .describe("Optional inclusive upper bound (YYYY-MM-DD)."),
+  campaignId: zod.coerce
+    .number()
+    .optional()
+    .describe("Optional campaign filter (numeric campaign id)."),
+});
+
 export const GetAdminScansResponse = zod.object({
   scans: zod.array(
     zod.object({
       spotId: zod.number(),
       businessName: zod.string().nullish(),
+      industry: zod.string().nullish(),
+      size: zod.enum(["xl", "large", "medium", "small"]),
+      campaignId: zod.number(),
+      campaignName: zod.string().nullish(),
       trackingCode: zod.string().nullish(),
       totalScans: zod.number(),
       scansLast7Days: zod.number(),
