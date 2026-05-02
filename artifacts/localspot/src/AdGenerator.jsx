@@ -709,17 +709,17 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
                   {sizeInfo.label} · {AD_SIZES[sizeKey].width}" × {AD_SIZES[sizeKey].height}" · ${sizeInfo.price}
                 </div>
 
-                {/* Ad preview — constrained so sizes look proportionally different */}
+                {/* Ad preview — single px-per-inch scale so every size is truly
+                    proportional to the others (matches the picker shapes exactly):
+                    XL 4×5 portrait, L 4×3 landscape, M 3×2, S 2×2 square */}
                 {(() => {
-                  // Max pixel widths per size, calibrated to match picker proportions
-                  // XL(4×5) is portrait — keep it tall
-                  // L(4×3), M(3×2), S(2×2) — scale down so small looks small
-                  const maxWidths = { XL: 520, L: 420, M: 310, S: 210 };
-                  const maxW = maxWidths[sizeKey] || 360;
+                  const PX_PER_INCH = 100;
+                  const w = AD_SIZES[sizeKey].width * PX_PER_INCH;
+                  const h = AD_SIZES[sizeKey].height * PX_PER_INCH;
                   return (
                     <div style={{
-                      width: maxW,
-                      aspectRatio: `${AD_SIZES[sizeKey].width} / ${AD_SIZES[sizeKey].height}`,
+                      width: w,
+                      height: h,
                       borderRadius: 6, overflow: "hidden",
                       boxShadow: "0 12px 48px rgba(0,0,0,0.6)",
                       flexShrink: 0,
@@ -749,8 +749,8 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
               </>
             ) : (
               <div style={{
-                width: 360,
-                aspectRatio: `${AD_SIZES[sizeKey].width} / ${AD_SIZES[sizeKey].height}`,
+                width: AD_SIZES[sizeKey].width * 100,
+                height: AD_SIZES[sizeKey].height * 100,
                 borderRadius: 6, border: "2px dashed rgba(255,255,255,0.2)",
                 background: "rgba(255,255,255,0.04)",
                 display: "flex", alignItems: "center", justifyContent: "center",
