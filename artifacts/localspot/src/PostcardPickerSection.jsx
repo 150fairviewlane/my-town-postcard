@@ -1,6 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useGetActiveCampaign, useReserveSpot } from "@workspace/api-client-react";
+import {
+  saveReservation,
+  findActiveReservation,
+  clearReservation,
+} from "./lib/reservationStorage";
 import { GRID_AREAS, PaidAd, AvailableSpot } from "./postcardCore";
 import {
   BACK_GRID_AREAS,
@@ -83,9 +88,39 @@ export default function PostcardPickerSection() {
   // matters server-side, the front/back distinction is purely a layout
   // partition for the picker.
   const [side, setSide] = useState("front");
+  // Active hold (if any) for THIS browser, used to surface a "resume checkout"
+  // banner so customers who closed the checkout tab can pick up where they
+  // left off before the 30-min hold expires.
+  const [activeHold, setActiveHold] = useState(() => findActiveReservation());
 
   const { data: campaign, isLoading } = useGetActiveCampaign();
   const reserveMutation = useReserveSpot();
+
+  // Re-check the active hold every 30s and on every campaign refresh — that
+  // way if the server already swept it (or we passed the expiry) the banner
+  // disappears without needing a reload.
+  useEffect(() => {
+    const tick = () => {
+      const found = findActiveReservation();
+      if (!found) {
+        setActiveHold(null);
+        return;
+      }
+      // If the campaign already shows this spot as no longer reserved
+      // (server sweeper won the race, or the customer paid in another tab),
+      // drop the storage entry too.
+      const matching = campaign?.spots?.find((s) => s.id === found.spotId);
+      if (matching && matching.status !== "reserved") {
+        clearReservation(found.spotId);
+        setActiveHold(null);
+        return;
+      }
+      setActiveHold(found);
+    };
+    tick();
+    const t = setInterval(tick, 30000);
+    return () => clearInterval(t);
+  }, [campaign]);
 
   if (isLoading) {
     return (
@@ -159,6 +194,14 @@ export default function PostcardPickerSection() {
       }
       AD_IMAGE_CACHE.set(result.id, payload.photo);
 
+      // Stash the 30-min hold so the CheckoutPage countdown banner and the
+      // picker's "resume checkout" banner can both find it after a reload.
+      // Server is still source of truth — this is just so we know which
+      // spot belongs to this browser tab.
+      if (result.expiresAt) {
+        saveReservation(result.id, result.expiresAt, result.businessName);
+      }
+
       setCreatorSpot(null);
       setSelected(null);
       navigate(`/checkout/${result.id}`);
@@ -231,6 +274,50 @@ export default function PostcardPickerSection() {
 
   return (
     <div style={{ fontFamily: "sans-serif" }}>
+      {/* Active hold banner — only shown if THIS browser reserved a spot
+          and the 30-min hold hasn't lapsed yet. Lets the customer jump
+          straight back to /checkout/<id> without picking again. */}
+      {activeHold && (
+        <div
+          role="status"
+          style={{
+            background: "#f0fdf4",
+            border: "1px solid #86efac",
+            borderRadius: 10,
+            padding: "10px 14px",
+            marginBottom: 14,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            fontSize: 13.5,
+            color: "#15803d",
+          }}
+        >
+          <span>
+            ⏱️ You have a spot held for{" "}
+            <strong>{activeHold.businessName || "your business"}</strong>.
+            Finish payment before it expires.
+          </span>
+          <button
+            onClick={() => navigate(`/checkout/${activeHold.spotId}`)}
+            style={{
+              background: "#15803d",
+              color: "#fff",
+              border: "none",
+              borderRadius: 8,
+              padding: "7px 14px",
+              fontSize: 13,
+              fontWeight: 800,
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+          >
+            Resume checkout →
+          </button>
+        </div>
+      )}
+
       {/* Front / Back toggle — large pill so customers immediately see they
           can advertise on either face of the postcard. */}
       <div

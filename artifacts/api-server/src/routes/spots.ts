@@ -15,11 +15,23 @@ import { fetchScanCountForSpot } from "../lib/scanCounts";
 
 const router: IRouter = Router();
 
-const serializeSpot = <T extends { createdAt: Date | string }>(s: T, scanCount = 0) => ({
+const serializeSpot = <
+  T extends { createdAt: Date | string; expiresAt?: Date | string | null },
+>(s: T, scanCount = 0) => ({
   ...s,
   createdAt: s.createdAt instanceof Date ? s.createdAt.toISOString() : s.createdAt,
+  expiresAt:
+    s.expiresAt instanceof Date
+      ? s.expiresAt.toISOString()
+      : (s.expiresAt ?? null),
   scanCount,
 });
+
+// Unpaid reservations are held for this long. After it lapses, the
+// expirationCleanup sweeper (or a checkout.session.expired webhook) frees
+// the spot. Keep this single source of truth — the frontend reads expiresAt
+// straight off the Spot response, so we never duplicate the constant client-side.
+const RESERVATION_TTL_MS = 30 * 60 * 1000;
 
 router.get("/spots/:id", async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
@@ -88,6 +100,8 @@ router.post("/spots/:id/reserve", async (req, res): Promise<void> => {
     return;
   }
 
+  const expiresAt = new Date(Date.now() + RESERVATION_TTL_MS);
+
   const [updated] = await db
     .update(spotsTable)
     .set({
@@ -97,11 +111,15 @@ router.post("/spots/:id/reserve", async (req, res): Promise<void> => {
       contactEmail: body.data.contactEmail,
       contactPhone: body.data.contactPhone ?? null,
       website: body.data.website ?? null,
+      expiresAt,
     })
     .where(eq(spotsTable.id, params.data.id))
     .returning();
 
-  req.log.info({ spotId: params.data.id, business: body.data.businessName }, "Spot reserved");
+  req.log.info(
+    { spotId: params.data.id, business: body.data.businessName, expiresAt: expiresAt.toISOString() },
+    "Spot reserved (30-min hold)",
+  );
   res.json(ReserveSpotResponse.parse(serializeSpot(updated, await fetchScanCountForSpot(updated.id))));
 });
 

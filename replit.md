@@ -62,7 +62,7 @@ See `.env.example` for full documentation. Summary:
 ## Database Schema
 
 - `campaigns` — id, name, territory, zip_code, mail_date, homes_count, status
-- `spots` — id, campaign_id, **side** (front|back, default front), size, grid_area, price, status, business_name, business_category, contact_email, contact_phone, website, ad_file_url, ad_status, **tracking_code** (unique, nullable; populated when status → paid)
+- `spots` — id, campaign_id, **side** (front|back, default front), size, grid_area, price, status, business_name, business_category, contact_email, contact_phone, website, ad_file_url, ad_status, **tracking_code** (unique, nullable; populated when status → paid), **expires_at** (timestamptz, nullable; set to NOW()+30min on reserve, cleared on paid/cleanup)
 - `orders` — id, spot_id, stripe_payment_intent_id, amount_cents, status
 - `qr_scans` — id, spot_id, campaign_id, scanned_at (default now), user_agent, ip_address, city — one row per QR scan recorded by `/go/:code`
 
@@ -79,6 +79,16 @@ The print page (`/admin/campaign/:id/print`) renders both sides as separate prin
 ## Seed Data
 
 Campaign 1 (Spring 2025) has 16 spots: 9 front-side + 7 back-side. Front: 1 paid (Mr. Biscuit's, the `mb` perpetual sponsor demo) + 8 available. Back: all 7 available.
+
+## Reservation Expiration
+
+Unpaid reservations are held for **30 minutes**. After that they are released automatically so the spot doesn't sit blocked.
+
+- `POST /api/spots/:id/reserve` sets `expires_at = NOW() + 30 min` on the spot row alongside the customer's business info.
+- A periodic sweeper (`artifacts/api-server/src/lib/expirationCleanup.ts`) runs every 5 minutes (and once immediately on server boot) via `setInterval` registered in `index.ts`. It runs a single conditional UPDATE on rows where `status='reserved' AND expires_at < now()`, resetting them to `available` and clearing `business_name`, `business_category`, `contact_email`, `contact_phone`, `website`, `expires_at`. Idempotent and concurrency-safe.
+- Stripe webhook listens for `checkout.session.expired` and calls `releaseReservedSpot(spotId)` to free the spot immediately rather than waiting for the next sweep tick. Acts only if the spot is still in `reserved` status (paid spots are never reset).
+- On payment success (both webhook + `/checkout/confirm`), `expires_at` is set to NULL alongside `status='paid'` so the sweeper never looks at a paid row.
+- Frontend (`artifacts/localspot/src/components/ReservationCountdown.jsx`) displays a live "⏱️ This spot is held for you for M:SS" banner above the Pay button on `/checkout/:spotId`, fed by the spot's `expiresAt` field. The banner flips to amber under 5 min, and on expiry it clears the customer's localStorage entry and redirects them back to the picker. The picker also shows a "Resume checkout for <business>" banner if the customer comes back to `/` while their hold is still active (state stored in `localStorage` under `localspot:reservation:<spotId>`).
 
 ## QR Code Tracking
 

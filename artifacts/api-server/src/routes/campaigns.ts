@@ -36,6 +36,7 @@ router.get("/campaigns/active", async (req, res): Promise<void> => {
     spots: spots.map(s => ({
       ...s,
       createdAt: serializeDate(s.createdAt),
+      expiresAt: serializeDate(s.expiresAt),
       scanCount: counts.get(s.id) ?? 0,
     })),
   };

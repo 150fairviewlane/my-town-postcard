@@ -49,6 +49,7 @@ export const GetActiveCampaignResponse = zod
           adStatus: zod.string().nullish(),
           trackingCode: zod.string().nullish(),
           scanCount: zod.number().optional(),
+          expiresAt: zod.string().nullish(),
           createdAt: zod.string(),
         }),
       ),
@@ -80,6 +81,7 @@ export const GetSpotResponse = zod.object({
   adStatus: zod.string().nullish(),
   trackingCode: zod.string().nullish(),
   scanCount: zod.number().optional(),
+  expiresAt: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
@@ -116,6 +118,7 @@ export const ReserveSpotResponse = zod.object({
   adStatus: zod.string().nullish(),
   trackingCode: zod.string().nullish(),
   scanCount: zod.number().optional(),
+  expiresAt: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
@@ -177,6 +180,7 @@ export const UploadAdResponse = zod.object({
   adStatus: zod.string().nullish(),
   trackingCode: zod.string().nullish(),
   scanCount: zod.number().optional(),
+  expiresAt: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
@@ -225,6 +229,7 @@ export const GetAdminCampaignResponse = zod.object({
         adStatus: zod.string().nullish(),
         trackingCode: zod.string().nullish(),
         scanCount: zod.number().optional(),
+        expiresAt: zod.string().nullish(),
         createdAt: zod.string(),
       })
       .and(
@@ -281,5 +286,6 @@ export const ApproveAdResponse = zod.object({
   adStatus: zod.string().nullish(),
   trackingCode: zod.string().nullish(),
   scanCount: zod.number().optional(),
+  expiresAt: zod.string().nullish(),
   createdAt: zod.string(),
 });

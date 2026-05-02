@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { startExpirationSweeper } from "./lib/expirationCleanup";
 
 const rawPort = process.env["PORT"];
 
@@ -22,4 +23,9 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+
+  // Sweep lapsed reservations every 5 minutes. The interval is unref()'d
+  // and the immediate first tick runs in the background — no app.listen
+  // ordering concern, just a fire-and-forget background worker.
+  startExpirationSweeper(5 * 60 * 1000);
 });

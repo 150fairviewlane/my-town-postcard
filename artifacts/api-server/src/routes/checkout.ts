@@ -102,9 +102,11 @@ router.post("/checkout/confirm", async (req, res): Promise<void> => {
     return;
   }
 
+  // Clear expires_at — paid spots have no expiry, and we want the periodic
+  // cleanup sweeper to ignore them entirely.
   await db
     .update(spotsTable)
-    .set({ status: "paid" })
+    .set({ status: "paid", expiresAt: null })
     .where(eq(spotsTable.id, body.data.spotId));
 
   const [order] = await db

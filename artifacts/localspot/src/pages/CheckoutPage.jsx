@@ -2,7 +2,16 @@ import { useState, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
-import { useCreatePaymentIntent, useConfirmPayment } from "@workspace/api-client-react";
+import {
+  useCreatePaymentIntent,
+  useConfirmPayment,
+  useGetSpot,
+} from "@workspace/api-client-react";
+import ReservationCountdown from "../components/ReservationCountdown";
+import {
+  loadReservation,
+  clearReservation,
+} from "../lib/reservationStorage";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "pk_test_placeholder");
 
@@ -15,13 +24,24 @@ const SIZE_LABELS = {
   small: "Small",
 };
 
-function CheckoutForm({ spotId, clientSecret, amount, size, businessName }) {
+function CheckoutForm({ spotId, clientSecret, amount, size, businessName, expiresAt }) {
   const stripe = useStripe();
   const elements = useElements();
   const [, navigate] = useLocation();
   const [error, setError] = useState(null);
   const [processing, setProcessing] = useState(false);
+  const [holdExpired, setHoldExpired] = useState(false);
   const confirmMutation = useConfirmPayment();
+
+  // When the 30-min hold lapses, drop the local storage entry and bounce
+  // the customer back to the picker so they can grab another spot. The
+  // server-side cleanup sweeper has already (or will momentarily) freed
+  // the row, so re-attempting payment here would just fail.
+  const handleHoldExpired = () => {
+    setHoldExpired(true);
+    clearReservation(spotId);
+    setTimeout(() => navigate("/"), 2500);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -47,6 +67,10 @@ function CheckoutForm({ spotId, clientSecret, amount, size, businessName }) {
           spotId: parseInt(spotId),
         },
       });
+      // Spot is paid; the hold no longer applies, so drop the localStorage
+      // entry to keep the picker's "resume checkout" banner from sticking
+      // around for a now-paid spot.
+      clearReservation(spotId);
       // Send the customer to the confirmation page that shows their
       // business name, spot size, and price paid.
       navigate(`/confirmation/${spotId}`);
@@ -61,6 +85,10 @@ function CheckoutForm({ spotId, clientSecret, amount, size, businessName }) {
   return (
     <form onSubmit={handleSubmit} style={{ fontFamily: "sans-serif" }}>
       <div style={{ marginBottom: 20 }}>
+        <ReservationCountdown
+          expiresAt={expiresAt}
+          onExpired={handleHoldExpired}
+        />
         <div style={{ background: "#f8fafc", borderRadius: 10, padding: "16px 20px", marginBottom: 20 }}>
           <div style={{ fontSize: 12, color: "#9ca3af", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Order Summary</div>
           <div style={{ fontWeight: 700, fontSize: 16, color: "#111" }}>{sizeLabel} Ad Spot</div>
@@ -93,14 +121,14 @@ function CheckoutForm({ spotId, clientSecret, amount, size, businessName }) {
 
       <button
         type="submit"
-        disabled={processing || !stripe}
+        disabled={processing || !stripe || holdExpired}
         style={{
           width: "100%", padding: 15, borderRadius: 12, border: "none",
-          background: processing ? "#d1d5db" : "#991b1b",
+          background: processing || holdExpired ? "#d1d5db" : "#991b1b",
           color: "#fff", fontSize: 16, fontWeight: 800,
-          cursor: processing ? "not-allowed" : "pointer",
+          cursor: processing || holdExpired ? "not-allowed" : "pointer",
         }}>
-        {processing ? "Processing..." : `Pay $${amount / 100}`}
+        {processing ? "Processing..." : holdExpired ? "Hold expired" : `Pay $${amount / 100}`}
       </button>
       <p style={{ textAlign: "center", fontSize: 11, color: "#9ca3af", marginTop: 10 }}>
         Secured by Stripe · Your card is charged now
@@ -115,6 +143,18 @@ export default function CheckoutPage() {
   const [intentData, setIntentData] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const createIntentMutation = useCreatePaymentIntent();
+  // Pull the spot record so we have the authoritative expires_at to drive
+  // the countdown — falling back to localStorage if the API is slow or
+  // can't be reached.
+  const numericSpotId = spotId ? parseInt(spotId, 10) : NaN;
+  const { data: spotData } = useGetSpot(
+    Number.isFinite(numericSpotId) ? numericSpotId : 0,
+    { query: { enabled: Number.isFinite(numericSpotId) } },
+  );
+  const stored = Number.isFinite(numericSpotId)
+    ? loadReservation(numericSpotId)
+    : null;
+  const expiresAt = spotData?.expiresAt ?? stored?.expiresAt ?? null;
 
   // Run exactly once per spotId. The mutation hook is stable and we don't
   // want to retrigger when its identity changes between renders.
@@ -169,6 +209,7 @@ export default function CheckoutPage() {
                 amount={intentData.amount}
                 size={intentData.size}
                 businessName={intentData.businessName || "Your Business"}
+                expiresAt={expiresAt}
               />
             </Elements>
           )}

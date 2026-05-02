@@ -85,6 +85,8 @@ export interface Spot {
   /** @nullable */
   trackingCode?: string | null;
   scanCount?: number;
+  /** @nullable */
+  expiresAt?: string | null;
   createdAt: string;
 }
 

@@ -77,6 +77,7 @@ router.get("/admin/campaign", requireAdmin, async (req, res): Promise<void> => {
     return {
       ...spot,
       createdAt: serializeDate(spot.createdAt),
+      expiresAt: serializeDate(spot.expiresAt),
       isPaid: spot.status === "paid",
       stripePaymentIntentId: order?.stripePaymentIntentId ?? null,
       scanCount: scanCounts.get(spot.id) ?? 0,

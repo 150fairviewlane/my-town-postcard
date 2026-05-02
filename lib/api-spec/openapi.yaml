@@ -369,6 +369,8 @@ components:
           type: ["string", "null"]
         scanCount:
           type: integer
+        expiresAt:
+          type: ["string", "null"]
         createdAt:
           type: string
       required:

@@ -25,6 +25,12 @@ export const spotsTable = pgTable("spots", {
   // synchronous /checkout/confirm path). Unique across the table; null until
   // payment so that available/reserved rows don't collide on the empty string.
   trackingCode: text("tracking_code").unique(),
+  // When a spot transitions to "reserved" it gets a 30-minute hold. The
+  // periodic sweeper (artifacts/api-server/src/lib/expirationCleanup.ts) and
+  // the Stripe checkout.session.expired webhook handler both reset spots
+  // whose hold has lapsed. NULL for available rows and for paid rows (a
+  // paid spot has no expiry); only meaningful on status="reserved" rows.
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db, spotsTable, ordersTable } from "@workspace/db";
 import { sendReservationConfirmation, sendAdminNewOrder } from "../lib/emails";
 import { ensureTrackingCode } from "../lib/trackingCode";
+import { releaseReservedSpot } from "../lib/expirationCleanup";
 import { logger } from "../lib/logger";
 
 // We use require("stripe") (not import) to match the pattern in checkout.ts
@@ -96,6 +97,16 @@ export async function stripeWebhookHandler(
         await handlePaymentIntentSucceeded(event.data.object, req);
         break;
       }
+      case "checkout.session.expired": {
+        // Customer abandoned a Stripe Checkout Session before paying.
+        // Free the spot immediately so other shoppers don't have to wait
+        // for the 5-minute periodic sweeper. (The current PaymentIntent
+        // flow doesn't emit this event; this arm is here to support a
+        // future Stripe Checkout Sessions migration without dropping holds
+        // on the floor.)
+        await handleCheckoutSessionExpired(event.data.object, req);
+        break;
+      }
       default:
         req.log.info(
           { eventType: event.type },
@@ -142,6 +153,36 @@ async function handleCheckoutSessionCompleted(
     typeof session.amount_total === "number" ? session.amount_total : null,
     req,
   );
+}
+
+async function handleCheckoutSessionExpired(
+  session: any,
+  req: Request,
+): Promise<void> {
+  const spotId = parseSpotIdFromMetadata(session.metadata);
+  if (spotId === null) {
+    req.log.warn(
+      { sessionId: session.id },
+      "checkout.session.expired missing spotId metadata — skipping",
+    );
+    return;
+  }
+
+  // Idempotent: only resets a spot that's still in "reserved" status. A spot
+  // that was already paid (race with a successful payment_intent.succeeded)
+  // or already swept by the periodic cleaner is left untouched.
+  const released = await releaseReservedSpot(spotId);
+  if (released) {
+    req.log.info(
+      { spotId, sessionId: session.id },
+      "Released spot after checkout.session.expired",
+    );
+  } else {
+    req.log.info(
+      { spotId, sessionId: session.id },
+      "checkout.session.expired for spot that's no longer reserved — no-op",
+    );
+  }
 }
 
 async function handlePaymentIntentSucceeded(
@@ -208,9 +249,12 @@ async function markSpotPaidAndNotify(
     return;
   }
 
+  // Clear expires_at when transitioning to paid — the 30-minute hold no
+  // longer applies, and we don't want the cleanup sweeper to ever look at
+  // this row again.
   await db
     .update(spotsTable)
-    .set({ status: "paid" })
+    .set({ status: "paid", expiresAt: null })
     .where(eq(spotsTable.id, spotId));
 
   // The DB has a partial unique index on stripe_payment_intent_id, so a
