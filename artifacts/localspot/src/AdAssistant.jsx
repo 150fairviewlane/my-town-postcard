@@ -74,8 +74,13 @@ PERSONALITY:
 - Keep conversational responses SHORT (2-4 sentences)
 - Local-focused — reference Clarkesville and local homeowners naturally
 - Friendly and encouraging
+- When presenting multiple options, ALWAYS format them as a simple numbered list like this:
+  1. Option text here
+  2. Option text here
+  3. Option text here
+  Never use bold markdown, never use headers, never use bullet points for options. The numbered format is required so the tap-to-choose buttons work correctly.
 
-IMPORTANT: The FIELDS block must appear at the very end of every response, on its own line, with no text after it.`;
+IMPORTANT: The FIELDS block must appear at the very end of every response, on its own line, with no text after it. The FIELDS block will be automatically stripped before displaying your response to the user, so never reference it in your conversational text.`;
 }
 
 // ─── Extract and apply field updates from AI response ────────────────────────
@@ -96,8 +101,14 @@ function extractFieldUpdates(text) {
 }
 
 // ─── Strip the FIELDS block from display text ─────────────────────────────────
+// Uses [^}]* (not +) so it matches empty objects like FIELDS:{} as well as
+// FIELDS:{...content...}. Strips trailing block (with or without leading
+// newline) and any inline occurrence anywhere in the text.
 function stripFields(text) {
-  return text.replace(/\nFIELDS:\s*{[^}]+}\s*$/, "").replace(/FIELDS:\s*{[^}]+}\s*$/, "").trim();
+  return text
+    .replace(/\n?FIELDS:\s*{[^}]*}\s*$/m, "")
+    .replace(/FIELDS:\s*{[^}]*}/g, "")
+    .trim();
 }
 
 // ─── Parse numbered options from AI response ─────────────────────────────────
