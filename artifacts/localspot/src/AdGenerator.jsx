@@ -647,7 +647,13 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
   // Email is required so we can send the receipt and reservation
   // confirmation. Use a basic shape check to avoid obviously bad addresses.
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim());
-  const formValid = formData.businessName.trim() && formData.industry && emailValid;
+  // The preview should populate live as soon as the user has a business
+  // name and an industry — that's what the empty-state copy promises and
+  // it lets them see their ad come together while they keep filling out
+  // the rest of the form. `formValid` (which additionally requires a
+  // valid email) only gates the "Approve & Reserve Spot" button.
+  const previewReady = formData.businessName.trim() && formData.industry;
+  const formValid = previewReady && emailValid;
 
   // Lock background scroll while the modal is open so swipes inside the ad
   // generator never bubble up to scroll the landing page underneath.
@@ -926,7 +932,7 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
               Live Preview · {sizeInfo.label} · {sizeInfo.ratio}
             </div>
 
-            {formValid ? (
+            {previewReady ? (
               <>
                 <style>{EDITABLE_CSS}</style>
 
@@ -963,14 +969,22 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
                 </div>
 
                 <button
-                  onClick={() => onComplete?.({ sizeKey, price: sizeInfo.price, template: selectedTemplate, ...formData })}
+                  onClick={() => formValid && onComplete?.({ sizeKey, price: sizeInfo.price, template: selectedTemplate, ...formData })}
+                  disabled={!formValid}
                   style={{
-                    marginTop: 20, padding: "14px 32px", background: "#991b1b",
+                    marginTop: 20, padding: "14px 32px",
+                    background: formValid ? "#991b1b" : "#6b7280",
                     color: "#fff", border: "none", borderRadius: 10, fontSize: 15,
-                    fontWeight: 800, cursor: "pointer", letterSpacing: 0.5,
+                    fontWeight: 800, cursor: formValid ? "pointer" : "not-allowed",
+                    letterSpacing: 0.5, opacity: formValid ? 1 : 0.7,
                   }}>
                   Approve &amp; Reserve Spot — ${sizeInfo.price}
                 </button>
+                {!formValid && (
+                  <div style={{ color: "rgba(255,255,255,0.65)", fontSize: 11, marginTop: 8, textAlign: "center", fontFamily: "sans-serif" }}>
+                    Add a valid email to reserve your spot.
+                  </div>
+                )}
               </>
             ) : (
               <div style={{
