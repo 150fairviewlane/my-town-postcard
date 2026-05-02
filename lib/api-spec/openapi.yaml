@@ -257,6 +257,147 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /admin/campaigns:
+    get:
+      operationId: listAdminCampaigns
+      tags: [admin]
+      summary: List all campaigns with revenue summaries
+      responses:
+        "200":
+          description: Campaign list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminCampaignsListResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createCampaign
+      tags: [admin]
+      summary: Create a new campaign and auto-generate its spot layout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCampaignBody"
+      responses:
+        "200":
+          description: Campaign created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminCampaignDetailResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/campaigns/{id}:
+    get:
+      operationId: getAdminCampaignById
+      tags: [admin]
+      summary: Get a specific campaign with all spots
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Campaign with spots and stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminCampaignDetailResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/campaigns/{id}/activate:
+    post:
+      operationId: activateCampaign
+      tags: [admin]
+      summary: Mark a campaign active (demotes any other active campaign to completed)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Campaign activated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminCampaignDetailResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/campaigns/{id}/complete:
+    post:
+      operationId: completeCampaign
+      tags: [admin]
+      summary: Mark a campaign completed and lock its spots
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Campaign completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminCampaignDetailResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /admin/spots/{id}/approve:
     post:
       operationId: approveAd
@@ -317,7 +458,7 @@ components:
           type: integer
         status:
           type: string
-          enum: [active, closed, mailed]
+          enum: [draft, active, completed]
         createdAt:
           type: string
       required:
@@ -555,3 +696,64 @@ components:
         - totalRevenue
         - totalSpots
         - paidSpots
+
+    CreateCampaignBody:
+      type: object
+      properties:
+        name:
+          type: string
+        territory:
+          type: string
+        zipCode:
+          type: string
+        homesCount:
+          type: integer
+        mailDate:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [draft, active, completed]
+      required:
+        - name
+        - territory
+        - zipCode
+        - homesCount
+
+    CampaignSummary:
+      allOf:
+        - $ref: "#/components/schemas/Campaign"
+        - type: object
+          properties:
+            totalSpots:
+              type: integer
+            paidSpots:
+              type: integer
+            availableSpots:
+              type: integer
+            totalRevenue:
+              type: integer
+          required:
+            - totalSpots
+            - paidSpots
+            - availableSpots
+            - totalRevenue
+
+    AdminCampaignsListResponse:
+      type: object
+      properties:
+        campaigns:
+          type: array
+          items:
+            $ref: "#/components/schemas/CampaignSummary"
+      required:
+        - campaigns
+
+    AdminCampaignDetailResponse:
+      allOf:
+        - $ref: "#/components/schemas/AdminCampaignResponse"
+        - type: object
+          properties:
+            availableSpots:
+              type: integer
+          required:
+            - availableSpots

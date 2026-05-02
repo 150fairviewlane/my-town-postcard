@@ -25,7 +25,7 @@ export const GetActiveCampaignResponse = zod
     zipCode: zod.string(),
     mailDate: zod.string().nullish(),
     homesCount: zod.number(),
-    status: zod.enum(["active", "closed", "mailed"]),
+    status: zod.enum(["draft", "active", "completed"]),
     createdAt: zod.string(),
   })
   .and(
@@ -206,7 +206,7 @@ export const GetAdminCampaignResponse = zod.object({
     zipCode: zod.string(),
     mailDate: zod.string().nullish(),
     homesCount: zod.number(),
-    status: zod.enum(["active", "closed", "mailed"]),
+    status: zod.enum(["draft", "active", "completed"]),
     createdAt: zod.string(),
   }),
   spots: zod.array(
@@ -260,6 +260,274 @@ export const GetAdminScansResponse = zod.object({
     }),
   ),
 });
+
+/**
+ * @summary List all campaigns with revenue summaries
+ */
+export const ListAdminCampaignsResponse = zod.object({
+  campaigns: zod.array(
+    zod
+      .object({
+        id: zod.number(),
+        name: zod.string(),
+        territory: zod.string(),
+        zipCode: zod.string(),
+        mailDate: zod.string().nullish(),
+        homesCount: zod.number(),
+        status: zod.enum(["draft", "active", "completed"]),
+        createdAt: zod.string(),
+      })
+      .and(
+        zod.object({
+          totalSpots: zod.number(),
+          paidSpots: zod.number(),
+          availableSpots: zod.number(),
+          totalRevenue: zod.number(),
+        }),
+      ),
+  ),
+});
+
+/**
+ * @summary Create a new campaign and auto-generate its spot layout
+ */
+export const CreateCampaignBody = zod.object({
+  name: zod.string(),
+  territory: zod.string(),
+  zipCode: zod.string(),
+  homesCount: zod.number(),
+  mailDate: zod.string().nullish(),
+  status: zod.enum(["draft", "active", "completed"]).optional(),
+});
+
+export const CreateCampaignResponse = zod
+  .object({
+    campaign: zod.object({
+      id: zod.number(),
+      name: zod.string(),
+      territory: zod.string(),
+      zipCode: zod.string(),
+      mailDate: zod.string().nullish(),
+      homesCount: zod.number(),
+      status: zod.enum(["draft", "active", "completed"]),
+      createdAt: zod.string(),
+    }),
+    spots: zod.array(
+      zod
+        .object({
+          id: zod.number(),
+          campaignId: zod.number(),
+          side: zod.enum(["front", "back"]),
+          size: zod.enum(["xl", "large", "medium", "small"]),
+          gridArea: zod.string(),
+          price: zod.number(),
+          categoryLock: zod.string().nullish(),
+          status: zod.enum(["available", "reserved", "paid"]),
+          businessName: zod.string().nullish(),
+          businessCategory: zod.string().nullish(),
+          contactEmail: zod.string().nullish(),
+          contactPhone: zod.string().nullish(),
+          website: zod.string().nullish(),
+          adFileUrl: zod.string().nullish(),
+          adStatus: zod.string().nullish(),
+          trackingCode: zod.string().nullish(),
+          scanCount: zod.number().optional(),
+          expiresAt: zod.string().nullish(),
+          createdAt: zod.string(),
+        })
+        .and(
+          zod.object({
+            isPaid: zod.boolean(),
+            stripePaymentIntentId: zod.string().nullish(),
+          }),
+        ),
+    ),
+    totalRevenue: zod.number(),
+    totalSpots: zod.number(),
+    paidSpots: zod.number(),
+  })
+  .and(
+    zod.object({
+      availableSpots: zod.number(),
+    }),
+  );
+
+/**
+ * @summary Get a specific campaign with all spots
+ */
+export const GetAdminCampaignByIdParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetAdminCampaignByIdResponse = zod
+  .object({
+    campaign: zod.object({
+      id: zod.number(),
+      name: zod.string(),
+      territory: zod.string(),
+      zipCode: zod.string(),
+      mailDate: zod.string().nullish(),
+      homesCount: zod.number(),
+      status: zod.enum(["draft", "active", "completed"]),
+      createdAt: zod.string(),
+    }),
+    spots: zod.array(
+      zod
+        .object({
+          id: zod.number(),
+          campaignId: zod.number(),
+          side: zod.enum(["front", "back"]),
+          size: zod.enum(["xl", "large", "medium", "small"]),
+          gridArea: zod.string(),
+          price: zod.number(),
+          categoryLock: zod.string().nullish(),
+          status: zod.enum(["available", "reserved", "paid"]),
+          businessName: zod.string().nullish(),
+          businessCategory: zod.string().nullish(),
+          contactEmail: zod.string().nullish(),
+          contactPhone: zod.string().nullish(),
+          website: zod.string().nullish(),
+          adFileUrl: zod.string().nullish(),
+          adStatus: zod.string().nullish(),
+          trackingCode: zod.string().nullish(),
+          scanCount: zod.number().optional(),
+          expiresAt: zod.string().nullish(),
+          createdAt: zod.string(),
+        })
+        .and(
+          zod.object({
+            isPaid: zod.boolean(),
+            stripePaymentIntentId: zod.string().nullish(),
+          }),
+        ),
+    ),
+    totalRevenue: zod.number(),
+    totalSpots: zod.number(),
+    paidSpots: zod.number(),
+  })
+  .and(
+    zod.object({
+      availableSpots: zod.number(),
+    }),
+  );
+
+/**
+ * @summary Mark a campaign active (demotes any other active campaign to completed)
+ */
+export const ActivateCampaignParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ActivateCampaignResponse = zod
+  .object({
+    campaign: zod.object({
+      id: zod.number(),
+      name: zod.string(),
+      territory: zod.string(),
+      zipCode: zod.string(),
+      mailDate: zod.string().nullish(),
+      homesCount: zod.number(),
+      status: zod.enum(["draft", "active", "completed"]),
+      createdAt: zod.string(),
+    }),
+    spots: zod.array(
+      zod
+        .object({
+          id: zod.number(),
+          campaignId: zod.number(),
+          side: zod.enum(["front", "back"]),
+          size: zod.enum(["xl", "large", "medium", "small"]),
+          gridArea: zod.string(),
+          price: zod.number(),
+          categoryLock: zod.string().nullish(),
+          status: zod.enum(["available", "reserved", "paid"]),
+          businessName: zod.string().nullish(),
+          businessCategory: zod.string().nullish(),
+          contactEmail: zod.string().nullish(),
+          contactPhone: zod.string().nullish(),
+          website: zod.string().nullish(),
+          adFileUrl: zod.string().nullish(),
+          adStatus: zod.string().nullish(),
+          trackingCode: zod.string().nullish(),
+          scanCount: zod.number().optional(),
+          expiresAt: zod.string().nullish(),
+          createdAt: zod.string(),
+        })
+        .and(
+          zod.object({
+            isPaid: zod.boolean(),
+            stripePaymentIntentId: zod.string().nullish(),
+          }),
+        ),
+    ),
+    totalRevenue: zod.number(),
+    totalSpots: zod.number(),
+    paidSpots: zod.number(),
+  })
+  .and(
+    zod.object({
+      availableSpots: zod.number(),
+    }),
+  );
+
+/**
+ * @summary Mark a campaign completed and lock its spots
+ */
+export const CompleteCampaignParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const CompleteCampaignResponse = zod
+  .object({
+    campaign: zod.object({
+      id: zod.number(),
+      name: zod.string(),
+      territory: zod.string(),
+      zipCode: zod.string(),
+      mailDate: zod.string().nullish(),
+      homesCount: zod.number(),
+      status: zod.enum(["draft", "active", "completed"]),
+      createdAt: zod.string(),
+    }),
+    spots: zod.array(
+      zod
+        .object({
+          id: zod.number(),
+          campaignId: zod.number(),
+          side: zod.enum(["front", "back"]),
+          size: zod.enum(["xl", "large", "medium", "small"]),
+          gridArea: zod.string(),
+          price: zod.number(),
+          categoryLock: zod.string().nullish(),
+          status: zod.enum(["available", "reserved", "paid"]),
+          businessName: zod.string().nullish(),
+          businessCategory: zod.string().nullish(),
+          contactEmail: zod.string().nullish(),
+          contactPhone: zod.string().nullish(),
+          website: zod.string().nullish(),
+          adFileUrl: zod.string().nullish(),
+          adStatus: zod.string().nullish(),
+          trackingCode: zod.string().nullish(),
+          scanCount: zod.number().optional(),
+          expiresAt: zod.string().nullish(),
+          createdAt: zod.string(),
+        })
+        .and(
+          zod.object({
+            isPaid: zod.boolean(),
+            stripePaymentIntentId: zod.string().nullish(),
+          }),
+        ),
+    ),
+    totalRevenue: zod.number(),
+    totalSpots: zod.number(),
+    paidSpots: zod.number(),
+  })
+  .and(
+    zod.object({
+      availableSpots: zod.number(),
+    }),
+  );
 
 /**
  * @summary Approve an ad

@@ -61,6 +61,53 @@ export async function sendReservationConfirmation(order: OrderInfo): Promise<voi
   }
 }
 
+interface CampaignCompletedInfo {
+  campaignId: number;
+  name: string;
+  territory: string;
+  totalSpots: number;
+  paidSpots: number;
+  totalRevenueCents: number;
+  homesCount: number;
+}
+
+export async function sendCampaignCompletedAdminEmail(
+  info: CampaignCompletedInfo,
+): Promise<void> {
+  const resend = getResendClient();
+  if (!resend) return;
+
+  const dollars = (info.totalRevenueCents / 100).toFixed(2);
+  const sellThru = info.totalSpots
+    ? Math.round((info.paidSpots / info.totalSpots) * 100)
+    : 0;
+
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: ADMIN_EMAIL,
+      subject: `Campaign completed: ${info.name} — $${dollars} (${info.paidSpots}/${info.totalSpots} spots sold)`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
+          <h2>Campaign Completed</h2>
+          <p>The <strong>${info.name}</strong> campaign in ${info.territory} has been marked complete. New purchases are locked.</p>
+          <table style="border-collapse: collapse; width: 100%; margin-top: 12px;">
+            <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Campaign #</strong></td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${info.campaignId}</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Territory</strong></td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${info.territory}</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Homes Mailed</strong></td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${info.homesCount.toLocaleString()}</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Spots Sold</strong></td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${info.paidSpots} / ${info.totalSpots} (${sellThru}% sell-through)</td></tr>
+            <tr><td style="padding: 8px;"><strong>Total Revenue</strong></td><td style="padding: 8px;">$${dollars}</td></tr>
+          </table>
+          <p style="margin-top: 16px;"><a href="${APP_URL}/admin">Open Admin Dashboard →</a></p>
+        </div>
+      `,
+    });
+    logger.info({ campaignId: info.campaignId }, "Campaign completed admin email sent");
+  } catch (err) {
+    logger.error({ err, campaignId: info.campaignId }, "Failed to send campaign completed email");
+  }
+}
+
 export async function sendAdminNewOrder(order: OrderInfo): Promise<void> {
   const resend = getResendClient();
   if (!resend) return;

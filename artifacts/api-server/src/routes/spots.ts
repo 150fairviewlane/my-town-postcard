@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
-import { db, spotsTable } from "@workspace/db";
+import { db, spotsTable, campaignsTable } from "@workspace/db";
 import {
   GetSpotParams,
   GetSpotResponse,
@@ -81,6 +81,20 @@ router.post("/spots/:id/reserve", async (req, res): Promise<void> => {
 
   if (spot.status !== "available") {
     res.status(400).json({ error: "This spot is no longer available" });
+    return;
+  }
+
+  // Defense in depth: refuse to reserve any spot whose campaign has been
+  // marked completed. The picker only renders the active campaign so this
+  // shouldn't happen via the UI, but we keep the API honest if a stale
+  // tab calls /reserve directly after the campaign was closed.
+  const [parentCampaign] = await db
+    .select()
+    .from(campaignsTable)
+    .where(eq(campaignsTable.id, spot.campaignId));
+
+  if (!parentCampaign || parentCampaign.status !== "active") {
+    res.status(400).json({ error: "This campaign is no longer accepting new spots." });
     return;
   }
 

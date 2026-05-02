@@ -9,7 +9,7 @@ export const campaignsTable = pgTable("campaigns", {
   zipCode: text("zip_code").notNull(),
   mailDate: text("mail_date"),
   homesCount: integer("homes_count").notNull().default(5000),
-  status: text("status", { enum: ["active", "closed", "mailed"] }).notNull().default("active"),
+  status: text("status", { enum: ["draft", "active", "completed"] }).notNull().default("draft"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

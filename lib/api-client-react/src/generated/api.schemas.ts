@@ -17,9 +17,9 @@ export type CampaignStatus =
   (typeof CampaignStatus)[keyof typeof CampaignStatus];
 
 export const CampaignStatus = {
+  draft: "draft",
   active: "active",
-  closed: "closed",
-  mailed: "mailed",
+  completed: "completed",
 } as const;
 
 export interface Campaign {
@@ -179,3 +179,37 @@ export interface AdminCampaignResponse {
   totalSpots: number;
   paidSpots: number;
 }
+
+export type CreateCampaignBodyStatus =
+  (typeof CreateCampaignBodyStatus)[keyof typeof CreateCampaignBodyStatus];
+
+export const CreateCampaignBodyStatus = {
+  draft: "draft",
+  active: "active",
+  completed: "completed",
+} as const;
+
+export interface CreateCampaignBody {
+  name: string;
+  territory: string;
+  zipCode: string;
+  homesCount: number;
+  /** @nullable */
+  mailDate?: string | null;
+  status?: CreateCampaignBodyStatus;
+}
+
+export type CampaignSummary = Campaign & {
+  totalSpots: number;
+  paidSpots: number;
+  availableSpots: number;
+  totalRevenue: number;
+};
+
+export interface AdminCampaignsListResponse {
+  campaigns: CampaignSummary[];
+}
+
+export type AdminCampaignDetailResponse = AdminCampaignResponse & {
+  availableSpots: number;
+};

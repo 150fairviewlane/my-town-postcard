@@ -29,6 +29,27 @@ pnpm workspace monorepo using TypeScript.
 | `artifacts/localspot` | `/` | React+Vite frontend (PostcardSpotPicker, checkout, upload, admin) |
 | `artifacts/api-server` | `/api` | Express backend (campaigns, spots, checkout, admin routes) |
 
+## Campaign management
+
+- Campaigns have status `draft | active | completed` (default `draft`).
+  Migrated from the legacy `[active, closed, mailed]` enum on 2026-05-02.
+- Only one campaign can be `active` at a time. The public picker calls
+  `GET /api/campaigns/active` and renders the first row it gets back.
+- Admin endpoints (all require `Authorization: Bearer <admin token>`):
+  - `GET /api/admin/campaigns` — list with revenue rollups (single GROUP BY).
+  - `POST /api/admin/campaigns` — create campaign + auto-generate the standard
+    16-spot postcard layout in a single transaction (9 sellable front cells:
+    `mb dn re hv ins lw a2 pz a1`; 7 sellable back cells: `bxl bl1 bl2 bm1 bm2
+    bs1 bs2`). House-ad cells (`hs bhs bhr bhn`) and the EDDM block (`ed`) are
+    rendered statically by the frontend and intentionally have no DB row.
+  - `GET /api/admin/campaigns/:id` — single campaign + spots + revenue summary.
+  - `POST /api/admin/campaigns/:id/activate` — transactional: demotes any other
+    active campaign to `completed`, then promotes the target.
+  - `POST /api/admin/campaigns/:id/complete` — sets `completed`, fires the
+    admin notification email with revenue and sell-through.
+- `POST /api/spots/:id/reserve` rejects when the parent campaign is not
+  `active` (defense in depth — the picker already only shows active campaigns).
+
 ## Key Commands
 
 - `pnpm run typecheck` — full typecheck across all packages

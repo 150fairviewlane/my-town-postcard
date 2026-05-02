@@ -17,13 +17,16 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AdminCampaignDetailResponse,
   AdminCampaignResponse,
+  AdminCampaignsListResponse,
   AdminLoginBody,
   AdminLoginResponse,
   AdminScansResponse,
   CampaignWithSpots,
   ConfirmPaymentBody,
   ConfirmPaymentResponse,
+  CreateCampaignBody,
   CreatePaymentIntentBody,
   ErrorResponse,
   HealthStatus,
@@ -850,6 +853,426 @@ export function useGetAdminScans<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary List all campaigns with revenue summaries
+ */
+export const getListAdminCampaignsUrl = () => {
+  return `/api/admin/campaigns`;
+};
+
+export const listAdminCampaigns = async (
+  options?: RequestInit,
+): Promise<AdminCampaignsListResponse> => {
+  return customFetch<AdminCampaignsListResponse>(getListAdminCampaignsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListAdminCampaignsQueryKey = () => {
+  return [`/api/admin/campaigns`] as const;
+};
+
+export const getListAdminCampaignsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listAdminCampaigns>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listAdminCampaigns>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListAdminCampaignsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listAdminCampaigns>>
+  > = ({ signal }) => listAdminCampaigns({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listAdminCampaigns>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListAdminCampaignsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listAdminCampaigns>>
+>;
+export type ListAdminCampaignsQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary List all campaigns with revenue summaries
+ */
+
+export function useListAdminCampaigns<
+  TData = Awaited<ReturnType<typeof listAdminCampaigns>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listAdminCampaigns>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListAdminCampaignsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a new campaign and auto-generate its spot layout
+ */
+export const getCreateCampaignUrl = () => {
+  return `/api/admin/campaigns`;
+};
+
+export const createCampaign = async (
+  createCampaignBody: CreateCampaignBody,
+  options?: RequestInit,
+): Promise<AdminCampaignDetailResponse> => {
+  return customFetch<AdminCampaignDetailResponse>(getCreateCampaignUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createCampaignBody),
+  });
+};
+
+export const getCreateCampaignMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCampaign>>,
+    TError,
+    { data: BodyType<CreateCampaignBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createCampaign>>,
+  TError,
+  { data: BodyType<CreateCampaignBody> },
+  TContext
+> => {
+  const mutationKey = ["createCampaign"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createCampaign>>,
+    { data: BodyType<CreateCampaignBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createCampaign(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateCampaignMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createCampaign>>
+>;
+export type CreateCampaignMutationBody = BodyType<CreateCampaignBody>;
+export type CreateCampaignMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Create a new campaign and auto-generate its spot layout
+ */
+export const useCreateCampaign = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCampaign>>,
+    TError,
+    { data: BodyType<CreateCampaignBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createCampaign>>,
+  TError,
+  { data: BodyType<CreateCampaignBody> },
+  TContext
+> => {
+  return useMutation(getCreateCampaignMutationOptions(options));
+};
+
+/**
+ * @summary Get a specific campaign with all spots
+ */
+export const getGetAdminCampaignByIdUrl = (id: number) => {
+  return `/api/admin/campaigns/${id}`;
+};
+
+export const getAdminCampaignById = async (
+  id: number,
+  options?: RequestInit,
+): Promise<AdminCampaignDetailResponse> => {
+  return customFetch<AdminCampaignDetailResponse>(
+    getGetAdminCampaignByIdUrl(id),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetAdminCampaignByIdQueryKey = (id: number) => {
+  return [`/api/admin/campaigns/${id}`] as const;
+};
+
+export const getGetAdminCampaignByIdQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAdminCampaignById>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAdminCampaignById>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAdminCampaignByIdQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAdminCampaignById>>
+  > = ({ signal }) => getAdminCampaignById(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminCampaignById>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAdminCampaignByIdQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAdminCampaignById>>
+>;
+export type GetAdminCampaignByIdQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get a specific campaign with all spots
+ */
+
+export function useGetAdminCampaignById<
+  TData = Awaited<ReturnType<typeof getAdminCampaignById>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAdminCampaignById>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAdminCampaignByIdQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Mark a campaign active (demotes any other active campaign to completed)
+ */
+export const getActivateCampaignUrl = (id: number) => {
+  return `/api/admin/campaigns/${id}/activate`;
+};
+
+export const activateCampaign = async (
+  id: number,
+  options?: RequestInit,
+): Promise<AdminCampaignDetailResponse> => {
+  return customFetch<AdminCampaignDetailResponse>(getActivateCampaignUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getActivateCampaignMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof activateCampaign>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof activateCampaign>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["activateCampaign"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof activateCampaign>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return activateCampaign(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ActivateCampaignMutationResult = NonNullable<
+  Awaited<ReturnType<typeof activateCampaign>>
+>;
+
+export type ActivateCampaignMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Mark a campaign active (demotes any other active campaign to completed)
+ */
+export const useActivateCampaign = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof activateCampaign>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof activateCampaign>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getActivateCampaignMutationOptions(options));
+};
+
+/**
+ * @summary Mark a campaign completed and lock its spots
+ */
+export const getCompleteCampaignUrl = (id: number) => {
+  return `/api/admin/campaigns/${id}/complete`;
+};
+
+export const completeCampaign = async (
+  id: number,
+  options?: RequestInit,
+): Promise<AdminCampaignDetailResponse> => {
+  return customFetch<AdminCampaignDetailResponse>(getCompleteCampaignUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getCompleteCampaignMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof completeCampaign>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof completeCampaign>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["completeCampaign"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof completeCampaign>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return completeCampaign(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CompleteCampaignMutationResult = NonNullable<
+  Awaited<ReturnType<typeof completeCampaign>>
+>;
+
+export type CompleteCampaignMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Mark a campaign completed and lock its spots
+ */
+export const useCompleteCampaign = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof completeCampaign>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof completeCampaign>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getCompleteCampaignMutationOptions(options));
+};
 
 /**
  * @summary Approve an ad

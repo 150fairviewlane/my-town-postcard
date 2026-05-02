@@ -1,5 +1,9 @@
 import { useParams } from "wouter";
-import { useGetActiveCampaign } from "@workspace/api-client-react";
+import {
+  useGetActiveCampaign,
+  useGetAdminCampaignById,
+  getGetAdminCampaignByIdQueryKey,
+} from "@workspace/api-client-react";
 import { GRID_AREAS, PaidAd } from "../postcardCore";
 import {
   BACK_GRID_AREAS,
@@ -206,8 +210,46 @@ function PostcardFace({ side, spots, gridAreas, gridOrder, fixedAreas, renderFix
 export default function AdminPrintPage() {
   const params = useParams();
   const campaignIdFromUrl = params.id;
+  const numericId = campaignIdFromUrl ? Number(campaignIdFromUrl) : NaN;
+  const hasValidId = Number.isFinite(numericId) && numericId > 0;
 
-  const { data: campaign, isLoading, error } = useGetActiveCampaign();
+  // When the URL carries a campaign id (e.g. /admin/campaign/2/print) load
+  // that specific campaign through the admin endpoint so any campaign — not
+  // just the live "active" one — can be print-previewed. Falls back to the
+  // public active-campaign endpoint when no id is present so the legacy
+  // /admin/print URL keeps working.
+  const adminToken =
+    typeof window !== "undefined" ? localStorage.getItem("admin_token") : null;
+  const adminAuth = adminToken
+    ? {
+        meta: { headers: { Authorization: `Bearer ${adminToken}` } },
+        request: { headers: { Authorization: `Bearer ${adminToken}` } },
+      }
+    : {};
+
+  const adminQuery = useGetAdminCampaignById(hasValidId ? numericId : 0, {
+    query: {
+      enabled: hasValidId && !!adminToken,
+      queryKey: hasValidId ? getGetAdminCampaignByIdQueryKey(numericId) : [],
+      ...adminAuth,
+    },
+    ...adminAuth,
+  });
+  const activeQuery = useGetActiveCampaign({
+    query: { enabled: !hasValidId },
+  });
+
+  const isLoading = hasValidId ? adminQuery.isLoading : activeQuery.isLoading;
+  const error = hasValidId ? adminQuery.error : activeQuery.error;
+  // Both endpoints return slightly different shapes:
+  //   - public /campaigns/active → CampaignWithSpots (campaign + spots merged)
+  //   - admin  /admin/campaigns/:id → { campaign, spots, … }
+  // Normalize to a single shape for the renderer below.
+  const campaign = hasValidId
+    ? adminQuery.data
+      ? { ...adminQuery.data.campaign, spots: adminQuery.data.spots }
+      : null
+    : activeQuery.data;
 
   if (isLoading) {
     return (
