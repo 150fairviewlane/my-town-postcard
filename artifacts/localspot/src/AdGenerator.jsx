@@ -84,7 +84,6 @@ function EditableText({ value, onChange, style = {}, multiline = false, placehol
   );
 }
 
-// Global CSS for hover hints
 const EDITABLE_CSS = `.editable-text:hover { outline: 1.5px dashed rgba(255,255,255,0.5) !important; border-radius: 2px; } .editable-text:hover .edit-hint { opacity: 1 !important; } .editable-text { cursor: text !important; }`;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -92,15 +91,15 @@ const EDITABLE_CSS = `.editable-text:hover { outline: 1.5px dashed rgba(255,255,
 // ─────────────────────────────────────────────────────────────────────────────
 
 const AD_SIZES = {
-  XL: { label: "Extra Large", price: 450, ratio: "4:5",   width: 4, height: 5,   desc: "Hero spot · maximum impact" },
-  L:  { label: "Large",       price: 350, ratio: "4:3",   width: 4, height: 3,   desc: "Premium placement" },
-  M:  { label: "Medium",      price: 250, ratio: "3:2",   width: 3, height: 2,   desc: "Great visibility" },
-  S:  { label: "Small",       price: 199, ratio: "3:1.5", width: 3, height: 1.5, desc: "Affordable local reach" },
+  XL: { label: "Extra Large", price: 450, ratio: "4:5", width: 4, height: 5,   desc: "Hero spot · maximum impact" },
+  L:  { label: "Large",       price: 350, ratio: "4:3", width: 4, height: 3,   desc: "Premium placement" },
+  M:  { label: "Medium",      price: 250, ratio: "3:2", width: 3, height: 2,   desc: "Great visibility" },
+  S:  { label: "Small",       price: 199, ratio: "2:2", width: 2, height: 2,   desc: "Affordable local reach" },
 };
 
 const TEMPLATE_STYLES = ["photo-bold", "split-clean", "magazine", "stamp"];
 
-// ─── Helper: Logo Badge with fallback ────────────────────────────────────────
+// ─── Helper: Logo Badge ───────────────────────────────────────────────────────
 function LogoBadge({ logo, name, emoji, size = 40, bg = "rgba(255,255,255,0.15)", color = "#fff", border }) {
   return (
     <div style={{
@@ -118,7 +117,7 @@ function LogoBadge({ logo, name, emoji, size = 40, bg = "rgba(255,255,255,0.15)"
   );
 }
 
-// ─── Helper: Coupon with perforated border + scissors + inline editing ────────
+// ─── Helper: Coupon ───────────────────────────────────────────────────────────
 function Coupon({ offer, fine, accent, scale = 1, dark = false, onEditOffer, onEditFine }) {
   if (!offer) return null;
   return (
@@ -150,14 +149,12 @@ function Coupon({ offer, fine, accent, scale = 1, dark = false, onEditOffer, onE
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TEMPLATE 1: PHOTO-BOLD
-// Full-bleed photo background with overlay text
-// Best for: restaurants, salons, photography
 // ─────────────────────────────────────────────────────────────────────────────
 function PhotoBoldTemplate({ data, sizeKey, onEdit }) {
   const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
   const photo = data.photo || ind.photos[0];
   const isXL = sizeKey === "XL", isL = sizeKey === "L", isM = sizeKey === "M", isS = sizeKey === "S";
-  const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.55;
+  const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.65;
   const edit = (field) => (val) => onEdit(field, val);
 
   return (
@@ -212,14 +209,12 @@ function PhotoBoldTemplate({ data, sizeKey, onEdit }) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TEMPLATE 2: SPLIT-CLEAN
-// 50/50 split: photo on one side, white content on the other
-// Best for: dental, medical, professional services
 // ─────────────────────────────────────────────────────────────────────────────
 function SplitCleanTemplate({ data, sizeKey, onEdit }) {
   const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
   const photo = data.photo || ind.photos[0];
   const isXL = sizeKey === "XL", isL = sizeKey === "L", isM = sizeKey === "M", isS = sizeKey === "S";
-  const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.55;
+  const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.65;
   const isVertical = isXL;
   const edit = (field) => (val) => onEdit(field, val);
   const editMenu = (i) => (val) => onEdit("menuItems", data.menuItems.map((m, j) => j === i ? val : m));
@@ -291,14 +286,12 @@ function SplitCleanTemplate({ data, sizeKey, onEdit }) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TEMPLATE 3: MAGAZINE
-// Editorial style with photo strip + dense content
-// Best for: real estate, insurance, financial, retail
 // ─────────────────────────────────────────────────────────────────────────────
 function MagazineTemplate({ data, sizeKey, onEdit }) {
   const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
   const photos = data.photo ? [data.photo] : ind.photos.slice(0, 3);
   const isXL = sizeKey === "XL", isL = sizeKey === "L", isM = sizeKey === "M", isS = sizeKey === "S";
-  const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.55;
+  const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.65;
   const edit = (field) => (val) => onEdit(field, val);
   const editMenu = (i) => (val) => onEdit("menuItems", data.menuItems.map((m, j) => j === i ? val : m));
 
@@ -328,7 +321,7 @@ function MagazineTemplate({ data, sizeKey, onEdit }) {
         )}
       </div>
 
-      {/* Photo strip — max 2 photos */}
+      {/* Photo strip */}
       {!isS && (
         <div style={{ display: "flex", gap: 1, height: isXL ? "30%" : isL ? "35%" : "40%", flexShrink: 0 }}>
           {photos.slice(0, 2).map((src, i) => (
@@ -386,25 +379,21 @@ function MagazineTemplate({ data, sizeKey, onEdit }) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TEMPLATE 4: STAMP
-// Diagonal split, oversized offer text, retro stamp feel
-// Best for: services (HVAC, plumber, electrician, lawn, auto)
 // ─────────────────────────────────────────────────────────────────────────────
 function StampTemplate({ data, sizeKey, onEdit }) {
   const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
   const photo = data.photo || ind.photos[0];
   const isXL = sizeKey === "XL", isL = sizeKey === "L", isM = sizeKey === "M", isS = sizeKey === "S";
-  const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.55;
+  const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.65;
   const edit = (field) => (val) => onEdit(field, val);
 
   return (
     <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative", background: ind.colors.dark, fontFamily: "sans-serif" }}>
-      {/* Diagonal photo on top half */}
       <div style={{ position: "absolute", inset: 0, clipPath: "polygon(0 0, 100% 0, 100% 55%, 0 75%)", overflow: "hidden" }}>
         <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${ind.colors.dark}50 0%, ${ind.colors.dark}cc 100%)` }} />
       </div>
 
-      {/* Top: feature badge */}
       <div style={{ position: "absolute", top: 8 * fScale, left: 10 * fScale, zIndex: 3 }}>
         <div style={{
           background: ind.colors.accent, color: ind.colors.dark, padding: `${3 * fScale}px ${8 * fScale}px`,
@@ -414,13 +403,11 @@ function StampTemplate({ data, sizeKey, onEdit }) {
         </div>
       </div>
 
-      {/* Logo top-right */}
       <div style={{ position: "absolute", top: 8 * fScale, right: 10 * fScale, zIndex: 3 }}>
         <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji}
           size={36 * fScale} bg="rgba(255,255,255,0.15)" color="#fff" border="2px solid rgba(255,255,255,0.5)" />
       </div>
 
-      {/* Center: business name + huge phone */}
       <div style={{ position: "absolute", top: "32%", left: 0, right: 0, padding: `0 ${12 * fScale}px`, textAlign: "center", zIndex: 3 }}>
         <EditableText value={data.businessName} onChange={edit("businessName")}
           style={{ color: "#fff", fontWeight: 900, fontSize: 13 * fScale, fontFamily: "Georgia, serif", textShadow: "0 2px 8px rgba(0,0,0,0.6)", lineHeight: 1.1, textAlign: "center" }} />
@@ -434,7 +421,6 @@ function StampTemplate({ data, sizeKey, onEdit }) {
         )}
       </div>
 
-      {/* Bottom */}
       <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: `${8 * fScale}px ${10 * fScale}px`, display: "flex", flexDirection: "column", gap: 4 * fScale, zIndex: 3 }}>
         {!isS && !isM && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: `2px ${8 * fScale}px`, justifyContent: "center" }}>
@@ -490,15 +476,16 @@ function suggestTemplate(industry) {
   return "split-clean";
 }
 
-// ─── Render dimensions: proportional to actual print sizes on a 9×12 postcard
-// Real sizes: XL=4×5", L=4×3", M=3×2", S=3×1.5"  ·  1 inch = 60px in preview
+// ─── Render dimensions ────────────────────────────────────────────────────────
+// 1 inch = 55px  →  9×12" postcard = 495×660px
+// XL=4×5"→220×275px  L=4×3"→220×165px  M=3×2"→165×110px  S=2×2"→110×110px
 function getRenderDimensions(sizeKey) {
-  const PX_PER_INCH = 60;
+  const PX_PER_INCH = 55;
   const sizes = {
-    XL: { w: 4, h: 5 },   // portrait  → 240 × 300px
-    L:  { w: 4, h: 3 },   // landscape → 240 × 180px
-    M:  { w: 3, h: 2 },   // landscape → 180 × 120px
-    S:  { w: 3, h: 1.5 }, // landscape → 180 × 90px
+    XL: { w: 4, h: 5 },
+    L:  { w: 4, h: 3 },
+    M:  { w: 3, h: 2 },
+    S:  { w: 2, h: 2 },
   };
   const s = sizes[sizeKey] || sizes.L;
   return { width: s.w * PX_PER_INCH, height: s.h * PX_PER_INCH };
@@ -548,7 +535,7 @@ function ImageUpload({ label, hint, value, onChange }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//   MAIN COMPONENT — Full UI with form, template picker, preview
+//   MAIN COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
 export default function AdGenerator({ initialSize = "L", onComplete, onClose }) {
   const [sizeKey, setSizeKey] = useState(initialSize);
@@ -600,9 +587,7 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
           display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0,
         }}>
           <div>
-            <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>
-              Build Your Ad
-            </div>
+            <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>Build Your Ad</div>
             <div style={{ fontSize: 22, fontWeight: 900, color: "#111", fontFamily: "Georgia, serif" }}>
               {sizeInfo.label} Ad &nbsp;<span style={{ color: "#991b1b" }}>${sizeInfo.price}</span>
             </div>
@@ -613,7 +598,7 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
           }}>×</button>
         </div>
 
-        {/* Body — three columns: form | preview | assistant */}
+        {/* Body — three columns */}
         <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0 }}>
 
           {/* LEFT: form */}
@@ -745,14 +730,14 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
                 <style>{EDITABLE_CSS}</style>
 
                 <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 11, marginBottom: 6, textAlign: "center", fontFamily: "sans-serif" }}>
-                  Actual size on a 9″ × 12″ postcard · <span style={{ color: "#fbbf24", fontWeight: 700 }}>1″ = 60px</span>
+                  Actual size on a 9″ × 12″ postcard · <span style={{ color: "#fbbf24", fontWeight: 700 }}>1″ = 55px</span>
                 </div>
 
-                {/* Postcard context frame — shows ad at true proportional scale */}
+                {/* Postcard context frame — 9×12" at 55px/inch = 495×660px */}
                 <div style={{
                   position: "relative",
-                  width: 9 * 60,   // 540px = 9 inches
-                  height: 12 * 60, // 720px = 12 inches
+                  width: 9 * 55,
+                  height: 12 * 55,
                   background: "rgba(255,255,255,0.06)",
                   border: "1px dashed rgba(255,255,255,0.2)",
                   borderRadius: 4,
@@ -767,7 +752,6 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
                     fontFamily: "sans-serif", letterSpacing: 1, textTransform: "uppercase",
                   }}>9″ × 12″ Postcard</div>
 
-                  {/* The actual ad at true proportional size */}
                   <div style={{
                     width: dims.width, height: dims.height,
                     borderRadius: 4, overflow: "hidden",
@@ -806,7 +790,7 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
               </>
             ) : (
               <div style={{
-                width: 9 * 60, height: 12 * 60, borderRadius: 4,
+                width: 9 * 55, height: 12 * 55, borderRadius: 4,
                 border: "1px dashed rgba(255,255,255,0.2)",
                 background: "rgba(255,255,255,0.04)",
                 display: "flex", alignItems: "center", justifyContent: "center",
