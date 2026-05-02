@@ -63,6 +63,17 @@ export default defineConfig({
     strictPort: true,
     host: "0.0.0.0",
     allowedHosts: true,
+    // Forward /api/* to the api-server in dev. The Replit workspace preview
+    // iframe loads this Vite dev server directly (bypassing the shared
+    // path-based proxy at port 80), so without this Vite returns 404 for any
+    // /api request. In production, the platform-level path proxy handles
+    // /api routing to the api-server, so this is dev-only.
+    proxy: {
+      "/api": {
+        target: "http://localhost:8080",
+        changeOrigin: true,
+      },
+    },
     fs: {
       strict: true,
     },
