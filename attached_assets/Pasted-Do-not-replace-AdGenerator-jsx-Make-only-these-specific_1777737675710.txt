@@ -1,0 +1,27 @@
+Do not replace AdGenerator.jsx. Make only these specific targeted edits to the existing file. Find each exact string and replace it as described.
+
+EDIT 1 - Remove orphaned duplicate code. Find the block that starts with a closing brace and then immediately has “return (” followed by a div with position relative overflow hidden fontFamily Georgia serif — this is a duplicate copy of the old PhotoBoldTemplate return statement that appears AFTER the closing brace of the current PhotoBoldTemplate function (around line 227). It ends with another closing brace and closing paren before the TEMPLATE 2 SPLIT-CLEAN comment. Delete that entire orphaned block. The file should have exactly one return statement inside PhotoBoldTemplate.
+
+EDIT 2 - SplitClean business name. Find: fontSize: 16*fScale, fontFamily: “Georgia, serif”, lineHeight: 1.05 inside SplitCleanTemplate. Replace fontSize value with 20*fScale and lineHeight with 1.0.
+
+EDIT 3 - SplitClean phone. Find the phone EditableText inside SplitCleanTemplate bottom contact section with fontSize: 10*fScale and fontWeight: 800. Change fontSize to 14*fScale and fontWeight to 900.
+
+EDIT 4 - SplitClean address. Find the address EditableText inside SplitCleanTemplate with fontSize: 7*fScale and color #555. Change fontSize to 9*fScale.
+
+EDIT 5 - SplitClean menu items. Find the services list div in SplitCleanTemplate with condition !isS && !isM. Remove the !isM condition so it reads just !isS. Also change the menu item font size from 8.5*fScale to 10*fScale and the bullet circle from 13*fScale to 14*fScale.
+
+EDIT 6 - Magazine business name in header. Find: fontSize: 13 * fScale, fontFamily: “Georgia, serif” inside the header bar of MagazineTemplate. Change 13 to 17.
+
+EDIT 7 - Magazine phone in header. Find fontSize: 10 * fScale, fontWeight: 800 inside the header bar phone div of MagazineTemplate. Change to fontSize: 13*fScale, fontWeight: 900.
+
+EDIT 8 - Magazine tagline. Find fontSize: 14*fScale, fontWeight: 900, fontFamily: “Georgia, serif”, lineHeight: 1.1, marginTop: 2 in MagazineTemplate content section. Change 14*fScale to 16*fScale.
+
+EDIT 9 - Magazine menu items. Find fontSize: 8*fScale, color: “#444”, fontFamily: “sans-serif” in MagazineTemplate menu list. Change to fontSize: 10*fScale, color: “#333”, fontFamily: “sans-serif”, fontWeight: 500. Also find the bullet span with fontSize: 6 in MagazineTemplate and change it to fontSize: 8*fScale.
+
+EDIT 10 - Magazine footer address. Find fontSize: 7*fScale, color: “#666”, fontFamily: “sans-serif”, whiteSpace: “nowrap” in MagazineTemplate footer. Change fontSize to 9*fScale and color to #555.
+
+EDIT 11 - Magazine footer phone. Find fontSize: 8*fScale, color: ind.colors.primary, fontWeight: 800, fontFamily: “sans-serif”, whiteSpace: “nowrap” in MagazineTemplate footer. Change fontSize to 12*fScale and fontWeight to 900.
+
+EDIT 12 - PhotoBold footer contact. Find fontSize: 7.5*fScale in the bottom contact div of PhotoBoldTemplate. Change all instances of 7.5*fScale in that section to 9*fScale.
+
+After all edits verify the file still compiles without errors by checking that every function has exactly one return statement and all JSX is properly closed.
