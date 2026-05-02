@@ -403,30 +403,87 @@ export default function AdAssistant({ formData, onUpdate, sizeKey = "L" }) {
       }
     }
 
-    try {
-      // Use BASE_URL prefix so the request is routed correctly through the
-      // artifact path proxy (matches the LandingPage `/api/leads` pattern).
-      // Root-relative `/api/...` can escape the artifact's path prefix.
-      const response = await fetch(`${import.meta.env.BASE_URL}api/ai/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          system: buildSystemPrompt(formData, sizeKey),
-          messages: history,
-        }),
-      });
+    // Use BASE_URL prefix so the request is routed correctly through the
+    // artifact path proxy (matches the LandingPage `/api/leads` pattern).
+    // Root-relative `/api/...` can escape the artifact's path prefix.
+    const url = `${import.meta.env.BASE_URL}api/ai/chat`;
+    const requestBody = JSON.stringify({
+      system: buildSystemPrompt(formData, sizeKey),
+      messages: history,
+    });
 
-      const data = await response.json().catch(() => ({}));
+    // Transient-failure retry. The api-server occasionally restarts (port
+    // reclaim, hot-reload of route module) and during that ~1–3s window the
+    // platform proxy returns a bare 404/502/503 with NO JSON body, which
+    // previously surfaced as the cryptic "Request failed (404)" to the user.
+    // We retry these statuses + network errors (TypeError from fetch) with
+    // backoff so the user just sees a slightly slower reply instead of a
+    // bogus error. 4xx (other than 404) are real client problems and not
+    // retried; 200s short-circuit immediately.
+    const RETRY_STATUSES = new Set([404, 502, 503, 504]);
+    const RETRY_DELAYS = [800, 2000]; // 2 retries → up to 3 attempts total
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+    let response = null;
+    let data = null;
+    let lastNetworkErr = null;
+
+    try {
+      for (let attempt = 0; attempt < 1 + RETRY_DELAYS.length; attempt++) {
+        if (attempt > 0) await sleep(RETRY_DELAYS[attempt - 1]);
+
+        try {
+          response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: requestBody,
+          });
+          lastNetworkErr = null;
+        } catch (netErr) {
+          // Browser-level fetch failure (DNS, offline, server reset). Treat
+          // as transient and retry.
+          lastNetworkErr = netErr;
+          response = null;
+          continue;
+        }
+
+        data = await response.json().catch(() => ({}));
+
+        // Retry on transient infra statuses, but only when there is no
+        // structured error body (a real error from our route always has one).
+        const noErrorBody = !data || (!data.error && !data.content);
+        if (RETRY_STATUSES.has(response.status) && noErrorBody) {
+          continue;
+        }
+        break;
+      }
+
+      if (lastNetworkErr) {
+        throw new Error(
+          "Couldn't reach the AI service. Please check your connection and try again."
+        );
+      }
+
       // Error shape can be Anthropic's `{error: {type, message}}` or our proxy's
       // `{error: "Failed to reach AI service"}` (plain string), so normalize both.
-      if (!response.ok || data.error) {
-        const errMsg =
-          (data.error && typeof data.error === "object" && data.error.message) ||
-          (typeof data.error === "string" && data.error) ||
-          `Request failed (${response.status})`;
+      if (!response.ok || (data && data.error)) {
+        const structuredMsg =
+          (data?.error && typeof data.error === "object" && data.error.message) ||
+          (typeof data?.error === "string" && data.error) ||
+          null;
+        let errMsg;
+        if (structuredMsg) {
+          errMsg = structuredMsg;
+        } else if (RETRY_STATUSES.has(response.status)) {
+          // No body, transient code that survived all retries — service is
+          // genuinely unavailable.
+          errMsg = "The AI service is temporarily unavailable. Please try again in a moment.";
+        } else {
+          errMsg = `The AI service returned an unexpected response (HTTP ${response.status}). Please try again.`;
+        }
         throw new Error(errMsg);
       }
-      if (!data.content) throw new Error("Empty response from AI service");
+      if (!data || !data.content) throw new Error("Empty response from AI service");
 
       const raw = data.content?.[0]?.text || "Sorry, I didn't get a response. Please try again.";
 
