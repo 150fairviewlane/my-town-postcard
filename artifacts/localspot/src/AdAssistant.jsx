@@ -68,6 +68,11 @@ Rules for the FIELDS block:
 - NEVER put placeholder text, example text, or suggestions into fields — only real values the user confirmed
 - NEVER put your own generated taglines or offers into fields unless the user explicitly said "use that one" or "yes"
 - If you suggest 3 tagline options and the user has not chosen one yet, leave tagline as empty string ""
+- NEVER include commentary, reasoning, or explanatory text inside a field value. Field values are printed VERBATIM on a physical postcard, so they must contain ONLY the literal text the user wants on their ad.
+  - BAD:  "offer":"$10 OFF — high perceived value"
+  - BAD:  "offer":"Family Special $34.99 (higher ticket)"
+  - GOOD: "offer":"$10 OFF"
+  - GOOD: "offer":"Family Special $34.99"
 - The FIELDS block must be valid JSON on one line
 
 PERSONALITY:
@@ -80,8 +85,40 @@ PERSONALITY:
   2. Option text here
   3. Option text here
   Never use bold markdown, never use headers, never use bullet points for options. The numbered format is required so the tap-to-choose buttons work correctly.
+- CRITICAL: Each numbered option must contain ONLY the literal text the user would put on their ad — NO em-dash explanations, NO parenthetical commentary, NO reasoning afterwards. The user taps the option to apply it directly to their ad, so any commentary you append will be printed on the physical postcard.
+  - BAD:  "2. Family Special $34.99 — higher ticket, bigger perceived value"
+  - BAD:  "1. Hand-Tossed Pizza (classic feel-good tagline)"
+  - GOOD: "2. Family Special $34.99"
+  - GOOD: "1. Hand-Tossed. Oven Fresh."
+  If you want to explain why an option works, put that explanation in conversational sentences BEFORE or AFTER the numbered list, never on the same line as the option.
 
 IMPORTANT: The FIELDS block must appear at the very end of every response, on its own line, with no text after it. The FIELDS block will be automatically stripped before displaying your response to the user, so never reference it in your conversational text.`;
+}
+
+// ─── Sanitize AI-originated text before it lands in a form field ────────────
+// AI replies sometimes include rationale appended to the value, which would
+// then get printed verbatim on a physical postcard. Strip the most common
+// commentary patterns. Conservative on purpose so legitimate text stays:
+//   keep:   "$10–$20 off"               (no spaces around dash)
+//   keep:   "Buy-1-Get-1 Free"          (hyphens inside word)
+//   keep:   "Family Special (2 Large)"  (trailing parens, no rationale words)
+//   keep:   "Special (limit 1)"         (trailing parens, no rationale words)
+//   strip:  "$10 OFF — high perceived value"
+//   strip:  "Hand-Tossed -- classic feel-good vibe"
+//   strip:  "Family Special $34.99 (higher ticket, bigger perceived value)"
+const COMMENTARY_KEYWORDS = "higher|value|works|easy|perceived|ticket|best|appeals|appealing|feel|vibe|premium|classic|tested|effective|proven|memorable|stronger|attractive|tagline|approach|reasoning|because|simple|execute|version|option";
+const TRAILING_DASH_RE = /\s+(?:[—–]|--)\s+.*$/;
+const TRAILING_PAREN_COMMENTARY_RE = new RegExp(
+  `\\s+\\([^)]*\\b(?:${COMMENTARY_KEYWORDS})\\b[^)]*\\)\\s*$`,
+  "i",
+);
+
+function sanitizeAdValue(s) {
+  if (typeof s !== "string") return "";
+  return s
+    .replace(TRAILING_DASH_RE, "")
+    .replace(TRAILING_PAREN_COMMENTARY_RE, "")
+    .trim();
 }
 
 // ─── Extract and apply field updates from AI response ────────────────────────
@@ -90,10 +127,10 @@ function extractFieldUpdates(text) {
     const match = text.match(/FIELDS:\s*({[^}]+})/);
     if (!match) return {};
     const raw = JSON.parse(match[1]);
-    // Filter out empty strings
     const updates = {};
     Object.entries(raw).forEach(([k, v]) => {
-      if (v && v.trim()) updates[k] = v.trim();
+      const cleaned = sanitizeAdValue(v);
+      if (cleaned) updates[k] = cleaned;
     });
     return updates;
   } catch {
@@ -123,10 +160,11 @@ function parseSuggestions(text, formData) {
 
   matches.slice(0, 4).forEach(m => {
     const num = parseInt(m[1]);
-    const val = m[2].trim()
-      .replace(/^(tagline:|offer:|option \d+:)\s*/i, "")
-      .replace(/\*+/g, "")
-      .trim();
+    const val = sanitizeAdValue(
+      m[2].trim()
+        .replace(/^(tagline:|offer:|option \d+:)\s*/i, "")
+        .replace(/\*+/g, "")
+    );
 
     if (!val || val.length < 6) return;
 
