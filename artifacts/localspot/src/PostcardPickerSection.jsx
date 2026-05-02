@@ -423,9 +423,15 @@ export default function PostcardPickerSection() {
           </div>
         </div>
 
-        {/* The postcard grid — 12:9 landscape ratio */}
+        {/* The postcard grid — 12:9 landscape ratio.
+            On narrow viewports the grid would shrink below readability, so
+            we wrap it in a horizontal scroll container and force a 600px
+            minimum width on the grid itself. On desktop the grid still
+            expands to 100% of the parent, so layout is unchanged. */}
+        <div style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
         <div style={{
           width: "100%",
+          minWidth: 600,
           aspectRatio: "12 / 9",
           display: "grid",
           gridTemplateColumns: "repeat(12, 1fr)",
@@ -479,6 +485,7 @@ export default function PostcardPickerSection() {
               {renderFixedCell(area)}
             </div>
           ))}
+        </div>
         </div>
 
         {/* EDDM footer strip — visual reminder on the picker, the real

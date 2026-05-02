@@ -3,6 +3,21 @@ import { INDUSTRIES, INDUSTRY_LIST } from "./industryAssets";
 import { AdQRCode, InlineQRCode, hasQR, normalizeWebsite, generateSpotCode } from "./qrUtils";
 import AdAssistant from "./AdAssistant";
 
+// Tracks the live viewport width so the modal can flip between the
+// three-column desktop layout and the tabbed mobile layout below 768px.
+function useWindowWidth() {
+  const [w, setW] = useState(() =>
+    typeof window === "undefined" ? 1280 : window.innerWidth
+  );
+  useEffect(() => {
+    const onResize = () => setW(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  return w;
+}
+const MOBILE_BREAKPOINT = 768;
+
 // ─────────────────────────────────────────────────────────────────────────────
 //   EDITABLE TEXT — click any text in the preview to edit it inline
 // ─────────────────────────────────────────────────────────────────────────────
@@ -583,6 +598,50 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
     setFormData(d => ({ ...d, [field]: value }));
   }, []);
 
+  // ── Responsive layout state ────────────────────────────────────────────────
+  // Below 768px the three-column desktop layout collapses into a tabbed,
+  // full-screen experience. Each panel keeps its own state (form text,
+  // assistant chat history) by toggling `display: none` instead of
+  // unmounting, so switching tabs never clears typed input or chat.
+  const windowWidth = useWindowWidth();
+  const isMobile = windowWidth < MOBILE_BREAKPOINT;
+  const [activeTab, setActiveTab] = useState("build"); // build | preview | assistant
+  const previewPeekTimeoutRef = useRef(null);
+
+  // Mobile-only "preview peek": when the user touches a field on the Build
+  // tab, briefly flip to Preview so they can confirm the change, then return
+  // to Build so they can keep filling out the form. Debounced — while the
+  // user is still typing/tapping, we keep the peek open and only revert
+  // 1.5s after they stop.
+  const pokePreview = useCallback(() => {
+    if (!isMobile) return;
+    setActiveTab((cur) =>
+      cur === "build" || cur === "preview" ? "preview" : cur,
+    );
+    if (previewPeekTimeoutRef.current) clearTimeout(previewPeekTimeoutRef.current);
+    previewPeekTimeoutRef.current = setTimeout(() => {
+      setActiveTab((cur) => (cur === "preview" ? "build" : cur));
+    }, 1500);
+  }, [isMobile]);
+
+  // Cancel any pending peek timeout when the modal unmounts so we don't
+  // call setState after the component is gone.
+  useEffect(() => () => {
+    if (previewPeekTimeoutRef.current) clearTimeout(previewPeekTimeoutRef.current);
+  }, []);
+
+  // Tab-aware setters used by every Build-tab control. On desktop these
+  // are the same as the underlying setters; on mobile they additionally
+  // trigger the preview peek. Manual tab presses cancel any pending peek.
+  const setFormDataB = useCallback((u) => { setFormData(u); pokePreview(); }, [pokePreview]);
+  const setSizeKeyB = useCallback((k) => { setSizeKey(k); pokePreview(); }, [pokePreview]);
+  const setSelectedTemplateB = useCallback((t) => { setSelectedTemplate(t); pokePreview(); }, [pokePreview]);
+  const handleIndustryChangeB = useCallback((e) => { handleIndustryChange(e); pokePreview(); }, [pokePreview]);
+  const selectTab = useCallback((t) => {
+    if (previewPeekTimeoutRef.current) clearTimeout(previewPeekTimeoutRef.current);
+    setActiveTab(t);
+  }, []);
+
   const sizeInfo = AD_SIZES[sizeKey];
   const Tpl = TEMPLATES[selectedTemplate].Component;
   // Email is required so we can send the receipt and reservation
@@ -637,14 +696,21 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
       onTouchMove={(e) => e.stopPropagation()}
       style={{
         position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)",
-        display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16,
+        display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
+        padding: isMobile ? 0 : 16,
         overscrollBehavior: "contain",
       }}
     >
       <div style={{
-        background: "#f8fafc", borderRadius: 18, width: "100%", maxWidth: 1280, maxHeight: "94vh",
+        background: "#f8fafc",
+        borderRadius: isMobile ? 0 : 18,
+        width: "100%",
+        maxWidth: isMobile ? "none" : 1280,
+        height: isMobile ? "100%" : "auto",
+        maxHeight: isMobile ? "100%" : "94vh",
         overflow: "hidden", display: "flex", flexDirection: "column",
-        boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
+        boxShadow: isMobile ? "none" : "0 40px 100px rgba(0,0,0,0.4)",
+        fontFamily: "system-ui, sans-serif",
       }}>
 
         {/* Header */}
@@ -664,18 +730,66 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
           }}>×</button>
         </div>
 
-        {/* Body — three columns */}
-        <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0 }}>
+        {/* Mobile-only tab bar — collapses the three-column desktop layout
+            into Build / Preview / Assistant tabs below 768px. */}
+        {isMobile && (
+          <div style={{
+            display: "flex", borderBottom: "1px solid #e5e7eb",
+            background: "#fff", flexShrink: 0,
+          }}>
+            {[
+              { key: "build", label: "Build" },
+              { key: "preview", label: "Preview" },
+              { key: "assistant", label: "Assistant" },
+            ].map((t) => {
+              const active = activeTab === t.key;
+              return (
+                <button
+                  key={t.key}
+                  onClick={() => selectTab(t.key)}
+                  style={{
+                    flex: 1, padding: "13px 8px", border: "none",
+                    background: active ? "#fef2f2" : "transparent",
+                    color: active ? "#991b1b" : "#6b7280",
+                    fontWeight: active ? 800 : 600, fontSize: 13,
+                    letterSpacing: 0.5, textTransform: "uppercase",
+                    borderBottom: `3px solid ${active ? "#991b1b" : "transparent"}`,
+                    cursor: "pointer",
+                  }}
+                >
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Body — three columns on desktop, tabbed single-column on mobile.
+            Panels use display:none rather than unmounting so form text and
+            assistant chat history survive tab switches. */}
+        <div style={{
+          flex: 1, display: "flex",
+          flexDirection: isMobile ? "column" : "row",
+          overflow: "hidden", minHeight: 0,
+        }}>
 
           {/* LEFT: form */}
-          <div style={{ width: 380, padding: "20px 24px", overflowY: "auto", borderRight: "1px solid #e5e7eb", background: "#fff", flexShrink: 0 }}>
+          <div style={{
+            width: isMobile ? "100%" : 380,
+            flex: isMobile ? 1 : "0 0 auto",
+            display: isMobile && activeTab !== "build" ? "none" : "block",
+            padding: "20px 24px", overflowY: "auto",
+            borderRight: isMobile ? "none" : "1px solid #e5e7eb",
+            background: "#fff", flexShrink: 0,
+            minHeight: 0,
+          }}>
 
             {/* Size selector */}
             <div style={{ marginBottom: 20 }}>
               <div style={{ fontSize: 12, fontWeight: 800, color: "#111", marginBottom: 8, letterSpacing: 1, textTransform: "uppercase" }}>Ad Size</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                 {Object.entries(AD_SIZES).map(([k, s]) => (
-                  <button key={k} onClick={() => setSizeKey(k)}
+                  <button key={k} onClick={() => setSizeKeyB(k)}
                     style={{
                       padding: "8px 10px", borderRadius: 8, border: `2px solid ${sizeKey === k ? "#991b1b" : "#e5e7eb"}`,
                       background: sizeKey === k ? "#fef2f2" : "#fff", cursor: "pointer", textAlign: "left",
@@ -691,13 +805,13 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div>
                 <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>Business Name *</label>
-                <input value={formData.businessName} onChange={e => setFormData(d => ({ ...d, businessName: e.target.value }))}
+                <input value={formData.businessName} onChange={e => setFormDataB(d => ({ ...d, businessName: e.target.value }))}
                   placeholder="e.g. Joe's Pizza" style={inputStyle} />
               </div>
 
               <div>
                 <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>Industry *</label>
-                <select value={formData.industry} onChange={handleIndustryChange} style={inputStyle}>
+                <select value={formData.industry} onChange={handleIndustryChangeB} style={inputStyle}>
                   <option value="">Select your industry...</option>
                   {INDUSTRY_LIST.map(i => <option key={i} value={i}>{i}</option>)}
                 </select>
@@ -705,7 +819,7 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
 
               <div>
                 <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>Tagline / Slogan</label>
-                <input value={formData.tagline} onChange={e => setFormData(d => ({ ...d, tagline: e.target.value }))}
+                <input value={formData.tagline} onChange={e => setFormDataB(d => ({ ...d, tagline: e.target.value }))}
                   placeholder={formData.industry ? INDUSTRIES[formData.industry]?.taglines[0] : "Your catchy slogan"}
                   style={inputStyle} />
               </div>
@@ -713,12 +827,12 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>Special Offer</label>
-                  <input value={formData.offer} onChange={e => setFormData(d => ({ ...d, offer: e.target.value }))}
+                  <input value={formData.offer} onChange={e => setFormDataB(d => ({ ...d, offer: e.target.value }))}
                     placeholder="$10 OFF" style={inputStyle} />
                 </div>
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>Offer Fine Print</label>
-                  <input value={formData.offerFine} onChange={e => setFormData(d => ({ ...d, offerFine: e.target.value }))}
+                  <input value={formData.offerFine} onChange={e => setFormDataB(d => ({ ...d, offerFine: e.target.value }))}
                     placeholder="Expires 6/30" style={inputStyle} />
                 </div>
               </div>
@@ -727,7 +841,7 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
                 <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>
                   Email <span style={{ color: "#991b1b" }}>*</span>
                 </label>
-                <input value={formData.email} onChange={e => setFormData(d => ({ ...d, email: e.target.value }))}
+                <input value={formData.email} onChange={e => setFormDataB(d => ({ ...d, email: e.target.value }))}
                   type="email" inputMode="email" autoComplete="email"
                   placeholder="you@yourbusiness.com" style={inputStyle} />
                 <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>
@@ -737,19 +851,19 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
 
               <div>
                 <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>Phone Number</label>
-                <input value={formData.phone} onChange={e => setFormData(d => ({ ...d, phone: e.target.value }))}
+                <input value={formData.phone} onChange={e => setFormDataB(d => ({ ...d, phone: e.target.value }))}
                   placeholder="(555) 123-4567" style={inputStyle} />
               </div>
 
               <div>
                 <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>Business Hours</label>
-                <input value={formData.hours} onChange={e => setFormData(d => ({ ...d, hours: e.target.value }))}
+                <input value={formData.hours} onChange={e => setFormDataB(d => ({ ...d, hours: e.target.value }))}
                   placeholder="Mon-Fri 9am-5pm" style={inputStyle} />
               </div>
 
               <div>
                 <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>Address</label>
-                <input value={formData.address} onChange={e => setFormData(d => ({ ...d, address: e.target.value }))}
+                <input value={formData.address} onChange={e => setFormDataB(d => ({ ...d, address: e.target.value }))}
                   placeholder="123 Main St, Your Town" style={inputStyle} />
               </div>
 
@@ -757,7 +871,7 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
                 <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>
                   Website <span style={{ fontWeight: 400, color: "#9ca3af" }}>(optional)</span>
                 </label>
-                <input value={formData.website} onChange={e => setFormData(d => ({ ...d, website: e.target.value }))}
+                <input value={formData.website} onChange={e => setFormDataB(d => ({ ...d, website: e.target.value }))}
                   placeholder="www.yourbusiness.com" style={inputStyle} />
                 {formData.website ? (
                   <div style={{ fontSize: 11, color: "#16a34a", marginTop: 4, padding: "5px 8px", background: "#f0fdf4", borderRadius: 6, display: "flex", alignItems: "center", gap: 5 }}>
@@ -769,8 +883,8 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, paddingTop: 8, borderTop: "1px solid #f3f4f6" }}>
-                <ImageUpload label="Your Logo" hint="Optional" value={formData.logo} onChange={v => setFormData(d => ({ ...d, logo: v }))} />
-                <ImageUpload label="Your Photo" hint="Or use stock" value={formData.photo} onChange={v => setFormData(d => ({ ...d, photo: v }))} />
+                <ImageUpload label="Your Logo" hint="Optional" value={formData.logo} onChange={v => setFormDataB(d => ({ ...d, logo: v }))} />
+                <ImageUpload label="Your Photo" hint="Or use stock" value={formData.photo} onChange={v => setFormDataB(d => ({ ...d, photo: v }))} />
               </div>
               {formData.industry && !formData.photo && (
                 <div style={{ fontSize: 11, color: "#6b7280", padding: "6px 10px", background: "#f0fdf4", borderRadius: 6 }}>
@@ -784,7 +898,7 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
               <div style={{ fontSize: 12, fontWeight: 800, color: "#111", marginBottom: 8, letterSpacing: 1, textTransform: "uppercase" }}>Design Style</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                 {TEMPLATE_STYLES.map(tpl => (
-                  <button key={tpl} onClick={() => setSelectedTemplate(tpl)}
+                  <button key={tpl} onClick={() => setSelectedTemplateB(tpl)}
                     style={{
                       padding: "8px 10px", borderRadius: 8,
                       border: `2px solid ${selectedTemplate === tpl ? "#991b1b" : "#e5e7eb"}`,
@@ -801,9 +915,12 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
 
           {/* CENTER: live preview */}
           <div style={{
-            flex: 1, padding: "20px 24px", overflowY: "auto", display: "flex",
+            flex: 1,
+            display: isMobile && activeTab !== "preview" ? "none" : "flex",
+            padding: "20px 24px", overflowY: "auto",
             flexDirection: "column", alignItems: "center", justifyContent: "flex-start",
             background: "linear-gradient(135deg, #1e293b, #0f172a)",
+            minHeight: 0,
           }}>
             <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 }}>
               Live Preview · {sizeInfo.label} · {sizeInfo.ratio}
@@ -870,7 +987,14 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
           </div>
 
           {/* RIGHT: AI Assistant */}
-          <div style={{ width: 320, borderLeft: "1px solid #e5e7eb", display: "flex", flexDirection: "column", overflow: "hidden", flexShrink: 0 }}>
+          <div style={{
+            width: isMobile ? "100%" : 320,
+            flex: isMobile ? 1 : "0 0 auto",
+            display: isMobile && activeTab !== "assistant" ? "none" : "flex",
+            flexDirection: "column",
+            borderLeft: isMobile ? "none" : "1px solid #e5e7eb",
+            overflow: "hidden", flexShrink: 0, minHeight: 0,
+          }}>
             <AdAssistant formData={formData} onUpdate={handleInlineEdit} sizeKey={sizeKey} />
           </div>
 
