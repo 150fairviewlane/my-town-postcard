@@ -162,7 +162,6 @@ function PhotoBoldTemplate({ data, sizeKey, onEdit }) {
       <img src={photo} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
       <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${ind.colors.dark}99 0%, ${ind.colors.dark}55 40%, ${ind.colors.dark}f0 100%)` }} />
 
-      {/* Top: logo + name */}
       <div style={{ position: "absolute", top: 0, left: 0, right: 0, padding: `${10 * fScale}px ${12 * fScale}px`, display: "flex", alignItems: "center", gap: 8 * fScale }}>
         <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji} size={36 * fScale} bg={`${ind.colors.primary}cc`} color="#fff" />
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -175,7 +174,6 @@ function PhotoBoldTemplate({ data, sizeKey, onEdit }) {
         </div>
       </div>
 
-      {/* Center: tagline */}
       {!isS && (
         <div style={{ position: "absolute", top: "42%", left: 12 * fScale, right: 12 * fScale, textAlign: "center" }}>
           <EditableText value={data.tagline || ind.taglines[0]} onChange={edit("tagline")}
@@ -183,7 +181,6 @@ function PhotoBoldTemplate({ data, sizeKey, onEdit }) {
         </div>
       )}
 
-      {/* Bottom: coupon + contact */}
       <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: `${8 * fScale}px ${12 * fScale}px`, display: "flex", flexDirection: "column", gap: 4 * fScale }}>
         {data.offer && <Coupon offer={data.offer} fine={data.offerFine} accent="#fff" scale={fScale} dark={true} onEditOffer={edit("offer")} onEditFine={edit("offerFine")} />}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", color: "rgba(255,255,255,0.85)", fontSize: 7.5 * fScale, fontFamily: "sans-serif" }}>
@@ -225,7 +222,6 @@ function SplitCleanTemplate({ data, sizeKey, onEdit }) {
       flexDirection: isVertical ? "column" : "row",
       background: ind.colors.light, fontFamily: "sans-serif",
     }}>
-      {/* Photo half */}
       <div style={{ width: isVertical ? "100%" : "45%", height: isVertical ? "45%" : "100%", position: "relative", flexShrink: 0 }}>
         <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         <div style={{ position: "absolute", top: 8 * fScale, left: 8 * fScale }}>
@@ -234,7 +230,6 @@ function SplitCleanTemplate({ data, sizeKey, onEdit }) {
         </div>
       </div>
 
-      {/* Content half */}
       <div style={{ flex: 1, padding: `${10 * fScale}px ${12 * fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", background: ind.colors.light, minWidth: 0 }}>
         <div>
           <div style={{ color: ind.colors.accent, fontSize: 8 * fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 3 }}>{data.industry}</div>
@@ -301,7 +296,6 @@ function MagazineTemplate({ data, sizeKey, onEdit }) {
       background: "#fff", fontFamily: "Georgia, serif",
       border: `${3 * fScale}px solid ${ind.colors.primary}`, boxSizing: "border-box",
     }}>
-      {/* Header bar */}
       <div style={{
         background: ind.colors.primary, padding: `${5 * fScale}px ${10 * fScale}px`,
         display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0,
@@ -321,7 +315,6 @@ function MagazineTemplate({ data, sizeKey, onEdit }) {
         )}
       </div>
 
-      {/* Photo strip */}
       {!isS && (
         <div style={{ display: "flex", gap: 1, height: isXL ? "30%" : isL ? "35%" : "40%", flexShrink: 0 }}>
           {photos.slice(0, 2).map((src, i) => (
@@ -333,7 +326,6 @@ function MagazineTemplate({ data, sizeKey, onEdit }) {
         </div>
       )}
 
-      {/* Content */}
       <div style={{ flex: 1, padding: `${4 * fScale}px ${10 * fScale}px ${5 * fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 0 }}>
         <div>
           <div style={{ color: ind.colors.accent, fontSize: 7.5 * fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>{data.industry}</div>
@@ -476,21 +468,6 @@ function suggestTemplate(industry) {
   return "split-clean";
 }
 
-// ─── Render dimensions ────────────────────────────────────────────────────────
-// 1 inch = 55px  →  9×12" postcard = 495×660px
-// XL=4×5"→220×275px  L=4×3"→220×165px  M=3×2"→165×110px  S=2×2"→110×110px
-function getRenderDimensions(sizeKey) {
-  const PX_PER_INCH = 55;
-  const sizes = {
-    XL: { w: 4, h: 5 },
-    L:  { w: 4, h: 3 },
-    M:  { w: 3, h: 2 },
-    S:  { w: 2, h: 2 },
-  };
-  const s = sizes[sizeKey] || sizes.L;
-  return { width: s.w * PX_PER_INCH, height: s.h * PX_PER_INCH };
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 //   IMAGE UPLOAD
 // ─────────────────────────────────────────────────────────────────────────────
@@ -565,7 +542,6 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
     setFormData(d => ({ ...d, [field]: value }));
   }, []);
 
-  const dims = getRenderDimensions(sizeKey);
   const sizeInfo = AD_SIZES[sizeKey];
   const Tpl = TEMPLATES[selectedTemplate].Component;
   const formValid = formData.businessName.trim() && formData.industry;
@@ -729,45 +705,19 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
               <>
                 <style>{EDITABLE_CSS}</style>
 
-                <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 11, marginBottom: 6, textAlign: "center", fontFamily: "sans-serif" }}>
-                  Actual size on a 9″ × 12″ postcard · <span style={{ color: "#fbbf24", fontWeight: 700 }}>1″ = 55px</span>
+                <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 11, marginBottom: 10, textAlign: "center", fontFamily: "sans-serif" }}>
+                  {sizeInfo.label} · {AD_SIZES[sizeKey].width}" × {AD_SIZES[sizeKey].height}" · ${sizeInfo.price}
                 </div>
 
-                {/* Postcard context frame — 9×12" at 55px/inch = 495×660px */}
+                {/* Ad fills full width at correct aspect ratio */}
                 <div style={{
-                  position: "relative",
-                  width: 9 * 55,
-                  height: 12 * 55,
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px dashed rgba(255,255,255,0.2)",
-                  borderRadius: 4,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
+                  width: "100%",
+                  aspectRatio: `${AD_SIZES[sizeKey].width} / ${AD_SIZES[sizeKey].height}`,
+                  borderRadius: 6, overflow: "hidden",
+                  boxShadow: "0 12px 48px rgba(0,0,0,0.6)",
                   flexShrink: 0,
                 }}>
-                  <div style={{
-                    position: "absolute", top: 6, left: 10,
-                    color: "rgba(255,255,255,0.25)", fontSize: 9,
-                    fontFamily: "sans-serif", letterSpacing: 1, textTransform: "uppercase",
-                  }}>9″ × 12″ Postcard</div>
-
-                  <div style={{
-                    width: dims.width, height: dims.height,
-                    borderRadius: 4, overflow: "hidden",
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
-                    flexShrink: 0,
-                  }}>
-                    <Tpl data={formData} sizeKey={sizeKey} onEdit={handleInlineEdit} />
-                  </div>
-
-                  <div style={{
-                    position: "absolute", bottom: 6, right: 10,
-                    color: "rgba(255,255,255,0.25)", fontSize: 9,
-                    fontFamily: "sans-serif",
-                  }}>
-                    Ad: {AD_SIZES[sizeKey]?.width || "?"}″ × {AD_SIZES[sizeKey]?.height || "?"}″
-                  </div>
+                  <Tpl data={formData} sizeKey={sizeKey} onEdit={handleInlineEdit} />
                 </div>
 
                 <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 10, marginTop: 10, textAlign: "center", fontStyle: "italic" }}>
@@ -790,8 +740,9 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
               </>
             ) : (
               <div style={{
-                width: 9 * 55, height: 12 * 55, borderRadius: 4,
-                border: "1px dashed rgba(255,255,255,0.2)",
+                width: "100%",
+                aspectRatio: `${AD_SIZES[sizeKey].width} / ${AD_SIZES[sizeKey].height}`,
+                borderRadius: 6, border: "2px dashed rgba(255,255,255,0.2)",
                 background: "rgba(255,255,255,0.04)",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 color: "rgba(255,255,255,0.4)", fontSize: 13, textAlign: "center", padding: 20,
