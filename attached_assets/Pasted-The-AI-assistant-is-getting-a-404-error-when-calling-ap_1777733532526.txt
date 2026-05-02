@@ -1,0 +1,39 @@
+The AI assistant is getting a 404 error when calling /api/ai/chat. This means the route either does not exist or is not being registered correctly. Please do the following diagnostic steps in order and fix whatever is broken.
+
+STEP 1: Search every server-side file for the text “ai/chat” or “ai chat”. Tell me exactly which file it is in and what line it is on.
+
+STEP 2: If the route exists, check that it is actually being registered. In Express, routes must be either defined directly on the app object like app.post(’/api/ai/chat’) or defined in a router file that is then mounted on the app with app.use(’/api’, router) or similar. If the route is defined in a router file, make sure that router file is imported and mounted in the main server file (usually server.ts, server.js, index.ts, or app.ts). Show me the mount line.
+
+STEP 3: Check that the route path is correct. If the frontend is calling /api/ai/chat but the route is defined as /ai/chat without the /api prefix, or vice versa, that causes a 404. Make sure the prefix matches exactly.
+
+STEP 4: If the route does not exist at all, create it now. Add this POST route to the main Express server file:
+
+app.post(’/api/ai/chat’, async (req, res) => {
+try {
+const { messages, system } = req.body;
+const response = await fetch(‘https://api.anthropic.com/v1/messages’, {
+method: ‘POST’,
+headers: {
+‘Content-Type’: ‘application/json’,
+‘x-api-key’: process.env.ANTHROPIC_API_KEY,
+‘anthropic-version’: ‘2023-06-01’
+},
+body: JSON.stringify({
+model: ‘claude-haiku-4-5-20251001’,
+max_tokens: 400,
+system: system,
+messages: messages
+})
+});
+const data = await response.json();
+res.json(data);
+} catch (err) {
+res.status(500).json({ error: { message: err.message } });
+}
+});
+
+STEP 5: Also check that AdAssistant.jsx is calling the correct URL. Open AdAssistant.jsx and find the fetch call. It should be calling /api/ai/chat with a relative URL. If it is calling an absolute URL like https://something.replit.dev/api/ai/chat, change it to just /api/ai/chat. Relative URLs always work regardless of what domain the app is running on.
+
+STEP 6: After making fixes, test by opening the ad generator, typing a message in the assistant, and confirming you get a real AI response instead of the 404 error.
+
+Do not modify AdAssistant.jsx for any reason other than fixing the fetch URL in step 5. Only fix the server-side route registration.
