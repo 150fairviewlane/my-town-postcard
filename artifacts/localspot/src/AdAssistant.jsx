@@ -233,12 +233,10 @@ export default function AdAssistant({ formData, onUpdate, sizeKey = "L" }) {
     }));
 
     try {
-      const response = await fetch("/api/ad-assistant", {
+      const response = await fetch("/api/ai/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-haiku-4-5",
-          max_tokens: 400,
           system: buildSystemPrompt(formData, sizeKey),
           messages: history,
         }),
