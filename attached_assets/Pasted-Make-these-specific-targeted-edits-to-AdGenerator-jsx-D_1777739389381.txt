@@ -1,0 +1,26 @@
+Make these specific targeted edits to AdGenerator.jsx. Do not replace the file. Find each exact location and make only the described change.
+
+EDIT 1 - PhotoBold center section. Find the div with comment “Center: tagline” in PhotoBoldTemplate. Currently it only shows the tagline. Replace it with this richer center section that adds menu items and phone below the tagline:
+
+Replace the entire center tagline block (the div with position absolute top 42%) with:
+A flex column div positioned absolute from top 38% to bottom 28%, left and right 12*fScale padding, display flex, flexDirection column, justifyContent center, gap 8*fScale. Inside it put: first the tagline EditableText as before (same font size). Then below that for L and XL sizes only, a row of menu item dots — map over the first 3 items from data.menuItems or ind.menu, showing each as a small white dot bullet with the item text in white at 9*fScale. Then below that for L and XL, the phone number in a prominent badge — a div with background rgba 0,0,0,0.5 and border 1.5px solid white, borderRadius 6, padding 4*fScale by 12*fScale, showing the phone at 18*fScale for XL and 14*fScale for L, color white, fontWeight 900, fontFamily sans-serif.
+
+EDIT 2 - PhotoBold footer. The footer currently shows address and phone both at 9*fScale. The phone is already shown prominently in the center for L/XL after edit 1, so in the footer: show full address (not truncated) at 9*fScale for all sizes. For S and M sizes only show the phone in the footer at 13*fScale fontWeight 900. For L and XL hide the phone in the footer since it shows in the center.
+
+EDIT 3 - SplitClean full address. Find every place in SplitCleanTemplate where address is displayed using data.address.split(”,”)[0] — this truncates to street only. Change all of them to show the full data.address without splitting, but use whiteSpace normal and let it wrap to 2 lines with fontSize 8*fScale.
+
+EDIT 4 - SplitClean menu items fallback. In SplitCleanTemplate the menu items section uses data.menuItems which may be empty. Change the data source from just data.menuItems to data.menuItems and data.menuItems.length greater than 0 ? data.menuItems : ind.menu — this ensures industry default menu items always show even when the user has not entered custom ones. Show 4 items on XL, 3 on L, 2 on M.
+
+EDIT 5 - Magazine full address. Find every place in MagazineTemplate where address is displayed using data.address.split(”,”)[0]. Change all of them to show the full data.address. Use fontSize 9*fScale and allow wrapping.
+
+EDIT 6 - Magazine fill empty space. In MagazineTemplate the content section has a large gap between the tagline and the menu items. Increase the number of menu items shown from 4 to 6 for XL and L. Also use the same fallback as edit 4: data.menuItems and data.menuItems.length greater than 0 ? data.menuItems : ind.menu so industry defaults always show. Increase the menu item font from 10*fScale to 11*fScale. Increase the bullet dot from 8*fScale to 10*fScale.
+
+EDIT 7 - Magazine add hours field. After the menu items in MagazineTemplate content section, if data.hours exists show it on its own line with a clock emoji at 10*fScale in the industry primary color. This fills space when hours are provided.
+
+EDIT 8 - SplitClean add hours field. After the menu items list in SplitCleanTemplate, if data.hours exists show it at 9*fScale in the industry primary color with a clock emoji. This helps fill the middle section.
+
+EDIT 9 - Add hours field to formData. In the main AdGenerator component find the formData useState initialization and add hours as an empty string alongside the other fields. Add a new input field in the form panel labeled Business Hours with placeholder Mon-Fri 9am-5pm positioned after the phone number field.
+
+EDIT 10 - Pass hours to system prompt. In AdAssistant.jsx buildSystemPrompt function, find the CURRENT AD STATE section and add a line for Hours showing data.hours or empty. Also add hours to the FIELDS block template so the AI can auto-fill it when a user mentions their hours.
+
+Do not change anything else. Verify after edits that all 4 templates still compile and render.

@@ -36,6 +36,7 @@ CURRENT AD STATE:
 - Offer Fine Print: ${formData.offerFine || "empty"}
 - Phone: ${formData.phone || "empty"}
 - Address: ${formData.address || "empty"}
+- Hours: ${formData.hours || "empty"}
 - Website: ${formData.website || "none"}
 
 INDUSTRY CONTEXT:
@@ -56,7 +57,7 @@ YOUR JOB:
 3. Auto-fill fields silently — don't say "I've updated your tagline", just do it and move on
 
 RESPONSE FORMAT — ALWAYS end your response with this exact block (even if no fields to update, include empty block):
-FIELDS:{"businessName":"","industry":"","tagline":"","offer":"","offerFine":"","phone":"","address":"","website":""}
+FIELDS:{"businessName":"","industry":"","tagline":"","offer":"","offerFine":"","phone":"","address":"","hours":"","website":""}
 
 Rules for the FIELDS block:
 - Only include fields that have NEW confirmed information the user actually provided in their message

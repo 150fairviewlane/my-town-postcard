@@ -175,9 +175,23 @@ function PhotoBoldTemplate({ data, sizeKey, onEdit }) {
       </div>
 
       {!isS && (
-        <div style={{ position: "absolute", top: "42%", left: 12 * fScale, right: 12 * fScale, textAlign: "center" }}>
+        <div style={{ position: "absolute", top: "38%", bottom: "28%", left: 12 * fScale, right: 12 * fScale, display: "flex", flexDirection: "column", justifyContent: "center", gap: 8 * fScale, textAlign: "center" }}>
           <EditableText value={data.tagline || ind.taglines[0]} onChange={edit("tagline")}
             style={{ color: "#fff", fontWeight: 800, fontSize: (isXL ? 22 : isL ? 18 : 14) * fScale, lineHeight: 1.1, fontStyle: "italic", textShadow: "0 2px 12px rgba(0,0,0,0.8)", textAlign: "center" }} />
+          {(isXL || isL) && (
+            <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: `2px ${10 * fScale}px` }}>
+              {((data.menuItems && data.menuItems.length > 0) ? data.menuItems : ind.menu).slice(0, 3).map((item, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{ color: "#fff", fontSize: 6 * fScale }}>●</span>
+                  <span style={{ color: "#fff", fontSize: 9 * fScale, fontFamily: "sans-serif", textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}>{item}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {(isXL || isL) && data.phone && (
+            <EditableText value={data.phone} onChange={edit("phone")}
+              style={{ color: "#fff", fontWeight: 900, fontSize: (isXL ? 24 : 20) * fScale, fontFamily: "sans-serif", textAlign: "center", letterSpacing: -0.5, textShadow: "0 2px 8px rgba(0,0,0,0.7)" }} />
+          )}
         </div>
       )}
 
@@ -186,12 +200,12 @@ function PhotoBoldTemplate({ data, sizeKey, onEdit }) {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", color: "rgba(255,255,255,0.85)", fontSize: 9 * fScale, fontFamily: "sans-serif" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
             {data.address && (
-              <EditableText value={data.address} onChange={edit("address")}
-                style={{ color: "rgba(255,255,255,0.85)", fontSize: 9 * fScale, fontFamily: "sans-serif", whiteSpace: "nowrap" }} />
+              <EditableText value={data.address} onChange={edit("address")} multiline
+                style={{ color: "rgba(255,255,255,0.85)", fontSize: 9 * fScale, fontFamily: "sans-serif", lineHeight: 1.2 }} />
             )}
-            {data.phone && (
+            {(isS || isM) && data.phone && (
               <EditableText value={data.phone} onChange={edit("phone")}
-                style={{ color: "rgba(255,255,255,0.85)", fontSize: 9 * fScale, fontWeight: 800, fontFamily: "sans-serif", whiteSpace: "nowrap" }} />
+                style={{ color: "#fff", fontSize: 13 * fScale, fontWeight: 900, fontFamily: "sans-serif", whiteSpace: "nowrap" }} />
             )}
           </div>
           {hasQR(data) && !isS && (
@@ -243,7 +257,7 @@ function SplitCleanTemplate({ data, sizeKey, onEdit }) {
 
         {!isS && (
           <div style={{ display: "flex", flexDirection: "column", gap: 2 * fScale, margin: `${4 * fScale}px 0` }}>
-            {(data.menuItems || ind.menu).slice(0, isXL ? 2 : 3).map((item, i) => (
+            {((data.menuItems && data.menuItems.length > 0) ? data.menuItems : ind.menu).slice(0, isXL ? 4 : isL ? 3 : 2).map((item, i) => (
               <div key={i} style={{ display: "flex", gap: 6, alignItems: "center" }}>
                 <div style={{ width: 14 * fScale, height: 14 * fScale, borderRadius: "50%", background: ind.colors.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <span style={{ color: "#fff", fontSize: 7 * fScale, fontWeight: 900 }}>✓</span>
@@ -254,12 +268,20 @@ function SplitCleanTemplate({ data, sizeKey, onEdit }) {
           </div>
         )}
 
+        {!isS && data.hours && (
+          <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2 * fScale }}>
+            <span style={{ fontSize: 9 * fScale }}>🕒</span>
+            <EditableText value={data.hours} onChange={edit("hours")}
+              style={{ color: ind.colors.primary, fontWeight: 700, fontSize: 9 * fScale }} />
+          </div>
+        )}
+
         <div style={{ flexShrink: 0 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: data.offer ? 5 * fScale : 0 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
               {data.address && (
-                <EditableText value={data.address.split(",")[0]} onChange={edit("address")}
-                  style={{ fontSize: 9 * fScale, color: "#555", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} />
+                <EditableText value={data.address} onChange={edit("address")} multiline
+                  style={{ fontSize: 8 * fScale, color: "#555", whiteSpace: "normal", lineHeight: 1.2 }} />
               )}
               {data.phone && (
                 <EditableText value={data.phone} onChange={edit("phone")}
@@ -335,12 +357,20 @@ function MagazineTemplate({ data, sizeKey, onEdit }) {
 
         {!isS && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: `2px ${10 * fScale}px`, margin: `${3 * fScale}px 0` }}>
-            {(data.menuItems || ind.menu).slice(0, 4).map((item, i) => (
+            {((data.menuItems && data.menuItems.length > 0) ? data.menuItems : ind.menu).slice(0, (isXL || isL) ? 6 : 4).map((item, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                <span style={{ color: ind.colors.primary, fontSize: 8 * fScale }}>●</span>
-                <EditableText value={item} onChange={editMenu(i)} style={{ fontSize: 10 * fScale, color: "#333", fontFamily: "sans-serif", fontWeight: 500 }} />
+                <span style={{ color: ind.colors.primary, fontSize: 10 * fScale }}>●</span>
+                <EditableText value={item} onChange={editMenu(i)} style={{ fontSize: 11 * fScale, color: "#333", fontFamily: "sans-serif", fontWeight: 500 }} />
               </div>
             ))}
+          </div>
+        )}
+
+        {!isS && data.hours && (
+          <div style={{ display: "flex", alignItems: "center", gap: 4, margin: `${2 * fScale}px 0` }}>
+            <span style={{ fontSize: 10 * fScale }}>🕒</span>
+            <EditableText value={data.hours} onChange={edit("hours")}
+              style={{ color: ind.colors.primary, fontWeight: 700, fontSize: 10 * fScale, fontFamily: "sans-serif" }} />
           </div>
         )}
 
@@ -348,8 +378,8 @@ function MagazineTemplate({ data, sizeKey, onEdit }) {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
               {data.address && (
-                <EditableText value={data.address.split(",")[0]} onChange={edit("address")}
-                  style={{ fontSize: 9 * fScale, color: "#555", fontFamily: "sans-serif", whiteSpace: "nowrap" }} />
+                <EditableText value={data.address} onChange={edit("address")} multiline
+                  style={{ fontSize: 9 * fScale, color: "#555", fontFamily: "sans-serif", whiteSpace: "normal", lineHeight: 1.2 }} />
               )}
               {data.phone && (
                 <EditableText value={data.phone} onChange={edit("phone")}
@@ -528,6 +558,7 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
     logo: null,
     photo: null,
     menuItems: [],
+    hours: "",
   });
   const [selectedTemplate, setSelectedTemplate] = useState("photo-bold");
 
@@ -637,6 +668,12 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
                 <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>Phone Number</label>
                 <input value={formData.phone} onChange={e => setFormData(d => ({ ...d, phone: e.target.value }))}
                   placeholder="(555) 123-4567" style={inputStyle} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>Business Hours</label>
+                <input value={formData.hours} onChange={e => setFormData(d => ({ ...d, hours: e.target.value }))}
+                  placeholder="Mon-Fri 9am-5pm" style={inputStyle} />
               </div>
 
               <div>
