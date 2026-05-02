@@ -84,6 +84,7 @@ function EditableText({ value, onChange, style = {}, multiline = false, placehol
   );
 }
 
+// Global CSS for hover hints
 const EDITABLE_CSS = `.editable-text:hover { outline: 1.5px dashed rgba(255,255,255,0.5) !important; border-radius: 2px; } .editable-text:hover .edit-hint { opacity: 1 !important; } .editable-text { cursor: text !important; }`;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -117,7 +118,7 @@ function LogoBadge({ logo, name, emoji, size = 40, bg = "rgba(255,255,255,0.15)"
   );
 }
 
-// ─── Helper: Coupon with perforated border + scissors ────────────────────────
+// ─── Helper: Coupon with perforated border + scissors + inline editing ────────
 function Coupon({ offer, fine, accent, scale = 1, dark = false, onEditOffer, onEditFine }) {
   if (!offer) return null;
   return (
@@ -149,6 +150,8 @@ function Coupon({ offer, fine, accent, scale = 1, dark = false, onEditOffer, onE
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TEMPLATE 1: PHOTO-BOLD
+// Full-bleed photo background with overlay text
+// Best for: restaurants, salons, photography
 // ─────────────────────────────────────────────────────────────────────────────
 function PhotoBoldTemplate({ data, sizeKey, onEdit }) {
   const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
@@ -162,6 +165,7 @@ function PhotoBoldTemplate({ data, sizeKey, onEdit }) {
       <img src={photo} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
       <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${ind.colors.dark}99 0%, ${ind.colors.dark}55 40%, ${ind.colors.dark}f0 100%)` }} />
 
+      {/* Top: logo + name */}
       <div style={{ position: "absolute", top: 0, left: 0, right: 0, padding: `${10 * fScale}px ${12 * fScale}px`, display: "flex", alignItems: "center", gap: 8 * fScale }}>
         <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji} size={36 * fScale} bg={`${ind.colors.primary}cc`} color="#fff" />
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -174,6 +178,7 @@ function PhotoBoldTemplate({ data, sizeKey, onEdit }) {
         </div>
       </div>
 
+      {/* Center: tagline */}
       {!isS && (
         <div style={{ position: "absolute", top: "42%", left: 12 * fScale, right: 12 * fScale, textAlign: "center" }}>
           <EditableText value={data.tagline || ind.taglines[0]} onChange={edit("tagline")}
@@ -181,6 +186,7 @@ function PhotoBoldTemplate({ data, sizeKey, onEdit }) {
         </div>
       )}
 
+      {/* Bottom: coupon + contact */}
       <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: `${8 * fScale}px ${12 * fScale}px`, display: "flex", flexDirection: "column", gap: 4 * fScale }}>
         {data.offer && <Coupon offer={data.offer} fine={data.offerFine} accent="#fff" scale={fScale} dark={true} onEditOffer={edit("offer")} onEditFine={edit("offerFine")} />}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", color: "rgba(255,255,255,0.85)", fontSize: 7.5 * fScale, fontFamily: "sans-serif" }}>
@@ -206,6 +212,8 @@ function PhotoBoldTemplate({ data, sizeKey, onEdit }) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TEMPLATE 2: SPLIT-CLEAN
+// 50/50 split: photo on one side, white content on the other
+// Best for: dental, medical, professional services
 // ─────────────────────────────────────────────────────────────────────────────
 function SplitCleanTemplate({ data, sizeKey, onEdit }) {
   const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
@@ -222,6 +230,7 @@ function SplitCleanTemplate({ data, sizeKey, onEdit }) {
       flexDirection: isVertical ? "column" : "row",
       background: ind.colors.light, fontFamily: "sans-serif",
     }}>
+      {/* Photo half */}
       <div style={{ width: isVertical ? "100%" : "45%", height: isVertical ? "45%" : "100%", position: "relative", flexShrink: 0 }}>
         <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         <div style={{ position: "absolute", top: 8 * fScale, left: 8 * fScale }}>
@@ -230,6 +239,7 @@ function SplitCleanTemplate({ data, sizeKey, onEdit }) {
         </div>
       </div>
 
+      {/* Content half */}
       <div style={{ flex: 1, padding: `${10 * fScale}px ${12 * fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", background: ind.colors.light, minWidth: 0 }}>
         <div>
           <div style={{ color: ind.colors.accent, fontSize: 8 * fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 3 }}>{data.industry}</div>
@@ -281,6 +291,8 @@ function SplitCleanTemplate({ data, sizeKey, onEdit }) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TEMPLATE 3: MAGAZINE
+// Editorial style with photo strip + dense content
+// Best for: real estate, insurance, financial, retail
 // ─────────────────────────────────────────────────────────────────────────────
 function MagazineTemplate({ data, sizeKey, onEdit }) {
   const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
@@ -296,6 +308,7 @@ function MagazineTemplate({ data, sizeKey, onEdit }) {
       background: "#fff", fontFamily: "Georgia, serif",
       border: `${3 * fScale}px solid ${ind.colors.primary}`, boxSizing: "border-box",
     }}>
+      {/* Header bar */}
       <div style={{
         background: ind.colors.primary, padding: `${5 * fScale}px ${10 * fScale}px`,
         display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0,
@@ -315,6 +328,7 @@ function MagazineTemplate({ data, sizeKey, onEdit }) {
         )}
       </div>
 
+      {/* Photo strip — max 2 photos */}
       {!isS && (
         <div style={{ display: "flex", gap: 1, height: isXL ? "30%" : isL ? "35%" : "40%", flexShrink: 0 }}>
           {photos.slice(0, 2).map((src, i) => (
@@ -326,6 +340,7 @@ function MagazineTemplate({ data, sizeKey, onEdit }) {
         </div>
       )}
 
+      {/* Content */}
       <div style={{ flex: 1, padding: `${4 * fScale}px ${10 * fScale}px ${5 * fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 0 }}>
         <div>
           <div style={{ color: ind.colors.accent, fontSize: 7.5 * fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>{data.industry}</div>
@@ -371,6 +386,8 @@ function MagazineTemplate({ data, sizeKey, onEdit }) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TEMPLATE 4: STAMP
+// Diagonal split, oversized offer text, retro stamp feel
+// Best for: services (HVAC, plumber, electrician, lawn, auto)
 // ─────────────────────────────────────────────────────────────────────────────
 function StampTemplate({ data, sizeKey, onEdit }) {
   const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
@@ -381,11 +398,13 @@ function StampTemplate({ data, sizeKey, onEdit }) {
 
   return (
     <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative", background: ind.colors.dark, fontFamily: "sans-serif" }}>
+      {/* Diagonal photo on top half */}
       <div style={{ position: "absolute", inset: 0, clipPath: "polygon(0 0, 100% 0, 100% 55%, 0 75%)", overflow: "hidden" }}>
         <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${ind.colors.dark}50 0%, ${ind.colors.dark}cc 100%)` }} />
       </div>
 
+      {/* Top: feature badge */}
       <div style={{ position: "absolute", top: 8 * fScale, left: 10 * fScale, zIndex: 3 }}>
         <div style={{
           background: ind.colors.accent, color: ind.colors.dark, padding: `${3 * fScale}px ${8 * fScale}px`,
@@ -395,11 +414,13 @@ function StampTemplate({ data, sizeKey, onEdit }) {
         </div>
       </div>
 
+      {/* Logo top-right */}
       <div style={{ position: "absolute", top: 8 * fScale, right: 10 * fScale, zIndex: 3 }}>
         <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji}
           size={36 * fScale} bg="rgba(255,255,255,0.15)" color="#fff" border="2px solid rgba(255,255,255,0.5)" />
       </div>
 
+      {/* Center: business name + huge phone */}
       <div style={{ position: "absolute", top: "32%", left: 0, right: 0, padding: `0 ${12 * fScale}px`, textAlign: "center", zIndex: 3 }}>
         <EditableText value={data.businessName} onChange={edit("businessName")}
           style={{ color: "#fff", fontWeight: 900, fontSize: 13 * fScale, fontFamily: "Georgia, serif", textShadow: "0 2px 8px rgba(0,0,0,0.6)", lineHeight: 1.1, textAlign: "center" }} />
@@ -413,6 +434,7 @@ function StampTemplate({ data, sizeKey, onEdit }) {
         )}
       </div>
 
+      {/* Bottom */}
       <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: `${8 * fScale}px ${10 * fScale}px`, display: "flex", flexDirection: "column", gap: 4 * fScale, zIndex: 3 }}>
         {!isS && !isM && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: `2px ${8 * fScale}px`, justifyContent: "center" }}>
@@ -468,10 +490,18 @@ function suggestTemplate(industry) {
   return "split-clean";
 }
 
+// ─── Render dimensions: proportional to actual print sizes on a 9×12 postcard
+// Real sizes: XL=4×5", L=4×3", M=3×2", S=3×1.5"  ·  1 inch = 60px in preview
 function getRenderDimensions(sizeKey) {
-  const s = AD_SIZES[sizeKey];
-  const baseWidth = sizeKey === "XL" ? 280 : sizeKey === "L" ? 360 : sizeKey === "M" ? 320 : 380;
-  return { width: baseWidth, height: baseWidth * (s.height / s.width) };
+  const PX_PER_INCH = 60;
+  const sizes = {
+    XL: { w: 4, h: 5 },   // portrait  → 240 × 300px
+    L:  { w: 4, h: 3 },   // landscape → 240 × 180px
+    M:  { w: 3, h: 2 },   // landscape → 180 × 120px
+    S:  { w: 3, h: 1.5 }, // landscape → 180 × 90px
+  };
+  const s = sizes[sizeKey] || sizes.L;
+  return { width: s.w * PX_PER_INCH, height: s.h * PX_PER_INCH };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -518,7 +548,7 @@ function ImageUpload({ label, hint, value, onChange }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//   MAIN COMPONENT
+//   MAIN COMPONENT — Full UI with form, template picker, preview
 // ─────────────────────────────────────────────────────────────────────────────
 export default function AdGenerator({ initialSize = "L", onComplete, onClose }) {
   const [sizeKey, setSizeKey] = useState(initialSize);
@@ -589,6 +619,7 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
           {/* LEFT: form */}
           <div style={{ width: 380, padding: "20px 24px", overflowY: "auto", borderRight: "1px solid #e5e7eb", background: "#fff", flexShrink: 0 }}>
 
+            {/* Size selector */}
             <div style={{ marginBottom: 20 }}>
               <div style={{ fontSize: 12, fontWeight: 800, color: "#111", marginBottom: 8, letterSpacing: 1, textTransform: "uppercase" }}>Ad Size</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
@@ -605,6 +636,7 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
               </div>
             </div>
 
+            {/* Form fields */}
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div>
                 <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>Business Name *</label>
@@ -678,6 +710,7 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
               )}
             </div>
 
+            {/* Template picker */}
             <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid #f3f4f6" }}>
               <div style={{ fontSize: 12, fontWeight: 800, color: "#111", marginBottom: 8, letterSpacing: 1, textTransform: "uppercase" }}>Design Style</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
@@ -697,9 +730,9 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
             </div>
           </div>
 
-          {/* MIDDLE: live preview */}
+          {/* CENTER: live preview */}
           <div style={{
-            flex: 1, padding: "24px", overflowY: "auto", display: "flex",
+            flex: 1, padding: "20px 24px", overflowY: "auto", display: "flex",
             flexDirection: "column", alignItems: "center", justifyContent: "flex-start",
             background: "linear-gradient(135deg, #1e293b, #0f172a)",
           }}>
@@ -710,9 +743,49 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
             {formValid ? (
               <>
                 <style>{EDITABLE_CSS}</style>
-                <div style={{ width: dims.width, height: dims.height, borderRadius: 6, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.5)" }}>
-                  <Tpl data={formData} sizeKey={sizeKey} onEdit={handleInlineEdit} />
+
+                <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 11, marginBottom: 6, textAlign: "center", fontFamily: "sans-serif" }}>
+                  Actual size on a 9″ × 12″ postcard · <span style={{ color: "#fbbf24", fontWeight: 700 }}>1″ = 60px</span>
                 </div>
+
+                {/* Postcard context frame — shows ad at true proportional scale */}
+                <div style={{
+                  position: "relative",
+                  width: 9 * 60,   // 540px = 9 inches
+                  height: 12 * 60, // 720px = 12 inches
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px dashed rgba(255,255,255,0.2)",
+                  borderRadius: 4,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}>
+                  <div style={{
+                    position: "absolute", top: 6, left: 10,
+                    color: "rgba(255,255,255,0.25)", fontSize: 9,
+                    fontFamily: "sans-serif", letterSpacing: 1, textTransform: "uppercase",
+                  }}>9″ × 12″ Postcard</div>
+
+                  {/* The actual ad at true proportional size */}
+                  <div style={{
+                    width: dims.width, height: dims.height,
+                    borderRadius: 4, overflow: "hidden",
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+                    flexShrink: 0,
+                  }}>
+                    <Tpl data={formData} sizeKey={sizeKey} onEdit={handleInlineEdit} />
+                  </div>
+
+                  <div style={{
+                    position: "absolute", bottom: 6, right: 10,
+                    color: "rgba(255,255,255,0.25)", fontSize: 9,
+                    fontFamily: "sans-serif",
+                  }}>
+                    Ad: {AD_SIZES[sizeKey]?.width || "?"}″ × {AD_SIZES[sizeKey]?.height || "?"}″
+                  </div>
+                </div>
+
                 <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 10, marginTop: 10, textAlign: "center", fontStyle: "italic" }}>
                   ✎ Click any text in the preview to edit it directly
                 </div>
@@ -720,6 +793,7 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
                   Style: <strong style={{ color: "#fff" }}>{TEMPLATES[selectedTemplate].name}</strong>
                   {!formData.photo && formData.industry && <> · Using stock photo for {formData.industry}</>}
                 </div>
+
                 <button
                   onClick={() => onComplete?.({ sizeKey, price: sizeInfo.price, template: selectedTemplate, ...formData })}
                   style={{
@@ -732,12 +806,13 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
               </>
             ) : (
               <div style={{
-                width: dims.width, height: dims.height, borderRadius: 6,
-                border: "2px dashed rgba(255,255,255,0.3)",
+                width: 9 * 60, height: 12 * 60, borderRadius: 4,
+                border: "1px dashed rgba(255,255,255,0.2)",
+                background: "rgba(255,255,255,0.04)",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 color: "rgba(255,255,255,0.4)", fontSize: 13, textAlign: "center", padding: 20,
               }}>
-                Fill in business name and industry<br />to see your ad preview
+                Fill in your business name and<br />industry to see your ad preview
               </div>
             )}
           </div>
