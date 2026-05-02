@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { INDUSTRIES, INDUSTRY_LIST } from "./industryAssets";
 import { AdQRCode, InlineQRCode, hasQR, normalizeWebsite, generateSpotCode } from "./qrUtils";
 import AdAssistant from "./AdAssistant";
@@ -577,11 +577,57 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
   const Tpl = TEMPLATES[selectedTemplate].Component;
   const formValid = formData.businessName.trim() && formData.industry;
 
+  // Lock background scroll while the modal is open so swipes inside the ad
+  // generator never bubble up to scroll the landing page underneath.
+  // Plain `overflow: hidden` on body works on desktop but iOS Safari ignores
+  // it once a touch is in flight, so we also pin body with position:fixed and
+  // restore the scroll position on unmount. This is the standard
+  // body-scroll-lock pattern.
+  useEffect(() => {
+    const scrollY = window.scrollY || window.pageYOffset || 0;
+    const body = document.body;
+    const html = document.documentElement;
+    const prev = {
+      bodyPosition: body.style.position,
+      bodyTop: body.style.top,
+      bodyLeft: body.style.left,
+      bodyRight: body.style.right,
+      bodyWidth: body.style.width,
+      bodyOverflow: body.style.overflow,
+      htmlOverflow: html.style.overflow,
+      htmlOverscroll: html.style.overscrollBehavior,
+    };
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.width = "100%";
+    body.style.overflow = "hidden";
+    html.style.overflow = "hidden";
+    html.style.overscrollBehavior = "none";
+    return () => {
+      body.style.position = prev.bodyPosition;
+      body.style.top = prev.bodyTop;
+      body.style.left = prev.bodyLeft;
+      body.style.right = prev.bodyRight;
+      body.style.width = prev.bodyWidth;
+      body.style.overflow = prev.bodyOverflow;
+      html.style.overflow = prev.htmlOverflow;
+      html.style.overscrollBehavior = prev.htmlOverscroll;
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
+
   return (
-    <div style={{
-      position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)",
-      display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16,
-    }}>
+    <div
+      onWheel={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      style={{
+        position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)",
+        display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16,
+        overscrollBehavior: "contain",
+      }}
+    >
       <div style={{
         background: "#f8fafc", borderRadius: 18, width: "100%", maxWidth: 1280, maxHeight: "94vh",
         overflow: "hidden", display: "flex", flexDirection: "column",
