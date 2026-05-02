@@ -709,16 +709,22 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
                   {sizeInfo.label} · {AD_SIZES[sizeKey].width}" × {AD_SIZES[sizeKey].height}" · ${sizeInfo.price}
                 </div>
 
-                {/* Ad fills full width at correct aspect ratio */}
-                <div style={{
-                  width: "100%",
-                  aspectRatio: `${AD_SIZES[sizeKey].width} / ${AD_SIZES[sizeKey].height}`,
-                  borderRadius: 6, overflow: "hidden",
-                  boxShadow: "0 12px 48px rgba(0,0,0,0.6)",
-                  flexShrink: 0,
-                }}>
-                  <Tpl data={formData} sizeKey={sizeKey} onEdit={handleInlineEdit} />
-                </div>
+                {/* Ad preview — constrained so sizes look proportionally different */}
+                {(() => {
+                  const maxWidths = { XL: 320, L: 460, M: 340, S: 220 };
+                  const maxW = maxWidths[sizeKey] || 360;
+                  return (
+                    <div style={{
+                      width: maxW,
+                      aspectRatio: `${AD_SIZES[sizeKey].width} / ${AD_SIZES[sizeKey].height}`,
+                      borderRadius: 6, overflow: "hidden",
+                      boxShadow: "0 12px 48px rgba(0,0,0,0.6)",
+                      flexShrink: 0,
+                    }}>
+                      <Tpl data={formData} sizeKey={sizeKey} onEdit={handleInlineEdit} />
+                    </div>
+                  );
+                })()}
 
                 <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 10, marginTop: 10, textAlign: "center", fontStyle: "italic" }}>
                   ✎ Click any text in the preview to edit it directly
@@ -740,7 +746,7 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
               </>
             ) : (
               <div style={{
-                width: "100%",
+                width: 360,
                 aspectRatio: `${AD_SIZES[sizeKey].width} / ${AD_SIZES[sizeKey].height}`,
                 borderRadius: 6, border: "2px dashed rgba(255,255,255,0.2)",
                 background: "rgba(255,255,255,0.04)",
