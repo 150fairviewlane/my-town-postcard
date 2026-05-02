@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useGetActiveCampaign, useReserveSpot } from "@workspace/api-client-react";
 import {
@@ -15,7 +15,12 @@ import {
   HouseAdBanner,
   EDDMBox,
 } from "./postcardBack";
-import AdGenerator from "./AdGenerator";
+// AdGenerator is the heaviest module on this page (~1k lines, plus
+// AdAssistant and the industry asset table). It only mounts when the user
+// clicks a spot and opens the modal, so we lazy-load it. That keeps the
+// initial paint of the picker fast — which is the screen the user lands on
+// and starts testing from.
+const AdGenerator = lazy(() => import("./AdGenerator"));
 import { getSampleAd, SPOT_SAMPLE_MAP } from "./PostcardSampleAds";
 
 const SIZE_MAP = { xl: "XL", large: "L", medium: "M", small: "S" };
@@ -514,15 +519,17 @@ export default function PostcardPickerSection() {
         ))}
       </div>
 
-      {/* Ad Generator */}
+      {/* Ad Generator (lazy) — only fetched when the user opens the modal */}
       {creatorSpot && (
-        <AdGenerator
-          initialSize={SIZE_MAP[creatorSpot.size] || "S"}
-          onComplete={handleAdComplete}
-          onClose={closeCreator}
-          isLoading={reserveMutation.isPending}
-          error={reserveError}
-        />
+        <Suspense fallback={null}>
+          <AdGenerator
+            initialSize={SIZE_MAP[creatorSpot.size] || "S"}
+            onComplete={handleAdComplete}
+            onClose={closeCreator}
+            isLoading={reserveMutation.isPending}
+            error={reserveError}
+          />
+        </Suspense>
       )}
     </div>
   );

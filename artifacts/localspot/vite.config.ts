@@ -53,6 +53,27 @@ export default defineConfig({
     },
     dedupe: ["react", "react-dom"],
   },
+  // Pre-bundle the heaviest dependencies up front so Vite doesn't pause to
+  // re-optimize them the first time a page imports them. Without this hint
+  // the first navigation that pulls in (e.g.) recharts or framer-motion
+  // triggers a full page reload while Vite re-bundles. Keep this list to
+  // genuinely heavy deps — small libs are fine to discover lazily.
+  optimizeDeps: {
+    include: [
+      "react",
+      "react-dom",
+      "react-dom/client",
+      "wouter",
+      "@tanstack/react-query",
+      "framer-motion",
+      "recharts",
+      "lucide-react",
+      "@stripe/stripe-js",
+      "@stripe/react-stripe-js",
+      "date-fns",
+      "zod",
+    ],
+  },
   root: path.resolve(import.meta.dirname),
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
