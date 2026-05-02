@@ -124,8 +124,29 @@ function Dashboard({ token }) {
         <div style={{ background: "#fff", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", overflow: "hidden" }}>
           <div style={{ padding: "16px 20px", borderBottom: "1px solid #f3f4f6", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ fontWeight: 800, fontSize: 16, color: "#111" }}>All Spots</div>
-            <button style={{ background: "#f3f4f6", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontSize: 13, color: "#374151", fontWeight: 600 }}>
-              Download Print-Ready PDF (Coming Soon)
+            <button
+              onClick={() => {
+                if (!campaign?.id) return;
+                window.open(
+                  `${import.meta.env.BASE_URL}admin/campaign/${campaign.id}/print`,
+                  "_blank",
+                  "noopener,noreferrer",
+                );
+              }}
+              disabled={!campaign?.id}
+              style={{
+                background: "#991b1b",
+                border: "none",
+                borderRadius: 8,
+                padding: "8px 16px",
+                cursor: campaign?.id ? "pointer" : "not-allowed",
+                fontSize: 13,
+                color: "#fff",
+                fontWeight: 700,
+                opacity: campaign?.id ? 1 : 0.5,
+              }}
+            >
+              📥 Download Print File
             </button>
           </div>
           <div style={{ overflowX: "auto" }}>

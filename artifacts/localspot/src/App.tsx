@@ -7,6 +7,7 @@ import CheckoutPage from "./pages/CheckoutPage";
 import UploadAdPage from "./pages/UploadAdPage";
 import ConfirmationPage from "./pages/ConfirmationPage";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminPrintPage from "./pages/AdminPrintPage";
 
 const queryClient = new QueryClient();
 
@@ -17,6 +18,9 @@ function Router() {
       <Route path="/checkout/:spotId" component={CheckoutPage} />
       <Route path="/upload/:spotId" component={UploadAdPage} />
       <Route path="/confirmation/:spotId" component={ConfirmationPage} />
+      {/* More-specific admin route must come before /admin so wouter's Switch
+          matches it first. */}
+      <Route path="/admin/campaign/:id/print" component={AdminPrintPage} />
       <Route path="/admin" component={AdminDashboard} />
     </Switch>
   );
