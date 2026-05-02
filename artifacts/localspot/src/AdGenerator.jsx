@@ -183,15 +183,15 @@ function PhotoBoldTemplate({ data, sizeKey, onEdit }) {
 
       <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: `${8 * fScale}px ${12 * fScale}px`, display: "flex", flexDirection: "column", gap: 4 * fScale }}>
         {data.offer && <Coupon offer={data.offer} fine={data.offerFine} accent="#fff" scale={fScale} dark={true} onEditOffer={edit("offer")} onEditFine={edit("offerFine")} />}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", color: "rgba(255,255,255,0.85)", fontSize: 7.5 * fScale, fontFamily: "sans-serif" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", color: "rgba(255,255,255,0.85)", fontSize: 9 * fScale, fontFamily: "sans-serif" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
             {data.address && (
               <EditableText value={data.address} onChange={edit("address")}
-                style={{ color: "rgba(255,255,255,0.85)", fontSize: 7.5 * fScale, fontFamily: "sans-serif", whiteSpace: "nowrap" }} />
+                style={{ color: "rgba(255,255,255,0.85)", fontSize: 9 * fScale, fontFamily: "sans-serif", whiteSpace: "nowrap" }} />
             )}
             {data.phone && (
               <EditableText value={data.phone} onChange={edit("phone")}
-                style={{ color: "rgba(255,255,255,0.85)", fontSize: 7.5 * fScale, fontWeight: 800, fontFamily: "sans-serif", whiteSpace: "nowrap" }} />
+                style={{ color: "rgba(255,255,255,0.85)", fontSize: 9 * fScale, fontWeight: 800, fontFamily: "sans-serif", whiteSpace: "nowrap" }} />
             )}
           </div>
           {hasQR(data) && !isS && (
@@ -234,21 +234,21 @@ function SplitCleanTemplate({ data, sizeKey, onEdit }) {
         <div>
           <div style={{ color: ind.colors.accent, fontSize: 8 * fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 3 }}>{data.industry}</div>
           <EditableText value={data.businessName} onChange={edit("businessName")}
-            style={{ color: ind.colors.dark, fontWeight: 900, fontSize: 16 * fScale, fontFamily: "Georgia, serif", lineHeight: 1.05 }} />
+            style={{ color: ind.colors.dark, fontWeight: 900, fontSize: 20 * fScale, fontFamily: "Georgia, serif", lineHeight: 1.0 }} />
           {!isS && (
             <EditableText value={data.tagline || ind.taglines[0]} onChange={edit("tagline")}
               style={{ fontSize: 10 * fScale, color: ind.colors.primary, fontWeight: 700, marginTop: 4, fontStyle: "italic" }} />
           )}
         </div>
 
-        {!isS && !isM && (
+        {!isS && (
           <div style={{ display: "flex", flexDirection: "column", gap: 2 * fScale, margin: `${4 * fScale}px 0` }}>
             {(data.menuItems || ind.menu).slice(0, isXL ? 2 : 3).map((item, i) => (
               <div key={i} style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                <div style={{ width: 13 * fScale, height: 13 * fScale, borderRadius: "50%", background: ind.colors.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <div style={{ width: 14 * fScale, height: 14 * fScale, borderRadius: "50%", background: ind.colors.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <span style={{ color: "#fff", fontSize: 7 * fScale, fontWeight: 900 }}>✓</span>
                 </div>
-                <EditableText value={item} onChange={editMenu(i)} style={{ fontSize: 8.5 * fScale, color: "#333" }} />
+                <EditableText value={item} onChange={editMenu(i)} style={{ fontSize: 10 * fScale, color: "#333" }} />
               </div>
             ))}
           </div>
@@ -259,11 +259,11 @@ function SplitCleanTemplate({ data, sizeKey, onEdit }) {
             <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
               {data.address && (
                 <EditableText value={data.address.split(",")[0]} onChange={edit("address")}
-                  style={{ fontSize: 7 * fScale, color: "#555", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} />
+                  style={{ fontSize: 9 * fScale, color: "#555", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} />
               )}
               {data.phone && (
                 <EditableText value={data.phone} onChange={edit("phone")}
-                  style={{ fontSize: 10 * fScale, color: ind.colors.primary, fontWeight: 800, whiteSpace: "nowrap" }} />
+                  style={{ fontSize: 14 * fScale, color: ind.colors.primary, fontWeight: 900, whiteSpace: "nowrap" }} />
               )}
             </div>
             {hasQR(data) && !isS && (
@@ -303,12 +303,12 @@ function MagazineTemplate({ data, sizeKey, onEdit }) {
         <div style={{ display: "flex", alignItems: "center", gap: 6 * fScale }}>
           <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji} size={28 * fScale} bg={ind.colors.accent} color="#fff" />
           <EditableText value={data.businessName} onChange={edit("businessName")}
-            style={{ color: "#fff", fontWeight: 900, fontSize: 13 * fScale, fontFamily: "Georgia, serif" }} />
+            style={{ color: "#fff", fontWeight: 900, fontSize: 17 * fScale, fontFamily: "Georgia, serif" }} />
         </div>
         {!isS && data.phone && (
           <EditableText value={data.phone} onChange={edit("phone")}
             style={{
-              color: "#fff", fontSize: 10 * fScale, fontWeight: 800,
+              color: "#fff", fontSize: 13 * fScale, fontWeight: 900,
               background: "rgba(0,0,0,0.25)", padding: `${2 * fScale}px ${7 * fScale}px`, borderRadius: 3,
               fontFamily: "sans-serif",
             }} />
@@ -330,15 +330,15 @@ function MagazineTemplate({ data, sizeKey, onEdit }) {
         <div>
           <div style={{ color: ind.colors.accent, fontSize: 7.5 * fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>{data.industry}</div>
           <EditableText value={data.tagline || ind.taglines[0]} onChange={edit("tagline")}
-            style={{ color: ind.colors.dark, fontSize: 14 * fScale, fontWeight: 900, fontFamily: "Georgia, serif", lineHeight: 1.1, marginTop: 2 }} />
+            style={{ color: ind.colors.dark, fontSize: 16 * fScale, fontWeight: 900, fontFamily: "Georgia, serif", lineHeight: 1.1, marginTop: 2 }} />
         </div>
 
         {!isS && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: `2px ${10 * fScale}px`, margin: `${3 * fScale}px 0` }}>
             {(data.menuItems || ind.menu).slice(0, 4).map((item, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                <span style={{ color: ind.colors.primary, fontSize: 6 }}>●</span>
-                <EditableText value={item} onChange={editMenu(i)} style={{ fontSize: 8 * fScale, color: "#444", fontFamily: "sans-serif" }} />
+                <span style={{ color: ind.colors.primary, fontSize: 8 * fScale }}>●</span>
+                <EditableText value={item} onChange={editMenu(i)} style={{ fontSize: 10 * fScale, color: "#333", fontFamily: "sans-serif", fontWeight: 500 }} />
               </div>
             ))}
           </div>
@@ -349,11 +349,11 @@ function MagazineTemplate({ data, sizeKey, onEdit }) {
             <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
               {data.address && (
                 <EditableText value={data.address.split(",")[0]} onChange={edit("address")}
-                  style={{ fontSize: 7 * fScale, color: "#666", fontFamily: "sans-serif", whiteSpace: "nowrap" }} />
+                  style={{ fontSize: 9 * fScale, color: "#555", fontFamily: "sans-serif", whiteSpace: "nowrap" }} />
               )}
               {data.phone && (
                 <EditableText value={data.phone} onChange={edit("phone")}
-                  style={{ fontSize: 8 * fScale, color: ind.colors.primary, fontWeight: 800, fontFamily: "sans-serif", whiteSpace: "nowrap" }} />
+                  style={{ fontSize: 12 * fScale, color: ind.colors.primary, fontWeight: 900, fontFamily: "sans-serif", whiteSpace: "nowrap" }} />
               )}
             </div>
             {hasQR(data) && !isS && (
