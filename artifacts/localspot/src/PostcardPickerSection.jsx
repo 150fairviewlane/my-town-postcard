@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useGetActiveCampaign, useReserveSpot } from "@workspace/api-client-react";
 import {
@@ -15,12 +15,14 @@ import {
   HouseAdBanner,
   EDDMBox,
 } from "./postcardBack";
-// AdGenerator is the heaviest module on this page (~1k lines, plus
-// AdAssistant and the industry asset table). It only mounts when the user
-// clicks a spot and opens the modal, so we lazy-load it. That keeps the
-// initial paint of the picker fast — which is the screen the user lands on
-// and starts testing from.
-const AdGenerator = lazy(() => import("./AdGenerator"));
+// AdGenerator is heavy (~1k lines + AdAssistant + the industry asset
+// table) BUT it is the very first thing the user clicks while testing.
+// We tried lazy-loading it earlier — that turned out to hurt: in Vite dev
+// each lazy chunk fan-outs a fresh waterfall of module requests over the
+// (often slow) Replit preview proxy, so the modal would take a long time
+// to appear after the click. Loading it eagerly with the picker means
+// the modal opens instantly when a spot is tapped.
+import AdGenerator from "./AdGenerator";
 import { getSampleAd, SPOT_SAMPLE_MAP } from "./PostcardSampleAds";
 
 const SIZE_MAP = { xl: "XL", large: "L", medium: "M", small: "S" };
@@ -519,17 +521,15 @@ export default function PostcardPickerSection() {
         ))}
       </div>
 
-      {/* Ad Generator (lazy) — only fetched when the user opens the modal */}
+      {/* Ad Generator */}
       {creatorSpot && (
-        <Suspense fallback={null}>
-          <AdGenerator
-            initialSize={SIZE_MAP[creatorSpot.size] || "S"}
-            onComplete={handleAdComplete}
-            onClose={closeCreator}
-            isLoading={reserveMutation.isPending}
-            error={reserveError}
-          />
-        </Suspense>
+        <AdGenerator
+          initialSize={SIZE_MAP[creatorSpot.size] || "S"}
+          onComplete={handleAdComplete}
+          onClose={closeCreator}
+          isLoading={reserveMutation.isPending}
+          error={reserveError}
+        />
       )}
     </div>
   );

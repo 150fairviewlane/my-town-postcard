@@ -20,9 +20,30 @@ const ScanAnalyticsPage = lazy(() => import("./pages/ScanAnalyticsPage"));
 
 const queryClient = new QueryClient();
 
+// Visible Suspense fallback so a slow lazy chunk fetch on the Replit dev
+// preview (especially over a tablet/phone connection) feels like loading
+// rather than a broken page.
+function RouteLoading() {
+  return (
+    <div style={{
+      position: "fixed", inset: 0, display: "flex", alignItems: "center",
+      justifyContent: "center", background: "#fff", zIndex: 9999,
+      flexDirection: "column", gap: 16, fontFamily: "sans-serif", color: "#374151",
+    }}>
+      <div style={{
+        width: 36, height: 36, border: "3px solid #e5e7eb",
+        borderTopColor: "#7B1418", borderRadius: "50%",
+        animation: "lsspin 0.8s linear infinite",
+      }} />
+      <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: 0.3 }}>Loading…</div>
+      <style>{`@keyframes lsspin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
+
 function Router() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<RouteLoading />}>
       <Switch>
         <Route path="/" component={LandingPage} />
         <Route path="/checkout/:spotId" component={CheckoutPage} />
