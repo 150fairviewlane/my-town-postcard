@@ -615,6 +615,10 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
   // email parses cleanly so the user gets immediate positive feedback.
   const emailInputRef = useRef(null);
   const [showEmailError, setShowEmailError] = useState(false);
+  // Used by the Reserve button below to debounce the iPad Safari case
+  // where both `onClick` and `onPointerUp` end up firing for the same
+  // tap. 400ms is enough to dedupe without making double-clicks feel slow.
+  const lastReserveFireRef = useRef(0);
 
   // Mobile-only "preview peek": when the user touches a field on the Build
   // tab, briefly flip to Preview so they can confirm the change, then return
@@ -988,8 +992,25 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
                   {!formData.photo && formData.industry && <> · Using stock photo for {formData.industry}</>}
                 </div>
 
-                <button
-                  onClick={() => {
+                {(() => {
+                  // iPad Safari is finicky about taps on buttons inside
+                  // a position:fixed modal that also has overflowY:auto.
+                  // The fix kit:
+                  //   • explicit `type="button"` so iOS can't misclassify it
+                  //   • `touchAction: "manipulation"` to kill the 300ms
+                  //     double-tap delay and the synthetic-click cancel
+                  //     iOS sometimes does after a near-tap
+                  //   • `WebkitTapHighlightColor` so the user gets visible
+                  //     feedback on tap (and so iOS treats it as tappable)
+                  //   • `WebkitAppearance: none` so iOS doesn't apply its
+                  //     own button chrome, which can swallow taps
+                  //   • belt-and-braces `onPointerUp` mirroring `onClick`,
+                  //     guarded by a 400ms ref so we never fire twice
+                  const lastFire = lastReserveFireRef;
+                  const submit = () => {
+                    const now = Date.now();
+                    if (now - (lastFire.current || 0) < 400) return;
+                    lastFire.current = now;
                     if (formValid) {
                       onComplete?.({ sizeKey, price: sizeInfo.price, template: selectedTemplate, ...formData });
                       return;
@@ -1001,20 +1022,29 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
                     // previewReady is true) is the email.
                     setShowEmailError(true);
                     if (isMobile) setActiveTab("build");
-                    // Defer the scroll/focus so the form tab has time to
-                    // un-hide on mobile before we try to scroll into it.
                     setTimeout(() => {
                       emailInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
                       emailInputRef.current?.focus();
                     }, 50);
-                  }}
-                  style={{
-                    marginTop: 20, padding: "14px 32px", background: "#991b1b",
-                    color: "#fff", border: "none", borderRadius: 10, fontSize: 15,
-                    fontWeight: 800, cursor: "pointer", letterSpacing: 0.5,
-                  }}>
-                  Approve &amp; Reserve Spot — ${sizeInfo.price}
-                </button>
+                  };
+                  return (
+                    <button
+                      type="button"
+                      onClick={submit}
+                      onPointerUp={submit}
+                      style={{
+                        marginTop: 20, padding: "14px 32px", background: "#991b1b",
+                        color: "#fff", border: "none", borderRadius: 10, fontSize: 15,
+                        fontWeight: 800, cursor: "pointer", letterSpacing: 0.5,
+                        touchAction: "manipulation",
+                        WebkitAppearance: "none",
+                        WebkitTapHighlightColor: "rgba(255,255,255,0.15)",
+                        userSelect: "none",
+                      }}>
+                      Approve &amp; Reserve Spot — ${sizeInfo.price}
+                    </button>
+                  );
+                })()}
               </>
             ) : (
               <div style={{
