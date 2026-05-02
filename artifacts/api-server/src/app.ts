@@ -2,10 +2,16 @@ import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import router from "./routes";
+import redirectRouter from "./routes/redirect";
 import { stripeWebhookHandler } from "./routes/webhooks";
 import { logger } from "./lib/logger";
 
 const app: Express = express();
+
+// We sit behind the Replit shared proxy, which sets X-Forwarded-For. Trusting
+// the proxy makes req.ip the originating client IP (used when logging QR
+// scans) instead of the loopback address Express otherwise reports.
+app.set("trust proxy", true);
 
 app.use(
   pinoHttp({
@@ -40,6 +46,11 @@ app.post(
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Public QR redirect lives at the app root (no /api prefix) so printed
+// codes are short and human-readable. Mount BEFORE the /api router so it
+// gets first crack at /go/:code.
+app.use(redirectRouter);
 
 app.use("/api", router);
 

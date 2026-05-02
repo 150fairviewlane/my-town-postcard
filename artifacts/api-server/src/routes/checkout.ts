@@ -8,6 +8,7 @@ import {
   ConfirmPaymentResponse,
 } from "@workspace/api-zod";
 import { sendReservationConfirmation, sendAdminNewOrder } from "../lib/emails";
+import { ensureTrackingCode } from "../lib/trackingCode";
 import { logger } from "../lib/logger";
 
 function getStripe() {
@@ -117,6 +118,16 @@ router.post("/checkout/confirm", async (req, res): Promise<void> => {
     .returning();
 
   req.log.info({ orderId: order.id, spotId: spot.id }, "Payment confirmed, order created");
+
+  // Assign QR tracking code on the spot (idempotent — webhook may have
+  // already done this for the same spot). Don't fail the request if it
+  // hiccups; the webhook will retry.
+  try {
+    const code = await ensureTrackingCode(spot);
+    req.log.info({ spotId: spot.id, trackingCode: code }, "Tracking code ensured for paid spot");
+  } catch (err) {
+    req.log.error({ err, spotId: spot.id }, "Failed to assign tracking code — continuing");
+  }
 
   const orderInfo = {
     businessName: spot.businessName ?? "Unknown",

@@ -62,8 +62,9 @@ See `.env.example` for full documentation. Summary:
 ## Database Schema
 
 - `campaigns` — id, name, territory, zip_code, mail_date, homes_count, status
-- `spots` — id, campaign_id, **side** (front|back, default front), size, grid_area, price, status, business_name, business_category, contact_email, contact_phone, ad_file_url, ad_status
+- `spots` — id, campaign_id, **side** (front|back, default front), size, grid_area, price, status, business_name, business_category, contact_email, contact_phone, website, ad_file_url, ad_status, **tracking_code** (unique, nullable; populated when status → paid)
 - `orders` — id, spot_id, stripe_payment_intent_id, amount_cents, status
+- `qr_scans` — id, spot_id, campaign_id, scanned_at (default now), user_agent, ip_address, city — one row per QR scan recorded by `/go/:code`
 
 ## Postcard Layout
 
@@ -79,6 +80,14 @@ The print page (`/admin/campaign/:id/print`) renders both sides as separate prin
 
 Campaign 1 (Spring 2025) has 16 spots: 9 front-side + 7 back-side. Front: 1 paid (Mr. Biscuit's, the `mb` perpetual sponsor demo) + 8 available. Back: all 7 available.
 
+## QR Code Tracking
+
+Every paid spot is automatically issued a URL-safe slug `tracking_code` (e.g. `romas-pizza-spring2026`) by the Stripe webhook (and idempotently by the synchronous `/checkout/confirm` path). The frontend's `qrUtils.jsx` builds QR codes pointing to `https://<host>/go/<code>`.
+
+- `GET /go/:code` (api-server, mounted at app root via the `/go` path in `artifact.toml`) — looks up the spot by tracking_code, fire-and-forget inserts a row into `qr_scans` (user-agent, IP from `X-Forwarded-For` via `app.set("trust proxy", true)`), then 302-redirects to `normalizeWebsite(spot.website)` (or `/` if no website is stored). Unknown codes return 404.
+- `GET /api/admin/scans` (admin auth) — per-spot aggregate: `totalScans`, `scansLast7Days`, `scansLast30Days`, `lastScannedAt` (only includes spots that have a tracking_code).
+- Spot API responses (active campaign, GET spot, admin campaign) now include `trackingCode` and `scanCount` for the frontend.
+
 ## Routes
 
 ### Frontend (Wouter)
@@ -87,6 +96,7 @@ Campaign 1 (Spring 2025) has 16 spots: 9 front-side + 7 back-side. Front: 1 paid
 - `/upload/:spotId` — Ad file upload / design request
 - `/confirmation` — Order confirmation
 - `/admin` — Admin dashboard (JWT protected)
+- `/go/:code` — QR redirect (handled by api-server, not the frontend)
 
 ### Backend (Express, all under `/api`)
 - `GET /api/campaigns/active`

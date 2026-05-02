@@ -238,6 +238,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /admin/scans:
+    get:
+      operationId: getAdminScans
+      tags: [admin]
+      summary: Get QR scan stats grouped by spot
+      responses:
+        "200":
+          description: Per-spot scan stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminScansResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /admin/spots/{id}/approve:
     post:
       operationId: approveAd
@@ -346,6 +365,10 @@ components:
           type: ["string", "null"]
         adStatus:
           type: ["string", "null"]
+        trackingCode:
+          type: ["string", "null"]
+        scanCount:
+          type: integer
         createdAt:
           type: string
       required:
@@ -475,6 +498,39 @@ components:
               type: ["string", "null"]
           required:
             - isPaid
+
+    ScanStats:
+      type: object
+      properties:
+        spotId:
+          type: integer
+        businessName:
+          type: ["string", "null"]
+        trackingCode:
+          type: ["string", "null"]
+        totalScans:
+          type: integer
+        scansLast7Days:
+          type: integer
+        scansLast30Days:
+          type: integer
+        lastScannedAt:
+          type: ["string", "null"]
+      required:
+        - spotId
+        - totalScans
+        - scansLast7Days
+        - scansLast30Days
+
+    AdminScansResponse:
+      type: object
+      properties:
+        scans:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScanStats"
+      required:
+        - scans
 
     AdminCampaignResponse:
       type: object

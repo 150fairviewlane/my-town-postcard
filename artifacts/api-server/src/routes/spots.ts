@@ -11,12 +11,14 @@ import {
   UploadAdBody,
   UploadAdResponse,
 } from "@workspace/api-zod";
+import { fetchScanCountForSpot } from "../lib/scanCounts";
 
 const router: IRouter = Router();
 
-const serializeSpot = <T extends { createdAt: Date | string }>(s: T) => ({
+const serializeSpot = <T extends { createdAt: Date | string }>(s: T, scanCount = 0) => ({
   ...s,
   createdAt: s.createdAt instanceof Date ? s.createdAt.toISOString() : s.createdAt,
+  scanCount,
 });
 
 router.get("/spots/:id", async (req, res): Promise<void> => {
@@ -37,7 +39,8 @@ router.get("/spots/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(GetSpotResponse.parse(serializeSpot(spot)));
+  const scanCount = await fetchScanCountForSpot(spot.id);
+  res.json(GetSpotResponse.parse(serializeSpot(spot, scanCount)));
 });
 
 router.post("/spots/:id/reserve", async (req, res): Promise<void> => {
@@ -99,7 +102,7 @@ router.post("/spots/:id/reserve", async (req, res): Promise<void> => {
     .returning();
 
   req.log.info({ spotId: params.data.id, business: body.data.businessName }, "Spot reserved");
-  res.json(ReserveSpotResponse.parse(serializeSpot(updated)));
+  res.json(ReserveSpotResponse.parse(serializeSpot(updated, await fetchScanCountForSpot(updated.id))));
 });
 
 router.post("/spots/:id/upload-ad", async (req, res): Promise<void> => {
@@ -136,7 +139,7 @@ router.post("/spots/:id/upload-ad", async (req, res): Promise<void> => {
     .returning();
 
   req.log.info({ spotId: params.data.id, adStatus }, "Ad uploaded/requested");
-  res.json(UploadAdResponse.parse(serializeSpot(updated)));
+  res.json(UploadAdResponse.parse(serializeSpot(updated, await fetchScanCountForSpot(updated.id))));
 });
 
 export default router;

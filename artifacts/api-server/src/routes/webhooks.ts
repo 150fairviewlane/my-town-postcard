@@ -2,6 +2,7 @@ import { type Request, type Response } from "express";
 import { eq } from "drizzle-orm";
 import { db, spotsTable, ordersTable } from "@workspace/db";
 import { sendReservationConfirmation, sendAdminNewOrder } from "../lib/emails";
+import { ensureTrackingCode } from "../lib/trackingCode";
 import { logger } from "../lib/logger";
 
 // We use require("stripe") (not import) to match the pattern in checkout.ts
@@ -242,6 +243,17 @@ async function markSpotPaidAndNotify(
     { orderId: order.id, spotId, paymentRef },
     "Webhook marked spot paid and created order",
   );
+
+  // Generate a tracking code for the QR redirect. Idempotent — if the
+  // synchronous /checkout/confirm path already set one, this is a no-op.
+  // Wrapped in try/catch so a failure here doesn't break webhook delivery
+  // (Stripe would otherwise retry forever).
+  try {
+    const code = await ensureTrackingCode(spot);
+    req.log.info({ spotId, trackingCode: code }, "Tracking code ensured for paid spot");
+  } catch (err) {
+    req.log.error({ err, spotId }, "Failed to assign tracking code — continuing");
+  }
 
   const orderInfo = {
     businessName: spot.businessName ?? "Unknown",

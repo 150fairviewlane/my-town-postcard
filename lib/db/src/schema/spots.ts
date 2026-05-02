@@ -20,6 +20,11 @@ export const spotsTable = pgTable("spots", {
   website: text("website"),
   adFileUrl: text("ad_file_url"),
   adStatus: text("ad_status"),
+  // URL-safe slug used for the trackable QR redirect at /go/:code. Generated
+  // when the spot transitions to "paid" (in the Stripe webhook and the
+  // synchronous /checkout/confirm path). Unique across the table; null until
+  // payment so that available/reserved rows don't collide on the empty string.
+  trackingCode: text("tracking_code").unique(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

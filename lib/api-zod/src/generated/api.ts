@@ -47,6 +47,8 @@ export const GetActiveCampaignResponse = zod
           website: zod.string().nullish(),
           adFileUrl: zod.string().nullish(),
           adStatus: zod.string().nullish(),
+          trackingCode: zod.string().nullish(),
+          scanCount: zod.number().optional(),
           createdAt: zod.string(),
         }),
       ),
@@ -76,6 +78,8 @@ export const GetSpotResponse = zod.object({
   website: zod.string().nullish(),
   adFileUrl: zod.string().nullish(),
   adStatus: zod.string().nullish(),
+  trackingCode: zod.string().nullish(),
+  scanCount: zod.number().optional(),
   createdAt: zod.string(),
 });
 
@@ -110,6 +114,8 @@ export const ReserveSpotResponse = zod.object({
   website: zod.string().nullish(),
   adFileUrl: zod.string().nullish(),
   adStatus: zod.string().nullish(),
+  trackingCode: zod.string().nullish(),
+  scanCount: zod.number().optional(),
   createdAt: zod.string(),
 });
 
@@ -169,6 +175,8 @@ export const UploadAdResponse = zod.object({
   website: zod.string().nullish(),
   adFileUrl: zod.string().nullish(),
   adStatus: zod.string().nullish(),
+  trackingCode: zod.string().nullish(),
+  scanCount: zod.number().optional(),
   createdAt: zod.string(),
 });
 
@@ -215,6 +223,8 @@ export const GetAdminCampaignResponse = zod.object({
         website: zod.string().nullish(),
         adFileUrl: zod.string().nullish(),
         adStatus: zod.string().nullish(),
+        trackingCode: zod.string().nullish(),
+        scanCount: zod.number().optional(),
         createdAt: zod.string(),
       })
       .and(
@@ -227,6 +237,23 @@ export const GetAdminCampaignResponse = zod.object({
   totalRevenue: zod.number(),
   totalSpots: zod.number(),
   paidSpots: zod.number(),
+});
+
+/**
+ * @summary Get QR scan stats grouped by spot
+ */
+export const GetAdminScansResponse = zod.object({
+  scans: zod.array(
+    zod.object({
+      spotId: zod.number(),
+      businessName: zod.string().nullish(),
+      trackingCode: zod.string().nullish(),
+      totalScans: zod.number(),
+      scansLast7Days: zod.number(),
+      scansLast30Days: zod.number(),
+      lastScannedAt: zod.string().nullish(),
+    }),
+  ),
 });
 
 /**
@@ -252,5 +279,7 @@ export const ApproveAdResponse = zod.object({
   website: zod.string().nullish(),
   adFileUrl: zod.string().nullish(),
   adStatus: zod.string().nullish(),
+  trackingCode: zod.string().nullish(),
+  scanCount: zod.number().optional(),
   createdAt: zod.string(),
 });

@@ -20,6 +20,7 @@ import type {
   AdminCampaignResponse,
   AdminLoginBody,
   AdminLoginResponse,
+  AdminScansResponse,
   CampaignWithSpots,
   ConfirmPaymentBody,
   ConfirmPaymentResponse,
@@ -767,6 +768,81 @@ export function useGetAdminCampaign<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetAdminCampaignQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get QR scan stats grouped by spot
+ */
+export const getGetAdminScansUrl = () => {
+  return `/api/admin/scans`;
+};
+
+export const getAdminScans = async (
+  options?: RequestInit,
+): Promise<AdminScansResponse> => {
+  return customFetch<AdminScansResponse>(getGetAdminScansUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAdminScansQueryKey = () => {
+  return [`/api/admin/scans`] as const;
+};
+
+export const getGetAdminScansQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAdminScans>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminScans>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAdminScansQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminScans>>> = ({
+    signal,
+  }) => getAdminScans({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminScans>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAdminScansQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAdminScans>>
+>;
+export type GetAdminScansQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get QR scan stats grouped by spot
+ */
+
+export function useGetAdminScans<
+  TData = Awaited<ReturnType<typeof getAdminScans>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminScans>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAdminScansQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

@@ -82,6 +82,9 @@ export interface Spot {
   adFileUrl?: string | null;
   /** @nullable */
   adStatus?: string | null;
+  /** @nullable */
+  trackingCode?: string | null;
+  scanCount?: number;
   createdAt: string;
 }
 
@@ -149,6 +152,23 @@ export type AdminSpotRow = Spot & {
   /** @nullable */
   stripePaymentIntentId?: string | null;
 };
+
+export interface ScanStats {
+  spotId: number;
+  /** @nullable */
+  businessName?: string | null;
+  /** @nullable */
+  trackingCode?: string | null;
+  totalScans: number;
+  scansLast7Days: number;
+  scansLast30Days: number;
+  /** @nullable */
+  lastScannedAt?: string | null;
+}
+
+export interface AdminScansResponse {
+  scans: ScanStats[];
+}
 
 export interface AdminCampaignResponse {
   campaign: Campaign;

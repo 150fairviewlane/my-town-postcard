@@ -1,14 +1,16 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db, campaignsTable, spotsTable, ordersTable } from "@workspace/db";
 import {
   AdminLoginBody,
   AdminLoginResponse,
   GetAdminCampaignResponse,
+  GetAdminScansResponse,
   ApproveAdParams,
   ApproveAdResponse,
 } from "@workspace/api-zod";
 import jwt from "jsonwebtoken";
+import { fetchScanCountsForSpotIds } from "../lib/scanCounts";
 
 const router: IRouter = Router();
 
@@ -65,6 +67,7 @@ router.get("/admin/campaign", requireAdmin, async (req, res): Promise<void> => {
 
   const orders = await db.select().from(ordersTable);
   const paidOrdersBySpot = new Map(orders.map(o => [o.spotId, o]));
+  const scanCounts = await fetchScanCountsForSpotIds(spots.map(s => s.id));
 
   const serializeDate = (d: Date | string | null | undefined) =>
     d instanceof Date ? d.toISOString() : (d ?? null);
@@ -76,6 +79,7 @@ router.get("/admin/campaign", requireAdmin, async (req, res): Promise<void> => {
       createdAt: serializeDate(spot.createdAt),
       isPaid: spot.status === "paid",
       stripePaymentIntentId: order?.stripePaymentIntentId ?? null,
+      scanCount: scanCounts.get(spot.id) ?? 0,
     };
   });
 
@@ -89,6 +93,58 @@ router.get("/admin/campaign", requireAdmin, async (req, res): Promise<void> => {
     totalSpots: spots.length,
     paidSpots: paidSpots.length,
   }));
+});
+
+router.get("/admin/scans", requireAdmin, async (req, res): Promise<void> => {
+  // One round-trip per-spot aggregate: total / 7-day / 30-day windows plus
+  // the last-scanned-at timestamp. We list every spot that has been issued
+  // a tracking code (i.e. paid spots) so admins can see "0 scans yet" rows
+  // alongside actively scanned ones.
+  const rows = await db.execute<{
+    spot_id: number;
+    business_name: string | null;
+    tracking_code: string | null;
+    total_scans: number;
+    scans_last_7_days: number;
+    scans_last_30_days: number;
+    last_scanned_at: Date | string | null;
+  }>(sql`
+    SELECT
+      s.id            AS spot_id,
+      s.business_name AS business_name,
+      s.tracking_code AS tracking_code,
+      COUNT(q.id)::int                                                              AS total_scans,
+      COUNT(q.id) FILTER (WHERE q.scanned_at > now() - interval '7 days')::int      AS scans_last_7_days,
+      COUNT(q.id) FILTER (WHERE q.scanned_at > now() - interval '30 days')::int     AS scans_last_30_days,
+      MAX(q.scanned_at)                                                             AS last_scanned_at
+    FROM spots s
+    LEFT JOIN qr_scans q ON q.spot_id = s.id
+    WHERE s.tracking_code IS NOT NULL
+    GROUP BY s.id, s.business_name, s.tracking_code
+    ORDER BY total_scans DESC, s.id ASC
+  `);
+
+  // pg returns TIMESTAMPTZ as a Date in some configs and as an already-parsed
+  // string in others. Normalize both into ISO 8601 so the API is consistent
+  // with the rest of the responses (createdAt etc).
+  const toIso = (v: Date | string | null | undefined): string | null => {
+    if (!v) return null;
+    if (v instanceof Date) return v.toISOString();
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? String(v) : d.toISOString();
+  };
+
+  const scans = rows.rows.map(r => ({
+    spotId: Number(r.spot_id),
+    businessName: r.business_name,
+    trackingCode: r.tracking_code,
+    totalScans: Number(r.total_scans ?? 0),
+    scansLast7Days: Number(r.scans_last_7_days ?? 0),
+    scansLast30Days: Number(r.scans_last_30_days ?? 0),
+    lastScannedAt: toIso(r.last_scanned_at),
+  }));
+
+  res.json(GetAdminScansResponse.parse({ scans }));
 });
 
 router.post("/admin/spots/:id/approve", requireAdmin, async (req, res): Promise<void> => {
@@ -115,7 +171,12 @@ router.post("/admin/spots/:id/approve", requireAdmin, async (req, res): Promise<
     .where(eq(spotsTable.id, params.data.id))
     .returning();
 
-  const ser = (u: typeof updated) => ({ ...u, createdAt: u.createdAt instanceof Date ? u.createdAt.toISOString() : u.createdAt });
+  const scanCount = (await fetchScanCountsForSpotIds([params.data.id])).get(params.data.id) ?? 0;
+  const ser = (u: typeof updated) => ({
+    ...u,
+    createdAt: u.createdAt instanceof Date ? u.createdAt.toISOString() : u.createdAt,
+    scanCount,
+  });
 
   req.log.info({ spotId: params.data.id }, "Ad approved");
   res.json(ApproveAdResponse.parse(ser(updated)));
