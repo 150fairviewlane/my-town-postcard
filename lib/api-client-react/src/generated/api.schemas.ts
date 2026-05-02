@@ -210,6 +210,149 @@ export interface AdminCampaignsListResponse {
   campaigns: CampaignSummary[];
 }
 
+export type OutreachLeadContactMethod =
+  (typeof OutreachLeadContactMethod)[keyof typeof OutreachLeadContactMethod];
+
+export const OutreachLeadContactMethod = {
+  facebook: "facebook",
+  phone: "phone",
+  email: "email",
+  "in-person": "in-person",
+  other: "other",
+} as const;
+
+export type OutreachLeadStatus =
+  (typeof OutreachLeadStatus)[keyof typeof OutreachLeadStatus];
+
+export const OutreachLeadStatus = {
+  "not-contacted": "not-contacted",
+  contacted: "contacted",
+  interested: "interested",
+  reserved: "reserved",
+  paid: "paid",
+  passed: "passed",
+} as const;
+
+export interface OutreachLead {
+  id: number;
+  businessName: string;
+  /** @nullable */
+  ownerName?: string | null;
+  /** @nullable */
+  phone?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  industry?: string | null;
+  /** @nullable */
+  town?: string | null;
+  contactMethod: OutreachLeadContactMethod;
+  status: OutreachLeadStatus;
+  /** @nullable */
+  notes?: string | null;
+  /** @nullable */
+  contactedAt?: string | null;
+  /** @nullable */
+  followUpDate?: string | null;
+  createdAt: string;
+}
+
+export type OutreachLeadInputContactMethod =
+  (typeof OutreachLeadInputContactMethod)[keyof typeof OutreachLeadInputContactMethod];
+
+export const OutreachLeadInputContactMethod = {
+  facebook: "facebook",
+  phone: "phone",
+  email: "email",
+  "in-person": "in-person",
+  other: "other",
+} as const;
+
+export type OutreachLeadInputStatus =
+  (typeof OutreachLeadInputStatus)[keyof typeof OutreachLeadInputStatus];
+
+export const OutreachLeadInputStatus = {
+  "not-contacted": "not-contacted",
+  contacted: "contacted",
+  interested: "interested",
+  reserved: "reserved",
+  paid: "paid",
+  passed: "passed",
+} as const;
+
+export interface OutreachLeadInput {
+  businessName: string;
+  /** @nullable */
+  ownerName?: string | null;
+  /** @nullable */
+  phone?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  industry?: string | null;
+  /** @nullable */
+  town?: string | null;
+  contactMethod?: OutreachLeadInputContactMethod;
+  status?: OutreachLeadInputStatus;
+  /** @nullable */
+  notes?: string | null;
+  /** @nullable */
+  followUpDate?: string | null;
+}
+
+export type OutreachLeadUpdateContactMethod =
+  (typeof OutreachLeadUpdateContactMethod)[keyof typeof OutreachLeadUpdateContactMethod];
+
+export const OutreachLeadUpdateContactMethod = {
+  facebook: "facebook",
+  phone: "phone",
+  email: "email",
+  "in-person": "in-person",
+  other: "other",
+} as const;
+
+export type OutreachLeadUpdateStatus =
+  (typeof OutreachLeadUpdateStatus)[keyof typeof OutreachLeadUpdateStatus];
+
+export const OutreachLeadUpdateStatus = {
+  "not-contacted": "not-contacted",
+  contacted: "contacted",
+  interested: "interested",
+  reserved: "reserved",
+  paid: "paid",
+  passed: "passed",
+} as const;
+
+export interface OutreachLeadUpdate {
+  businessName?: string;
+  /** @nullable */
+  ownerName?: string | null;
+  /** @nullable */
+  phone?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  industry?: string | null;
+  /** @nullable */
+  town?: string | null;
+  contactMethod?: OutreachLeadUpdateContactMethod;
+  status?: OutreachLeadUpdateStatus;
+  /** @nullable */
+  notes?: string | null;
+  /** @nullable */
+  followUpDate?: string | null;
+  /** When true, set contactedAt to the server's current time */
+  markContactedNow?: boolean;
+}
+
+export interface OutreachLeadsListResponse {
+  leads: OutreachLead[];
+}
+
+export interface DeleteOutreachLeadResponse {
+  success: boolean;
+}
+
 export type AdminCampaignDetailResponse = AdminCampaignResponse & {
   availableSpots: number;
 };

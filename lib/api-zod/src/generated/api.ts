@@ -530,6 +530,161 @@ export const CompleteCampaignResponse = zod
   );
 
 /**
+ * @summary List all outreach leads
+ */
+export const ListOutreachLeadsResponse = zod.object({
+  leads: zod.array(
+    zod.object({
+      id: zod.number(),
+      businessName: zod.string(),
+      ownerName: zod.string().nullish(),
+      phone: zod.string().nullish(),
+      email: zod.string().nullish(),
+      industry: zod.string().nullish(),
+      town: zod.string().nullish(),
+      contactMethod: zod.enum([
+        "facebook",
+        "phone",
+        "email",
+        "in-person",
+        "other",
+      ]),
+      status: zod.enum([
+        "not-contacted",
+        "contacted",
+        "interested",
+        "reserved",
+        "paid",
+        "passed",
+      ]),
+      notes: zod.string().nullish(),
+      contactedAt: zod.string().nullish(),
+      followUpDate: zod.string().nullish(),
+      createdAt: zod.string(),
+    }),
+  ),
+});
+
+/**
+ * @summary Create a new outreach lead
+ */
+export const CreateOutreachLeadBody = zod.object({
+  businessName: zod.string(),
+  ownerName: zod.string().nullish(),
+  phone: zod.string().nullish(),
+  email: zod.string().nullish(),
+  industry: zod.string().nullish(),
+  town: zod.string().nullish(),
+  contactMethod: zod
+    .enum(["facebook", "phone", "email", "in-person", "other"])
+    .optional(),
+  status: zod
+    .enum([
+      "not-contacted",
+      "contacted",
+      "interested",
+      "reserved",
+      "paid",
+      "passed",
+    ])
+    .optional(),
+  notes: zod.string().nullish(),
+  followUpDate: zod.string().nullish(),
+});
+
+export const CreateOutreachLeadResponse = zod.object({
+  id: zod.number(),
+  businessName: zod.string(),
+  ownerName: zod.string().nullish(),
+  phone: zod.string().nullish(),
+  email: zod.string().nullish(),
+  industry: zod.string().nullish(),
+  town: zod.string().nullish(),
+  contactMethod: zod.enum(["facebook", "phone", "email", "in-person", "other"]),
+  status: zod.enum([
+    "not-contacted",
+    "contacted",
+    "interested",
+    "reserved",
+    "paid",
+    "passed",
+  ]),
+  notes: zod.string().nullish(),
+  contactedAt: zod.string().nullish(),
+  followUpDate: zod.string().nullish(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Update an outreach lead
+ */
+export const UpdateOutreachLeadParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateOutreachLeadBody = zod.object({
+  businessName: zod.string().optional(),
+  ownerName: zod.string().nullish(),
+  phone: zod.string().nullish(),
+  email: zod.string().nullish(),
+  industry: zod.string().nullish(),
+  town: zod.string().nullish(),
+  contactMethod: zod
+    .enum(["facebook", "phone", "email", "in-person", "other"])
+    .optional(),
+  status: zod
+    .enum([
+      "not-contacted",
+      "contacted",
+      "interested",
+      "reserved",
+      "paid",
+      "passed",
+    ])
+    .optional(),
+  notes: zod.string().nullish(),
+  followUpDate: zod.string().nullish(),
+  markContactedNow: zod
+    .boolean()
+    .optional()
+    .describe("When true, set contactedAt to the server's current time"),
+});
+
+export const UpdateOutreachLeadResponse = zod.object({
+  id: zod.number(),
+  businessName: zod.string(),
+  ownerName: zod.string().nullish(),
+  phone: zod.string().nullish(),
+  email: zod.string().nullish(),
+  industry: zod.string().nullish(),
+  town: zod.string().nullish(),
+  contactMethod: zod.enum(["facebook", "phone", "email", "in-person", "other"]),
+  status: zod.enum([
+    "not-contacted",
+    "contacted",
+    "interested",
+    "reserved",
+    "paid",
+    "passed",
+  ]),
+  notes: zod.string().nullish(),
+  contactedAt: zod.string().nullish(),
+  followUpDate: zod.string().nullish(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Delete an outreach lead
+ */
+export const DeleteOutreachLeadParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const DeleteOutreachLeadResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
  * @summary Approve an ad
  */
 export const ApproveAdParams = zod.object({

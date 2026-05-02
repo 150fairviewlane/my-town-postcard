@@ -398,6 +398,120 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /admin/outreach:
+    get:
+      operationId: listOutreachLeads
+      tags: [admin]
+      summary: List all outreach leads
+      responses:
+        "200":
+          description: Lead list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OutreachLeadsListResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createOutreachLead
+      tags: [admin]
+      summary: Create a new outreach lead
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OutreachLeadInput"
+      responses:
+        "200":
+          description: Lead created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OutreachLead"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/outreach/{id}:
+    patch:
+      operationId: updateOutreachLead
+      tags: [admin]
+      summary: Update an outreach lead
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OutreachLeadUpdate"
+      responses:
+        "200":
+          description: Lead updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OutreachLead"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Lead not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteOutreachLead
+      tags: [admin]
+      summary: Delete an outreach lead
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Lead deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteOutreachLeadResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Lead not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /admin/spots/{id}/approve:
     post:
       operationId: approveAd
@@ -747,6 +861,119 @@ components:
             $ref: "#/components/schemas/CampaignSummary"
       required:
         - campaigns
+
+    OutreachLead:
+      type: object
+      properties:
+        id:
+          type: integer
+        businessName:
+          type: string
+        ownerName:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        industry:
+          type: ["string", "null"]
+        town:
+          type: ["string", "null"]
+        contactMethod:
+          type: string
+          enum: [facebook, phone, email, in-person, other]
+        status:
+          type: string
+          enum: [not-contacted, contacted, interested, reserved, paid, passed]
+        notes:
+          type: ["string", "null"]
+        contactedAt:
+          type: ["string", "null"]
+        followUpDate:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - businessName
+        - contactMethod
+        - status
+        - createdAt
+
+    OutreachLeadInput:
+      type: object
+      properties:
+        businessName:
+          type: string
+        ownerName:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        industry:
+          type: ["string", "null"]
+        town:
+          type: ["string", "null"]
+        contactMethod:
+          type: string
+          enum: [facebook, phone, email, in-person, other]
+        status:
+          type: string
+          enum: [not-contacted, contacted, interested, reserved, paid, passed]
+        notes:
+          type: ["string", "null"]
+        followUpDate:
+          type: ["string", "null"]
+      required:
+        - businessName
+
+    OutreachLeadUpdate:
+      type: object
+      properties:
+        businessName:
+          type: string
+        ownerName:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        industry:
+          type: ["string", "null"]
+        town:
+          type: ["string", "null"]
+        contactMethod:
+          type: string
+          enum: [facebook, phone, email, in-person, other]
+        status:
+          type: string
+          enum: [not-contacted, contacted, interested, reserved, paid, passed]
+        notes:
+          type: ["string", "null"]
+        followUpDate:
+          type: ["string", "null"]
+        markContactedNow:
+          type: boolean
+          description: When true, set contactedAt to the server's current time
+
+    OutreachLeadsListResponse:
+      type: object
+      properties:
+        leads:
+          type: array
+          items:
+            $ref: "#/components/schemas/OutreachLead"
+      required:
+        - leads
+
+    DeleteOutreachLeadResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
 
     AdminCampaignDetailResponse:
       allOf:

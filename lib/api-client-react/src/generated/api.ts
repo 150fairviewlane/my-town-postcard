@@ -28,8 +28,13 @@ import type {
   ConfirmPaymentResponse,
   CreateCampaignBody,
   CreatePaymentIntentBody,
+  DeleteOutreachLeadResponse,
   ErrorResponse,
   HealthStatus,
+  OutreachLead,
+  OutreachLeadInput,
+  OutreachLeadUpdate,
+  OutreachLeadsListResponse,
   PaymentIntentResponse,
   ReserveSpotBody,
   Spot,
@@ -1272,6 +1277,338 @@ export const useCompleteCampaign = <
   TContext
 > => {
   return useMutation(getCompleteCampaignMutationOptions(options));
+};
+
+/**
+ * @summary List all outreach leads
+ */
+export const getListOutreachLeadsUrl = () => {
+  return `/api/admin/outreach`;
+};
+
+export const listOutreachLeads = async (
+  options?: RequestInit,
+): Promise<OutreachLeadsListResponse> => {
+  return customFetch<OutreachLeadsListResponse>(getListOutreachLeadsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListOutreachLeadsQueryKey = () => {
+  return [`/api/admin/outreach`] as const;
+};
+
+export const getListOutreachLeadsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listOutreachLeads>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listOutreachLeads>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListOutreachLeadsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listOutreachLeads>>
+  > = ({ signal }) => listOutreachLeads({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listOutreachLeads>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListOutreachLeadsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listOutreachLeads>>
+>;
+export type ListOutreachLeadsQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary List all outreach leads
+ */
+
+export function useListOutreachLeads<
+  TData = Awaited<ReturnType<typeof listOutreachLeads>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listOutreachLeads>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListOutreachLeadsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a new outreach lead
+ */
+export const getCreateOutreachLeadUrl = () => {
+  return `/api/admin/outreach`;
+};
+
+export const createOutreachLead = async (
+  outreachLeadInput: OutreachLeadInput,
+  options?: RequestInit,
+): Promise<OutreachLead> => {
+  return customFetch<OutreachLead>(getCreateOutreachLeadUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(outreachLeadInput),
+  });
+};
+
+export const getCreateOutreachLeadMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createOutreachLead>>,
+    TError,
+    { data: BodyType<OutreachLeadInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createOutreachLead>>,
+  TError,
+  { data: BodyType<OutreachLeadInput> },
+  TContext
+> => {
+  const mutationKey = ["createOutreachLead"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createOutreachLead>>,
+    { data: BodyType<OutreachLeadInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createOutreachLead(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateOutreachLeadMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createOutreachLead>>
+>;
+export type CreateOutreachLeadMutationBody = BodyType<OutreachLeadInput>;
+export type CreateOutreachLeadMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Create a new outreach lead
+ */
+export const useCreateOutreachLead = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createOutreachLead>>,
+    TError,
+    { data: BodyType<OutreachLeadInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createOutreachLead>>,
+  TError,
+  { data: BodyType<OutreachLeadInput> },
+  TContext
+> => {
+  return useMutation(getCreateOutreachLeadMutationOptions(options));
+};
+
+/**
+ * @summary Update an outreach lead
+ */
+export const getUpdateOutreachLeadUrl = (id: number) => {
+  return `/api/admin/outreach/${id}`;
+};
+
+export const updateOutreachLead = async (
+  id: number,
+  outreachLeadUpdate: OutreachLeadUpdate,
+  options?: RequestInit,
+): Promise<OutreachLead> => {
+  return customFetch<OutreachLead>(getUpdateOutreachLeadUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(outreachLeadUpdate),
+  });
+};
+
+export const getUpdateOutreachLeadMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateOutreachLead>>,
+    TError,
+    { id: number; data: BodyType<OutreachLeadUpdate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateOutreachLead>>,
+  TError,
+  { id: number; data: BodyType<OutreachLeadUpdate> },
+  TContext
+> => {
+  const mutationKey = ["updateOutreachLead"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateOutreachLead>>,
+    { id: number; data: BodyType<OutreachLeadUpdate> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateOutreachLead(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateOutreachLeadMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateOutreachLead>>
+>;
+export type UpdateOutreachLeadMutationBody = BodyType<OutreachLeadUpdate>;
+export type UpdateOutreachLeadMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Update an outreach lead
+ */
+export const useUpdateOutreachLead = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateOutreachLead>>,
+    TError,
+    { id: number; data: BodyType<OutreachLeadUpdate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateOutreachLead>>,
+  TError,
+  { id: number; data: BodyType<OutreachLeadUpdate> },
+  TContext
+> => {
+  return useMutation(getUpdateOutreachLeadMutationOptions(options));
+};
+
+/**
+ * @summary Delete an outreach lead
+ */
+export const getDeleteOutreachLeadUrl = (id: number) => {
+  return `/api/admin/outreach/${id}`;
+};
+
+export const deleteOutreachLead = async (
+  id: number,
+  options?: RequestInit,
+): Promise<DeleteOutreachLeadResponse> => {
+  return customFetch<DeleteOutreachLeadResponse>(getDeleteOutreachLeadUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteOutreachLeadMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteOutreachLead>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteOutreachLead>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteOutreachLead"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteOutreachLead>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteOutreachLead(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteOutreachLeadMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteOutreachLead>>
+>;
+
+export type DeleteOutreachLeadMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Delete an outreach lead
+ */
+export const useDeleteOutreachLead = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteOutreachLead>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteOutreachLead>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteOutreachLeadMutationOptions(options));
 };
 
 /**
