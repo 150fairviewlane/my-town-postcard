@@ -69,6 +69,8 @@ export interface Spot {
   /** @nullable */
   contactPhone?: string | null;
   /** @nullable */
+  website?: string | null;
+  /** @nullable */
   adFileUrl?: string | null;
   /** @nullable */
   adStatus?: string | null;
@@ -84,16 +86,30 @@ export interface ReserveSpotBody {
   businessCategory: string;
   contactEmail: string;
   contactPhone?: string;
+  website?: string;
 }
 
 export interface CreatePaymentIntentBody {
   spotId: number;
 }
 
+export type PaymentIntentResponseSize =
+  (typeof PaymentIntentResponseSize)[keyof typeof PaymentIntentResponseSize];
+
+export const PaymentIntentResponseSize = {
+  xl: "xl",
+  large: "large",
+  medium: "medium",
+  small: "small",
+} as const;
+
 export interface PaymentIntentResponse {
   clientSecret: string;
   spotId: number;
   amount: number;
+  /** @nullable */
+  businessName?: string | null;
+  size: PaymentIntentResponseSize;
 }
 
 export interface ConfirmPaymentBody {

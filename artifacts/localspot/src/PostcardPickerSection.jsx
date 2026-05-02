@@ -105,6 +105,7 @@ export default function PostcardPickerSection() {
           businessCategory: payload.industry,
           contactEmail: payload.email,
           contactPhone: payload.phone || undefined,
+          website: payload.website || undefined,
         },
       });
 

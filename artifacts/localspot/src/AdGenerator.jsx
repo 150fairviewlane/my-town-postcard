@@ -563,6 +563,7 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
     offerFine: "",
     address: "",
     phone: "",
+    email: "",
     website: "",
     logo: null,
     photo: null,
@@ -584,7 +585,10 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
 
   const sizeInfo = AD_SIZES[sizeKey];
   const Tpl = TEMPLATES[selectedTemplate].Component;
-  const formValid = formData.businessName.trim() && formData.industry;
+  // Email is required so we can send the receipt and reservation
+  // confirmation. Use a basic shape check to avoid obviously bad addresses.
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim());
+  const formValid = formData.businessName.trim() && formData.industry && emailValid;
 
   // Lock background scroll while the modal is open so swipes inside the ad
   // generator never bubble up to scroll the landing page underneath.
@@ -716,6 +720,18 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
                   <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>Offer Fine Print</label>
                   <input value={formData.offerFine} onChange={e => setFormData(d => ({ ...d, offerFine: e.target.value }))}
                     placeholder="Expires 6/30" style={inputStyle} />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>
+                  Email <span style={{ color: "#991b1b" }}>*</span>
+                </label>
+                <input value={formData.email} onChange={e => setFormData(d => ({ ...d, email: e.target.value }))}
+                  type="email" inputMode="email" autoComplete="email"
+                  placeholder="you@yourbusiness.com" style={inputStyle} />
+                <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>
+                  We'll send your receipt and reservation confirmation here.
                 </div>
               </div>
 

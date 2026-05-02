@@ -65,6 +65,8 @@ router.post("/checkout/create-payment-intent", async (req, res): Promise<void> =
     clientSecret: paymentIntent.client_secret,
     spotId: spot.id,
     amount: spot.price,
+    businessName: spot.businessName,
+    size: spot.size,
   }));
 });
 

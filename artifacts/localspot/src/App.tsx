@@ -16,7 +16,7 @@ function Router() {
       <Route path="/" component={LandingPage} />
       <Route path="/checkout/:spotId" component={CheckoutPage} />
       <Route path="/upload/:spotId" component={UploadAdPage} />
-      <Route path="/confirmation" component={ConfirmationPage} />
+      <Route path="/confirmation/:spotId" component={ConfirmationPage} />
       <Route path="/admin" component={AdminDashboard} />
     </Switch>
   );

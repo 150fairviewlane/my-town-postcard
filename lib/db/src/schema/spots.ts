@@ -14,6 +14,7 @@ export const spotsTable = pgTable("spots", {
   businessCategory: text("business_category"),
   contactEmail: text("contact_email"),
   contactPhone: text("contact_phone"),
+  website: text("website"),
   adFileUrl: text("ad_file_url"),
   adStatus: text("ad_status"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

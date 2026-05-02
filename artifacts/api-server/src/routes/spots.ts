@@ -2,6 +2,8 @@ import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
 import { db, spotsTable } from "@workspace/db";
 import {
+  GetSpotParams,
+  GetSpotResponse,
   ReserveSpotParams,
   ReserveSpotBody,
   ReserveSpotResponse,
@@ -11,6 +13,32 @@ import {
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
+
+const serializeSpot = <T extends { createdAt: Date | string }>(s: T) => ({
+  ...s,
+  createdAt: s.createdAt instanceof Date ? s.createdAt.toISOString() : s.createdAt,
+});
+
+router.get("/spots/:id", async (req, res): Promise<void> => {
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const params = GetSpotParams.safeParse({ id: rawId });
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const [spot] = await db
+    .select()
+    .from(spotsTable)
+    .where(eq(spotsTable.id, params.data.id));
+
+  if (!spot) {
+    res.status(404).json({ error: "Spot not found" });
+    return;
+  }
+
+  res.json(GetSpotResponse.parse(serializeSpot(spot)));
+});
 
 router.post("/spots/:id/reserve", async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
@@ -65,14 +93,13 @@ router.post("/spots/:id/reserve", async (req, res): Promise<void> => {
       businessCategory: body.data.businessCategory,
       contactEmail: body.data.contactEmail,
       contactPhone: body.data.contactPhone ?? null,
+      website: body.data.website ?? null,
     })
     .where(eq(spotsTable.id, params.data.id))
     .returning();
 
-  const ser = (u: typeof updated) => ({ ...u, createdAt: u.createdAt instanceof Date ? u.createdAt.toISOString() : u.createdAt });
-
   req.log.info({ spotId: params.data.id, business: body.data.businessName }, "Spot reserved");
-  res.json(ReserveSpotResponse.parse(ser(updated)));
+  res.json(ReserveSpotResponse.parse(serializeSpot(updated)));
 });
 
 router.post("/spots/:id/upload-ad", async (req, res): Promise<void> => {
@@ -108,10 +135,8 @@ router.post("/spots/:id/upload-ad", async (req, res): Promise<void> => {
     .where(eq(spotsTable.id, params.data.id))
     .returning();
 
-  const ser2 = (u: typeof updated) => ({ ...u, createdAt: u.createdAt instanceof Date ? u.createdAt.toISOString() : u.createdAt });
-
   req.log.info({ spotId: params.data.id, adStatus }, "Ad uploaded/requested");
-  res.json(UploadAdResponse.parse(ser2(updated)));
+  res.json(UploadAdResponse.parse(serializeSpot(updated)));
 });
 
 export default router;

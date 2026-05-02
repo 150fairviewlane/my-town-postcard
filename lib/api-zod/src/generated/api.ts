@@ -43,6 +43,7 @@ export const GetActiveCampaignResponse = zod
           businessCategory: zod.string().nullish(),
           contactEmail: zod.string().nullish(),
           contactPhone: zod.string().nullish(),
+          website: zod.string().nullish(),
           adFileUrl: zod.string().nullish(),
           adStatus: zod.string().nullish(),
           createdAt: zod.string(),
@@ -50,6 +51,31 @@ export const GetActiveCampaignResponse = zod
       ),
     }),
   );
+
+/**
+ * @summary Get a single spot by id
+ */
+export const GetSpotParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetSpotResponse = zod.object({
+  id: zod.number(),
+  campaignId: zod.number(),
+  size: zod.enum(["xl", "large", "medium", "small"]),
+  gridArea: zod.string(),
+  price: zod.number(),
+  categoryLock: zod.string().nullish(),
+  status: zod.enum(["available", "reserved", "paid"]),
+  businessName: zod.string().nullish(),
+  businessCategory: zod.string().nullish(),
+  contactEmail: zod.string().nullish(),
+  contactPhone: zod.string().nullish(),
+  website: zod.string().nullish(),
+  adFileUrl: zod.string().nullish(),
+  adStatus: zod.string().nullish(),
+  createdAt: zod.string(),
+});
 
 /**
  * @summary Reserve a spot
@@ -63,6 +89,7 @@ export const ReserveSpotBody = zod.object({
   businessCategory: zod.string(),
   contactEmail: zod.string(),
   contactPhone: zod.string().optional(),
+  website: zod.string().optional(),
 });
 
 export const ReserveSpotResponse = zod.object({
@@ -77,6 +104,7 @@ export const ReserveSpotResponse = zod.object({
   businessCategory: zod.string().nullish(),
   contactEmail: zod.string().nullish(),
   contactPhone: zod.string().nullish(),
+  website: zod.string().nullish(),
   adFileUrl: zod.string().nullish(),
   adStatus: zod.string().nullish(),
   createdAt: zod.string(),
@@ -93,6 +121,8 @@ export const CreatePaymentIntentResponse = zod.object({
   clientSecret: zod.string(),
   spotId: zod.number(),
   amount: zod.number(),
+  businessName: zod.string().nullish(),
+  size: zod.enum(["xl", "large", "medium", "small"]),
 });
 
 /**
@@ -132,6 +162,7 @@ export const UploadAdResponse = zod.object({
   businessCategory: zod.string().nullish(),
   contactEmail: zod.string().nullish(),
   contactPhone: zod.string().nullish(),
+  website: zod.string().nullish(),
   adFileUrl: zod.string().nullish(),
   adStatus: zod.string().nullish(),
   createdAt: zod.string(),
@@ -176,6 +207,7 @@ export const GetAdminCampaignResponse = zod.object({
         businessCategory: zod.string().nullish(),
         contactEmail: zod.string().nullish(),
         contactPhone: zod.string().nullish(),
+        website: zod.string().nullish(),
         adFileUrl: zod.string().nullish(),
         adStatus: zod.string().nullish(),
         createdAt: zod.string(),
@@ -211,6 +243,7 @@ export const ApproveAdResponse = zod.object({
   businessCategory: zod.string().nullish(),
   contactEmail: zod.string().nullish(),
   contactPhone: zod.string().nullish(),
+  website: zod.string().nullish(),
   adFileUrl: zod.string().nullish(),
   adStatus: zod.string().nullish(),
   createdAt: zod.string(),

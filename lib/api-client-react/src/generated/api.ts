@@ -192,6 +192,83 @@ export function useGetActiveCampaign<
 }
 
 /**
+ * @summary Get a single spot by id
+ */
+export const getGetSpotUrl = (id: number) => {
+  return `/api/spots/${id}`;
+};
+
+export const getSpot = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Spot> => {
+  return customFetch<Spot>(getGetSpotUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetSpotQueryKey = (id: number) => {
+  return [`/api/spots/${id}`] as const;
+};
+
+export const getGetSpotQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSpot>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getSpot>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetSpotQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getSpot>>> = ({
+    signal,
+  }) => getSpot(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getSpot>>, TError, TData> & {
+    queryKey: QueryKey;
+  };
+};
+
+export type GetSpotQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getSpot>>
+>;
+export type GetSpotQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get a single spot by id
+ */
+
+export function useGetSpot<
+  TData = Awaited<ReturnType<typeof getSpot>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getSpot>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetSpotQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
  * @summary Reserve a spot
  */
 export const getReserveSpotUrl = (id: number) => {

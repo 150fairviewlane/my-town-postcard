@@ -6,10 +6,13 @@ import { useCreatePaymentIntent, useConfirmPayment } from "@workspace/api-client
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "pk_test_placeholder");
 
-const SIZES = {
-  large: { label: "Large", price: 399 },
-  medium: { label: "Medium", price: 299 },
-  small: { label: "Small", price: 199 },
+// Display labels for each spot size. Actual price is read from the
+// PaymentIntent (server-authoritative) so this is just for the size name.
+const SIZE_LABELS = {
+  xl: "Extra Large",
+  large: "Large",
+  medium: "Medium",
+  small: "Small",
 };
 
 function CheckoutForm({ spotId, clientSecret, amount, size, businessName }) {
@@ -44,19 +47,23 @@ function CheckoutForm({ spotId, clientSecret, amount, size, businessName }) {
           spotId: parseInt(spotId),
         },
       });
-      navigate(`/upload/${spotId}`);
+      // Send the customer to the confirmation page that shows their
+      // business name, spot size, and price paid.
+      navigate(`/confirmation/${spotId}`);
     } catch (err) {
       setError("Payment succeeded but confirmation failed. Please contact support.");
       setProcessing(false);
     }
   };
 
+  const sizeLabel = SIZE_LABELS[size] || "Ad";
+
   return (
     <form onSubmit={handleSubmit} style={{ fontFamily: "sans-serif" }}>
       <div style={{ marginBottom: 20 }}>
         <div style={{ background: "#f8fafc", borderRadius: 10, padding: "16px 20px", marginBottom: 20 }}>
           <div style={{ fontSize: 12, color: "#9ca3af", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Order Summary</div>
-          <div style={{ fontWeight: 700, fontSize: 16, color: "#111" }}>{SIZES[size]?.label} Ad Spot</div>
+          <div style={{ fontWeight: 700, fontSize: 16, color: "#111" }}>{sizeLabel} Ad Spot</div>
           <div style={{ color: "#6b7280", fontSize: 13, marginTop: 2 }}>{businessName}</div>
           <div style={{ fontWeight: 900, fontSize: 28, color: "#991b1b", marginTop: 8 }}>${amount / 100}</div>
           <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>Reaches 5,000 Clarkesville-area homes</div>
@@ -106,24 +113,29 @@ export default function CheckoutPage() {
   const { spotId } = useParams();
   const [, navigate] = useLocation();
   const [intentData, setIntentData] = useState(null);
+  const [loadError, setLoadError] = useState(null);
   const createIntentMutation = useCreatePaymentIntent();
-  const [spot, setSpot] = useState(null);
 
+  // Run exactly once per spotId. The mutation hook is stable and we don't
+  // want to retrigger when its identity changes between renders.
   useEffect(() => {
     if (!spotId) return;
-
-    const fetchIntent = async () => {
+    let cancelled = false;
+    (async () => {
       try {
         const result = await createIntentMutation.mutateAsync({
           data: { spotId: parseInt(spotId) },
         });
-        setIntentData(result);
+        if (!cancelled) setIntentData(result);
       } catch (err) {
-        console.error("Failed to create payment intent", err);
+        if (!cancelled) {
+          const msg = err?.data?.error || "Could not start payment. Please go back and try again.";
+          setLoadError(msg);
+        }
       }
-    };
-
-    fetchIntent();
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spotId]);
 
   return (
@@ -138,14 +150,14 @@ export default function CheckoutPage() {
           <h1 style={{ fontSize: 24, fontWeight: 900, color: "#111", margin: "0 0 8px", fontFamily: "Georgia,serif" }}>Complete Your Payment</h1>
           <p style={{ color: "#6b7280", fontSize: 14, marginBottom: 24 }}>You're one step away from securing your spot.</p>
 
-          {createIntentMutation.isPending && (
-            <div style={{ textAlign: "center", padding: 40, color: "#6b7280" }}>Setting up payment...</div>
+          {!intentData && !loadError && (
+            <div style={{ textAlign: "center", padding: 40, color: "#6b7280" }}>Setting up payment…</div>
           )}
 
-          {createIntentMutation.isError && (
+          {loadError && (
             <div style={{ background: "#fef2f2", borderRadius: 8, padding: 16, color: "#991b1b", textAlign: "center" }}>
               <div style={{ fontWeight: 700, marginBottom: 8 }}>Could not load payment</div>
-              <div style={{ fontSize: 13 }}>Stripe may not be configured. Please contact us to complete your reservation.</div>
+              <div style={{ fontSize: 13 }}>{loadError}</div>
             </div>
           )}
 
@@ -155,8 +167,8 @@ export default function CheckoutPage() {
                 spotId={spotId}
                 clientSecret={intentData.clientSecret}
                 amount={intentData.amount}
-                size={spot?.size || "medium"}
-                businessName={spot?.businessName || "Your Business"}
+                size={intentData.size}
+                businessName={intentData.businessName || "Your Business"}
               />
             </Elements>
           )}

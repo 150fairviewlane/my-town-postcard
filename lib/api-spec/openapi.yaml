@@ -51,6 +51,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /spots/{id}:
+    get:
+      operationId: getSpot
+      tags: [spots]
+      summary: Get a single spot by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Spot details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Spot"
+        "404":
+          description: Spot not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /spots/{id}/reserve:
     post:
       operationId: reserveSpot
@@ -312,6 +337,8 @@ components:
           type: ["string", "null"]
         contactPhone:
           type: ["string", "null"]
+        website:
+          type: ["string", "null"]
         adFileUrl:
           type: ["string", "null"]
         adStatus:
@@ -350,6 +377,8 @@ components:
           type: string
         contactPhone:
           type: string
+        website:
+          type: string
       required:
         - businessName
         - businessCategory
@@ -372,10 +401,16 @@ components:
           type: integer
         amount:
           type: integer
+        businessName:
+          type: ["string", "null"]
+        size:
+          type: string
+          enum: [xl, large, medium, small]
       required:
         - clientSecret
         - spotId
         - amount
+        - size
 
     ConfirmPaymentBody:
       type: object
