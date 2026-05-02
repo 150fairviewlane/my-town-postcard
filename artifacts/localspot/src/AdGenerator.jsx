@@ -174,26 +174,26 @@ function PhotoBoldTemplate({ data, sizeKey, onEdit }) {
         </div>
       </div>
 
-      {!isS && (
-        <div style={{ position: "absolute", top: "38%", bottom: "28%", left: 12 * fScale, right: 12 * fScale, display: "flex", flexDirection: "column", justifyContent: "center", gap: 8 * fScale, textAlign: "center" }}>
-          <EditableText value={data.tagline || ind.taglines[0]} onChange={edit("tagline")}
-            style={{ color: "#fff", fontWeight: 800, fontSize: (isXL ? 22 : isL ? 18 : 14) * fScale, lineHeight: 1.1, fontStyle: "italic", textShadow: "0 2px 12px rgba(0,0,0,0.8)", textAlign: "center" }} />
-          {(isXL || isL) && (
-            <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: `2px ${10 * fScale}px` }}>
-              {((data.menuItems && data.menuItems.length > 0) ? data.menuItems : ind.menu).slice(0, 3).map((item, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  <span style={{ color: "#fff", fontSize: 6 * fScale }}>●</span>
-                  <span style={{ color: "#fff", fontSize: 9 * fScale, fontFamily: "sans-serif", textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}>{item}</span>
-                </div>
-              ))}
-            </div>
-          )}
-          {(isXL || isL) && data.phone && (
-            <EditableText value={data.phone} onChange={edit("phone")}
-              style={{ color: "#fff", fontWeight: 900, fontSize: (isXL ? 24 : 20) * fScale, fontFamily: "sans-serif", textAlign: "center", letterSpacing: -0.5, textShadow: "0 2px 8px rgba(0,0,0,0.7)" }} />
-          )}
-        </div>
-      )}
+      {/* Center block: tagline always shows (even on Small); menu + center
+          phone are L/XL-only since they don't fit at smaller sizes. */}
+      <div style={{ position: "absolute", top: isS ? "32%" : "38%", bottom: isS ? "32%" : "28%", left: 12 * fScale, right: 12 * fScale, display: "flex", flexDirection: "column", justifyContent: "center", gap: 8 * fScale, textAlign: "center" }}>
+        <EditableText value={data.tagline || ind.taglines[0]} onChange={edit("tagline")}
+          style={{ color: "#fff", fontWeight: 800, fontSize: (isXL ? 22 : isL ? 18 : isM ? 14 : 13) * fScale, lineHeight: 1.1, fontStyle: "italic", textShadow: "0 2px 12px rgba(0,0,0,0.8)", textAlign: "center" }} />
+        {(isXL || isL) && (
+          <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: `2px ${10 * fScale}px` }}>
+            {((data.menuItems && data.menuItems.length > 0) ? data.menuItems : ind.menu).slice(0, 3).map((item, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <span style={{ color: "#fff", fontSize: 6 * fScale }}>●</span>
+                <span style={{ color: "#fff", fontSize: 9 * fScale, fontFamily: "sans-serif", textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}>{item}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {(isXL || isL) && data.phone && (
+          <EditableText value={data.phone} onChange={edit("phone")}
+            style={{ color: "#fff", fontWeight: 900, fontSize: (isXL ? 24 : 20) * fScale, fontFamily: "sans-serif", textAlign: "center", letterSpacing: -0.5, textShadow: "0 2px 8px rgba(0,0,0,0.7)" }} />
+        )}
+      </div>
 
       <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: `${8 * fScale}px ${12 * fScale}px`, display: "flex", flexDirection: "column", gap: 4 * fScale }}>
         {data.offer && <Coupon offer={data.offer} fine={data.offerFine} accent="#fff" scale={fScale} dark={true} onEditOffer={edit("offer")} onEditFine={edit("offerFine")} />}
@@ -208,9 +208,9 @@ function PhotoBoldTemplate({ data, sizeKey, onEdit }) {
                 style={{ color: "#fff", fontSize: 13 * fScale, fontWeight: 900, fontFamily: "sans-serif", whiteSpace: "nowrap" }} />
             )}
           </div>
-          {hasQR(data) && !isS && (
+          {hasQR(data) && (
             <AdQRCode website={normalizeWebsite(data.website)} spotCode={generateSpotCode(data.businessName, "current")}
-              size={isXL ? 44 : 36} dark={true} scale={fScale * 0.7} />
+              size={isXL ? 44 : isS ? 30 : 36} dark={true} scale={fScale * (isS ? 0.85 : 0.7)} />
           )}
         </div>
       </div>
@@ -249,10 +249,8 @@ function SplitCleanTemplate({ data, sizeKey, onEdit }) {
           <div style={{ color: ind.colors.accent, fontSize: 8 * fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 3 }}>{data.industry}</div>
           <EditableText value={data.businessName} onChange={edit("businessName")}
             style={{ color: ind.colors.dark, fontWeight: 900, fontSize: 20 * fScale, fontFamily: "Georgia, serif", lineHeight: 1.0 }} />
-          {!isS && (
-            <EditableText value={data.tagline || ind.taglines[0]} onChange={edit("tagline")}
-              style={{ fontSize: 10 * fScale, color: ind.colors.primary, fontWeight: 700, marginTop: 4, fontStyle: "italic" }} />
-          )}
+          <EditableText value={data.tagline || ind.taglines[0]} onChange={edit("tagline")}
+            style={{ fontSize: (isS ? 9 : 10) * fScale, color: ind.colors.primary, fontWeight: 700, marginTop: 4, fontStyle: "italic" }} />
         </div>
 
         {!isS && (
@@ -288,9 +286,9 @@ function SplitCleanTemplate({ data, sizeKey, onEdit }) {
                   style={{ fontSize: 14 * fScale, color: ind.colors.primary, fontWeight: 900, whiteSpace: "nowrap" }} />
               )}
             </div>
-            {hasQR(data) && !isS && (
+            {hasQR(data) && (
               <AdQRCode website={normalizeWebsite(data.website)} spotCode={generateSpotCode(data.businessName, "current")}
-                size={isXL ? 48 : 38} dark={false} scale={fScale * 0.65} />
+                size={isXL ? 48 : isS ? 32 : 38} dark={false} scale={fScale * (isS ? 0.85 : 0.65)} />
             )}
           </div>
           <Coupon offer={data.offer} fine={data.offerFine} accent={ind.colors.primary} scale={fScale}
@@ -386,9 +384,9 @@ function MagazineTemplate({ data, sizeKey, onEdit }) {
                   style={{ fontSize: 12 * fScale, color: ind.colors.primary, fontWeight: 900, fontFamily: "sans-serif", whiteSpace: "nowrap" }} />
               )}
             </div>
-            {hasQR(data) && !isS && (
+            {hasQR(data) && (
               <AdQRCode website={normalizeWebsite(data.website)} spotCode={generateSpotCode(data.businessName, "current")}
-                size={isXL ? 44 : 34} dark={false} scale={fScale * 0.65} />
+                size={isXL ? 44 : isS ? 30 : 34} dark={false} scale={fScale * (isS ? 0.85 : 0.65)} />
             )}
           </div>
           <Coupon offer={data.offer} fine={data.offerFine} accent={ind.colors.primary} scale={fScale}
@@ -437,10 +435,8 @@ function StampTemplate({ data, sizeKey, onEdit }) {
           <EditableText value={data.phone} onChange={edit("phone")}
             style={{ color: ind.colors.accent, fontWeight: 900, fontSize: (isXL ? 28 : isL ? 24 : 18) * fScale, lineHeight: 1, marginTop: 4, letterSpacing: -0.5, textShadow: "0 2px 12px rgba(0,0,0,0.8)", textAlign: "center" }} />
         )}
-        {!isS && (
-          <EditableText value={data.tagline || ind.taglines[0]} onChange={edit("tagline")}
-            style={{ color: "rgba(255,255,255,0.85)", fontSize: 9 * fScale, marginTop: 4, fontStyle: "italic", textAlign: "center" }} />
-        )}
+        <EditableText value={data.tagline || ind.taglines[0]} onChange={edit("tagline")}
+          style={{ color: "rgba(255,255,255,0.85)", fontSize: (isS ? 8 : 9) * fScale, marginTop: 4, fontStyle: "italic", textAlign: "center" }} />
       </div>
 
       <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: `${8 * fScale}px ${10 * fScale}px`, display: "flex", flexDirection: "column", gap: 4 * fScale, zIndex: 3 }}>
@@ -468,9 +464,9 @@ function StampTemplate({ data, sizeKey, onEdit }) {
             {data.address && <EditableText value={data.address.split(",")[0]} onChange={edit("address")} style={{ color: "rgba(255,255,255,0.7)", fontSize: 7 * fScale, display: "block", whiteSpace: "nowrap" }} />}
             {isS && data.phone && <EditableText value={data.phone} onChange={edit("phone")} style={{ color: "rgba(255,255,255,0.85)", fontSize: 8 * fScale, fontWeight: 700, display: "block", whiteSpace: "nowrap" }} />}
           </div>
-          {hasQR(data) && !isS && (
+          {hasQR(data) && (
             <InlineQRCode website={normalizeWebsite(data.website)} spotCode={generateSpotCode(data.businessName, "current")}
-              size={isXL ? 36 : 28} dark={true} scale={fScale * 0.72} />
+              size={isXL ? 36 : isS ? 26 : 28} dark={true} scale={fScale * (isS ? 0.95 : 0.72)} />
           )}
         </div>
       </div>
