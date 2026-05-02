@@ -274,7 +274,10 @@ export default function AdAssistant({ formData, onUpdate, sizeKey = "L" }) {
     }
 
     try {
-      const response = await fetch("/api/ai/chat", {
+      // Use BASE_URL prefix so the request is routed correctly through the
+      // artifact path proxy (matches the LandingPage `/api/leads` pattern).
+      // Root-relative `/api/...` can escape the artifact's path prefix.
+      const response = await fetch(`${import.meta.env.BASE_URL}api/ai/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
