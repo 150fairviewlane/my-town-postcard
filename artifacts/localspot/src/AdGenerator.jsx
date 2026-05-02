@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { INDUSTRIES, INDUSTRY_LIST } from "./industryAssets";
+import { AdQRCode, InlineQRCode, hasQR, normalizeWebsite, generateSpotCode } from "./qrUtils";
+import AdAssistant from "./AdAssistant";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //   EDITABLE TEXT — click any text in the preview to edit it inline
@@ -85,8 +87,9 @@ function EditableText({ value, onChange, style = {}, multiline = false, placehol
 const EDITABLE_CSS = `.editable-text:hover { outline: 1.5px dashed rgba(255,255,255,0.5) !important; border-radius: 2px; } .editable-text:hover .edit-hint { opacity: 1 !important; } .editable-text { cursor: text !important; }`;
 
 // ─────────────────────────────────────────────────────────────────────────────
-//   AD SIZES
+//   AD GENERATOR
 // ─────────────────────────────────────────────────────────────────────────────
+
 const AD_SIZES = {
   XL: { label: "Extra Large", price: 450, ratio: "4:5",   width: 4, height: 5,   desc: "Hero spot · maximum impact" },
   L:  { label: "Large",       price: 350, ratio: "4:3",   width: 4, height: 3,   desc: "Premium placement" },
@@ -96,7 +99,7 @@ const AD_SIZES = {
 
 const TEMPLATE_STYLES = ["photo-bold", "split-clean", "magazine", "stamp"];
 
-// ─── Helper: Logo Badge ───────────────────────────────────────────────────────
+// ─── Helper: Logo Badge with fallback ────────────────────────────────────────
 function LogoBadge({ logo, name, emoji, size = 40, bg = "rgba(255,255,255,0.15)", color = "#fff", border }) {
   return (
     <div style={{
@@ -114,7 +117,7 @@ function LogoBadge({ logo, name, emoji, size = 40, bg = "rgba(255,255,255,0.15)"
   );
 }
 
-// ─── Helper: Coupon ───────────────────────────────────────────────────────────
+// ─── Helper: Coupon with perforated border + scissors ────────────────────────
 function Coupon({ offer, fine, accent, scale = 1, dark = false, onEditOffer, onEditFine }) {
   if (!offer) return null;
   return (
@@ -157,45 +160,45 @@ function PhotoBoldTemplate({ data, sizeKey, onEdit }) {
   return (
     <div style={{ width: "100%", height: "100%", position: "relative", overflow: "hidden", fontFamily: "Georgia, serif" }}>
       <img src={photo} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-      <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${ind.colors.dark}bb 0%, ${ind.colors.dark}44 28%, ${ind.colors.dark}11 52%, ${ind.colors.dark}99 76%, ${ind.colors.dark}f2 100%)` }} />
+      <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${ind.colors.dark}99 0%, ${ind.colors.dark}55 40%, ${ind.colors.dark}f0 100%)` }} />
 
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, padding: `${8 * fScale}px ${10 * fScale}px`, display: "flex", alignItems: "center", gap: 7 * fScale }}>
-        <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji} size={32 * fScale} bg={`${ind.colors.primary}cc`} color="#fff" />
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, padding: `${10 * fScale}px ${12 * fScale}px`, display: "flex", alignItems: "center", gap: 8 * fScale }}>
+        <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji} size={36 * fScale} bg={`${ind.colors.primary}cc`} color="#fff" />
         <div style={{ flex: 1, minWidth: 0 }}>
           <EditableText value={data.businessName} onChange={edit("businessName")}
-            style={{ color: "#fff", fontWeight: 900, fontSize: 22 * fScale, lineHeight: 1.0, textShadow: "0 2px 10px rgba(0,0,0,0.9)" }} />
+            style={{ color: "#fff", fontWeight: 900, fontSize: 16 * fScale, lineHeight: 1.05, textShadow: "0 2px 8px rgba(0,0,0,0.7)" }} />
           {!isS && (
             <EditableText value={data.industry} onChange={edit("industry")}
-              style={{ color: "rgba(255,255,255,0.9)", fontSize: 8 * fScale, marginTop: 1, fontFamily: "sans-serif", letterSpacing: 1, textTransform: "uppercase" }} />
+              style={{ color: "rgba(255,255,255,0.85)", fontSize: 8 * fScale, marginTop: 2, fontFamily: "sans-serif", letterSpacing: 1, textTransform: "uppercase" }} />
           )}
         </div>
       </div>
 
       {!isS && (
-        <div style={{ position: "absolute", top: "44%", left: 12 * fScale, right: 12 * fScale, textAlign: "center" }}>
+        <div style={{ position: "absolute", top: "42%", left: 12 * fScale, right: 12 * fScale, textAlign: "center" }}>
           <EditableText value={data.tagline || ind.taglines[0]} onChange={edit("tagline")}
-            style={{ color: "#fff", fontWeight: 800, fontSize: (isXL ? 20 : isL ? 16 : 12) * fScale, lineHeight: 1.15, fontStyle: "italic", textShadow: "0 2px 14px rgba(0,0,0,0.9)", textAlign: "center" }} />
+            style={{ color: "#fff", fontWeight: 800, fontSize: (isXL ? 22 : isL ? 18 : 14) * fScale, lineHeight: 1.1, fontStyle: "italic", textShadow: "0 2px 12px rgba(0,0,0,0.8)", textAlign: "center" }} />
         </div>
       )}
 
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: `${5 * fScale}px ${10 * fScale}px ${4 * fScale}px`, display: "flex", flexDirection: "column", gap: 3 * fScale }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", color: "rgba(255,255,255,0.9)", fontSize: 7.5 * fScale, fontFamily: "sans-serif" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 1, flex: 1, minWidth: 0 }}>
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: `${8 * fScale}px ${12 * fScale}px`, display: "flex", flexDirection: "column", gap: 4 * fScale }}>
+        {data.offer && <Coupon offer={data.offer} fine={data.offerFine} accent="#fff" scale={fScale} dark={true} onEditOffer={edit("offer")} onEditFine={edit("offerFine")} />}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", color: "rgba(255,255,255,0.85)", fontSize: 7.5 * fScale, fontFamily: "sans-serif" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
             {data.address && (
               <EditableText value={data.address} onChange={edit("address")}
-                style={{ color: "rgba(255,255,255,0.9)", fontSize: 7.5 * fScale, fontFamily: "sans-serif" }} />
+                style={{ color: "rgba(255,255,255,0.85)", fontSize: 7.5 * fScale, fontFamily: "sans-serif", whiteSpace: "nowrap" }} />
             )}
-            {data.website && (
-              <EditableText value={data.website} onChange={edit("website")}
-                style={{ color: "rgba(255,255,255,0.75)", fontSize: 7 * fScale, fontFamily: "sans-serif" }} />
+            {data.phone && (
+              <EditableText value={data.phone} onChange={edit("phone")}
+                style={{ color: "rgba(255,255,255,0.85)", fontSize: 7.5 * fScale, fontWeight: 800, fontFamily: "sans-serif", whiteSpace: "nowrap" }} />
             )}
           </div>
-          {data.phone && (
-            <EditableText value={data.phone} onChange={edit("phone")}
-              style={{ color: "rgba(255,255,255,0.9)", fontSize: 7.5 * fScale, fontWeight: 800, fontFamily: "sans-serif", whiteSpace: "nowrap" }} />
+          {hasQR(data) && !isS && (
+            <AdQRCode website={normalizeWebsite(data.website)} spotCode={generateSpotCode(data.businessName, "current")}
+              size={isXL ? 44 : 36} dark={true} scale={fScale * 0.7} />
           )}
         </div>
-        {data.offer && <Coupon offer={data.offer} fine={data.offerFine} accent="#fff" scale={fScale * 0.82} dark={true} onEditOffer={edit("offer")} onEditFine={edit("offerFine")} />}
       </div>
     </div>
   );
@@ -214,19 +217,24 @@ function SplitCleanTemplate({ data, sizeKey, onEdit }) {
   const editMenu = (i) => (val) => onEdit("menuItems", data.menuItems.map((m, j) => j === i ? val : m));
 
   return (
-    <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: isVertical ? "column" : "row", background: ind.colors.light, fontFamily: "sans-serif" }}>
-      <div style={{ width: isVertical ? "100%" : "50%", height: isVertical ? "48%" : "100%", position: "relative", flexShrink: 0 }}>
+    <div style={{
+      width: "100%", height: "100%", overflow: "hidden", display: "flex",
+      flexDirection: isVertical ? "column" : "row",
+      background: ind.colors.light, fontFamily: "sans-serif",
+    }}>
+      <div style={{ width: isVertical ? "100%" : "45%", height: isVertical ? "45%" : "100%", position: "relative", flexShrink: 0 }}>
         <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         <div style={{ position: "absolute", top: 8 * fScale, left: 8 * fScale }}>
-          <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji} size={36 * fScale} bg={ind.colors.primary} color="#fff" border="2px solid #fff" />
+          <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji}
+            size={36 * fScale} bg={ind.colors.primary} color="#fff" border="2px solid #fff" />
         </div>
       </div>
 
-      <div style={{ flex: 1, padding: `${8 * fScale}px ${10 * fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", background: ind.colors.light, minWidth: 0 }}>
+      <div style={{ flex: 1, padding: `${10 * fScale}px ${12 * fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", background: ind.colors.light, minWidth: 0 }}>
         <div>
-          <div style={{ color: ind.colors.accent, fontSize: 8 * fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 2 }}>{data.industry}</div>
+          <div style={{ color: ind.colors.accent, fontSize: 8 * fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 3 }}>{data.industry}</div>
           <EditableText value={data.businessName} onChange={edit("businessName")}
-            style={{ color: ind.colors.dark, fontWeight: 900, fontSize: 21 * fScale, fontFamily: "Georgia, serif", lineHeight: 1.0 }} />
+            style={{ color: ind.colors.dark, fontWeight: 900, fontSize: 16 * fScale, fontFamily: "Georgia, serif", lineHeight: 1.05 }} />
           {!isS && (
             <EditableText value={data.tagline || ind.taglines[0]} onChange={edit("tagline")}
               style={{ fontSize: 10 * fScale, color: ind.colors.primary, fontWeight: 700, marginTop: 4, fontStyle: "italic" }} />
@@ -240,26 +248,27 @@ function SplitCleanTemplate({ data, sizeKey, onEdit }) {
                 <div style={{ width: 13 * fScale, height: 13 * fScale, borderRadius: "50%", background: ind.colors.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <span style={{ color: "#fff", fontSize: 7 * fScale, fontWeight: 900 }}>✓</span>
                 </div>
-                <EditableText value={item} onChange={editMenu(i)}
-                  style={{ fontSize: 8.5 * fScale, color: "#333" }} />
+                <EditableText value={item} onChange={editMenu(i)} style={{ fontSize: 8.5 * fScale, color: "#333" }} />
               </div>
             ))}
           </div>
         )}
 
         <div style={{ flexShrink: 0 }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 1, marginBottom: data.offer ? 5 * fScale : 0 }}>
-            {data.address && (
-              <EditableText value={data.address.split(",")[0]} onChange={edit("address")}
-                style={{ fontSize: 7 * fScale, color: "#555", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} />
-            )}
-            {data.website && (
-              <EditableText value={data.website} onChange={edit("website")}
-                style={{ fontSize: 7 * fScale, color: "#666", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} />
-            )}
-            {data.phone && (
-              <EditableText value={data.phone} onChange={edit("phone")}
-                style={{ fontSize: 10 * fScale, color: ind.colors.primary, fontWeight: 800, whiteSpace: "nowrap" }} />
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: data.offer ? 5 * fScale : 0 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              {data.address && (
+                <EditableText value={data.address.split(",")[0]} onChange={edit("address")}
+                  style={{ fontSize: 7 * fScale, color: "#555", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} />
+              )}
+              {data.phone && (
+                <EditableText value={data.phone} onChange={edit("phone")}
+                  style={{ fontSize: 10 * fScale, color: ind.colors.primary, fontWeight: 800, whiteSpace: "nowrap" }} />
+              )}
+            </div>
+            {hasQR(data) && !isS && (
+              <AdQRCode website={normalizeWebsite(data.website)} spotCode={generateSpotCode(data.businessName, "current")}
+                size={isXL ? 48 : 38} dark={false} scale={fScale * 0.65} />
             )}
           </div>
           <Coupon offer={data.offer} fine={data.offerFine} accent={ind.colors.primary} scale={fScale}
@@ -282,34 +291,46 @@ function MagazineTemplate({ data, sizeKey, onEdit }) {
   const editMenu = (i) => (val) => onEdit("menuItems", data.menuItems.map((m, j) => j === i ? val : m));
 
   return (
-    <div style={{ width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: "column", background: "#fff", fontFamily: "Georgia, serif", border: `${3 * fScale}px solid ${ind.colors.primary}`, boxSizing: "border-box" }}>
-      <div style={{ background: ind.colors.primary, padding: `${5 * fScale}px ${10 * fScale}px`, display: "flex", alignItems: "center", gap: 6 * fScale, flexShrink: 0 }}>
-        <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji} size={30 * fScale} bg={ind.colors.accent} color="#fff" />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ color: "#fff", fontWeight: 900, fontSize: 18 * fScale, fontFamily: "Georgia, serif", lineHeight: 1.0 }}>
-            {data.businessName}
-          </div>
-          {!isS && data.phone && (
-            <EditableText value={data.phone} onChange={edit("phone")}
-              style={{ color: "#fff", fontSize: 10 * fScale, fontWeight: 800, fontFamily: "sans-serif", whiteSpace: "nowrap", marginTop: 2 * fScale, opacity: 0.95 }} />
-          )}
+    <div style={{
+      width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: "column",
+      background: "#fff", fontFamily: "Georgia, serif",
+      border: `${3 * fScale}px solid ${ind.colors.primary}`, boxSizing: "border-box",
+    }}>
+      <div style={{
+        background: ind.colors.primary, padding: `${5 * fScale}px ${10 * fScale}px`,
+        display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 * fScale }}>
+          <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji} size={28 * fScale} bg={ind.colors.accent} color="#fff" />
+          <EditableText value={data.businessName} onChange={edit("businessName")}
+            style={{ color: "#fff", fontWeight: 900, fontSize: 13 * fScale, fontFamily: "Georgia, serif" }} />
         </div>
+        {!isS && data.phone && (
+          <EditableText value={data.phone} onChange={edit("phone")}
+            style={{
+              color: "#fff", fontSize: 10 * fScale, fontWeight: 800,
+              background: "rgba(0,0,0,0.25)", padding: `${2 * fScale}px ${7 * fScale}px`, borderRadius: 3,
+              fontFamily: "sans-serif",
+            }} />
+        )}
       </div>
 
-      <div style={{ display: "flex", gap: 1, height: isXL ? "32%" : isL ? "38%" : isM ? "34%" : "28%", flexShrink: 0 }}>
-        {photos.slice(0, 2).map((src, i) => (
-          <div key={i} style={{ flex: 1, overflow: "hidden", background: ind.colors.dark }}>
-            <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-              onError={e => { e.target.style.display = "none"; }} />
-          </div>
-        ))}
-      </div>
+      {!isS && (
+        <div style={{ display: "flex", gap: 1, height: isXL ? "30%" : isL ? "35%" : "40%", flexShrink: 0 }}>
+          {photos.slice(0, 2).map((src, i) => (
+            <div key={i} style={{ flex: 1, overflow: "hidden", background: ind.colors.dark }}>
+              <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                onError={e => { e.target.style.display = "none"; }} />
+            </div>
+          ))}
+        </div>
+      )}
 
       <div style={{ flex: 1, padding: `${4 * fScale}px ${10 * fScale}px ${5 * fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 0 }}>
         <div>
           <div style={{ color: ind.colors.accent, fontSize: 7.5 * fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>{data.industry}</div>
           <EditableText value={data.tagline || ind.taglines[0]} onChange={edit("tagline")}
-            style={{ color: ind.colors.dark, fontSize: 16 * fScale, fontWeight: 900, fontFamily: "Georgia, serif", lineHeight: 1.1, marginTop: 2 }} />
+            style={{ color: ind.colors.dark, fontSize: 14 * fScale, fontWeight: 900, fontFamily: "Georgia, serif", lineHeight: 1.1, marginTop: 2 }} />
         </div>
 
         {!isS && (
@@ -317,28 +338,29 @@ function MagazineTemplate({ data, sizeKey, onEdit }) {
             {(data.menuItems || ind.menu).slice(0, 4).map((item, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 3 }}>
                 <span style={{ color: ind.colors.primary, fontSize: 6 }}>●</span>
-                <EditableText value={item} onChange={editMenu(i)}
-                  style={{ fontSize: 8 * fScale, color: "#444", fontFamily: "sans-serif" }} />
+                <EditableText value={item} onChange={editMenu(i)} style={{ fontSize: 8 * fScale, color: "#444", fontFamily: "sans-serif" }} />
               </div>
             ))}
           </div>
         )}
 
         <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 3 * fScale }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 }}>
-            {data.address && (
-              <EditableText value={data.address.split(",")[0]} onChange={edit("address")}
-                style={{ fontSize: 7 * fScale, color: "#666", fontFamily: "sans-serif", flex: 1 }} />
-            )}
-            {data.phone && (
-              <EditableText value={data.phone} onChange={edit("phone")}
-                style={{ fontSize: 8 * fScale, color: ind.colors.primary, fontWeight: 800, fontFamily: "sans-serif", flexShrink: 0, whiteSpace: "nowrap" }} />
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              {data.address && (
+                <EditableText value={data.address.split(",")[0]} onChange={edit("address")}
+                  style={{ fontSize: 7 * fScale, color: "#666", fontFamily: "sans-serif", whiteSpace: "nowrap" }} />
+              )}
+              {data.phone && (
+                <EditableText value={data.phone} onChange={edit("phone")}
+                  style={{ fontSize: 8 * fScale, color: ind.colors.primary, fontWeight: 800, fontFamily: "sans-serif", whiteSpace: "nowrap" }} />
+              )}
+            </div>
+            {hasQR(data) && !isS && (
+              <AdQRCode website={normalizeWebsite(data.website)} spotCode={generateSpotCode(data.businessName, "current")}
+                size={isXL ? 44 : 34} dark={false} scale={fScale * 0.65} />
             )}
           </div>
-          {data.website && (
-            <EditableText value={data.website} onChange={edit("website")}
-              style={{ fontSize: 7 * fScale, color: "#666", fontFamily: "sans-serif" }} />
-          )}
           <Coupon offer={data.offer} fine={data.offerFine} accent={ind.colors.primary} scale={fScale}
             onEditOffer={edit("offer")} onEditFine={edit("offerFine")} />
         </div>
@@ -359,32 +381,35 @@ function StampTemplate({ data, sizeKey, onEdit }) {
 
   return (
     <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative", background: ind.colors.dark, fontFamily: "sans-serif" }}>
-      <div style={{ position: "absolute", inset: 0, clipPath: "polygon(0 0, 100% 0, 100% 65%, 0 85%)", overflow: "hidden" }}>
+      <div style={{ position: "absolute", inset: 0, clipPath: "polygon(0 0, 100% 0, 100% 55%, 0 75%)", overflow: "hidden" }}>
         <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-        <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${ind.colors.dark}33 0%, ${ind.colors.dark}88 100%)` }} />
+        <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${ind.colors.dark}50 0%, ${ind.colors.dark}cc 100%)` }} />
       </div>
 
-      <div style={{ position: "absolute", top: 7 * fScale, left: 9 * fScale, zIndex: 3 }}>
-        <div style={{ background: ind.colors.accent, color: ind.colors.dark, padding: `${3 * fScale}px ${7 * fScale}px`, fontSize: 8 * fScale, fontWeight: 900, letterSpacing: 1.5, borderRadius: 3, display: "inline-block" }}>
+      <div style={{ position: "absolute", top: 8 * fScale, left: 10 * fScale, zIndex: 3 }}>
+        <div style={{
+          background: ind.colors.accent, color: ind.colors.dark, padding: `${3 * fScale}px ${8 * fScale}px`,
+          fontSize: 8 * fScale, fontWeight: 900, letterSpacing: 1.5, borderRadius: 3, display: "inline-block",
+        }}>
           {ind.menu[0]?.toUpperCase() || "FEATURED"}
         </div>
       </div>
 
-      <div style={{ position: "absolute", top: 7 * fScale, right: 9 * fScale, zIndex: 3 }}>
+      <div style={{ position: "absolute", top: 8 * fScale, right: 10 * fScale, zIndex: 3 }}>
         <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji}
-          size={34 * fScale} bg="rgba(255,255,255,0.18)" color="#fff" border="2px solid rgba(255,255,255,0.6)" />
+          size={36 * fScale} bg="rgba(255,255,255,0.15)" color="#fff" border="2px solid rgba(255,255,255,0.5)" />
       </div>
 
-      <div style={{ position: "absolute", top: isS ? "48%" : "38%", left: 0, right: 0, padding: `0 ${10 * fScale}px`, textAlign: "center", zIndex: 3 }}>
+      <div style={{ position: "absolute", top: "32%", left: 0, right: 0, padding: `0 ${12 * fScale}px`, textAlign: "center", zIndex: 3 }}>
         <EditableText value={data.businessName} onChange={edit("businessName")}
-          style={{ color: "#fff", fontWeight: 900, fontSize: 19 * fScale, fontFamily: "Georgia, serif", textShadow: "0 2px 10px rgba(0,0,0,0.85)", lineHeight: 1.05, textAlign: "center" }} />
+          style={{ color: "#fff", fontWeight: 900, fontSize: 13 * fScale, fontFamily: "Georgia, serif", textShadow: "0 2px 8px rgba(0,0,0,0.6)", lineHeight: 1.1, textAlign: "center" }} />
         {!isS && data.phone && (
           <EditableText value={data.phone} onChange={edit("phone")}
-            style={{ color: ind.colors.accent, fontWeight: 900, fontSize: (isXL ? 26 : isL ? 22 : 17) * fScale, lineHeight: 1, marginTop: 3, letterSpacing: -0.5, textShadow: "0 2px 12px rgba(0,0,0,0.8)", textAlign: "center", whiteSpace: "nowrap" }} />
+            style={{ color: ind.colors.accent, fontWeight: 900, fontSize: (isXL ? 28 : isL ? 24 : 18) * fScale, lineHeight: 1, marginTop: 4, letterSpacing: -0.5, textShadow: "0 2px 12px rgba(0,0,0,0.8)", textAlign: "center" }} />
         )}
         {!isS && (
           <EditableText value={data.tagline || ind.taglines[0]} onChange={edit("tagline")}
-            style={{ color: "rgba(255,255,255,0.9)", fontSize: 9 * fScale, marginTop: 3, fontStyle: "italic", textAlign: "center" }} />
+            style={{ color: "rgba(255,255,255,0.85)", fontSize: 9 * fScale, marginTop: 4, fontStyle: "italic", textAlign: "center" }} />
         )}
       </div>
 
@@ -408,14 +433,14 @@ function StampTemplate({ data, sizeKey, onEdit }) {
             )}
           </div>
         )}
-        <div style={{ display: "flex", flexDirection: "column", gap: 1, alignItems: "center" }}>
-          <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 7 * fScale, textAlign: "center", fontFamily: "sans-serif", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
-            {data.address && <EditableText value={data.address.split(",")[0]} onChange={edit("address")} style={{ color: "rgba(255,255,255,0.7)", fontSize: 7 * fScale, display: "inline" }} />}
-            {isS && data.phone && <EditableText value={data.phone} onChange={edit("phone")} style={{ color: "rgba(255,255,255,0.85)", fontSize: 7 * fScale, fontWeight: 700, display: "inline", whiteSpace: "nowrap" }} />}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontFamily: "sans-serif" }}>
+          <div>
+            {data.address && <EditableText value={data.address.split(",")[0]} onChange={edit("address")} style={{ color: "rgba(255,255,255,0.7)", fontSize: 7 * fScale, display: "block", whiteSpace: "nowrap" }} />}
+            {isS && data.phone && <EditableText value={data.phone} onChange={edit("phone")} style={{ color: "rgba(255,255,255,0.85)", fontSize: 8 * fScale, fontWeight: 700, display: "block", whiteSpace: "nowrap" }} />}
           </div>
-          {data.website && (
-            <EditableText value={data.website} onChange={edit("website")}
-              style={{ color: "rgba(255,255,255,0.7)", fontSize: 7 * fScale, fontFamily: "sans-serif", textAlign: "center" }} />
+          {hasQR(data) && !isS && (
+            <InlineQRCode website={normalizeWebsite(data.website)} spotCode={generateSpotCode(data.businessName, "current")}
+              size={isXL ? 36 : 28} dark={true} scale={fScale * 0.72} />
           )}
         </div>
       </div>
@@ -425,10 +450,10 @@ function StampTemplate({ data, sizeKey, onEdit }) {
 
 // ─── Template Registry ────────────────────────────────────────────────────────
 const TEMPLATES = {
-  "photo-bold":  { name: "Photo Bold",    desc: "Hero photo, bold overlay text",  Component: PhotoBoldTemplate },
-  "split-clean": { name: "Split Clean",   desc: "50/50 photo + content split",     Component: SplitCleanTemplate },
-  "magazine":    { name: "Magazine",      desc: "Editorial multi-photo layout",    Component: MagazineTemplate },
-  "stamp":       { name: "Service Stamp", desc: "Diagonal cut, oversized phone",   Component: StampTemplate },
+  "photo-bold":  { name: "Photo Bold",    desc: "Hero photo, bold overlay text", Component: PhotoBoldTemplate },
+  "split-clean": { name: "Split Clean",   desc: "50/50 photo + content split",   Component: SplitCleanTemplate },
+  "magazine":    { name: "Magazine",      desc: "Editorial multi-photo layout",  Component: MagazineTemplate },
+  "stamp":       { name: "Service Stamp", desc: "Diagonal cut, oversized phone", Component: StampTemplate },
 };
 
 function suggestTemplate(industry) {
@@ -436,7 +461,6 @@ function suggestTemplate(industry) {
   const medicalTypes = ["Dentist", "Medical & Healthcare", "Chiropractor", "Veterinarian"];
   const editorialTypes = ["Real Estate", "Insurance", "Financial Services", "Photography", "Retail Shop", "Daycare", "Salon & Beauty"];
   const serviceTypes = ["HVAC", "Plumber", "Electrician", "Lawn & Landscaping", "Roofing", "Painting", "Cleaning Service", "Pest Control", "Auto Repair"];
-
   if (restaurantTypes.includes(industry)) return "photo-bold";
   if (medicalTypes.includes(industry)) return "split-clean";
   if (editorialTypes.includes(industry)) return "magazine";
@@ -451,7 +475,7 @@ function getRenderDimensions(sizeKey) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//   IMAGE UPLOAD INPUT
+//   IMAGE UPLOAD
 // ─────────────────────────────────────────────────────────────────────────────
 function ImageUpload({ label, hint, value, onChange }) {
   const ref = useRef();
@@ -496,12 +520,11 @@ function ImageUpload({ label, hint, value, onChange }) {
 // ─────────────────────────────────────────────────────────────────────────────
 //   MAIN COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
-export default function AdGenerator({ initialSize = "L", onComplete, onClose, isLoading = false, error = null }) {
+export default function AdGenerator({ initialSize = "L", onComplete, onClose }) {
   const [sizeKey, setSizeKey] = useState(initialSize);
   const [formData, setFormData] = useState({
     businessName: "",
     industry: "",
-    email: "",
     tagline: "",
     offer: "",
     offerFine: "",
@@ -528,7 +551,7 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose, is
   const dims = getRenderDimensions(sizeKey);
   const sizeInfo = AD_SIZES[sizeKey];
   const Tpl = TEMPLATES[selectedTemplate].Component;
-  const formValid = formData.businessName.trim() && formData.industry && formData.email.trim();
+  const formValid = formData.businessName.trim() && formData.industry;
 
   return (
     <div style={{
@@ -536,7 +559,7 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose, is
       display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16,
     }}>
       <div style={{
-        background: "#f8fafc", borderRadius: 18, width: "100%", maxWidth: 1100, maxHeight: "94vh",
+        background: "#f8fafc", borderRadius: 18, width: "100%", maxWidth: 1280, maxHeight: "94vh",
         overflow: "hidden", display: "flex", flexDirection: "column",
         boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
       }}>
@@ -560,17 +583,14 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose, is
           }}>×</button>
         </div>
 
-        {/* Body */}
+        {/* Body — three columns: form | preview | assistant */}
         <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0 }}>
 
           {/* LEFT: form */}
-          <div style={{ width: 420, padding: "20px 24px", overflowY: "auto", borderRight: "1px solid #e5e7eb", background: "#fff" }}>
+          <div style={{ width: 380, padding: "20px 24px", overflowY: "auto", borderRight: "1px solid #e5e7eb", background: "#fff", flexShrink: 0 }}>
 
-            {/* Size selector */}
             <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 12, fontWeight: 800, color: "#111", marginBottom: 8, letterSpacing: 1, textTransform: "uppercase" }}>
-                Ad Size
-              </div>
+              <div style={{ fontSize: 12, fontWeight: 800, color: "#111", marginBottom: 8, letterSpacing: 1, textTransform: "uppercase" }}>Ad Size</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                 {Object.entries(AD_SIZES).map(([k, s]) => (
                   <button key={k} onClick={() => setSizeKey(k)}
@@ -585,21 +605,15 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose, is
               </div>
             </div>
 
-            {/* Form fields */}
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div>
-                <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>
-                  Business Name *
-                </label>
-                <input value={formData.businessName}
-                  onChange={e => setFormData(d => ({ ...d, businessName: e.target.value }))}
+                <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>Business Name *</label>
+                <input value={formData.businessName} onChange={e => setFormData(d => ({ ...d, businessName: e.target.value }))}
                   placeholder="e.g. Joe's Pizza" style={inputStyle} />
               </div>
 
               <div>
-                <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>
-                  Industry *
-                </label>
+                <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>Industry *</label>
                 <select value={formData.industry} onChange={handleIndustryChange} style={inputStyle}>
                   <option value="">Select your industry...</option>
                   {INDUSTRY_LIST.map(i => <option key={i} value={i}>{i}</option>)}
@@ -607,75 +621,55 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose, is
               </div>
 
               <div>
-                <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>
-                  Email *
-                </label>
-                <input value={formData.email}
-                  onChange={e => setFormData(d => ({ ...d, email: e.target.value }))}
-                  type="email" placeholder="you@yourbusiness.com" style={inputStyle} />
-              </div>
-
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>
-                  Tagline / Slogan
-                </label>
-                <input value={formData.tagline}
-                  onChange={e => setFormData(d => ({ ...d, tagline: e.target.value }))}
+                <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>Tagline / Slogan</label>
+                <input value={formData.tagline} onChange={e => setFormData(d => ({ ...d, tagline: e.target.value }))}
                   placeholder={formData.industry ? INDUSTRIES[formData.industry]?.taglines[0] : "Your catchy slogan"}
                   style={inputStyle} />
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                 <div>
-                  <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>
-                    Special Offer
-                  </label>
-                  <input value={formData.offer}
-                    onChange={e => setFormData(d => ({ ...d, offer: e.target.value }))}
+                  <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>Special Offer</label>
+                  <input value={formData.offer} onChange={e => setFormData(d => ({ ...d, offer: e.target.value }))}
                     placeholder="$10 OFF" style={inputStyle} />
                 </div>
                 <div>
-                  <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>
-                    Offer Fine Print
-                  </label>
-                  <input value={formData.offerFine}
-                    onChange={e => setFormData(d => ({ ...d, offerFine: e.target.value }))}
+                  <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>Offer Fine Print</label>
+                  <input value={formData.offerFine} onChange={e => setFormData(d => ({ ...d, offerFine: e.target.value }))}
                     placeholder="Expires 6/30" style={inputStyle} />
                 </div>
               </div>
 
               <div>
-                <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>
-                  Phone Number
-                </label>
-                <input value={formData.phone}
-                  onChange={e => setFormData(d => ({ ...d, phone: e.target.value }))}
+                <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>Phone Number</label>
+                <input value={formData.phone} onChange={e => setFormData(d => ({ ...d, phone: e.target.value }))}
                   placeholder="(555) 123-4567" style={inputStyle} />
               </div>
 
               <div>
-                <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>
-                  Address
-                </label>
-                <input value={formData.address}
-                  onChange={e => setFormData(d => ({ ...d, address: e.target.value }))}
+                <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>Address</label>
+                <input value={formData.address} onChange={e => setFormData(d => ({ ...d, address: e.target.value }))}
                   placeholder="123 Main St, Your Town" style={inputStyle} />
               </div>
 
               <div>
                 <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>
-                  Website
+                  Website <span style={{ fontWeight: 400, color: "#9ca3af" }}>(optional)</span>
                 </label>
-                <input value={formData.website}
-                  onChange={e => setFormData(d => ({ ...d, website: e.target.value }))}
+                <input value={formData.website} onChange={e => setFormData(d => ({ ...d, website: e.target.value }))}
                   placeholder="www.yourbusiness.com" style={inputStyle} />
+                {formData.website ? (
+                  <div style={{ fontSize: 11, color: "#16a34a", marginTop: 4, padding: "5px 8px", background: "#f0fdf4", borderRadius: 6, display: "flex", alignItems: "center", gap: 5 }}>
+                    <span>📱</span><span>A trackable QR code will be added to your ad automatically!</span>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>Add your website to get a free trackable QR code on your ad</div>
+                )}
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, paddingTop: 8, borderTop: "1px solid #f3f4f6" }}>
-                <ImageUpload label="Your Logo" hint="Optional"
-                  value={formData.logo} onChange={v => setFormData(d => ({ ...d, logo: v }))} />
-                <ImageUpload label="Your Photo" hint="Or use stock"
-                  value={formData.photo} onChange={v => setFormData(d => ({ ...d, photo: v }))} />
+                <ImageUpload label="Your Logo" hint="Optional" value={formData.logo} onChange={v => setFormData(d => ({ ...d, logo: v }))} />
+                <ImageUpload label="Your Photo" hint="Or use stock" value={formData.photo} onChange={v => setFormData(d => ({ ...d, photo: v }))} />
               </div>
               {formData.industry && !formData.photo && (
                 <div style={{ fontSize: 11, color: "#6b7280", padding: "6px 10px", background: "#f0fdf4", borderRadius: 6 }}>
@@ -684,11 +678,8 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose, is
               )}
             </div>
 
-            {/* Template picker */}
             <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid #f3f4f6" }}>
-              <div style={{ fontSize: 12, fontWeight: 800, color: "#111", marginBottom: 8, letterSpacing: 1, textTransform: "uppercase" }}>
-                Design Style
-              </div>
+              <div style={{ fontSize: 12, fontWeight: 800, color: "#111", marginBottom: 8, letterSpacing: 1, textTransform: "uppercase" }}>Design Style</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                 {TEMPLATE_STYLES.map(tpl => (
                   <button key={tpl} onClick={() => setSelectedTemplate(tpl)}
@@ -706,7 +697,7 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose, is
             </div>
           </div>
 
-          {/* RIGHT: live preview */}
+          {/* MIDDLE: live preview */}
           <div style={{
             flex: 1, padding: "24px", overflowY: "auto", display: "flex",
             flexDirection: "column", alignItems: "center", justifyContent: "flex-start",
@@ -722,32 +713,21 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose, is
                 <div style={{ width: dims.width, height: dims.height, borderRadius: 6, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.5)" }}>
                   <Tpl data={formData} sizeKey={sizeKey} onEdit={handleInlineEdit} />
                 </div>
-                <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, marginTop: 10, textAlign: "center", fontStyle: "italic", fontWeight: 600 }}>
+                <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 10, marginTop: 10, textAlign: "center", fontStyle: "italic" }}>
                   ✎ Click any text in the preview to edit it directly
                 </div>
-
-                {error && (
-                  <div style={{
-                    marginTop: 16, padding: "10px 16px", background: "#fef2f2",
-                    border: "1px solid #fca5a5", borderRadius: 8,
-                    color: "#991b1b", fontSize: 13, fontWeight: 600, textAlign: "center",
-                    maxWidth: dims.width,
-                  }}>
-                    {error}
-                  </div>
-                )}
-
+                <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 10, marginTop: 4, textAlign: "center" }}>
+                  Style: <strong style={{ color: "#fff" }}>{TEMPLATES[selectedTemplate].name}</strong>
+                  {!formData.photo && formData.industry && <> · Using stock photo for {formData.industry}</>}
+                </div>
                 <button
-                  disabled={isLoading}
                   onClick={() => onComplete?.({ sizeKey, price: sizeInfo.price, template: selectedTemplate, ...formData })}
                   style={{
-                    marginTop: 20, padding: "14px 32px",
-                    background: isLoading ? "#b91c1c99" : "#991b1b",
+                    marginTop: 20, padding: "14px 32px", background: "#991b1b",
                     color: "#fff", border: "none", borderRadius: 10, fontSize: 15,
-                    fontWeight: 800, cursor: isLoading ? "not-allowed" : "pointer", letterSpacing: 0.5,
-                    opacity: isLoading ? 0.7 : 1,
+                    fontWeight: 800, cursor: "pointer", letterSpacing: 0.5,
                   }}>
-                  {isLoading ? "Reserving..." : `Approve & Reserve Spot — $${sizeInfo.price}`}
+                  Approve &amp; Reserve Spot — ${sizeInfo.price}
                 </button>
               </>
             ) : (
@@ -757,10 +737,16 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose, is
                 display: "flex", alignItems: "center", justifyContent: "center",
                 color: "rgba(255,255,255,0.4)", fontSize: 13, textAlign: "center", padding: 20,
               }}>
-                Fill in business name, industry, and email<br />to see your ad preview
+                Fill in business name and industry<br />to see your ad preview
               </div>
             )}
           </div>
+
+          {/* RIGHT: AI Assistant */}
+          <div style={{ width: 320, borderLeft: "1px solid #e5e7eb", display: "flex", flexDirection: "column", overflow: "hidden", flexShrink: 0 }}>
+            <AdAssistant formData={formData} onUpdate={handleInlineEdit} sizeKey={sizeKey} />
+          </div>
+
         </div>
       </div>
     </div>
