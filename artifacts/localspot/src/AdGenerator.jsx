@@ -608,6 +608,14 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
   const [activeTab, setActiveTab] = useState("build"); // build | preview | assistant
   const previewPeekTimeoutRef = useRef(null);
 
+  // Email validation: we keep the button always clickable so it never feels
+  // dead. If the user clicks Reserve without a valid email we flip
+  // `showEmailError`, jump them to the form tab on mobile, scroll the email
+  // field into view, and focus it. The red ring auto-clears the moment the
+  // email parses cleanly so the user gets immediate positive feedback.
+  const emailInputRef = useRef(null);
+  const [showEmailError, setShowEmailError] = useState(false);
+
   // Mobile-only "preview peek": when the user touches a field on the Build
   // tab, briefly flip to Preview so they can confirm the change, then return
   // to Build so they can keep filling out the form. Debounced — while the
@@ -647,6 +655,11 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
   // Email is required so we can send the receipt and reservation
   // confirmation. Use a basic shape check to avoid obviously bad addresses.
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim());
+
+  // Clear the inline error as soon as the email starts validating.
+  useEffect(() => {
+    if (emailValid && showEmailError) setShowEmailError(false);
+  }, [emailValid, showEmailError]);
   // The preview should populate live as soon as the user has a business
   // name and an industry — that's what the empty-state copy promises and
   // it lets them see their ad come together while they keep filling out
@@ -847,11 +860,18 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
                 <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>
                   Email <span style={{ color: "#991b1b" }}>*</span>
                 </label>
-                <input value={formData.email} onChange={e => setFormDataB(d => ({ ...d, email: e.target.value }))}
+                <input ref={emailInputRef}
+                  value={formData.email} onChange={e => setFormDataB(d => ({ ...d, email: e.target.value }))}
                   type="email" inputMode="email" autoComplete="email"
-                  placeholder="you@yourbusiness.com" style={inputStyle} />
-                <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>
-                  We'll send your receipt and reservation confirmation here.
+                  placeholder="you@yourbusiness.com"
+                  style={{
+                    ...inputStyle,
+                    ...(showEmailError ? { borderColor: "#dc2626", boxShadow: "0 0 0 3px rgba(220,38,38,0.15)" } : null),
+                  }} />
+                <div style={{ fontSize: 11, color: showEmailError ? "#dc2626" : "#9ca3af", marginTop: 4, fontWeight: showEmailError ? 600 : 400 }}>
+                  {showEmailError
+                    ? "Please enter a valid email so we can send your receipt and reservation confirmation."
+                    : "We'll send your receipt and reservation confirmation here."}
                 </div>
               </div>
 
@@ -969,22 +989,32 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
                 </div>
 
                 <button
-                  onClick={() => formValid && onComplete?.({ sizeKey, price: sizeInfo.price, template: selectedTemplate, ...formData })}
-                  disabled={!formValid}
+                  onClick={() => {
+                    if (formValid) {
+                      onComplete?.({ sizeKey, price: sizeInfo.price, template: selectedTemplate, ...formData });
+                      return;
+                    }
+                    // Form isn't valid — surface why instead of silently
+                    // failing. Right now the only field that gates Reserve
+                    // beyond previewReady (name + industry, both already
+                    // present here since the button only renders when
+                    // previewReady is true) is the email.
+                    setShowEmailError(true);
+                    if (isMobile) setActiveTab("build");
+                    // Defer the scroll/focus so the form tab has time to
+                    // un-hide on mobile before we try to scroll into it.
+                    setTimeout(() => {
+                      emailInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                      emailInputRef.current?.focus();
+                    }, 50);
+                  }}
                   style={{
-                    marginTop: 20, padding: "14px 32px",
-                    background: formValid ? "#991b1b" : "#6b7280",
+                    marginTop: 20, padding: "14px 32px", background: "#991b1b",
                     color: "#fff", border: "none", borderRadius: 10, fontSize: 15,
-                    fontWeight: 800, cursor: formValid ? "pointer" : "not-allowed",
-                    letterSpacing: 0.5, opacity: formValid ? 1 : 0.7,
+                    fontWeight: 800, cursor: "pointer", letterSpacing: 0.5,
                   }}>
                   Approve &amp; Reserve Spot — ${sizeInfo.price}
                 </button>
-                {!formValid && (
-                  <div style={{ color: "rgba(255,255,255,0.65)", fontSize: 11, marginTop: 8, textAlign: "center", fontFamily: "sans-serif" }}>
-                    Add a valid email to reserve your spot.
-                  </div>
-                )}
               </>
             ) : (
               <div style={{
