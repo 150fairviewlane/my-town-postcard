@@ -1,16 +1,24 @@
 import { useParams } from "wouter";
 import { useGetActiveCampaign } from "@workspace/api-client-react";
 import { GRID_AREAS, PaidAd } from "../postcardCore";
+import {
+  BACK_GRID_AREAS,
+  BACK_GRID_ORDER,
+  HouseAdVertical,
+  HouseAdRow,
+  HouseAdBanner,
+  EDDMBox,
+} from "../postcardBack";
 import { getSampleAd, SPOT_SAMPLE_MAP } from "../PostcardSampleAds";
 
 const SIZE_MAP = { xl: "XL", large: "L", medium: "M", small: "S" };
 
-// Same render order as the picker so the grid lays out identically.
-const GRID_ORDER = ["mb", "dn", "re", "hv", "ins", "pz", "lw", "a1", "a2", "a3"];
+// Same render order as the picker so each side lays out identically.
+const FRONT_GRID_ORDER = ["mb", "dn", "re", "hv", "ins", "pz", "lw", "a1", "a2", "a3"];
 
-// Permanent house ad — same content as PostcardPickerSection so the printed
-// postcard matches what customers see in the live preview. Kept as a local
-// copy to avoid widening the export surface of PostcardPickerSection.
+// Permanent front-side house ad — same content as PostcardPickerSection so
+// the printed postcard matches what customers see in the live preview. Kept
+// as a local copy to avoid widening the export surface of PostcardPickerSection.
 function HouseAd() {
   return (
     <div
@@ -99,6 +107,102 @@ function UnsoldSlot() {
   );
 }
 
+// Render a single side of the postcard at exactly 12in × 9in on print.
+// Both invocations share the same primitives (PaidAd, sample ads, unsold
+// filler) so the print fidelity is identical between front and back.
+function PostcardFace({ side, spots, gridAreas, gridOrder, fixedAreas, renderFixed, label }) {
+  const sortedSpots = [...spots].sort((a, b) => {
+    const ai = gridOrder.indexOf(a.gridArea);
+    const bi = gridOrder.indexOf(b.gridArea);
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+  });
+
+  return (
+    <div className="ls-print-page-wrapper">
+      {/* On-screen label so the admin knows which face they're previewing.
+          Hidden in print so each printed page is just the postcard. */}
+      <div
+        className="ls-no-print"
+        style={{
+          maxWidth: 1200,
+          margin: "0 auto 8px",
+          fontFamily: "sans-serif",
+          fontSize: 12,
+          fontWeight: 800,
+          color: "#374151",
+          letterSpacing: 1.5,
+          textTransform: "uppercase",
+        }}
+      >
+        {label}
+      </div>
+
+      <div
+        className="ls-print-page"
+        data-side={side}
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(12, 1fr)",
+          gridTemplateRows: "repeat(9, 1fr)",
+          gridTemplateAreas: gridAreas,
+          gap: "10px",
+          background: "#000",
+        }}
+      >
+        {sortedSpots.map((spot) => {
+          // Match the picker's logic exactly: on the front side "mb" is the
+          // perpetual sponsor demo cell (Mr. Biscuit's) and always renders
+          // the sample ad, never the PaidAd dispatcher path. The back side
+          // has no equivalent — every paid back-side spot uses PaidAd.
+          const isPaid =
+            (spot.status === "paid" || spot.status === "reserved") &&
+            !(side === "front" && spot.gridArea === "mb");
+          const sampleKey = SPOT_SAMPLE_MAP[spot.gridArea];
+
+          let content;
+          if (isPaid) {
+            content = <PaidAd spot={spot} />;
+          } else if (sampleKey) {
+            content = getSampleAd(sampleKey, SIZE_MAP[spot.size] || "S");
+          } else {
+            content = <UnsoldSlot />;
+          }
+
+          return (
+            <div
+              key={spot.id}
+              style={{
+                gridArea: spot.gridArea,
+                overflow: "hidden",
+                minWidth: 0,
+                minHeight: 0,
+              }}
+            >
+              {content}
+            </div>
+          );
+        })}
+
+        {/* Fixed (non-sellable) cells — house ads on both sides, plus the
+            USPS EDDM placeholder on the back. */}
+        {fixedAreas.map((area) => (
+          <div
+            key={area}
+            style={{
+              gridArea: area,
+              overflow: "hidden",
+              minWidth: 0,
+              minHeight: 0,
+            }}
+          >
+            {renderFixed(area)}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPrintPage() {
   const params = useParams();
   const campaignIdFromUrl = params.id;
@@ -121,10 +225,20 @@ export default function AdminPrintPage() {
     );
   }
 
-  const spots = campaign.spots || [];
-  const sortedSpots = [...spots].sort(
-    (a, b) => GRID_ORDER.indexOf(a.gridArea) - GRID_ORDER.indexOf(b.gridArea),
-  );
+  const allSpots = campaign.spots || [];
+  // Older spots without the side column come back as undefined — treat those
+  // as front-side so existing campaigns keep printing correctly.
+  const frontSpots = allSpots.filter((s) => (s.side ?? "front") === "front");
+  const backSpots = allSpots.filter((s) => s.side === "back");
+
+  const renderFrontFixed = (area) => (area === "hs" ? <HouseAd /> : null);
+  const renderBackFixed = (area) => {
+    if (area === "bhs") return <HouseAdVertical />;
+    if (area === "bhr") return <HouseAdRow />;
+    if (area === "bhn") return <HouseAdBanner campaign={campaign} />;
+    if (area === "ed") return <EDDMBox />;
+    return null;
+  };
 
   const handlePrint = () => window.print();
 
@@ -132,13 +246,15 @@ export default function AdminPrintPage() {
     <>
       {/*
         Print stylesheet. The layout is dual-mode:
-          - on screen: postcard scales to viewport at 12:9 aspect ratio
-          - on print:  postcard is forced to exactly 12in × 9in landscape
+          - on screen: each postcard scales to viewport at 12:9 aspect ratio
+          - on print:  each postcard is forced to exactly 12in × 9in landscape
                        so it fills one page edge-to-edge with no margins.
+                       Front and back are separated by a forced page break so
+                       the printer / Save-as-PDF produces a 2-page file.
 
-        -webkit-print-color-adjust / print-color-adjust: exact ensures backgrounds,
-        gradients, and photos print at full color/opacity instead of being
-        stripped by the browser's "economy mode" defaults.
+        -webkit-print-color-adjust / print-color-adjust: exact ensures
+        backgrounds, gradients, and photos print at full color/opacity instead
+        of being stripped by the browser's "economy mode" defaults.
       */}
       <style>{`
         @media screen {
@@ -147,6 +263,9 @@ export default function AdminPrintPage() {
             max-width: 1200px;
             aspect-ratio: 12 / 9;
             margin: 0 auto;
+          }
+          .ls-print-page-wrapper + .ls-print-page-wrapper {
+            margin-top: 32px;
           }
         }
 
@@ -172,15 +291,23 @@ export default function AdminPrintPage() {
             min-height: 0 !important;
           }
 
+          .ls-print-page-wrapper {
+            page-break-after: always;
+            break-after: page;
+          }
+          /* Don't append a blank trailing page after the last side. */
+          .ls-print-page-wrapper:last-child {
+            page-break-after: auto;
+            break-after: auto;
+          }
+
           .ls-print-page {
             width: 12in !important;
             height: 9in !important;
             max-width: none !important;
             aspect-ratio: auto !important;
             margin: 0 !important;
-            page-break-after: avoid;
             page-break-inside: avoid;
-            break-after: avoid;
             break-inside: avoid;
           }
 
@@ -225,6 +352,7 @@ export default function AdminPrintPage() {
             <div style={{ fontSize: 13, color: "#6b7280", marginTop: 2 }}>
               {campaign.name} · {campaign.territory}
               {campaignIdFromUrl ? ` · Campaign #${campaignIdFromUrl}` : ""}
+              {" · 2 pages (Front + Back)"}
             </div>
           </div>
           <div style={{ display: "flex", gap: 10 }}>
@@ -284,71 +412,33 @@ export default function AdminPrintPage() {
           <div>
             <strong>Bleed: 0.125 inches on all sides for the printer.</strong>
             <div style={{ fontSize: 12, marginTop: 2, color: "#a16207" }}>
-              Final trim size is 12&quot; × 9&quot;. Use Save as PDF in the print dialog
-              and send the PDF to your print vendor.
+              Final trim size is 12&quot; × 9&quot; per side. Use Save as PDF in the
+              print dialog — the file will be 2 pages (Front, then Back). The
+              USPS EDDM block in the bottom-right of the back page is a
+              placeholder; the printer will imprint the live indicia.
             </div>
           </div>
         </div>
 
-        {/* The postcard — same grid as PostcardPickerSection. Forced to exactly
-            12in × 9in on print via the @media print rules above. */}
-        <div
-          className="ls-print-page"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(12, 1fr)",
-            gridTemplateRows: "repeat(9, 1fr)",
-            gridTemplateAreas: GRID_AREAS,
-            gap: "10px",
-            background: "#000",
-          }}
-        >
-          {sortedSpots.map((spot) => {
-            // Match the picker's logic exactly: "mb" is the perpetual sponsor
-            // demo cell (Mr. Biscuit's) and always renders the sample ad,
-            // never the PaidAd dispatcher path, so the printed postcard mirrors
-            // what customers see on the live preview.
-            const isPaid =
-              (spot.status === "paid" || spot.status === "reserved") &&
-              spot.gridArea !== "mb";
-            const sampleKey = SPOT_SAMPLE_MAP[spot.gridArea];
-
-            let content;
-            if (isPaid) {
-              content = <PaidAd spot={spot} />;
-            } else if (sampleKey) {
-              content = getSampleAd(sampleKey, SIZE_MAP[spot.size] || "S");
-            } else {
-              content = <UnsoldSlot />;
-            }
-
-            return (
-              <div
-                key={spot.id}
-                style={{
-                  gridArea: spot.gridArea,
-                  overflow: "hidden",
-                  minWidth: 0,
-                  minHeight: 0,
-                }}
-              >
-                {content}
-              </div>
-            );
-          })}
-
-          {/* Permanent house ad — same as the picker. */}
-          <div
-            style={{
-              gridArea: "hs",
-              overflow: "hidden",
-              minWidth: 0,
-              minHeight: 0,
-            }}
-          >
-            <HouseAd />
-          </div>
-        </div>
+        {/* Two faces, two print pages. */}
+        <PostcardFace
+          side="front"
+          spots={frontSpots}
+          gridAreas={GRID_AREAS}
+          gridOrder={FRONT_GRID_ORDER}
+          fixedAreas={["hs"]}
+          renderFixed={renderFrontFixed}
+          label="Front"
+        />
+        <PostcardFace
+          side="back"
+          spots={backSpots}
+          gridAreas={BACK_GRID_AREAS}
+          gridOrder={BACK_GRID_ORDER}
+          fixedAreas={["bhs", "bhr", "bhn", "ed"]}
+          renderFixed={renderBackFixed}
+          label="Back"
+        />
       </div>
     </>
   );

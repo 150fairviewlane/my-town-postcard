@@ -34,6 +34,7 @@ export const GetActiveCampaignResponse = zod
         zod.object({
           id: zod.number(),
           campaignId: zod.number(),
+          side: zod.enum(["front", "back"]),
           size: zod.enum(["xl", "large", "medium", "small"]),
           gridArea: zod.string(),
           price: zod.number(),
@@ -62,6 +63,7 @@ export const GetSpotParams = zod.object({
 export const GetSpotResponse = zod.object({
   id: zod.number(),
   campaignId: zod.number(),
+  side: zod.enum(["front", "back"]),
   size: zod.enum(["xl", "large", "medium", "small"]),
   gridArea: zod.string(),
   price: zod.number(),
@@ -95,6 +97,7 @@ export const ReserveSpotBody = zod.object({
 export const ReserveSpotResponse = zod.object({
   id: zod.number(),
   campaignId: zod.number(),
+  side: zod.enum(["front", "back"]),
   size: zod.enum(["xl", "large", "medium", "small"]),
   gridArea: zod.string(),
   price: zod.number(),
@@ -153,6 +156,7 @@ export const UploadAdBody = zod.object({
 export const UploadAdResponse = zod.object({
   id: zod.number(),
   campaignId: zod.number(),
+  side: zod.enum(["front", "back"]),
   size: zod.enum(["xl", "large", "medium", "small"]),
   gridArea: zod.string(),
   price: zod.number(),
@@ -198,6 +202,7 @@ export const GetAdminCampaignResponse = zod.object({
       .object({
         id: zod.number(),
         campaignId: zod.number(),
+        side: zod.enum(["front", "back"]),
         size: zod.enum(["xl", "large", "medium", "small"]),
         gridArea: zod.string(),
         price: zod.number(),
@@ -234,6 +239,7 @@ export const ApproveAdParams = zod.object({
 export const ApproveAdResponse = zod.object({
   id: zod.number(),
   campaignId: zod.number(),
+  side: zod.enum(["front", "back"]),
   size: zod.enum(["xl", "large", "medium", "small"]),
   gridArea: zod.string(),
   price: zod.number(),

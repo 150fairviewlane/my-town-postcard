@@ -153,7 +153,7 @@ function Dashboard({ token }) {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "#f8fafc", fontSize: 11, color: "#9ca3af", textTransform: "uppercase", letterSpacing: 0.5 }}>
-                  {["Business", "Category", "Size", "Price", "Status", "Paid", "Ad Status", "Action"].map(h => (
+                  {["Business", "Category", "Side", "Size", "Price", "Status", "Paid", "Ad Status", "Action"].map(h => (
                     <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, whiteSpace: "nowrap" }}>{h}</th>
                   ))}
                 </tr>
@@ -163,6 +163,21 @@ function Dashboard({ token }) {
                   <tr key={spot.id} style={{ borderTop: "1px solid #f3f4f6", background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
                     <td style={{ padding: "12px 16px", fontSize: 13, fontWeight: 600, color: "#111" }}>{spot.businessName || <span style={{ color: "#9ca3af" }}>Available</span>}</td>
                     <td style={{ padding: "12px 16px", fontSize: 13, color: "#374151" }}>{spot.businessCategory || "—"}</td>
+                    <td style={{ padding: "12px 16px", fontSize: 13 }}>
+                      <span style={{
+                        display: "inline-block",
+                        padding: "2px 8px",
+                        borderRadius: 10,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        textTransform: "uppercase",
+                        letterSpacing: 0.5,
+                        background: (spot.side ?? "front") === "back" ? "#eef2ff" : "#fef3c7",
+                        color: (spot.side ?? "front") === "back" ? "#3730a3" : "#92400e",
+                      }}>
+                        {spot.side ?? "front"}
+                      </span>
+                    </td>
                     <td style={{ padding: "12px 16px", fontSize: 13, color: "#374151", textTransform: "capitalize" }}>{spot.size}</td>
                     <td style={{ padding: "12px 16px", fontSize: 13, fontWeight: 700, color: "#111" }}>${spot.price / 100}</td>
                     <td style={{ padding: "12px 16px" }}>{getStatusBadge(spot)}</td>

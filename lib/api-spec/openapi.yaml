@@ -317,6 +317,9 @@ components:
           type: integer
         campaignId:
           type: integer
+        side:
+          type: string
+          enum: [front, back]
         size:
           type: string
           enum: [xl, large, medium, small]
@@ -348,6 +351,7 @@ components:
       required:
         - id
         - campaignId
+        - side
         - size
         - gridArea
         - price

@@ -2,12 +2,20 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useGetActiveCampaign, useReserveSpot } from "@workspace/api-client-react";
 import { GRID_AREAS, PaidAd, AvailableSpot } from "./postcardCore";
+import {
+  BACK_GRID_AREAS,
+  BACK_GRID_ORDER,
+  HouseAdVertical,
+  HouseAdRow,
+  HouseAdBanner,
+  EDDMBox,
+} from "./postcardBack";
 import AdGenerator from "./AdGenerator";
 import { getSampleAd, SPOT_SAMPLE_MAP } from "./PostcardSampleAds";
 
 const SIZE_MAP = { xl: "XL", large: "L", medium: "M", small: "S" };
 
-const GRID_ORDER = ["mb","dn","re","hv","ins","pz","lw","a1","a2","a3"];
+const FRONT_GRID_ORDER = ["mb","dn","re","hv","ins","pz","lw","a1","a2","a3"];
 
 // ─── Permanent house / self-promotion ad ─────────────────────────────────────
 function HouseAd() {
@@ -70,6 +78,11 @@ export default function PostcardPickerSection() {
   const [selected, setSelected] = useState(null);
   const [creatorSpot, setCreatorSpot] = useState(null);
   const [reserveError, setReserveError] = useState(null);
+  // Which face of the postcard the customer is currently viewing/buying.
+  // Both sides share the SAME reservation + payment flow — only the spot id
+  // matters server-side, the front/back distinction is purely a layout
+  // partition for the picker.
+  const [side, setSide] = useState("front");
 
   const { data: campaign, isLoading } = useGetActiveCampaign();
   const reserveMutation = useReserveSpot();
@@ -90,10 +103,28 @@ export default function PostcardPickerSection() {
     );
   }
 
-  const spots = campaign.spots || [];
-  const sortedSpots = [...spots].sort((a, b) =>
-    (GRID_ORDER.indexOf(a.gridArea) ?? 99) - (GRID_ORDER.indexOf(b.gridArea) ?? 99)
-  );
+  const allSpots = campaign.spots || [];
+  // Older rows that pre-date the side column come back without it set; treat
+  // those as front-side so existing campaigns keep rendering correctly.
+  const sideSpots = allSpots.filter((s) => (s.side ?? "front") === side);
+  const orderForSide = side === "back" ? BACK_GRID_ORDER : FRONT_GRID_ORDER;
+  const sortedSpots = [...sideSpots].sort((a, b) => {
+    const ai = orderForSide.indexOf(a.gridArea);
+    const bi = orderForSide.indexOf(b.gridArea);
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+  });
+
+  // Quick stats for the toggle pill so customers can see at a glance how many
+  // spots are still up for grabs on each side.
+  const sideStats = (target) => {
+    const spotsForSide = allSpots.filter((s) => (s.side ?? "front") === target);
+    const sold = spotsForSide.filter(
+      (s) => s.status === "paid" || s.status === "reserved",
+    ).length;
+    return { total: spotsForSide.length, sold };
+  };
+  const frontStats = sideStats("front");
+  const backStats = sideStats("back");
 
   const handleAdComplete = async (payload) => {
     setReserveError(null);
@@ -161,8 +192,127 @@ export default function PostcardPickerSection() {
     setReserveError(null);
   };
 
+  // Cells on the active grid that are *not* sellable spots — they always
+  // render fixed UI (house ads, EDDM block) instead of going through the
+  // PaidAd / AvailableSpot path.
+  const renderFixedCell = (area) => {
+    if (side === "front") {
+      if (area === "hs") return <HouseAd />;
+      return null;
+    }
+    // Back side
+    if (area === "bhs") return <HouseAdVertical />;
+    if (area === "bhr") return <HouseAdRow />;
+    if (area === "bhn") return <HouseAdBanner campaign={campaign} />;
+    if (area === "ed") return <EDDMBox />;
+    return null;
+  };
+
+  const fixedAreas = side === "front" ? ["hs"] : ["bhs", "bhr", "bhn", "ed"];
+
+  const sideButtonStyle = (active) => ({
+    flex: 1,
+    border: "none",
+    cursor: "pointer",
+    padding: "12px 18px",
+    borderRadius: 10,
+    background: active ? "#991b1b" : "transparent",
+    color: active ? "#fff" : "#374151",
+    fontWeight: 800,
+    fontSize: 14,
+    fontFamily: "sans-serif",
+    transition: "all 0.15s",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 2,
+    boxShadow: active ? "0 4px 14px rgba(153,27,27,0.35)" : "none",
+  });
+
   return (
     <div style={{ fontFamily: "sans-serif" }}>
+      {/* Front / Back toggle — large pill so customers immediately see they
+          can advertise on either face of the postcard. */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 6,
+          marginBottom: 18,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 11,
+            color: "#6b7280",
+            fontWeight: 700,
+            letterSpacing: 1.5,
+            textTransform: "uppercase",
+          }}
+        >
+          Choose a side to advertise on
+        </div>
+        <div
+          role="tablist"
+          aria-label="Postcard side"
+          style={{
+            display: "flex",
+            background: "#f3f4f6",
+            border: "1px solid #e5e7eb",
+            borderRadius: 12,
+            padding: 5,
+            gap: 4,
+            width: "100%",
+            maxWidth: 480,
+            boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+          }}
+        >
+          <button
+            role="tab"
+            aria-selected={side === "front"}
+            onClick={() => {
+              setSide("front");
+              setSelected(null);
+            }}
+            style={sideButtonStyle(side === "front")}
+          >
+            <span>📮 Front Side</span>
+            <span
+              style={{
+                fontSize: 10.5,
+                fontWeight: 600,
+                color: side === "front" ? "rgba(255,255,255,0.85)" : "#6b7280",
+                letterSpacing: 0.3,
+              }}
+            >
+              {frontStats.sold} of {frontStats.total} sold
+            </span>
+          </button>
+          <button
+            role="tab"
+            aria-selected={side === "back"}
+            onClick={() => {
+              setSide("back");
+              setSelected(null);
+            }}
+            style={sideButtonStyle(side === "back")}
+          >
+            <span>📬 Back Side</span>
+            <span
+              style={{
+                fontSize: 10.5,
+                fontWeight: 600,
+                color: side === "back" ? "rgba(255,255,255,0.85)" : "#6b7280",
+                letterSpacing: 0.3,
+              }}
+            >
+              {backStats.sold} of {backStats.total} sold
+            </span>
+          </button>
+        </div>
+      </div>
+
       {/* Postcard card */}
       <div style={{ background: "#000", borderRadius: 12, padding: "10px 10px 6px",
         boxShadow: "0 16px 56px rgba(0,0,0,0.18)", position: "relative" }}>
@@ -171,7 +321,7 @@ export default function PostcardPickerSection() {
         <div style={{ position: "absolute", top: -13, left: 20, background: "#111", color: "#fff",
           fontSize: 9, fontWeight: 700, letterSpacing: 1.5, padding: "3px 14px",
           borderRadius: 20, textTransform: "uppercase" }}>
-          Live Postcard Preview · 9" × 12" Horizontal · 1 unit = 1 inch
+          Live Postcard Preview · {side === "back" ? "Back" : "Front"} · 12" × 9" · 1 unit = 1 inch
         </div>
 
         {/* Red header bar */}
@@ -179,7 +329,7 @@ export default function PostcardPickerSection() {
           padding: "6px 16px", display: "flex", justifyContent: "space-between", alignItems: "center",
           marginBottom: 3 }}>
           <div style={{ color: "#fff", fontWeight: 800, fontSize: 13, fontFamily: "Georgia,serif" }}>
-            📮 My Town Postcard
+            📮 My Town Postcard · {side === "back" ? "Back Side" : "Front Side"}
           </div>
           <div style={{ color: "#fca5a5", fontSize: 9 }}>
             Reaching {campaign.homesCount?.toLocaleString()} Local Homes · Summer 2026
@@ -193,7 +343,7 @@ export default function PostcardPickerSection() {
           display: "grid",
           gridTemplateColumns: "repeat(12, 1fr)",
           gridTemplateRows: "repeat(9, 1fr)",
-          gridTemplateAreas: GRID_AREAS,
+          gridTemplateAreas: side === "back" ? BACK_GRID_AREAS : GRID_AREAS,
           gap: "10px",
           background: "#000",
         }}>
@@ -224,14 +374,28 @@ export default function PostcardPickerSection() {
               </div>
             );
           })}
-          {/* Permanent house ad — not a sellable spot, no click, not counted */}
-          <div style={{ gridArea: "hs", overflow: "hidden", borderRadius: 0,
-            minWidth: 0, minHeight: 0, cursor: "default", pointerEvents: "none" }}>
-            <HouseAd />
-          </div>
+          {/* Fixed (non-sellable) cells: house ads on both sides, plus the
+              USPS EDDM placeholder on the back. No click, not counted. */}
+          {fixedAreas.map((area) => (
+            <div
+              key={area}
+              style={{
+                gridArea: area,
+                overflow: "hidden",
+                borderRadius: 0,
+                minWidth: 0,
+                minHeight: 0,
+                cursor: "default",
+                pointerEvents: "none",
+              }}
+            >
+              {renderFixedCell(area)}
+            </div>
+          ))}
         </div>
 
-        {/* EDDM footer strip */}
+        {/* EDDM footer strip — visual reminder on the picker, the real
+            indicia lives in the EDDM box on the back side itself. */}
         <div style={{ marginTop: 3, padding: "3px 12px", background: "#000",
           borderRadius: "0 0 6px 6px", display: "flex", justifyContent: "space-between" }}>
           <div style={{ fontSize: 7.5, color: "#666" }}>LOCAL POSTAL CUSTOMER · EDDM</div>

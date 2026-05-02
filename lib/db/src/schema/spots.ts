@@ -5,6 +5,9 @@ import { z } from "zod/v4";
 export const spotsTable = pgTable("spots", {
   id: serial("id").primaryKey(),
   campaignId: integer("campaign_id").notNull(),
+  // Which face of the postcard this spot lives on. Front and back are
+  // independently sellable using the same payment + ad-generator flow.
+  side: text("side", { enum: ["front", "back"] }).notNull().default("front"),
   size: text("size", { enum: ["xl", "large", "medium", "small"] }).notNull(),
   gridArea: text("grid_area").notNull(),
   price: integer("price").notNull(),

@@ -62,12 +62,22 @@ See `.env.example` for full documentation. Summary:
 ## Database Schema
 
 - `campaigns` — id, name, territory, zip_code, mail_date, homes_count, status
-- `spots` — id, campaign_id, size, grid_area, price, status, business_name, business_category, contact_email, contact_phone, ad_file_url, ad_status
+- `spots` — id, campaign_id, **side** (front|back, default front), size, grid_area, price, status, business_name, business_category, contact_email, contact_phone, ad_file_url, ad_status
 - `orders` — id, spot_id, stripe_payment_intent_id, amount_cents, status
+
+## Postcard Layout
+
+The postcard is 12"×9" landscape and has TWO sides, both sellable through the same picker, AdGenerator, and payment flow. The picker has a Front/Back toggle pill above the grid.
+
+**Front side** — 9 spots: `mb` (xl, perpetual sponsor demo Mr. Biscuit's), `dn` `re` (xl), `hv` `ins` (large), `pz` `a1` (small), `lw` `a2` (medium), plus `hs` permanent house ad cell.
+
+**Back side** — 7 spots: `bxl` (xl, $450), `bl1` `bl2` (large, $350), `bm1` `bm2` (medium, $250), `bs1` `bs2` (small, $199), plus three house-ad cells (`bhs` vertical, `bhr` row, `bhn` banner) and the non-sellable `ed` USPS EDDM block (4"×2" placeholder with PRESORTED STD indicia, ECRWSS, "Local Postal Customer" line, and barcode placeholder) in the bottom-right corner. Layout in `artifacts/localspot/src/postcardBack.jsx`.
+
+The print page (`/admin/campaign/:id/print`) renders both sides as separate print pages with `page-break-after: always` between them.
 
 ## Seed Data
 
-Campaign 1 (Spring 2025) has 10 spots: 7 paid (demo businesses), 3 available (a1=medium $299, a2=small $199, a3=small $199).
+Campaign 1 (Spring 2025) has 16 spots: 9 front-side + 7 back-side. Front: 1 paid (Mr. Biscuit's, the `mb` perpetual sponsor demo) + 8 available. Back: all 7 available.
 
 ## Routes
 

@@ -34,6 +34,13 @@ export interface Campaign {
   createdAt: string;
 }
 
+export type SpotSide = (typeof SpotSide)[keyof typeof SpotSide];
+
+export const SpotSide = {
+  front: "front",
+  back: "back",
+} as const;
+
 export type SpotSize = (typeof SpotSize)[keyof typeof SpotSize];
 
 export const SpotSize = {
@@ -54,6 +61,7 @@ export const SpotStatus = {
 export interface Spot {
   id: number;
   campaignId: number;
+  side: SpotSide;
   size: SpotSize;
   gridArea: string;
   price: number;
