@@ -253,10 +253,25 @@ export default function AdAssistant({ formData, onUpdate, sizeKey = "L" }) {
     setMessages(prev => [...prev, userMsg]);
     setLoading(true);
 
-    const history = [...messages, userMsg].map(m => ({
-      role: m.role,
-      content: m.content,
-    }));
+    // Anthropic requires: messages start with a user role and alternate user/assistant.
+    // Our UI inserts non-user-initiated assistant messages (intro greeting, industry
+    // change nudge), so we must (a) drop leading assistants and (b) collapse any
+    // consecutive same-role messages into one. We also strip the FIELDS:{...} control
+    // block from assistant turns so the model isn't re-fed its own metadata trailers.
+    const allMsgs = [...messages, userMsg];
+    const firstUserIdx = allMsgs.findIndex(m => m.role === "user");
+    const trimmed = firstUserIdx >= 0 ? allMsgs.slice(firstUserIdx) : [];
+    const history = [];
+    for (const m of trimmed) {
+      const cleanContent = m.role === "assistant" ? stripFields(m.content) : m.content;
+      if (!cleanContent.trim()) continue;
+      const prev = history[history.length - 1];
+      if (prev && prev.role === m.role) {
+        prev.content = `${prev.content}\n\n${cleanContent}`;
+      } else {
+        history.push({ role: m.role, content: cleanContent });
+      }
+    }
 
     try {
       const response = await fetch("/api/ai/chat", {
@@ -268,8 +283,17 @@ export default function AdAssistant({ formData, onUpdate, sizeKey = "L" }) {
         }),
       });
 
-      const data = await response.json();
-      if (data.error) throw new Error(data.error.message);
+      const data = await response.json().catch(() => ({}));
+      // Error shape can be Anthropic's `{error: {type, message}}` or our proxy's
+      // `{error: "Failed to reach AI service"}` (plain string), so normalize both.
+      if (!response.ok || data.error) {
+        const errMsg =
+          (data.error && typeof data.error === "object" && data.error.message) ||
+          (typeof data.error === "string" && data.error) ||
+          `Request failed (${response.status})`;
+        throw new Error(errMsg);
+      }
+      if (!data.content) throw new Error("Empty response from AI service");
 
       const raw = data.content?.[0]?.text || "Sorry, I didn't get a response. Please try again.";
 
@@ -286,9 +310,10 @@ export default function AdAssistant({ formData, onUpdate, sizeKey = "L" }) {
       }]);
 
     } catch (err) {
+      console.error("AdAssistant error:", err);
       setMessages(prev => [...prev, {
         role: "assistant",
-        content: "Sorry, I ran into a connection issue. Please try again.",
+        content: `Sorry, I ran into a connection issue. Please try again.${err?.message ? `\n\n(${err.message})` : ""}`,
         time: now(),
       }]);
     } finally {
