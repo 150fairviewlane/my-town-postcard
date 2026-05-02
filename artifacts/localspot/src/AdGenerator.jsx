@@ -711,7 +711,10 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
 
                 {/* Ad preview — constrained so sizes look proportionally different */}
                 {(() => {
-                  const maxWidths = { XL: 320, L: 460, M: 340, S: 220 };
+                  // Max pixel widths per size, calibrated to match picker proportions
+                  // XL(4×5) is portrait — keep it tall
+                  // L(4×3), M(3×2), S(2×2) — scale down so small looks small
+                  const maxWidths = { XL: 520, L: 420, M: 310, S: 210 };
                   const maxW = maxWidths[sizeKey] || 360;
                   return (
                     <div style={{
