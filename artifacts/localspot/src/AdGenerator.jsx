@@ -244,8 +244,15 @@ function SplitCleanTemplate({ data, sizeKey, onEdit }) {
         </div>
       </div>
 
-      <div style={{ flex: 1, padding: `${10 * fScale}px ${12 * fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", background: ind.colors.light, minWidth: 0 }}>
-        <div>
+      {/* Right column laid out as Header (fixed) / Middle (flex, clips) /
+          Footer (fixed). The footer holds the coupon, so it must be
+          flexShrink:0 — and the middle must own all the spare space with
+          minHeight:0+overflow:hidden so it shrinks instead of pushing the
+          coupon out of the card's clipped bounds. The previous version used
+          `justifyContent: space-between` which let total content exceed the
+          container height and clipped the coupon on XL. */}
+      <div style={{ flex: 1, padding: `${10 * fScale}px ${12 * fScale}px`, display: "flex", flexDirection: "column", background: ind.colors.light, minWidth: 0, minHeight: 0 }}>
+        <div style={{ flexShrink: 0 }}>
           <div style={{ color: ind.colors.accent, fontSize: 8 * fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 3 }}>{data.industry}</div>
           <EditableText value={data.businessName} onChange={edit("businessName")}
             style={{ color: ind.colors.dark, fontWeight: 900, fontSize: 20 * fScale, fontFamily: "Georgia, serif", lineHeight: 1.0 }} />
@@ -253,30 +260,32 @@ function SplitCleanTemplate({ data, sizeKey, onEdit }) {
             style={{ fontSize: (isS ? 9 : 10) * fScale, color: ind.colors.primary, fontWeight: 700, marginTop: 4, fontStyle: "italic" }} />
         </div>
 
-        {!isS && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 2 * fScale, margin: `${4 * fScale}px 0` }}>
-            {((data.menuItems && data.menuItems.length > 0) ? data.menuItems : ind.menu).slice(0, isXL ? 4 : isL ? 3 : 2).map((item, i) => (
-              <div key={i} style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                <div style={{ width: 14 * fScale, height: 14 * fScale, borderRadius: "50%", background: ind.colors.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <span style={{ color: "#fff", fontSize: 7 * fScale, fontWeight: 900 }}>✓</span>
+        <div style={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "center", gap: 3 * fScale, margin: `${4 * fScale}px 0` }}>
+          {!isS && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 * fScale }}>
+              {((data.menuItems && data.menuItems.length > 0) ? data.menuItems : ind.menu).slice(0, isXL ? 3 : isL ? 3 : 2).map((item, i) => (
+                <div key={i} style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <div style={{ width: 14 * fScale, height: 14 * fScale, borderRadius: "50%", background: ind.colors.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <span style={{ color: "#fff", fontSize: 7 * fScale, fontWeight: 900 }}>✓</span>
+                  </div>
+                  <EditableText value={item} onChange={editMenu(i)} style={{ fontSize: 10 * fScale, color: "#333" }} />
                 </div>
-                <EditableText value={item} onChange={editMenu(i)} style={{ fontSize: 10 * fScale, color: "#333" }} />
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
 
-        {!isS && data.hours && (
-          <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2 * fScale }}>
-            <span style={{ fontSize: 9 * fScale }}>🕒</span>
-            <EditableText value={data.hours} onChange={edit("hours")}
-              style={{ color: ind.colors.primary, fontWeight: 700, fontSize: 9 * fScale }} />
-          </div>
-        )}
+          {!isS && data.hours && (
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ fontSize: 9 * fScale }}>🕒</span>
+              <EditableText value={data.hours} onChange={edit("hours")}
+                style={{ color: ind.colors.primary, fontWeight: 700, fontSize: 9 * fScale }} />
+            </div>
+          )}
+        </div>
 
         <div style={{ flexShrink: 0 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: data.offer ? 5 * fScale : 0 }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 1, minWidth: 0 }}>
               {data.address && (
                 <EditableText value={data.address} onChange={edit("address")} multiline
                   style={{ fontSize: 8 * fScale, color: "#555", whiteSpace: "normal", lineHeight: 1.2 }} />
@@ -346,31 +355,35 @@ function MagazineTemplate({ data, sizeKey, onEdit }) {
         </div>
       )}
 
-      <div style={{ flex: 1, padding: `${4 * fScale}px ${10 * fScale}px ${5 * fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 0 }}>
-        <div>
+      {/* Same Header / Middle (flex, clips) / Footer (fixed) pattern as
+          SplitClean to guarantee the coupon footer is always visible. */}
+      <div style={{ flex: 1, padding: `${4 * fScale}px ${10 * fScale}px ${5 * fScale}px`, display: "flex", flexDirection: "column", minHeight: 0 }}>
+        <div style={{ flexShrink: 0 }}>
           <div style={{ color: ind.colors.accent, fontSize: 7.5 * fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>{data.industry}</div>
           <EditableText value={data.tagline || ind.taglines[0]} onChange={edit("tagline")}
             style={{ color: ind.colors.dark, fontSize: 16 * fScale, fontWeight: 900, fontFamily: "Georgia, serif", lineHeight: 1.1, marginTop: 2 }} />
         </div>
 
-        {!isS && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: `2px ${10 * fScale}px`, margin: `${3 * fScale}px 0` }}>
-            {((data.menuItems && data.menuItems.length > 0) ? data.menuItems : ind.menu).slice(0, (isXL || isL) ? 6 : 4).map((item, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                <span style={{ color: ind.colors.primary, fontSize: 10 * fScale }}>●</span>
-                <EditableText value={item} onChange={editMenu(i)} style={{ fontSize: 11 * fScale, color: "#333", fontFamily: "sans-serif", fontWeight: 500 }} />
-              </div>
-            ))}
-          </div>
-        )}
+        <div style={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "center", gap: 2 * fScale, margin: `${3 * fScale}px 0` }}>
+          {!isS && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: `2px ${10 * fScale}px` }}>
+              {((data.menuItems && data.menuItems.length > 0) ? data.menuItems : ind.menu).slice(0, (isXL || isL) ? 6 : 4).map((item, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                  <span style={{ color: ind.colors.primary, fontSize: 10 * fScale }}>●</span>
+                  <EditableText value={item} onChange={editMenu(i)} style={{ fontSize: 11 * fScale, color: "#333", fontFamily: "sans-serif", fontWeight: 500 }} />
+                </div>
+              ))}
+            </div>
+          )}
 
-        {!isS && data.hours && (
-          <div style={{ display: "flex", alignItems: "center", gap: 4, margin: `${2 * fScale}px 0` }}>
-            <span style={{ fontSize: 10 * fScale }}>🕒</span>
-            <EditableText value={data.hours} onChange={edit("hours")}
-              style={{ color: ind.colors.primary, fontWeight: 700, fontSize: 10 * fScale, fontFamily: "sans-serif" }} />
-          </div>
-        )}
+          {!isS && data.hours && (
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ fontSize: 10 * fScale }}>🕒</span>
+              <EditableText value={data.hours} onChange={edit("hours")}
+                style={{ color: ind.colors.primary, fontWeight: 700, fontSize: 10 * fScale, fontFamily: "sans-serif" }} />
+            </div>
+          )}
+        </div>
 
         <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 3 * fScale }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
