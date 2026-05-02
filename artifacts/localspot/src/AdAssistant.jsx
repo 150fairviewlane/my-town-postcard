@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { INDUSTRIES } from "./industryAssets";
+import { INDUSTRIES, INDUSTRY_LIST } from "./industryAssets";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AD ASSISTANT — AI-powered ad design consultant with auto-fill
@@ -14,8 +14,10 @@ import { INDUSTRIES } from "./industryAssets";
 //   sizeKey   — current ad size (XL/L/M/S)
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Valid industry names for matching
 const INDUSTRY_NAMES = Object.keys(INDUSTRIES);
 
+// ─── System prompt ────────────────────────────────────────────────────────────
 function buildSystemPrompt(formData, sizeKey) {
   const ind = INDUSTRIES[formData.industry] || {};
   const sizeName = {
@@ -50,8 +52,8 @@ AD SIZE GUIDANCE:
 
 YOUR JOB:
 1. Have a natural conversation and help them build a great ad
-1. When the user tells you information about their business (name, phone, tagline, offer, address, website, industry), EXTRACT it and include it in the FIELDS block at the end of your response
-1. Auto-fill fields silently — don't say "I've updated your tagline", just do it and move on
+2. When the user tells you information about their business (name, phone, tagline, offer, address, website, industry), EXTRACT it and include it in the FIELDS block at the end of your response
+3. Auto-fill fields silently — don't say "I've updated your tagline", just do it and move on
 
 RESPONSE FORMAT — ALWAYS end your response with this exact block (even if no fields to update, include empty block):
 FIELDS:{"businessName":"","industry":"","tagline":"","offer":"","offerFine":"","phone":"","address":"","website":""}
@@ -73,11 +75,13 @@ PERSONALITY:
 IMPORTANT: The FIELDS block must appear at the very end of every response, on its own line, with no text after it.`;
 }
 
+// ─── Extract and apply field updates from AI response ────────────────────────
 function extractFieldUpdates(text) {
   try {
     const match = text.match(/FIELDS:\s*({[^}]+})/);
     if (!match) return {};
     const raw = JSON.parse(match[1]);
+    // Filter out empty strings
     const updates = {};
     Object.entries(raw).forEach(([k, v]) => {
       if (v && v.trim()) updates[k] = v.trim();
@@ -88,24 +92,45 @@ function extractFieldUpdates(text) {
   }
 }
 
+// ─── Strip the FIELDS block from display text ─────────────────────────────────
 function stripFields(text) {
   return text.replace(/\nFIELDS:\s*{[^}]+}\s*$/, "").replace(/FIELDS:\s*{[^}]+}\s*$/, "").trim();
 }
 
+// ─── Parse numbered options from AI response ─────────────────────────────────
+// Returns array of { number, field, value, shortLabel }
 function parseSuggestions(text, formData) {
+  const cleaned = stripFields(text);
   const suggestions = [];
-  const numberedOptions = [...text.matchAll(/(?:^|\n)\s*(?:\d+[.)]\s*)["']?([A-Z][^"'\n]{10,70})["']?/gm)];
-  if (numberedOptions.length >= 2) {
-    numberedOptions.slice(0, 3).forEach((m, i) => {
-      const val = m[1].trim();
-      if (val !== formData.tagline && val !== formData.offer && val.length > 8) {
-        suggestions.push({ field: "tagline", label: `Option ${i + 1}`, value: val });
-      }
-    });
-  }
-  return suggestions.slice(0, 3);
+
+  // Match patterns like: "1. Something" "1) Something" "**1.** Something"
+  const matches = [...cleaned.matchAll(/(?:^|\n)\s*\*{0,2}(\d+)[.)]?\*{0,2}\s+\*{0,2}["']?([^"'\n*]{8,80})["']?\*{0,2}/gm)];
+
+  matches.slice(0, 4).forEach(m => {
+    const num = parseInt(m[1]);
+    const val = m[2].trim()
+      .replace(/^(tagline:|offer:|option \d+:)\s*/i, "")
+      .replace(/\*+/g, "")
+      .trim();
+
+    if (!val || val.length < 6) return;
+
+    // Guess which field this is for based on context
+    const lowerText = cleaned.toLowerCase();
+    const lowerVal = val.toLowerCase();
+    let field = "tagline"; // default
+    if (lowerText.includes("offer") || lowerText.includes("coupon") || lowerText.includes("deal") ||
+        lowerVal.includes("off") || lowerVal.includes("free") || lowerVal.includes("%")) {
+      field = "offer";
+    }
+
+    suggestions.push({ number: num, field, value: val });
+  });
+
+  return suggestions;
 }
 
+// ─── Auto-filled field flash notification ─────────────────────────────────────
 function FieldFlash({ fields }) {
   if (!fields || Object.keys(fields).length === 0) return null;
   const labels = {
@@ -127,6 +152,7 @@ function FieldFlash({ fields }) {
   );
 }
 
+// ─── Single message component ─────────────────────────────────────────────────
 function Message({ msg, onApply, formData }) {
   const displayText = stripFields(msg.content);
   const suggestions = msg.role === "assistant" ? parseSuggestions(displayText, formData) : [];
@@ -159,31 +185,60 @@ function Message({ msg, onApply, formData }) {
           {displayText}
         </div>
 
+        {/* Auto-fill notification */}
         {msg.autoFilled && Object.keys(msg.autoFilled).length > 0 && (
           <div style={{ marginTop: 5 }}>
             <FieldFlash fields={msg.autoFilled} />
           </div>
         )}
 
+        {/* Numbered choice buttons — prominent, easy to tap */}
         {suggestions.length > 0 && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
-            {suggestions.map((s, i) => (
-              <button key={i} onClick={() => onApply(s)}
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
+            <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase" }}>
+              Tap to choose:
+            </div>
+            {suggestions.map((s) => (
+              <button key={s.number} onClick={() => onApply(s)}
                 style={{
-                  background: "#fff", border: "1.5px solid #991b1b", color: "#991b1b",
-                  borderRadius: 20, padding: "4px 12px", fontSize: 11, fontWeight: 700,
-                  cursor: "pointer", fontFamily: "sans-serif", transition: "all 0.15s",
+                  display: "flex", alignItems: "center", gap: 10,
+                  background: "#fff", border: "1.5px solid #e5e7eb",
+                  borderRadius: 10, padding: "9px 12px",
+                  cursor: "pointer", fontFamily: "sans-serif",
+                  textAlign: "left", width: "100%",
+                  transition: "all 0.15s",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
                 }}
-                onMouseEnter={e => { e.target.style.background = "#991b1b"; e.target.style.color = "#fff"; }}
-                onMouseLeave={e => { e.target.style.background = "#fff"; e.target.style.color = "#991b1b"; }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = "#991b1b";
+                  e.currentTarget.style.background = "#fef2f2";
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = "#e5e7eb";
+                  e.currentTarget.style.background = "#fff";
+                }}
               >
-                ✓ {s.label}: "{s.value.slice(0, 28)}{s.value.length > 28 ? "…" : ""}"
+                {/* Number badge */}
+                <div style={{
+                  width: 26, height: 26, borderRadius: "50%",
+                  background: "#991b1b", color: "#fff",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 12, fontWeight: 900, flexShrink: 0,
+                }}>
+                  {s.number}
+                </div>
+                {/* Option text */}
+                <div style={{ flex: 1, fontSize: 12, color: "#111", fontWeight: 600, lineHeight: 1.3 }}>
+                  {s.value}
+                </div>
+                {/* Apply hint */}
+                <div style={{ fontSize: 10, color: "#9ca3af", flexShrink: 0 }}>tap →</div>
               </button>
             ))}
           </div>
         )}
 
-        <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: msg.role === "user" ? "right" : "left" }}>
+        <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 6, textAlign: msg.role === "user" ? "right" : "left" }}>
           {msg.time}
         </div>
       </div>
@@ -191,6 +246,7 @@ function Message({ msg, onApply, formData }) {
   );
 }
 
+// ─── Typing indicator ─────────────────────────────────────────────────────────
 function TypingIndicator() {
   return (
     <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
@@ -208,10 +264,7 @@ function TypingIndicator() {
 function chipStyle(bg, color) {
   return { background: bg, border: "none", borderRadius: 20, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", color, fontFamily: "sans-serif" };
 }
-
-function now() {
-  return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
+function now() { return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN COMPONENT
@@ -229,6 +282,7 @@ export default function AdAssistant({ formData, onUpdate, sizeKey = "L" }) {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);
 
+  // Watch for industry changes from the form dropdown and acknowledge
   const prevIndustry = useRef(formData.industry);
   useEffect(() => {
     if (formData.industry && formData.industry !== prevIndustry.current) {
@@ -244,10 +298,33 @@ export default function AdAssistant({ formData, onUpdate, sizeKey = "L" }) {
     }
   }, [formData.industry]);
 
+  const handleApply = useCallback((suggestion) => {
+    onUpdate(suggestion.field, suggestion.value);
+    setMessages(prev => [...prev, {
+      role: "assistant",
+      content: `✓ Applied to your ${suggestion.field}: "${suggestion.value}"\n\nYou can see it updating in the preview. Want to tweak it or move on?`,
+      autoFilled: { [suggestion.field]: suggestion.value },
+      time: now(),
+    }]);
+  }, [onUpdate]);
+
   const sendMessage = useCallback(async (text) => {
     const userText = (text || input).trim();
     if (!userText || loading) return;
     setInput("");
+
+    // ── Number shortcut — if user types 1, 2, 3, 4 and last message had options
+    if (/^[1-4]$/.test(userText)) {
+      const lastAssistantMsg = [...messages].reverse().find(m => m.role === "assistant");
+      if (lastAssistantMsg) {
+        const opts = parseSuggestions(stripFields(lastAssistantMsg.content), formData);
+        const chosen = opts.find(o => o.number === parseInt(userText));
+        if (chosen) {
+          handleApply(chosen);
+          return;
+        }
+      }
+    }
 
     const userMsg = { role: "user", content: userText, time: now() };
     setMessages(prev => [...prev, userMsg]);
@@ -323,17 +400,7 @@ export default function AdAssistant({ formData, onUpdate, sizeKey = "L" }) {
       setLoading(false);
       inputRef.current?.focus();
     }
-  }, [input, loading, messages, formData, sizeKey, onUpdate]);
-
-  const handleApply = useCallback((suggestion) => {
-    onUpdate(suggestion.field, suggestion.value);
-    setMessages(prev => [...prev, {
-      role: "assistant",
-      content: `✓ Applied "${suggestion.value}" — check your preview. Anything else to tweak?`,
-      autoFilled: { [suggestion.field]: suggestion.value },
-      time: now(),
-    }]);
-  }, [onUpdate]);
+  }, [input, loading, messages, formData, sizeKey, onUpdate, handleApply]);
 
   const hasContent = formData.businessName || formData.industry;
 
