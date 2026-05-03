@@ -13,31 +13,57 @@ import {
   clearReservation,
 } from "../lib/reservationStorage";
 
-// Read the publishable key once. We don't pass anything to loadStripe() if
-// it's missing — Stripe.js throws synchronously on an invalid key, which
-// would unmount the page before our friendly "not configured" UI can render.
-const STRIPE_PK = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "";
-
-// Module-level promise so Stripe.js loads exactly once across page renders.
-// Wrapped in try/catch because loadStripe() itself can throw if the key has
-// an obviously bad shape (e.g. empty string, "sk_..." secret key by mistake).
+// The publishable key is served by the API (so a single Replit Stripe
+// integration drives both server-side payments and Stripe.js on the
+// frontend, with no env vars to wire up). We fetch it once per page load
+// and memoize the resulting Stripe.js promise so <Elements> doesn't
+// reinitialize on every render.
 let cachedStripePromise = null;
 function getStripePromise() {
   if (cachedStripePromise) return cachedStripePromise;
-  if (!STRIPE_PK || !/^pk_(test|live)_/.test(STRIPE_PK)) {
-    cachedStripePromise = Promise.reject(
-      new Error(
-        "Stripe is not configured for this environment. The site owner needs to set VITE_STRIPE_PUBLISHABLE_KEY before payments will work."
-      )
-    );
-    return cachedStripePromise;
-  }
-  try {
-    cachedStripePromise = loadStripe(STRIPE_PK);
-  } catch (err) {
-    cachedStripePromise = Promise.reject(err);
-  }
-  return cachedStripePromise;
+  cachedStripePromise = (async () => {
+    const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+    const url = `${base}/api/config/stripe-publishable-key`;
+    let res;
+    try {
+      res = await fetch(url, { headers: { Accept: "application/json" } });
+    } catch (err) {
+      throw new Error(
+        "Could not reach the payments service. Check your connection and try again.",
+      );
+    }
+    if (!res.ok) {
+      let msg = `Payments service returned ${res.status}.`;
+      try {
+        const body = await res.json();
+        if (body?.error) msg = body.error;
+      } catch {
+        /* fall through */
+      }
+      throw new Error(msg);
+    }
+    const body = await res.json();
+    const pk = body?.publishableKey;
+    if (!pk || !/^pk_(test|live)_/.test(pk)) {
+      throw new Error(
+        "Payments service returned an invalid publishable key. Contact the site owner.",
+      );
+    }
+    const stripe = await loadStripe(pk);
+    if (!stripe) {
+      throw new Error("Stripe.js failed to load. Check that your browser allows js.stripe.com.");
+    }
+    return stripe;
+  })().catch((err) => {
+    // Reset cache so a future visit to /checkout will retry, but keep this
+    // promise rejecting so the in-flight render shows the error UI.
+    cachedStripePromise = null;
+    throw err;
+  });
+  // Re-cache the (now-thrown) promise lookup-side so all consumers in the
+  // current page session see the same rejection without refetching.
+  const p = cachedStripePromise;
+  return p;
 }
 
 // Display labels for each spot size. Actual price is read from the

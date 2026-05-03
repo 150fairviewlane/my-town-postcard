@@ -11,13 +11,25 @@ import ErrorBoundary from "./components/ErrorBoundary";
 // have to transform the admin/checkout/upload code before showing the home
 // page or the ad picker.
 import LandingPage from "./pages/LandingPage";
+// CheckoutPage is the critical conversion path — a Suspense flash on the
+// way in (or worse, a long lazy-chunk fetch on the Replit dev edge proxy)
+// looks like a blank screen to the customer. Keep it eager so the page
+// renders the moment the route is hit, even if the JS bundle is slightly
+// larger.
+// @ts-expect-error JSX module without types
+import CheckoutPage from "./pages/CheckoutPage";
 
-const CheckoutPage = lazy(() => import("./pages/CheckoutPage"));
+// @ts-expect-error JSX module without types
 const UploadAdPage = lazy(() => import("./pages/UploadAdPage"));
+// @ts-expect-error JSX module without types
 const ConfirmationPage = lazy(() => import("./pages/ConfirmationPage"));
+// @ts-expect-error JSX module without types
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+// @ts-expect-error JSX module without types
 const AdminPrintPage = lazy(() => import("./pages/AdminPrintPage"));
+// @ts-expect-error JSX module without types
 const OutreachPage = lazy(() => import("./pages/OutreachPage"));
+// @ts-expect-error JSX module without types
 const ScanAnalyticsPage = lazy(() => import("./pages/ScanAnalyticsPage"));
 
 const queryClient = new QueryClient();

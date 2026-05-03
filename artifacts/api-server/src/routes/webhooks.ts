@@ -1,21 +1,11 @@
 import { type Request, type Response } from "express";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db, spotsTable, ordersTable, campaignsTable } from "@workspace/db";
 import { sendAdProofEmail, sendAdminNewOrder } from "../lib/emails";
 import { ensureTrackingCode } from "../lib/trackingCode";
 import { releaseReservedSpot } from "../lib/expirationCleanup";
 import { logger } from "../lib/logger";
-
-// We use require("stripe") (not import) to match the pattern in checkout.ts
-// — this lets the API server boot even when the stripe package isn't fully
-// resolvable, and works with the esbuild bundle's require shim.
-function getStripe() {
-  const key = process.env.STRIPE_SECRET_KEY;
-  if (!key) return null;
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const Stripe = require("stripe");
-  return new Stripe(key, { apiVersion: "2024-06-20" });
-}
+import { getStripeClient } from "../lib/stripeClient";
 
 /**
  * Stripe webhook handler. Mounted at POST /api/webhooks/stripe via
@@ -44,9 +34,11 @@ export async function stripeWebhookHandler(
     return;
   }
 
-  const stripe = getStripe();
-  if (!stripe) {
-    logger.error("STRIPE_SECRET_KEY not set — cannot process Stripe webhook");
+  let stripe;
+  try {
+    stripe = await getStripeClient();
+  } catch (err: any) {
+    logger.error({ err: err?.message }, "Stripe integration unavailable — cannot process webhook");
     res.status(503).json({ error: "Stripe not configured" });
     return;
   }
@@ -236,6 +228,40 @@ async function markSpotPaidAndNotify(
       { spotId, paymentRef, orderId: existing[0].id },
       "Order already recorded for this payment — webhook is a no-op (idempotent)",
     );
+    return;
+  }
+
+  // Defense-in-depth against duplicate charges: a different PaymentIntent
+  // may have already paid this spot. The DB unique index would reject the
+  // insert anyway, but we want to (a) avoid the noisy 23505 log, (b) auto-
+  // refund the duplicate via Stripe, and (c) leave a clear audit trail.
+  const otherPaid = await db
+    .select({ id: ordersTable.id, paymentIntentId: ordersTable.stripePaymentIntentId })
+    .from(ordersTable)
+    .where(and(eq(ordersTable.spotId, spotId), eq(ordersTable.status, "paid")))
+    .limit(1);
+  if (otherPaid.length > 0 && otherPaid[0].paymentIntentId !== paymentRef) {
+    req.log.warn(
+      {
+        spotId,
+        existingOrderId: otherPaid[0].id,
+        existingPaymentIntentId: otherPaid[0].paymentIntentId,
+        duplicatePaymentIntentId: paymentRef,
+      },
+      "Duplicate charge detected via webhook — auto-refunding the duplicate",
+    );
+    try {
+      const stripe = await getStripeClient();
+      await stripe.refunds.create({
+        payment_intent: paymentRef,
+        reason: "duplicate",
+      });
+    } catch (refundErr: any) {
+      req.log.error(
+        { err: refundErr?.message, paymentIntentId: paymentRef },
+        "Webhook auto-refund of duplicate charge FAILED — manual reconciliation required",
+      );
+    }
     return;
   }
 

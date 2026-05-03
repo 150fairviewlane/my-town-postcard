@@ -22,6 +22,16 @@ export const ordersTable = pgTable(
     stripePaymentIntentIdUnique: uniqueIndex("orders_stripe_payment_intent_id_unique")
       .on(t.stripePaymentIntentId)
       .where(sql`${t.stripePaymentIntentId} IS NOT NULL`),
+    // Partial unique index: at most one PAID order per spot, ever. This is
+    // the DB-level guarantee that a spot can never be double-charged. If two
+    // distinct PaymentIntents both succeed for the same spot (e.g. customer
+    // reloads checkout, two PIs are created, both somehow get confirmed),
+    // the second insert here fails with 23505 and the application code
+    // refunds (or flags for manual reconciliation) instead of issuing a
+    // duplicate paid order. Failed/pending orders are not constrained.
+    paidOrderPerSpotUnique: uniqueIndex("orders_paid_spot_unique")
+      .on(t.spotId)
+      .where(sql`${t.status} = 'paid'`),
   }),
 );
 
