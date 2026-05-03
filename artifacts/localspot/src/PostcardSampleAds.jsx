@@ -3,6 +3,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { INDUSTRIES } from "./industryAssets";
+import { AdQRCode, generateSpotCode, normalizeWebsite } from "./qrUtils";
 
 // ─── Helper: Logo Badge ───────────────────────────────────────────────────────
 function LogoBadge({ emoji, size = 40, bg = "rgba(255,255,255,0.18)", color = "#fff", border }) {
@@ -80,6 +81,7 @@ export const SAMPLE_AD_CONFIGS = {
       tagline: "Accepting New Patients!", starburst: "NEW!",
       offer: "FREE Whitening Kit", offerFine: "w/ exam & cleaning · show this ad",
       phone: "(706) 555-0142", address: "142 Commerce St, Clarkesville, GA 30523",
+      website: "clarkesvillefamilydental.com",
       menuItems: ["Preventive Care & Cleanings", "Cosmetic & Whitening", "Family & Children's Care"],
     },
   },
@@ -90,6 +92,7 @@ export const SAMPLE_AD_CONFIGS = {
       tagline: "Local Agent. Real Savings.",
       offer: "Save up to $500/yr", offerFine: "Free quote · no obligation",
       phone: "(706) 555-0388", address: "55 Green St, Clarkesville, GA 30523",
+      website: "tannerinsurance.com",
       menuItems: ["Auto", "Home", "Life", "Business"],
     },
   },
@@ -100,6 +103,7 @@ export const SAMPLE_AD_CONFIGS = {
       tagline: "Your Yard. Our Pride.", starburst: "$25 OFF",
       offer: "$25 OFF First Service", offerFine: "New customers · expires 6/30",
       phone: "(706) 555-0291", address: "Clarkesville, GA",
+      website: "greenacreslawn.com",
       menuItems: ["Weekly Mowing", "Spring Cleanup", "Mulch", "Free Estimates"],
     },
   },
@@ -109,7 +113,8 @@ export const SAMPLE_AD_CONFIGS = {
       businessName: "The Cut Above Salon", industry: "Salon & Beauty",
       tagline: "Look Beautiful. Feel Confident.", starburst: "20% OFF",
       offer: "20% OFF First Visit", offerFine: "New clients · show this ad",
-      phone: "(706) 555-0519", address: "Clarkesville, GA",
+      phone: "(706) 555-0519", address: "105 Main St, Clarkesville, GA 30523",
+      website: "thecutabovesalon.com",
       menuItems: ["Cut & Color", "Wedding Hair", "Walk-Ins"],
     },
   },
@@ -150,6 +155,7 @@ export const SAMPLE_AD_CONFIGS = {
       tagline: "Compassionate Pet Care",
       offer: "Free First Exam", offerFine: "New patients · call to schedule",
       phone: "(706) 555-0322", address: "Clarkesville, GA",
+      website: "clarkesvilleanimalclinic.com",
       menuItems: ["Wellness Exams", "Vaccinations", "Surgery & Dental", "Emergency Care"],
     },
   },
@@ -160,6 +166,7 @@ export const SAMPLE_AD_CONFIGS = {
       tagline: "From-Scratch Biscuits & Boba!", starburst: "$1 OFF",
       offer: "$1 OFF Any Biscuit", offerFine: "1 per visit · with this postcard",
       phone: "(706) 754-0105", address: "596 W Louise St D, Clarkesville, GA 30523",
+      website: "mrbiscuitscafe.com",
       menuItems: ["Plain Biscuit $2.99", "Bacon Biscuit $4.99", "Chicken Tender $5.99", "NY Bagels $5.49"],
     },
   },
@@ -198,7 +205,7 @@ function PhotoBoldAd({ data, sizeKey }) {
       </div>
 
       {/* Center: tagline + phone badge */}
-      <div style={{ position: "relative", zIndex: 2, flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: `${4 * fScale}px ${12 * fScale}px`, gap: 7 * fScale }}>
+      <div style={{ position: "relative", zIndex: 2, flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: `${4 * fScale}px ${12 * fScale}px`, gap: 6 * fScale }}>
         {!isS && (
           <div style={{ color: "#fff", fontWeight: 800, fontSize: (isXL ? 22 : isL ? 18 : 14) * fScale, lineHeight: 1.15, fontStyle: "italic", textShadow: "0 2px 14px rgba(0,0,0,0.95)", textAlign: "center" }}>
             &ldquo;{data.tagline}&rdquo;
@@ -215,17 +222,33 @@ function PhotoBoldAd({ data, sizeKey }) {
             📞 {data.phone}
           </div>
         )}
+        {/* M-size services list to fill dead space (e.g. salon ad) */}
+        {isM && data.menuItems && data.menuItems.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: `${2 * fScale}px ${8 * fScale}px`, padding: `0 ${4 * fScale}px` }}>
+            {data.menuItems.slice(0, 3).map((item, i) => (
+              <span key={i} style={{
+                color: "#fff", fontFamily: "sans-serif", fontSize: 9 * fScale, fontWeight: 600,
+                textShadow: "0 1px 4px rgba(0,0,0,0.85)", whiteSpace: "nowrap",
+              }}>
+                ✦ {item}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Bottom: coupon + contact */}
       <div style={{ position: "relative", zIndex: 2, padding: `${5 * fScale}px ${10 * fScale}px ${8 * fScale}px`, display: "flex", flexDirection: "column", gap: 4 * fScale, flexShrink: 0 }}>
         {data.offer && <Coupon offer={data.offer} fine={isS ? null : data.offerFine} accent="#fff" scale={fScale} dark={true} />}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", color: "#fff", fontFamily: "sans-serif", textShadow: "0 1px 4px rgba(0,0,0,0.7)" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", color: "#fff", fontFamily: "sans-serif", textShadow: "0 1px 4px rgba(0,0,0,0.7)", gap: 6 * fScale }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 1, minWidth: 0, flex: 1 }}>
             {data.address && <div style={{ fontSize: 9 * fScale, fontWeight: 600 }}>📍 {data.address}</div>}
-            {data.website && <div style={{ fontSize: 8 * fScale, fontWeight: 500, opacity: 0.9 }}>🌐 {data.website}</div>}
+            {(isS || isM) && data.phone && <div style={{ fontWeight: 900, fontSize: 11 * fScale, color: "#fff", whiteSpace: "nowrap", marginTop: 2 }}>📞 {data.phone}</div>}
           </div>
-          {(isS || isM) && data.phone && <div style={{ fontWeight: 900, fontSize: 11 * fScale, color: "#fff", whiteSpace: "nowrap" }}>📞 {data.phone}</div>}
+          {!isS && data.website && (
+            <AdQRCode website={normalizeWebsite(data.website)} spotCode={generateSpotCode(data.businessName, "sample")}
+              size={isXL ? 50 : isL ? 40 : 32} dark={true} />
+          )}
         </div>
       </div>
     </div>
@@ -294,10 +317,21 @@ function SplitCleanAd({ data, sizeKey }) {
         )}
 
         <div style={{ flexShrink: 0 }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 2, marginBottom: data.offer ? 5 * fScale : 0 }}>
-            {data.address && <div style={{ fontSize: (isS ? 8 : 9) * fScale, color: "#555" }}>📍 {data.address}</div>}
-            {data.website && <div style={{ fontSize: (isS ? 8 : 9) * fScale, color: "#555" }}>🌐 {data.website}</div>}
-            {data.phone && <div style={{ fontSize: (isS ? 11 : 15) * fScale, color: ind.colors.primary, fontWeight: 900, letterSpacing: 0.3, whiteSpace: "nowrap" }}>📞 {data.phone}</div>}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 6 * fScale, marginBottom: data.offer ? 5 * fScale : 0 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0, flex: 1 }}>
+              {data.address && <div style={{ fontSize: (isS ? 8 : 9) * fScale, color: "#555" }}>📍 {data.address}</div>}
+              {data.phone && (
+                <div style={{
+                  fontSize: (isS ? 11 : isL ? 13 : 12) * fScale,
+                  color: ind.colors.primary, fontWeight: 900, letterSpacing: 0.2,
+                  whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                }}>📞 {data.phone}</div>
+              )}
+            </div>
+            {!isS && data.website && (
+              <AdQRCode website={normalizeWebsite(data.website)} spotCode={generateSpotCode(data.businessName, "sample")}
+                size={isXL ? 48 : isL ? 38 : 30} dark={false} />
+            )}
           </div>
           <Coupon offer={data.offer} fine={isS ? null : data.offerFine} accent={ind.colors.primary} scale={fScale} />
         </div>
@@ -329,7 +363,7 @@ function MagazineAd({ data, sizeKey }) {
       </div>
 
       {/* Photo strip — always shown; S gets 1 photo, others get 2 */}
-      <div style={{ display: "flex", gap: 1, height: isXL ? "30%" : isL ? "34%" : isM ? "36%" : "32%", flexShrink: 0 }}>
+      <div style={{ display: "flex", gap: 1, height: isXL ? "28%" : isL ? "30%" : isM ? "26%" : "30%", flexShrink: 0 }}>
         {(isS ? photos.slice(0, 1) : photos).map((src, i) => (
           <div key={i} style={{ flex: 1, overflow: "hidden", background: ind.colors.dark, position: "relative" }}>
             <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
@@ -339,30 +373,33 @@ function MagazineAd({ data, sizeKey }) {
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, padding: `${5 * fScale}px ${10 * fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 0 }}>
+      <div style={{ flex: 1, padding: `${4 * fScale}px ${9 * fScale}px ${6 * fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 0, gap: 3 * fScale }}>
         <div>
           <div style={{ color: ind.colors.accent, fontSize: 8.5 * fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>{data.industry}</div>
-          <div style={{ color: ind.colors.dark, fontSize: (isS ? 12 : 16) * fScale, fontWeight: 900, fontFamily: "Georgia, serif", lineHeight: 1.1, marginTop: 2 }}>{data.tagline}</div>
+          <div style={{ color: ind.colors.dark, fontSize: (isS ? 12 : 15) * fScale, fontWeight: 900, fontFamily: "Georgia, serif", lineHeight: 1.1, marginTop: 2 }}>{data.tagline}</div>
         </div>
 
         {!isS && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: `${3 * fScale}px ${10 * fScale}px`, margin: `${4 * fScale}px 0` }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: `${2 * fScale}px ${9 * fScale}px` }}>
             {(data.menuItems || []).slice(0, 4).map((item, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <span style={{ color: ind.colors.primary, fontSize: 8 * fScale }}>★</span>
-                <span style={{ fontSize: 10 * fScale, color: "#222", fontFamily: "sans-serif", fontWeight: 500 }}>{item}</span>
+                <span style={{ fontSize: 9.5 * fScale, color: "#222", fontFamily: "sans-serif", fontWeight: 500 }}>{item}</span>
               </div>
             ))}
           </div>
         )}
 
         <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 3 * fScale }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 6 * fScale }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 1, minWidth: 0, flex: 1 }}>
               {data.address && <div style={{ fontSize: (isS ? 8 : 9) * fScale, color: "#555", fontFamily: "sans-serif" }}>📍 {data.address}</div>}
-              {data.website && <div style={{ fontSize: (isS ? 8 : 9) * fScale, color: "#555", fontFamily: "sans-serif" }}>🌐 {data.website}</div>}
+              {isS && data.phone && <div style={{ fontSize: 11 * fScale, color: ind.colors.primary, fontWeight: 900, fontFamily: "sans-serif", whiteSpace: "nowrap" }}>📞 {data.phone}</div>}
             </div>
-            {isS && data.phone && <div style={{ fontSize: 11 * fScale, color: ind.colors.primary, fontWeight: 900, fontFamily: "sans-serif", whiteSpace: "nowrap" }}>📞 {data.phone}</div>}
+            {!isS && data.website && (
+              <AdQRCode website={normalizeWebsite(data.website)} spotCode={generateSpotCode(data.businessName, "sample")}
+                size={isXL ? 44 : isL ? 36 : 30} dark={false} />
+            )}
           </div>
           <Coupon offer={data.offer} fine={isS ? null : data.offerFine} accent={ind.colors.primary} scale={fScale} />
         </div>
@@ -434,15 +471,14 @@ function StampAd({ data, sizeKey }) {
             {data.offerFine && !isS && <div style={{ color: ind.colors.dark, fontSize: 8 * fScale, opacity: 0.85 }}>{data.offerFine}</div>}
           </div>
         )}
-        <div style={{ display: "flex", flexDirection: "column", gap: 2, alignItems: "center" }}>
-          <div style={{ color: "rgba(255,255,255,0.95)", fontSize: (isS ? 8.5 : 9.5) * fScale, textAlign: "center", fontFamily: "sans-serif", display: "flex", justifyContent: "center", gap: 10 * fScale, textShadow: "0 1px 4px rgba(0,0,0,0.7)" }}>
-            {data.address && <span>📍 {data.address.split(",")[0]}</span>}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 * fScale }}>
+          <div style={{ color: "rgba(255,255,255,0.95)", fontSize: (isS ? 8.5 : 9.5) * fScale, fontFamily: "sans-serif", display: "flex", flexDirection: "column", gap: 2, textShadow: "0 1px 4px rgba(0,0,0,0.7)", flex: 1, minWidth: 0 }}>
+            {data.address && <span>📍 {data.address}</span>}
             {isS && data.phone && <span style={{ fontWeight: 900, color: ind.colors.accent, whiteSpace: "nowrap" }}>📞 {data.phone}</span>}
           </div>
-          {data.website && (
-            <div style={{ color: "rgba(255,255,255,0.85)", fontSize: (isS ? 8 : 9) * fScale, fontFamily: "sans-serif", textShadow: "0 1px 4px rgba(0,0,0,0.7)" }}>
-              🌐 {data.website}
-            </div>
+          {!isS && data.website && (
+            <AdQRCode website={normalizeWebsite(data.website)} spotCode={generateSpotCode(data.businessName, "sample")}
+              size={isXL ? 44 : isL ? 36 : 30} dark={true} />
           )}
         </div>
       </div>
