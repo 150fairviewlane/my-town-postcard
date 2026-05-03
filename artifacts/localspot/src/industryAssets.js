@@ -41,7 +41,7 @@ export const INDUSTRIES = {
 "Breakfast & Cafe": {
   photos: [
     "https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?w=800&q=80",
-    "https://images.unsplash.com/photo-1558303618-69ff14b1c2e5?w=800&q=80",
+    "https://images.unsplash.com/photo-1644561146633-34f3f9c5c58e?w=800&q=80",
     "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&q=80",
     "https://images.unsplash.com/photo-1541167760496-1628856ab772?w=800&q=80",
   ],
@@ -133,7 +133,7 @@ export const INDUSTRIES = {
 "Chiropractor": {
   photos: [
     "https://images.unsplash.com/photo-1581595220892-b0739db3ba8c?w=800&q=80",
-    "https://images.unsplash.com/photo-1590612473366-aa1b7d2c30bf?w=800&q=80",
+    "https://images.unsplash.com/photo-1519824145371-296894a0daa9?w=800&q=80",
     "https://images.unsplash.com/photo-1612531386530-97286d97c2d2?w=800&q=80",
     "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&q=80",
   ],
@@ -159,7 +159,7 @@ export const INDUSTRIES = {
 
 "HVAC": {
   photos: [
-    "https://images.unsplash.com/photo-1631545806609-e8956cdb3aaa?w=800&q=80",
+    "https://images.unsplash.com/photo-1566917064245-1c6bff30dbf1?w=800&q=80",
     "https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=800&q=80",
     "https://images.unsplash.com/photo-1581094288338-2314dddb7ece?w=800&q=80",
     "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=800&q=80",
@@ -172,9 +172,9 @@ export const INDUSTRIES = {
 },
 "Plumber": {
   photos: [
+    "https://images.unsplash.com/photo-1503789146722-cf137a3c0fea?w=800&q=80",
     "https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=800&q=80",
-    "https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=800&q=80",
-    "https://images.unsplash.com/photo-1585129777188-9c34d43f4eb8?w=800&q=80",
+    "https://images.unsplash.com/photo-1503791774117-08c379dd7f7c?w=800&q=80",
     "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80",
   ],
   colors: { primary: "#1e40af", dark: "#0a1f4d", light: "#eff6ff", accent: "#f59e0b" },
@@ -185,10 +185,10 @@ export const INDUSTRIES = {
 },
 "Electrician": {
   photos: [
-    "https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=800&q=80",
-    "https://images.unsplash.com/photo-1565608087341-404b25492fee?w=800&q=80",
-    "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80",
-    "https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=800&q=80",
+    "https://images.unsplash.com/photo-1562034037-ba96b6312a80?w=800&q=80",
+    "https://images.unsplash.com/photo-1601998539036-006e7fbddb0c?w=800&q=80",
+    "https://images.unsplash.com/photo-1689543524860-8e633f9897bf?w=800&q=80",
+    "https://images.unsplash.com/photo-1676630444903-163fe485c5d1?w=800&q=80",
   ],
   colors: { primary: "#b45309", dark: "#451a03", light: "#fffbeb", accent: "#1e40af" },
   taglines: ["Master Electricians", "Licensed · Bonded · Insured", "Powering Your Home Right"],
@@ -198,10 +198,10 @@ export const INDUSTRIES = {
 },
 "Lawn & Landscaping": {
   photos: [
+    "https://images.unsplash.com/photo-1628340981113-fe1949fe5cc0?w=800&q=80",
     "https://images.unsplash.com/photo-1558904541-efa843a96f01?w=800&q=80",
     "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&q=80",
     "https://images.unsplash.com/photo-1592595896551-12b371d546d5?w=800&q=80",
-    "https://images.unsplash.com/photo-1599629954294-14df9ec8bc03?w=800&q=80",
   ],
   colors: { primary: "#14532d", dark: "#052e16", light: "#f0fdf4", accent: "#fbbf24" },
   taglines: ["Your Yard. Our Pride.", "Beautiful Lawns Year-Round", "Mowing · Mulching · Maintenance"],
@@ -211,7 +211,7 @@ export const INDUSTRIES = {
 },
 "Roofing": {
   photos: [
-    "https://images.unsplash.com/photo-1632178176057-0f3a18a07e95?w=800&q=80",
+    "https://images.unsplash.com/photo-1686227829172-608dde465459?w=800&q=80",
     "https://images.unsplash.com/photo-1605152276897-4f618f831968?w=800&q=80",
     "https://images.unsplash.com/photo-1597047084897-51e81819a499?w=800&q=80",
     "https://images.unsplash.com/photo-1581858726788-75bc0f6a952d?w=800&q=80",
@@ -250,9 +250,9 @@ export const INDUSTRIES = {
 },
 "Pest Control": {
   photos: [
-    "https://images.unsplash.com/photo-1632935190508-bafa18bb9d09?w=800&q=80",
-    "https://images.unsplash.com/photo-1632935188785-4d6f7e4c0e0e?w=800&q=80",
-    "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80",
+    "https://images.unsplash.com/photo-1560519894-90d2f1ccae4a?w=800&q=80",
+    "https://images.unsplash.com/photo-1579278084099-e7593776949e?w=800&q=80",
+    "https://images.unsplash.com/photo-1582510337531-26936ce438e5?w=800&q=80",
     "https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=800&q=80",
   ],
   colors: { primary: "#166534", dark: "#052e16", light: "#f0fdf4", accent: "#dc2626" },
@@ -291,7 +291,7 @@ export const INDUSTRIES = {
 "Auto Repair": {
   photos: [
     "https://images.unsplash.com/photo-1486006920555-c77dcf18193c?w=800&q=80",
-    "https://images.unsplash.com/photo-1632823471565-1ecdf5176f30?w=800&q=80",
+    "https://images.unsplash.com/photo-1593142927747-8c1b758967a6?w=800&q=80",
     "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=800&q=80",
     "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&q=80",
   ],
@@ -371,7 +371,7 @@ export const INDUSTRIES = {
     "https://images.unsplash.com/photo-1587653263995-422546a7a569?w=800&q=80",
     "https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=800&q=80",
     "https://images.unsplash.com/photo-1602052793312-b99c2a9ee797?w=800&q=80",
-    "https://images.unsplash.com/photo-1597392587806-4baf09a2e7b1?w=800&q=80",
+    "https://images.unsplash.com/photo-1654881609317-c3c7d43601c7?w=800&q=80",
   ],
   colors: { primary: "#0891b2", dark: "#083344", light: "#ecfeff", accent: "#fbbf24" },
   taglines: ["Where Learning Begins", "Loving Care for Little Ones", "Educational Childcare"],
