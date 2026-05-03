@@ -20,7 +20,10 @@ function getResendClient() {
 }
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "info@mytownpostcard.com";
-const FROM_EMAIL = process.env.FROM_EMAIL || "noreply@mytownpostcard.com";
+// Default to Resend's always-verified sandbox sender so emails go through
+// out of the box. Override with FROM_EMAIL once mytownpostcard.com is
+// verified in the Resend dashboard.
+const FROM_EMAIL = process.env.FROM_EMAIL || "onboarding@resend.dev";
 const APP_URL = process.env.APP_URL || "https://mytownpostcard.com";
 
 interface AdProofInfo {
