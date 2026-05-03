@@ -242,7 +242,7 @@ function PhotoBoldAd({ data, sizeKey }) {
         {data.offer && <Coupon offer={data.offer} fine={isS ? null : data.offerFine} accent="#fff" scale={fScale} dark={true} />}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", color: "#fff", fontFamily: "sans-serif", textShadow: "0 1px 4px rgba(0,0,0,0.7)", gap: 6 * fScale }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 1, minWidth: 0, flex: 1 }}>
-            {data.address && <div style={{ fontSize: 9 * fScale, fontWeight: 600 }}>📍 {data.address}</div>}
+            {data.address && <div style={{ fontSize: 11 * fScale, fontWeight: 800 }}>📍 {data.address}</div>}
             {(isS || isM) && data.phone && <div style={{ fontWeight: 900, fontSize: 11 * fScale, color: "#fff", whiteSpace: "nowrap", marginTop: 2 }}>📞 {data.phone}</div>}
           </div>
           {!isS && data.website && (
@@ -319,7 +319,7 @@ function SplitCleanAd({ data, sizeKey }) {
         <div style={{ flexShrink: 0 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 6 * fScale, marginBottom: data.offer ? 5 * fScale : 0 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0, flex: 1 }}>
-              {data.address && <div style={{ fontSize: (isS ? 8 : 9) * fScale, color: "#555" }}>📍 {data.address}</div>}
+              {data.address && <div style={{ fontSize: (isS ? 9.5 : 11) * fScale, color: "#222", fontWeight: 700 }}>📍 {data.address}</div>}
               {data.phone && (
                 <div style={{
                   fontSize: (isS ? 11 : isL ? 13 : 12) * fScale,
@@ -393,7 +393,7 @@ function MagazineAd({ data, sizeKey }) {
         <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 3 * fScale }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 6 * fScale }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 1, minWidth: 0, flex: 1 }}>
-              {data.address && <div style={{ fontSize: (isS ? 8 : 9) * fScale, color: "#555", fontFamily: "sans-serif" }}>📍 {data.address}</div>}
+              {data.address && <div style={{ fontSize: (isS ? 9.5 : 11) * fScale, color: "#222", fontFamily: "sans-serif", fontWeight: 700 }}>📍 {data.address}</div>}
               {isS && data.phone && <div style={{ fontSize: 11 * fScale, color: ind.colors.primary, fontWeight: 900, fontFamily: "sans-serif", whiteSpace: "nowrap" }}>📞 {data.phone}</div>}
             </div>
             {!isS && data.website && (
@@ -472,7 +472,7 @@ function StampAd({ data, sizeKey }) {
           </div>
         )}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 * fScale }}>
-          <div style={{ color: "rgba(255,255,255,0.95)", fontSize: (isS ? 8.5 : 9.5) * fScale, fontFamily: "sans-serif", display: "flex", flexDirection: "column", gap: 2, textShadow: "0 1px 4px rgba(0,0,0,0.7)", flex: 1, minWidth: 0 }}>
+          <div style={{ color: "#fff", fontSize: (isS ? 10 : 11.5) * fScale, fontWeight: 800, fontFamily: "sans-serif", display: "flex", flexDirection: "column", gap: 2, textShadow: "0 1px 4px rgba(0,0,0,0.85)", flex: 1, minWidth: 0 }}>
             {data.address && <span>📍 {data.address}</span>}
             {isS && data.phone && <span style={{ fontWeight: 900, color: ind.colors.accent, whiteSpace: "nowrap" }}>📞 {data.phone}</span>}
           </div>

@@ -216,7 +216,7 @@ function PhotoBoldTemplate({ data, sizeKey, onEdit }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
             {data.address && (
               <EditableText value={data.address} onChange={edit("address")} multiline
-                style={{ color: "rgba(255,255,255,0.85)", fontSize: 9 * fScale, fontFamily: "sans-serif", lineHeight: 1.2 }} />
+                style={{ color: "#fff", fontSize: 11 * fScale, fontWeight: 700, fontFamily: "sans-serif", lineHeight: 1.2, textShadow: "0 1px 3px rgba(0,0,0,0.6)" }} />
             )}
             {(isS || isM) && data.phone && (
               <EditableText value={data.phone} onChange={edit("phone")}
@@ -303,7 +303,7 @@ function SplitCleanTemplate({ data, sizeKey, onEdit }) {
             <div style={{ display: "flex", flexDirection: "column", gap: 1, minWidth: 0 }}>
               {data.address && (
                 <EditableText value={data.address} onChange={edit("address")} multiline
-                  style={{ fontSize: 8 * fScale, color: "#555", whiteSpace: "normal", lineHeight: 1.2 }} />
+                  style={{ fontSize: 10 * fScale, color: "#222", fontWeight: 700, whiteSpace: "normal", lineHeight: 1.2 }} />
               )}
               {data.phone && (
                 <EditableText value={data.phone} onChange={edit("phone")}
@@ -405,7 +405,7 @@ function MagazineTemplate({ data, sizeKey, onEdit }) {
             <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
               {data.address && (
                 <EditableText value={data.address} onChange={edit("address")} multiline
-                  style={{ fontSize: 9 * fScale, color: "#555", fontFamily: "sans-serif", whiteSpace: "normal", lineHeight: 1.2 }} />
+                  style={{ fontSize: 11 * fScale, color: "#222", fontWeight: 700, fontFamily: "sans-serif", whiteSpace: "normal", lineHeight: 1.2 }} />
               )}
               {data.phone && (
                 <EditableText value={data.phone} onChange={edit("phone")}
@@ -489,8 +489,8 @@ function StampTemplate({ data, sizeKey, onEdit }) {
         )}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontFamily: "sans-serif" }}>
           <div>
-            {data.address && <EditableText value={data.address.split(",")[0]} onChange={edit("address")} style={{ color: "rgba(255,255,255,0.7)", fontSize: 7 * fScale, display: "block", whiteSpace: "nowrap" }} />}
-            {isS && data.phone && <EditableText value={data.phone} onChange={edit("phone")} style={{ color: "rgba(255,255,255,0.85)", fontSize: 8 * fScale, fontWeight: 700, display: "block", whiteSpace: "nowrap" }} />}
+            {data.address && <EditableText value={data.address.split(",")[0]} onChange={edit("address")} style={{ color: "#fff", fontSize: 11 * fScale, fontWeight: 800, display: "block", whiteSpace: "nowrap", textShadow: "0 1px 4px rgba(0,0,0,0.8)" }} />}
+            {isS && data.phone && <EditableText value={data.phone} onChange={edit("phone")} style={{ color: "#fff", fontSize: 10 * fScale, fontWeight: 800, display: "block", whiteSpace: "nowrap", textShadow: "0 1px 4px rgba(0,0,0,0.8)" }} />}
           </div>
           {hasQR(data) && (
             <InlineQRCode website={normalizeWebsite(data.website)} spotCode={generateSpotCode(data.businessName, "current")}
