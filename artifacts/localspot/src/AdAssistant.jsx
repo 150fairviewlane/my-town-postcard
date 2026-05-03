@@ -412,16 +412,16 @@ export default function AdAssistant({ formData, onUpdate, sizeKey = "L" }) {
       messages: history,
     });
 
-    // Transient-failure retry. The api-server occasionally restarts (port
-    // reclaim, hot-reload of route module) and during that ~1–3s window the
-    // platform proxy returns a bare 404/502/503 with NO JSON body, which
-    // previously surfaced as the cryptic "Request failed (404)" to the user.
-    // We retry these statuses + network errors (TypeError from fetch) with
-    // backoff so the user just sees a slightly slower reply instead of a
-    // bogus error. 4xx (other than 404) are real client problems and not
-    // retried; 200s short-circuit immediately.
+    // Retry on transient infrastructure statuses. 404/502/503/504 are the
+    // shapes we see from: (a) the Vite dev proxy when the api-server is mid
+    // hot-reload, (b) the Replit shared proxy during a workflow restart,
+    // (c) Anthropic itself when the model is briefly overloaded.
+    // Delays sum to ~14s, which comfortably outlasts a tsx-watch restart
+    // (~3-5s) and a Vite dep re-optimization (~1-2s) so users don't see a
+    // bogus "AI service unavailable" message just because dev tooling
+    // happened to reload between their keystrokes.
     const RETRY_STATUSES = new Set([404, 502, 503, 504]);
-    const RETRY_DELAYS = [800, 2000]; // 2 retries → up to 3 attempts total
+    const RETRY_DELAYS = [600, 1500, 3500, 6500]; // 4 retries → 5 attempts total
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
     let response = null;
@@ -475,9 +475,10 @@ export default function AdAssistant({ formData, onUpdate, sizeKey = "L" }) {
         if (structuredMsg) {
           errMsg = structuredMsg;
         } else if (RETRY_STATUSES.has(response.status)) {
-          // No body, transient code that survived all retries — service is
-          // genuinely unavailable.
-          errMsg = "The AI service is temporarily unavailable. Please try again in a moment.";
+          // No body, transient code that survived all 5 retry attempts
+          // (~14s of patience). At this point the dev server / api-server
+          // probably needs a manual nudge — usually a page refresh.
+          errMsg = "The AI service didn't respond after several tries. A quick page refresh usually fixes this.";
         } else {
           errMsg = `The AI service returned an unexpected response (HTTP ${response.status}). Please try again.`;
         }

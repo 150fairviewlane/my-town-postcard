@@ -178,10 +178,37 @@ export default defineConfig({
     // path-based proxy at port 80), so without this Vite returns 404 for any
     // /api request. In production, the platform-level path proxy handles
     // /api routing to the api-server, so this is dev-only.
+    //
+    // The AI chat endpoint waits on Anthropic and can take up to 30s, so we
+    // raise both timeouts well above the http-proxy defaults to avoid
+    // spurious 504s mid-stream. We also wire an `error` handler that emits
+    // a structured JSON body — without this, the proxy silently returns an
+    // empty/HTML response on api-server hiccups (tsx-watch restart, port
+    // reclaim) and the client surfaces the cryptic "AI service unavailable"
+    // message after burning all its retries.
     proxy: {
       "/api": {
         target: "http://localhost:8080",
         changeOrigin: true,
+        timeout: 60_000,
+        proxyTimeout: 60_000,
+        configure: (proxy) => {
+          proxy.on("error", (err, req, res) => {
+            // eslint-disable-next-line no-console
+            console.warn(
+              `[vite-proxy] ${req.method} ${req.url} → api-server failed: ${err.message}`,
+            );
+            if (res && "writeHead" in res && !res.headersSent) {
+              res.writeHead(502, { "Content-Type": "application/json" });
+              res.end(
+                JSON.stringify({
+                  error:
+                    "The api-server is briefly unavailable (likely a hot-reload). Retrying…",
+                }),
+              );
+            }
+          });
+        },
       },
     },
     fs: {
