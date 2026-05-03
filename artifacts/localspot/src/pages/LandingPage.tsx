@@ -427,13 +427,10 @@ function ReserveForm() {
             <>
               <div style={{
                 fontSize: 32, fontWeight: 900, color: "#7B1418",
-                fontFamily: "Georgia,serif", marginBottom: 14, lineHeight: 1.15,
+                fontFamily: "Georgia,serif", marginBottom: 6, lineHeight: 1.15,
               }}>
-                Want us to build your ad?
+                Got Questions?
               </div>
-              <h2 style={{ fontSize: 22, fontWeight: 900, color: "#111", fontFamily: "Georgia,serif", marginBottom: 6 }}>
-                Reserve Your Spot
-              </h2>
               <p style={{ color: "#666", fontSize: 14, marginBottom: 24, fontFamily: "sans-serif" }}>
                 Enter your info below and we'll guide you through next steps.
               </p>
