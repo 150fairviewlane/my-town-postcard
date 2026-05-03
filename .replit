@@ -54,3 +54,5 @@ channel = "stable-25_05"
 
 [userenv.production]
 STRIPE_FORCE_TEST_MODE = "1"
+STRIPE_LIVE_SECRET_KEY = "placeholder"
+STRIPE_LIVE_PUBLISHABLE_KEY = "placeholder"
