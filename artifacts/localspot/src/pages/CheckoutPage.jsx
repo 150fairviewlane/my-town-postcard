@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useLocation } from "wouter";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
@@ -13,7 +13,32 @@ import {
   clearReservation,
 } from "../lib/reservationStorage";
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "pk_test_placeholder");
+// Read the publishable key once. We don't pass anything to loadStripe() if
+// it's missing — Stripe.js throws synchronously on an invalid key, which
+// would unmount the page before our friendly "not configured" UI can render.
+const STRIPE_PK = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "";
+
+// Module-level promise so Stripe.js loads exactly once across page renders.
+// Wrapped in try/catch because loadStripe() itself can throw if the key has
+// an obviously bad shape (e.g. empty string, "sk_..." secret key by mistake).
+let cachedStripePromise = null;
+function getStripePromise() {
+  if (cachedStripePromise) return cachedStripePromise;
+  if (!STRIPE_PK || !/^pk_(test|live)_/.test(STRIPE_PK)) {
+    cachedStripePromise = Promise.reject(
+      new Error(
+        "Stripe is not configured for this environment. The site owner needs to set VITE_STRIPE_PUBLISHABLE_KEY before payments will work."
+      )
+    );
+    return cachedStripePromise;
+  }
+  try {
+    cachedStripePromise = loadStripe(STRIPE_PK);
+  } catch (err) {
+    cachedStripePromise = Promise.reject(err);
+  }
+  return cachedStripePromise;
+}
 
 // Display labels for each spot size. Actual price is read from the
 // PaymentIntent (server-authoritative) so this is just for the size name.
@@ -50,9 +75,16 @@ function CheckoutForm({ spotId, clientSecret, amount, size, businessName, expire
     setProcessing(true);
     setError(null);
 
-    const result = await stripe.confirmCardPayment(clientSecret, {
-      payment_method: { card: elements.getElement(CardElement) },
-    });
+    let result;
+    try {
+      result = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: { card: elements.getElement(CardElement) },
+      });
+    } catch (err) {
+      setError(err?.message || "Could not reach Stripe. Please try again.");
+      setProcessing(false);
+      return;
+    }
 
     if (result.error) {
       setError(result.error.message);
@@ -75,7 +107,11 @@ function CheckoutForm({ spotId, clientSecret, amount, size, businessName, expire
       // business name, spot size, and price paid.
       navigate(`/confirmation/${spotId}`);
     } catch (err) {
-      setError("Payment succeeded but confirmation failed. Please contact support.");
+      const apiMsg =
+        (err?.data && typeof err.data === "object" && err.data.error) ||
+        err?.message ||
+        "Payment confirmation failed. Please contact support — we will reconcile your payment manually.";
+      setError(apiMsg);
       setProcessing(false);
     }
   };
@@ -93,7 +129,7 @@ function CheckoutForm({ spotId, clientSecret, amount, size, businessName, expire
           <div style={{ fontSize: 12, color: "#9ca3af", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Order Summary</div>
           <div style={{ fontWeight: 700, fontSize: 16, color: "#111" }}>{sizeLabel} Ad Spot</div>
           <div style={{ color: "#6b7280", fontSize: 13, marginTop: 2 }}>{businessName}</div>
-          <div style={{ fontWeight: 900, fontSize: 28, color: "#991b1b", marginTop: 8 }}>${amount / 100}</div>
+          <div style={{ fontWeight: 900, fontSize: 28, color: "#991b1b", marginTop: 8 }}>${(amount / 100).toFixed(2)}</div>
           <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>Reaches 5,000 Clarkesville-area homes</div>
         </div>
 
@@ -128,7 +164,7 @@ function CheckoutForm({ spotId, clientSecret, amount, size, businessName, expire
           color: "#fff", fontSize: 16, fontWeight: 800,
           cursor: processing || holdExpired ? "not-allowed" : "pointer",
         }}>
-        {processing ? "Processing..." : holdExpired ? "Hold expired" : `Pay $${amount / 100}`}
+        {processing ? "Processing..." : holdExpired ? "Hold expired" : `Pay $${(amount / 100).toFixed(2)}`}
       </button>
       <p style={{ textAlign: "center", fontSize: 11, color: "#9ca3af", marginTop: 10 }}>
         Secured by Stripe · Your card is charged now
@@ -137,12 +173,51 @@ function CheckoutForm({ spotId, clientSecret, amount, size, businessName, expire
   );
 }
 
+function CheckoutShell({ children }) {
+  const [, navigate] = useLocation();
+  return (
+    <div style={{ minHeight: "100vh", background: "#f9fafb", fontFamily: "sans-serif" }}>
+      <div style={{ background: "#fff", borderBottom: "1px solid #e5e7eb", padding: "12px 24px", display: "flex", alignItems: "center", gap: 12 }}>
+        <button onClick={() => navigate("/")} style={{ background: "none", border: "none", cursor: "pointer", color: "#6b7280", fontSize: 14 }}>← Back</button>
+        <div style={{ fontWeight: 900, fontSize: 18, color: "#111", fontFamily: "Georgia,serif" }}>📮 My Town Postcard</div>
+      </div>
+
+      <div style={{ maxWidth: 480, margin: "48px auto", padding: "0 20px" }}>
+        <div style={{ background: "#fff", borderRadius: 16, padding: 32, boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
+          <h1 style={{ fontSize: 24, fontWeight: 900, color: "#111", margin: "0 0 8px", fontFamily: "Georgia,serif" }}>Complete Your Payment</h1>
+          <p style={{ color: "#6b7280", fontSize: 14, marginBottom: 24 }}>You're one step away from securing your spot.</p>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ErrorPanel({ title, message }) {
+  return (
+    <div
+      style={{
+        background: "#fef2f2",
+        border: "1px solid #fecaca",
+        borderRadius: 10,
+        padding: 18,
+        color: "#991b1b",
+        textAlign: "left",
+      }}
+    >
+      <div style={{ fontWeight: 800, marginBottom: 6, fontSize: 15 }}>{title}</div>
+      <div style={{ fontSize: 13, lineHeight: 1.5, color: "#7f1d1d" }}>{message}</div>
+    </div>
+  );
+}
+
 export default function CheckoutPage() {
   const { spotId } = useParams();
-  const [, navigate] = useLocation();
   const [intentData, setIntentData] = useState(null);
   const [loadError, setLoadError] = useState(null);
+  const [stripeLoadError, setStripeLoadError] = useState(null);
   const createIntentMutation = useCreatePaymentIntent();
+
   // Pull the spot record so we have the authoritative expires_at to drive
   // the countdown — falling back to localStorage if the API is slow or
   // can't be reached.
@@ -155,6 +230,18 @@ export default function CheckoutPage() {
     ? loadReservation(numericSpotId)
     : null;
   const expiresAt = spotData?.expiresAt ?? stored?.expiresAt ?? null;
+
+  // Resolve the Stripe.js promise eagerly so a missing/broken key surfaces
+  // a friendly error here instead of crashing somewhere inside <Elements>.
+  const stripePromise = useMemo(() => getStripePromise(), []);
+  useEffect(() => {
+    let cancelled = false;
+    stripePromise.catch((err) => {
+      if (cancelled) return;
+      setStripeLoadError(err?.message || "Could not load the payment form.");
+    });
+    return () => { cancelled = true; };
+  }, [stripePromise]);
 
   // Run exactly once per spotId. The mutation hook is stable and we don't
   // want to retrigger when its identity changes between renders.
@@ -169,7 +256,16 @@ export default function CheckoutPage() {
         if (!cancelled) setIntentData(result);
       } catch (err) {
         if (!cancelled) {
-          const msg = err?.data?.error || "Could not start payment. Please go back and try again.";
+          const status = err?.status;
+          let msg = err?.data?.error || err?.message;
+          if (status === 503) {
+            msg =
+              msg ||
+              "Payments aren't turned on yet on this site. Please contact the site owner.";
+          }
+          if (!msg) {
+            msg = "Could not start payment. Please go back and try again.";
+          }
           setLoadError(msg);
         }
       }
@@ -178,43 +274,50 @@ export default function CheckoutPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spotId]);
 
+  // Stripe.js failed to load — usually because VITE_STRIPE_PUBLISHABLE_KEY
+  // is missing or invalid. Render a clear message rather than a blank
+  // screen.
+  if (stripeLoadError) {
+    return (
+      <CheckoutShell>
+        <ErrorPanel title="Payments are not configured" message={stripeLoadError} />
+      </CheckoutShell>
+    );
+  }
+
+  if (!Number.isFinite(numericSpotId)) {
+    return (
+      <CheckoutShell>
+        <ErrorPanel
+          title="Invalid checkout link"
+          message="This checkout URL doesn't reference a valid spot. Go back to the picker and reserve a spot to start over."
+        />
+      </CheckoutShell>
+    );
+  }
+
   return (
-    <div style={{ minHeight: "100vh", background: "#f9fafb", fontFamily: "sans-serif" }}>
-      <div style={{ background: "#fff", borderBottom: "1px solid #e5e7eb", padding: "12px 24px", display: "flex", alignItems: "center", gap: 12 }}>
-        <button onClick={() => navigate("/")} style={{ background: "none", border: "none", cursor: "pointer", color: "#6b7280", fontSize: 14 }}>← Back</button>
-        <div style={{ fontWeight: 900, fontSize: 18, color: "#111", fontFamily: "Georgia,serif" }}>📮 My Town Postcard</div>
-      </div>
-
-      <div style={{ maxWidth: 480, margin: "48px auto", padding: "0 20px" }}>
-        <div style={{ background: "#fff", borderRadius: 16, padding: 32, boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
-          <h1 style={{ fontSize: 24, fontWeight: 900, color: "#111", margin: "0 0 8px", fontFamily: "Georgia,serif" }}>Complete Your Payment</h1>
-          <p style={{ color: "#6b7280", fontSize: 14, marginBottom: 24 }}>You're one step away from securing your spot.</p>
-
-          {!intentData && !loadError && (
-            <div style={{ textAlign: "center", padding: 40, color: "#6b7280" }}>Setting up payment…</div>
-          )}
-
-          {loadError && (
-            <div style={{ background: "#fef2f2", borderRadius: 8, padding: 16, color: "#991b1b", textAlign: "center" }}>
-              <div style={{ fontWeight: 700, marginBottom: 8 }}>Could not load payment</div>
-              <div style={{ fontSize: 13 }}>{loadError}</div>
-            </div>
-          )}
-
-          {intentData && (
-            <Elements stripe={stripePromise} options={{ clientSecret: intentData.clientSecret }}>
-              <CheckoutForm
-                spotId={spotId}
-                clientSecret={intentData.clientSecret}
-                amount={intentData.amount}
-                size={intentData.size}
-                businessName={intentData.businessName || "Your Business"}
-                expiresAt={expiresAt}
-              />
-            </Elements>
-          )}
+    <CheckoutShell>
+      {!intentData && !loadError && (
+        <div style={{ textAlign: "center", padding: 40, color: "#6b7280" }}>
+          Setting up payment…
         </div>
-      </div>
-    </div>
+      )}
+
+      {loadError && <ErrorPanel title="Could not load payment" message={loadError} />}
+
+      {intentData && (
+        <Elements stripe={stripePromise} options={{ clientSecret: intentData.clientSecret }}>
+          <CheckoutForm
+            spotId={spotId}
+            clientSecret={intentData.clientSecret}
+            amount={intentData.amount}
+            size={intentData.size}
+            businessName={intentData.businessName || "Your Business"}
+            expiresAt={expiresAt}
+          />
+        </Elements>
+      )}
+    </CheckoutShell>
   );
 }
