@@ -4,7 +4,7 @@ export const INDUSTRIES = {
     "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&q=80",
     "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800&q=80",
     "https://images.unsplash.com/photo-1571997478779-2adcbbe9ab2f?w=800&q=80",
-    "https://images.unsplash.com/photo-1593560708920-61dd98c46a4e?w=800&q=80",
+    "https://images.pexels.com/photos/9685273/pexels-photo-9685273.jpeg?auto=compress&cs=tinysrgb&w=800",
   ],
   colors: { primary: "#c0392b", dark: "#7a1f15", light: "#fff5f0", accent: "#f4d03f" },
   taglines: ["Hand-Tossed. Oven Fresh.", "The Best Slice in Town!", "Authentic Italian Since 1985"],
@@ -92,7 +92,7 @@ export const INDUSTRIES = {
 },
 "Coffee Shop": {
   photos: [
-    "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800&q=80",
+    "https://images.pexels.com/photos/7125626/pexels-photo-7125626.jpeg?auto=compress&cs=tinysrgb&w=800",
     "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=800&q=80",
     "https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=800&q=80",
     "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=800&q=80",
@@ -132,10 +132,10 @@ export const INDUSTRIES = {
 },
 "Chiropractor": {
   photos: [
-    "https://images.unsplash.com/photo-1581595220892-b0739db3ba8c?w=800&q=80",
+    "https://images.pexels.com/photos/14797760/pexels-photo-14797760.jpeg?auto=compress&cs=tinysrgb&w=800",
     "https://images.unsplash.com/photo-1519824145371-296894a0daa9?w=800&q=80",
     "https://images.unsplash.com/photo-1612531386530-97286d97c2d2?w=800&q=80",
-    "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&q=80",
+    "https://images.pexels.com/photos/4506077/pexels-photo-4506077.jpeg?auto=compress&cs=tinysrgb&w=800",
   ],
   colors: { primary: "#065f46", dark: "#022c22", light: "#ecfdf5", accent: "#f59e0b" },
   taglines: ["Get Back to Pain-Free Living", "Natural Pain Relief", "Restore · Rebuild · Renew"],
@@ -147,7 +147,7 @@ export const INDUSTRIES = {
   photos: [
     "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=800&q=80",
     "https://images.unsplash.com/photo-1551717743-49959800b1f6?w=800&q=80",
-    "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=800&q=80",
+    "https://images.pexels.com/photos/28644631/pexels-photo-28644631/free-photo-of-veterinarian-examining-cat-in-clinic.jpeg?auto=compress&cs=tinysrgb&w=800",
     "https://images.unsplash.com/photo-1450778869180-41d0601e046e?w=800&q=80",
   ],
   colors: { primary: "#7c2d12", dark: "#451a03", light: "#fef7ed", accent: "#0891b2" },
@@ -161,7 +161,7 @@ export const INDUSTRIES = {
   photos: [
     "https://images.unsplash.com/photo-1566917064245-1c6bff30dbf1?w=800&q=80",
     "https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=800&q=80",
-    "https://images.unsplash.com/photo-1581094288338-2314dddb7ece?w=800&q=80",
+    "https://images.pexels.com/photos/5463587/pexels-photo-5463587.jpeg?auto=compress&cs=tinysrgb&w=800",
     "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=800&q=80",
   ],
   colors: { primary: "#003f6b", dark: "#001f33", light: "#eff6ff", accent: "#dc2626" },
@@ -172,9 +172,9 @@ export const INDUSTRIES = {
 },
 "Plumber": {
   photos: [
-    "https://images.unsplash.com/photo-1503789146722-cf137a3c0fea?w=800&q=80",
+    "https://images.pexels.com/photos/6419128/pexels-photo-6419128.jpeg?auto=compress&cs=tinysrgb&w=800",
     "https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=800&q=80",
-    "https://images.unsplash.com/photo-1503791774117-08c379dd7f7c?w=800&q=80",
+    "https://images.pexels.com/photos/8488035/pexels-photo-8488035.jpeg?auto=compress&cs=tinysrgb&w=800",
     "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80",
   ],
   colors: { primary: "#1e40af", dark: "#0a1f4d", light: "#eff6ff", accent: "#f59e0b" },
@@ -212,9 +212,9 @@ export const INDUSTRIES = {
 "Roofing": {
   photos: [
     "https://images.unsplash.com/photo-1686227829172-608dde465459?w=800&q=80",
-    "https://images.unsplash.com/photo-1605152276897-4f618f831968?w=800&q=80",
-    "https://images.unsplash.com/photo-1597047084897-51e81819a499?w=800&q=80",
-    "https://images.unsplash.com/photo-1581858726788-75bc0f6a952d?w=800&q=80",
+    "https://images.pexels.com/photos/544966/pexels-photo-544966.jpeg?auto=compress&cs=tinysrgb&w=800",
+    "https://images.pexels.com/photos/27806149/pexels-photo-27806149/free-photo-of-a-close-up-of-a-roof-with-many-tiles.jpeg?auto=compress&cs=tinysrgb&w=800",
+    "https://images.pexels.com/photos/7788269/pexels-photo-7788269.jpeg?auto=compress&cs=tinysrgb&w=800",
   ],
   colors: { primary: "#7f1d1d", dark: "#450a0a", light: "#fef2f2", accent: "#fbbf24" },
   taglines: ["Quality Roofing You Can Trust", "Storm Damage Specialists", "Free Inspections"],
@@ -368,7 +368,7 @@ export const INDUSTRIES = {
 },
 "Daycare": {
   photos: [
-    "https://images.unsplash.com/photo-1587653263995-422546a7a569?w=800&q=80",
+    "https://images.pexels.com/photos/8422148/pexels-photo-8422148.jpeg?auto=compress&cs=tinysrgb&w=800",
     "https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=800&q=80",
     "https://images.unsplash.com/photo-1602052793312-b99c2a9ee797?w=800&q=80",
     "https://images.unsplash.com/photo-1654881609317-c3c7d43601c7?w=800&q=80",
