@@ -32,7 +32,14 @@ async function fetchCredentials(): Promise<StripeCreds> {
     );
   }
 
-  const isProduction = process.env.REPLIT_DEPLOYMENT === "1";
+  // STRIPE_FORCE_TEST_MODE=1 lets a published deployment use the
+  // development (Stripe TEST) credentials instead of the production
+  // (Stripe LIVE) credentials. Useful for publishing a staging /
+  // QA build that should never charge real cards. Remove or set to
+  // "0" before going live to real customers.
+  const forceTestMode = process.env.STRIPE_FORCE_TEST_MODE === "1";
+  const isProduction =
+    !forceTestMode && process.env.REPLIT_DEPLOYMENT === "1";
   const targetEnvironment = isProduction ? "production" : "development";
 
   const url = new URL(`https://${hostname}/api/v2/connection`);
