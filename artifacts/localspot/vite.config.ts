@@ -26,14 +26,24 @@ if (!basePath) {
   );
 }
 
+// The cartographer + dev-banner plugins traverse the entire monorepo on dev
+// requests and add measurable latency to a Vite cold start over a slow
+// connection (the iPad-via-Replit-preview case). They are useful for the
+// in-workspace AI assistant tooling but unnecessary for plain dev work.
+// They are now OFF by default and can be re-enabled with
+// `REPLIT_VITE_DEV_PLUGINS=1` when needed.
+const enableReplitDevPlugins =
+  process.env.NODE_ENV !== "production" &&
+  process.env.REPL_ID !== undefined &&
+  process.env.REPLIT_VITE_DEV_PLUGINS === "1";
+
 export default defineConfig({
   base: basePath,
   plugins: [
     react(),
     tailwindcss(),
     runtimeErrorOverlay(),
-    ...(process.env.NODE_ENV !== "production" &&
-    process.env.REPL_ID !== undefined
+    ...(enableReplitDevPlugins
       ? [
           await import("@replit/vite-plugin-cartographer").then((m) =>
             m.cartographer({
@@ -53,25 +63,80 @@ export default defineConfig({
     },
     dedupe: ["react", "react-dom"],
   },
-  // Pre-bundle the heaviest dependencies up front so Vite doesn't pause to
-  // re-optimize them the first time a page imports them. Without this hint
-  // the first navigation that pulls in (e.g.) recharts or framer-motion
-  // triggers a full page reload while Vite re-bundles. Keep this list to
-  // genuinely heavy deps — small libs are fine to discover lazily.
+  // Pre-bundle every npm dependency the landing-page critical path actually
+  // touches. In Vite dev each un-prebundled package becomes its own ESM
+  // request waterfall in the browser — collapsing them into single
+  // pre-bundled chunks is the single biggest win for cold-load time when
+  // testing over a slow proxied connection (e.g. iPad → Replit preview).
   optimizeDeps: {
     include: [
+      // Critical-path runtime
       "react",
+      "react/jsx-runtime",
       "react-dom",
       "react-dom/client",
       "wouter",
       "@tanstack/react-query",
+      // Heavy interactive libs used inside the modal
       "framer-motion",
       "recharts",
       "lucide-react",
+      "react-icons",
+      "react-icons/fa",
+      "react-icons/fi",
+      "react-icons/md",
+      "react-hook-form",
+      "@hookform/resolvers",
+      // Stripe is imported by the checkout page (lazy) but pre-bundling it
+      // keeps the navigation from stalling on a fresh deps build.
       "@stripe/stripe-js",
       "@stripe/react-stripe-js",
+      // Notification / toast surfaces eagerly mounted in App.tsx
+      "sonner",
+      "next-themes",
+      // shadcn/ui primitives — every one ends up imported somewhere on the
+      // critical path through the toaster, tooltip, button-group, etc.
+      "class-variance-authority",
+      "clsx",
+      "tailwind-merge",
+      "cmdk",
+      "vaul",
+      "input-otp",
+      "embla-carousel-react",
+      "react-day-picker",
+      "react-resizable-panels",
       "date-fns",
       "zod",
+      // All radix-ui packages that ship under @workspace/localspot. They are
+      // small individually but together they generate ~50+ separate ESM
+      // requests when not pre-bundled.
+      "@radix-ui/react-accordion",
+      "@radix-ui/react-alert-dialog",
+      "@radix-ui/react-aspect-ratio",
+      "@radix-ui/react-avatar",
+      "@radix-ui/react-checkbox",
+      "@radix-ui/react-collapsible",
+      "@radix-ui/react-context-menu",
+      "@radix-ui/react-dialog",
+      "@radix-ui/react-dropdown-menu",
+      "@radix-ui/react-hover-card",
+      "@radix-ui/react-label",
+      "@radix-ui/react-menubar",
+      "@radix-ui/react-navigation-menu",
+      "@radix-ui/react-popover",
+      "@radix-ui/react-progress",
+      "@radix-ui/react-radio-group",
+      "@radix-ui/react-scroll-area",
+      "@radix-ui/react-select",
+      "@radix-ui/react-separator",
+      "@radix-ui/react-slider",
+      "@radix-ui/react-slot",
+      "@radix-ui/react-switch",
+      "@radix-ui/react-tabs",
+      "@radix-ui/react-toast",
+      "@radix-ui/react-toggle",
+      "@radix-ui/react-toggle-group",
+      "@radix-ui/react-tooltip",
     ],
   },
   root: path.resolve(import.meta.dirname),
@@ -84,6 +149,30 @@ export default defineConfig({
     strictPort: true,
     host: "0.0.0.0",
     allowedHosts: true,
+    // Pre-transform the landing-page critical path at server start so the
+    // first browser request doesn't have to wait for these files to be
+    // compiled one by one. Vite runs warmup in parallel with normal
+    // requests, so this only speeds up the initial paint and never blocks
+    // anything.
+    warmup: {
+      clientFiles: [
+        "./src/main.tsx",
+        "./src/App.tsx",
+        "./src/pages/LandingPage.tsx",
+        "./src/PostcardPickerSection.jsx",
+        "./src/AdGenerator.jsx",
+        "./src/AdAssistant.jsx",
+        "./src/postcardCore.jsx",
+        "./src/postcardBack.jsx",
+        "./src/industryAssets.js",
+        "./src/PostcardSampleAds.jsx",
+        "./src/MrBiscuitsReferenceAd.jsx",
+        "./src/qrUtils.jsx",
+        "./src/lib/reservationStorage.js",
+        "./src/components/ui/toaster.tsx",
+        "./src/components/ui/tooltip.tsx",
+      ],
+    },
     // Forward /api/* to the api-server in dev. The Replit workspace preview
     // iframe loads this Vite dev server directly (bypassing the shared
     // path-based proxy at port 80), so without this Vite returns 404 for any
