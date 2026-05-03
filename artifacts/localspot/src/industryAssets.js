@@ -237,10 +237,10 @@ export const INDUSTRIES = {
 },
 "Cleaning Service": {
   photos: [
-    "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=800&q=80",
-    "https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?w=800&q=80",
     "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=800&q=80",
+    "https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?w=800&q=80",
     "https://images.unsplash.com/photo-1563453392212-326f5e854473?w=800&q=80",
+    "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=800&q=80",
   ],
   colors: { primary: "#0891b2", dark: "#083344", light: "#ecfeff", accent: "#fbbf24" },
   taglines: ["Sparkling Clean, Every Time", "Trusted Home Cleaning", "Insured & Bonded"],
