@@ -24,15 +24,15 @@ export default function ConfirmationPage() {
         <div style={{ fontWeight: 900, fontSize: 18, color: "#111", fontFamily: "Georgia,serif" }}>📮 My Town Postcard</div>
       </div>
 
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "48px 20px" }}>
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "clamp(24px, 6vw, 48px) clamp(14px, 4vw, 20px)" }}>
         <div style={{ maxWidth: 520, width: "100%", textAlign: "center" }}>
           <div style={{ width: 80, height: 80, borderRadius: "50%", background: "#f0fdf4", border: "3px solid #22c55e", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px", fontSize: 36 }}>
             🎉
           </div>
-          <h1 style={{ fontSize: 32, fontWeight: 900, color: "#111", fontFamily: "Georgia,serif", margin: "0 0 12px" }}>
+          <h1 style={{ fontSize: "clamp(22px, 6vw, 32px)", fontWeight: 900, color: "#111", fontFamily: "Georgia,serif", margin: "0 0 12px", lineHeight: 1.2 }}>
             You're on the Postcard!
           </h1>
-          <p style={{ color: "#374151", fontSize: 16, lineHeight: 1.6, marginBottom: 24 }}>
+          <p style={{ color: "#374151", fontSize: 15, lineHeight: 1.6, marginBottom: 24 }}>
             Your ad will appear on the next <strong>Clarkesville Community Mailer</strong>,
             reaching <strong>5,000 homes</strong> across Habersham County.
           </p>

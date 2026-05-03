@@ -1,5 +1,6 @@
 import { useState } from "react";
 import PostcardPickerSection from "../PostcardPickerSection";
+import { useIsMobile } from "../hooks/use-mobile";
 
 const RED = "#7B1418";
 
@@ -14,36 +15,106 @@ function scrollTo(id: string) {
 }
 
 function NavBar() {
+  const isMobile = useIsMobile();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const handleNav = (id: string) => {
+    setMenuOpen(false);
+    setTimeout(() => scrollTo(id), 50);
+  };
+
   return (
     <header style={{
       position: "sticky", top: 0, zIndex: 50, background: "#fff",
       borderBottom: "1px solid #e5e7eb",
-      padding: "0 32px", display: "flex", alignItems: "center",
-      justifyContent: "space-between", height: 64, gap: 24,
+      padding: isMobile ? "0 16px" : "0 32px", display: "flex", alignItems: "center",
+      justifyContent: "space-between", height: 64, gap: 12,
     }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", minWidth: 0 }}
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
-        <span style={{ fontSize: 32 }}>📮</span>
-        <div style={{ fontWeight: 900, fontSize: 30, color: "#111", fontFamily: "Georgia,serif", lineHeight: 1 }}>
+        <span style={{ fontSize: isMobile ? 24 : 32, flexShrink: 0 }}>📮</span>
+        <div style={{
+          fontWeight: 900, fontSize: isMobile ? 18 : 30, color: "#111",
+          fontFamily: "Georgia,serif", lineHeight: 1,
+          whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+        }}>
           My Town Postcard
         </div>
       </div>
 
-      <nav style={{ display: "flex", alignItems: "center", gap: 28 }}>
-        {NAV_LINKS.map(l => (
-          <button key={l.label} onClick={() => scrollTo(l.href.slice(1))}
-            style={{ background: "none", border: "none", cursor: "pointer",
-              fontSize: 14, fontWeight: 600, color: "#374151", fontFamily: "sans-serif" }}>
-            {l.label}
+      {isMobile ? (
+        <>
+          <button
+            onClick={() => setMenuOpen(o => !o)}
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            style={{
+              background: "none", border: "none", cursor: "pointer",
+              width: 44, height: 44, display: "flex", flexDirection: "column",
+              justifyContent: "center", alignItems: "center", gap: 5, flexShrink: 0,
+            }}
+          >
+            <span style={{ width: 22, height: 2.5, background: "#111", borderRadius: 2,
+              transform: menuOpen ? "translateY(7.5px) rotate(45deg)" : "none",
+              transition: "transform 0.2s" }} />
+            <span style={{ width: 22, height: 2.5, background: "#111", borderRadius: 2,
+              opacity: menuOpen ? 0 : 1, transition: "opacity 0.2s" }} />
+            <span style={{ width: 22, height: 2.5, background: "#111", borderRadius: 2,
+              transform: menuOpen ? "translateY(-7.5px) rotate(-45deg)" : "none",
+              transition: "transform 0.2s" }} />
           </button>
-        ))}
-        <button onClick={() => scrollTo("book")}
-          style={{ background: RED, color: "#fff", border: "none", borderRadius: 8,
-            padding: "9px 22px", fontSize: 14, fontWeight: 800, cursor: "pointer",
-            fontFamily: "sans-serif", letterSpacing: 0.2 }}>
-          Save Your Spot →
-        </button>
-      </nav>
+
+          {menuOpen && (
+            <>
+              <div onClick={() => setMenuOpen(false)} style={{
+                position: "fixed", inset: 0, top: 64, background: "rgba(0,0,0,0.4)", zIndex: 40,
+              }} />
+              <nav style={{
+                position: "fixed", top: 64, left: 0, right: 0, background: "#fff",
+                borderBottom: "1px solid #e5e7eb", padding: "12px 16px 16px",
+                display: "flex", flexDirection: "column", gap: 4, zIndex: 41,
+                boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
+              }}>
+                {NAV_LINKS.map(l => (
+                  <button key={l.label} onClick={() => handleNav(l.href.slice(1))}
+                    style={{
+                      background: "none", border: "none", cursor: "pointer",
+                      fontSize: 16, fontWeight: 600, color: "#374151",
+                      fontFamily: "sans-serif", textAlign: "left",
+                      padding: "14px 8px", minHeight: 44,
+                      borderRadius: 8,
+                    }}>
+                    {l.label}
+                  </button>
+                ))}
+                <button onClick={() => handleNav("book")}
+                  style={{
+                    marginTop: 8, background: RED, color: "#fff", border: "none",
+                    borderRadius: 8, padding: "14px 22px", fontSize: 15, fontWeight: 800,
+                    cursor: "pointer", fontFamily: "sans-serif", minHeight: 44,
+                  }}>
+                  Save Your Spot →
+                </button>
+              </nav>
+            </>
+          )}
+        </>
+      ) : (
+        <nav style={{ display: "flex", alignItems: "center", gap: 28 }}>
+          {NAV_LINKS.map(l => (
+            <button key={l.label} onClick={() => scrollTo(l.href.slice(1))}
+              style={{ background: "none", border: "none", cursor: "pointer",
+                fontSize: 14, fontWeight: 600, color: "#374151", fontFamily: "sans-serif" }}>
+              {l.label}
+            </button>
+          ))}
+          <button onClick={() => scrollTo("book")}
+            style={{ background: RED, color: "#fff", border: "none", borderRadius: 8,
+              padding: "9px 22px", fontSize: 14, fontWeight: 800, cursor: "pointer",
+              fontFamily: "sans-serif", letterSpacing: 0.2 }}>
+            Save Your Spot →
+          </button>
+        </nav>
+      )}
     </header>
   );
 }

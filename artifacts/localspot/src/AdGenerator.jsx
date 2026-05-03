@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { INDUSTRIES, INDUSTRY_LIST } from "./industryAssets";
 import { AdQRCode, InlineQRCode, hasQR, normalizeWebsite, generateSpotCode } from "./qrUtils";
 import AdAssistant from "./AdAssistant";
@@ -599,20 +599,17 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
   }, []);
 
   // ── Responsive layout state ────────────────────────────────────────────────
-  // Below 768px the three-column desktop layout collapses into a tabbed,
-  // full-screen experience. Each panel keeps its own state (form text,
-  // assistant chat history) by toggling `display: none` instead of
-  // unmounting, so switching tabs never clears typed input or chat.
+  // Below 768px the three-column desktop layout collapses into a single
+  // scrolling column with the AI assistant promoted to a FAB+bottom-sheet.
+  // Above 768px the desktop 3-column layout is unchanged.
   const windowWidth = useWindowWidth();
   const isMobile = windowWidth < MOBILE_BREAKPOINT;
-  const [activeTab, setActiveTab] = useState("build"); // build | preview | assistant
-  const previewPeekTimeoutRef = useRef(null);
 
   // Email validation: we keep the button always clickable so it never feels
   // dead. If the user clicks Reserve without a valid email we flip
-  // `showEmailError`, jump them to the form tab on mobile, scroll the email
-  // field into view, and focus it. The red ring auto-clears the moment the
-  // email parses cleanly so the user gets immediate positive feedback.
+  // `showEmailError`, scroll the email field into view, and focus it. The
+  // red ring auto-clears the moment the email parses cleanly so the user
+  // gets immediate positive feedback.
   const emailInputRef = useRef(null);
   const [showEmailError, setShowEmailError] = useState(false);
   // Used by the Reserve button below to debounce the iPad Safari case
@@ -620,42 +617,31 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
   // tap. 400ms is enough to dedupe without making double-clicks feel slow.
   const lastReserveFireRef = useRef(0);
 
-  // Mobile-only "preview peek": when the user touches a field on the Build
-  // tab, briefly flip to Preview so they can confirm the change, then return
-  // to Build so they can keep filling out the form. Debounced — while the
-  // user is still typing/tapping, we keep the peek open and only revert
-  // 1.5s after they stop.
-  const pokePreview = useCallback(() => {
-    if (!isMobile) return;
-    setActiveTab((cur) =>
-      cur === "build" || cur === "preview" ? "preview" : cur,
-    );
-    if (previewPeekTimeoutRef.current) clearTimeout(previewPeekTimeoutRef.current);
-    previewPeekTimeoutRef.current = setTimeout(() => {
-      setActiveTab((cur) => (cur === "preview" ? "build" : cur));
-    }, 1500);
-  }, [isMobile]);
-
-  // Cancel any pending peek timeout when the modal unmounts so we don't
-  // call setState after the component is gone.
-  useEffect(() => () => {
-    if (previewPeekTimeoutRef.current) clearTimeout(previewPeekTimeoutRef.current);
-  }, []);
-
-  // Tab-aware setters used by every Build-tab control. On desktop these
-  // are the same as the underlying setters; on mobile they additionally
-  // trigger the preview peek. Manual tab presses cancel any pending peek.
-  const setFormDataB = useCallback((u) => { setFormData(u); pokePreview(); }, [pokePreview]);
-  const setSizeKeyB = useCallback((k) => { setSizeKey(k); pokePreview(); }, [pokePreview]);
-  const setSelectedTemplateB = useCallback((t) => { setSelectedTemplate(t); pokePreview(); }, [pokePreview]);
-  const handleIndustryChangeB = useCallback((e) => { handleIndustryChange(e); pokePreview(); }, [pokePreview]);
-  const selectTab = useCallback((t) => {
-    if (previewPeekTimeoutRef.current) clearTimeout(previewPeekTimeoutRef.current);
-    setActiveTab(t);
-  }, []);
+  // Aliases preserved for callsites that historically wrapped the setters
+  // with extra side-effects (e.g. preview-peek under the old tabs system).
+  // They are now plain pass-throughs.
+  const setFormDataB = setFormData;
+  const setSizeKeyB = setSizeKey;
+  const setSelectedTemplateB = setSelectedTemplate;
+  const handleIndustryChangeB = handleIndustryChange;
 
   const sizeInfo = AD_SIZES[sizeKey];
   const Tpl = TEMPLATES[selectedTemplate].Component;
+  // On mobile we bump font-size to 16px so iOS Safari doesn't auto-zoom on
+  // focus, and we bump padding/min-height so each field hits the 44×44
+  // accessible tap-target floor.
+  const inputStyle = useMemo(() => ({
+    width: "100%",
+    padding: isMobile ? "12px 14px" : "9px 12px",
+    borderRadius: 7,
+    border: "1.5px solid #e5e7eb",
+    fontSize: isMobile ? 16 : 13,
+    outline: "none",
+    fontFamily: "system-ui, sans-serif",
+    boxSizing: "border-box",
+    background: "#fff",
+    minHeight: isMobile ? 44 : undefined,
+  }), [isMobile]);
   // Email is required so we can send the receipt and reservation
   // confirmation. Use a basic shape check to avoid obviously bad addresses.
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim());
@@ -753,55 +739,25 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
           }}>×</button>
         </div>
 
-        {/* Mobile-only tab bar — collapses the three-column desktop layout
-            into Build / Preview / Assistant tabs below 768px. */}
-        {isMobile && (
-          <div style={{
-            display: "flex", borderBottom: "1px solid #e5e7eb",
-            background: "#fff", flexShrink: 0,
-          }}>
-            {[
-              { key: "build", label: "Build" },
-              { key: "preview", label: "Preview" },
-              { key: "assistant", label: "Assistant" },
-            ].map((t) => {
-              const active = activeTab === t.key;
-              return (
-                <button
-                  key={t.key}
-                  onClick={() => selectTab(t.key)}
-                  style={{
-                    flex: 1, padding: "13px 8px", border: "none",
-                    background: active ? "#fef2f2" : "transparent",
-                    color: active ? "#991b1b" : "#6b7280",
-                    fontWeight: active ? 800 : 600, fontSize: 13,
-                    letterSpacing: 0.5, textTransform: "uppercase",
-                    borderBottom: `3px solid ${active ? "#991b1b" : "transparent"}`,
-                    cursor: "pointer",
-                  }}
-                >
-                  {t.label}
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Body — three columns on desktop, tabbed single-column on mobile.
-            Panels use display:none rather than unmounting so form text and
-            assistant chat history survive tab switches. */}
+        {/* Body — three columns on desktop, single scrolling column on mobile.
+            On mobile the modal-body itself scrolls and child columns flow
+            naturally; on desktop each column has its own overflow:auto so
+            they scroll independently. */}
         <div style={{
           flex: 1, display: "flex",
           flexDirection: isMobile ? "column" : "row",
-          overflow: "hidden", minHeight: 0,
+          overflowX: "hidden",
+          overflowY: isMobile ? "auto" : "hidden",
+          WebkitOverflowScrolling: "touch",
+          minHeight: 0,
         }}>
 
           {/* LEFT: form */}
           <div style={{
             width: isMobile ? "100%" : 380,
-            flex: isMobile ? 1 : "0 0 auto",
-            display: isMobile && activeTab !== "build" ? "none" : "block",
-            padding: "20px 24px", overflowY: "auto",
+            flex: isMobile ? "0 0 auto" : "0 0 auto",
+            padding: isMobile ? "16px 16px 8px" : "20px 24px",
+            overflowY: isMobile ? "visible" : "auto",
             borderRight: isMobile ? "none" : "1px solid #e5e7eb",
             background: "#fff", flexShrink: 0,
             minHeight: 0,
@@ -945,9 +901,10 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
 
           {/* CENTER: live preview */}
           <div style={{
-            flex: 1,
-            display: isMobile && activeTab !== "preview" ? "none" : "flex",
-            padding: "20px 24px", overflowY: "auto",
+            flex: isMobile ? "0 0 auto" : 1,
+            display: "flex",
+            padding: isMobile ? "20px 16px 24px" : "20px 24px",
+            overflowY: isMobile ? "visible" : "auto",
             flexDirection: "column", alignItems: "center", justifyContent: "flex-start",
             background: "linear-gradient(135deg, #1e293b, #0f172a)",
             minHeight: 0,
@@ -968,7 +925,10 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
                     proportional to the others (matches the picker shapes exactly):
                     XL 4×5 portrait, L 4×3 landscape, M 3×2, S 2×2 square */}
                 {(() => {
-                  const PX_PER_INCH = 100;
+                  // Smaller scale on mobile so even the XL 4×5 portrait fits
+                  // comfortably inside a phone viewport without horizontal
+                  // scrolling. Desktop keeps the original 100px-per-inch.
+                  const PX_PER_INCH = isMobile ? 62 : 100;
                   const w = AD_SIZES[sizeKey].width * PX_PER_INCH;
                   const h = AD_SIZES[sizeKey].height * PX_PER_INCH;
                   return (
@@ -1021,7 +981,6 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
                     // present here since the button only renders when
                     // previewReady is true) is the email.
                     setShowEmailError(true);
-                    if (isMobile) setActiveTab("build");
                     setTimeout(() => {
                       emailInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
                       emailInputRef.current?.focus();
@@ -1048,8 +1007,8 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
               </>
             ) : (
               <div style={{
-                width: AD_SIZES[sizeKey].width * 100,
-                height: AD_SIZES[sizeKey].height * 100,
+                width: AD_SIZES[sizeKey].width * (isMobile ? 62 : 100),
+                height: AD_SIZES[sizeKey].height * (isMobile ? 62 : 100),
                 borderRadius: 6, border: "2px dashed rgba(255,255,255,0.2)",
                 background: "rgba(255,255,255,0.04)",
                 display: "flex", alignItems: "center", justifyContent: "center",
@@ -1060,26 +1019,112 @@ export default function AdGenerator({ initialSize = "L", onComplete, onClose }) 
             )}
           </div>
 
-          {/* RIGHT: AI Assistant */}
-          <div style={{
-            width: isMobile ? "100%" : 320,
-            flex: isMobile ? 1 : "0 0 auto",
-            display: isMobile && activeTab !== "assistant" ? "none" : "flex",
-            flexDirection: "column",
-            borderLeft: isMobile ? "none" : "1px solid #e5e7eb",
-            overflow: "hidden", flexShrink: 0, minHeight: 0,
-          }}>
-            <AdAssistant formData={formData} onUpdate={handleInlineEdit} sizeKey={sizeKey} />
-          </div>
+          {/* RIGHT: AI Assistant — desktop only. On mobile the assistant
+              opens from a floating action button as a bottom-sheet so it
+              never competes with the form for vertical real-estate. */}
+          {!isMobile && (
+            <div style={{
+              width: 320,
+              flex: "0 0 auto",
+              display: "flex",
+              flexDirection: "column",
+              borderLeft: "1px solid #e5e7eb",
+              overflow: "hidden", flexShrink: 0, minHeight: 0,
+            }}>
+              <AdAssistant formData={formData} onUpdate={handleInlineEdit} sizeKey={sizeKey} />
+            </div>
+          )}
 
         </div>
       </div>
+
+      {/* Mobile-only: FAB + bottom-sheet for the AI Assistant. Lives at the
+          modal root (not inside a column) so it floats over the scrolling
+          form/preview content. */}
+      {isMobile && (
+        <MobileAssistantFAB
+          formData={formData}
+          onUpdate={handleInlineEdit}
+          sizeKey={sizeKey}
+        />
+      )}
     </div>
   );
 }
 
-const inputStyle = {
-  width: "100%", padding: "9px 12px", borderRadius: 7,
-  border: "1.5px solid #e5e7eb", fontSize: 13, outline: "none",
-  fontFamily: "system-ui, sans-serif", boxSizing: "border-box", background: "#fff",
-};
+// ─────────────────────────────────────────────────────────────────────────────
+//   MOBILE ASSISTANT FAB + BOTTOM-SHEET
+// ─────────────────────────────────────────────────────────────────────────────
+function MobileAssistantFAB({ formData, onUpdate, sizeKey }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      {!open && (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label="Open AI Ad Assistant"
+          style={{
+            position: "fixed", right: 16, bottom: 16, zIndex: 1100,
+            width: 60, height: 60, borderRadius: "50%",
+            background: "#991b1b", color: "#fff", border: "none",
+            boxShadow: "0 8px 24px rgba(153,27,27,0.45), 0 2px 6px rgba(0,0,0,0.2)",
+            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 13, fontWeight: 800, fontFamily: "system-ui, sans-serif",
+            letterSpacing: 0.3, lineHeight: 1,
+            touchAction: "manipulation",
+          }}
+        >
+          <span style={{ fontSize: 22, lineHeight: 1 }}>✦</span>
+        </button>
+      )}
+
+      {open && (
+        <div
+          onClick={() => setOpen(false)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 1100,
+            background: "rgba(0,0,0,0.55)",
+            display: "flex", alignItems: "flex-end", justifyContent: "stretch",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%", height: "85vh", maxHeight: "85vh",
+              background: "#f8fafc",
+              borderTopLeftRadius: 18, borderTopRightRadius: 18,
+              overflow: "hidden",
+              display: "flex", flexDirection: "column",
+              boxShadow: "0 -8px 32px rgba(0,0,0,0.3)",
+              position: "relative",
+            }}
+          >
+            <div style={{
+              position: "absolute", top: 6, left: 0, right: 0,
+              display: "flex", justifyContent: "center", zIndex: 3, pointerEvents: "none",
+            }}>
+              <div style={{ width: 44, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.5)" }} />
+            </div>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              aria-label="Close assistant"
+              style={{
+                position: "absolute", top: 10, right: 12, zIndex: 4,
+                width: 32, height: 32, borderRadius: "50%",
+                background: "rgba(255,255,255,0.25)", border: "none",
+                color: "#fff", fontSize: 18, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                touchAction: "manipulation",
+              }}
+            >×</button>
+            <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+              <AdAssistant formData={formData} onUpdate={onUpdate} sizeKey={sizeKey} />
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

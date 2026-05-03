@@ -435,6 +435,18 @@ export default function PostcardPickerSection() {
             we wrap it in a horizontal scroll container and force a 600px
             minimum width on the grid itself. On desktop the grid still
             expands to 100% of the parent, so layout is unchanged. */}
+        <div className="ls-mobile-scroll-hint" style={{
+          display: "none", textAlign: "center", color: "#9ca3af",
+          fontSize: 11, fontWeight: 600, letterSpacing: 0.5,
+          padding: "6px 8px 4px", fontFamily: "sans-serif",
+        }}>
+          ← Swipe to see all spots →
+        </div>
+        <style>{`
+          @media (max-width: 767px) {
+            .ls-mobile-scroll-hint { display: block !important; }
+          }
+        `}</style>
         <div style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
         <div style={{
           width: "100%",

@@ -208,9 +208,16 @@ function CheckoutShell({ children }) {
         <div style={{ fontWeight: 900, fontSize: 18, color: "#111", fontFamily: "Georgia,serif" }}>📮 My Town Postcard</div>
       </div>
 
-      <div style={{ maxWidth: 480, margin: "48px auto", padding: "0 20px" }}>
-        <div style={{ background: "#fff", borderRadius: 16, padding: 32, boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
-          <h1 style={{ fontSize: 24, fontWeight: 900, color: "#111", margin: "0 0 8px", fontFamily: "Georgia,serif" }}>Complete Your Payment</h1>
+      <div style={{
+        maxWidth: 480, margin: "0 auto",
+        padding: "clamp(20px, 5vw, 48px) clamp(14px, 4vw, 20px) 48px",
+      }}>
+        <div style={{
+          background: "#fff", borderRadius: 16,
+          padding: "clamp(20px, 5vw, 32px)",
+          boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
+        }}>
+          <h1 style={{ fontSize: "clamp(20px, 5vw, 24px)", fontWeight: 900, color: "#111", margin: "0 0 8px", fontFamily: "Georgia,serif" }}>Complete Your Payment</h1>
           <p style={{ color: "#6b7280", fontSize: 14, marginBottom: 24 }}>You're one step away from securing your spot.</p>
           {children}
         </div>

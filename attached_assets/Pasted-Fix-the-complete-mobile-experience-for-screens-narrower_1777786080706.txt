@@ -1,0 +1,46 @@
+Fix the complete mobile experience for screens narrower than 768px. Do not change any desktop behavior. Here are all the changes needed:
+
+POSTCARD PICKER ON MOBILE:
+The postcard grid is currently too small to read or interact with on a phone. Make the postcard picker section horizontally scrollable on mobile. Set the grid container to overflow-x auto with a minimum width of 640px so the postcard maintains its proportions and spots are large enough to tap. Add a small hint text above the grid that says Scroll to see all spots with a left-right arrow indicator. Make available spot tap targets a minimum of 44x44px so they are easy to tap with a finger. The spot size labels and prices should be readable at mobile font sizes — minimum 12px.
+
+AD GENERATOR MODAL ON MOBILE:
+Remove the current tab-switching behavior entirely. When a form field value changes on mobile, do not navigate away from the form or switch any views. Fix the layout as follows:
+
+Make the modal full screen with no border radius, no outer padding, and no box shadow. The close X button must be fixed in the top right corner and always visible even when scrolling.
+
+Show content in a single scrollable column in this exact order: size selector buttons at the top, then all form fields, then design style selector, then the ad preview updating live, then the Approve and Reserve Spot button at the bottom with enough bottom padding so it is not hidden behind the phone’s home indicator.
+
+The form fields must not cause any view switching when typed into. The keyboard should stay open while typing. Do not auto-scroll or auto-navigate on input changes.
+
+Make all form inputs have a minimum height of 44px, fontSize of 16px minimum (this prevents iOS from auto-zooming on focus which is jarring), and adequate padding for finger tapping.
+
+The size selector buttons should be 2x2 grid on mobile instead of the current layout, with each button showing the size name, dimensions, and price clearly readable.
+
+The design style selector should be a horizontal scrollable row of cards on mobile rather than a 2x2 grid, so all 4 options are accessible with a swipe.
+
+AI ASSISTANT ON MOBILE:
+Hide the assistant panel completely by default on mobile. Add a floating action button fixed to the bottom right of the screen with a chat bubble icon and the label AI in red matching the brand color 991b1b. The button should have a subtle pulsing animation for the first 10 seconds to draw attention to it.
+
+When the user taps the floating button, slide up a bottom sheet from the bottom of the screen covering 70 percent of the viewport height. The bottom sheet should have a drag handle at the top, be scrollable internally, and be dismissible by tapping outside it or swiping down.
+
+When the assistant sends a new message while the panel is closed, show a red notification badge with the number 1 on the floating button. Clear the badge when the user opens the panel.
+
+The numbered tap-to-choose option buttons inside the assistant must be large enough to tap easily on mobile — minimum 44px height each with clear visual separation between options.
+
+The assistant input field at the bottom of the sheet must stay above the keyboard when it opens. Use padding-bottom or a keyboard-aware scroll behavior to prevent the keyboard from covering the input.
+
+CHECKOUT AND CONFIRMATION ON MOBILE:
+Make sure the Approve and Reserve Spot button is always fully visible on mobile and not cut off by the bottom of the screen or the phone home indicator. Add padding-bottom of at least 24px below the button.
+
+After successful payment, the confirmation page should be readable on mobile with font sizes no smaller than 14px and adequate padding on left and right sides so text does not touch the screen edges.
+
+GENERAL MOBILE FIXES:
+Prevent horizontal scrolling on the main landing page outside of the intentional postcard grid scroll area. Set overflow-x hidden on the body or main container.
+
+Make the navigation bar on mobile show a hamburger menu for the How It Works, Pricing, and FAQ links instead of showing them all inline which may overflow on small screens.
+
+Make the hero section headline font size responsive — it should be large on desktop but scale down gracefully on mobile so it does not overflow or require horizontal scrolling.
+
+Ensure all clickable elements throughout the app have a minimum tap target size of 44x44px per Apple and Google accessibility guidelines.
+
+Do not change any backend code, ad templates, AdAssistant logic, Stripe integration, database, or any desktop layout.
