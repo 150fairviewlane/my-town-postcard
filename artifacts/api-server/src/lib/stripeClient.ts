@@ -19,6 +19,16 @@ let cachedCreds: StripeCreds | null = null;
 const CACHE_FOR_PRODUCTION = process.env.REPLIT_DEPLOYMENT === "1";
 
 async function fetchCredentials(): Promise<StripeCreds> {
+  // Direct-env-var path. If the operator provides STRIPE_SECRET_KEY +
+  // STRIPE_PUBLISHABLE_KEY (e.g. Stripe TEST keys for a published QA
+  // build), use them and skip the Replit connector. This bypasses the
+  // Replit Stripe integration's "live keys required to publish" gate.
+  const envSecret = process.env.STRIPE_SECRET_KEY;
+  const envPublishable = process.env.STRIPE_PUBLISHABLE_KEY;
+  if (envSecret && envPublishable) {
+    return { secretKey: envSecret, publishableKey: envPublishable };
+  }
+
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
   const xReplitToken = process.env.REPL_IDENTITY
     ? "repl " + process.env.REPL_IDENTITY
@@ -28,15 +38,13 @@ async function fetchCredentials(): Promise<StripeCreds> {
 
   if (!hostname || !xReplitToken) {
     throw new Error(
-      "Stripe integration not available — missing REPLIT_CONNECTORS_HOSTNAME or REPL_IDENTITY",
+      "Stripe not configured — set STRIPE_SECRET_KEY + STRIPE_PUBLISHABLE_KEY env vars, or connect the Replit Stripe integration",
     );
   }
 
   // STRIPE_FORCE_TEST_MODE=1 lets a published deployment use the
   // development (Stripe TEST) credentials instead of the production
-  // (Stripe LIVE) credentials. Useful for publishing a staging /
-  // QA build that should never charge real cards. Remove or set to
-  // "0" before going live to real customers.
+  // (Stripe LIVE) credentials when going through the Replit connector.
   const forceTestMode = process.env.STRIPE_FORCE_TEST_MODE === "1";
   const isProduction =
     !forceTestMode && process.env.REPLIT_DEPLOYMENT === "1";
