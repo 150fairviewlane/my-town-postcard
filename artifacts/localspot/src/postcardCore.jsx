@@ -25,7 +25,7 @@ export const GRID_AREAS = [
 
 // ─── 2. CLARKESVILLE FAMILY DENTAL — White + Navy/Gold, Badge Logo ─────────
 // Layout: White background, navy header band, badge logomark, navy coupon strip bottom
-function FamilyDentalAd({ size }) {
+export function FamilyDentalAd({ size }) {
   const L = size === "large";
   const M = size === "medium";
 
@@ -154,7 +154,7 @@ function FamilyDentalAd({ size }) {
 
 // ─── 3. BLUE RIDGE AIR & HEAT — Diagonal Split, Ice Blue + White ─────────────
 // Layout: Diagonal split design — dark steel blue left, ice white right, snowflake center
-function BlueRidgeAd({ size }) {
+export function BlueRidgeAd({ size }) {
   const L = size === "large";
   const M = size === "medium";
 
@@ -281,7 +281,7 @@ function BlueRidgeAd({ size }) {
 
 // ─── 4. TANNER INSURANCE AGENCY — Dark Navy Full-Bleed, Gold Shield ───────────
 // Layout: Logo on left with text stacked on right + full dark bleed
-function TannerAd({ size }) {
+export function TannerAd({ size }) {
   const L = size === "large";
   const M = size === "medium";
 
@@ -404,7 +404,7 @@ function TannerAd({ size }) {
 
 // ─── 5. ROMA'S PIZZA & SUBS — Bold Single Color, White Text, Coupon Strip ────
 // Layout: Bold dark red bg, BOGO hero headline, white coupon strip at bottom
-function RomasPizzaAd({ size }) {
+export function RomasPizzaAd({ size }) {
   const L = size === "large";
 
   return (
@@ -494,7 +494,7 @@ function RomasPizzaAd({ size }) {
 
 // ─── 6. GREEN ACRES LAWN CARE — Fresh Green Gradient, Logo Left / Text Right ──
 // Layout: Left strip with leaf badge, right = white with offer and phone
-function GreenAcresAd({ size }) {
+export function GreenAcresAd({ size }) {
   const L = size === "large";
 
   return (
