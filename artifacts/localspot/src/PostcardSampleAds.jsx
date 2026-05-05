@@ -511,15 +511,16 @@ export function getSampleAd(configKey, sizeKeyOverride) {
 // Keys are actual gridArea values from the postcard grid.
 // Spots NOT listed here render as green AvailableSpot (purchase prompt).
 //
-// Filled  (sample ad): mb (XL), dn (L), ins (M), lw (M), a1 (S) — 5 spots
-// Available (green +): re (L), hv (M), pz (S), a2 (M)           — 4 spots
+// Filled  (sample ad): mb (XL), dn (L), ins (M), a1 (S)     — 4 spots
+// Available (green +): re (L), hv (M), pz (S), lw (S), a2 (S) — 5 spots
 //
-// Each filled spot is a different industry — no duplicates.
+// Front available count: 1 L + 1 M + 3 S = 5 purchasable spots visible
 // ─────────────────────────────────────────────────────────────────────────────
 export const SPOT_SAMPLE_MAP = {
-  "mb":  "mrbiscuits",   // XL — Mr. Biscuit's Café (anchor client)
-  "dn":  "dental",       // L  — Clarkesville Family Dental
-  "ins": "pizza",        // M  — Roma's Pizza & Subs
-  "lw":  "lawn",         // M  — Green Acres Lawn Care
-  "a1":  "salon",        // S  — The Cut Above Salon
+  "mb":  "mrbiscuits",
+  "dn":  "dental",
+  "ins": "insurance",
+  "lw":  "lawn",
+  "a1":  "salon",
+  "a3":  "vet",
 };

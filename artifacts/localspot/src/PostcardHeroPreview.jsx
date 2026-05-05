@@ -1,40 +1,20 @@
-import { GRID_AREAS } from "./postcardCore";
-import { FamilyDentalAd, BlueRidgeAd, TannerAd, RomasPizzaAd, GreenAcresAd } from "./postcardCore";
-import { MrBiscuitsLarge } from "./MrBiscuitsReferenceAd.jsx";
 import { getSampleAd } from "./PostcardSampleAds";
+import { GRID_AREAS } from "./postcardCore";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// HERO AD MAP — 9 distinct businesses, no duplicates, varied ad styles.
-//
-// Grid layout (12 cols × 9 rows):
-//   mb  (4×5 XL)  : Mr. Biscuit's Café              — photo-forward café ad
-//   dn  (4×5 L)   : Clarkesville Family Dental       — navy/gold professional
-//   re  (4×5 L)   : Blue Ridge Air & Heat            — diagonal split HVAC
-//   hv  (3×4 M)   : Tanner Insurance Agency          — dark navy, gold shield
-//   ins (3×4 M)   : Roma's Pizza & Subs              — bold red, BOGO offer
-//   pz  (2×2 S)   : Green Acres Lawn Care            — green gradient
-//   hs  (2×2 S)   : The Cut Above Salon              — photo-bold style
-//   a1  (2×2 S)   : Shadetree Auto Repair            — stamp style
-//   lw  (3×2 M)   : Clarkesville Animal Clinic       — split-clean style
-//   a2  (3×2 M)   : Peak Performance Gym             — photo-bold style
-// ─────────────────────────────────────────────────────────────────────────────
-function renderHeroAd(area) {
-  switch (area) {
-    case "mb":  return <MrBiscuitsLarge />;
-    case "dn":  return <FamilyDentalAd size="large" />;
-    case "re":  return <BlueRidgeAd size="large" />;
-    case "hv":  return <TannerAd size="medium" />;
-    case "ins": return <RomasPizzaAd size="large" />;
-    case "pz":  return getSampleAd("lawn", "S");
-    case "hs":  return getSampleAd("salon", "S");
-    case "a1":  return getSampleAd("autorepair", "S");
-    case "lw":  return getSampleAd("vet", "M");
-    case "a2":  return getSampleAd("gym", "M");
-    default:    return null;
-  }
-}
+const HERO_AD_MAP = {
+  mb:  { key: "mrbiscuits", sizeKey: "XL" },
+  dn:  { key: "dental",     sizeKey: "L"  },
+  re:  { key: "autorepair", sizeKey: "L"  },
+  hv:  { key: "gym",        sizeKey: "M"  },
+  ins: { key: "insurance",  sizeKey: "M"  },
+  pz:  { key: "pizza",      sizeKey: "S"  },
+  hs:  { key: "mexican",    sizeKey: "S"  },
+  a1:  { key: "salon",      sizeKey: "S"  },
+  lw:  { key: "lawn",       sizeKey: "M"  },
+  a2:  { key: "vet",        sizeKey: "M"  },
+};
 
-const HERO_SLOTS = ["mb", "dn", "re", "hv", "ins", "pz", "hs", "a1", "lw", "a2"];
+const GRID_SLOTS = ["mb", "dn", "re", "hv", "ins", "pz", "hs", "a1", "lw", "a2"];
 
 export default function PostcardHeroPreview() {
   return (
@@ -57,7 +37,7 @@ export default function PostcardHeroPreview() {
           📮 Clarkesville Community Mailer
         </div>
         <div style={{ color: "#fca5a5", fontSize: 8, fontFamily: "sans-serif" }}>
-          Reaching 5,000 Local Homes · Summer 2026
+          Reaching 5,000 Local Homes · Spring 2026
         </div>
       </div>
 
@@ -75,11 +55,14 @@ export default function PostcardHeroPreview() {
           padding: "5px",
           boxSizing: "border-box",
         }}>
-          {HERO_SLOTS.map(area => (
-            <div key={area} style={{ gridArea: area, overflow: "hidden", borderRadius: 2, minWidth: 0, minHeight: 0 }}>
-              {renderHeroAd(area)}
-            </div>
-          ))}
+          {GRID_SLOTS.map(gridArea => {
+            const entry = HERO_AD_MAP[gridArea];
+            return (
+              <div key={gridArea} style={{ gridArea, overflow: "hidden", borderRadius: 2, minWidth: 0, minHeight: 0 }}>
+                {getSampleAd(entry.key, entry.sizeKey)}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

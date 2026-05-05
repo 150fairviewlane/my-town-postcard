@@ -1,6 +1,5 @@
 import { useState } from "react";
 import PostcardPickerSection from "../PostcardPickerSection";
-import PostcardHeroPreview from "../PostcardHeroPreview";
 import { useIsMobile } from "../hooks/use-mobile";
 
 const RED = "#7B1418";
@@ -167,13 +166,17 @@ function Hero() {
       </div>
 
       <div style={{ flex: "1 1 420px", minWidth: 300, position: "relative" }}>
-        <PostcardHeroPreview />
+        <img
+          src={`${import.meta.env.BASE_URL}postcard-hero.png`}
+          alt="Sample 9×12 co-op postcard"
+          style={{ width: "100%", maxWidth: 560, borderRadius: 12,
+            boxShadow: "0 24px 60px rgba(0,0,0,0.18)", display: "block" }}
+        />
         <div style={{
-          position: "absolute", bottom: -14, left: -12,
+          position: "absolute", bottom: 24, left: -12,
           background: "#d4a017", color: "#fff",
           borderRadius: 10, padding: "14px 20px",
           boxShadow: "0 8px 24px rgba(0,0,0,0.2)", fontFamily: "sans-serif",
-          zIndex: 2,
         }}>
           <div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1 }}>9"×12"</div>
           <div style={{ fontSize: 12, fontWeight: 600, opacity: 0.9 }}>Impossible<br />to Miss</div>
@@ -251,7 +254,12 @@ function WhyChooseUs() {
           </div>
         </div>
         <div style={{ flex: "1 1 360px" }}>
-          <PostcardHeroPreview />
+          <img
+            src={`${import.meta.env.BASE_URL}postcard-hero.png`}
+            alt="9×12 postcard sample"
+            style={{ width: "100%", maxWidth: 520, borderRadius: 12,
+              boxShadow: "0 16px 48px rgba(0,0,0,0.14)", display: "block" }}
+          />
         </div>
       </div>
     </section>
