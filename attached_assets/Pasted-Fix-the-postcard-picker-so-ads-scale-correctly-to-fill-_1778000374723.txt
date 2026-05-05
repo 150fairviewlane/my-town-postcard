@@ -1,0 +1,61 @@
+Fix the postcard picker so ads scale correctly to fill their grid cells. The grid proportions are now correct but the ad content inside each cell is not scaling to fit. Make these targeted fixes:
+
+PROBLEM 1 - BLACK BARS ON LEFT AND RIGHT:
+The postcard grid has black space on the left and right sides. Find the outermost postcard wrapper div and make sure it has no fixed width, no margin that could cause centering issues, and that it fills its parent container completely. Set width: 100% on both the wrapper and the grid container. Remove any maxWidth that might be less than the available space.
+
+PROBLEM 2 - ADS NOT FILLING GRID CELLS:
+Each spot in the grid renders a sample ad component or an available spot indicator. The ad components are rendering at their own internal sizes instead of filling the grid cell. Fix this by wrapping each ad component in a div that uses this exact CSS pattern:
+
+The wrapper div around each spot’s content should have:
+position: relative
+width: 100%
+height: 100%
+overflow: hidden
+
+Inside that wrapper, the actual ad component should be rendered inside a scaling div with:
+position: absolute
+top: 0
+left: 0
+width: [the ad’s natural render width in pixels]
+height: [the ad’s natural render height in pixels]
+transform-origin: top left
+transform: scale() — calculated as the cell’s actual pixel width divided by the ad’s natural render width
+
+The natural render sizes for each ad type should match what AdGenerator uses:
+
+- XL: natural width 520px, natural height 650px (4:5 ratio)
+- Large: natural width 420px, natural height 315px (4:3 ratio)
+- Medium: natural width 310px, natural height 207px (3:2 ratio)
+- Small: natural width 210px, natural height 210px (2:2 ratio)
+
+To calculate the scale factor dynamically, use a ResizeObserver or useRef on each cell div to get its actual rendered pixel width, then calculate scale = actualWidth / naturalWidth. Apply this as an inline style.
+
+SIMPLER ALTERNATIVE APPROACH if ResizeObserver is complex:
+Instead of calculating scale dynamically, use CSS transform with a known scale. Since the postcard renders at a known width (roughly 900px max), calculate the expected cell widths:
+
+- XL cell width = 4/12 of postcard width = 300px at 900px postcard
+- Large cell width = 4/12 = 300px
+- Medium cell width = 3/12 = 225px
+- Small cell width = 2/12 = 150px
+
+Then set these scale factors as inline styles on the scaling wrapper:
+
+- XL: transform: scale(300/520) = scale(0.577), width: 520px, height: 650px
+- Large: transform: scale(300/420) = scale(0.714), width: 420px, height: 315px
+- Medium: transform: scale(225/310) = scale(0.726), width: 310px, height: 207px
+- Small: transform: scale(150/210) = scale(0.714), width: 210px, height: 210px
+
+PROBLEM 3 - AVAILABLE SPOT INDICATORS NOT FILLING CELLS:
+The green dashed available spot indicators (showing + Large Spot $350 etc) also need to fill their cells completely. Make sure their container div has width: 100% and height: 100% so the dashed border and text fill the entire grid cell regardless of cell size.
+
+PROBLEM 4 - FONT SIZES IN AVAILABLE SPOTS:
+The + symbol, spot name, price, and dimensions text inside available spots should scale relative to their cell size. Use these approximate font sizes:
+
+- XL available spot: + symbol 48px, name 18px, price 22px, dimensions 13px
+- Large available spot: + symbol 36px, name 15px, price 18px, dimensions 11px
+- Medium available spot: + symbol 28px, name 12px, price 15px, dimensions 10px
+- Small available spot: + symbol 22px, name 10px, price 13px, dimensions 9px
+
+After these fixes the postcard should show: no black bars, ads filling their grid cells completely edge to edge, available spots showing their green dashed border filling the full cell, correct proportional sizes across all spot types.
+
+Do not change AdGenerator, AdAssistant, ad templates, or any backend code.

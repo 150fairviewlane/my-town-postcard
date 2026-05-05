@@ -623,32 +623,45 @@ export function PaidAd({ spot }) {
   }
 }
 
+// Per-size font sizes for AvailableSpot. The picker wraps each cell in a
+// transform: scale() container, so these values are the *natural* pixel sizes
+// at 100 px per grid unit. They scale uniformly with the postcard, but their
+// relative size to the cell stays correct (no tiny fonts in big cells).
+const AVAIL_FONTS = {
+  xl:     { plus: 48, name: 18, price: 22, dim: 13, gap: 8,  pad: 14, border: 4 },
+  large:  { plus: 36, name: 15, price: 18, dim: 11, gap: 6,  pad: 10, border: 3 },
+  medium: { plus: 28, name: 12, price: 15, dim: 10, gap: 4,  pad: 8,  border: 3 },
+  small:  { plus: 22, name: 10, price: 13, dim:  9, gap: 3,  pad: 5,  border: 2 },
+};
+
 // ─── Public: AvailableSpot ────────────────────────────────────────────────────
+// Fills 100% of its parent cell (the picker's ScaledCell wrapper). Font sizes
+// are picked per spot.size so the + / label / price feel right at every size.
 export function AvailableSpot({ spot, isSelected, onClick }) {
   const sz = SIZES[spot.size] ?? SIZES.small;
-  // "small" = 2×2 grid units — compact layout. Everything else has more room.
-  const isCompact = spot.size === "small";
+  const f = AVAIL_FONTS[spot.size] || AVAIL_FONTS.small;
   const displayPrice = Math.round((spot.price ?? 0) / 100);
 
   return (
     <div onClick={onClick} style={{
-      width: "100%", height: "100%", borderRadius: 3, cursor: "pointer",
+      width: "100%", height: "100%", borderRadius: 4, cursor: "pointer",
       background: isSelected ? "#fef9c3" : "#f0fdf4",
-      border: isSelected ? "2.5px solid #ca8a04" : "2px dashed #22c55e",
+      border: isSelected
+        ? `${f.border}px solid #ca8a04`
+        : `${f.border}px dashed #22c55e`,
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-      gap: isCompact ? 2 : 5, padding: isCompact ? "5px 4px" : "8px 6px",
+      gap: f.gap, padding: f.pad,
       textAlign: "center", transition: "all 0.15s", boxSizing: "border-box",
+      overflow: "hidden",
     }}>
-      <div style={{ fontSize: isCompact ? 16 : 22 }}>{isSelected ? "✅" : "➕"}</div>
-      <div style={{ fontWeight: 800, fontSize: isCompact ? 8.5 : 10.5,
+      <div style={{ fontSize: f.plus, lineHeight: 1 }}>{isSelected ? "✅" : "➕"}</div>
+      <div style={{ fontWeight: 800, fontSize: f.name,
         color: isSelected ? "#92400e" : "#15803d", fontFamily: "sans-serif", lineHeight: 1.2 }}>
         {isSelected ? "SELECTED" : sz.label + " Spot"}
       </div>
-      <div style={{ fontSize: isCompact ? 11 : 15, color: isSelected ? "#b45309" : "#166534",
-        fontWeight: 900, fontFamily: "sans-serif" }}>${displayPrice}</div>
-      {!isCompact && (
-        <div style={{ fontSize: 8.5, color: "#6b7280", fontFamily: "sans-serif" }}>{sz.dim}</div>
-      )}
+      <div style={{ fontSize: f.price, color: isSelected ? "#b45309" : "#166534",
+        fontWeight: 900, fontFamily: "sans-serif", lineHeight: 1 }}>${displayPrice}</div>
+      <div style={{ fontSize: f.dim, color: "#6b7280", fontFamily: "sans-serif", lineHeight: 1 }}>{sz.dim}</div>
     </div>
   );
 }

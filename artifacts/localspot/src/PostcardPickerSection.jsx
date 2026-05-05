@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useGetActiveCampaign, useReserveSpot } from "@workspace/api-client-react";
 import {
@@ -58,6 +58,54 @@ const GRID_POSITIONS = {
   bhs: { gridColumn: "11/13", gridRow: "4/6"  },  // House ad — top-right corner
   bhn: { gridColumn: "5/9",   gridRow: "9/10" },  // House ad — bottom banner
 };
+
+// ─── Cell scaling system ─────────────────────────────────────────────────────
+// Each cell renders its content at a known "natural" pixel size (1 grid unit
+// = 100 px = 1 inch), then a single CSS transform: scale() shrinks/grows the
+// whole inner DOM to fit the actual rendered cell. This way ads, available
+// spot indicators, paid ads, and house ads all scale uniformly with the
+// postcard — fonts, padding, borders, everything stays in proportion.
+const PX_PER_CELL = 100;
+const NATURAL_GRID_W = 12 * PX_PER_CELL; // 1200px
+const PostcardScaleContext = createContext(1);
+
+function parseSpan(s) {
+  const [a, b] = s.split("/").map(Number);
+  return b - a;
+}
+
+// ScaledCell: place at gridColumn/gridRow, then render children inside an
+// absolutely-positioned, naturally-sized wrapper that's transform-scaled.
+function ScaledCell({ pos, children, pointerEvents }) {
+  const scale = useContext(PostcardScaleContext);
+  const cols = parseSpan(pos.gridColumn);
+  const rows = parseSpan(pos.gridRow);
+  const natW = cols * PX_PER_CELL;
+  const natH = rows * PX_PER_CELL;
+  return (
+    <div style={{
+      gridColumn: pos.gridColumn,
+      gridRow: pos.gridRow,
+      position: "relative",
+      overflow: "hidden",
+      minWidth: 0,
+      minHeight: 0,
+      pointerEvents: pointerEvents || "auto",
+    }}>
+      <div style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: natW,
+        height: natH,
+        transformOrigin: "top left",
+        transform: `scale(${scale})`,
+      }}>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 // ─── Permanent house / self-promotion ad ─────────────────────────────────────
 function HouseAd() {
@@ -125,6 +173,22 @@ export default function PostcardPickerSection() {
   // matters server-side, the front/back distinction is purely a layout
   // partition for the picker.
   const [side, setSide] = useState("front");
+
+  // ResizeObserver on the grid container computes ONE scale value for the
+  // entire postcard. Every cell uses this same scale via PostcardScaleContext
+  // because the natural sizes are derived from grid units, so all cells
+  // share the same scale factor regardless of how many cols/rows they span.
+  const gridRef = useRef(null);
+  const [postcardScale, setPostcardScale] = useState(1);
+  useEffect(() => {
+    const el = gridRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver(([entry]) => {
+      setPostcardScale(entry.contentRect.width / NATURAL_GRID_W);
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   // Active hold (if any) for THIS browser, used to surface a "resume checkout"
   // banner so customers who closed the checkout tab can pick up where they
@@ -461,72 +525,66 @@ export default function PostcardPickerSection() {
           </div>
         </div>
 
-        {/* Postcard grid — fluid 12:9 landscape.
-            width:100% + aspectRatio keeps the 12:9 shape at any screen width.
-            Each cell uses explicit gridColumn/gridRow from GRID_POSITIONS so
-            placement is accurate and independent of gridTemplateAreas. */}
-        <div style={{ width: "100%", maxWidth: 900, margin: "0 auto" }}>
-          <div style={{
-            width: "100%",
-            aspectRatio: "12 / 9",
-            display: "grid",
-            gridTemplateColumns: "repeat(12, 1fr)",
-            gridTemplateRows: "repeat(9, 1fr)",
-            gap: 1,
-            background: "rgba(0,0,0,0.15)",
-            border: "1px solid #ccc",
-            boxShadow: "0 4px 24px rgba(0,0,0,0.35)",
-            boxSizing: "border-box",
-            overflow: "hidden",
-          }}>
-            {sortedSpots.map(spot => {
-              const isSelected = selected?.id === spot.id;
-              const isPaid = (spot.status === "paid" || spot.status === "reserved") && spot.gridArea !== "mb";
-              const sampleKey = SPOT_SAMPLE_MAP[spot.gridArea];
-              const sampleContent = !isPaid && sampleKey
-                ? getSampleAd(sampleKey, SIZE_MAP[spot.size] || "S")
-                : null;
-              const pos = GRID_POSITIONS[spot.gridArea] || {};
+        {/* Postcard grid — fluid 12:9 landscape, fills its parent fully.
+            Every cell renders content at a fixed natural pixel size
+            (1 grid unit = 100 px) and is transform-scaled by PostcardScaleContext
+            so all fonts/borders/padding stay proportional at any viewport. */}
+        <div style={{ width: "100%" }}>
+          <PostcardScaleContext.Provider value={postcardScale}>
+            <div ref={gridRef} style={{
+              width: "100%",
+              aspectRatio: "12 / 9",
+              display: "grid",
+              gridTemplateColumns: "repeat(12, 1fr)",
+              gridTemplateRows: "repeat(9, 1fr)",
+              gap: 1,
+              background: "rgba(0,0,0,0.15)",
+              border: "1px solid #ccc",
+              boxShadow: "0 4px 24px rgba(0,0,0,0.35)",
+              boxSizing: "border-box",
+              overflow: "hidden",
+            }}>
+              {sortedSpots.map(spot => {
+                const isSelected = selected?.id === spot.id;
+                const isPaid = (spot.status === "paid" || spot.status === "reserved") && spot.gridArea !== "mb";
+                const sampleKey = SPOT_SAMPLE_MAP[spot.gridArea];
+                const sampleContent = !isPaid && sampleKey
+                  ? getSampleAd(sampleKey, SIZE_MAP[spot.size] || "S")
+                  : null;
+                const pos = GRID_POSITIONS[spot.gridArea];
+                if (!pos) return null;
 
-              return (
-                <div key={spot.id} style={{ ...pos, overflow: "hidden", minWidth: 0, minHeight: 0 }}>
-                  {isPaid ? (
-                    <PaidAd spot={spot} />
-                  ) : sampleContent ? (
-                    <div style={{ position: "relative", width: "100%", height: "100%", cursor: "default" }}>
-                      {sampleContent}
-                    </div>
-                  ) : (
-                    <AvailableSpot
-                      spot={spot}
-                      isSelected={isSelected}
-                      onClick={() => openCreator(spot)}
-                    />
-                  )}
-                </div>
-              );
-            })}
-            {/* Fixed (non-sellable) cells: house ads on both sides, plus the
-                USPS EDDM placeholder on the back. No click, not counted. */}
-            {fixedAreas.map((area) => {
-              const pos = GRID_POSITIONS[area] || {};
-              return (
-                <div
-                  key={area}
-                  style={{
-                    ...pos,
-                    overflow: "hidden",
-                    minWidth: 0,
-                    minHeight: 0,
-                    cursor: "default",
-                    pointerEvents: "none",
-                  }}
-                >
-                  {renderFixedCell(area)}
-                </div>
-              );
-            })}
-          </div>
+                return (
+                  <ScaledCell key={spot.id} pos={pos}>
+                    {isPaid ? (
+                      <PaidAd spot={spot} />
+                    ) : sampleContent ? (
+                      <div style={{ position: "relative", width: "100%", height: "100%", cursor: "default" }}>
+                        {sampleContent}
+                      </div>
+                    ) : (
+                      <AvailableSpot
+                        spot={spot}
+                        isSelected={isSelected}
+                        onClick={() => openCreator(spot)}
+                      />
+                    )}
+                  </ScaledCell>
+                );
+              })}
+              {/* Fixed (non-sellable) cells: house ads on both sides, plus the
+                  USPS EDDM placeholder on the back. No click, not counted. */}
+              {fixedAreas.map((area) => {
+                const pos = GRID_POSITIONS[area];
+                if (!pos) return null;
+                return (
+                  <ScaledCell key={area} pos={pos} pointerEvents="none">
+                    {renderFixedCell(area)}
+                  </ScaledCell>
+                );
+              })}
+            </div>
+          </PostcardScaleContext.Provider>
         </div>
 
         {/* EDDM footer strip — visual reminder on the picker, the real
