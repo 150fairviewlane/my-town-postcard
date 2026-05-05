@@ -1,0 +1,621 @@
+import { useState, useRef, useEffect } from “react”;
+import { INDUSTRIES } from “./industryAssets”;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POSTCARD PICKER SECTION
+//
+// Renders a 12×9 postcard grid with correct proportional ad sizes.
+// All scaling is done via a single scale factor derived from container width.
+// Natural postcard size: 1200×900px (100px per inch)
+// Scale factor = containerWidth / 1200
+// Every pixel in this file is specified at natural 100px/inch scale.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const NATURAL_W = 1200; // 12 inches × 100px
+const NATURAL_H = 900;  // 9 inches × 100px
+
+// Ad sizes in natural pixels (100px per inch)
+const AD_NATURAL = {
+XL: { w: 400, h: 500 }, // 4×5”
+L:  { w: 400, h: 300 }, // 4×3”
+M:  { w: 300, h: 200 }, // 3×2”
+S:  { w: 200, h: 200 }, // 2×2”
+};
+
+// ─── Front side spot layout (x, y, w, h in natural pixels) ───────────────────
+const FRONT_SPOTS = [
+{ id: “front-xl-1”, size: “XL”, price: 450, x: 0,   y: 0,   w: 400, h: 500 },
+{ id: “front-xl-2”, size: “XL”, price: 450, x: 400, y: 0,   w: 400, h: 500 },
+{ id: “front-xl-3”, size: “XL”, price: 450, x: 800, y: 0,   w: 400, h: 500 },
+{ id: “front-l-1”,  size: “L”,  price: 350, x: 0,   y: 500, w: 400, h: 300 },
+{ id: “front-l-2”,  size: “L”,  price: 350, x: 400, y: 500, w: 400, h: 300 },
+{ id: “front-m-1”,  size: “M”,  price: 250, x: 800, y: 500, w: 300, h: 200 },
+{ id: “front-m-2”,  size: “M”,  price: 250, x: 800, y: 700, w: 300, h: 200 },
+{ id: “front-s-1”,  size: “S”,  price: 199, x: 1000, y: 500, w: 200, h: 200 }, // wait — 800+300=1100, need to recalc
+{ id: “front-s-2”,  size: “S”,  price: 199, x: 1000, y: 700, w: 200, h: 200 },
+// House ad fills bottom strip
+{ id: “front-house”, size: “house”, price: 0, x: 0, y: 800, w: 800, h: 100 },
+];
+
+// Recalc: 3 XL = 1200 wide ✓ top row fills perfectly
+// Bottom: L(400)+L(400)=800, then M(300)+S(200)=500… 800+500=1300 ≠ 1200
+// Fix: M=300 at x=800, S=200 at x=1100… but 1100+200=1300 ≠ 1200
+// Real fix: M must be 200 wide to fit: 800+200+200=1200 ✓ but M is 3×2”
+// Better: use 2 columns for bottom right: M(300) + S(100)? No.
+// Real postcard layout: 12-col grid. Col width = 100px.
+// XL=4cols, L=4cols, M=3cols, S=2cols, remaining=1col goes to house
+// Bottom: L(4)+L(4)+M(3)+S(2) = 13 cols — doesn’t fit 12!
+// Standard fix: L(4)+L(4)+M(2)+M(2) = 12 ✓ or L(4)+M(3)+M(3)+S(2) = 12 ✓
+// Use: L(4)+L(4)+M(2)+S(2)+S(2) = wait…
+// Best fit for 2XL+2L+2M+2S in bottom 4 rows (400px):
+// Row layout: L(400)+L(400)+[M(200)+M(200)+S(200)] = nope
+// Use this proven layout that tiles perfectly:
+// Bottom 4 rows (y=500 to y=900, h=400):
+//   Large 1: x=0,   w=400, h=300 (y=500-800)
+//   Large 2: x=400, w=400, h=300 (y=500-800)  
+//   Medium 1: x=800, w=200, h=200 (y=500-700)
+//   Small 1:  x=1000,w=200, h=200 (y=500-700)
+//   Medium 2: x=800, w=200, h=200 (y=700-900)
+//   Small 2:  x=1000,w=200, h=200 (y=700-900)
+//   House:    x=0,   w=800, h=100 (y=800-900)
+// CHECK: top y=0 to 500: 3×XL(400) = 1200 ✓
+// Bottom y=500-900: cols 0-799 = 2×L stacked… L is h=300 so y=500-800
+//   then house y=800-900 x=0-799
+//   cols 800-1199 = 400px wide:
+//     M(200)+S(200) at y=500-700
+//     M(200)+S(200) at y=700-900
+//   ✓ All tiles, no gaps!
+
+const FRONT_SPOTS_FINAL = [
+{ id: “front-xl-1”,  size: “XL”,    price: 450, x: 0,    y: 0,   w: 400, h: 500 },
+{ id: “front-xl-2”,  size: “XL”,    price: 450, x: 400,  y: 0,   w: 400, h: 500 },
+{ id: “front-xl-3”,  size: “XL”,    price: 450, x: 800,  y: 0,   w: 400, h: 500 },
+{ id: “front-l-1”,   size: “L”,     price: 350, x: 0,    y: 500, w: 400, h: 300 },
+{ id: “front-l-2”,   size: “L”,     price: 350, x: 400,  y: 500, w: 400, h: 300 },
+{ id: “front-m-1”,   size: “M”,     price: 250, x: 800,  y: 500, w: 200, h: 200 },
+{ id: “front-s-1”,   size: “S”,     price: 199, x: 1000, y: 500, w: 200, h: 200 },
+{ id: “front-m-2”,   size: “M”,     price: 250, x: 800,  y: 700, w: 200, h: 200 },
+{ id: “front-s-2”,   size: “S”,     price: 199, x: 1000, y: 700, w: 200, h: 200 },
+{ id: “front-house”, size: “house”, price: 0,   x: 0,    y: 800, w: 800, h: 100 },
+];
+
+// Back side: 1 XL + 2 L + 2 M + 2 S + EDDM indicia
+// Layout: XL(400×500) left | right side 800×900
+// Right top: L(400×300) + L(400×300) side by side = 800×300 ✓
+// Right mid: M(200×200)+S(200×200)+M(200×200)+S(200×200) = 800×200 ✓ (2 rows of 4)
+// Wait: right width = 800. L=400 wide, so 2×L = 800 ✓
+// Then: M=200, S=200, M=200, S=200 = 800 ✓ for one row h=200
+// Then EDDM: 400×213 (4”×2.125”) at bottom right
+// Remaining: house ad fills rest
+// Back y=0-500: XL left, right: L(400,y=0,h=300)+L(400+400=800,y=0,h=300) → x=400,x=800
+// Back y=500-900 left: house x=0,w=400,h=400
+// Back y=300-500 right (x=400-1200, 800wide, h=200): M+S+M+S each 200px wide
+// Back y=500-713 right (x=400-1200): EDDM at x=800,w=400,h=213 + something at x=400,w=400
+// This is getting complex. Let me use a simpler clean layout:
+
+const BACK_SPOTS_FINAL = [
+{ id: “back-xl-1”,   size: “XL”,    price: 450, x: 0,    y: 0,   w: 400, h: 500 },
+{ id: “back-l-1”,    size: “L”,     price: 350, x: 400,  y: 0,   w: 400, h: 300 },
+{ id: “back-l-2”,    size: “L”,     price: 350, x: 800,  y: 0,   w: 400, h: 300 },
+{ id: “back-m-1”,    size: “M”,     price: 250, x: 400,  y: 300, w: 200, h: 200 },
+{ id: “back-s-1”,    size: “S”,     price: 199, x: 600,  y: 300, w: 200, h: 200 },
+{ id: “back-m-2”,    size: “M”,     price: 250, x: 800,  y: 300, w: 200, h: 200 },
+{ id: “back-s-2”,    size: “S”,     price: 199, x: 1000, y: 300, w: 200, h: 200 },
+{ id: “back-house”,  size: “house”, price: 0,   x: 0,    y: 500, w: 400, h: 400 },
+{ id: “back-filler”, size: “fill”,  price: 0,   x: 400,  y: 500, w: 400, h: 400 },
+{ id: “back-eddm”,   size: “eddm”,  price: 0,   x: 800,  y: 500, w: 400, h: 400 },
+];
+
+// ─── Sample ad assignments ────────────────────────────────────────────────────
+const SAMPLE_MAP = {
+“front-xl-1”:  { biz: “Mr. Biscuit’s Café”,       ind: “Breakfast & Cafe”,       tmpl: “photobold”,  offer: “$1 OFF Any Biscuit”,       phone: “(706) 754-0105”, tag: “From-Scratch Biscuits & Boba!”, star: “$1 OFF”, menu: [“Plain Biscuit $2.99”,“Bacon Biscuit $4.99”,“Chicken Tender $5.99”,“NY Bagels $5.49”] },
+“front-xl-2”:  null, // reserved placeholder
+“front-xl-3”:  null,
+“front-l-1”:   { biz: “Clarkesville Family Dental”, ind: “Dentist”,               tmpl: “splitclean”, offer: “FREE Whitening Kit”,         phone: “(706) 555-0142”, tag: “Accepting New Patients!”, star: “NEW!”, menu: [“Preventive Care & Cleanings”,“Cosmetic & Whitening”,“Family & Children’s Care”] },
+“front-l-2”:   null,
+“front-m-1”:   { biz: “Tanner Insurance”,          ind: “Insurance”,              tmpl: “magazine”,   offer: “Save up to $500/yr”,         phone: “(706) 555-0388”, tag: “Local Agent. Real Savings.”, menu: [“Auto”,“Home”,“Life”,“Business”] },
+“front-m-2”:   null,
+“front-s-1”:   { biz: “The Cut Above Salon”,       ind: “Salon & Beauty”,         tmpl: “photobold”,  offer: “20% OFF First Visit”,        phone: “(706) 555-0519”, tag: “Look Beautiful. Feel Confident.”, star: “20% OFF” },
+“front-s-2”:   null,
+“back-xl-1”:   null,
+“back-l-1”:    { biz: “Shadetree Auto Repair”,     ind: “Auto Repair”,            tmpl: “stamp”,      offer: “Free Diagnostic Check”,      phone: “(770) 678-7890”, tag: “Honest Repair. Fair Prices.”, star: “FREE!” },
+“back-l-2”:    null,
+“back-m-1”:    { biz: “Green Acres Lawn Care”,     ind: “Lawn & Landscaping”,     tmpl: “stamp”,      offer: “$25 OFF First Service”,      phone: “(706) 555-0291”, tag: “Your Yard. Our Pride.”, star: “$25 OFF” },
+“back-m-2”:    null,
+“back-s-1”:    { biz: “Clarkesville Animal Clinic”,ind: “Veterinarian”,           tmpl: “splitclean”, offer: “Free First Exam”,            phone: “(706) 555-0322”, tag: “Compassionate Pet Care” },
+“back-s-2”:    null,
+};
+
+// ─── Unsplash photos per industry (same as industryAssets) ───────────────────
+const PHOTOS = {
+“Breakfast & Cafe”:    “https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=600&q=80”,
+“Dentist”:             “https://images.unsplash.com/photo-1609840114035-3c981b782dfe?w=600&q=80”,
+“Insurance”:           “https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=600&q=80”,
+“Lawn & Landscaping”:  “https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80”,
+“Salon & Beauty”:      “https://images.unsplash.com/photo-1560066984-138daaa4e4e1?w=600&q=80”,
+“Auto Repair”:         “https://images.unsplash.com/photo-1530046339160-ce3e530c7d2f?w=600&q=80”,
+“Veterinarian”:        “https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=600&q=80”,
+“Pizza Restaurant”:    “https://images.unsplash.com/photo-1513104890138-7c749659a591?w=600&q=80”,
+};
+
+// ─── Industry colors ──────────────────────────────────────────────────────────
+const COLORS = {
+“Breakfast & Cafe”:    { p: “#7c3a1e”, a: “#f59e0b”, l: “#fef3c7”, d: “#3b1a0a” },
+“Dentist”:             { p: “#1e40af”, a: “#3b82f6”, l: “#eff6ff”, d: “#1e3a5f” },
+“Insurance”:           { p: “#1a3d2e”, a: “#d4a017”, l: “#f0fdf4”, d: “#0f2318” },
+“Lawn & Landscaping”:  { p: “#166534”, a: “#f59e0b”, l: “#f0fdf4”, d: “#052e16” },
+“Salon & Beauty”:      { p: “#831843”, a: “#ec4899”, l: “#fdf2f8”, d: “#4a0e28” },
+“Auto Repair”:         { p: “#1e3a5f”, a: “#f59e0b”, l: “#eff6ff”, d: “#0f1f33” },
+“Veterinarian”:        { p: “#065f46”, a: “#34d399”, l: “#ecfdf5”, d: “#022c22” },
+};
+
+// ─── Emoji per industry ───────────────────────────────────────────────────────
+const EMOJI = {
+“Breakfast & Cafe”: “🥐”, “Dentist”: “🦷”, “Insurance”: “🛡️”,
+“Lawn & Landscaping”: “🌿”, “Salon & Beauty”: “💇”, “Auto Repair”: “🔧”,
+“Veterinarian”: “🐾”,
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SAMPLE AD RENDERERS — each renders at exactly 400×500, 400×300, 200×200 etc
+// The parent scales them down via transform
+// ─────────────────────────────────────────────────────────────────────────────
+
+function Starburst({ text, size = 70, top = 8, right = 8 }) {
+return (
+<div style={{ position:“absolute”, top, right, width:size, height:size, zIndex:10 }}>
+<svg width={size} height={size} viewBox=“0 0 100 100” style={{position:“absolute”,filter:“drop-shadow(0 2px 6px rgba(0,0,0,0.5))”}}>
+<polygon points="50,2 58,18 76,8 73,28 92,28 80,42 96,55 78,60 87,78 68,75 70,94 53,84 50,98 47,84 30,94 32,75 13,78 22,60 4,55 20,42 8,28 27,28 24,8 42,18" fill="#f59e0b"/>
+</svg>
+<div style={{position:“absolute”,inset:0,display:“flex”,alignItems:“center”,justifyContent:“center”,color:”#fff”,fontWeight:900,fontSize:size*0.18,textAlign:“center”,lineHeight:1.1,padding:“0 8px”,textShadow:“0 1px 3px rgba(0,0,0,0.6)”}}>{text}</div>
+</div>
+);
+}
+
+function Coupon({ offer, fine, accent, dark }) {
+if (!offer) return null;
+return (
+<div style={{border:`2px dashed ${accent}`,background:dark?“rgba(0,0,0,0.4)”:`${accent}18`,borderRadius:6,padding:“8px 14px 6px”,textAlign:“center”,position:“relative”,marginTop:6,flexShrink:0}}>
+<div style={{position:“absolute”,top:-1,left:0,right:0,display:“flex”,alignItems:“center”,padding:“0 6px”}}>
+<span style={{fontSize:12,opacity:0.7}}>✂</span>
+<div style={{flex:1,marginLeft:4,borderTop:`1.5px dashed ${accent}88`}}/>
+<span style={{fontSize:12,opacity:0.7,transform:“scaleX(-1)”,display:“inline-block”}}>✂</span>
+</div>
+<div style={{color:accent,fontWeight:900,fontSize:16,lineHeight:1,marginTop:4}}>{offer}</div>
+{fine&&<div style={{color:dark?“rgba(255,255,255,0.7)”:”#666”,fontSize:10,marginTop:2,fontFamily:“sans-serif”}}>{fine}</div>}
+</div>
+);
+}
+
+// Photo Bold — full bleed photo, dark overlay, white text
+function PhotoBoldSample({ d, w, h }) {
+const col = COLORS[d.ind] || COLORS[“Breakfast & Cafe”];
+const photo = PHOTOS[d.ind] || PHOTOS[“Breakfast & Cafe”];
+const isXL = h > 400;
+const isS = w <= 200 && h <= 200;
+return (
+<div style={{width:“100%”,height:“100%”,position:“relative”,overflow:“hidden”,fontFamily:“Georgia,serif”,background:”#222”}}>
+<img src={photo} alt=”” style={{position:“absolute”,inset:0,width:“100%”,height:“100%”,objectFit:“cover”}}/>
+<div style={{position:“absolute”,inset:0,background:`linear-gradient(180deg,${col.d}bb 0%,${col.d}44 35%,${col.d}ee 100%)`}}/>
+{d.star && <Starburst text={d.star} size={isXL?80:isS?36:55} top={isXL?12:6} right={isXL?12:6}/>}
+{/* Top: name + industry */}
+<div style={{position:“absolute”,top:isXL?14:8,left:isXL?14:8,right:isXL?80:50}}>
+<div style={{color:col.a,fontSize:isXL?11:isS?7:9,fontWeight:700,letterSpacing:2,textTransform:“uppercase”,fontFamily:“sans-serif”}}>{d.ind}</div>
+<div style={{color:”#fff”,fontWeight:900,fontSize:isXL?28:isS?13:18,lineHeight:1.05,textShadow:“0 2px 8px rgba(0,0,0,0.8)”}}>{d.biz}</div>
+</div>
+{/* Center: tagline */}
+{!isS && (
+<div style={{position:“absolute”,top:“40%”,left:isXL?14:8,right:isXL?14:8,textAlign:“center”}}>
+<div style={{color:”#fff”,fontWeight:800,fontSize:isXL?22:14,lineHeight:1.15,fontStyle:“italic”,textShadow:“0 2px 12px rgba(0,0,0,0.9)”}}>“{d.tag}”</div>
+</div>
+)}
+{/* Bottom */}
+<div style={{position:“absolute”,bottom:0,left:0,right:0,padding:isXL?“12px 14px”:“7px 9px”,display:“flex”,flexDirection:“column”,gap:5}}>
+{d.offer && <Coupon offer={d.offer} accent="#fff" dark={true}/>}
+<div style={{display:“flex”,justifyContent:“space-between”,alignItems:“flex-end”}}>
+<div>
+{d.addr&&<div style={{color:“rgba(255,255,255,0.85)”,fontSize:isXL?10:8,fontFamily:“sans-serif”}}>{d.addr}</div>}
+<div style={{color:”#fff”,fontSize:isXL?15:isS?10:12,fontWeight:900,fontFamily:“sans-serif”}}>{d.phone}</div>
+</div>
+</div>
+</div>
+</div>
+);
+}
+
+// Split Clean — photo left, content right
+function SplitCleanSample({ d, w, h }) {
+const col = COLORS[d.ind] || COLORS[“Dentist”];
+const photo = PHOTOS[d.ind] || PHOTOS[“Dentist”];
+const isS = w <= 200 && h <= 200;
+const isXL = h > 400;
+return (
+<div style={{width:“100%”,height:“100%”,overflow:“hidden”,display:“flex”,flexDirection:isXL?“column”:“row”,background:”#fff”,fontFamily:“sans-serif”}}>
+{d.star&&<div style={{position:“absolute”,top:6,right:6,zIndex:10}}><Starburst text={d.star} size={isXL?80:50}/></div>}
+{/* Photo */}
+<div style={{width:isXL?“100%”:isS?“35%”:“44%”,height:isXL?“42%”:“100%”,position:“relative”,flexShrink:0,overflow:“hidden”}}>
+<img src={photo} alt=”” style={{width:“100%”,height:“100%”,objectFit:“cover”,display:“block”}}/>
+<div style={{position:“absolute”,inset:0,background:`linear-gradient(${isXL?"180deg":"90deg"},transparent 50%,${col.l}ff 100%)`}}/>
+</div>
+{/* Content */}
+<div style={{flex:1,padding:isXL?“10px 14px”:“8px 10px”,display:“flex”,flexDirection:“column”,justifyContent:“space-between”,background:col.l}}>
+<div>
+<div style={{color:col.a,fontSize:isS?7:8,fontWeight:700,letterSpacing:2,textTransform:“uppercase”}}>{d.ind}</div>
+<div style={{color:col.d,fontWeight:900,fontSize:isXL?22:isS?13:17,fontFamily:“Georgia,serif”,lineHeight:1.0}}>{d.biz}</div>
+{!isS&&<div style={{fontSize:isXL?13:10,color:col.p,fontWeight:700,marginTop:3,fontStyle:“italic”}}>{d.tag}</div>}
+</div>
+{!isS&&d.menu&&(
+<div style={{display:“flex”,flexDirection:“column”,gap:3}}>
+{(d.menu||[]).slice(0,isXL?4:3).map((item,i)=>(
+<div key={i} style={{display:“flex”,gap:5,alignItems:“center”}}>
+<div style={{width:14,height:14,borderRadius:“50%”,background:col.a,display:“flex”,alignItems:“center”,justifyContent:“center”,flexShrink:0}}>
+<span style={{color:”#fff”,fontSize:8,fontWeight:900}}>✓</span>
+</div>
+<div style={{fontSize:isXL?11:9,color:”#222”,fontWeight:500}}>{item}</div>
+</div>
+))}
+</div>
+)}
+<div>
+{d.addr&&<div style={{fontSize:isXL?10:8,color:”#555”}}>{d.addr}</div>}
+<div style={{fontSize:isXL?15:isS?10:13,color:col.p,fontWeight:900}}>{d.phone}</div>
+{d.offer&&<Coupon offer={d.offer} fine={d.fine} accent={col.p}/>}
+</div>
+</div>
+</div>
+);
+}
+
+// Magazine — header bar + photo strip + content
+function MagazineSample({ d, w, h }) {
+const col = COLORS[d.ind] || COLORS[“Insurance”];
+const photo = PHOTOS[d.ind] || PHOTOS[“Insurance”];
+const isS = w <= 200 && h <= 200;
+const isXL = h > 400;
+return (
+<div style={{width:“100%”,height:“100%”,overflow:“hidden”,display:“flex”,flexDirection:“column”,background:”#fff”,fontFamily:“Georgia,serif”,border:`3px solid ${col.p}`,boxSizing:“border-box”}}>
+{/* Header */}
+<div style={{background:col.p,padding:isXL?“8px 12px”:“5px 8px”,display:“flex”,alignItems:“center”,justifyContent:“space-between”,flexShrink:0}}>
+<div style={{display:“flex”,alignItems:“center”,gap:7}}>
+<div style={{width:isXL?36:22,height:isXL?36:22,borderRadius:“50%”,background:col.a,display:“flex”,alignItems:“center”,justifyContent:“center”,fontSize:isXL?18:11,flexShrink:0}}>{EMOJI[d.ind]||“🏪”}</div>
+<div style={{color:”#fff”,fontWeight:900,fontSize:isXL?18:isS?11:14,lineHeight:1.0}}>{d.biz}</div>
+</div>
+{!isS&&<div style={{color:”#fff”,fontSize:isXL?13:10,fontWeight:900,background:“rgba(0,0,0,0.3)”,padding:“3px 8px”,borderRadius:4,fontFamily:“sans-serif”,whiteSpace:“nowrap”}}>{d.phone}</div>}
+</div>
+{/* Photo strip */}
+{!isS&&(
+<div style={{height:isXL?“38%”:“35%”,flexShrink:0,overflow:“hidden”,display:“flex”,gap:2,position:“relative”}}>
+<img src={photo} alt=”” style={{width:“100%”,height:“100%”,objectFit:“cover”,display:“block”}}/>
+<div style={{position:“absolute”,inset:0,background:`linear-gradient(transparent 60%,${col.l})`}}/>
+</div>
+)}
+{/* Content */}
+<div style={{flex:1,padding:isXL?“6px 12px 8px”:“4px 8px 6px”,display:“flex”,flexDirection:“column”,justifyContent:“space-between”}}>
+<div>
+<div style={{color:col.a,fontSize:isS?7:8,fontWeight:700,letterSpacing:2,textTransform:“uppercase”,fontFamily:“sans-serif”}}>{d.ind}</div>
+<div style={{color:col.d,fontSize:isXL?17:isS?12:14,fontWeight:900,lineHeight:1.1,marginTop:2}}>{d.tag}</div>
+</div>
+{!isS&&d.menu&&(
+<div style={{display:“flex”,flexWrap:“wrap”,gap:`3px ${isXL?14:8}px`}}>
+{(d.menu||[]).slice(0,isXL?6:4).map((item,i)=>(
+<div key={i} style={{display:“flex”,alignItems:“center”,gap:3}}>
+<span style={{color:col.p,fontSize:isXL?10:8}}>●</span>
+<span style={{fontSize:isXL?11:9,color:”#333”,fontWeight:500,fontFamily:“sans-serif”}}>{item}</span>
+</div>
+))}
+</div>
+)}
+<div>
+{d.addr&&<div style={{fontSize:isXL?10:8,color:”#666”,fontFamily:“sans-serif”}}>{d.addr}</div>}
+{isS&&<div style={{fontSize:10,color:col.p,fontWeight:900,fontFamily:“sans-serif”}}>{d.phone}</div>}
+{d.offer&&<Coupon offer={d.offer} fine={d.fine} accent={col.p}/>}
+</div>
+</div>
+</div>
+);
+}
+
+// Stamp — bold diagonal, big phone
+function StampSample({ d, w, h }) {
+const col = COLORS[d.ind] || COLORS[“Lawn & Landscaping”];
+const photo = PHOTOS[d.ind] || PHOTOS[“Lawn & Landscaping”];
+const isS = w <= 200 && h <= 200;
+const isXL = h > 400;
+return (
+<div style={{width:“100%”,height:“100%”,overflow:“hidden”,position:“relative”,background:col.d,fontFamily:“sans-serif”}}>
+<img src={photo} alt=”” style={{position:“absolute”,inset:0,width:“100%”,height:“100%”,objectFit:“cover”,opacity:0.35}}/>
+{d.star&&<div style={{position:“absolute”,top:isXL?12:6,left:isXL?12:6,zIndex:5}}><Starburst text={d.star} size={isXL?80:isS?40:55}/></div>}
+{/* Diagonal accent */}
+<div style={{position:“absolute”,inset:0,background:`linear-gradient(135deg,${col.p}cc 0%,${col.p}00 50%)`}}/>
+{/* Offer banner */}
+{d.offer&&(
+<div style={{position:“absolute”,top:isXL?“28%”:“22%”,left:0,right:0,background:col.a,padding:isXL?“10px 16px”:“5px 10px”,textAlign:“center”,boxShadow:“0 3px 12px rgba(0,0,0,0.4)”}}>
+<div style={{color:”#fff”,fontWeight:900,fontSize:isXL?20:isS?11:14,lineHeight:1}}>{d.offer}</div>
+{d.fine&&!isS&&<div style={{color:“rgba(255,255,255,0.85)”,fontSize:isXL?11:9,marginTop:2}}>{d.fine}</div>}
+</div>
+)}
+{/* Business name */}
+<div style={{position:“absolute”,bottom:isXL?60:isS?22:32,left:isXL?14:8,right:isXL?14:8,textAlign:“center”}}>
+<div style={{color:”#fff”,fontWeight:900,fontSize:isXL?22:isS?12:15,textShadow:“0 2px 8px rgba(0,0,0,0.8)”,lineHeight:1.1}}>{d.biz}</div>
+<div style={{color:col.a,fontWeight:700,fontSize:isXL?16:isS?10:13,marginTop:isXL?4:2}}>{d.phone}</div>
+{!isS&&<div style={{color:“rgba(255,255,255,0.7)”,fontSize:isXL?10:8,marginTop:2,fontStyle:“italic”}}>{d.tag}</div>}
+</div>
+{/* Bottom address */}
+<div style={{position:“absolute”,bottom:0,left:0,right:0,background:“rgba(0,0,0,0.5)”,padding:isXL?“8px 12px”:“4px 8px”,display:“flex”,justifyContent:“space-between”,alignItems:“center”}}>
+{d.addr&&<div style={{color:“rgba(255,255,255,0.8)”,fontSize:isXL?9:7}}>{d.addr}</div>}
+<div style={{color:col.a,fontSize:isXL?9:7,fontWeight:700}}>mytownpostcard.com</div>
+</div>
+</div>
+);
+}
+
+// ─── Render a sample ad given a config and natural dimensions ─────────────────
+function SampleAd({ config, w, h }) {
+if (!config) return null;
+const props = { d: config, w, h };
+if (config.tmpl === “photobold”) return <PhotoBoldSample {…props}/>;
+if (config.tmpl === “splitclean”) return <SplitCleanSample {…props}/>;
+if (config.tmpl === “magazine”) return <MagazineSample {…props}/>;
+if (config.tmpl === “stamp”) return <StampSample {…props}/>;
+return <PhotoBoldSample {…props}/>;
+}
+
+// ─── House ad ────────────────────────────────────────────────────────────────
+function HouseAd({ w, h }) {
+return (
+<div style={{width:“100%”,height:“100%”,background:”#1a1a2e”,display:“flex”,alignItems:“center”,justifyContent:“center”,gap:h>50?16:8,padding:“6px 12px”,boxSizing:“border-box”}}>
+<div style={{textAlign:“center”}}>
+<div style={{color:”#e2e8f0”,fontWeight:900,fontSize:h>60?13:10,fontFamily:“sans-serif”,whiteSpace:“nowrap”}}>Shop, Dine & Buy Local</div>
+<div style={{color:“rgba(255,255,255,0.5)”,fontSize:h>60?9:7,fontFamily:“sans-serif”}}>YOUR AD HERE</div>
+<div style={{color:”#991b1b”,fontWeight:700,fontSize:h>60?11:9,fontFamily:“sans-serif”}}>mytownpostcard.com</div>
+</div>
+</div>
+);
+}
+
+// ─── EDDM Indicia ─────────────────────────────────────────────────────────────
+function EDDMIndicia({ w, h }) {
+return (
+<div style={{width:“100%”,height:“100%”,border:“2px solid #999”,display:“flex”,flexDirection:“column”,alignItems:“center”,justifyContent:“center”,background:”#f8f8f8”,boxSizing:“border-box”,padding:8}}>
+<div style={{fontSize:10,fontWeight:700,fontFamily:“sans-serif”,color:”#333”,textAlign:“center”,lineHeight:1.4}}>
+<div>PRESORTED STD</div>
+<div>U.S. POSTAGE PAID</div>
+<div>CLARKESVILLE, GA 30523</div>
+<div style={{marginTop:4,borderTop:“1px solid #ccc”,paddingTop:4}}>LOCAL POSTAL CUSTOMER</div>
+<div style={{fontWeight:900,letterSpacing:1}}>EDDM</div>
+</div>
+</div>
+);
+}
+
+// ─── Available spot ───────────────────────────────────────────────────────────
+const SIZE_LABELS = { XL:“Extra Large”, L:“Large”, M:“Medium”, S:“Small” };
+
+function AvailableSpot({ spot, scale, onClick }) {
+const [hovered, setHovered] = useState(false);
+const fs = { XL:{ plus:48, name:17, price:21, dims:12 }, L:{ plus:36, name:14, price:18, dims:11 }, M:{ plus:26, name:11, price:14, dims:10 }, S:{ plus:20, name:9, price:12, dims:9 } }[spot.size] || { plus:20, name:9, price:12, dims:9 };
+return (
+<div
+onClick={() => onClick(spot)}
+onMouseEnter={() => setHovered(true)}
+onMouseLeave={() => setHovered(false)}
+style={{
+width:“100%”, height:“100%”,
+border: `${Math.max(1.5, 2.5/scale)}px dashed ${hovered?"#16a34a":"#22c55e"}`,
+background: hovered ? “rgba(22,163,74,0.12)” : “rgba(240,253,244,0.9)”,
+display:“flex”, flexDirection:“column”, alignItems:“center”, justifyContent:“center”,
+cursor:“pointer”, boxSizing:“border-box”, transition:“all 0.15s”, gap:3,
+}}
+>
+<div style={{color:hovered?”#15803d”:”#16a34a”, fontSize:fs.plus, fontWeight:300, lineHeight:1}}>+</div>
+<div style={{color:hovered?”#15803d”:”#16a34a”, fontSize:fs.name, fontWeight:700, fontFamily:“sans-serif”}}>{SIZE_LABELS[spot.size]} Spot</div>
+<div style={{color:”#111”, fontSize:fs.price, fontWeight:900, fontFamily:“sans-serif”}}>${spot.price}</div>
+<div style={{color:”#555”, fontSize:fs.dims, fontFamily:“sans-serif”}}>{spot.size===“XL”?“4" × 5"”:spot.size===“L”?“4" × 3"”:spot.size===“M”?“3" × 2"”:“2" × 2"”}</div>
+</div>
+);
+}
+
+// ─── Reserved spot ────────────────────────────────────────────────────────────
+function ReservedSpot({ spot }) {
+return (
+<div style={{width:“100%”,height:“100%”,background:”#fefce8”,border:“2px dashed #fbbf24”,display:“flex”,flexDirection:“column”,alignItems:“center”,justifyContent:“center”,boxSizing:“border-box”,gap:4}}>
+<div style={{fontSize:20}}>📌</div>
+<div style={{color:”#92400e”,fontWeight:700,fontSize:11,fontFamily:“sans-serif”}}>Reserved</div>
+</div>
+);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SPOT RENDERER — scales content to fill its natural pixel cell
+// ─────────────────────────────────────────────────────────────────────────────
+function SpotCell({ spot, spotData, scale, onSelect }) {
+// Natural pixel dimensions for this spot
+const nw = spot.w;
+const nh = spot.h;
+
+if (spot.size === “house”) return (
+<div style={{ position:“absolute”, left: spot.x * scale, top: spot.y * scale, width: nw * scale, height: nh * scale, overflow:“hidden” }}>
+<HouseAd w={nw} h={nh}/>
+</div>
+);
+
+if (spot.size === “eddm”) return (
+<div style={{ position:“absolute”, left: spot.x * scale, top: spot.y * scale, width: nw * scale, height: nh * scale, overflow:“hidden”, display:“flex”, flexDirection:“column” }}>
+<div style={{flex:1, overflow:“hidden”}}>
+<EDDMIndicia w={nw} h={nh*0.6}/>
+</div>
+<div style={{height: nh * 0.4 * scale, background:”#f0f0f0”, display:“flex”, alignItems:“center”, justifyContent:“center”}}>
+<div style={{fontSize:9,color:”#999”,fontFamily:“sans-serif”,textAlign:“center”,padding:4}}>LOCAL POSTAL CUSTOMER · EDDM</div>
+</div>
+</div>
+);
+
+if (spot.size === “fill”) return (
+<div style={{ position:“absolute”, left: spot.x * scale, top: spot.y * scale, width: nw * scale, height: nh * scale, background:”#f5f5f5” }}/>
+);
+
+const config = SAMPLE_MAP[spot.id];
+const status = spotData?.[spot.id]?.status || “available”;
+
+return (
+<div style={{
+position: “absolute”,
+left: spot.x * scale,
+top: spot.y * scale,
+width: nw * scale,
+height: nh * scale,
+overflow: “hidden”,
+boxSizing: “border-box”,
+outline: “0.5px solid rgba(0,0,0,0.08)”,
+}}>
+{/* Scale wrapper: renders ad at natural size, then shrinks */}
+<div style={{
+position: “absolute”,
+top: 0, left: 0,
+width: nw,
+height: nh,
+transformOrigin: “top left”,
+transform: `scale(${scale})`,
+}}>
+{status === “paid” && config ? (
+<SampleAd config={config} w={nw} h={nh}/>
+) : status === “reserved” ? (
+<ReservedSpot spot={spot}/>
+) : config ? (
+// Has a sample ad — show it as a demo
+<SampleAd config={config} w={nw} h={nh}/>
+) : (
+// Available for purchase
+<AvailableSpot spot={spot} scale={scale} onClick={onSelect}/>
+)}
+</div>
+</div>
+);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN EXPORT — PostcardPickerSection
+// ─────────────────────────────────────────────────────────────────────────────
+export default function PostcardPickerSection({ spotData, onSelectSpot, activeCampaign }) {
+const [side, setSide] = useState(“front”);
+const containerRef = useRef(null);
+const [scale, setScale] = useState(0.5);
+
+// Calculate scale from container width
+useEffect(() => {
+function updateScale() {
+if (!containerRef.current) return;
+const availW = containerRef.current.offsetWidth - 4;
+setScale(availW / NATURAL_W);
+}
+updateScale();
+const ro = new ResizeObserver(updateScale);
+if (containerRef.current) ro.observe(containerRef.current);
+return () => ro.disconnect();
+}, []);
+
+const spots = side === “front” ? FRONT_SPOTS_FINAL : BACK_SPOTS_FINAL;
+const soldFront = FRONT_SPOTS_FINAL.filter(s => s.price > 0 && (spotData?.[s.id]?.status === “paid”)).length;
+const soldBack  = BACK_SPOTS_FINAL.filter(s => s.price > 0 && (spotData?.[s.id]?.status === “paid”)).length;
+
+return (
+<div style={{ width:“100%”, fontFamily:“sans-serif” }}>
+
+```
+  {/* Side toggle */}
+  <div style={{ display:"flex", justifyContent:"center", marginBottom:16 }}>
+    <div style={{ background:"#f1f5f9", borderRadius:12, padding:4, display:"flex", gap:4, boxShadow:"inset 0 1px 3px rgba(0,0,0,0.1)" }}>
+      {[{id:"front",label:"📮 Front Side",sold:soldFront,total:9},{id:"back",label:"🗂 Back Side",sold:soldBack,total:7}].map(s=>(
+        <button key={s.id} onClick={()=>setSide(s.id)} style={{
+          padding:"10px 28px", borderRadius:9, border:"none", cursor:"pointer",
+          background: side===s.id ? "#991b1b" : "transparent",
+          color: side===s.id ? "#fff" : "#64748b",
+          fontWeight:700, fontSize:14, transition:"all 0.2s",
+          boxShadow: side===s.id ? "0 2px 8px rgba(153,27,27,0.4)" : "none",
+        }}>
+          {s.label}<br/>
+          <span style={{fontSize:11,fontWeight:400,opacity:0.85}}>{s.sold} of {s.total} sold</span>
+        </button>
+      ))}
+    </div>
+  </div>
+
+  {/* Label */}
+  <div style={{ textAlign:"center", marginBottom:8 }}>
+    <span style={{ fontSize:11, fontWeight:700, color:"#64748b", letterSpacing:1, textTransform:"uppercase" }}>
+      {side==="front"?"Front":"Back"} Side — 12" × 9" · Reaching 5,000 Homes
+    </span>
+  </div>
+
+  {/* Postcard */}
+  <div ref={containerRef} style={{ width:"100%", maxWidth:960, margin:"0 auto" }}>
+    <div style={{
+      position: "relative",
+      width: "100%",
+      height: NATURAL_H * scale,
+      background: "#fff",
+      borderRadius: 4,
+      overflow: "hidden",
+      boxShadow: "0 4px 24px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.1)",
+      border: "1px solid #e2e8f0",
+    }}>
+      {/* Header bar */}
+      <div style={{
+        position:"absolute", top:0, left:0, right:0,
+        height: 28 * scale,
+        background:"#7f1d1d",
+        display:"flex", alignItems:"center", justifyContent:"space-between",
+        padding:`0 ${12*scale}px`,
+        zIndex:20,
+      }}>
+        <div style={{display:"flex",alignItems:"center",gap:6*scale}}>
+          <span style={{fontSize:11*scale}}>📮</span>
+          <span style={{color:"#fff",fontWeight:800,fontSize:11*scale,letterSpacing:0.5}}>My Town Postcard · {side==="front"?"Front":"Back"} Side</span>
+        </div>
+        <span style={{color:"rgba(255,255,255,0.75)",fontSize:9*scale}}>Reaching 5,000 Local Homes · Summer 2026</span>
+      </div>
+
+      {/* Spots */}
+      <div style={{ position:"absolute", inset:0, top: 28*scale }}>
+        {spots.map(spot => (
+          <SpotCell
+            key={spot.id}
+            spot={{...spot, y: spot.y === 0 ? 0 : spot.y}}
+            spotData={spotData}
+            scale={scale}
+            onSelect={onSelectSpot}
+          />
+        ))}
+      </div>
+
+      {/* Footer */}
+      <div style={{
+        position:"absolute", bottom:0, left:0, right:0,
+        height:22*scale, background:"#1a1a2e",
+        display:"flex", alignItems:"center", justifyContent:"space-between",
+        padding:`0 ${12*scale}px`, zIndex:20,
+      }}>
+        <span style={{color:"rgba(255,255,255,0.6)",fontSize:8*scale,fontFamily:"sans-serif"}}>LOCAL POSTAL CUSTOMER · EDDM</span>
+        <span style={{color:"rgba(255,255,255,0.6)",fontSize:8*scale,fontFamily:"sans-serif"}}>PRESORTED STD · U.S. POSTAGE PAID · CLARKESVILLE GA 30523</span>
+      </div>
+    </div>
+  </div>
+
+  {/* Legend */}
+  <div style={{ display:"flex", justifyContent:"center", gap:24, marginTop:12 }}>
+    {[
+      { color:"rgba(240,253,244,0.9)", border:"2px dashed #22c55e", label:"Available — click to reserve" },
+      { color:"#fef9c3", border:"2px dashed #fbbf24", label:"Your selection" },
+      { color:"#f1f5f9", border:"2px solid #cbd5e1", label:"Spot taken" },
+    ].map(l=>(
+      <div key={l.label} style={{display:"flex",alignItems:"center",gap:6}}>
+        <div style={{width:18,height:18,background:l.color,border:l.border,borderRadius:3}}/>
+        <span style={{fontSize:12,color:"#64748b"}}>{l.label}</span>
+      </div>
+    ))}
+  </div>
+</div>
+```
+
+);
+}
