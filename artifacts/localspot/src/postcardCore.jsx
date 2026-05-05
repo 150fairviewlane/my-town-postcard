@@ -3,23 +3,25 @@ import { MrBiscuitsLarge, MrBiscuitsMedium, MrBiscuitsSmall } from "./MrBiscuits
 
 export const SIZES = {
   xl:     { label: "Extra-Large", dim: '4" × 5"', desc: "Prime placement, maximum impact" },
-  large:  { label: "Large",       dim: '3" × 4"', desc: "Great visibility, popular choice" },
+  large:  { label: "Large",       dim: '4" × 3"', desc: "Great visibility, popular choice" },
   medium: { label: "Medium",      dim: '3" × 2"', desc: "Growing reach, great value" },
   small:  { label: "Small",       dim: '2" × 2"', desc: "Affordable local reach" },
 };
 
-// "hs" = permanent house ad (cols 9-10, rows 6-7 — center-right of bottom half).
-// pz and a1 narrowed from 3 cols to 2 cols to make room; lw and a2 unchanged.
+// Front-side grid: 12 cols × 9 rows. 1 column = 1 inch = 56 px.
+// Sizes: XL=4×5, Large=4×3, Medium=3×2, Small=1×2 (only 1 col remains after medium+2xl cols).
+// House ad (hs) fills the bottom strip cols 1-8 row 9.
+// Layout verified to tile all 108 cells (12×9) with no gaps or overlaps.
 export const GRID_AREAS = [
-  "mb mb mb mb dn dn dn dn re re re re",
-  "mb mb mb mb dn dn dn dn re re re re",
-  "mb mb mb mb dn dn dn dn re re re re",
-  "mb mb mb mb dn dn dn dn re re re re",
-  "mb mb mb mb dn dn dn dn re re re re",
-  "hv hv hv ins ins ins pz pz hs hs a1 a1",
-  "hv hv hv ins ins ins pz pz hs hs a1 a1",
-  "hv hv hv ins ins ins lw lw lw a2 a2 a2",
-  "hv hv hv ins ins ins lw lw lw a2 a2 a2",
+  "mb  mb  mb  mb  dn  dn  dn  dn  re  re  re  re",
+  "mb  mb  mb  mb  dn  dn  dn  dn  re  re  re  re",
+  "mb  mb  mb  mb  dn  dn  dn  dn  re  re  re  re",
+  "mb  mb  mb  mb  dn  dn  dn  dn  re  re  re  re",
+  "mb  mb  mb  mb  dn  dn  dn  dn  re  re  re  re",
+  "hv  hv  hv  hv  ins ins ins ins pz  pz  pz  a1",
+  "hv  hv  hv  hv  ins ins ins ins pz  pz  pz  a1",
+  "hv  hv  hv  hv  ins ins ins ins lw  lw  lw  a2",
+  "hs  hs  hs  hs  hs  hs  hs  hs  lw  lw  lw  a2",
 ].map(r => `"${r}"`).join(" ");
 
 

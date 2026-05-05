@@ -1,0 +1,65 @@
+Fix the postcard picker grid to display at correct 12x9 landscape proportions. The postcard is 12 inches wide by 9 inches tall. Every ad size must be proportionally accurate so customers understand exactly what they are buying.
+
+THE MATH — use these exact proportions throughout:
+Base unit: 1 inch = 56px at default scale (adjust if needed to fit the screen)
+Postcard total: 12” wide x 9” tall = 672px wide x 504px tall
+Front side ad layout uses a 12-column x 9-row grid where each unit = 56px
+
+AD SIZES IN GRID UNITS (these are the real print dimensions):
+
+- XL spot: 4” wide x 5” tall = 4 columns x 5 rows = 224px x 280px
+- Large spot: 4” wide x 3” tall = 4 columns x 3 rows = 224px x 168px
+- Medium spot: 3” wide x 2” tall = 3 columns x 2 rows = 168px x 112px
+- Small spot: 2” wide x 2” tall = 2 columns x 2 rows = 112px x 112px
+- House ad: fills remaining front space
+- EDDM indicia on back: 4” wide x 2.125” tall = 224px x 119px
+
+FRONT SIDE LAYOUT (3 XL + 2 Large + 2 Medium + 2 Small + 1 house ad):
+The front grid is 12 columns wide x 9 rows tall. Place spots using CSS grid-template-areas or explicit gridColumn and gridRow values:
+
+- XL spot 1: columns 1-4, rows 1-5 (top left, 4x5”)
+- XL spot 2: columns 5-8, rows 1-5 (top center, 4x5”)
+- XL spot 3: columns 9-12, rows 1-5 (top right, 4x5”)
+- Large spot 1: columns 1-4, rows 6-8 (bottom left, 4x3”)
+- Large spot 2: columns 5-8, rows 6-8 (bottom center-left, 4x3”)
+- Medium spot 1: columns 9-11, rows 6-7 (bottom center-right, 3x2”)
+- Medium spot 2: columns 9-11, rows 8-9 (bottom center-right lower, 3x2”)
+- Small spot 1: column 12, rows 6-7 — NOTE: Small is 2” wide but only 1 column remains here so adjust layout if needed to fit small spots properly
+- Small spot 2: column 12, rows 8-9
+- House ad: fills any remaining space
+
+NOTE: If the exact layout above does not perfectly tile a 12x9 grid with the specified ad sizes, adjust the placement to make the spots fit perfectly with no gaps and no overlaps while keeping the sizes as close to spec as possible. The key requirement is that XL spots are visibly larger than Large, Large visibly larger than Medium, and Medium visibly larger than Small — with proportions matching the actual print dimensions.
+
+BACK SIDE LAYOUT (1 XL + 2 Large + 2 Medium + 2 Small + EDDM indicia):
+
+- XL spot 1: columns 1-4, rows 1-5 (left side, 4x5”)
+- Large spot 1: columns 5-8, rows 1-3 (top center-right, 4x3”)
+- Large spot 2: columns 9-12, rows 1-3 (top right, 4x3”)
+- Medium spot 1: columns 5-7, rows 4-5 (center, 3x2”)
+- Medium spot 2: columns 8-10, rows 4-5 (center-right, 3x2”)
+- Small spot 1: columns 5-6, rows 6-7 (lower center, 2x2”)
+- Small spot 2: columns 7-8, rows 6-7 (lower center-right, 2x2”)
+- EDDM indicia box: columns 9-12, rows 6-9 (bottom right, 4x2.125” — not a sellable spot, shows USPS indicia placeholder)
+- Remaining space: house ad or decorative filler
+
+IMPLEMENTATION:
+Use a CSS grid on the postcard container with:
+gridTemplateColumns: repeat(12, 1fr)
+gridTemplateRows: repeat(9, 1fr)
+width: 672px (or scale proportionally to fit the screen with max-width)
+aspectRatio: 12 / 9
+
+Each spot div should use gridColumn and gridRow to place it at the correct position. The spot’s internal content (sample ad or available spot indicator) should fill 100% width and height of its grid cell using width: 100% and height: 100%.
+
+SCALING FOR DIFFERENT SCREENS:
+Wrap the postcard grid in a container that uses transform: scale() to fit within the available viewport width while maintaining the 12:9 aspect ratio. On screens narrower than 700px use a scale factor so the postcard shrinks proportionally rather than overflowing.
+
+VISUAL REQUIREMENTS:
+
+- Add a thin border around the entire postcard (1-2px solid #ccc) to define its edges
+- Add a very subtle drop shadow to the postcard container
+- Show a small label above the grid: “Front Side — 12” × 9” · Reaching 5,000 Homes”
+- The grid lines between spots should be visible as thin lines (1px solid rgba(0,0,0,0.1)) so customers can clearly see where their ad ends and the next begins
+- Do not add any padding inside individual spot cells — the ad content should go edge to edge within each cell
+
+Do not change any ad template components, AdGenerator, AdAssistant, backend code, or database.

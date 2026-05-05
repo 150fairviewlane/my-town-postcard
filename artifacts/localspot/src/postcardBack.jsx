@@ -26,16 +26,32 @@
 //           indicia, address line, and barcode. Not a paid ad slot.
 //   • bhs, bhr, bhn — house ads / brand promo. Filled by us, not for sale.
 
+// Back-side grid: 12 cols × 9 rows. 1 column = 1 inch.
+// Sizes: XL=4×5, Large=4×3, Medium=3×2, Small=2×2, EDDM=4×4.
+// House ads fill remaining cells: bhs (2×2 top-right corner of middle band),
+// bhr (4×4 left strip rows 6-9), bhn (4×2 bottom-center banner).
+// Layout tiles all 108 cells with no gaps or overlaps.
+//
+//   cols: 1  2  3  4  5  6  7  8  9  10 11 12
+//  row 1: bxl bxl bxl bxl bl1 bl1 bl1 bl1 bl2 bl2 bl2 bl2
+//  row 2: bxl bxl bxl bxl bl1 bl1 bl1 bl1 bl2 bl2 bl2 bl2
+//  row 3: bxl bxl bxl bxl bl1 bl1 bl1 bl1 bl2 bl2 bl2 bl2
+//  row 4: bxl bxl bxl bxl bm1 bm1 bm1 bm2 bm2 bm2 bhs bhs
+//  row 5: bxl bxl bxl bxl bm1 bm1 bm1 bm2 bm2 bm2 bhs bhs
+//  row 6: bhr bhr bhr bhr bs1 bs1 bs2 bs2 ed  ed  ed  ed
+//  row 7: bhr bhr bhr bhr bs1 bs1 bs2 bs2 ed  ed  ed  ed
+//  row 8: bhr bhr bhr bhr bhn bhn bhn bhn ed  ed  ed  ed
+//  row 9: bhr bhr bhr bhr bhn bhn bhn bhn ed  ed  ed  ed
 export const BACK_GRID_AREAS = [
-  "bxl bxl bxl bxl bl1 bl1 bl1 bl2 bl2 bl2 bhs bhs",
-  "bxl bxl bxl bxl bl1 bl1 bl1 bl2 bl2 bl2 bhs bhs",
-  "bxl bxl bxl bxl bl1 bl1 bl1 bl2 bl2 bl2 bhs bhs",
-  "bxl bxl bxl bxl bl1 bl1 bl1 bl2 bl2 bl2 bhs bhs",
+  "bxl bxl bxl bxl bl1 bl1 bl1 bl1 bl2 bl2 bl2 bl2",
+  "bxl bxl bxl bxl bl1 bl1 bl1 bl1 bl2 bl2 bl2 bl2",
+  "bxl bxl bxl bxl bl1 bl1 bl1 bl1 bl2 bl2 bl2 bl2",
   "bxl bxl bxl bxl bm1 bm1 bm1 bm2 bm2 bm2 bhs bhs",
-  "bs1 bs1 bs2 bs2 bm1 bm1 bm1 bm2 bm2 bm2 bhs bhs",
-  "bs1 bs1 bs2 bs2 bhr bhr bhr bhr bhr bhr bhs bhs",
-  "bhn bhn bhn bhn bhn bhn bhn bhn ed  ed  ed  ed ",
-  "bhn bhn bhn bhn bhn bhn bhn bhn ed  ed  ed  ed ",
+  "bxl bxl bxl bxl bm1 bm1 bm1 bm2 bm2 bm2 bhs bhs",
+  "bhr bhr bhr bhr bs1 bs1 bs2 bs2 ed  ed  ed  ed ",
+  "bhr bhr bhr bhr bs1 bs1 bs2 bs2 ed  ed  ed  ed ",
+  "bhr bhr bhr bhr bhn bhn bhn bhn ed  ed  ed  ed ",
+  "bhr bhr bhr bhr bhn bhn bhn bhn ed  ed  ed  ed ",
 ].map((r) => `"${r}"`).join(" ");
 
 // Render order for sellable back-side spots (used by sort helpers in callers).

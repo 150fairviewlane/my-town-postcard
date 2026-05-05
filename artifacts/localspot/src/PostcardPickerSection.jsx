@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useGetActiveCampaign, useReserveSpot } from "@workspace/api-client-react";
 import {
@@ -95,6 +95,23 @@ export default function PostcardPickerSection() {
   // matters server-side, the front/back distinction is purely a layout
   // partition for the picker.
   const [side, setSide] = useState("front");
+
+  // Postcard natural dimensions: 12" × 9" at 56 px/inch.
+  const POSTCARD_W = 672;
+  const POSTCARD_H = 504;
+  // Scale the postcard to fit the available container width on narrow screens.
+  const gridContainerRef = useRef(null);
+  const [postcardScale, setPostcardScale] = useState(1);
+  useEffect(() => {
+    const el = gridContainerRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver(([entry]) => {
+      const w = entry.contentRect.width;
+      setPostcardScale(Math.min(1, w / POSTCARD_W));
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
   // Active hold (if any) for THIS browser, used to surface a "resume checkout"
   // banner so customers who closed the checkout tab can pick up where they
   // left off before the 30-min hold expires.
@@ -415,7 +432,7 @@ export default function PostcardPickerSection() {
         <div style={{ position: "absolute", top: -13, left: 20, background: "#111", color: "#fff",
           fontSize: 9, fontWeight: 700, letterSpacing: 1.5, padding: "3px 14px",
           borderRadius: 20, textTransform: "uppercase" }}>
-          Live Postcard Preview · {side === "back" ? "Back" : "Front"} · 12" × 9" · 1 unit = 1 inch
+          {side === "front" ? "Front Side" : "Back Side"} — 12" × 9" · Reaching {campaign.homesCount?.toLocaleString() ?? "5,000"} Homes
         </div>
 
         {/* Red header bar */}
@@ -430,81 +447,78 @@ export default function PostcardPickerSection() {
           </div>
         </div>
 
-        {/* The postcard grid — 12:9 landscape ratio.
-            On narrow viewports the grid would shrink below readability, so
-            we wrap it in a horizontal scroll container and force a 600px
-            minimum width on the grid itself. On desktop the grid still
-            expands to 100% of the parent, so layout is unchanged. */}
-        <div className="ls-mobile-scroll-hint" style={{
-          display: "none", textAlign: "center", color: "#9ca3af",
-          fontSize: 11, fontWeight: 600, letterSpacing: 0.5,
-          padding: "6px 8px 4px", fontFamily: "sans-serif",
-        }}>
-          ← Swipe to see all spots →
-        </div>
-        <style>{`
-          @media (max-width: 767px) {
-            .ls-mobile-scroll-hint { display: block !important; }
-          }
-        `}</style>
-        <div style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
-        <div style={{
-          width: "100%",
-          minWidth: 600,
-          aspectRatio: "12 / 9",
-          display: "grid",
-          gridTemplateColumns: "repeat(12, 1fr)",
-          gridTemplateRows: "repeat(9, 1fr)",
-          gridTemplateAreas: side === "back" ? BACK_GRID_AREAS : GRID_AREAS,
-          gap: "10px",
-          background: "#000",
-        }}>
-          {sortedSpots.map(spot => {
-            const isSelected = selected?.id === spot.id;
-            const isPaid = (spot.status === "paid" || spot.status === "reserved") && spot.gridArea !== "mb";
-            const sampleKey = SPOT_SAMPLE_MAP[spot.gridArea];
-            const sampleContent = !isPaid && sampleKey
-              ? getSampleAd(sampleKey, SIZE_MAP[spot.size] || "S")
-              : null;
+        {/* Postcard grid — 12:9 landscape, proportionally accurate.
+            Natural size: 672 × 504 px (56 px/inch × 12" × 9").
+            On narrow viewports a ResizeObserver scales the postcard down
+            via transform: scale() so it always fits without horizontal scroll
+            while preserving the exact 12:9 aspect ratio. */}
+        <div ref={gridContainerRef} style={{ width: "100%", overflow: "hidden" }}>
+          <div style={{
+            width: POSTCARD_W,
+            height: POSTCARD_H,
+            transformOrigin: "top left",
+            transform: `scale(${postcardScale})`,
+            marginBottom: postcardScale < 1 ? -(POSTCARD_H * (1 - postcardScale)) : 0,
+          }}>
+            <div style={{
+              width: POSTCARD_W,
+              height: POSTCARD_H,
+              display: "grid",
+              gridTemplateColumns: "repeat(12, 1fr)",
+              gridTemplateRows: "repeat(9, 1fr)",
+              gridTemplateAreas: side === "back" ? BACK_GRID_AREAS : GRID_AREAS,
+              gap: 1,
+              background: "rgba(0,0,0,0.15)",
+              border: "1px solid #ccc",
+              boxShadow: "0 4px 24px rgba(0,0,0,0.35)",
+              boxSizing: "border-box",
+            }}>
+              {sortedSpots.map(spot => {
+                const isSelected = selected?.id === spot.id;
+                const isPaid = (spot.status === "paid" || spot.status === "reserved") && spot.gridArea !== "mb";
+                const sampleKey = SPOT_SAMPLE_MAP[spot.gridArea];
+                const sampleContent = !isPaid && sampleKey
+                  ? getSampleAd(sampleKey, SIZE_MAP[spot.size] || "S")
+                  : null;
 
-            return (
-              <div key={spot.id} style={{ gridArea: spot.gridArea, overflow: "hidden", borderRadius: 0,
-                minWidth: 0, minHeight: 0 }}>
-                {isPaid ? (
-                  <PaidAd spot={spot} />
-                ) : sampleContent ? (
-                  <div style={{ position: "relative", width: "100%", height: "100%", cursor: "default" }}>
-                    {sampleContent}
+                return (
+                  <div key={spot.id} style={{ gridArea: spot.gridArea, overflow: "hidden",
+                    minWidth: 0, minHeight: 0 }}>
+                    {isPaid ? (
+                      <PaidAd spot={spot} />
+                    ) : sampleContent ? (
+                      <div style={{ position: "relative", width: "100%", height: "100%", cursor: "default" }}>
+                        {sampleContent}
+                      </div>
+                    ) : (
+                      <AvailableSpot
+                        spot={spot}
+                        isSelected={isSelected}
+                        onClick={() => openCreator(spot)}
+                      />
+                    )}
                   </div>
-                ) : (
-                  <AvailableSpot
-                    spot={spot}
-                    isSelected={isSelected}
-                    onClick={() => openCreator(spot)}
-                  />
-                )}
-              </div>
-            );
-          })}
-          {/* Fixed (non-sellable) cells: house ads on both sides, plus the
-              USPS EDDM placeholder on the back. No click, not counted. */}
-          {fixedAreas.map((area) => (
-            <div
-              key={area}
-              style={{
-                gridArea: area,
-                overflow: "hidden",
-                borderRadius: 0,
-                minWidth: 0,
-                minHeight: 0,
-                cursor: "default",
-                pointerEvents: "none",
-              }}
-            >
-              {renderFixedCell(area)}
+                );
+              })}
+              {/* Fixed (non-sellable) cells: house ads on both sides, plus the
+                  USPS EDDM placeholder on the back. No click, not counted. */}
+              {fixedAreas.map((area) => (
+                <div
+                  key={area}
+                  style={{
+                    gridArea: area,
+                    overflow: "hidden",
+                    minWidth: 0,
+                    minHeight: 0,
+                    cursor: "default",
+                    pointerEvents: "none",
+                  }}
+                >
+                  {renderFixedCell(area)}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </div>
         </div>
 
         {/* EDDM footer strip — visual reminder on the picker, the real
