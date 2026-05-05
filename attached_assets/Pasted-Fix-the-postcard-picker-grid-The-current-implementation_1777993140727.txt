@@ -1,0 +1,56 @@
+Fix the postcard picker grid. The current implementation has two problems: the grid is too wide and overflows the screen, and the ads only appear in the left portion with the right half showing as black empty space. Do not start over — make these targeted fixes to the existing implementation.
+
+PROBLEM 1 - CONTAINER TOO WIDE:
+The postcard container must never exceed the available screen width. Find the postcard grid container div and replace its width/sizing with this approach:
+
+Give the outer wrapper div these styles: width 100%, maxWidth 900px, margin 0 auto. Then give the actual postcard grid div these styles: width 100%, aspectRatio set to 12/9, position relative, overflow hidden. Remove any fixed pixel widths like 672px that are causing overflow. The grid should scale fluidly to fit the container rather than having a hardcoded size.
+
+PROBLEM 2 - ADS ONLY ON LEFT HALF:
+The black empty space on the right means the grid columns are not being assigned correctly. The spots need explicit gridColumn and gridRow values that span the full 12-column grid. Find each spot div and make sure they are placed using the correct grid positions. The three XL spots must span columns 1-4, 5-8, and 9-12 respectively so they fill the full width. Check that all spot divs have their gridColumn and gridRow set correctly and that no spot is missing its placement.
+
+PROBLEM 3 - GRID TEMPLATE:
+The grid container must have these exact CSS properties:
+display: grid
+gridTemplateColumns: repeat(12, 1fr)  
+gridTemplateRows: repeat(9, 1fr)
+width: 100%
+aspectRatio: 12/9
+
+This ensures the grid always maintains 12x9 proportions regardless of screen size.
+
+FRONT SIDE SPOT GRID POSITIONS (gridColumn start/end, gridRow start/end):
+
+- XL spot 1: gridColumn 1/5, gridRow 1/6
+- XL spot 2: gridColumn 5/9, gridRow 1/6
+- XL spot 3: gridColumn 9/13, gridRow 1/6
+- Large spot 1: gridColumn 1/5, gridRow 6/9
+- Large spot 2: gridColumn 5/9, gridRow 6/9
+- Medium spot 1: gridColumn 9/12, gridRow 6/8
+- Medium spot 2: gridColumn 9/12, gridRow 8/10
+- Small spot 1: gridColumn 12/13, gridRow 6/8
+- Small spot 2: gridColumn 12/13, gridRow 8/10
+- House ad: gridColumn 1/5, gridRow 9/10
+
+Note: CSS grid end values are exclusive so column 1/5 means columns 1 through 4 which is 4 columns wide. Row 1/6 means rows 1 through 5 which is 5 rows tall. This gives XL its correct 4x5 inch proportions.
+
+BACK SIDE SPOT GRID POSITIONS:
+
+- XL spot 1: gridColumn 1/5, gridRow 1/6
+- Large spot 1: gridColumn 5/9, gridRow 1/4
+- Large spot 2: gridColumn 9/13, gridRow 1/4
+- Medium spot 1: gridColumn 5/8, gridRow 4/6
+- Medium spot 2: gridColumn 8/11, gridRow 4/6
+- Small spot 1: gridColumn 5/7, gridRow 6/9
+- Small spot 2: gridColumn 7/9, gridRow 6/9
+- EDDM indicia: gridColumn 9/13, gridRow 6/10
+- House ad: gridColumn 1/5, gridRow 6/10
+
+SCALING FIX FOR IPAD AND MOBILE:
+Remove any transform scale approach. Instead rely purely on the fluid width plus aspectRatio CSS property. The grid will automatically scale to fill its container width while maintaining 12:9 proportions. The 1fr columns and rows will divide the available space equally.
+
+FONT SIZES INSIDE SPOTS:
+Because the grid now scales fluidly, the sample ad content inside each spot also needs to scale. Each spot div should have fontSize set using clamp or a viewport-relative unit so text stays readable at different screen sizes. Add overflow hidden to each spot div so content never bleeds outside the grid cell.
+
+After making these fixes verify that: the postcard fills the full width of its container with no black empty space on the right, the three XL spots span the full width of the top portion, the bottom row shows Large Medium and Small spots in descending size order, the aspect ratio stays 12:9 when the window is resized, and no content overflows outside the postcard boundary.
+
+Do not change any ad template components, AdGenerator, AdAssistant, or backend code.

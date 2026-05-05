@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useGetActiveCampaign, useReserveSpot } from "@workspace/api-client-react";
 import {
@@ -28,6 +28,36 @@ import { getSampleAd, SPOT_SAMPLE_MAP } from "./PostcardSampleAds";
 const SIZE_MAP = { xl: "XL", large: "L", medium: "M", small: "S" };
 
 const FRONT_GRID_ORDER = ["mb","dn","re","hv","ins","pz","lw","a1","a2","a3"];
+
+// Explicit grid positions for every named area on both sides.
+// gridColumn / gridRow use CSS end-exclusive line numbers (e.g. "1/5" = cols 1-4).
+// This approach is more reliable than gridTemplateAreas and makes ad placement
+// immediately readable: each spot's print dimensions map directly to its col/row span.
+const GRID_POSITIONS = {
+  // ── Front side ──────────────────────────────────────────────────────────────
+  mb:  { gridColumn: "1/5",   gridRow: "1/6"  },  // XL  4"×5"
+  dn:  { gridColumn: "5/9",   gridRow: "1/6"  },  // XL  4"×5"
+  re:  { gridColumn: "9/13",  gridRow: "1/6"  },  // XL  4"×5"
+  hv:  { gridColumn: "1/5",   gridRow: "6/9"  },  // Lg  4"×3"
+  ins: { gridColumn: "5/9",   gridRow: "6/9"  },  // Lg  4"×3"
+  pz:  { gridColumn: "9/12",  gridRow: "6/8"  },  // Md  3"×2"
+  lw:  { gridColumn: "9/12",  gridRow: "8/10" },  // Md  3"×2"
+  a1:  { gridColumn: "12/13", gridRow: "6/8"  },  // Sm  1"×2" (1 col remains)
+  a2:  { gridColumn: "12/13", gridRow: "8/10" },  // Sm  1"×2"
+  hs:  { gridColumn: "1/9",   gridRow: "9/10" },  // House ad — bottom strip
+  // ── Back side ───────────────────────────────────────────────────────────────
+  bxl: { gridColumn: "1/5",   gridRow: "1/6"  },  // XL  4"×5"
+  bl1: { gridColumn: "5/9",   gridRow: "1/4"  },  // Lg  4"×3"
+  bl2: { gridColumn: "9/13",  gridRow: "1/4"  },  // Lg  4"×3"
+  bm1: { gridColumn: "5/8",   gridRow: "4/6"  },  // Md  3"×2"
+  bm2: { gridColumn: "8/11",  gridRow: "4/6"  },  // Md  3"×2"
+  bs1: { gridColumn: "5/7",   gridRow: "6/9"  },  // Sm  2"×3"
+  bs2: { gridColumn: "7/9",   gridRow: "6/9"  },  // Sm  2"×3"
+  ed:  { gridColumn: "9/13",  gridRow: "6/10" },  // EDDM indicia  4"×4"
+  bhr: { gridColumn: "1/5",   gridRow: "6/10" },  // House ad — left strip
+  bhs: { gridColumn: "11/13", gridRow: "4/6"  },  // House ad — top-right corner
+  bhn: { gridColumn: "5/9",   gridRow: "9/10" },  // House ad — bottom banner
+};
 
 // ─── Permanent house / self-promotion ad ─────────────────────────────────────
 function HouseAd() {
@@ -96,22 +126,6 @@ export default function PostcardPickerSection() {
   // partition for the picker.
   const [side, setSide] = useState("front");
 
-  // Postcard natural dimensions: 12" × 9" at 56 px/inch.
-  const POSTCARD_W = 672;
-  const POSTCARD_H = 504;
-  // Scale the postcard to fit the available container width on narrow screens.
-  const gridContainerRef = useRef(null);
-  const [postcardScale, setPostcardScale] = useState(1);
-  useEffect(() => {
-    const el = gridContainerRef.current;
-    if (!el) return;
-    const obs = new ResizeObserver(([entry]) => {
-      const w = entry.contentRect.width;
-      setPostcardScale(Math.min(1, w / POSTCARD_W));
-    });
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
   // Active hold (if any) for THIS browser, used to surface a "resume checkout"
   // banner so customers who closed the checkout tab can pick up where they
   // left off before the 30-min hold expires.
@@ -447,66 +461,60 @@ export default function PostcardPickerSection() {
           </div>
         </div>
 
-        {/* Postcard grid — 12:9 landscape, proportionally accurate.
-            Natural size: 672 × 504 px (56 px/inch × 12" × 9").
-            On narrow viewports a ResizeObserver scales the postcard down
-            via transform: scale() so it always fits without horizontal scroll
-            while preserving the exact 12:9 aspect ratio. */}
-        <div ref={gridContainerRef} style={{ width: "100%", overflow: "hidden" }}>
+        {/* Postcard grid — fluid 12:9 landscape.
+            width:100% + aspectRatio keeps the 12:9 shape at any screen width.
+            Each cell uses explicit gridColumn/gridRow from GRID_POSITIONS so
+            placement is accurate and independent of gridTemplateAreas. */}
+        <div style={{ width: "100%", maxWidth: 900, margin: "0 auto" }}>
           <div style={{
-            width: POSTCARD_W,
-            height: POSTCARD_H,
-            transformOrigin: "top left",
-            transform: `scale(${postcardScale})`,
-            marginBottom: postcardScale < 1 ? -(POSTCARD_H * (1 - postcardScale)) : 0,
+            width: "100%",
+            aspectRatio: "12 / 9",
+            display: "grid",
+            gridTemplateColumns: "repeat(12, 1fr)",
+            gridTemplateRows: "repeat(9, 1fr)",
+            gap: 1,
+            background: "rgba(0,0,0,0.15)",
+            border: "1px solid #ccc",
+            boxShadow: "0 4px 24px rgba(0,0,0,0.35)",
+            boxSizing: "border-box",
+            overflow: "hidden",
           }}>
-            <div style={{
-              width: POSTCARD_W,
-              height: POSTCARD_H,
-              display: "grid",
-              gridTemplateColumns: "repeat(12, 1fr)",
-              gridTemplateRows: "repeat(9, 1fr)",
-              gridTemplateAreas: side === "back" ? BACK_GRID_AREAS : GRID_AREAS,
-              gap: 1,
-              background: "rgba(0,0,0,0.15)",
-              border: "1px solid #ccc",
-              boxShadow: "0 4px 24px rgba(0,0,0,0.35)",
-              boxSizing: "border-box",
-            }}>
-              {sortedSpots.map(spot => {
-                const isSelected = selected?.id === spot.id;
-                const isPaid = (spot.status === "paid" || spot.status === "reserved") && spot.gridArea !== "mb";
-                const sampleKey = SPOT_SAMPLE_MAP[spot.gridArea];
-                const sampleContent = !isPaid && sampleKey
-                  ? getSampleAd(sampleKey, SIZE_MAP[spot.size] || "S")
-                  : null;
+            {sortedSpots.map(spot => {
+              const isSelected = selected?.id === spot.id;
+              const isPaid = (spot.status === "paid" || spot.status === "reserved") && spot.gridArea !== "mb";
+              const sampleKey = SPOT_SAMPLE_MAP[spot.gridArea];
+              const sampleContent = !isPaid && sampleKey
+                ? getSampleAd(sampleKey, SIZE_MAP[spot.size] || "S")
+                : null;
+              const pos = GRID_POSITIONS[spot.gridArea] || {};
 
-                return (
-                  <div key={spot.id} style={{ gridArea: spot.gridArea, overflow: "hidden",
-                    minWidth: 0, minHeight: 0 }}>
-                    {isPaid ? (
-                      <PaidAd spot={spot} />
-                    ) : sampleContent ? (
-                      <div style={{ position: "relative", width: "100%", height: "100%", cursor: "default" }}>
-                        {sampleContent}
-                      </div>
-                    ) : (
-                      <AvailableSpot
-                        spot={spot}
-                        isSelected={isSelected}
-                        onClick={() => openCreator(spot)}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-              {/* Fixed (non-sellable) cells: house ads on both sides, plus the
-                  USPS EDDM placeholder on the back. No click, not counted. */}
-              {fixedAreas.map((area) => (
+              return (
+                <div key={spot.id} style={{ ...pos, overflow: "hidden", minWidth: 0, minHeight: 0 }}>
+                  {isPaid ? (
+                    <PaidAd spot={spot} />
+                  ) : sampleContent ? (
+                    <div style={{ position: "relative", width: "100%", height: "100%", cursor: "default" }}>
+                      {sampleContent}
+                    </div>
+                  ) : (
+                    <AvailableSpot
+                      spot={spot}
+                      isSelected={isSelected}
+                      onClick={() => openCreator(spot)}
+                    />
+                  )}
+                </div>
+              );
+            })}
+            {/* Fixed (non-sellable) cells: house ads on both sides, plus the
+                USPS EDDM placeholder on the back. No click, not counted. */}
+            {fixedAreas.map((area) => {
+              const pos = GRID_POSITIONS[area] || {};
+              return (
                 <div
                   key={area}
                   style={{
-                    gridArea: area,
+                    ...pos,
                     overflow: "hidden",
                     minWidth: 0,
                     minHeight: 0,
@@ -516,8 +524,8 @@ export default function PostcardPickerSection() {
                 >
                   {renderFixedCell(area)}
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         </div>
 
