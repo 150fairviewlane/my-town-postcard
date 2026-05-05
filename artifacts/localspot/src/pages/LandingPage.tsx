@@ -167,7 +167,7 @@ function Hero() {
 
       <div style={{ flex: "1 1 420px", minWidth: 300, position: "relative" }}>
         <img
-          src={`${import.meta.env.BASE_URL}postcard-hero.png`}
+          src={`${import.meta.env.BASE_URL}postcard-hero-double.png`}
           alt="Sample 9×12 co-op postcard"
           style={{ width: "100%", maxWidth: 560, borderRadius: 12,
             boxShadow: "0 24px 60px rgba(0,0,0,0.18)", display: "block" }}
@@ -255,7 +255,7 @@ function WhyChooseUs() {
         </div>
         <div style={{ flex: "1 1 360px" }}>
           <img
-            src={`${import.meta.env.BASE_URL}postcard-hero.png`}
+            src={`${import.meta.env.BASE_URL}postcard-hero-single.png`}
             alt="9×12 postcard sample"
             style={{ width: "100%", maxWidth: 520, borderRadius: 12,
               boxShadow: "0 16px 48px rgba(0,0,0,0.14)", display: "block" }}
