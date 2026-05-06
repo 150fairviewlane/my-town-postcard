@@ -91,6 +91,7 @@ function ScaledCell({ pos, children, pointerEvents }) {
       minWidth: 0,
       minHeight: 0,
       pointerEvents: pointerEvents || "auto",
+      outline: "0.5px solid rgba(0,0,0,0.08)",
     }}>
       <div style={{
         position: "absolute",
@@ -356,22 +357,18 @@ export default function PostcardPickerSection() {
   const fixedAreas = side === "front" ? ["hs"] : ["bhs", "bhr", "bhn", "ed"];
 
   const sideButtonStyle = (active) => ({
-    flex: 1,
     border: "none",
     cursor: "pointer",
-    padding: "12px 18px",
-    borderRadius: 10,
-    background: active ? "#991b1b" : "transparent",
-    color: active ? "#fff" : "#374151",
-    fontWeight: 800,
+    padding: "11px 32px",
+    borderRadius: 11,
+    background: active ? "linear-gradient(135deg,#991b1b,#7f1d1d)" : "transparent",
+    color: active ? "#fff" : "#64748b",
+    fontWeight: 700,
     fontSize: 14,
     fontFamily: "sans-serif",
-    transition: "all 0.15s",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: 2,
-    boxShadow: active ? "0 4px 14px rgba(153,27,27,0.35)" : "none",
+    transition: "all 0.2s",
+    lineHeight: 1.4,
+    boxShadow: active ? "0 3px 10px rgba(127,29,29,0.4)" : "none",
   });
 
   return (
@@ -446,91 +443,56 @@ export default function PostcardPickerSection() {
           role="tablist"
           aria-label="Postcard side"
           style={{
-            display: "flex",
-            background: "#f3f4f6",
-            border: "1px solid #e5e7eb",
-            borderRadius: 12,
+            background: "#fff",
+            borderRadius: 14,
             padding: 5,
+            display: "flex",
             gap: 4,
-            width: "100%",
-            maxWidth: 480,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+            boxShadow: "0 1px 8px rgba(0,0,0,0.10)",
           }}
         >
-          <button
-            role="tab"
-            aria-selected={side === "front"}
-            onClick={() => {
-              setSide("front");
-              setSelected(null);
-            }}
-            style={sideButtonStyle(side === "front")}
-          >
-            <span>📮 Front Side</span>
-            <span
-              style={{
-                fontSize: 10.5,
-                fontWeight: 600,
-                color: side === "front" ? "rgba(255,255,255,0.85)" : "#6b7280",
-                letterSpacing: 0.3,
-              }}
+          {[
+            { id: "front", e: "📮", l: "Front Side", stats: frontStats },
+            { id: "back",  e: "📬", l: "Back Side",  stats: backStats  },
+          ].map(s => (
+            <button
+              key={s.id}
+              role="tab"
+              aria-selected={side === s.id}
+              onClick={() => { setSide(s.id); setSelected(null); }}
+              style={sideButtonStyle(side === s.id)}
             >
-              {frontStats.sold} of {frontStats.total} sold
-            </span>
-          </button>
-          <button
-            role="tab"
-            aria-selected={side === "back"}
-            onClick={() => {
-              setSide("back");
-              setSelected(null);
-            }}
-            style={sideButtonStyle(side === "back")}
-          >
-            <span>📬 Back Side</span>
-            <span
-              style={{
-                fontSize: 10.5,
-                fontWeight: 600,
-                color: side === "back" ? "rgba(255,255,255,0.85)" : "#6b7280",
-                letterSpacing: 0.3,
-              }}
-            >
-              {backStats.sold} of {backStats.total} sold
-            </span>
-          </button>
+              <span style={{ fontSize: 16, marginRight: 6 }}>{s.e}</span>{s.l}
+              <br />
+              <span style={{ fontSize: 11, fontWeight: 400, opacity: 0.8 }}>
+                {s.stats.sold} of {s.stats.total} spots sold
+              </span>
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Postcard card — white "matte" so the postcard sits on the page like
-          a real glossy mailer rather than a tablet bezel. The grid still
-          carries the colored chrome inside. */}
-      <div style={{ background: "#fff", border: "1px solid #e5e7eb",
-        borderRadius: 14, padding: "12px 12px 8px",
-        boxShadow: "0 24px 60px rgba(15,23,42,0.16), 0 2px 6px rgba(15,23,42,0.06)",
-        position: "relative" }}>
+      {/* Label chip — sits above the card like the reference's "FRONT SIDE —
+          12" × 9"…" badge. Plain dark pill, centered. */}
+      <div style={{ textAlign: "center", marginBottom: 10 }}>
+        <span style={{
+          display: "inline-block",
+          background: "#1e293b", color: "rgba(255,255,255,0.65)",
+          fontSize: 10, fontWeight: 700, letterSpacing: 1.5,
+          textTransform: "uppercase", padding: "4px 14px", borderRadius: 20,
+        }}>
+          {side === "front" ? "Front" : "Back"} Side &mdash; 12&Prime; &times; 9&Prime; &middot; Reaching {campaign.homesCount?.toLocaleString() ?? "5,000"} Habersham County Homes
+        </span>
+      </div>
 
-        {/* Label chip */}
-        <div style={{ position: "absolute", top: -13, left: 22, background: "#111827", color: "#fff",
-          fontSize: 9, fontWeight: 700, letterSpacing: 1.5, padding: "4px 14px",
-          borderRadius: 20, textTransform: "uppercase",
-          boxShadow: "0 4px 10px rgba(0,0,0,0.18)" }}>
-          {side === "front" ? "Front Side" : "Back Side"} — 12" × 9" · Reaching {campaign.homesCount?.toLocaleString() ?? "5,000"} Homes
-        </div>
-
-        {/* Red header bar */}
-        <div style={{ background: "linear-gradient(90deg,#7f1d1d,#991b1b)", borderRadius: "8px 8px 0 0",
-          padding: "8px 16px", display: "flex", justifyContent: "space-between", alignItems: "center",
-          marginBottom: 0, borderBottom: "2px solid #fff" }}>
-          <div style={{ color: "#fff", fontWeight: 800, fontSize: 13, fontFamily: "Georgia,serif",
-            letterSpacing: 0.2 }}>
-            📮 My Town Postcard · {side === "back" ? "Back Side" : "Front Side"}
-          </div>
-          <div style={{ color: "#fecaca", fontSize: 9, fontFamily: "sans-serif",
-            letterSpacing: 0.6, textTransform: "uppercase", fontWeight: 600 }}>
-            Reaching {campaign.homesCount?.toLocaleString()} Local Homes · Summer 2026
-          </div>
-        </div>
+      {/* Postcard card — plain white card, cells fill edge-to-edge, no
+          separate colored header or footer strips outside the grid.
+          The house-ad cell at the bottom provides the dark visual closure. */}
+      <div style={{
+        position: "relative",
+        background: "#fff", borderRadius: 8, overflow: "hidden",
+        boxShadow: "0 0 0 1px rgba(0,0,0,0.08),0 8px 32px rgba(0,0,0,0.18)",
+      }}>
 
         {/* Postcard grid — fluid 12:9 landscape, fills its parent fully.
             Every cell renders content at a fixed natural pixel size
@@ -599,35 +561,20 @@ export default function PostcardPickerSection() {
           </PostcardScaleContext.Provider>
         </div>
 
-        {/* EDDM footer strip — USPS-authentic navy bar with the indicia
-            text. Visual reminder on the picker; the real indicia lives in
-            the EDDM box on the back side itself. */}
-        <div style={{ padding: "5px 14px", background: "#1a1a2e",
-          borderRadius: "0 0 8px 8px", display: "flex", justifyContent: "space-between",
-          alignItems: "center", borderTop: "2px solid #fff" }}>
-          <div style={{ fontSize: 8, color: "#cbd5e1", letterSpacing: 0.8,
-            fontFamily: "sans-serif", fontWeight: 600 }}>
-            LOCAL POSTAL CUSTOMER · EDDM RETAIL
-          </div>
-          <div style={{ fontSize: 8, color: "#cbd5e1", letterSpacing: 0.8,
-            fontFamily: "sans-serif", fontWeight: 600 }}>
-            PRESORTED STD · U.S. POSTAGE PAID · CLARKESVILLE GA {campaign.zipCode}
-          </div>
-        </div>
       </div>
 
-      {/* Legend — three states the customer might see while scanning the card */}
-      <div style={{ display: "flex", gap: 22, marginTop: 14, justifyContent: "center",
-        flexWrap: "wrap", padding: "0 8px" }}>
+      {/* Legend — three states matching reference colors exactly */}
+      <div style={{ display: "flex", gap: 28, marginTop: 14, justifyContent: "center",
+        flexWrap: "wrap" }}>
         {[
-          { bg: "rgba(240,253,244,0.92)", border: "2px dashed #22c55e", label: "Available — click to claim" },
-          { bg: "rgba(254,243,199,0.96)", border: "2px solid #f59e0b",  label: "Your selection" },
-          { bg: "#fefce8",                border: "2px dashed #fbbf24", label: "Reserved by another business" },
+          { bg: "linear-gradient(135deg,#f8fffe,#f0fdf4)", border: "2px solid #4ade80", label: "Available — click to reserve" },
+          { bg: "#fefce8",                                  border: "2px dashed #fbbf24", label: "Reserved" },
+          { bg: "#f1f5f9",                                  border: "2px solid #cbd5e1",  label: "Spot taken" },
         ].map(l => (
-          <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ width: 24, height: 16, background: l.bg, border: l.border,
-              borderRadius: 3, flexShrink: 0 }} />
-            <span style={{ fontSize: 12, color: "#4b5563", fontWeight: 500 }}>{l.label}</span>
+          <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 7 }}>
+            <div style={{ width: 20, height: 20, background: l.bg, border: l.border,
+              borderRadius: 4, flexShrink: 0 }} />
+            <span style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{l.label}</span>
           </div>
         ))}
       </div>

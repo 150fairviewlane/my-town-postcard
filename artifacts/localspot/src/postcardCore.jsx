@@ -623,42 +623,52 @@ export function PaidAd({ spot }) {
   }
 }
 
-// Per-size font sizes for AvailableSpot / ReservedSpot. The picker wraps each
-// cell in a transform: scale() container, so these values are the *natural*
-// pixel sizes at 100 px per grid unit. They scale uniformly with the postcard,
-// but their relative size to the cell stays correct (no tiny fonts in big cells).
-const AVAIL_FONTS = {
-  xl:     { plus: 78, name: 22, price: 36, dim: 15, gap: 10, pad: 20, border: 4, badge: 12, cta: 13 },
-  large:  { plus: 58, name: 18, price: 28, dim: 13, gap: 8,  pad: 14, border: 4, badge: 11, cta: 12 },
-  medium: { plus: 42, name: 14, price: 22, dim: 11, gap: 6,  pad: 10, border: 3, badge: 10, cta: 11 },
-  small:  { plus: 26, name: 10, price: 14, dim:  8, gap: 3,  pad: 6,  border: 2, badge:  8, cta:  9 },
+// Size info for AvailableSpot — labels and dimensions shown inside each cell.
+// Sizes are at *natural* pixel scale (100 px per grid unit) so they scale
+// uniformly with the postcard via ScaledCell's transform: scale().
+const SZ_INFO = {
+  xl:     { label: "Extra Large Ad", dims: '4" × 5"' },
+  large:  { label: "Large Ad",       dims: '4" × 3"' },
+  medium: { label: "Medium Ad",      dims: '3" × 2"' },
+  small:  { label: "Small Ad",       dims: '1" × 2"' },
 };
 
 // ─── Public: AvailableSpot ────────────────────────────────────────────────────
-// Fills 100% of its parent cell (the picker's ScaledCell wrapper). Font sizes
-// are picked per spot.size so the + / label / price feel right at every size.
-// Hover state is local React state — no DOM mutation, no transforms (those
-// would be clipped by ScaledCell's overflow: hidden).
+// Reference visual: circular green + button, corner-fold triangle top-right,
+// green gradient background, "Reserve This Spot" pill CTA, "Reaches 5,000…"
+// footer. Hover state managed locally — no transforms (those get clipped by
+// ScaledCell's overflow: hidden). All sizes are natural pixels so ScaledCell's
+// uniform scale keeps them proportional at any viewport width.
 export function AvailableSpot({ spot, isSelected, onClick }) {
-  const sz = SIZES[spot.size] ?? SIZES.small;
-  const f = AVAIL_FONTS[spot.size] || AVAIL_FONTS.small;
+  const info = SZ_INFO[spot.size] || SZ_INFO.small;
   const displayPrice = Math.round((spot.price ?? 0) / 100);
   const [hover, setHover] = useState(false);
-  const isSmall = spot.size === "small";
 
-  const bg = isSelected
-    ? "rgba(254, 243, 199, 0.96)"
-    : hover
-      ? "rgba(220, 252, 231, 0.96)"
-      : "rgba(240, 253, 244, 0.92)";
-  const borderColor = isSelected ? "#f59e0b" : hover ? "#15803d" : "#22c55e";
-  const borderStyle = isSelected ? "solid" : "dashed";
-  const accent = isSelected ? "#92400e" : hover ? "#15803d" : "#16a34a";
-  const innerGlow = hover && !isSelected
-    ? "inset 0 0 28px rgba(34,197,94,0.20)"
-    : isSelected
-      ? "inset 0 0 28px rgba(245,158,11,0.18)"
-      : "inset 0 0 0 rgba(0,0,0,0)";
+  const isXL = spot.size === "xl";
+  const isL  = spot.size === "large";
+  const isM  = spot.size === "medium";
+  const isS  = spot.size === "small";
+
+  // Natural-pixel sizes — scaled uniformly by ScaledCell.
+  const csz     = isXL ? 80  : isL ? 60  : isM ? 44  : 28;   // circle diameter
+  const lsz     = isXL ? 20  : isL ? 16  : isM ? 13  : 9;    // label font
+  const psz     = isXL ? 34  : isL ? 26  : isM ? 20  : 12;   // price font
+  const dsz     = isXL ? 14  : isL ? 11  : isM ? 10  : 7;    // dims font
+  const tw      = isXL ? 40  : isL ? 30  : 22;                // triangle wing
+  const showBtn = !isS;
+  const bh      = isXL ? 44  : isL ? 34  : 26;                // pill height
+  const bf      = isXL ? 13  : isL ? 11  : 10;                // pill font
+  const gap     = isXL ? 12  : isL ? 9   : isM ? 6   : 4;
+  const pad     = isXL ? 20  : isL ? 14  : isM ? 10  : 6;
+
+  // Selected state overrides hover with amber tones.
+  const h = hover && !isSelected;
+  const bg          = isSelected ? "#fefce8" : h ? "linear-gradient(135deg,#ecfdf5,#d1fae5)" : "linear-gradient(135deg,#f8fffe,#f0fdf4)";
+  const borderColor = isSelected ? "#f59e0b" : h ? "#16a34a" : "#4ade80";
+  const borderStyle = isSelected ? "2px solid" : `3px solid`;
+  const circleColor = isSelected ? "#f59e0b" : h ? "#16a34a" : "#22c55e";
+  const labelColor  = isSelected ? "#92400e" : h ? "#15803d" : "#166534";
+  const priceColor  = isSelected ? "#b45309" : "#111";
 
   return (
     <div
@@ -666,57 +676,92 @@ export function AvailableSpot({ spot, isSelected, onClick }) {
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
-        width: "100%", height: "100%", borderRadius: 6, cursor: "pointer",
+        width: "100%", height: "100%",
+        display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center",
+        cursor: "pointer", boxSizing: "border-box",
+        position: "relative", overflow: "hidden",
         background: bg,
-        border: `${f.border}px ${borderStyle} ${borderColor}`,
-        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-        gap: f.gap, padding: f.pad,
-        textAlign: "center", boxSizing: "border-box", overflow: "hidden",
-        position: "relative",
-        transition: "all 0.15s ease",
-        boxShadow: innerGlow,
-      }}>
-      {/* Size badge top-right — gives every "ticket" a clear size label */}
-      {!isSmall && (
+        border: `${borderStyle} ${borderColor}`,
+        gap, padding: pad,
+        transition: "all 0.18s ease",
+      }}
+    >
+      {/* Corner-fold triangle — top-right visual cue the cell is claimable */}
+      {!isSelected && (
         <div style={{
-          position: "absolute", top: 6, right: 10,
-          fontSize: f.badge, fontWeight: 800, color: accent,
-          letterSpacing: 1.2, textTransform: "uppercase", opacity: 0.78,
-          fontFamily: "sans-serif",
-        }}>
-          {sz.label}
-        </div>
+          position: "absolute", top: 0, right: 0,
+          width: 0, height: 0, borderStyle: "solid",
+          borderWidth: `0 ${tw}px ${tw}px 0`,
+          borderColor: `transparent ${h ? "#16a34a" : "#22c55e"} transparent transparent`,
+          opacity: h ? 1 : 0.55,
+          transition: "opacity 0.18s",
+        }} />
       )}
 
-      <div style={{ fontSize: f.plus, lineHeight: 1, color: accent, fontWeight: 300 }}>
-        {isSelected ? "✓" : "+"}
-      </div>
+      {/* Circular + button */}
       <div style={{
-        fontWeight: 800, fontSize: f.name, color: accent,
-        fontFamily: "sans-serif", lineHeight: 1.15, letterSpacing: 0.2,
+        width: csz, height: csz, borderRadius: "50%",
+        background: circleColor,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        boxShadow: h ? "0 4px 16px rgba(22,163,74,0.45)" : "0 2px 8px rgba(34,197,94,0.30)",
+        transition: "all 0.18s", flexShrink: 0,
       }}>
-        {isSelected ? "Selected" : "Your ad here"}
+        <span style={{ color: "#fff", fontSize: csz * 0.45, fontWeight: 200, lineHeight: 1 }}>
+          {isSelected ? "✓" : "+"}
+        </span>
       </div>
+
+      {/* Label */}
       <div style={{
-        fontSize: f.price, color: isSelected ? "#b45309" : "#111827",
-        fontWeight: 900, fontFamily: "sans-serif", lineHeight: 1,
+        color: labelColor, fontSize: lsz, fontWeight: 800,
+        letterSpacing: 0.3, textAlign: "center", lineHeight: 1,
+        fontFamily: "sans-serif",
+      }}>
+        {isSelected ? "Selected" : info.label}
+      </div>
+
+      {/* Price */}
+      <div style={{
+        color: priceColor, fontSize: psz, fontWeight: 900,
+        fontFamily: "Georgia,serif", lineHeight: 1, letterSpacing: -0.5,
       }}>
         ${displayPrice}
       </div>
+
+      {/* Dimensions */}
       <div style={{
-        fontSize: f.dim, color: "#6b7280",
-        fontFamily: "sans-serif", lineHeight: 1, fontWeight: 500,
+        color: "#666", fontSize: dsz, fontWeight: 600, letterSpacing: 0.5,
+        fontFamily: "sans-serif",
       }}>
-        {sz.dim}
+        {info.dims}
       </div>
 
-      {/* Hover CTA copy strengthens to "Claim this spot →" */}
-      {hover && !isSelected && !isSmall && (
+      {/* "Reserve This Spot" pill — shown for all sizes except Small */}
+      {showBtn && !isSelected && (
         <div style={{
-          fontSize: f.cta, fontWeight: 700, color: "#15803d",
-          fontFamily: "sans-serif", lineHeight: 1, marginTop: 2,
+          height: bh, paddingLeft: isXL ? 24 : 16, paddingRight: isXL ? 24 : 16,
+          background: h ? "#15803d" : "#16a34a",
+          borderRadius: bh / 2,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          color: "#fff", fontWeight: 800, fontSize: bf,
+          letterSpacing: 0.5, textTransform: "uppercase",
+          boxShadow: h ? "0 4px 14px rgba(21,128,61,0.55)" : "0 2px 6px rgba(22,163,74,0.35)",
+          transition: "all 0.18s",
+          fontFamily: "sans-serif",
         }}>
-          Claim this spot →
+          Reserve This Spot
+        </div>
+      )}
+
+      {/* Social proof footer — not shown for Small (no room) */}
+      {!isS && !isSelected && (
+        <div style={{
+          fontSize: isXL ? 10 : isL ? 8 : 7,
+          color: "#9ca3af", fontStyle: "italic",
+          textAlign: "center", fontFamily: "sans-serif",
+        }}>
+          Reaches 5,000 local homes
         </div>
       )}
     </div>

@@ -1,10 +1,324 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// POSTCARD SAMPLE ADS — Rich Edition
+// POSTCARD SAMPLE ADS — Reference Edition
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { INDUSTRIES } from "./industryAssets";
 import { AdQRCode, generateSpotCode, normalizeWebsite } from "./qrUtils";
 
+// ─── Reference-style helpers ─────────────────────────────────────────────────
+// Check SVG — filled circle with white checkmark
+function Check({ color, sz = 14 }) {
+  return (
+    <svg width={sz} height={sz} viewBox="0 0 14 14" style={{ flexShrink: 0, marginTop: 1 }}>
+      <circle cx="7" cy="7" r="7" fill={color} />
+      <path d="M4 7l2 2 4-4" stroke="white" strokeWidth="1.8"
+        strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    </svg>
+  );
+}
+
+// Phone SVG + number
+function PhoneRow({ phone, color, size }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+      <svg width={size} height={size} viewBox="0 0 24 24" fill={color} style={{ flexShrink: 0 }}>
+        <path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z" />
+      </svg>
+      <span style={{ fontSize: size * 1.1, fontWeight: 900, color, fontFamily: "sans-serif" }}>{phone}</span>
+    </div>
+  );
+}
+
+// Coupon strip — reference variant (simpler border-only style)
+function RefCoupon({ offer, fine, color, dark }) {
+  if (!offer) return null;
+  return (
+    <div style={{
+      border: `1.5px dashed ${dark ? "rgba(255,255,255,0.65)" : color}`,
+      borderRadius: 4, padding: "6px 10px", textAlign: "center",
+      background: dark ? "rgba(0,0,0,0.3)" : `${color}18`,
+      flexShrink: 0,
+    }}>
+      <div style={{ fontSize: 14, fontWeight: 900, color: dark ? "#fff" : color, lineHeight: 1.1 }}>{offer}</div>
+      {fine && <div style={{ fontSize: 9, color: dark ? "rgba(255,255,255,0.55)" : "#777", marginTop: 2 }}>{fine}</div>}
+    </div>
+  );
+}
+
+// ─── Reference ad data ───────────────────────────────────────────────────────
+// Colors: p=primary, a=accent, l=light, d=dark
+const REF_ADS = {
+  roofing: {
+    biz: "Pine Ridge Roofing", cat: "ROOFING & EXTERIORS",
+    tag: "Built to Protect. Built to Last.",
+    services: ["Roof Replacement", "Roof Repair", "Siding Installation", "Gutter Installation"],
+    offer: "FREE Inspection", fine: "No obligation · licensed & insured",
+    phone: "(770) 725-1010", addr: "Clarkesville, GA", web: "pineridgeroofing.com",
+    photo: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80",
+    p: "#334155", a: "#64748b", l: "#f8fafc", d: "#0f172a",
+  },
+  dental: {
+    biz: "Northview Dental", cat: "FAMILY DENTISTRY",
+    tag: "Healthy Smiles. Confident Lives.",
+    services: ["General Dentistry", "Cosmetic Dentistry", "Dental Implants", "Teeth Whitening"],
+    offer: "New Patients Always Welcome", fine: "Call today to schedule",
+    phone: "(770) 704-1633", addr: "Clarkesville, GA", web: "northviewdental.com",
+    photo: "https://images.unsplash.com/photo-1609840114035-3c981b782dfe?w=800&q=80",
+    p: "#1e40af", a: "#3b82f6", l: "#eff6ff", d: "#1e3a8a",
+  },
+  lawn: {
+    biz: "GreenScapes Lawn Care", cat: "LAWN & LANDSCAPING",
+    tag: "A Beautiful Lawn You'll Love Coming Home To!",
+    services: ["Mowing", "Fertilization", "Weed Control", "Landscaping", "Mulch Installation"],
+    offer: "Free Estimate", fine: "Call today to schedule",
+    phone: "(706) 257-1186", addr: "Clarkesville, GA", web: "greenscapeslawncare.com",
+    photo: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&q=80",
+    p: "#166534", a: "#22c55e", l: "#f0fdf4", d: "#14532d",
+  },
+  hvac: {
+    biz: "Climate Comfort HVAC", cat: "HEATING & COOLING",
+    tag: "Keeping You Comfortable All Year Long",
+    services: ["Installation", "Repair", "Maintenance"],
+    offer: "$50 OFF Any Service", fine: "Show this ad · expires 6/30",
+    phone: "(770) 365-6599", addr: "Clarkesville, GA", web: "climatecomforthvac.com",
+    photo: "https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=800&q=80",
+    p: "#0369a1", a: "#0ea5e9", l: "#f0f9ff", d: "#0c2a3a",
+  },
+  auto: {
+    biz: "Pit Stop Auto Repair", cat: "AUTO REPAIR",
+    tag: "Honest Repairs. Fair Prices. Dependable Service.",
+    services: ["Oil Change $29.99", "Brake Service", "AC Repair", "Free Estimates"],
+    offer: "Free Diagnostic Check", fine: "With any repair · show this ad",
+    phone: "(706) 219-6136", addr: "Clarkesville, GA", web: "",
+    photo: "https://images.unsplash.com/photo-1530046339160-ce3e530c7d2f?w=800&q=80",
+    p: "#7f1d1d", a: "#ef4444", l: "#fef2f2", d: "#450a0a",
+  },
+  vet: {
+    biz: "Paws & Claws Vet Clinic", cat: "VETERINARIAN",
+    tag: "Compassionate Care For Your Pets",
+    services: ["Wellness Exams", "Vaccinations", "Surgery & Dental", "Emergency Care"],
+    offer: "Free First Exam", fine: "New patients only · call to schedule",
+    phone: "(770) 592-7387", addr: "Clarkesville, GA", web: "pawsandclawsvet.com",
+    photo: "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=800&q=80",
+    p: "#065f46", a: "#10b981", l: "#ecfdf5", d: "#064e3b",
+  },
+  pizza: {
+    biz: "Tony's Pizza", cat: "PIZZA & ITALIAN",
+    tag: "Fresh Ingredients. Great Taste. Every Time.",
+    services: [],
+    offer: "Large Pizza $12.99", fine: "Pick-up only · show this ad",
+    phone: "(706) 507-1111", addr: "Clarkesville, GA", web: "tonyspizza.com",
+    photo: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&q=80",
+    p: "#9a3412", a: "#f97316", l: "#fff7ed", d: "#431407",
+  },
+  salon: {
+    biz: "The Cut Above Salon", cat: "SALON & BEAUTY",
+    tag: "Look Your Best.",
+    services: [],
+    offer: "20% OFF First Visit", fine: "New clients · show this ad",
+    phone: "(706) 555-0519", addr: "Clarkesville, GA", web: "",
+    photo: "https://images.unsplash.com/photo-1560066984-138daaa4e4e1?w=800&q=80",
+    p: "#831843", a: "#ec4899", l: "#fdf2f8", d: "#4a0e28",
+  },
+};
+
+// ─── Reference template: AdXL (400 × 500) ───────────────────────────────────
+function AdXL({ d }) {
+  return (
+    <div style={{
+      width: 400, height: 500, display: "flex", flexDirection: "column",
+      overflow: "hidden", fontFamily: "sans-serif",
+      background: "#fff", border: `3px solid ${d.p}`, boxSizing: "border-box",
+    }}>
+      {/* Colored header */}
+      <div style={{
+        background: d.p, padding: "8px 14px",
+        display: "flex", alignItems: "center", gap: 8, flexShrink: 0,
+      }}>
+        <div style={{
+          width: 36, height: 36, borderRadius: 6, overflow: "hidden",
+          flexShrink: 0, border: "2px solid rgba(255,255,255,0.3)",
+        }}>
+          <img src={d.photo} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt=""
+            onError={e => { e.target.style.display = "none"; }} />
+        </div>
+        <div>
+          <div style={{ color: "#fff", fontWeight: 900, fontSize: 18, fontFamily: "Georgia,serif", lineHeight: 1 }}>{d.biz}</div>
+          <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600, marginTop: 2 }}>{d.cat}</div>
+        </div>
+      </div>
+
+      {/* Photo strip */}
+      <div style={{ height: 176, flexShrink: 0, overflow: "hidden", position: "relative" }}>
+        <img src={d.photo} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} alt=""
+          onError={e => { e.target.style.display = "none"; }} />
+        <div style={{ position: "absolute", inset: 0, background: `linear-gradient(0deg,${d.d}bb,transparent 55%)` }} />
+      </div>
+
+      {/* Content */}
+      <div style={{
+        flex: 1, padding: "10px 14px", display: "flex", flexDirection: "column",
+        gap: 7, background: d.l, overflow: "hidden",
+      }}>
+        <div style={{ color: d.p, fontWeight: 800, fontSize: 13, fontStyle: "italic", lineHeight: 1.2 }}>{d.tag}</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          {d.services.slice(0, 4).map((s, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <Check color={d.a} sz={13} />
+              <span style={{ fontSize: 11, color: "#222" }}>{s}</span>
+            </div>
+          ))}
+        </div>
+        <RefCoupon offer={d.offer} fine={d.fine} color={d.p} dark={false} />
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: "auto", gap: 8 }}>
+          <div>
+            <PhoneRow phone={d.phone} color={d.p} size={14} />
+            {d.addr && <div style={{ fontSize: 10, color: "#555", marginTop: 3 }}>📍 {d.addr}</div>}
+          </div>
+          {d.web && (
+            <AdQRCode website={normalizeWebsite(d.web)} spotCode={generateSpotCode(d.biz, "ref")} size={44} dark={false} />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Reference template: AdL (400 × 300) ────────────────────────────────────
+function AdL({ d }) {
+  return (
+    <div style={{
+      width: 400, height: 300, display: "flex", overflow: "hidden",
+      background: "#fff", fontFamily: "sans-serif",
+      border: `3px solid ${d.p}`, boxSizing: "border-box",
+    }}>
+      {/* Photo column */}
+      <div style={{ width: 155, flexShrink: 0, position: "relative", overflow: "hidden" }}>
+        <img src={d.photo} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} alt=""
+          onError={e => { e.target.style.display = "none"; }} />
+        <div style={{ position: "absolute", inset: 0, background: `linear-gradient(90deg,transparent 60%,${d.p}44)` }} />
+      </div>
+
+      {/* Content column */}
+      <div style={{
+        flex: 1, padding: "12px 14px", display: "flex", flexDirection: "column",
+        justifyContent: "space-between", background: d.l, overflow: "hidden",
+      }}>
+        <div>
+          <div style={{ color: d.a, fontSize: 9, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>{d.cat}</div>
+          <div style={{ color: d.d, fontWeight: 900, fontSize: 19, fontFamily: "Georgia,serif", lineHeight: 1.05, marginTop: 2 }}>{d.biz}</div>
+          <div style={{ color: d.p, fontWeight: 700, fontSize: 11, fontStyle: "italic", marginTop: 4 }}>{d.tag}</div>
+        </div>
+
+        {d.services.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {d.services.slice(0, 3).map((s, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <Check color={d.a} sz={12} />
+                <span style={{ fontSize: 11, color: "#333" }}>{s}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          <RefCoupon offer={d.offer} fine={d.fine} color={d.p} dark={false} />
+          <PhoneRow phone={d.phone} color={d.p} size={13} />
+          {d.addr && <div style={{ fontSize: 10, color: "#555" }}>📍 {d.addr}</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Reference template: AdM (300 × 200) ────────────────────────────────────
+function AdM({ d }) {
+  return (
+    <div style={{
+      width: 300, height: 200, display: "flex", flexDirection: "column",
+      overflow: "hidden", fontFamily: "sans-serif",
+      border: `2px solid ${d.p}`, boxSizing: "border-box", background: "#fff",
+    }}>
+      {/* Header */}
+      <div style={{
+        background: d.p, padding: "6px 10px",
+        display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ width: 22, height: 22, borderRadius: 4, overflow: "hidden", border: "1.5px solid rgba(255,255,255,0.3)", flexShrink: 0 }}>
+            <img src={d.photo} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt=""
+              onError={e => { e.target.style.display = "none"; }} />
+          </div>
+          <div>
+            <div style={{ color: "#fff", fontWeight: 900, fontSize: 13, fontFamily: "Georgia,serif", lineHeight: 1 }}>{d.biz}</div>
+            <div style={{ color: "rgba(255,255,255,0.72)", fontSize: 7.5, letterSpacing: 1.3, textTransform: "uppercase" }}>{d.cat}</div>
+          </div>
+        </div>
+        <PhoneRow phone={d.phone} color="rgba(255,255,255,0.9)" size={11} />
+      </div>
+
+      {/* Content */}
+      <div style={{
+        flex: 1, padding: "8px 10px", display: "flex", gap: 10,
+        background: d.l, overflow: "hidden",
+      }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between", minWidth: 0 }}>
+          <div style={{ color: d.p, fontSize: 11, fontWeight: 700, fontStyle: "italic", lineHeight: 1.2 }}>{d.tag}</div>
+          {d.services.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              {d.services.slice(0, 3).map((s, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <Check color={d.a} sz={11} />
+                  <span style={{ fontSize: 10, color: "#333" }}>{s}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {d.addr && <div style={{ fontSize: 9, color: "#555" }}>📍 {d.addr}</div>}
+        </div>
+        <div style={{ flexShrink: 0, display: "flex", alignItems: "flex-end" }}>
+          <RefCoupon offer={d.offer} fine={null} color={d.p} dark={false} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Reference template: AdS (100 × 200) ────────────────────────────────────
+function AdS({ d }) {
+  return (
+    <div style={{ width: 100, height: 200, overflow: "hidden", position: "relative", fontFamily: "sans-serif" }}>
+      <img src={d.photo} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} alt=""
+        onError={e => { e.target.style.display = "none"; }} />
+      <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg,${d.d}cc 0%,${d.d}f5 100%)` }} />
+      <div style={{
+        position: "absolute", inset: 0, padding: "8px 5px",
+        display: "flex", flexDirection: "column", justifyContent: "space-between",
+      }}>
+        <div>
+          <div style={{ color: "#fff", fontWeight: 900, fontSize: 10, lineHeight: 1.2, fontFamily: "Georgia,serif" }}>{d.biz}</div>
+          <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 7, letterSpacing: 1, textTransform: "uppercase", marginTop: 2 }}>{d.cat}</div>
+        </div>
+        <div>
+          <RefCoupon offer={d.offer} fine={null} color="#fff" dark={true} />
+          <div style={{ color: "rgba(255,255,255,0.85)", fontSize: 8, marginTop: 4, fontWeight: 700, lineHeight: 1.2 }}>{d.phone}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Reference dispatcher ─────────────────────────────────────────────────────
+function RefPhotoAd({ data, sizeKey }) {
+  const d = REF_ADS[data.key];
+  if (!d) return null;
+  if (sizeKey === "XL") return <AdXL d={d} />;
+  if (sizeKey === "L")  return <AdL  d={d} />;
+  if (sizeKey === "M")  return <AdM  d={d} />;
+  return <AdS d={d} />;
+}
+
+// ─── Legacy helpers (kept for existing templates below) ───────────────────────
 // ─── Helper: Logo Badge ───────────────────────────────────────────────────────
 function LogoBadge({ emoji, size = 40, bg = "rgba(255,255,255,0.18)", color = "#fff", border }) {
   return (
@@ -159,6 +473,16 @@ export const SAMPLE_AD_CONFIGS = {
       menuItems: ["Wellness Exams", "Vaccinations", "Surgery & Dental", "Emergency Care"],
     },
   },
+  // ── Reference-photo configs (new businesses matching reference file) ────────
+  "ref-roofing": { template: "ref-photo", sizeKey: "XL", data: { key: "roofing" } },
+  "ref-dental":  { template: "ref-photo", sizeKey: "XL", data: { key: "dental"  } },
+  "ref-lawn":    { template: "ref-photo", sizeKey: "L",  data: { key: "lawn"    } },
+  "ref-hvac":    { template: "ref-photo", sizeKey: "L",  data: { key: "hvac"    } },
+  "ref-auto":    { template: "ref-photo", sizeKey: "L",  data: { key: "auto"    } },
+  "ref-vet":     { template: "ref-photo", sizeKey: "M",  data: { key: "vet"     } },
+  "ref-pizza":   { template: "ref-photo", sizeKey: "S",  data: { key: "pizza"   } },
+  "ref-salon":   { template: "ref-photo", sizeKey: "S",  data: { key: "salon"   } },
+  // ── Mr. Biscuit's — perpetual sponsor demo (keeps existing rich template) ──
   "mrbiscuits": {
     template: "photo-bold", sizeKey: "XL",
     data: {
@@ -494,6 +818,7 @@ const TEMPLATE_RENDERERS = {
   "split-clean": SplitCleanAd,
   "magazine":    MagazineAd,
   "stamp":       StampAd,
+  "ref-photo":   RefPhotoAd,
 };
 
 export function getSampleAd(configKey, sizeKeyOverride) {
@@ -521,15 +846,15 @@ export function getSampleAd(configKey, sizeKeyOverride) {
 // mailer with room left for the customer.
 // ─────────────────────────────────────────────────────────────────────────────
 export const SPOT_SAMPLE_MAP = {
-  // Front side
-  "mb":  "mrbiscuits",
-  "dn":  "dental",
-  "ins": "insurance",
-  "lw":  "lawn",
-  "a1":  "salon",
+  // Front side — reference designs match the visual reference file exactly
+  "mb":  "mrbiscuits",    // XL — Mr. Biscuit's (existing rich template)
+  "dn":  "ref-dental",    // XL — Northview Dental
+  "ins": "ref-hvac",      // L  — Climate Comfort HVAC
+  "lw":  "ref-lawn",      // M  — GreenScapes Lawn Care (re-rendered at M)
+  "a1":  "ref-pizza",     // S  — Tony's Pizza
   // Back side
-  "bxl": "mexican",
-  "bl1": "autorepair",
-  "bm1": "vet",
-  "bs1": "gym",
+  "bxl": "ref-roofing",   // XL — Pine Ridge Roofing
+  "bl1": "ref-auto",      // L  — Pit Stop Auto Repair
+  "bm1": "ref-vet",       // M  — Paws & Claws Vet Clinic
+  "bs1": "ref-salon",     // S  — The Cut Above Salon
 };
