@@ -102,8 +102,8 @@ M:  { label: "Medium",      price: 250, ratio: "3:2",  width: 3, height: 2,   de
 S:  { label: "Small",       price: 199, ratio: "2:2",  width: 2, height: 2,   desc: "Affordable local reach" },
 };
 
-// 4 visually distinct template styles
-const TEMPLATE_STYLES = ["photo-bold", "split-clean", "magazine", "stamp"];
+// 5 visually distinct template styles
+const TEMPLATE_STYLES = ["photo-bold", "split-clean", "magazine", "stamp", "fade-out"];
 
 // ─── Helper: Logo Badge with fallback ────────────────────────────────────────
 function LogoBadge({ logo, name, emoji, size = 40, bg = "rgba(255,255,255,0.15)", color = "#fff", border }) {
