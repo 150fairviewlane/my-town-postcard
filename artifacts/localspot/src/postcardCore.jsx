@@ -623,45 +623,138 @@ export function PaidAd({ spot }) {
   }
 }
 
-// Per-size font sizes for AvailableSpot. The picker wraps each cell in a
-// transform: scale() container, so these values are the *natural* pixel sizes
-// at 100 px per grid unit. They scale uniformly with the postcard, but their
-// relative size to the cell stays correct (no tiny fonts in big cells).
+// Per-size font sizes for AvailableSpot / ReservedSpot. The picker wraps each
+// cell in a transform: scale() container, so these values are the *natural*
+// pixel sizes at 100 px per grid unit. They scale uniformly with the postcard,
+// but their relative size to the cell stays correct (no tiny fonts in big cells).
 const AVAIL_FONTS = {
-  xl:     { plus: 48, name: 18, price: 22, dim: 13, gap: 8,  pad: 14, border: 4 },
-  large:  { plus: 36, name: 15, price: 18, dim: 11, gap: 6,  pad: 10, border: 3 },
-  medium: { plus: 28, name: 12, price: 15, dim: 10, gap: 4,  pad: 8,  border: 3 },
-  small:  { plus: 22, name: 10, price: 13, dim:  9, gap: 3,  pad: 5,  border: 2 },
+  xl:     { plus: 78, name: 22, price: 36, dim: 15, gap: 10, pad: 20, border: 4, badge: 12, cta: 13 },
+  large:  { plus: 58, name: 18, price: 28, dim: 13, gap: 8,  pad: 14, border: 4, badge: 11, cta: 12 },
+  medium: { plus: 42, name: 14, price: 22, dim: 11, gap: 6,  pad: 10, border: 3, badge: 10, cta: 11 },
+  small:  { plus: 26, name: 10, price: 14, dim:  8, gap: 3,  pad: 6,  border: 2, badge:  8, cta:  9 },
 };
 
 // ─── Public: AvailableSpot ────────────────────────────────────────────────────
 // Fills 100% of its parent cell (the picker's ScaledCell wrapper). Font sizes
 // are picked per spot.size so the + / label / price feel right at every size.
+// Hover state is local React state — no DOM mutation, no transforms (those
+// would be clipped by ScaledCell's overflow: hidden).
 export function AvailableSpot({ spot, isSelected, onClick }) {
   const sz = SIZES[spot.size] ?? SIZES.small;
   const f = AVAIL_FONTS[spot.size] || AVAIL_FONTS.small;
   const displayPrice = Math.round((spot.price ?? 0) / 100);
+  const [hover, setHover] = useState(false);
+  const isSmall = spot.size === "small";
+
+  const bg = isSelected
+    ? "rgba(254, 243, 199, 0.96)"
+    : hover
+      ? "rgba(220, 252, 231, 0.96)"
+      : "rgba(240, 253, 244, 0.92)";
+  const borderColor = isSelected ? "#f59e0b" : hover ? "#15803d" : "#22c55e";
+  const borderStyle = isSelected ? "solid" : "dashed";
+  const accent = isSelected ? "#92400e" : hover ? "#15803d" : "#16a34a";
+  const innerGlow = hover && !isSelected
+    ? "inset 0 0 28px rgba(34,197,94,0.20)"
+    : isSelected
+      ? "inset 0 0 28px rgba(245,158,11,0.18)"
+      : "inset 0 0 0 rgba(0,0,0,0)";
 
   return (
-    <div onClick={onClick} style={{
-      width: "100%", height: "100%", borderRadius: 4, cursor: "pointer",
-      background: isSelected ? "#fef9c3" : "#f0fdf4",
-      border: isSelected
-        ? `${f.border}px solid #ca8a04`
-        : `${f.border}px dashed #22c55e`,
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        width: "100%", height: "100%", borderRadius: 6, cursor: "pointer",
+        background: bg,
+        border: `${f.border}px ${borderStyle} ${borderColor}`,
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+        gap: f.gap, padding: f.pad,
+        textAlign: "center", boxSizing: "border-box", overflow: "hidden",
+        position: "relative",
+        transition: "all 0.15s ease",
+        boxShadow: innerGlow,
+      }}>
+      {/* Size badge top-right — gives every "ticket" a clear size label */}
+      {!isSmall && (
+        <div style={{
+          position: "absolute", top: 6, right: 10,
+          fontSize: f.badge, fontWeight: 800, color: accent,
+          letterSpacing: 1.2, textTransform: "uppercase", opacity: 0.78,
+          fontFamily: "sans-serif",
+        }}>
+          {sz.label}
+        </div>
+      )}
+
+      <div style={{ fontSize: f.plus, lineHeight: 1, color: accent, fontWeight: 300 }}>
+        {isSelected ? "✓" : "+"}
+      </div>
+      <div style={{
+        fontWeight: 800, fontSize: f.name, color: accent,
+        fontFamily: "sans-serif", lineHeight: 1.15, letterSpacing: 0.2,
+      }}>
+        {isSelected ? "Selected" : "Your ad here"}
+      </div>
+      <div style={{
+        fontSize: f.price, color: isSelected ? "#b45309" : "#111827",
+        fontWeight: 900, fontFamily: "sans-serif", lineHeight: 1,
+      }}>
+        ${displayPrice}
+      </div>
+      <div style={{
+        fontSize: f.dim, color: "#6b7280",
+        fontFamily: "sans-serif", lineHeight: 1, fontWeight: 500,
+      }}>
+        {sz.dim}
+      </div>
+
+      {/* Hover CTA copy strengthens to "Claim this spot →" */}
+      {hover && !isSelected && !isSmall && (
+        <div style={{
+          fontSize: f.cta, fontWeight: 700, color: "#15803d",
+          fontFamily: "sans-serif", lineHeight: 1, marginTop: 2,
+        }}>
+          Claim this spot →
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Public: ReservedSpot ─────────────────────────────────────────────────────
+// Spot is held by another business but not yet paid. Distinct amber/yellow
+// look so it doesn't pretend to be a finished paid ad — the customer can see
+// it's taken without thinking it's a sample for them to copy. Renders inside
+// the same ScaledCell wrapper as AvailableSpot so sizes match exactly.
+export function ReservedSpot({ spot }) {
+  const f = AVAIL_FONTS[spot.size] || AVAIL_FONTS.small;
+  return (
+    <div style={{
+      width: "100%", height: "100%", borderRadius: 6,
+      background: "#fefce8",
+      border: `${Math.max(2, f.border - 1)}px dashed #fbbf24`,
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
       gap: f.gap, padding: f.pad,
-      textAlign: "center", transition: "all 0.15s", boxSizing: "border-box",
-      overflow: "hidden",
+      textAlign: "center", boxSizing: "border-box", overflow: "hidden",
+      cursor: "not-allowed",
     }}>
-      <div style={{ fontSize: f.plus, lineHeight: 1 }}>{isSelected ? "✅" : "➕"}</div>
-      <div style={{ fontWeight: 800, fontSize: f.name,
-        color: isSelected ? "#92400e" : "#15803d", fontFamily: "sans-serif", lineHeight: 1.2 }}>
-        {isSelected ? "SELECTED" : sz.label + " Spot"}
+      <div style={{ fontSize: Math.round(f.plus * 0.62), lineHeight: 1 }}>📌</div>
+      <div style={{
+        fontWeight: 800, fontSize: f.name, color: "#92400e",
+        fontFamily: "sans-serif", lineHeight: 1.15,
+      }}>
+        Reserved
       </div>
-      <div style={{ fontSize: f.price, color: isSelected ? "#b45309" : "#166534",
-        fontWeight: 900, fontFamily: "sans-serif", lineHeight: 1 }}>${displayPrice}</div>
-      <div style={{ fontSize: f.dim, color: "#6b7280", fontFamily: "sans-serif", lineHeight: 1 }}>{sz.dim}</div>
+      {spot.size !== "small" && (
+        <div style={{
+          fontSize: f.badge, color: "#a16207",
+          fontFamily: "sans-serif", lineHeight: 1.2, fontWeight: 600,
+        }}>
+          Held by another business
+        </div>
+      )}
     </div>
   );
 }

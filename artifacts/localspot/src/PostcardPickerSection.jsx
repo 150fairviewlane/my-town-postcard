@@ -6,7 +6,7 @@ import {
   findActiveReservation,
   clearReservation,
 } from "./lib/reservationStorage";
-import { GRID_AREAS, PaidAd, AvailableSpot } from "./postcardCore";
+import { GRID_AREAS, PaidAd, AvailableSpot, ReservedSpot } from "./postcardCore";
 import {
   BACK_GRID_AREAS,
   BACK_GRID_ORDER,
@@ -502,25 +502,32 @@ export default function PostcardPickerSection() {
         </div>
       </div>
 
-      {/* Postcard card */}
-      <div style={{ background: "#000", borderRadius: 12, padding: "10px 10px 6px",
-        boxShadow: "0 16px 56px rgba(0,0,0,0.18)", position: "relative" }}>
+      {/* Postcard card — white "matte" so the postcard sits on the page like
+          a real glossy mailer rather than a tablet bezel. The grid still
+          carries the colored chrome inside. */}
+      <div style={{ background: "#fff", border: "1px solid #e5e7eb",
+        borderRadius: 14, padding: "12px 12px 8px",
+        boxShadow: "0 24px 60px rgba(15,23,42,0.16), 0 2px 6px rgba(15,23,42,0.06)",
+        position: "relative" }}>
 
         {/* Label chip */}
-        <div style={{ position: "absolute", top: -13, left: 20, background: "#111", color: "#fff",
-          fontSize: 9, fontWeight: 700, letterSpacing: 1.5, padding: "3px 14px",
-          borderRadius: 20, textTransform: "uppercase" }}>
+        <div style={{ position: "absolute", top: -13, left: 22, background: "#111827", color: "#fff",
+          fontSize: 9, fontWeight: 700, letterSpacing: 1.5, padding: "4px 14px",
+          borderRadius: 20, textTransform: "uppercase",
+          boxShadow: "0 4px 10px rgba(0,0,0,0.18)" }}>
           {side === "front" ? "Front Side" : "Back Side"} — 12" × 9" · Reaching {campaign.homesCount?.toLocaleString() ?? "5,000"} Homes
         </div>
 
         {/* Red header bar */}
-        <div style={{ background: "linear-gradient(90deg,#7f1d1d,#991b1b)", borderRadius: "6px 6px 0 0",
-          padding: "6px 16px", display: "flex", justifyContent: "space-between", alignItems: "center",
-          marginBottom: 3 }}>
-          <div style={{ color: "#fff", fontWeight: 800, fontSize: 13, fontFamily: "Georgia,serif" }}>
+        <div style={{ background: "linear-gradient(90deg,#7f1d1d,#991b1b)", borderRadius: "8px 8px 0 0",
+          padding: "8px 16px", display: "flex", justifyContent: "space-between", alignItems: "center",
+          marginBottom: 0, borderBottom: "2px solid #fff" }}>
+          <div style={{ color: "#fff", fontWeight: 800, fontSize: 13, fontFamily: "Georgia,serif",
+            letterSpacing: 0.2 }}>
             📮 My Town Postcard · {side === "back" ? "Back Side" : "Front Side"}
           </div>
-          <div style={{ color: "#fca5a5", fontSize: 9 }}>
+          <div style={{ color: "#fecaca", fontSize: 9, fontFamily: "sans-serif",
+            letterSpacing: 0.6, textTransform: "uppercase", fontWeight: 600 }}>
             Reaching {campaign.homesCount?.toLocaleString()} Local Homes · Summer 2026
           </div>
         </div>
@@ -538,17 +545,20 @@ export default function PostcardPickerSection() {
               gridTemplateColumns: "repeat(12, 1fr)",
               gridTemplateRows: "repeat(9, 1fr)",
               gap: 1,
-              background: "rgba(0,0,0,0.15)",
-              border: "1px solid #ccc",
-              boxShadow: "0 4px 24px rgba(0,0,0,0.35)",
+              background: "rgba(15,23,42,0.08)",
+              borderLeft: "1px solid #d1d5db",
+              borderRight: "1px solid #d1d5db",
               boxSizing: "border-box",
               overflow: "hidden",
             }}>
               {sortedSpots.map(spot => {
                 const isSelected = selected?.id === spot.id;
-                const isPaid = (spot.status === "paid" || spot.status === "reserved") && spot.gridArea !== "mb";
+                // The seeded "mb" Mr. Biscuit's spot is always shown as a
+                // finished paid ad — it's our perpetual sponsor demo.
+                const isPaid = spot.status === "paid" || spot.gridArea === "mb";
+                const isReserved = spot.status === "reserved" && spot.gridArea !== "mb";
                 const sampleKey = SPOT_SAMPLE_MAP[spot.gridArea];
-                const sampleContent = !isPaid && sampleKey
+                const sampleContent = !isPaid && !isReserved && sampleKey
                   ? getSampleAd(sampleKey, SIZE_MAP[spot.size] || "S")
                   : null;
                 const pos = GRID_POSITIONS[spot.gridArea];
@@ -558,6 +568,8 @@ export default function PostcardPickerSection() {
                   <ScaledCell key={spot.id} pos={pos}>
                     {isPaid ? (
                       <PaidAd spot={spot} />
+                    ) : isReserved ? (
+                      <ReservedSpot spot={spot} />
                     ) : sampleContent ? (
                       <div style={{ position: "relative", width: "100%", height: "100%", cursor: "default" }}>
                         {sampleContent}
@@ -587,28 +599,35 @@ export default function PostcardPickerSection() {
           </PostcardScaleContext.Provider>
         </div>
 
-        {/* EDDM footer strip — visual reminder on the picker, the real
-            indicia lives in the EDDM box on the back side itself. */}
-        <div style={{ marginTop: 3, padding: "3px 12px", background: "#000",
-          borderRadius: "0 0 6px 6px", display: "flex", justifyContent: "space-between" }}>
-          <div style={{ fontSize: 7.5, color: "#666" }}>LOCAL POSTAL CUSTOMER · EDDM</div>
-          <div style={{ fontSize: 7.5, color: "#666" }}>
+        {/* EDDM footer strip — USPS-authentic navy bar with the indicia
+            text. Visual reminder on the picker; the real indicia lives in
+            the EDDM box on the back side itself. */}
+        <div style={{ padding: "5px 14px", background: "#1a1a2e",
+          borderRadius: "0 0 8px 8px", display: "flex", justifyContent: "space-between",
+          alignItems: "center", borderTop: "2px solid #fff" }}>
+          <div style={{ fontSize: 8, color: "#cbd5e1", letterSpacing: 0.8,
+            fontFamily: "sans-serif", fontWeight: 600 }}>
+            LOCAL POSTAL CUSTOMER · EDDM RETAIL
+          </div>
+          <div style={{ fontSize: 8, color: "#cbd5e1", letterSpacing: 0.8,
+            fontFamily: "sans-serif", fontWeight: 600 }}>
             PRESORTED STD · U.S. POSTAGE PAID · CLARKESVILLE GA {campaign.zipCode}
           </div>
         </div>
       </div>
 
-      {/* Legend */}
-      <div style={{ display: "flex", gap: 20, marginTop: 10, justifyContent: "center", flexWrap: "wrap" }}>
+      {/* Legend — three states the customer might see while scanning the card */}
+      <div style={{ display: "flex", gap: 22, marginTop: 14, justifyContent: "center",
+        flexWrap: "wrap", padding: "0 8px" }}>
         {[
-          { bg: "#f0fdf4", border: "2px dashed #22c55e", label: "Available — click to reserve" },
-          { bg: "#fef9c3", border: "2px solid #ca8a04",  label: "Your selection" },
-          { bg: "#f3f4f6", border: "1px solid #e5e7eb",  label: "Spot taken" },
+          { bg: "rgba(240,253,244,0.92)", border: "2px dashed #22c55e", label: "Available — click to claim" },
+          { bg: "rgba(254,243,199,0.96)", border: "2px solid #f59e0b",  label: "Your selection" },
+          { bg: "#fefce8",                border: "2px dashed #fbbf24", label: "Reserved by another business" },
         ].map(l => (
-          <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 7 }}>
-            <div style={{ width: 22, height: 14, background: l.bg, border: l.border,
+          <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ width: 24, height: 16, background: l.bg, border: l.border,
               borderRadius: 3, flexShrink: 0 }} />
-            <span style={{ fontSize: 11.5, color: "#6b7280" }}>{l.label}</span>
+            <span style={{ fontSize: 12, color: "#4b5563", fontWeight: 500 }}>{l.label}</span>
           </div>
         ))}
       </div>

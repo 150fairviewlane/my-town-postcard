@@ -511,16 +511,25 @@ export function getSampleAd(configKey, sizeKeyOverride) {
 // Keys are actual gridArea values from the postcard grid.
 // Spots NOT listed here render as green AvailableSpot (purchase prompt).
 //
-// Filled  (sample ad): mb (XL), dn (L), ins (M), a1 (S)     — 4 spots
-// Available (green +): re (L), hv (M), pz (S), lw (S), a2 (S) — 5 spots
+// Front filled (sample): mb (XL), dn (XL), ins (L), lw (M), a1 (S) — 5 spots
+// Front available:        re (XL), hv (L), pz (M), a2 (S)           — 4 spots
+// Back  filled (sample):  bxl (XL), bl1 (L), bm1 (M), bs1 (S)       — 4 spots
+// Back  available:        bl2 (L), bm2 (M), bs2 (S)
 //
-// Front available count: 1 L + 1 M + 3 S = 5 purchasable spots visible
+// At least one sample ad per size per side. Everything else is a clearly
+// inviting "Your ad here" cell so the postcard reads as a real co-op
+// mailer with room left for the customer.
 // ─────────────────────────────────────────────────────────────────────────────
 export const SPOT_SAMPLE_MAP = {
+  // Front side
   "mb":  "mrbiscuits",
   "dn":  "dental",
   "ins": "insurance",
   "lw":  "lawn",
   "a1":  "salon",
-  "a3":  "vet",
+  // Back side
+  "bxl": "mexican",
+  "bl1": "autorepair",
+  "bm1": "vet",
+  "bs1": "gym",
 };
