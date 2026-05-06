@@ -1,0 +1,21 @@
+I am attaching a file called PostcardPickerFinal.jsx. This is a visual reference showing exactly how the postcard picker should look. Do not apply this file directly. Instead, study it carefully and use it to update the existing PostcardPickerSection component in the real codebase. Here is exactly what to do:
+
+STEP 1 - FIX THE ASPECT RATIO:
+The postcard is currently too tall. A 12x9 postcard must be wider than it is tall. Find the postcard grid container div and change its height calculation. Replace any fixed height like H * scale with a CSS padding-bottom approach. The outer wrapper div should have position relative and width 100%. Inside it, the postcard div should have position absolute, inset 0, and use padding-bottom 75 percent on the wrapper (because 9 divided by 12 equals 0.75). This guarantees the postcard always maintains correct 12x9 landscape proportions at any screen width.
+
+STEP 2 - FIX SPOT SIZES AND LABELS:
+The Small spots are currently displaying as 1 inch by 2 inch. They must be 2 inch by 2 inch to match spec. Update all Small spot definitions to use w:200 and h:200 in natural pixels. Update all Medium spot definitions to also use w:200 and h:200. This requires reorganizing the bottom-right section of the front side grid. The correct layout for the bottom-right region (x=800 to x=1200, y=500 to y=900) is a 2x2 grid of four 200x200 spots: Medium 1 at x=800 y=500, Small 1 at x=1000 y=500, Medium 2 at x=800 y=700, Small 2 at x=1000 y=700. Also fix the back side so Medium spots use w:200 h:200 and Small spots use w:200 h:200 with appropriate positioning that tiles without gaps.
+
+STEP 3 - FIX THE SIZE LABELS:
+The Medium and Small labels are currently swapped. Fix the size label lookup so that spots with size M display the label Medium Ad with dimensions 2 x 2 inches and spots with size S display the label Small Ad with dimensions 2 x 2 inches.
+
+STEP 4 - FIX THE MR BISCUITS SAMPLE AD:
+The Mr. Biscuit’s Cafe sample ad currently shows a multi-photo grid with multiple coupon images. This does not match what our AdGenerator actually produces. Replace it with a single-photo template that matches our AdGenerator style: a colored header bar with the business name, one hero photo strip below the header, then a content area with the tagline, a service list with checkmarks, a dashed-border coupon, the phone number, and the address. The photo for Mr. Biscuit’s should be a single food photo from Unsplash. The brand colors are warm brown primary #7c3a1e with amber accent #f59e0b and light background #fef3c7.
+
+STEP 5 - UPDATE MEDIUM AND SMALL AD TEMPLATES:
+The existing Medium ad template renders at 300x200 natural pixels. Update it to render at 200x200. Keep the same layout (header bar with business name and phone, small photo strip, content area with tagline and services, coupon at bottom) but adjust all internal sizing and font sizes to fit the smaller 200x200 canvas. The Small ad template currently renders at 100x200. Update it to render at 200x200. Keep the photo-background layout but adjust padding, font sizes, and spacing to fill the square canvas properly.
+
+STEP 6 - DO NOT CHANGE ANYTHING ELSE:
+Do not change the spot IDs in the database. Do not change the useGetActiveCampaign hook. Do not change the useReserveSpot mutation. Do not change the resume-checkout banner. Do not change the ScaledCell scaling architecture. Do not change the front/back toggle. Do not change the available spot styling or the reservation modal. Only change what is described in steps 1 through 5 above.
+
+After making all changes, verify that the postcard renders at correct 12x9 landscape proportions, that Medium and Small spots are visibly square, that the labels read correctly as Medium Ad and Small Ad, and that the Mr. Biscuit’s ad looks like a single professional ad that could have been created in our AdGenerator.

@@ -4,7 +4,7 @@ import { MrBiscuitsLarge, MrBiscuitsMedium, MrBiscuitsSmall } from "./MrBiscuits
 export const SIZES = {
   xl:     { label: "Extra-Large", dim: '4" × 5"', desc: "Prime placement, maximum impact" },
   large:  { label: "Large",       dim: '4" × 3"', desc: "Great visibility, popular choice" },
-  medium: { label: "Medium",      dim: '3" × 2"', desc: "Growing reach, great value" },
+  medium: { label: "Medium",      dim: '2" × 2"', desc: "Growing reach, great value" },
   small:  { label: "Small",       dim: '2" × 2"', desc: "Affordable local reach" },
 };
 
@@ -629,8 +629,8 @@ export function PaidAd({ spot }) {
 const SZ_INFO = {
   xl:     { label: "Extra Large Ad", dims: '4" × 5"' },
   large:  { label: "Large Ad",       dims: '4" × 3"' },
-  medium: { label: "Medium Ad",      dims: '3" × 2"' },
-  small:  { label: "Small Ad",       dims: '1" × 2"' },
+  medium: { label: "Medium Ad",      dims: '2" × 2"' },
+  small:  { label: "Small Ad",       dims: '2" × 2"' },
 };
 
 // ─── Public: AvailableSpot ────────────────────────────────────────────────────

@@ -40,23 +40,21 @@ const GRID_POSITIONS = {
   re:  { gridColumn: "9/13",  gridRow: "1/6"  },  // XL  4"×5"
   hv:  { gridColumn: "1/5",   gridRow: "6/9"  },  // Lg  4"×3"
   ins: { gridColumn: "5/9",   gridRow: "6/9"  },  // Lg  4"×3"
-  pz:  { gridColumn: "9/12",  gridRow: "6/8"  },  // Md  3"×2"
-  lw:  { gridColumn: "9/12",  gridRow: "8/10" },  // Md  3"×2"
-  a1:  { gridColumn: "12/13", gridRow: "6/8"  },  // Sm  1"×2" (1 col remains)
-  a2:  { gridColumn: "12/13", gridRow: "8/10" },  // Sm  1"×2"
+  pz:  { gridColumn: "9/11",  gridRow: "6/8"  },  // Md  2"×2" (bottom-right 2×2 grid)
+  a1:  { gridColumn: "11/13", gridRow: "6/8"  },  // Sm  2"×2"
+  lw:  { gridColumn: "9/11",  gridRow: "8/10" },  // Md  2"×2"
+  a2:  { gridColumn: "11/13", gridRow: "8/10" },  // Sm  2"×2"
   hs:  { gridColumn: "1/9",   gridRow: "9/10" },  // House ad — bottom strip
   // ── Back side ───────────────────────────────────────────────────────────────
   bxl: { gridColumn: "1/5",   gridRow: "1/6"  },  // XL  4"×5"
   bl1: { gridColumn: "5/9",   gridRow: "1/4"  },  // Lg  4"×3"
   bl2: { gridColumn: "9/13",  gridRow: "1/4"  },  // Lg  4"×3"
-  bm1: { gridColumn: "5/8",   gridRow: "4/6"  },  // Md  3"×2"
-  bm2: { gridColumn: "8/11",  gridRow: "4/6"  },  // Md  3"×2"
-  bs1: { gridColumn: "5/7",   gridRow: "6/9"  },  // Sm  2"×3"
-  bs2: { gridColumn: "7/9",   gridRow: "6/9"  },  // Sm  2"×3"
+  bm1: { gridColumn: "5/7",   gridRow: "4/6"  },  // Md  2"×2"
+  bs1: { gridColumn: "7/9",   gridRow: "4/6"  },  // Sm  2"×2"
+  bm2: { gridColumn: "9/11",  gridRow: "4/6"  },  // Md  2"×2"
+  bs2: { gridColumn: "11/13", gridRow: "4/6"  },  // Sm  2"×2"
   ed:  { gridColumn: "9/13",  gridRow: "6/10" },  // EDDM indicia  4"×4"
-  bhr: { gridColumn: "1/5",   gridRow: "6/10" },  // House ad — left strip
-  bhs: { gridColumn: "11/13", gridRow: "4/6"  },  // House ad — top-right corner
-  bhn: { gridColumn: "5/9",   gridRow: "9/10" },  // House ad — bottom banner
+  bhr: { gridColumn: "1/9",   gridRow: "6/10" },  // House ad — full left block 8"×4"
 };
 
 // ─── Cell scaling system ─────────────────────────────────────────────────────
@@ -354,7 +352,9 @@ export default function PostcardPickerSection() {
     return null;
   };
 
-  const fixedAreas = side === "front" ? ["hs"] : ["bhs", "bhr", "bhn", "ed"];
+  // Back side: bhr now covers the full 8"×4" house-ad block (cols 1-8, rows 6-9).
+  // bhs and bhn were the old split house-ad cells; they no longer exist in the layout.
+  const fixedAreas = side === "front" ? ["hs"] : ["bhr", "ed"];
 
   const sideButtonStyle = (active) => ({
     border: "none",
@@ -494,30 +494,28 @@ export default function PostcardPickerSection() {
         boxShadow: "0 0 0 1px rgba(0,0,0,0.08),0 8px 32px rgba(0,0,0,0.18)",
       }}>
 
-        {/* Postcard grid — fluid 12:9 landscape, fills its parent fully.
-            Every cell renders content at a fixed natural pixel size
-            (1 grid unit = 100 px) and is transform-scaled by PostcardScaleContext
-            so all fonts/borders/padding stay proportional at any viewport. */}
+        {/* Postcard grid — padding-bottom: 75% guarantees exact 12:9 landscape
+            ratio at every viewport width (9÷12 = 0.75). The grid is absolutely
+            positioned to fill the padding box; ScaledCell's transform:scale()
+            keeps every cell's content in proportion. */}
         <div style={{ width: "100%" }}>
           <PostcardScaleContext.Provider value={postcardScale}>
-            <div ref={gridRef} style={{
-              width: "100%",
-              aspectRatio: "12 / 9",
+            <div ref={gridRef} style={{ position: "relative", width: "100%", paddingBottom: "75%" }}>
+            <div style={{
+              position: "absolute", inset: 0,
               display: "grid",
               gridTemplateColumns: "repeat(12, 1fr)",
               gridTemplateRows: "repeat(9, 1fr)",
               gap: 1,
               background: "rgba(15,23,42,0.08)",
-              borderLeft: "1px solid #d1d5db",
-              borderRight: "1px solid #d1d5db",
               boxSizing: "border-box",
               overflow: "hidden",
             }}>
               {sortedSpots.map(spot => {
                 const isSelected = selected?.id === spot.id;
-                // The seeded "mb" Mr. Biscuit's spot is always shown as a
-                // finished paid ad — it's our perpetual sponsor demo.
-                const isPaid = spot.status === "paid" || spot.gridArea === "mb";
+                // mb is seeded as "paid" but we render it as a sample AdXL so it
+                // reads like a real advertiser's ad rather than the generic paid-ad renderer.
+                const isPaid = spot.status === "paid" && spot.gridArea !== "mb";
                 const isReserved = spot.status === "reserved" && spot.gridArea !== "mb";
                 const sampleKey = SPOT_SAMPLE_MAP[spot.gridArea];
                 const sampleContent = !isPaid && !isReserved && sampleKey
@@ -557,6 +555,7 @@ export default function PostcardPickerSection() {
                   </ScaledCell>
                 );
               })}
+            </div>
             </div>
           </PostcardScaleContext.Provider>
         </div>

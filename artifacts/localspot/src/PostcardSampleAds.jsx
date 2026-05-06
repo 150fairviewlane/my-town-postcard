@@ -48,6 +48,15 @@ function RefCoupon({ offer, fine, color, dark }) {
 // ─── Reference ad data ───────────────────────────────────────────────────────
 // Colors: p=primary, a=accent, l=light, d=dark
 const REF_ADS = {
+  mrbiscuits: {
+    biz: "Mr. Biscuit's Café", cat: "BREAKFAST & CAFE",
+    tag: "From-Scratch Biscuits & Boba!",
+    services: ["Plain Biscuit $2.99", "Bacon Biscuit $4.99", "Chicken Tender $5.99", "NY Bagels $5.49"],
+    offer: "$1 OFF Any Biscuit", fine: "1 per visit · with this postcard",
+    phone: "(706) 754-0105", addr: "596 W Louise St, Clarkesville, GA 30523", web: "mrbiscuitscafe.com",
+    photo: "https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?w=800&q=80",
+    p: "#92400e", a: "#f59e0b", l: "#fffbeb", d: "#451a03",
+  },
   roofing: {
     biz: "Pine Ridge Roofing", cat: "ROOFING & EXTERIORS",
     tag: "Built to Protect. Built to Last.",
@@ -231,30 +240,30 @@ function AdL({ d }) {
   );
 }
 
-// ─── Reference template: AdM (300 × 200) ────────────────────────────────────
+// ─── Reference template: AdM (200 × 200) ────────────────────────────────────
 function AdM({ d }) {
   return (
     <div style={{
-      width: 300, height: 200, display: "flex", flexDirection: "column",
+      width: 200, height: 200, display: "flex", flexDirection: "column",
       overflow: "hidden", fontFamily: "sans-serif",
       border: `2px solid ${d.p}`, boxSizing: "border-box", background: "#fff",
     }}>
       {/* Header */}
       <div style={{
-        background: d.p, padding: "6px 10px",
+        background: d.p, padding: "5px 8px",
         display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0,
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <div style={{ width: 22, height: 22, borderRadius: 4, overflow: "hidden", border: "1.5px solid rgba(255,255,255,0.3)", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <div style={{ width: 18, height: 18, borderRadius: 3, overflow: "hidden", border: "1.5px solid rgba(255,255,255,0.3)", flexShrink: 0 }}>
             <img src={d.photo} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt=""
               onError={e => { e.target.style.display = "none"; }} />
           </div>
           <div>
-            <div style={{ color: "#fff", fontWeight: 900, fontSize: 13, fontFamily: "Georgia,serif", lineHeight: 1 }}>{d.biz}</div>
-            <div style={{ color: "rgba(255,255,255,0.72)", fontSize: 7.5, letterSpacing: 1.3, textTransform: "uppercase" }}>{d.cat}</div>
+            <div style={{ color: "#fff", fontWeight: 900, fontSize: 11, fontFamily: "Georgia,serif", lineHeight: 1, overflow: "hidden", whiteSpace: "nowrap", maxWidth: 82 }}>{d.biz}</div>
+            <div style={{ color: "rgba(255,255,255,0.72)", fontSize: 6.5, letterSpacing: 1.2, textTransform: "uppercase" }}>{d.cat}</div>
           </div>
         </div>
-        <PhoneRow phone={d.phone} color="rgba(255,255,255,0.9)" size={11} />
+        <PhoneRow phone={d.phone} color="rgba(255,255,255,0.9)" size={10} />
       </div>
 
       {/* Content */}
@@ -284,24 +293,24 @@ function AdM({ d }) {
   );
 }
 
-// ─── Reference template: AdS (100 × 200) ────────────────────────────────────
+// ─── Reference template: AdS (200 × 200) ────────────────────────────────────
 function AdS({ d }) {
   return (
-    <div style={{ width: 100, height: 200, overflow: "hidden", position: "relative", fontFamily: "sans-serif" }}>
+    <div style={{ width: 200, height: 200, overflow: "hidden", position: "relative", fontFamily: "sans-serif" }}>
       <img src={d.photo} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} alt=""
         onError={e => { e.target.style.display = "none"; }} />
-      <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg,${d.d}cc 0%,${d.d}f5 100%)` }} />
+      <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg,${d.d}aa 0%,${d.d}f5 100%)` }} />
       <div style={{
-        position: "absolute", inset: 0, padding: "8px 5px",
+        position: "absolute", inset: 0, padding: "12px 10px",
         display: "flex", flexDirection: "column", justifyContent: "space-between",
       }}>
         <div>
-          <div style={{ color: "#fff", fontWeight: 900, fontSize: 10, lineHeight: 1.2, fontFamily: "Georgia,serif" }}>{d.biz}</div>
-          <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 7, letterSpacing: 1, textTransform: "uppercase", marginTop: 2 }}>{d.cat}</div>
+          <div style={{ color: "#fff", fontWeight: 900, fontSize: 13, lineHeight: 1.2, fontFamily: "Georgia,serif" }}>{d.biz}</div>
+          <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 9, letterSpacing: 1, textTransform: "uppercase", marginTop: 2 }}>{d.cat}</div>
         </div>
         <div>
           <RefCoupon offer={d.offer} fine={null} color="#fff" dark={true} />
-          <div style={{ color: "rgba(255,255,255,0.85)", fontSize: 8, marginTop: 4, fontWeight: 700, lineHeight: 1.2 }}>{d.phone}</div>
+          <div style={{ color: "rgba(255,255,255,0.85)", fontSize: 10, marginTop: 5, fontWeight: 700, lineHeight: 1.2 }}>{d.phone}</div>
         </div>
       </div>
     </div>
@@ -473,6 +482,8 @@ export const SAMPLE_AD_CONFIGS = {
       menuItems: ["Wellness Exams", "Vaccinations", "Surgery & Dental", "Emergency Care"],
     },
   },
+  // ── Mr. Biscuit's — single-photo AdXL matching AdGenerator style ──────────
+  "ref-mrbiscuits": { template: "ref-photo", sizeKey: "XL", data: { key: "mrbiscuits" } },
   // ── Reference-photo configs (new businesses matching reference file) ────────
   "ref-roofing": { template: "ref-photo", sizeKey: "XL", data: { key: "roofing" } },
   "ref-dental":  { template: "ref-photo", sizeKey: "XL", data: { key: "dental"  } },
@@ -482,18 +493,6 @@ export const SAMPLE_AD_CONFIGS = {
   "ref-vet":     { template: "ref-photo", sizeKey: "M",  data: { key: "vet"     } },
   "ref-pizza":   { template: "ref-photo", sizeKey: "S",  data: { key: "pizza"   } },
   "ref-salon":   { template: "ref-photo", sizeKey: "S",  data: { key: "salon"   } },
-  // ── Mr. Biscuit's — perpetual sponsor demo (keeps existing rich template) ──
-  "mrbiscuits": {
-    template: "photo-bold", sizeKey: "XL",
-    data: {
-      businessName: "Mr. Biscuit's Café", industry: "Breakfast & Cafe",
-      tagline: "From-Scratch Biscuits & Boba!", starburst: "$1 OFF",
-      offer: "$1 OFF Any Biscuit", offerFine: "1 per visit · with this postcard",
-      phone: "(706) 754-0105", address: "596 W Louise St D, Clarkesville, GA 30523",
-      website: "mrbiscuitscafe.com",
-      menuItems: ["Plain Biscuit $2.99", "Bacon Biscuit $4.99", "Chicken Tender $5.99", "NY Bagels $5.49"],
-    },
-  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -847,7 +846,7 @@ export function getSampleAd(configKey, sizeKeyOverride) {
 // ─────────────────────────────────────────────────────────────────────────────
 export const SPOT_SAMPLE_MAP = {
   // Front side — reference designs match the visual reference file exactly
-  "mb":  "mrbiscuits",    // XL — Mr. Biscuit's (existing rich template)
+  "mb":  "ref-mrbiscuits", // XL — Mr. Biscuit's (single-photo AdXL, AdGenerator style)
   "dn":  "ref-dental",    // XL — Northview Dental
   "ins": "ref-hvac",      // L  — Climate Comfort HVAC
   "lw":  "ref-lawn",      // M  — GreenScapes Lawn Care (re-rendered at M)

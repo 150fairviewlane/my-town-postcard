@@ -89,11 +89,13 @@ See `.env.example` for full documentation. Summary:
 
 ## Postcard Layout
 
-The postcard is 12"×9" landscape and has TWO sides, both sellable through the same picker, AdGenerator, and payment flow. The picker has a Front/Back toggle pill above the grid.
+The postcard is 12"×9" landscape and has TWO sides, both sellable through the same picker, AdGenerator, and payment flow. The picker has a Front/Back toggle pill above the grid. Aspect ratio is locked via `padding-bottom: 75%` wrapper (not `aspect-ratio` CSS) to guarantee exact 12:9 at all viewports.
 
-**Front side** — 9 spots: `mb` (xl, perpetual sponsor demo Mr. Biscuit's), `dn` `re` (xl), `hv` `ins` (large), `pz` `a1` (small), `lw` `a2` (medium), plus `hs` permanent house ad cell.
+**Front side** — 9 spots: `mb` (xl, Mr. Biscuit's sample), `dn` `re` (xl), `hv` `ins` (large), then a **2×2 grid** in the bottom-right corner: `pz` `a1` (top row, each 2"×2"), `lw` `a2` (bottom row, each 2"×2"), plus `hs` permanent house ad cell (cols 1-8, row 9).
 
-**Back side** — 7 spots: `bxl` (xl, $450), `bl1` `bl2` (large, $350), `bm1` `bm2` (medium, $250), `bs1` `bs2` (small, $199), plus three house-ad cells (`bhs` vertical, `bhr` row, `bhn` banner) and the non-sellable `ed` USPS EDDM block (4"×2" placeholder with PRESORTED STD indicia, ECRWSS, "Local Postal Customer" line, and barcode placeholder) in the bottom-right corner. Layout in `artifacts/localspot/src/postcardBack.jsx`.
+**Back side** — 7 spots: `bxl` (xl, $450), `bl1` `bl2` (large, $350), `bm1` `bs1` `bm2` `bs2` (each 2"×2", 200×200px natural, arranged in a row at rows 4-5), plus one house-ad cell `bhr` (cols 1-8, rows 6-9 = 800×400) and the non-sellable `ed` USPS EDDM block (4"×4"). Layout in `artifacts/localspot/src/postcardBack.jsx`.
+
+**Medium and Small spots** are both 2"×2" (200×200 natural px). They differ only in price ($250 vs $199) and content density in the sample ads.
 
 The print page (`/admin/campaign/:id/print`) renders both sides as separate print pages with `page-break-after: always` between them.
 
