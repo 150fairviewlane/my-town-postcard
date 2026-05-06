@@ -1,0 +1,524 @@
+import { useState, useRef, useEffect } from “react”;
+import { useGetActiveCampaign, useReserveSpot } from “./postcardCore”;
+import { findActiveReservation, saveReservation } from “./postcardCore”;
+import { Modal, ReservationForm, PaidAd } from “./postcardCore”;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POSTCARD PICKER SECTION
+//
+// Renders a 12 by 9 inch postcard at correct proportions with all spots
+// tiled perfectly. Natural canvas is 1200 by 900 pixels at 100px per inch.
+// A single scale factor (containerWidth / 1200) shrinks the entire postcard
+// to fit the screen while every position and font size stays mathematically
+// correct.
+//
+// Each spot renders its content at natural pixel size, then transform: scale
+// shrinks the rendered ad to fit its cell — so fonts and proportions never
+// distort.
+//
+// Spot IDs use the gridArea codes that the backend already knows about:
+// mb, dn, re, hv, ins, pz, lw, a1, a2, hs on the front side, and the
+// back-* prefixed IDs on the back. The existing useGetActiveCampaign hook,
+// useReserveSpot mutation, findActiveReservation, saveReservation, Modal,
+// ReservationForm, and PaidAd components are all preserved — checkout,
+// reservations, the resume banner, and real paid ads continue to work.
+//
+// LAYOUT NOTES:
+//   Front 9 paid spots: 3 XL plus 2 L plus 2 M plus 2 S plus 1 house ad
+//   Back 7 paid spots: 1 XL plus 2 L plus 2 M plus 2 S plus house ad plus
+//   EDDM indicia
+//
+//   Small spots are 1 inch by 2 inch (banner format) on this layout because
+//   that is the only way to fit 2 Mediums plus 2 Smalls in the right column
+//   without overlap. The pricing reflects this footprint at 199 dollars.
+//   This matches how real EDDM co-op postcards lay out small spots.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const NATURAL_W = 1200;
+const NATURAL_H = 900;
+
+// Front side spot definitions (verified to tile perfectly)
+const FRONT = [
+{ id: “mb”,  size: “XL”, price: 450, x: 0,    y: 0,   w: 400, h: 500 },
+{ id: “dn”,  size: “XL”, price: 450, x: 400,  y: 0,   w: 400, h: 500 },
+{ id: “re”,  size: “XL”, price: 450, x: 800,  y: 0,   w: 400, h: 500 },
+{ id: “hv”,  size: “L”,  price: 350, x: 0,    y: 500, w: 400, h: 300 },
+{ id: “ins”, size: “L”,  price: 350, x: 400,  y: 500, w: 400, h: 300 },
+{ id: “pz”,  size: “M”,  price: 250, x: 800,  y: 500, w: 300, h: 200 },
+{ id: “a1”,  size: “S”,  price: 199, x: 1100, y: 500, w: 100, h: 200 },
+{ id: “lw”,  size: “M”,  price: 250, x: 800,  y: 700, w: 300, h: 200 },
+{ id: “a2”,  size: “S”,  price: 199, x: 1100, y: 700, w: 100, h: 200 },
+{ id: “hs”,  size: “house”, price: 0, x: 0, y: 800, w: 800, h: 100 },
+];
+
+// Back side spot definitions
+const BACK = [
+{ id: “back-xl”,    size: “XL”,    price: 450, x: 0,    y: 0,   w: 400, h: 500 },
+{ id: “back-l1”,    size: “L”,     price: 350, x: 400,  y: 0,   w: 400, h: 300 },
+{ id: “back-l2”,    size: “L”,     price: 350, x: 800,  y: 0,   w: 400, h: 300 },
+{ id: “back-m1”,    size: “M”,     price: 250, x: 400,  y: 300, w: 300, h: 200 },
+{ id: “back-s1”,    size: “S”,     price: 199, x: 700,  y: 300, w: 100, h: 200 },
+{ id: “back-m2”,    size: “M”,     price: 250, x: 800,  y: 300, w: 300, h: 200 },
+{ id: “back-s2”,    size: “S”,     price: 199, x: 1100, y: 300, w: 100, h: 200 },
+{ id: “back-house”, size: “house”, price: 0,   x: 0,    y: 500, w: 800, h: 400 },
+{ id: “back-eddm”,  size: “eddm”,  price: 0,   x: 800,  y: 500, w: 400, h: 400 },
+];
+
+// Industry visual definitions for sample ads
+const IND = {
+“Breakfast & Cafe”:   { photo: “https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=800&q=80”, primary: “#7c3a1e”, accent: “#f59e0b”, light: “#fef3c7”, dark: “#3b1a0a”, emoji: “🥐” },
+“Dentist”:            { photo: “https://images.unsplash.com/photo-1609840114035-3c981b782dfe?w=800&q=80”, primary: “#1e40af”, accent: “#3b82f6”, light: “#eff6ff”, dark: “#1e3a5f”, emoji: “🦷” },
+“Insurance”:          { photo: “https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800&q=80”, primary: “#1a3d2e”, accent: “#d4a017”, light: “#f0fdf4”, dark: “#0f2318”, emoji: “🛡️” },
+“Lawn & Landscaping”: { photo: “https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&q=80”, primary: “#166534”, accent: “#f59e0b”, light: “#f0fdf4”, dark: “#052e16”, emoji: “🌿” },
+“Salon & Beauty”:     { photo: “https://images.unsplash.com/photo-1560066984-138daaa4e4e1?w=800&q=80”, primary: “#831843”, accent: “#ec4899”, light: “#fdf2f8”, dark: “#4a0e28”, emoji: “💇” },
+“Auto Repair”:        { photo: “https://images.unsplash.com/photo-1530046339160-ce3e530c7d2f?w=800&q=80”, primary: “#1e3a5f”, accent: “#f59e0b”, light: “#eff6ff”, dark: “#0f1f33”, emoji: “🔧” },
+“Veterinarian”:       { photo: “https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=800&q=80”, primary: “#065f46”, accent: “#34d399”, light: “#ecfdf5”, dark: “#022c22”, emoji: “🐾” },
+};
+
+// Sample ad data per spot ID — only used when the DB has no real paid ad
+const SAMPLES = {
+“mb”:      { biz: “Mr. Biscuit’s Cafe”,         ind: “Breakfast & Cafe”,   tag: “From-Scratch Biscuits & Boba!”, offer: “$1 OFF Any Biscuit”,  phone: “(706) 754-0105”, addr: “596 W Louise St, Clarkesville GA”, star: “$1 OFF” },
+“dn”:      { biz: “Clarkesville Family Dental”, ind: “Dentist”,            tag: “Accepting New Patients!”,      offer: “FREE Whitening Kit”,  phone: “(706) 555-0142”, addr: “142 Commerce St, Clarkesville GA”, star: “NEW!”, menu: [“Preventive Care”, “Cosmetic & Whitening”, “Family Care”] },
+“ins”:     { biz: “Tanner Insurance”,           ind: “Insurance”,          tag: “Local Agent. Real Savings.”,   offer: “Save up to $500/yr”, phone: “(706) 555-0388”, addr: “55 Green St, Clarkesville GA”,     menu: [“Auto”, “Home”, “Life”, “Business”] },
+“lw”:      { biz: “Green Acres Lawn Care”,      ind: “Lawn & Landscaping”, tag: “Your Yard. Our Pride.”,        offer: “$25 OFF First Service”, phone: “(706) 555-0291”, addr: “Clarkesville, GA”,              star: “$25 OFF” },
+“a1”:      { biz: “Cut Above Salon”,            ind: “Salon & Beauty”,     tag: “Look Beautiful.”,              offer: “20% OFF”,            phone: “(706) 555-0519”, addr: “Clarkesville, GA”,                 star: “20% OFF” },
+“back-l1”: { biz: “Shadetree Auto Repair”,      ind: “Auto Repair”,        tag: “Honest Repair. Fair Prices.”,  offer: “Free Diagnostic”,    phone: “(770) 678-7890”, addr: “Clarkesville, GA”,                 star: “FREE!” },
+“back-m1”: { biz: “Clarkesville Animal Clinic”, ind: “Veterinarian”,       tag: “Compassionate Pet Care”,       offer: “Free First Exam”,    phone: “(706) 555-0322”, addr: “Clarkesville, GA”,                 menu: [“Wellness”, “Vaccines”, “Surgery”] },
+};
+
+// ─── Decorative components ────────────────────────────────────────────────────
+
+function Starburst({ text, size }) {
+return (
+<div style={{ position: “absolute”, width: size, height: size, top: 8, right: 8, zIndex: 5 }}>
+<svg width={size} height={size} viewBox=“0 0 100 100” style={{ position: “absolute”, filter: “drop-shadow(0 2px 6px rgba(0,0,0,0.5))” }}>
+<polygon points="50,2 58,18 76,8 73,28 92,28 80,42 96,55 78,60 87,78 68,75 70,94 53,84 50,98 47,84 30,94 32,75 13,78 22,60 4,55 20,42 8,28 27,28 24,8 42,18" fill="#f59e0b" />
+</svg>
+<div style={{
+position: “absolute”, inset: 0, display: “flex”, alignItems: “center”,
+justifyContent: “center”, color: “#fff”, fontWeight: 900,
+fontSize: size * 0.18, textAlign: “center”, lineHeight: 1.1,
+padding: “0 6px”, textShadow: “0 1px 3px rgba(0,0,0,0.6)”,
+}}>{text}</div>
+</div>
+);
+}
+
+function Coupon({ offer, accent, dark }) {
+if (!offer) return null;
+return (
+<div style={{
+border: `2px dashed ${accent}`,
+background: dark ? “rgba(0,0,0,0.4)” : `${accent}18`,
+borderRadius: 6, padding: “8px 14px 6px”, textAlign: “center”,
+position: “relative”, marginTop: 6, flexShrink: 0,
+}}>
+<div style={{ color: accent, fontWeight: 900, fontSize: 16, lineHeight: 1 }}>{offer}</div>
+</div>
+);
+}
+
+// ─── Sample ad templates — render at NATURAL pixel sizes ─────────────────────
+
+function SampleXL({ d }) {
+const ind = IND[d.ind] || IND[“Breakfast & Cafe”];
+return (
+<div style={{ width: 400, height: 500, position: “relative”, overflow: “hidden”, fontFamily: “Georgia, serif”, background: “#222” }}>
+<img src={ind.photo} alt=”” style={{ position: “absolute”, inset: 0, width: “100%”, height: “100%”, objectFit: “cover” }} />
+<div style={{ position: “absolute”, inset: 0, background: `linear-gradient(180deg, ${ind.dark}cc 0%, ${ind.dark}33 35%, ${ind.dark}f0 100%)` }} />
+{d.star && <Starburst text={d.star} size={75} />}
+<div style={{ position: “absolute”, top: 18, left: 18, right: 90 }}>
+<div style={{ color: ind.accent, fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: “uppercase”, fontFamily: “sans-serif” }}>{d.ind}</div>
+<div style={{ color: “#fff”, fontWeight: 900, fontSize: 30, lineHeight: 1.05, marginTop: 4, textShadow: “0 2px 8px rgba(0,0,0,0.85)” }}>{d.biz}</div>
+</div>
+<div style={{ position: “absolute”, top: “42%”, left: 18, right: 18, textAlign: “center” }}>
+<div style={{ color: “#fff”, fontWeight: 800, fontSize: 24, lineHeight: 1.15, fontStyle: “italic”, textShadow: “0 2px 12px rgba(0,0,0,0.9)” }}>“{d.tag}”</div>
+</div>
+<div style={{ position: “absolute”, bottom: 0, left: 0, right: 0, padding: “14px 18px”, display: “flex”, flexDirection: “column”, gap: 8 }}>
+{d.offer && <Coupon offer={d.offer} accent="#fff" dark />}
+<div>
+{d.addr && <div style={{ color: “rgba(255,255,255,0.85)”, fontSize: 11, fontFamily: “sans-serif” }}>📍 {d.addr}</div>}
+<div style={{ color: “#fff”, fontSize: 18, fontWeight: 900, fontFamily: “sans-serif”, marginTop: 2 }}>📞 {d.phone}</div>
+</div>
+</div>
+</div>
+);
+}
+
+function SampleL({ d }) {
+const ind = IND[d.ind] || IND[“Dentist”];
+return (
+<div style={{ width: 400, height: 300, overflow: “hidden”, display: “flex”, background: “#fff”, fontFamily: “sans-serif”, position: “relative” }}>
+{d.star && <div style={{ position: “absolute”, top: 0, right: 0, zIndex: 5 }}><Starburst text={d.star} size={55} /></div>}
+<div style={{ width: 170, height: “100%”, flexShrink: 0, position: “relative”, overflow: “hidden” }}>
+<img src={ind.photo} alt=”” style={{ width: “100%”, height: “100%”, objectFit: “cover” }} />
+<div style={{ position: “absolute”, inset: 0, background: `linear-gradient(90deg, transparent 60%, ${ind.light})` }} />
+</div>
+<div style={{ flex: 1, padding: “12px 14px”, background: ind.light, display: “flex”, flexDirection: “column”, justifyContent: “space-between” }}>
+<div>
+<div style={{ color: ind.accent, fontSize: 9, fontWeight: 700, letterSpacing: 2, textTransform: “uppercase” }}>{d.ind}</div>
+<div style={{ color: ind.dark, fontWeight: 900, fontSize: 20, fontFamily: “Georgia, serif”, lineHeight: 1.0, marginTop: 2 }}>{d.biz}</div>
+<div style={{ color: ind.primary, fontSize: 11, fontWeight: 700, fontStyle: “italic”, marginTop: 3 }}>{d.tag}</div>
+</div>
+{d.menu && (
+<div style={{ display: “flex”, flexDirection: “column”, gap: 3 }}>
+{d.menu.slice(0, 3).map((m, i) => (
+<div key={i} style={{ display: “flex”, alignItems: “center”, gap: 5 }}>
+<div style={{ width: 13, height: 13, borderRadius: “50%”, background: ind.accent, display: “flex”, alignItems: “center”, justifyContent: “center”, flexShrink: 0 }}>
+<span style={{ color: “#fff”, fontSize: 8, fontWeight: 900 }}>✓</span>
+</div>
+<div style={{ fontSize: 10, color: “#222”, fontWeight: 500 }}>{m}</div>
+</div>
+))}
+</div>
+)}
+<div>
+{d.addr && <div style={{ fontSize: 9, color: “#555” }}>📍 {d.addr}</div>}
+<div style={{ fontSize: 14, color: ind.primary, fontWeight: 900 }}>📞 {d.phone}</div>
+{d.offer && <Coupon offer={d.offer} accent={ind.primary} />}
+</div>
+</div>
+</div>
+);
+}
+
+function SampleM({ d }) {
+const ind = IND[d.ind] || IND[“Insurance”];
+return (
+<div style={{ width: 300, height: 200, overflow: “hidden”, display: “flex”, flexDirection: “column”, background: “#fff”, fontFamily: “sans-serif”, border: `2px solid ${ind.primary}`, boxSizing: “border-box” }}>
+<div style={{ background: ind.primary, padding: “6px 10px”, display: “flex”, alignItems: “center”, justifyContent: “space-between” }}>
+<div style={{ display: “flex”, alignItems: “center”, gap: 6 }}>
+<div style={{ width: 24, height: 24, borderRadius: “50%”, background: ind.accent, display: “flex”, alignItems: “center”, justifyContent: “center”, fontSize: 13 }}>{ind.emoji}</div>
+<div style={{ color: “#fff”, fontWeight: 900, fontSize: 13, lineHeight: 1 }}>{d.biz}</div>
+</div>
+<div style={{ color: “#fff”, fontSize: 11, fontWeight: 900, background: “rgba(0,0,0,0.3)”, padding: “2px 6px”, borderRadius: 3, whiteSpace: “nowrap” }}>📞 {d.phone}</div>
+</div>
+<div style={{ flex: 1, padding: “6px 10px”, display: “flex”, flexDirection: “column”, justifyContent: “space-between” }}>
+<div>
+<div style={{ color: ind.dark, fontSize: 13, fontWeight: 900, fontFamily: “Georgia, serif”, lineHeight: 1.1 }}>{d.tag}</div>
+{d.menu && (
+<div style={{ display: “flex”, flexWrap: “wrap”, gap: “2px 8px”, marginTop: 4 }}>
+{d.menu.slice(0, 4).map((m, i) => (
+<div key={i} style={{ display: “flex”, alignItems: “center”, gap: 3 }}>
+<span style={{ color: ind.primary, fontSize: 7 }}>●</span>
+<span style={{ fontSize: 9, color: “#333”, fontWeight: 500 }}>{m}</span>
+</div>
+))}
+</div>
+)}
+</div>
+<div>
+{d.addr && <div style={{ fontSize: 8, color: “#666” }}>📍 {d.addr}</div>}
+{d.offer && <Coupon offer={d.offer} accent={ind.primary} />}
+</div>
+</div>
+</div>
+);
+}
+
+function SampleS({ d }) {
+const ind = IND[d.ind] || IND[“Salon & Beauty”];
+return (
+<div style={{ width: 100, height: 200, overflow: “hidden”, position: “relative”, background: ind.dark, fontFamily: “sans-serif” }}>
+<img src={ind.photo} alt=”” style={{ position: “absolute”, inset: 0, width: “100%”, height: “100%”, objectFit: “cover”, opacity: 0.5 }} />
+<div style={{ position: “absolute”, inset: 0, background: `linear-gradient(180deg, ${ind.dark}cc 0%, ${ind.dark}ff 100%)` }} />
+<div style={{ position: “absolute”, inset: 0, padding: “8px 6px”, display: “flex”, flexDirection: “column”, justifyContent: “space-between”, alignItems: “center”, textAlign: “center” }}>
+<div>
+<div style={{ color: ind.accent, fontSize: 6, fontWeight: 700, letterSpacing: 1, textTransform: “uppercase” }}>{d.ind}</div>
+<div style={{ color: “#fff”, fontSize: 11, fontWeight: 900, fontFamily: “Georgia, serif”, lineHeight: 1.0, marginTop: 2 }}>{d.biz}</div>
+</div>
+{d.offer && (
+<div style={{ background: ind.accent, padding: “3px 6px”, borderRadius: 3, width: “100%”, boxSizing: “border-box” }}>
+<div style={{ color: “#fff”, fontWeight: 900, fontSize: 8, lineHeight: 1 }}>{d.offer}</div>
+</div>
+)}
+<div style={{ color: “#fff”, fontSize: 10, fontWeight: 900, fontFamily: “sans-serif” }}>📞 {d.phone}</div>
+</div>
+</div>
+);
+}
+
+function SampleAd({ size, d }) {
+if (!d) return null;
+if (size === “XL”) return <SampleXL d={d} />;
+if (size === “L”)  return <SampleL d={d} />;
+if (size === “M”)  return <SampleM d={d} />;
+if (size === “S”)  return <SampleS d={d} />;
+return null;
+}
+
+function HouseAd({ w, h }) {
+return (
+<div style={{ width: w, height: h, background: “#1a1a2e”, display: “flex”, alignItems: “center”, justifyContent: “center”, padding: 8, boxSizing: “border-box” }}>
+<div style={{ textAlign: “center” }}>
+<div style={{ color: “#e2e8f0”, fontWeight: 900, fontSize: 14, fontFamily: “sans-serif” }}>Shop, Dine & Buy Local</div>
+<div style={{ color: “rgba(255,255,255,0.6)”, fontSize: 9, fontFamily: “sans-serif”, marginTop: 2 }}>YOUR AD HERE — Reach 5,000 Local Homes</div>
+<div style={{ color: “#dc2626”, fontWeight: 700, fontSize: 11, fontFamily: “sans-serif”, marginTop: 2 }}>mytownpostcard.com</div>
+</div>
+</div>
+);
+}
+
+function EDDMBox({ w, h }) {
+return (
+<div style={{ width: w, height: h, border: “2px solid #999”, display: “flex”, flexDirection: “column”, alignItems: “center”, justifyContent: “center”, background: “#f8f8f8”, boxSizing: “border-box”, padding: 12 }}>
+<div style={{ fontSize: 14, fontWeight: 700, fontFamily: “sans-serif”, color: “#333”, textAlign: “center”, lineHeight: 1.5 }}>
+<div>PRESORTED STD</div>
+<div>U.S. POSTAGE PAID</div>
+<div>CLARKESVILLE, GA 30523</div>
+<div style={{ marginTop: 8, borderTop: “1px solid #ccc”, paddingTop: 8 }}>LOCAL POSTAL CUSTOMER</div>
+<div style={{ fontWeight: 900, letterSpacing: 2, fontSize: 16 }}>EDDM</div>
+</div>
+</div>
+);
+}
+
+// ─── Available / Reserved indicators ──────────────────────────────────────────
+
+const SIZE_LABELS = { XL: “Extra Large”, L: “Large”, M: “Medium”, S: “Small” };
+const SIZE_DIMS = { XL: ‘4” × 5”’, L: ‘4” × 3”’, M: ‘3” × 2”’, S: ‘1” × 2”’ };
+
+function AvailableSpot({ spot, onClick }) {
+const [hover, setHover] = useState(false);
+const fs = {
+XL: { plus: 80, name: 24, price: 32, dims: 16 },
+L:  { plus: 60, name: 20, price: 26, dims: 14 },
+M:  { plus: 42, name: 16, price: 21, dims: 12 },
+S:  { plus: 28, name: 11, price: 14, dims: 9 },
+}[spot.size] || { plus: 28, name: 11, price: 14, dims: 9 };
+
+return (
+<div
+onClick={() => onClick(spot)}
+onMouseEnter={() => setHover(true)}
+onMouseLeave={() => setHover(false)}
+style={{
+width: spot.w, height: spot.h,
+border: `4px dashed ${hover ? "#15803d" : "#22c55e"}`,
+background: hover ? “rgba(22,163,74,0.15)” : “rgba(240,253,244,0.95)”,
+display: “flex”, flexDirection: “column”, alignItems: “center”, justifyContent: “center”,
+cursor: “pointer”, boxSizing: “border-box”,
+transition: “all 0.15s”, gap: spot.size === “S” ? 2 : 6,
+fontFamily: “sans-serif”,
+}}
+>
+<div style={{ color: hover ? “#15803d” : “#16a34a”, fontSize: fs.plus, fontWeight: 300, lineHeight: 1 }}>+</div>
+<div style={{ color: hover ? “#15803d” : “#16a34a”, fontSize: fs.name, fontWeight: 700 }}>{SIZE_LABELS[spot.size]}</div>
+<div style={{ color: “#111”, fontSize: fs.price, fontWeight: 900 }}>${spot.price}</div>
+<div style={{ color: “#555”, fontSize: fs.dims }}>{SIZE_DIMS[spot.size]}</div>
+</div>
+);
+}
+
+function ReservedSpot({ w, h }) {
+return (
+<div style={{ width: w, height: h, background: “#fefce8”, border: “3px dashed #fbbf24”, display: “flex”, flexDirection: “column”, alignItems: “center”, justifyContent: “center”, boxSizing: “border-box”, gap: 8, fontFamily: “sans-serif” }}>
+<div style={{ fontSize: 42 }}>📌</div>
+<div style={{ color: “#92400e”, fontWeight: 700, fontSize: 18 }}>Reserved</div>
+</div>
+);
+}
+
+// ─── Renders one spot at correct scaled position ─────────────────────────────
+
+function SpotCell({ spot, status, paidData, scale, onSelect }) {
+if (spot.size === “house”) return (
+<ScaledCell spot={spot} scale={scale}>
+<HouseAd w={spot.w} h={spot.h} />
+</ScaledCell>
+);
+if (spot.size === “eddm”) return (
+<ScaledCell spot={spot} scale={scale}>
+<EDDMBox w={spot.w} h={spot.h} />
+</ScaledCell>
+);
+
+let content;
+if (status === “paid” && paidData && PaidAd) {
+content = <PaidAd spotId={spot.id} data={paidData} size={spot.size} />;
+} else if (status === “reserved”) {
+content = <ReservedSpot w={spot.w} h={spot.h} />;
+} else {
+const sample = SAMPLES[spot.id];
+if (sample) {
+content = <SampleAd size={spot.size} d={sample} />;
+} else {
+content = <AvailableSpot spot={spot} onClick={onSelect} />;
+}
+}
+return <ScaledCell spot={spot} scale={scale}>{content}</ScaledCell>;
+}
+
+function ScaledCell({ spot, scale, children }) {
+return (
+<div style={{
+position: “absolute”,
+left: spot.x * scale,
+top: spot.y * scale,
+width: spot.w * scale,
+height: spot.h * scale,
+overflow: “hidden”,
+outline: “0.5px solid rgba(0,0,0,0.1)”,
+boxSizing: “border-box”,
+}}>
+<div style={{
+width: spot.w,
+height: spot.h,
+transform: `scale(${scale})`,
+transformOrigin: “top left”,
+}}>
+{children}
+</div>
+</div>
+);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN COMPONENT
+// ─────────────────────────────────────────────────────────────────────────────
+
+export default function PostcardPickerSection() {
+const [side, setSide] = useState(“front”);
+const [selectedSpot, setSelectedSpot] = useState(null);
+const [showResume, setShowResume] = useState(false);
+const containerRef = useRef(null);
+const [scale, setScale] = useState(0.5);
+
+const { data: campaign, isLoading } = useGetActiveCampaign();
+const reserveMutation = useReserveSpot();
+
+useEffect(() => {
+function update() {
+if (!containerRef.current) return;
+setScale(containerRef.current.offsetWidth / NATURAL_W);
+}
+update();
+const ro = new ResizeObserver(update);
+if (containerRef.current) ro.observe(containerRef.current);
+return () => ro.disconnect();
+}, []);
+
+useEffect(() => {
+if (findActiveReservation && findActiveReservation()) setShowResume(true);
+}, []);
+
+const spots = side === “front” ? FRONT : BACK;
+
+const spotStatus = {};
+if (campaign?.spots) {
+campaign.spots.forEach(s => { spotStatus[s.id] = { status: s.status, data: s }; });
+}
+
+function handleSelect(spot) {
+setSelectedSpot(spot);
+}
+
+function handleReserve(formData) {
+if (!selectedSpot || !campaign) return;
+reserveMutation.mutate({
+campaignId: campaign.id,
+spotId: selectedSpot.id,
+…formData,
+}, {
+onSuccess: (data) => {
+if (saveReservation) saveReservation(data);
+setSelectedSpot(null);
+if (data?.checkoutUrl) window.location.href = data.checkoutUrl;
+},
+});
+}
+
+const soldCount = (sideSpots) => sideSpots.filter(s => s.price > 0 && spotStatus[s.id]?.status === “paid”).length;
+const totalPaid = (sideSpots) => sideSpots.filter(s => s.price > 0).length;
+
+if (isLoading) return <div style={{ textAlign: “center”, padding: 40, color: “#666” }}>Loading postcard…</div>;
+
+return (
+<div style={{ width: “100%”, fontFamily: “sans-serif”, padding: “20px 16px” }}>
+
+```
+  {showResume && (
+    <div style={{ background: "#fef3c7", border: "1px solid #f59e0b", borderRadius: 8, padding: 12, marginBottom: 16, textAlign: "center" }}>
+      <span style={{ fontSize: 14, color: "#92400e" }}>You have a reservation in progress. </span>
+      <button onClick={() => { window.location.href = "/checkout"; }} style={{ marginLeft: 8, background: "#f59e0b", color: "#fff", border: "none", padding: "6px 14px", borderRadius: 6, fontWeight: 700, cursor: "pointer" }}>Resume Checkout</button>
+    </div>
+  )}
+
+  <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+    <div style={{ background: "#f1f5f9", borderRadius: 12, padding: 4, display: "flex", gap: 4, boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)" }}>
+      {[
+        { id: "front", label: "📮 Front Side", sold: soldCount(FRONT), total: totalPaid(FRONT) },
+        { id: "back",  label: "🗂 Back Side",  sold: soldCount(BACK),  total: totalPaid(BACK) },
+      ].map(s => (
+        <button key={s.id} onClick={() => setSide(s.id)} style={{
+          padding: "10px 28px", borderRadius: 9, border: "none", cursor: "pointer",
+          background: side === s.id ? "#991b1b" : "transparent",
+          color: side === s.id ? "#fff" : "#64748b",
+          fontWeight: 700, fontSize: 14, transition: "all 0.2s",
+          boxShadow: side === s.id ? "0 2px 8px rgba(153,27,27,0.4)" : "none",
+        }}>
+          {s.label}<br />
+          <span style={{ fontSize: 11, fontWeight: 400, opacity: 0.85 }}>{s.sold} of {s.total} sold</span>
+        </button>
+      ))}
+    </div>
+  </div>
+
+  <div style={{ textAlign: "center", marginBottom: 8 }}>
+    <span style={{ fontSize: 11, fontWeight: 700, color: "#64748b", letterSpacing: 1, textTransform: "uppercase" }}>
+      {side === "front" ? "Front" : "Back"} Side — 12" × 9" · Reaching 5,000 Homes
+    </span>
+  </div>
+
+  <div ref={containerRef} style={{ width: "100%", maxWidth: 960, margin: "0 auto" }}>
+    <div style={{
+      position: "relative",
+      width: "100%",
+      height: NATURAL_H * scale,
+      background: "#fff",
+      borderRadius: 6,
+      overflow: "hidden",
+      boxShadow: "0 4px 24px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.1)",
+      border: "1px solid #e2e8f0",
+    }}>
+      {spots.map(spot => (
+        <SpotCell
+          key={spot.id}
+          spot={spot}
+          status={spotStatus[spot.id]?.status}
+          paidData={spotStatus[spot.id]?.data}
+          scale={scale}
+          onSelect={handleSelect}
+        />
+      ))}
+    </div>
+  </div>
+
+  <div style={{ display: "flex", justifyContent: "center", gap: 24, marginTop: 14, flexWrap: "wrap" }}>
+    {[
+      { color: "rgba(240,253,244,0.95)", border: "3px dashed #22c55e", label: "Available — click to reserve" },
+      { color: "#fefce8", border: "3px dashed #fbbf24", label: "Reserved" },
+      { color: "#f1f5f9", border: "2px solid #cbd5e1", label: "Spot taken" },
+    ].map(l => (
+      <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <div style={{ width: 18, height: 18, background: l.color, border: l.border, borderRadius: 3 }} />
+        <span style={{ fontSize: 12, color: "#64748b" }}>{l.label}</span>
+      </div>
+    ))}
+  </div>
+
+  {selectedSpot && Modal && ReservationForm && (
+    <Modal onClose={() => setSelectedSpot(null)}>
+      <ReservationForm
+        spot={selectedSpot}
+        onSubmit={handleReserve}
+        onCancel={() => setSelectedSpot(null)}
+        isLoading={reserveMutation.isPending}
+      />
+    </Modal>
+  )}
+</div>
+```
+
+);
+}
