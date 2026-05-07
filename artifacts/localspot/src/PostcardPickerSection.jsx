@@ -1,591 +1,300 @@
-import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { useLocation } from "wouter";
-import { useGetActiveCampaign, useReserveSpot } from "@workspace/api-client-react";
-import {
-  saveReservation,
-  findActiveReservation,
-  clearReservation,
-} from "./lib/reservationStorage";
-import { GRID_AREAS, PaidAd, AvailableSpot, ReservedSpot } from "./postcardCore";
-import {
-  BACK_GRID_AREAS,
-  BACK_GRID_ORDER,
-  HouseAdVertical,
-  HouseAdRow,
-  HouseAdBanner,
-  EDDMBox,
-} from "./postcardBack";
-// AdGenerator is heavy (~1k lines + AdAssistant + the industry asset
-// table) BUT it is the very first thing the user clicks while testing.
-// We tried lazy-loading it earlier — that turned out to hurt: in Vite dev
-// each lazy chunk fan-outs a fresh waterfall of module requests over the
-// (often slow) Replit preview proxy, so the modal would take a long time
-// to appear after the click. Loading it eagerly with the picker means
-// the modal opens instantly when a spot is tapped.
-import AdGenerator from "./AdGenerator";
-import { getSampleAd, SPOT_SAMPLE_MAP } from "./PostcardSampleAds";
+import { useState, useRef, useEffect } from "react";
 
-const SIZE_MAP = { xl: "XL", large: "L", medium: "M", small: "S" };
+// Natural canvas: 1200x900 = 12"x9" landscape at 100px per inch
+// Scale = containerWidth / 1200, height = containerWidth * 0.75
+const W = 1200, H = 900;
 
-const FRONT_GRID_ORDER = ["mb","dn","re","l1","l2","l3","l4"];
+// FRONT: 3 XL (4"x5") top row + 4 Large (3"x4" portrait) bottom row
+// Top:    3 x XL  = 3*400 = 1200 wide, 500 tall OK
+// Bottom: 4 x L   = 4*300 = 1200 wide, 400 tall OK
+// Total:  1200 x 900 = perfect 12x9 – NO house ad, 100% paid coverage
+// Pricing: XL=$499, L=$399
+const FRONT = [
+{ id:"xl1", size:"XL", price:499, x:0,   y:0,   w:400, h:500, sample:"biscuits", tmpl:"photo" },
+{ id:"xl2", size:"XL", price:499, x:400, y:0,   w:400, h:500, sample:null       },
+{ id:"xl3", size:"XL", price:499, x:800, y:0,   w:400, h:500, sample:"dental",   tmpl:"clean" },
+{ id:"l1",  size:"L",  price:399, x:0,   y:500, w:300, h:400, sample:"hvac",    tmpl:"stamp"  },
+{ id:"l2",  size:"L",  price:399, x:300, y:500, w:300, h:400, sample:null       },
+{ id:"l3",  size:"L",  price:399, x:600, y:500, w:300, h:400, sample:"lawn",    tmpl:"split"  },
+{ id:"l4",  size:"L",  price:399, x:900, y:500, w:300, h:400, sample:null       },
+];
 
-// Explicit grid positions for every named area on both sides.
-// gridColumn / gridRow use CSS end-exclusive line numbers (e.g. "1/5" = cols 1-4).
-// This approach is more reliable than gridTemplateAreas and makes ad placement
-// immediately readable: each spot's print dimensions map directly to its col/row span.
-const GRID_POSITIONS = {
-  // ── Front side ──────────────────────────────────────────────────────────────
-  // Top row: 3 XL spots (4"×5" each = 4 cols × 5 rows)
-  mb:  { gridColumn: "1/5",   gridRow: "1/6"  },  // XL  4"×5"
-  dn:  { gridColumn: "5/9",   gridRow: "1/6"  },  // XL  4"×5"
-  re:  { gridColumn: "9/13",  gridRow: "1/6"  },  // XL  4"×5"
-  // Bottom row: 4 Large portrait spots (3"×4" each = 3 cols × 4 rows). No house ad.
-  l1:  { gridColumn: "1/4",   gridRow: "6/10" },  // Lg portrait  3"×4"
-  l2:  { gridColumn: "4/7",   gridRow: "6/10" },  // Lg portrait  3"×4"
-  l3:  { gridColumn: "7/10",  gridRow: "6/10" },  // Lg portrait  3"×4"
-  l4:  { gridColumn: "10/13", gridRow: "6/10" },  // Lg portrait  3"×4"
-  // ── Back side ───────────────────────────────────────────────────────────────
-  bxl: { gridColumn: "1/5",   gridRow: "1/6"  },  // XL  4"×5"
-  bl1: { gridColumn: "5/9",   gridRow: "1/4"  },  // Lg  4"×3"
-  bl2: { gridColumn: "9/13",  gridRow: "1/4"  },  // Lg  4"×3"
-  bm1: { gridColumn: "5/7",   gridRow: "4/6"  },  // Md  2"×2"
-  bs1: { gridColumn: "7/9",   gridRow: "4/6"  },  // Sm  2"×2"
-  bm2: { gridColumn: "9/11",  gridRow: "4/6"  },  // Md  2"×2"
-  bs2: { gridColumn: "11/13", gridRow: "4/6"  },  // Sm  2"×2"
-  ed:  { gridColumn: "9/13",  gridRow: "6/10" },  // EDDM indicia  4"×4"
-  bhr: { gridColumn: "1/9",   gridRow: "6/10" },  // House ad — full left block 8"×4"
+// BACK: 1 XL + 2 L + 2 M + 2 S + house + EDDM
+const BACK = [
+{ id:"bxl", size:"XL",    price:450, x:0,    y:0,   w:400, h:500, sample:null   },
+{ id:"bl1", size:"L",     price:350, x:400,  y:0,   w:400, h:300, sample:"auto" },
+{ id:"bl2", size:"L",     price:350, x:800,  y:0,   w:400, h:300, sample:null   },
+{ id:"bm1", size:"M",     price:250, x:400,  y:300, w:200, h:200, sample:"vet"  },
+{ id:"bs1", size:"S",     price:199, x:600,  y:300, w:200, h:200, sample:"salon"},
+{ id:"bm2", size:"M",     price:250, x:800,  y:300, w:200, h:200, sample:null   },
+{ id:"bs2", size:"S",     price:199, x:1000, y:300, w:200, h:200, sample:null   },
+{ id:"bhs", size:"house", price:0,   x:0,    y:500, w:800, h:400, sample:"house"},
+{ id:"bed", size:"eddm",  price:0,   x:800,  y:500, w:400, h:400, sample:"eddm" },
+];
+
+// Mr. Biscuit's uses the same single-photo template as the AdGenerator (PhotoBold style)
+// One hero photo, business name, tagline, coupon, phone – no multi-photo grid
+const ADS = {
+biscuits:{biz:"Mr. Biscuit's Cafe",cat:"BREAKFAST & CAFE",tag:"From-Scratch Biscuits & Boba!",services:["Plain Biscuit $2.99","Bacon Biscuit $4.99","Chicken Tender $5.99","NY Bagels $5.49"],offer:"$1 OFF Any Biscuit",fine:"1 per visit - with this postcard",phone:"(706) 754-0105",addr:"596 W Louise St, Clarkesville, GA 30523",web:"mrBiscuitsCafe.com",photo:"https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?w=800&q=80",p:"#7c3a1e",a:"#f59e0b",l:"#fef3c7",d:"#3b1a0a"},
+dental:{biz:"Northview Dental",cat:"FAMILY DENTISTRY",tag:"Healthy Smiles. Confident Lives.",services:["General Dentistry","Cosmetic Dentistry","Dental Implants","Teeth Whitening"],offer:"New Patients Always Welcome",fine:"Call today to schedule",phone:"(770) 704-1633",addr:"Clarkesville, GA",web:"northviewdental.com",photo:"https://images.unsplash.com/photo-1609840114035-3c981b782dfe?w=800&q=80",p:"#1e40af",a:"#3b82f6",l:"#eff6ff",d:"#1e3a5f"},
+lawn:{biz:"GreenScapes Lawn Care",cat:"LAWN & LANDSCAPING",tag:"A Beautiful Lawn You'll Love Coming Home To!",services:["Mowing","Fertilization","Weed Control","Landscaping","Mulch Installation"],offer:"Free Estimate",fine:"Call today to schedule",phone:"(706) 257-1186",addr:"Clarkesville, GA",web:"greenscapeslawncare.com",photo:"https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&q=80",p:"#166534",a:"#22c55e",l:"#f0fdf4",d:"#052e16"},
+hvac:{biz:"Climate Comfort HVAC",cat:"HEATING & COOLING",tag:"Keeping You Comfortable All Year Long",services:["Installation","Repair","Maintenance"],offer:"$50 OFF Any Service",fine:"Show this ad - expires 6/30",phone:"(770) 365-6599",addr:"Clarkesville, GA",web:"climatecomforthvac.com",photo:"https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=800&q=80",p:"#0369a1",a:"#0ea5e9",l:"#f0f9ff",d:"#0c2a3a"},
+auto:{biz:"Pit Stop Auto Repair",cat:"AUTO REPAIR",tag:"Honest Repairs. Fair Prices. Dependable Service.",services:["Oil Change $29.99","Brake Service","AC Repair","Free Estimates"],offer:"Free Diagnostic Check",fine:"With any repair - show this ad",phone:"(706) 219-6136",addr:"Clarkesville, GA",web:"",photo:"https://images.unsplash.com/photo-1530046339160-ce3e530c7d2f?w=800&q=80",p:"#7f1d1d",a:"#ef4444",l:"#fef2f2",d:"#450a0a"},
+vet:{biz:"Paws & Claws Vet Clinic",cat:"VETERINARIAN",tag:"Compassionate Care For Your Pets",services:["Wellness Exams","Vaccinations","Surgery & Dental","Emergency Care"],offer:"Free First Exam",fine:"New patients only - call to schedule",phone:"(770) 592-7387",addr:"Clarkesville, GA",web:"pawsandclawsvet.com",photo:"https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=800&q=80",p:"#065f46",a:"#10b981",l:"#ecfdf5",d:"#022c22"},
+pizza:{biz:"Tony's Pizza",cat:"PIZZA & ITALIAN",tag:"Fresh Ingredients. Great Taste.",services:[],offer:"Large Pizza $12.99",fine:"Pick-up only - show this ad",phone:"(706) 507-1111",addr:"Clarkesville, GA",web:"tonyspizza.com",photo:"https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&q=80",p:"#9a3412",a:"#f97316",l:"#fff7ed",d:"#431407"},
+salon:{biz:"The Cut Above Salon",cat:"SALON & BEAUTY",tag:"Look Your Best.",services:[],offer:"20% OFF First Visit",fine:"New clients - show this ad",phone:"(706) 555-0519",addr:"Clarkesville, GA",web:"",photo:"https://images.unsplash.com/photo-1560066984-138daaa4e4e1?w=800&q=80",p:"#831843",a:"#ec4899",l:"#fdf2f8",d:"#4a0e28"},
 };
 
-// ─── Cell scaling system ─────────────────────────────────────────────────────
-// Each cell renders its content at a known "natural" pixel size (1 grid unit
-// = 100 px = 1 inch), then a single CSS transform: scale() shrinks/grows the
-// whole inner DOM to fit the actual rendered cell. This way ads, available
-// spot indicators, paid ads, and house ads all scale uniformly with the
-// postcard — fonts, padding, borders, everything stays in proportion.
-const PX_PER_CELL = 100;
-const NATURAL_GRID_W = 12 * PX_PER_CELL; // 1200px
-const PostcardScaleContext = createContext(1);
+function Check({color,sz=14}){return(<svg width={sz} height={sz} viewBox="0 0 14 14" style={{flexShrink:0,marginTop:1}}><circle cx="7" cy="7" r="7" fill={color}/><path d="M4 7l2 2 4-4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>);}
+function Phone({phone,color,size}){return(<div style={{display:"flex",alignItems:"center",gap:5}}><svg width={size} height={size} viewBox="0 0 24 24" fill={color} style={{flexShrink:0}}><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg><span style={{fontSize:size*1.1,fontWeight:900,color,fontFamily:"sans-serif",letterSpacing:-0.5,lineHeight:1}}>{phone}</span></div>);}
+function Coupon({offer,fine,color,dark}){if(!offer)return null;return(<div style={{border:`1.5px dashed ${dark?"rgba(255,255,255,0.65)":color}`,borderRadius:4,padding:"6px 10px",textAlign:"center",background:dark?"rgba(0,0,0,0.3)":`${color}15`,flexShrink:0}}><div style={{fontSize:14,fontWeight:900,color:dark?"#fff":color,lineHeight:1.1}}>{offer}</div>{fine&&<div style={{fontSize:9,color:dark?"rgba(255,255,255,0.55)":"#777",marginTop:2}}>{fine}</div>}</div>);}
 
-function parseSpan(s) {
-  const [a, b] = s.split("/").map(Number);
-  return b - a;
+// XL (400x500) – header bar + hero photo + content + coupon + phone
+function AdXL({d,tmpl}){
+if(tmpl==="clean"){
+// Clean white XL – bold business name, large photo strip, clean content area
+return(<div style={{width:400,height:500,display:"flex",flexDirection:"column",overflow:"hidden",fontFamily:"sans-serif",background:"#fff"}}>
+<div style={{background:d.p,padding:"10px 14px",display:"flex",alignItems:"center",gap:9,flexShrink:0}}>
+<div style={{width:38,height:38,borderRadius:8,overflow:"hidden",flexShrink:0,border:"2px solid rgba(255,255,255,0.4)"}}><img src={d.photo} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/></div>
+<div><div style={{color:"rgba(255,255,255,0.75)",fontSize:8,fontWeight:700,letterSpacing:2,textTransform:"uppercase"}}>{d.cat}</div><div style={{color:"#fff",fontWeight:900,fontSize:20,lineHeight:1.0,fontFamily:"Georgia,serif"}}>{d.biz}</div></div>
+</div>
+<div style={{height:210,flexShrink:0,position:"relative",overflow:"hidden"}}><img src={d.photo} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/></div>
+<div style={{flex:1,padding:"10px 14px",display:"flex",flexDirection:"column",justifyContent:"space-between",background:"#fff"}}>
+<div><div style={{fontSize:14,fontWeight:900,color:d.d,fontFamily:"Georgia,serif",lineHeight:1.2,marginBottom:8}}>{d.tag}</div>{(d.services||[]).slice(0,4).map((s,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}><Check color={d.p} sz={13}/><span style={{fontSize:11,color:"#333",fontWeight:500}}>{s}</span></div>))}</div>
+<div style={{display:"flex",flexDirection:"column",gap:5}}><Coupon offer={d.offer} fine={d.fine} color={d.p}/><Phone phone={d.phone} color={d.p} size={14}/>{d.addr&&<div style={{fontSize:9,color:"#666"}}>{d.addr}{d.web?" - "+d.web:""}</div>}</div>
+</div>
+</div>);
+}
+// Default photo-bold XL – full bleed photo with dark gradient overlay
+return(<div style={{width:400,height:500,position:"relative",overflow:"hidden",fontFamily:"sans-serif"}}>
+<img src={d.photo} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
+<div style={{position:"absolute",inset:0,background:"linear-gradient(180deg,"+d.d+"cc 0%,"+d.d+"44 35%,"+d.d+"ee 100%)"}}/>
+<div style={{position:"absolute",top:14,left:14,right:14}}>
+<div style={{color:d.a,fontSize:9,fontWeight:700,letterSpacing:2,textTransform:"uppercase"}}>{d.cat}</div>
+<div style={{color:"#fff",fontWeight:900,fontSize:26,lineHeight:1.0,marginTop:3,fontFamily:"Georgia,serif",textShadow:"0 2px 8px rgba(0,0,0,0.8)"}}>{d.biz}</div>
+</div>
+<div style={{position:"absolute",top:"38%",left:14,right:14,textAlign:"center"}}>
+<div style={{color:"#fff",fontWeight:800,fontSize:20,lineHeight:1.2,fontStyle:"italic",textShadow:"0 2px 12px rgba(0,0,0,0.9)"}}>{d.tag}</div>
+</div>
+<div style={{position:"absolute",bottom:0,left:0,right:0,padding:"12px 14px",display:"flex",flexDirection:"column",gap:7}}>
+<div style={{display:"flex",flexDirection:"column",gap:3}}>{(d.services||[]).slice(0,3).map((s,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:6}}><Check color={d.a} sz={11}/><span style={{fontSize:10,color:"rgba(255,255,255,0.92)",fontWeight:600}}>{s}</span></div>))}</div>
+<Coupon offer={d.offer} fine={d.fine} color="#fff" dark/>
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><Phone phone={d.phone} color="#fff" size={14}/>{d.addr&&<div style={{fontSize:9,color:"rgba(255,255,255,0.7)",textAlign:"right"}}>{d.addr}</div>}</div>
+</div>
+</div>);
 }
 
-// ScaledCell: place at gridColumn/gridRow, then render children inside an
-// absolutely-positioned, naturally-sized wrapper that's transform-scaled.
-function ScaledCell({ pos, children, pointerEvents }) {
-  const scale = useContext(PostcardScaleContext);
-  const cols = parseSpan(pos.gridColumn);
-  const rows = parseSpan(pos.gridRow);
-  const natW = cols * PX_PER_CELL;
-  const natH = rows * PX_PER_CELL;
-  return (
-    <div style={{
-      gridColumn: pos.gridColumn,
-      gridRow: pos.gridRow,
-      position: "relative",
-      overflow: "hidden",
-      minWidth: 0,
-      minHeight: 0,
-      pointerEvents: pointerEvents || "auto",
+// L (300x400 portrait) – two visual styles based on tmpl prop
+function AdL({d,tmpl}){
+if(tmpl==="stamp"){
+// Dark stamp style – full photo background, bold overlay text
+return(<div style={{width:300,height:400,position:"relative",overflow:"hidden",fontFamily:"sans-serif"}}>
+<img src={d.photo} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
+<div style={{position:"absolute",inset:0,background:"linear-gradient(180deg,"+d.d+"dd 0%,"+d.d+"55 45%,"+d.d+"ee 100%)"}}/>
+{/* Top badge */}
+<div style={{position:"absolute",top:10,left:10,right:10}}>
+<div style={{display:"inline-block",background:d.a,color:"#fff",fontSize:7,fontWeight:800,letterSpacing:2,textTransform:"uppercase",padding:"3px 8px",borderRadius:3}}>{d.cat}</div>
+<div style={{color:"#fff",fontWeight:900,fontSize:20,lineHeight:1.0,marginTop:6,fontFamily:"Georgia,serif",textShadow:"0 2px 8px rgba(0,0,0,0.9)"}}>{d.biz}</div>
+<div style={{color:d.a,fontWeight:700,fontSize:12,marginTop:4,fontStyle:"italic"}}>{d.tag}</div>
+</div>
+{/* Bottom content */}
+<div style={{position:"absolute",bottom:0,left:0,right:0,padding:"10px 12px",display:"flex",flexDirection:"column",gap:6}}>
+<div style={{display:"flex",flexDirection:"column",gap:2}}>{(d.services||[]).slice(0,3).map((s,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:5}}><Check color={d.a} sz={10}/><span style={{fontSize:9,color:"rgba(255,255,255,0.9)",fontWeight:600}}>{s}</span></div>))}</div>
+<Coupon offer={d.offer} fine={d.fine} color={d.a} dark/>
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+<Phone phone={d.phone} color="#fff" size={12}/>
+{d.web&&<div style={{fontSize:8,color:"rgba(255,255,255,0.65)"}}>{d.web}</div>}
+</div>
+</div>
+</div>);
+}
+// Default split style – photo top, content bottom
+return(<div style={{width:300,height:400,display:"flex",flexDirection:"column",overflow:"hidden",background:"#fff",fontFamily:"sans-serif"}}>
+<div style={{height:150,flexShrink:0,position:"relative",overflow:"hidden"}}>
+<img src={d.photo} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/>
+<div style={{position:"absolute",inset:0,background:"linear-gradient(180deg,transparent 50%,"+d.l+" 100%)"}}/>
+</div>
+<div style={{flex:1,background:d.l,display:"flex",flexDirection:"column",justifyContent:"space-between",padding:"10px 12px"}}>
+<div>
+<div style={{fontSize:7,fontWeight:700,letterSpacing:2,textTransform:"uppercase",color:d.a,marginBottom:2}}>{d.cat}</div>
+<div style={{fontSize:18,fontWeight:900,color:d.d,fontFamily:"Georgia,serif",lineHeight:1.0,marginBottom:3}}>{d.biz}</div>
+<div style={{fontSize:11,fontWeight:700,color:d.p,fontStyle:"italic",marginBottom:7}}>{d.tag}</div>
+{(d.services||[]).slice(0,4).map((s,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:5,marginBottom:3}}><Check color={d.p} sz={12}/><span style={{fontSize:10,color:"#333",fontWeight:500}}>{s}</span></div>))}
+</div>
+<div style={{display:"flex",flexDirection:"column",gap:4}}>
+<Coupon offer={d.offer} fine={d.fine} color={d.p}/>
+<Phone phone={d.phone} color={d.p} size={12}/>
+{d.addr&&<div style={{fontSize:8,color:"#555"}}>{d.addr}</div>}
+{d.web&&<div style={{fontSize:8,color:d.p,fontWeight:600}}>{d.web}</div>}
+</div>
+</div>
+</div>);
+}
+
+function AdM({d}){return(<div style={{width:200,height:200,display:"flex",flexDirection:"column",overflow:"hidden",fontFamily:"sans-serif",border:"none",boxSizing:"border-box",background:"#fff"}}><div style={{background:d.p,padding:"5px 8px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}><div style={{color:"#fff",fontWeight:900,fontSize:11,lineHeight:1,fontFamily:"Georgia,serif",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"55%"}}>{d.biz}</div><div style={{color:"#fff",fontSize:8,fontWeight:700,background:"rgba(0,0,0,0.25)",padding:"1px 5px",borderRadius:3,whiteSpace:"nowrap",flexShrink:0}}>{d.phone}</div></div><div style={{height:42,flexShrink:0,position:"relative",overflow:"hidden"}}><img src={d.photo} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/><div style={{position:"absolute",inset:0,background:`linear-gradient(transparent 20%,${d.l}ff 100%)`}}/></div><div style={{flex:1,padding:"4px 8px 6px",background:d.l,display:"flex",flexDirection:"column",justifyContent:"space-between"}}><div><div style={{fontSize:6,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:d.a}}>{d.cat}</div><div style={{fontSize:11,fontWeight:900,color:d.d,fontFamily:"Georgia,serif",lineHeight:1.15}}>{d.tag}</div>{(d.services||[]).length>0&&(<div style={{display:"flex",flexWrap:"wrap",gap:"0px 6px",marginTop:2}}>{(d.services||[]).slice(0,3).map((s,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:2}}><span style={{color:d.p,fontSize:5}}>●</span><span style={{fontSize:7,color:"#333",fontWeight:500}}>{s}</span></div>))}</div>)}</div><Coupon offer={d.offer} fine="" color={d.p}/></div></div>);}
+
+// S (200x200) – photo background, condensed info square
+function AdS({d}){return(<div style={{width:200,height:200,overflow:"hidden",position:"relative",fontFamily:"sans-serif"}}><img src={d.photo} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}} alt=""/><div style={{position:"absolute",inset:0,background:`linear-gradient(180deg,${d.d}aa 0%,${d.d}f5 100%)`}}/><div style={{position:"absolute",inset:0,padding:"12px 10px",display:"flex",flexDirection:"column",justifyContent:"space-between",alignItems:"center",textAlign:"center"}}><div><div style={{color:d.a,fontSize:7,fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>{d.cat}</div><div style={{color:"#fff",fontSize:16,fontWeight:900,fontFamily:"Georgia,serif",lineHeight:1.0,marginTop:3}}>{d.biz}</div><div style={{color:"rgba(255,255,255,0.85)",fontSize:10,fontStyle:"italic",marginTop:4,lineHeight:1.3}}>{d.tag}</div></div>{d.offer&&(<div style={{background:d.a,padding:"6px 10px",borderRadius:4,width:"100%",boxSizing:"border-box"}}><div style={{color:"#fff",fontWeight:900,fontSize:12,lineHeight:1.1}}>{d.offer}</div></div>)}<div style={{color:"#fff",fontSize:13,fontWeight:900,lineHeight:1}}>{d.phone}</div></div></div>);}
+
+function AdHouse({w,h}){return(<div style={{width:w,height:h,background:"#0f172a",display:"flex",alignItems:"center",justifyContent:"center",gap:20,padding:"0 24px",boxSizing:"border-box"}}><div style={{width:2,height:36,background:"#991b1b",flexShrink:0}}/><div style={{textAlign:"center"}}><div style={{color:"#f1f5f9",fontWeight:900,fontSize:15,fontFamily:"Georgia,serif",letterSpacing:0.5}}>Shop, Dine & Buy Local</div><div style={{color:"rgba(255,255,255,0.4)",fontSize:9,fontFamily:"sans-serif",marginTop:2,letterSpacing:1,textTransform:"uppercase"}}>Your Ad Here · Reach 5,000 Habersham County Homes</div><div style={{color:"#991b1b",fontWeight:800,fontSize:11,fontFamily:"sans-serif",marginTop:3}}>mytownpostcard.com</div></div><div style={{width:2,height:36,background:"#991b1b",flexShrink:0}}/></div>);}
+
+function AdEDDM({w,h}){return(<div style={{width:w,height:h,background:"#f8f8f8",border:"2px solid #aaa",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,boxSizing:"border-box",padding:16}}><div style={{width:44,height:44,borderRadius:"50%",border:"3px solid #555",display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{width:26,height:26,borderRadius:"50%",border:"2px dashed #555"}}/></div><div style={{textAlign:"center",lineHeight:1.8,fontFamily:"sans-serif",color:"#333"}}><div style={{fontSize:9,letterSpacing:1,fontWeight:600}}>PRESORTED STD</div><div style={{fontSize:9,letterSpacing:1,fontWeight:600}}>U.S. POSTAGE PAID</div><div style={{fontSize:9,letterSpacing:1,fontWeight:600}}>CLARKESVILLE, GA 30523</div><div style={{marginTop:6,paddingTop:6,borderTop:"1px solid #ccc",fontSize:9,letterSpacing:2,fontWeight:600}}>LOCAL POSTAL CUSTOMER</div><div style={{fontWeight:900,fontSize:15,letterSpacing:3,marginTop:2}}>EDDM</div></div></div>);}
+
+const SZ={
+XL:{label:"Extra Large Ad", dims:'4" x 5"', price:"$499"},
+L: {label:"Large Ad",       dims:'3" x 4"', price:"$399"},
+M: {label:"Medium Ad",      dims:'3" x 2"', price:"$299"},
+S: {label:"Small Ad",       dims:'2" x 2"', price:"$199"},
+};
+
+function AvailableSpot({spot,hovered,onClick,onEnter,onLeave}){
+const info=SZ[spot.size]||{};
+const isXL=spot.size==="XL",isL=spot.size==="L",isM=spot.size==="M";
+const csz=isXL?80:isL?60:isM?44:28;
+const lsz=isXL?20:isL?16:isM?13:9;
+const psz=isXL?34:isL?26:isM?20:12;
+const dsz=isXL?14:isL?11:isM?10:7;
+const showBtn=isXL||isL||isM;
+const bh=isXL?44:isL?34:26;
+const bf=isXL?13:isL?11:10;
+return(
+<div onClick={onClick} onMouseEnter={onEnter} onMouseLeave={onLeave} style={{width:spot.w,height:spot.h,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",boxSizing:"border-box",position:"relative",overflow:"hidden",background:hovered?"linear-gradient(135deg,#ecfdf5,#d1fae5)":"linear-gradient(135deg,#f8fffe,#f0fdf4)",border:`3px solid ${hovered?"#16a34a":"#4ade80"}`,transition:"all 0.18s ease",gap:spot.size==="S"?3:6,fontFamily:"sans-serif"}}>
+<div style={{position:"absolute",top:0,right:0,width:0,height:0,borderStyle:"solid",borderWidth:`0 ${isXL?40:isL?30:22}px ${isXL?40:isL?30:22}px 0`,borderColor:`transparent ${hovered?"#16a34a":"#22c55e"} transparent transparent`,opacity:hovered?1:0.5,transition:"opacity 0.18s"}}/>
+<div style={{width:csz,height:csz,borderRadius:"50%",background:hovered?"#16a34a":"#22c55e",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:hovered?"0 4px 16px rgba(22,163,74,0.45)":"0 2px 8px rgba(34,197,94,0.3)",transition:"all 0.18s",flexShrink:0}}>
+<span style={{color:"#fff",fontSize:csz*0.45,fontWeight:200,lineHeight:1}}>+</span>
+</div>
+<div style={{color:hovered?"#15803d":"#166534",fontSize:lsz,fontWeight:800,letterSpacing:0.3,textAlign:"center",lineHeight:1}}>{info.label}</div>
+<div style={{color:"#111",fontSize:psz,fontWeight:900,fontFamily:"Georgia,serif",lineHeight:1,letterSpacing:-0.5}}>${spot.price}</div>
+<div style={{color:"#666",fontSize:dsz,fontWeight:600,letterSpacing:0.5}}>{info.dims}</div>
+{showBtn&&(<div style={{marginTop:2,height:bh,paddingLeft:isXL?24:16,paddingRight:isXL?24:16,background:hovered?"#15803d":"#16a34a",borderRadius:bh/2,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:800,fontSize:bf,letterSpacing:0.5,textTransform:"uppercase",boxShadow:hovered?"0 4px 14px rgba(21,128,61,0.55)":"0 2px 6px rgba(22,163,74,0.35)",transition:"all 0.18s"}}>Reserve This Spot</div>)}
+{spot.size!=="S"&&<div style={{fontSize:isXL?10:isL?8:7,color:"#9ca3af",fontStyle:"italic",textAlign:"center"}}>Reaches 5,000 local homes</div>}
+</div>
+);
+}
+
+function ScaledCell({spot,scale,children}){return(<div style={{position:"absolute",left:spot.x*scale,top:spot.y*scale,width:spot.w*scale,height:spot.h*scale,overflow:"hidden"}}><div style={{width:spot.w,height:spot.h,transform:"scale("+scale+")",transformOrigin:"top left"}}>{children}</div></div>);}
+
+function SpotCell({spot,scale,hov,onHov,onOut,onSel}){
+const k=spot.sample;
+const t=spot.tmpl||"photo";
+if(k==="house")return<ScaledCell spot={spot} scale={scale}><AdHouse w={spot.w} h={spot.h}/></ScaledCell>;
+if(k==="eddm") return<ScaledCell spot={spot} scale={scale}><AdEDDM w={spot.w} h={spot.h}/></ScaledCell>;
+if(k===null)   return<ScaledCell spot={spot} scale={scale}><AvailableSpot spot={spot} hovered={hov===spot.id} onClick={()=>onSel(spot)} onEnter={()=>onHov(spot.id)} onLeave={onOut}/></ScaledCell>;
+const d=ADS[k]; if(!d)return null;
+return(<ScaledCell spot={spot} scale={scale}>{spot.size==="XL"&&<AdXL d={d} tmpl={t}/>}{spot.size==="L"&&<AdL d={d} tmpl={t}/>}{spot.size==="M"&&<AdM d={d}/>}{spot.size==="S"&&<AdS d={d}/>}</ScaledCell>);
+}
+
+export default function PostcardPicker(){
+const [side,setSide]=useState("front");
+const [scale,setScale]=useState(0.5);
+const [hov,setHov]=useState(null);
+const [sel,setSel]=useState(null);
+const ref=useRef(null);
+
+useEffect(()=>{
+function upd(){
+if(ref.current){
+setScale(ref.current.offsetWidth / W);
+}
+}
+upd();
+const ro=new ResizeObserver(upd);
+if(ref.current)ro.observe(ref.current);
+return()=>ro.disconnect();
+},[]);
+
+const spots=side==="front"?FRONT:BACK;
+const soldF=FRONT.filter(s=>s.price>0&&s.sample!==null).length;
+const soldB=BACK.filter(s=>s.price>0&&s.sample!==null).length;
+
+return(<div style={{fontFamily:"sans-serif"}}>
+{/* Mobile portrait: show rotate prompt */}
+<style>{`@media (max-width: 768px) and (orientation: portrait) { .rotate-prompt { display: flex !important; } .postcard-section { display: none !important; } } @media (min-width: 769px), (orientation: landscape) { .rotate-prompt { display: none !important; } .postcard-section { display: flex !important; } }`}</style>
+
+{/* Rotate prompt for mobile portrait */}
+<div className="rotate-prompt" style={{display:"none",position:"fixed",inset:0,background:"#0f172a",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:999,gap:24,padding:32}}>
+  <div style={{fontSize:64,animation:"spin 2s linear infinite"}}>
+    <style>{`@keyframes spin{0%{transform:rotate(0deg)}50%{transform:rotate(90deg)}100%{transform:rotate(90deg)}}`}</style>
+    🔄
+  </div>
+  <div style={{color:"#fff",fontWeight:900,fontSize:22,fontFamily:"Georgia,serif",textAlign:"center"}}>Please rotate your device</div>
+  <div style={{color:"rgba(255,255,255,0.6)",fontSize:14,textAlign:"center",maxWidth:280,lineHeight:1.6}}>The postcard picker is designed for landscape view. Rotate your phone sideways for the best experience.</div>
+  <div style={{color:"rgba(255,255,255,0.3)",fontSize:40,marginTop:8}}>🔄</div>
+</div>
+
+{/* Main postcard section */}
+<div className="postcard-section" style={{display:"flex",width:"100%",fontFamily:"sans-serif",background:"#f1f5f9",flexDirection:"column",boxSizing:"border-box",height:"100vh",padding:"12px 20px 8px",overflow:"hidden"}}>
+
+  {/* Header -- centered, compact */}
+  <div style={{textAlign:"center",marginBottom:6,flexShrink:0}}>
+    <div style={{fontSize:22,fontWeight:900,color:"#111",fontFamily:"Georgia,serif",letterSpacing:-0.3}}>Reserve Your Spot on the Postcard</div>
+    <div style={{fontSize:12,color:"#64748b",marginTop:2}}>Click any <span style={{color:"#16a34a",fontWeight:700}}>green spot</span> below to claim yours</div>
+  </div>
+  {/* Side toggle -- centered */}
+  <div style={{display:"flex",justifyContent:"center",marginBottom:6,flexShrink:0}}>
+    <div style={{background:"#fff",borderRadius:12,padding:4,display:"flex",gap:3,boxShadow:"0 1px 8px rgba(0,0,0,0.1)"}}>
+      {[{id:"front",l:"Front Side",sold:soldF,tot:7},{id:"back",l:"Back Side",sold:soldB,tot:7}].map(s=>(
+        <button key={s.id} onClick={()=>setSide(s.id)} style={{padding:"7px 22px",borderRadius:9,border:"none",cursor:"pointer",background:side===s.id?"linear-gradient(135deg,#991b1b,#7f1d1d)":"transparent",color:side===s.id?"#fff":"#64748b",fontWeight:700,fontSize:13,transition:"all 0.18s",lineHeight:1.3}}>
+          {s.l}<br/>
+          <span style={{fontSize:10,fontWeight:400,opacity:0.8}}>{s.sold} of {s.tot} sold</span>
+        </button>
+      ))}
+    </div>
+  </div>
+
+  {/* Postcard container -- fills remaining height at correct 12:9 ratio */}
+  {/* Shadow is 8px spread so we give 20px horizontal margin to prevent clipping */}
+  <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",minHeight:0,padding:"8px 20px"}}>
+    <div ref={ref} style={{
+      width:"100%",
+      maxWidth:"calc((100vh - 160px) * 12 / 9)",
     }}>
       <div style={{
-        position: "absolute",
-        top: 0,
-        left: 0,
-        width: natW,
-        height: natH,
-        transformOrigin: "top left",
-        transform: `scale(${scale})`,
-        boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.10)",
+        position:"relative",
+        width:"100%",
+        paddingBottom:"75%",
+        background:"#c8c8c8",
+        borderRadius:6,
+        boxShadow:"0 0 0 7px #c8c8c8, 0 0 0 8.5px #a8a8a8, 0 16px 48px rgba(0,0,0,0.28), 0 4px 12px rgba(0,0,0,0.14)",
       }}>
-        {children}
+        <div style={{position:"absolute",inset:0,overflow:"hidden",borderRadius:5}}>
+          {spots.map(spot=><SpotCell key={spot.id} spot={spot} scale={scale} hov={hov} onHov={setHov} onOut={()=>setHov(null)} onSel={setSel}/>)}
+        </div>
       </div>
     </div>
-  );
-}
+  </div>
 
-// ─── Permanent house / self-promotion ad ─────────────────────────────────────
-function HouseAd() {
-  return (
-    <div style={{
-      width: "100%", height: "100%",
-      background: "linear-gradient(160deg,#0f1923 0%,#1a2a3a 100%)",
-      display: "flex", flexDirection: "column",
-      alignItems: "center", justifyContent: "center",
-      fontFamily: "sans-serif", padding: "6px 5px",
-      boxSizing: "border-box", gap: 2.5, overflow: "hidden",
-    }}>
-      <div style={{ width: "72%", height: 2, background: "#991b1b", borderRadius: 1 }} />
-      <div style={{ color: "#fff", fontWeight: 900, fontSize: 9,
-        textAlign: "center", lineHeight: 1.15, letterSpacing: 0.3 }}>
-        Shop, Dine<br />&amp; Buy Local
+  {/* Legend -- compact, inside viewport */}
+  <div style={{display:"flex",justifyContent:"center",gap:20,marginTop:8,flexWrap:"wrap",flexShrink:0}}>
+    {[{bg:"linear-gradient(135deg,#f8fffe,#f0fdf4)",border:"2px solid #4ade80",l:"Available -- click to reserve"},{bg:"#fefce8",border:"2px dashed #fbbf24",l:"Reserved"},{bg:"#f1f5f9",border:"2px solid #cbd5e1",l:"Spot taken"}].map(x=>(
+      <div key={x.l} style={{display:"flex",alignItems:"center",gap:7}}>
+        <div style={{width:20,height:20,background:x.bg,border:x.border,borderRadius:4,flexShrink:0}}/>
+        <span style={{fontSize:12,color:"#64748b",fontWeight:500}}>{x.l}</span>
       </div>
-      <div style={{ color: "rgba(255,255,255,0.52)", fontSize: 6.5,
-        textAlign: "center", letterSpacing: 0.8, textTransform: "uppercase" }}>
-        Your Ad Here
-      </div>
-      <div style={{ color: "#fff", fontWeight: 800, fontSize: 8,
-        textAlign: "center", fontFamily: "Georgia,serif", lineHeight: 1.1 }}>
-        My Town Postcard
-      </div>
-      <div style={{ color: "#991b1b", fontSize: 7, fontWeight: 700 }}>
-        mytownpostcard.com
-      </div>
-      <div style={{
-        border: "1.5px dashed rgba(255,255,255,0.3)", borderRadius: 3,
-        padding: "3px 7px", display: "flex", alignItems: "center", gap: 3,
-      }}>
-        <div style={{
-          width: 12, height: 12,
-          border: "1.5px solid rgba(255,255,255,0.45)",
-          borderRadius: 2, flexShrink: 0,
-          display: "grid", gridTemplateColumns: "1fr 1fr",
-          gridTemplateRows: "1fr 1fr", gap: 1.5, padding: 1.5,
-          boxSizing: "border-box",
-        }}>
-          {[0,1,2,3].map(i => (
-            <div key={i} style={{ background: "rgba(255,255,255,0.4)", borderRadius: 0.5 }} />
-          ))}
+    ))}
+  </div>
+
+  {sel&&(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:16}} onClick={()=>setSel(null)}>
+      <div style={{background:"#fff",borderRadius:16,padding:32,maxWidth:400,width:"100%",boxShadow:"0 24px 64px rgba(0,0,0,0.3)"}} onClick={e=>e.stopPropagation()}>
+        <div style={{fontSize:22,fontWeight:900,color:"#111",fontFamily:"Georgia,serif",marginBottom:4}}>Reserve Your {SZ[sel.size]?.label}</div>
+        <div style={{fontSize:14,color:"#64748b",marginBottom:20}}>{SZ[sel.size]?.dims} &middot; ${sel.price} &middot; Reaches 5,000 homes</div>
+        <div style={{background:"#f0fdf4",border:"2px solid #22c55e",borderRadius:10,padding:"14px 18px",marginBottom:24}}>
+          <div style={{fontSize:13,color:"#166634",fontWeight:600,lineHeight:1.8}}>
+            &#10003; Clarkesville Community Mailer &mdash; Summer 2026<br/>
+            &#10003; Reaching 5,000 Habersham County homeowners<br/>
+            &#10003; Trackable QR code with website link<br/>
+            &#10003; AI-powered ad builder included free
+          </div>
         </div>
-        <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 6 }}>QR Code</div>
+        <button onClick={()=>setSel(null)} style={{width:"100%",padding:"14px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#991b1b,#7f1d1d)",color:"#fff",fontWeight:900,fontSize:16,cursor:"pointer",boxShadow:"0 4px 14px rgba(127,29,29,0.4)",letterSpacing:0.3}}>
+          Build My Ad &amp; Reserve &mdash; ${sel.price}
+        </button>
+        <button onClick={()=>setSel(null)} style={{width:"100%",padding:"10px",marginTop:8,borderRadius:10,border:"1px solid #e5e7eb",background:"#f9fafb",color:"#374151",fontWeight:600,fontSize:13,cursor:"pointer"}}>Cancel</button>
       </div>
-      <div style={{ width: "72%", height: 2, background: "#991b1b", borderRadius: 1 }} />
     </div>
-  );
-}
-
-// Module-level in-memory cache for ad image data (base64).
-// Survives SPA navigation between checkout steps without exhausting the
-// sessionStorage quota. Lost on full page reload, which is acceptable —
-// the upload page collects images again at that point.
-export const AD_IMAGE_CACHE = new Map();
-
-export default function PostcardPickerSection() {
-  const [, navigate] = useLocation();
-  const [selected, setSelected] = useState(null);
-  const [creatorSpot, setCreatorSpot] = useState(null);
-  const [reserveError, setReserveError] = useState(null);
-  // Which face of the postcard the customer is currently viewing/buying.
-  // Both sides share the SAME reservation + payment flow — only the spot id
-  // matters server-side, the front/back distinction is purely a layout
-  // partition for the picker.
-  const [side, setSide] = useState("front");
-
-  // ResizeObserver on the grid container computes ONE scale value for the
-  // entire postcard. Every cell uses this same scale via PostcardScaleContext
-  // because the natural sizes are derived from grid units, so all cells
-  // share the same scale factor regardless of how many cols/rows they span.
-  const gridRef = useRef(null);
-  const [postcardScale, setPostcardScale] = useState(1);
-  useEffect(() => {
-    const el = gridRef.current;
-    if (!el) return;
-    const obs = new ResizeObserver(([entry]) => {
-      setPostcardScale(entry.contentRect.width / NATURAL_GRID_W);
-    });
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
-
-  // Active hold (if any) for THIS browser, used to surface a "resume checkout"
-  // banner so customers who closed the checkout tab can pick up where they
-  // left off before the 30-min hold expires.
-  const [activeHold, setActiveHold] = useState(() => findActiveReservation());
-
-  const { data: campaign, isLoading } = useGetActiveCampaign();
-  const reserveMutation = useReserveSpot();
-
-  // Re-check the active hold every 30s and on every campaign refresh — that
-  // way if the server already swept it (or we passed the expiry) the banner
-  // disappears without needing a reload.
-  useEffect(() => {
-    const tick = () => {
-      const found = findActiveReservation();
-      if (!found) {
-        setActiveHold(null);
-        return;
-      }
-      // If the campaign already shows this spot as no longer reserved
-      // (server sweeper won the race, or the customer paid in another tab),
-      // drop the storage entry too.
-      const matching = campaign?.spots?.find((s) => s.id === found.spotId);
-      if (matching && matching.status !== "reserved") {
-        clearReservation(found.spotId);
-        setActiveHold(null);
-        return;
-      }
-      setActiveHold(found);
-    };
-    tick();
-    const t = setInterval(tick, 30000);
-    return () => clearInterval(t);
-  }, [campaign]);
-
-  if (isLoading) {
-    return (
-      <div style={{ textAlign: "center", padding: "48px 0", fontFamily: "sans-serif", color: "#6b7280" }}>
-        Loading postcard preview…
-      </div>
-    );
-  }
-
-  if (!campaign) {
-    return (
-      <div style={{ textAlign: "center", padding: "48px 0", fontFamily: "sans-serif", color: "#6b7280" }}>
-        No active campaign found.
-      </div>
-    );
-  }
-
-  const allSpots = campaign.spots || [];
-  // Older rows that pre-date the side column come back without it set; treat
-  // those as front-side so existing campaigns keep rendering correctly.
-  const sideSpots = allSpots.filter((s) => (s.side ?? "front") === side);
-  const orderForSide = side === "back" ? BACK_GRID_ORDER : FRONT_GRID_ORDER;
-  const sortedSpots = [...sideSpots].sort((a, b) => {
-    const ai = orderForSide.indexOf(a.gridArea);
-    const bi = orderForSide.indexOf(b.gridArea);
-    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
-  });
-
-  // Quick stats for the toggle pill — only count spots that are actually
-  // rendered in the grid (have a GRID_POSITIONS entry). Orphaned DB rows
-  // (spots whose gridArea was retired from the layout) are excluded so the
-  // "X of Y spots sold" numbers match what the customer sees on screen.
-  const sideStats = (target) => {
-    const spotsForSide = allSpots.filter(
-      (s) => (s.side ?? "front") === target && !!GRID_POSITIONS[s.gridArea],
-    );
-    const sold = spotsForSide.filter(
-      (s) => s.status === "paid" || s.status === "reserved",
-    ).length;
-    return { total: spotsForSide.length, sold };
-  };
-  const frontStats = sideStats("front");
-  const backStats = sideStats("back");
-
-  const handleAdComplete = async (payload) => {
-    setReserveError(null);
-    try {
-      const result = await reserveMutation.mutateAsync({
-        id: creatorSpot.id,
-        data: {
-          businessName: payload.businessName,
-          businessCategory: payload.industry,
-          contactEmail: payload.email,
-          contactPhone: payload.phone || undefined,
-          website: payload.website || undefined,
-        },
-      });
-
-      // Persist the ad design data so checkout/upload pages can use it later.
-      // Only store small text (templateId + adData) in sessionStorage; base64
-      // images can easily blow the 5–10MB sessionStorage quota, so we cache
-      // them in module-level memory instead (survives SPA navigation, lost on
-      // full reload — the upload page will re-collect them in that case).
-      try {
-        const { sizeKey, price, template, photo, logo, ...adFields } = payload;
-        sessionStorage.setItem(
-          `localspot:ad:${result.id}`,
-          JSON.stringify({
-            templateId: template,
-            adData: adFields,
-          })
-        );
-      } catch {
-        // sessionStorage may be unavailable — non-fatal
-      }
-      AD_IMAGE_CACHE.set(result.id, payload.photo);
-
-      // Stash the 30-min hold so the CheckoutPage countdown banner and the
-      // picker's "resume checkout" banner can both find it after a reload.
-      // Server is still source of truth — this is just so we know which
-      // spot belongs to this browser tab.
-      if (result.expiresAt) {
-        saveReservation(result.id, result.expiresAt, result.businessName);
-      }
-
-      setCreatorSpot(null);
-      setSelected(null);
-      navigate(`/checkout/${result.id}`);
-    } catch (err) {
-      const apiMessage = typeof err?.data === "object" && err?.data !== null ? err.data.error : null;
-      const status = err?.status;
-      let friendly;
-      if (apiMessage) {
-        friendly = apiMessage;
-      } else if (status === 404) {
-        friendly = "Could not reach the reservation server. Please refresh and try again.";
-      } else if (status >= 500) {
-        friendly = "Server error. Please try again in a moment.";
-      } else {
-        friendly = err?.message || "Something went wrong. Please try again.";
-      }
-      setReserveError(friendly);
-    }
-  };
-
-  const openCreator = (spot) => {
-    setSelected(spot);
-    setCreatorSpot(spot);
-    setReserveError(null);
-  };
-
-  const closeCreator = () => {
-    if (reserveMutation.isPending) return;
-    setCreatorSpot(null);
-    setSelected(null);
-    setReserveError(null);
-  };
-
-  // Cells on the active grid that are *not* sellable spots — they always
-  // render fixed UI (house ads, EDDM block) instead of going through the
-  // PaidAd / AvailableSpot path.
-  const renderFixedCell = (area) => {
-    // Front side has no fixed cells — every inch is a paid spot.
-    if (side === "front") return null;
-    // Back side
-    if (area === "bhs") return <HouseAdVertical />;
-    if (area === "bhr") return <HouseAdRow />;
-    if (area === "bhn") return <HouseAdBanner campaign={campaign} />;
-    if (area === "ed") return <EDDMBox />;
-    return null;
-  };
-
-  // Front side has no fixed (non-sellable) cells — 100% paid coverage.
-  // Back side: bhr covers the full 8"×4" house-ad block; ed is the USPS EDDM placeholder.
-  const fixedAreas = side === "front" ? [] : ["bhr", "ed"];
-
-  const sideButtonStyle = (active) => ({
-    border: "none",
-    cursor: "pointer",
-    padding: "7px 18px",
-    borderRadius: 11,
-    background: active ? "linear-gradient(135deg,#991b1b,#7f1d1d)" : "transparent",
-    color: active ? "#fff" : "#64748b",
-    fontWeight: 700,
-    fontSize: 14,
-    fontFamily: "sans-serif",
-    transition: "all 0.2s",
-    lineHeight: 1.4,
-    boxShadow: active ? "0 3px 10px rgba(127,29,29,0.4)" : "none",
-  });
-
-  return (
-    <div style={{ height: "100vh", overflow: "hidden", display: "flex", flexDirection: "column", background: "#dde3ea", fontFamily: "sans-serif" }}>
-      <style>{`
-        @media (max-width: 768px) and (orientation: portrait) {
-          .ls-rotate-overlay { display: flex !important; }
-        }
-      `}</style>
-      <div className="ls-rotate-overlay" style={{ display: "none", position: "fixed", inset: 0, zIndex: 9999, background: "rgba(15,23,42,0.95)", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20, padding: "0 32px" }}>
-        <div style={{ fontSize: 56 }}>🔄</div>
-        <div style={{ color: "#fff", fontSize: 22, fontWeight: 800, textAlign: "center" }}>Please rotate your device</div>
-        <div style={{ color: "rgba(255,255,255,0.60)", fontSize: 15, textAlign: "center", maxWidth: 300, lineHeight: 1.6 }}>The postcard picker works best in landscape mode. Rotate your phone or tablet to continue.</div>
-      </div>
-      {/* Active hold banner — only shown if THIS browser reserved a spot
-          and the 30-min hold hasn't lapsed yet. Lets the customer jump
-          straight back to /checkout/<id> without picking again. */}
-      {activeHold && (
-        <div
-          role="status"
-          style={{
-            background: "#f0fdf4",
-            border: "1px solid #86efac",
-            borderRadius: 10,
-            padding: "10px 14px",
-            marginBottom: 14,
-            flexShrink: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
-            fontSize: 13.5,
-            color: "#15803d",
-          }}
-        >
-          <span>
-            ⏱️ You have a spot held for{" "}
-            <strong>{activeHold.businessName || "your business"}</strong>.
-            Finish payment before it expires.
-          </span>
-          <button
-            onClick={() => navigate(`/checkout/${activeHold.spotId}`)}
-            style={{
-              background: "#15803d",
-              color: "#fff",
-              border: "none",
-              borderRadius: 8,
-              padding: "7px 14px",
-              fontSize: 13,
-              fontWeight: 800,
-              cursor: "pointer",
-              flexShrink: 0,
-            }}
-          >
-            Resume checkout →
-          </button>
-        </div>
-      )}
-
-      {/* Compact header — title/subtitle on left, front/back toggle on right */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 20px 8px", flexShrink: 0, gap: 12 }}>
-        <div>
-          <div style={{ fontSize: 20, fontWeight: 900, color: "#111", fontFamily: "Georgia,serif", lineHeight: 1.15 }}>
-            Reserve Your Spot on the Postcard
-          </div>
-          <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
-            Click any{" "}
-            <span style={{ color: "#16a34a", fontWeight: 700 }}>green spot</span>{" "}
-            to claim yours.
-          </div>
-        </div>
-        <div
-          role="tablist"
-          aria-label="Postcard side"
-          style={{ background: "#fff", borderRadius: 14, padding: 5, display: "flex", gap: 4, boxShadow: "0 1px 8px rgba(0,0,0,0.10)", flexShrink: 0 }}
-        >
-          {[
-            { id: "front", e: "📮", l: "Front Side", stats: frontStats },
-            { id: "back",  e: "📬", l: "Back Side",  stats: backStats  },
-          ].map(s => (
-            <button
-              key={s.id}
-              role="tab"
-              aria-selected={side === s.id}
-              onClick={() => { setSide(s.id); setSelected(null); }}
-              style={sideButtonStyle(side === s.id)}
-            >
-              <span style={{ fontSize: 16, marginRight: 6 }}>{s.e}</span>{s.l}
-              <br />
-              <span style={{ fontSize: 11, fontWeight: 400, opacity: 0.8 }}>
-                {s.stats.sold} of {s.stats.total} spots sold
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Label chip — sits above the card like the reference's "FRONT SIDE —
-          12" × 9"…" badge. Plain dark pill, centered. */}
-      <div style={{ textAlign: "center", marginBottom: 6, flexShrink: 0 }}>
-        <span style={{
-          display: "inline-block",
-          background: "#1e293b", color: "rgba(255,255,255,0.65)",
-          fontSize: 10, fontWeight: 700, letterSpacing: 1.5,
-          textTransform: "uppercase", padding: "4px 14px", borderRadius: 20,
-        }}>
-          {side === "front" ? "Front" : "Back"} Side &mdash; 12&Prime; &times; 9&Prime; &middot; Reaching {campaign.homesCount?.toLocaleString() ?? "5,000"} Habersham County Homes
-        </span>
-      </div>
-
-      {/* Flex-fill wrapper — takes all remaining vertical space and centers
-          the postcard. Width formula fits both screen width AND height
-          (subtracting ~130px for header + chip + legend + padding). */}
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", minHeight: 0, padding: "0 16px 8px" }}>
-      {/* Postcard card — boxShadow layer 1: 7px gray mat border; layer 2:
-          thin dark outline; layers 3–4: drop shadow. Background #c8c8c8
-          shows through gap: 7 between cells as equal-width dividing lines. */}
-      <div ref={gridRef} style={{
-        position: "relative",
-        width: "min(100%, calc((100vh - 130px) * 12 / 9))",
-        height: `${9 * PX_PER_CELL * postcardScale}px`,
-        background: "#c8c8c8",
-        borderRadius: 8,
-        overflow: "hidden",
-        boxShadow: "0 0 0 7px #c8c8c8, 0 0 0 8px #b0b0b0, 0 16px 56px rgba(0,0,0,0.32), 0 4px 12px rgba(0,0,0,0.16)",
-      }}>
-
-        {/* Postcard grid — fills the container; gap: 7 lets the #c8c8c8
-            background show through as dividing lines matching the border. */}
-        <PostcardScaleContext.Provider value={postcardScale}>
-          <div style={{
-            position: "absolute", inset: 0,
-            display: "grid",
-            gridTemplateColumns: "repeat(12, 1fr)",
-            gridTemplateRows: "repeat(9, 1fr)",
-            gap: 7,
-            background: "#c8c8c8",
-            boxSizing: "border-box",
-            overflow: "hidden",
-          }}>
-              {sortedSpots.map(spot => {
-                const isSelected = selected?.id === spot.id;
-                // mb is seeded as "paid" but we render it as a sample AdXL so it
-                // reads like a real advertiser's ad rather than the generic paid-ad renderer.
-                const isPaid = spot.status === "paid" && spot.gridArea !== "mb";
-                const isReserved = spot.status === "reserved" && spot.gridArea !== "mb";
-                const sampleKey = SPOT_SAMPLE_MAP[spot.gridArea];
-                const sampleContent = !isPaid && !isReserved && sampleKey
-                  ? getSampleAd(sampleKey, SIZE_MAP[spot.size] || "S")
-                  : null;
-                const pos = GRID_POSITIONS[spot.gridArea];
-                if (!pos) return null;
-
-                return (
-                  <ScaledCell key={spot.id} pos={pos}>
-                    {isPaid ? (
-                      <PaidAd spot={spot} />
-                    ) : isReserved ? (
-                      <ReservedSpot spot={spot} />
-                    ) : sampleContent ? (
-                      <div style={{ position: "relative", width: "100%", height: "100%", cursor: "default" }}>
-                        {sampleContent}
-                      </div>
-                    ) : (
-                      <AvailableSpot
-                        spot={spot}
-                        isSelected={isSelected}
-                        onClick={() => openCreator(spot)}
-                      />
-                    )}
-                  </ScaledCell>
-                );
-              })}
-              {/* Fixed (non-sellable) cells: house ads on both sides, plus the
-                  USPS EDDM placeholder on the back. No click, not counted. */}
-              {fixedAreas.map((area) => {
-                const pos = GRID_POSITIONS[area];
-                if (!pos) return null;
-                return (
-                  <ScaledCell key={area} pos={pos} pointerEvents="none">
-                    {renderFixedCell(area)}
-                  </ScaledCell>
-                );
-              })}
-          </div>
-        </PostcardScaleContext.Provider>
-
-      </div>
-      </div>
-
-      {/* Legend — three states matching reference colors exactly */}
-      <div style={{ display: "flex", gap: 28, marginTop: 0, marginBottom: 10, justifyContent: "center",
-        flexWrap: "wrap", flexShrink: 0 }}>
-        {[
-          { bg: "linear-gradient(135deg,#f8fffe,#f0fdf4)", border: "2px solid #4ade80", label: "Available — click to reserve" },
-          { bg: "#fefce8",                                  border: "2px dashed #fbbf24", label: "Reserved" },
-          { bg: "#f1f5f9",                                  border: "2px solid #cbd5e1",  label: "Spot taken" },
-        ].map(l => (
-          <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 7 }}>
-            <div style={{ width: 20, height: 20, background: l.bg, border: l.border,
-              borderRadius: 4, flexShrink: 0 }} />
-            <span style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{l.label}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Ad Generator */}
-      {creatorSpot && (
-        <AdGenerator
-          initialSize={SIZE_MAP[creatorSpot.size] || "S"}
-          onComplete={handleAdComplete}
-          onClose={closeCreator}
-          isLoading={reserveMutation.isPending}
-          error={reserveError}
-        />
-      )}
-    </div>
-  );
+  )}
+</div>
+</div>
+);
 }
