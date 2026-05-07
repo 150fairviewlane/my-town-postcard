@@ -91,8 +91,8 @@ function ScaledCell({ pos, children, pointerEvents }) {
     }}>
       <div style={{
         position: "absolute",
-        top: 7,
-        left: 7,
+        top: 0,
+        left: 0,
         width: natW,
         height: natH,
         transformOrigin: "top left",
@@ -182,7 +182,7 @@ export default function PostcardPickerSection() {
     const el = gridRef.current;
     if (!el) return;
     const obs = new ResizeObserver(([entry]) => {
-      setPostcardScale((entry.contentRect.width - 14) / NATURAL_GRID_W);
+      setPostcardScale(entry.contentRect.width / NATURAL_GRID_W);
     });
     obs.observe(el);
     return () => obs.disconnect();
@@ -486,30 +486,22 @@ export default function PostcardPickerSection() {
         </span>
       </div>
 
-      {/* Postcard card — aspect-ratio div carries the shadow; a 7px border
-          overlay draws equal gray lines on all four outer edges;
-          the grid background shows the same gray through gap: 1. */}
+      {/* Postcard card — boxShadow layer 1: 7px gray mat border; layer 2:
+          thin dark outline; layers 3–4: drop shadow. Background #c8c8c8
+          shows through gap: 7 between cells as equal-width dividing lines. */}
       <div ref={gridRef} style={{
         position: "relative",
         width: "100%",
         maxWidth: 1000,
-        paddingBottom: "75%",
-        boxShadow: "0 12px 48px rgba(0,0,0,0.28),0 4px 12px rgba(0,0,0,0.16)",
+        height: `${9 * PX_PER_CELL * postcardScale}px`,
+        background: "#c8c8c8",
+        borderRadius: 8,
+        overflow: "hidden",
+        boxShadow: "0 0 0 7px #c8c8c8, 0 0 0 8px #b0b0b0, 0 16px 56px rgba(0,0,0,0.32), 0 4px 12px rgba(0,0,0,0.16)",
       }}>
 
-        {/* Border overlay — sits above all cells (zIndex 20), draws 7px solid
-            border matching the gap color. pointerEvents none → clicks pass through. */}
-        <div style={{
-          position: "absolute", inset: 0,
-          border: "7px solid #c8c8c8",
-          borderRadius: 8,
-          zIndex: 20,
-          pointerEvents: "none",
-          boxSizing: "border-box",
-        }} />
-
-        {/* Postcard grid — fills the entire padding box; ScaledCell offsets
-            each ad's inner div by 7px so content sits inside the border. */}
+        {/* Postcard grid — fills the container; gap: 7 lets the #c8c8c8
+            background show through as dividing lines matching the border. */}
         <PostcardScaleContext.Provider value={postcardScale}>
           <div style={{
             position: "absolute", inset: 0,
