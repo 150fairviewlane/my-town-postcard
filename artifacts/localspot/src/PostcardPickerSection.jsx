@@ -91,8 +91,8 @@ function ScaledCell({ pos, children, pointerEvents }) {
     }}>
       <div style={{
         position: "absolute",
-        top: 0,
-        left: 0,
+        top: 7,
+        left: 7,
         width: natW,
         height: natH,
         transformOrigin: "top left",
@@ -182,7 +182,7 @@ export default function PostcardPickerSection() {
     const el = gridRef.current;
     if (!el) return;
     const obs = new ResizeObserver(([entry]) => {
-      setPostcardScale(entry.contentRect.width / NATURAL_GRID_W);
+      setPostcardScale((entry.contentRect.width - 14) / NATURAL_GRID_W);
     });
     obs.observe(el);
     return () => obs.disconnect();
@@ -486,33 +486,41 @@ export default function PostcardPickerSection() {
         </span>
       </div>
 
-      {/* Mat wrapper — gray frame that shows between all ad cells and around
-          the outer edges, giving every grid line the same width.
-          Shadow lives here; the inner grid is flush against the mat. */}
-      <div style={{
-        background: "#d8d8d8", borderRadius: 10, padding: 6,
+      {/* Postcard card — aspect-ratio div carries the shadow; a 7px border
+          overlay draws equal gray lines on all four outer edges;
+          the grid background shows the same gray through gap: 1. */}
+      <div ref={gridRef} style={{
+        position: "relative",
+        width: "100%",
+        maxWidth: 1000,
+        paddingBottom: "75%",
         boxShadow: "0 12px 48px rgba(0,0,0,0.28),0 4px 12px rgba(0,0,0,0.16)",
-        display: "inline-block", width: "100%", boxSizing: "border-box",
       }}>
 
-        {/* Postcard grid — padding-bottom: 75% guarantees exact 12:9 landscape
-            ratio at every viewport width (9÷12 = 0.75). The grid is absolutely
-            positioned to fill the padding box; ScaledCell's transform:scale()
-            keeps every cell's content in proportion. */}
-        <div style={{ width: "100%" }}>
-          <PostcardScaleContext.Provider value={postcardScale}>
-            <div ref={gridRef} style={{ position: "relative", width: "100%", paddingBottom: "75%" }}>
-            <div style={{
-              position: "absolute", inset: 0,
-              display: "grid",
-              gridTemplateColumns: "repeat(12, 1fr)",
-              gridTemplateRows: "repeat(9, 1fr)",
-              gap: 1,
-              background: "#bbbbbb",
-              borderRadius: 4,
-              boxSizing: "border-box",
-              overflow: "hidden",
-            }}>
+        {/* Border overlay — sits above all cells (zIndex 20), draws 7px solid
+            border matching the gap color. pointerEvents none → clicks pass through. */}
+        <div style={{
+          position: "absolute", inset: 0,
+          border: "7px solid #c8c8c8",
+          borderRadius: 8,
+          zIndex: 20,
+          pointerEvents: "none",
+          boxSizing: "border-box",
+        }} />
+
+        {/* Postcard grid — fills the entire padding box; ScaledCell offsets
+            each ad's inner div by 7px so content sits inside the border. */}
+        <PostcardScaleContext.Provider value={postcardScale}>
+          <div style={{
+            position: "absolute", inset: 0,
+            display: "grid",
+            gridTemplateColumns: "repeat(12, 1fr)",
+            gridTemplateRows: "repeat(9, 1fr)",
+            gap: 1,
+            background: "#c8c8c8",
+            boxSizing: "border-box",
+            overflow: "hidden",
+          }}>
               {sortedSpots.map(spot => {
                 const isSelected = selected?.id === spot.id;
                 // mb is seeded as "paid" but we render it as a sample AdXL so it
@@ -557,10 +565,8 @@ export default function PostcardPickerSection() {
                   </ScaledCell>
                 );
               })}
-            </div>
-            </div>
-          </PostcardScaleContext.Provider>
-        </div>
+          </div>
+        </PostcardScaleContext.Provider>
 
       </div>
 
