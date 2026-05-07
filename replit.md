@@ -91,7 +91,10 @@ See `.env.example` for full documentation. Summary:
 
 The postcard is 12"×9" landscape and has TWO sides, both sellable through the same picker, AdGenerator, and payment flow. The picker has a Front/Back toggle pill above the grid. Aspect ratio is locked via `padding-bottom: 75%` wrapper (not `aspect-ratio` CSS) to guarantee exact 12:9 at all viewports.
 
-**Front side** — 9 spots: `mb` (xl, Mr. Biscuit's sample), `dn` `re` (xl), `hv` `ins` (large), then a **2×2 grid** in the bottom-right corner: `pz` `a1` (top row, each 2"×2"), `lw` `a2` (bottom row, each 2"×2"), plus `hs` permanent house ad cell (cols 1-8, row 9).
+**Front side** — 7 spots, 100% paid coverage (no house ad):
+- Top row: `mb` `dn` `re` — XL (4"×5", 400×500 natural px), each 4 cols × 5 rows.
+- Bottom row: `l1` `l2` `l3` `l4` — Large portrait (3"×4", 300×400 natural px), each 3 cols × 4 rows.
+- Grid: rows 1-5 = XL, rows 6-9 = Large portrait. All 108 cells covered (no house ad strip).
 
 **Back side** — 7 spots: `bxl` (xl, $450), `bl1` `bl2` (large, $350), `bm1` `bs1` `bm2` `bs2` (each 2"×2", 200×200px natural, arranged in a row at rows 4-5), plus one house-ad cell `bhr` (cols 1-8, rows 6-9 = 800×400) and the non-sellable `ed` USPS EDDM block (4"×4"). Layout in `artifacts/localspot/src/postcardBack.jsx`.
 
@@ -101,7 +104,7 @@ The print page (`/admin/campaign/:id/print`) renders both sides as separate prin
 
 ## Seed Data
 
-Campaign 1 (Spring 2025) has 16 spots: 9 front-side + 7 back-side. Front: 1 paid (Mr. Biscuit's, the `mb` perpetual sponsor demo) + 8 available. Back: all 7 available.
+Campaign 1 (Spring 2025) has 14 active spots: 7 front-side + 7 back-side. Front: `mb` `re` paid + `dn` `l1` `l2` `l3` `l4` available. Back: all 7 available. (Old spots `lw`/`a2` are orphaned DB rows — grid skips them via GRID_POSITIONS lookup.)
 
 ## Reservation Expiration
 

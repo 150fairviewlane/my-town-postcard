@@ -27,7 +27,7 @@ import { getSampleAd, SPOT_SAMPLE_MAP } from "./PostcardSampleAds";
 
 const SIZE_MAP = { xl: "XL", large: "L", medium: "M", small: "S" };
 
-const FRONT_GRID_ORDER = ["mb","dn","re","hv","ins","pz","lw","a1","a2","a3"];
+const FRONT_GRID_ORDER = ["mb","dn","re","l1","l2","l3","l4"];
 
 // Explicit grid positions for every named area on both sides.
 // gridColumn / gridRow use CSS end-exclusive line numbers (e.g. "1/5" = cols 1-4).
@@ -35,16 +35,15 @@ const FRONT_GRID_ORDER = ["mb","dn","re","hv","ins","pz","lw","a1","a2","a3"];
 // immediately readable: each spot's print dimensions map directly to its col/row span.
 const GRID_POSITIONS = {
   // ── Front side ──────────────────────────────────────────────────────────────
+  // Top row: 3 XL spots (4"×5" each = 4 cols × 5 rows)
   mb:  { gridColumn: "1/5",   gridRow: "1/6"  },  // XL  4"×5"
   dn:  { gridColumn: "5/9",   gridRow: "1/6"  },  // XL  4"×5"
   re:  { gridColumn: "9/13",  gridRow: "1/6"  },  // XL  4"×5"
-  hv:  { gridColumn: "1/5",   gridRow: "6/9"  },  // Lg  4"×3"
-  ins: { gridColumn: "5/9",   gridRow: "6/9"  },  // Lg  4"×3"
-  pz:  { gridColumn: "9/11",  gridRow: "6/8"  },  // Md  2"×2" (bottom-right 2×2 grid)
-  a1:  { gridColumn: "11/13", gridRow: "6/8"  },  // Sm  2"×2"
-  lw:  { gridColumn: "9/11",  gridRow: "8/10" },  // Md  2"×2"
-  a2:  { gridColumn: "11/13", gridRow: "8/10" },  // Sm  2"×2"
-  hs:  { gridColumn: "1/9",   gridRow: "9/10" },  // House ad — bottom strip
+  // Bottom row: 4 Large portrait spots (3"×4" each = 3 cols × 4 rows). No house ad.
+  l1:  { gridColumn: "1/4",   gridRow: "6/10" },  // Lg portrait  3"×4"
+  l2:  { gridColumn: "4/7",   gridRow: "6/10" },  // Lg portrait  3"×4"
+  l3:  { gridColumn: "7/10",  gridRow: "6/10" },  // Lg portrait  3"×4"
+  l4:  { gridColumn: "10/13", gridRow: "6/10" },  // Lg portrait  3"×4"
   // ── Back side ───────────────────────────────────────────────────────────────
   bxl: { gridColumn: "1/5",   gridRow: "1/6"  },  // XL  4"×5"
   bl1: { gridColumn: "5/9",   gridRow: "1/4"  },  // Lg  4"×3"
@@ -250,10 +249,14 @@ export default function PostcardPickerSection() {
     return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
   });
 
-  // Quick stats for the toggle pill so customers can see at a glance how many
-  // spots are still up for grabs on each side.
+  // Quick stats for the toggle pill — only count spots that are actually
+  // rendered in the grid (have a GRID_POSITIONS entry). Orphaned DB rows
+  // (spots whose gridArea was retired from the layout) are excluded so the
+  // "X of Y spots sold" numbers match what the customer sees on screen.
   const sideStats = (target) => {
-    const spotsForSide = allSpots.filter((s) => (s.side ?? "front") === target);
+    const spotsForSide = allSpots.filter(
+      (s) => (s.side ?? "front") === target && !!GRID_POSITIONS[s.gridArea],
+    );
     const sold = spotsForSide.filter(
       (s) => s.status === "paid" || s.status === "reserved",
     ).length;
@@ -340,10 +343,8 @@ export default function PostcardPickerSection() {
   // render fixed UI (house ads, EDDM block) instead of going through the
   // PaidAd / AvailableSpot path.
   const renderFixedCell = (area) => {
-    if (side === "front") {
-      if (area === "hs") return <HouseAd />;
-      return null;
-    }
+    // Front side has no fixed cells — every inch is a paid spot.
+    if (side === "front") return null;
     // Back side
     if (area === "bhs") return <HouseAdVertical />;
     if (area === "bhr") return <HouseAdRow />;
@@ -352,9 +353,9 @@ export default function PostcardPickerSection() {
     return null;
   };
 
-  // Back side: bhr now covers the full 8"×4" house-ad block (cols 1-8, rows 6-9).
-  // bhs and bhn were the old split house-ad cells; they no longer exist in the layout.
-  const fixedAreas = side === "front" ? ["hs"] : ["bhr", "ed"];
+  // Front side has no fixed (non-sellable) cells — 100% paid coverage.
+  // Back side: bhr covers the full 8"×4" house-ad block; ed is the USPS EDDM placeholder.
+  const fixedAreas = side === "front" ? [] : ["bhr", "ed"];
 
   const sideButtonStyle = (active) => ({
     border: "none",

@@ -845,15 +845,15 @@ export function getSampleAd(configKey, sizeKeyOverride) {
 // mailer with room left for the customer.
 // ─────────────────────────────────────────────────────────────────────────────
 export const SPOT_SAMPLE_MAP = {
-  // Front side — reference designs match the visual reference file exactly
-  "mb":  "ref-mrbiscuits", // XL — Mr. Biscuit's (single-photo AdXL, AdGenerator style)
-  "dn":  "ref-dental",    // XL — Northview Dental
-  "ins": "ref-hvac",      // L  — Climate Comfort HVAC
-  "lw":  "ref-lawn",      // M  — GreenScapes Lawn Care (re-rendered at M)
-  "a1":  "ref-pizza",     // S  — Tony's Pizza
+  // Front side — 3 XL samples + 2 L portrait samples; l3/l4 render as green available spots
+  "mb": "ref-mrbiscuits", // XL — Mr. Biscuit's (single-photo AdXL, AdGenerator style)
+  "dn": "ref-dental",     // XL — Northview Dental
+  "l1": "ref-hvac",       // L portrait — Climate Comfort HVAC (fluid template fills 3"×4" cell)
+  "l2": "ref-lawn",       // L portrait — GreenScapes Lawn Care
+  // re, l3, l4 → not listed → render as green AvailableSpot (purchase prompt)
   // Back side
-  "bxl": "ref-roofing",   // XL — Pine Ridge Roofing
-  "bl1": "ref-auto",      // L  — Pit Stop Auto Repair
-  "bm1": "ref-vet",       // M  — Paws & Claws Vet Clinic
-  "bs1": "ref-salon",     // S  — The Cut Above Salon
+  "bxl": "ref-roofing",  // XL — Pine Ridge Roofing
+  "bl1": "ref-auto",     // L  — Pit Stop Auto Repair
+  "bm1": "ref-vet",      // M  — Paws & Claws Vet Clinic
+  "bs1": "ref-salon",    // S  — The Cut Above Salon
 };

@@ -53,16 +53,16 @@ const STANDARD_SPOT_LAYOUT: ReadonlyArray<{
   gridArea: string;
   price: number;
 }> = [
-  // Front side — 9 sellable cells: 3 XL + 2 Large + 2 Medium + 2 Small.
-  { side: "front", size: "xl",     gridArea: "mb",  price: 45000 },
-  { side: "front", size: "xl",     gridArea: "dn",  price: 45000 },
-  { side: "front", size: "xl",     gridArea: "re",  price: 45000 },
-  { side: "front", size: "large",  gridArea: "hv",  price: 35000 },
-  { side: "front", size: "large",  gridArea: "ins", price: 35000 },
-  { side: "front", size: "medium", gridArea: "lw",  price: 25000 },
-  { side: "front", size: "medium", gridArea: "a2",  price: 25000 },
-  { side: "front", size: "small",  gridArea: "pz",  price: 19900 },
-  { side: "front", size: "small",  gridArea: "a1",  price: 19900 },
+  // Front side — 7 sellable cells: 3 XL (top row) + 4 Large portrait (bottom row).
+  // No house ad. Every inch of the front is a paid spot.
+  // XL  = 4"×5" (400×500 natural px). Large = 3"×4" portrait (300×400 natural px).
+  { side: "front", size: "xl",    gridArea: "mb", price: 45000 },
+  { side: "front", size: "xl",    gridArea: "dn", price: 45000 },
+  { side: "front", size: "xl",    gridArea: "re", price: 45000 },
+  { side: "front", size: "large", gridArea: "l1", price: 35000 },
+  { side: "front", size: "large", gridArea: "l2", price: 35000 },
+  { side: "front", size: "large", gridArea: "l3", price: 35000 },
+  { side: "front", size: "large", gridArea: "l4", price: 35000 },
   // Back side — 7 sellable cells: 1 XL + 2 Large + 2 Medium + 2 Small.
   { side: "back",  size: "xl",     gridArea: "bxl", price: 45000 },
   { side: "back",  size: "large",  gridArea: "bl1", price: 35000 },

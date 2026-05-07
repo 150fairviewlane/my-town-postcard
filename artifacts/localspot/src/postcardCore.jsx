@@ -3,25 +3,26 @@ import { MrBiscuitsLarge, MrBiscuitsMedium, MrBiscuitsSmall } from "./MrBiscuits
 
 export const SIZES = {
   xl:     { label: "Extra-Large", dim: '4" × 5"', desc: "Prime placement, maximum impact" },
-  large:  { label: "Large",       dim: '4" × 3"', desc: "Great visibility, popular choice" },
+  large:  { label: "Large",       dim: '3" × 4"', desc: "Great visibility, popular choice" },
   medium: { label: "Medium",      dim: '2" × 2"', desc: "Growing reach, great value" },
   small:  { label: "Small",       dim: '2" × 2"', desc: "Affordable local reach" },
 };
 
-// Front-side grid: 12 cols × 9 rows. 1 column = 1 inch = 56 px.
-// Sizes: XL=4×5, Large=4×3, Medium=3×2, Small=1×2 (only 1 col remains after medium+2xl cols).
-// House ad (hs) fills the bottom strip cols 1-8 row 9.
-// Layout verified to tile all 108 cells (12×9) with no gaps or overlaps.
+// Front-side grid: 12 cols × 9 rows (1 col = 1 inch = 100 natural px).
+// Top row (rows 1-5): 3 XL spots — 4 cols × 5 rows each (4"×5").
+// Bottom row (rows 6-9): 4 Large portrait spots — 3 cols × 4 rows each (3"×4").
+// No house ad. 100% of the front is paid advertising.
+// Layout tiles all 108 cells (12×9) with no gaps or overlaps.
 export const GRID_AREAS = [
   "mb  mb  mb  mb  dn  dn  dn  dn  re  re  re  re",
   "mb  mb  mb  mb  dn  dn  dn  dn  re  re  re  re",
   "mb  mb  mb  mb  dn  dn  dn  dn  re  re  re  re",
   "mb  mb  mb  mb  dn  dn  dn  dn  re  re  re  re",
   "mb  mb  mb  mb  dn  dn  dn  dn  re  re  re  re",
-  "hv  hv  hv  hv  ins ins ins ins pz  pz  pz  a1",
-  "hv  hv  hv  hv  ins ins ins ins pz  pz  pz  a1",
-  "hv  hv  hv  hv  ins ins ins ins lw  lw  lw  a2",
-  "hs  hs  hs  hs  hs  hs  hs  hs  lw  lw  lw  a2",
+  "l1  l1  l1  l2  l2  l2  l3  l3  l3  l4  l4  l4",
+  "l1  l1  l1  l2  l2  l2  l3  l3  l3  l4  l4  l4",
+  "l1  l1  l1  l2  l2  l2  l3  l3  l3  l4  l4  l4",
+  "l1  l1  l1  l2  l2  l2  l3  l3  l3  l4  l4  l4",
 ].map(r => `"${r}"`).join(" ");
 
 
@@ -628,7 +629,7 @@ export function PaidAd({ spot }) {
 // uniformly with the postcard via ScaledCell's transform: scale().
 const SZ_INFO = {
   xl:     { label: "Extra Large Ad", dims: '4" × 5"' },
-  large:  { label: "Large Ad",       dims: '4" × 3"' },
+  large:  { label: "Large Ad",       dims: '3" × 4"' },
   medium: { label: "Medium Ad",      dims: '2" × 2"' },
   small:  { label: "Small Ad",       dims: '2" × 2"' },
 };
