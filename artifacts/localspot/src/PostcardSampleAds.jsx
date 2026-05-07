@@ -137,7 +137,7 @@ function AdXL({ d }) {
     <div style={{
       width: 400, height: 500, display: "flex", flexDirection: "column",
       overflow: "hidden", fontFamily: "sans-serif",
-      background: "#fff", border: `3px solid ${d.p}`, boxSizing: "border-box",
+      background: "#fff", border: "none", boxSizing: "border-box",
     }}>
       {/* Colored header */}
       <div style={{
@@ -193,47 +193,48 @@ function AdXL({ d }) {
   );
 }
 
-// ─── Reference template: AdL (400 × 300) ────────────────────────────────────
+// ─── Reference template: AdL (300 × 400 portrait) ───────────────────────────
 function AdL({ d }) {
   return (
     <div style={{
-      width: 400, height: 300, display: "flex", overflow: "hidden",
-      background: "#fff", fontFamily: "sans-serif",
-      border: `3px solid ${d.p}`, boxSizing: "border-box",
+      width: 300, height: 400, display: "flex", flexDirection: "column",
+      overflow: "hidden", background: "#fff", fontFamily: "sans-serif",
+      border: "none", boxSizing: "border-box",
     }}>
-      {/* Photo column */}
-      <div style={{ width: 155, flexShrink: 0, position: "relative", overflow: "hidden" }}>
+      {/* Photo strip — 150px at top */}
+      <div style={{ height: 150, flexShrink: 0, position: "relative", overflow: "hidden" }}>
         <img src={d.photo} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} alt=""
           onError={e => { e.target.style.display = "none"; }} />
-        <div style={{ position: "absolute", inset: 0, background: `linear-gradient(90deg,transparent 60%,${d.p}44)` }} />
+        <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg,transparent 40%,${d.d}cc 100%)` }} />
+        {/* Business name overlaid on photo bottom */}
+        <div style={{ position: "absolute", bottom: 8, left: 10, right: 10 }}>
+          <div style={{ color: "#fff", fontWeight: 900, fontSize: 16, fontFamily: "Georgia,serif", lineHeight: 1.1, textShadow: "0 2px 6px rgba(0,0,0,0.75)" }}>{d.biz}</div>
+        </div>
       </div>
 
-      {/* Content column */}
+      {/* Content area */}
       <div style={{
-        flex: 1, padding: "12px 14px", display: "flex", flexDirection: "column",
-        justifyContent: "space-between", background: d.l, overflow: "hidden",
+        flex: 1, padding: "9px 12px", display: "flex", flexDirection: "column",
+        gap: 6, background: d.l, overflow: "hidden",
       }}>
-        <div>
-          <div style={{ color: d.a, fontSize: 9, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>{d.cat}</div>
-          <div style={{ color: d.d, fontWeight: 900, fontSize: 19, fontFamily: "Georgia,serif", lineHeight: 1.05, marginTop: 2 }}>{d.biz}</div>
-          <div style={{ color: d.p, fontWeight: 700, fontSize: 11, fontStyle: "italic", marginTop: 4 }}>{d.tag}</div>
-        </div>
+        <div style={{ color: d.a, fontSize: 8.5, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>{d.cat}</div>
+        <div style={{ color: d.p, fontSize: 11, fontWeight: 700, fontStyle: "italic", lineHeight: 1.2 }}>{d.tag}</div>
 
         {d.services.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            {d.services.slice(0, 3).map((s, i) => (
+            {d.services.slice(0, 4).map((s, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <Check color={d.a} sz={12} />
-                <span style={{ fontSize: 11, color: "#333" }}>{s}</span>
+                <span style={{ fontSize: 10.5, color: "#333" }}>{s}</span>
               </div>
             ))}
           </div>
         )}
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+        <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
           <RefCoupon offer={d.offer} fine={d.fine} color={d.p} dark={false} />
-          <PhoneRow phone={d.phone} color={d.p} size={13} />
-          {d.addr && <div style={{ fontSize: 10, color: "#555" }}>📍 {d.addr}</div>}
+          <PhoneRow phone={d.phone} color={d.p} size={12} />
+          {d.addr && <div style={{ fontSize: 9, color: "#555" }}>📍 {d.addr}</div>}
         </div>
       </div>
     </div>
@@ -246,7 +247,7 @@ function AdM({ d }) {
     <div style={{
       width: 200, height: 200, display: "flex", flexDirection: "column",
       overflow: "hidden", fontFamily: "sans-serif",
-      border: `2px solid ${d.p}`, boxSizing: "border-box", background: "#fff",
+      border: "none", boxSizing: "border-box", background: "#fff",
     }}>
       {/* Header */}
       <div style={{
@@ -845,12 +846,12 @@ export function getSampleAd(configKey, sizeKeyOverride) {
 // mailer with room left for the customer.
 // ─────────────────────────────────────────────────────────────────────────────
 export const SPOT_SAMPLE_MAP = {
-  // Front side — 3 XL samples + 2 L portrait samples; l3/l4 render as green available spots
-  "mb": "ref-mrbiscuits", // XL — Mr. Biscuit's (single-photo AdXL, AdGenerator style)
+  // Front side — mb/dn filled; re/l2/l4 show green available; l1/l3 show L portrait samples
+  "mb": "ref-mrbiscuits", // XL — Mr. Biscuit's
   "dn": "ref-dental",     // XL — Northview Dental
-  "l1": "ref-hvac",       // L portrait — Climate Comfort HVAC (fluid template fills 3"×4" cell)
-  "l2": "ref-lawn",       // L portrait — GreenScapes Lawn Care
-  // re, l3, l4 → not listed → render as green AvailableSpot (purchase prompt)
+  "l1": "ref-hvac",       // L portrait — Climate Comfort HVAC (leftmost)
+  "l3": "ref-lawn",       // L portrait — GreenScapes Lawn Care (third slot)
+  // re, l2, l4 → not listed → render as green AvailableSpot (purchase prompt)
   // Back side
   "bxl": "ref-roofing",  // XL — Pine Ridge Roofing
   "bl1": "ref-auto",     // L  — Pit Stop Auto Repair

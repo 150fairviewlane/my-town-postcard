@@ -1,0 +1,19 @@
+Three specific fixes needed in the postcard picker. Do not change any backend code, API hooks, or reservation logic.
+
+FIX 1 - EQUAL BORDERS BETWEEN ADS:
+The ads currently have thick borders (2-3px) that stack up between adjacent cells, making inner borders double-width and outer borders single-width. Remove the border property from every ad template component (AdXL, AdL, AdM, AdS). Instead, add a 1px solid rgba(0,0,0,0.12) outline to the ScaledCell wrapper div that positions each spot. This way every grid line between ads is exactly 1px from each cell’s outline, giving perfectly equal separation on all sides.
+
+FIX 2 - LARGE ADS MUST BE PORTRAIT (3 INCHES WIDE BY 4 INCHES TALL):
+The front side now uses Large spots that are 3”x4” portrait orientation (300x400 natural pixels), NOT the old 4”x3” landscape. Any Large ad template that renders at 400x300 (landscape) will be wrong size and get clipped. The Large template must render at exactly width:300 height:400. The layout should be: a photo strip across the top (about 150px tall), then a content area below with the category label, business name in a serif font, italic tagline, service checklist with checkmarks, coupon with dashed border, phone number, and address. This portrait layout matches a magazine column ad style. Make sure the Large template in the actual PostcardPickerSection component renders at 300x400 and not 400x300.
+
+FIX 3 - SAMPLE AD ASSIGNMENTS ON FRONT:
+The four Large spots on the front should be assigned as follows:
+
+- Large spot 1 (leftmost): show the HVAC sample ad (Climate Comfort HVAC)
+- Large spot 2: show as available for purchase (green dashed border with Reserve This Spot button)
+- Large spot 3: show the Lawn Care sample ad (GreenScapes Lawn Care)
+- Large spot 4 (rightmost): show as available for purchase
+
+The three XL spots should stay as: Mr. Biscuit’s (left), Northview Dental (center), available (right).
+
+After these fixes the front postcard should show: 3 XL ads across the top row (2 samples + 1 available), then 4 Large portrait ads across the bottom row (sample, available, sample, available). Every ad should fit perfectly in its cell with no clipping, and all grid lines between ads should be equal thickness.

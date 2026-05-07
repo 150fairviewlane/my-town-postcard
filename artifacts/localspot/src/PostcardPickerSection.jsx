@@ -88,7 +88,7 @@ function ScaledCell({ pos, children, pointerEvents }) {
       minWidth: 0,
       minHeight: 0,
       pointerEvents: pointerEvents || "auto",
-      outline: "0.5px solid rgba(0,0,0,0.08)",
+      outline: "1px solid rgba(0,0,0,0.12)",
     }}>
       <div style={{
         position: "absolute",
