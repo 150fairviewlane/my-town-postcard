@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import AdGenerator from "./AdGenerator";
 
 // Natural canvas: 1200x900 = 12"x9" landscape at 100px per inch
 // Scale = containerWidth / 1200, height = containerWidth * 0.75
@@ -274,26 +275,7 @@ return(<div style={{fontFamily:"sans-serif"}}>
     ))}
   </div>
 
-  {sel&&(
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:16}} onClick={()=>setSel(null)}>
-      <div style={{background:"#fff",borderRadius:16,padding:32,maxWidth:400,width:"100%",boxShadow:"0 24px 64px rgba(0,0,0,0.3)"}} onClick={e=>e.stopPropagation()}>
-        <div style={{fontSize:22,fontWeight:900,color:"#111",fontFamily:"Georgia,serif",marginBottom:4}}>Reserve Your {SZ[sel.size]?.label}</div>
-        <div style={{fontSize:14,color:"#64748b",marginBottom:20}}>{SZ[sel.size]?.dims} &middot; ${sel.price} &middot; Reaches 5,000 homes</div>
-        <div style={{background:"#f0fdf4",border:"2px solid #22c55e",borderRadius:10,padding:"14px 18px",marginBottom:24}}>
-          <div style={{fontSize:13,color:"#166634",fontWeight:600,lineHeight:1.8}}>
-            &#10003; Clarkesville Community Mailer &mdash; Summer 2026<br/>
-            &#10003; Reaching 5,000 Habersham County homeowners<br/>
-            &#10003; Trackable QR code with website link<br/>
-            &#10003; AI-powered ad builder included free
-          </div>
-        </div>
-        <button onClick={()=>setSel(null)} style={{width:"100%",padding:"14px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#991b1b,#7f1d1d)",color:"#fff",fontWeight:900,fontSize:16,cursor:"pointer",boxShadow:"0 4px 14px rgba(127,29,29,0.4)",letterSpacing:0.3}}>
-          Build My Ad &amp; Reserve &mdash; ${sel.price}
-        </button>
-        <button onClick={()=>setSel(null)} style={{width:"100%",padding:"10px",marginTop:8,borderRadius:10,border:"1px solid #e5e7eb",background:"#f9fafb",color:"#374151",fontWeight:600,fontSize:13,cursor:"pointer"}}>Cancel</button>
-      </div>
-    </div>
-  )}
+  {sel&&<AdGenerator initialSize={sel.size} onComplete={()=>setSel(null)} onClose={()=>setSel(null)}/>}
 </div>
 </div>
 );
