@@ -516,7 +516,7 @@ export default function PostcardPickerSection() {
             display: "grid",
             gridTemplateColumns: "repeat(12, 1fr)",
             gridTemplateRows: "repeat(9, 1fr)",
-            gap: 1,
+            gap: 7,
             background: "#c8c8c8",
             boxSizing: "border-box",
             overflow: "hidden",
