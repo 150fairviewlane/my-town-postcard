@@ -146,15 +146,15 @@ marginTop: 5*scale, // ensures scissors aren't flush with parent edge
 </div>
 {onEditOffer ? (
 <EditableText value={offer} onChange={onEditOffer}
-style={{ color: dark ? "#fff" : accent, fontWeight: 900, fontSize: 13*scale, lineHeight: 1.1, letterSpacing: 0.3 }} />
+style={{ color: dark ? "#fff" : accent, fontWeight: 900, fontSize: 13*scale, lineHeight: 1.1, letterSpacing: 0.3, overflow: "hidden" }} />
 ) : (
-<div style={{ color: dark ? "#fff" : accent, fontWeight: 900, fontSize: 13*scale, lineHeight: 1.1, letterSpacing: 0.3 }}>{offer}</div>
+<div style={{ color: dark ? "#fff" : accent, fontWeight: 900, fontSize: 13*scale, lineHeight: 1.1, letterSpacing: 0.3, overflow: "hidden" }}>{offer}</div>
 )}
 {fine && onEditFine ? (
 <EditableText value={fine} onChange={onEditFine}
-style={{ color: dark ? "rgba(255,255,255,0.7)" : "#666", fontSize: 7*scale, marginTop: 2, fontFamily: "sans-serif" }} />
+style={{ color: dark ? "rgba(255,255,255,0.7)" : "#666", fontSize: 7*scale, marginTop: 2, fontFamily: "sans-serif", overflow: "hidden" }} />
 ) : fine ? (
-<div style={{ color: dark ? "rgba(255,255,255,0.7)" : "#666", fontSize: 7*scale, marginTop: 2, fontFamily: "sans-serif" }}>{fine}</div>
+<div style={{ color: dark ? "rgba(255,255,255,0.7)" : "#666", fontSize: 7*scale, marginTop: 2, fontFamily: "sans-serif", overflow: "hidden" }}>{fine}</div>
 ) : null}
 </div>
 );
@@ -190,26 +190,41 @@ return (
     </div>
   </div>
 
-  {/* Center: tagline */}
+  {/* Center: tagline — capped so long text can't bleed into the bottom section */}
   {!isS && (
-    <div style={{ position: "absolute", top: "42%", left: 12*fScale, right: 12*fScale, textAlign: "center" }}>
+    <div style={{
+      position: "absolute", top: "42%", left: 12*fScale, right: 12*fScale, textAlign: "center",
+      maxHeight: `${(isXL ? 3 : 4) * (isXL?22:isL?18:14)*fScale * 1.25}px`,
+      overflow: "hidden",
+    }}>
       <EditableText value={data.tagline || ind.taglines[0]} onChange={edit("tagline")}
         style={{ color: "#fff", fontWeight: 800, fontSize: (isXL?22:isL?18:14)*fScale, lineHeight: 1.1, fontStyle: "italic", textShadow: "0 2px 12px rgba(0,0,0,0.8)", textAlign: "center" }} />
     </div>
   )}
 
-  {/* Bottom: coupon + contact */}
+  {/* Bottom: menu items (XL/L) + coupon + contact */}
   <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: `${8*fScale}px ${12*fScale}px`, display: "flex", flexDirection: "column", gap: 4*fScale }}>
+    {/* Descriptive items — shown on XL and L only */}
+    {(isXL || isL) && (
+      <div style={{ display: "flex", flexWrap: "wrap", gap: `2px ${10*fScale}px`, marginBottom: 2*fScale }}>
+        {(data.menuItems?.length ? data.menuItems : ind.menu).slice(0, isXL ? 3 : 2).map((item, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 8*fScale, lineHeight: 1, fontFamily: "sans-serif" }}>•</span>
+            <span style={{ color: "rgba(255,255,255,0.9)", fontSize: 9*fScale, fontFamily: "sans-serif", fontWeight: 500, textShadow: "0 1px 4px rgba(0,0,0,0.6)", lineHeight: 1.3 }}>{item}</span>
+          </div>
+        ))}
+      </div>
+    )}
     {data.offer && <Coupon offer={data.offer} fine={data.offerFine} accent="#fff" scale={fScale} dark={true} onEditOffer={edit("offer")} onEditFine={edit("offerFine")} />}
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", color: "rgba(255,255,255,0.85)", fontSize: 9*fScale, fontFamily: "sans-serif" }}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
         {data.address && (
-          <EditableText value={data.address} onChange={edit("address")}
-            style={{ color: "rgba(255,255,255,0.85)", fontSize: 9*fScale, fontFamily: "sans-serif", whiteSpace: "nowrap" }} />
+          <EditableText value={data.address.split(",")[0]} onChange={edit("address")}
+            style={{ color: "rgba(255,255,255,0.85)", fontSize: 9*fScale, fontFamily: "sans-serif", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} />
         )}
         {data.phone && (
           <EditableText value={data.phone} onChange={edit("phone")}
-            style={{ color: "rgba(255,255,255,0.85)", fontSize: 9*fScale, fontWeight: 800, fontFamily: "sans-serif", whiteSpace: "nowrap" }} />
+            style={{ color: "rgba(255,255,255,0.85)", fontSize: 9*fScale, fontWeight: 800, fontFamily: "sans-serif" }} />
         )}
       </div>
       {hasQR(data) && !isS && (
@@ -267,7 +282,7 @@ size={36 * fScale} bg={ind.colors.primary} color="#fff" border={`2px solid #fff`
 </div>
 
   {/* Content half */}
-  <div style={{ flex: 1, padding: `${10*fScale}px ${12*fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", background: ind.colors.light, minWidth: 0 }}>
+  <div data-overflow-clip="1" style={{ flex: 1, padding: `${10*fScale}px ${12*fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", background: ind.colors.light, minWidth: 0, overflow: "hidden" }}>
     {/* Top */}
     <div>
       <div style={{ color: ind.colors.accent, fontSize: 8*fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 3 }}>{data.industry}</div>
@@ -282,42 +297,42 @@ size={36 * fScale} bg={ind.colors.primary} color="#fff" border={`2px solid #fff`
     {/* Middle: editable services list -- show on L and XL and M */}
     {!isS && (
       <div style={{ display: "flex", flexDirection: "column", gap: 3*fScale, margin: `${5*fScale}px 0` }}>
-        {(data.menuItems || ind.menu).slice(0, isXL ? 3 : isL ? 3 : 2).map((item, i) => (
+        {(data.menuItems || ind.menu).slice(0, isXL ? 2 : isL ? 3 : 2).map((item, i) => (
           <div key={i} style={{ display: "flex", gap: 6, alignItems: "center" }}>
             <div style={{ width: 14*fScale, height: 14*fScale, borderRadius: "50%", background: ind.colors.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <span style={{ color: "#fff", fontSize: 8*fScale, fontWeight: 900 }}></span>
             </div>
             <EditableText value={item} onChange={editMenu(i)}
-              style={{ fontSize: 10*fScale, color: "#222", fontWeight: 500 }} />
+              style={{ fontSize: 10*fScale, color: "#222", fontWeight: 500, lineHeight: 1.2 }} />
           </div>
         ))}
       </div>
     )}
 
     {/* Bottom: contact + coupon */}
-    <div style={{ flexShrink: 0, overflow: "visible" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: data.offer ? 0 : 0 }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+    <div style={{ flexShrink: 0, overflow: "hidden" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", overflow: "hidden" }}>
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
           {data.address && (
             <EditableText value={data.address.split(",")[0]} onChange={edit("address")}
               style={{ fontSize: 9*fScale, color: "#555", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} />
           )}
           {data.phone && (
             <EditableText value={data.phone} onChange={edit("phone")}
-              style={{ fontSize: 14*fScale, color: ind.colors.primary, fontWeight: 900, whiteSpace: "nowrap" }} />
+              style={{ fontSize: 14*fScale, color: ind.colors.primary, fontWeight: 900 }} />
           )}
         </div>
         {hasQR(data) && !isS && (
-          <AdQRCode
+          <InlineQRCode
             website={normalizeWebsite(data.website)}
             spotCode={generateSpotCode(data.businessName, "current")}
-            size={isXL ? 48 : 38}
+            size={isXL ? 44 : 34}
             dark={false}
             scale={fScale * 0.65}
           />
         )}
       </div>
-      <Coupon offer={data.offer} fine={data.offerFine} accent={ind.colors.primary} scale={fScale}
+      <Coupon offer={data.offer} fine={data.offerFine} accent={ind.colors.primary} scale={fScale * 0.85}
         onEditOffer={edit("offer")} onEditFine={edit("offerFine")} />
     </div>
   </div>
@@ -350,11 +365,13 @@ border: `${3 * fScale}px solid ${ind.colors.primary}`, boxSizing: "border-box",
 background: ind.colors.primary, padding: `${6 * fScale}px ${10 * fScale}px`,
 display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0,
 }}>
-<div style={{ display: "flex", alignItems: "center", gap: 7 * fScale }}>
+<div style={{ display: "flex", alignItems: "center", gap: 7 * fScale, flex: 1, minWidth: 0 }}>
 <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji}
 size={32 * fScale} bg={ind.colors.accent} color="#fff" />
+<div data-overflow-clip="1" style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
 <EditableText value={data.businessName} onChange={edit("businessName")}
-style={{ color: "#fff", fontWeight: 900, fontSize: 17*fScale, fontFamily: "Georgia, serif", lineHeight: 1.0 }} />
+style={{ color: "#fff", fontWeight: 900, fontSize: 17*fScale, fontFamily: "Georgia, serif", lineHeight: 1.0, overflow: "hidden" }} />
+</div>
 </div>
 {!isS && data.phone && (
 <EditableText value={data.phone} onChange={edit("phone")}
@@ -379,14 +396,14 @@ borderRadius: 4, fontFamily: "sans-serif", whiteSpace: "nowrap",
   )}
 
   {/* Content */}
-  <div style={{ flex: 1, padding: `${4*fScale}px ${10*fScale}px ${5*fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 0 }}>
+  <div data-overflow-clip="1" style={{ flex: 1, padding: `${4*fScale}px ${10*fScale}px ${5*fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 0, overflow: "hidden" }}>
     <div>
       <div style={{ color: ind.colors.accent, fontSize: 8*fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>{data.industry}</div>
       <EditableText value={data.tagline || ind.taglines[0]} onChange={edit("tagline")}
         style={{ color: ind.colors.dark, fontSize: 16*fScale, fontWeight: 900, fontFamily: "Georgia, serif", lineHeight: 1.1, marginTop: 2 }} />
     </div>
 
-    {!isS && (
+    {!isS && !isM && (
       <div style={{ display: "flex", flexWrap: "wrap", gap: `${3*fScale}px ${10*fScale}px`, margin: `${4*fScale}px 0` }}>
         {(data.menuItems || ind.menu).slice(0, 4).map((item, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", gap: 3 }}>
@@ -399,29 +416,29 @@ borderRadius: 4, fontFamily: "sans-serif", whiteSpace: "nowrap",
     )}
 
     {/* Bottom: address row then coupon row */}
-    <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 3*fScale, overflow: "visible", paddingBottom: 2*fScale }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+    <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 3*fScale, overflow: "hidden", paddingBottom: 2*fScale }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", overflow: "hidden" }}>
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 1 }}>
           {data.address && (
             <EditableText value={data.address.split(",")[0]} onChange={edit("address")}
-              style={{ fontSize: 9*fScale, color: "#555", fontFamily: "sans-serif", whiteSpace: "nowrap" }} />
+              style={{ fontSize: 9*fScale, color: "#555", fontFamily: "sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} />
           )}
           {data.phone && (
             <EditableText value={data.phone} onChange={edit("phone")}
-              style={{ fontSize: 12*fScale, color: ind.colors.primary, fontWeight: 900, fontFamily: "sans-serif", whiteSpace: "nowrap" }} />
+              style={{ fontSize: 12*fScale, color: ind.colors.primary, fontWeight: 900, fontFamily: "sans-serif" }} />
           )}
         </div>
-        {hasQR(data) && !isS && (
-          <AdQRCode
+        {(isXL || isL) && hasQR(data) && (
+          <InlineQRCode
             website={normalizeWebsite(data.website)}
             spotCode={generateSpotCode(data.businessName, "current")}
-            size={isXL ? 44 : 34}
+            size={isXL ? 40 : 32}
             dark={false}
             scale={fScale * 0.65}
           />
         )}
       </div>
-      <Coupon offer={data.offer} fine={data.offerFine} accent={ind.colors.primary} scale={fScale}
+      <Coupon offer={data.offer} fine={data.offerFine} accent={ind.colors.primary} scale={isM ? fScale * 0.82 : fScale * 0.9}
         onEditOffer={edit("offer")} onEditFine={edit("offerFine")} />
     </div>
   </div>
@@ -483,8 +500,10 @@ background: `linear-gradient(180deg, ${ind.colors.dark}50 0%, ${ind.colors.dark}
 
   {/* Center: business name + huge phone */}
   <div style={{ position: "absolute", top: "32%", left: 0, right: 0, padding: `0 ${12*fScale}px`, textAlign: "center", zIndex: 3 }}>
-    <EditableText value={data.businessName} onChange={edit("businessName")}
-      style={{ color: "#fff", fontWeight: 900, fontSize: 13*fScale, fontFamily: "Georgia, serif", textShadow: "0 2px 8px rgba(0,0,0,0.6)", lineHeight: 1.1, textAlign: "center" }} />
+    <div style={{ overflow: "hidden", maxHeight: `${2 * 13*fScale * 1.2}px` }}>
+      <EditableText value={data.businessName} onChange={edit("businessName")}
+        style={{ color: "#fff", fontWeight: 900, fontSize: 13*fScale, fontFamily: "Georgia, serif", textShadow: "0 2px 8px rgba(0,0,0,0.6)", lineHeight: 1.1, textAlign: "center" }} />
+    </div>
     {!isS && data.phone && (
       <EditableText value={data.phone} onChange={edit("phone")}
         style={{ color: ind.colors.accent, fontWeight: 900, fontSize: (isXL?28:isL?24:18)*fScale, lineHeight: 1, marginTop: 4, letterSpacing: -0.5, textShadow: "0 2px 12px rgba(0,0,0,0.8)", textAlign: "center" }} />
@@ -514,8 +533,8 @@ background: `linear-gradient(180deg, ${ind.colors.dark}50 0%, ${ind.colors.dark}
     )}
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontFamily: "sans-serif" }}>
       <div>
-        {data.address && <EditableText value={data.address.split(",")[0]} onChange={edit("address")} style={{ color: "rgba(255,255,255,0.7)", fontSize: 7*fScale, display: "block", whiteSpace: "nowrap" }} />}
-        {isS && data.phone && <EditableText value={data.phone} onChange={edit("phone")} style={{ color: "rgba(255,255,255,0.85)", fontSize: 8*fScale, fontWeight: 700, display: "block", whiteSpace: "nowrap" }} />}
+        {data.address && <EditableText value={data.address.split(",")[0]} onChange={edit("address")} style={{ color: "rgba(255,255,255,0.7)", fontSize: 7*fScale, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} />}
+        {isS && data.phone && <EditableText value={data.phone} onChange={edit("phone")} style={{ color: "rgba(255,255,255,0.85)", fontSize: 8*fScale, fontWeight: 700, display: "block" }} />}
       </div>
       {hasQR(data) && !isS && (
         <InlineQRCode
@@ -586,13 +605,14 @@ background: leftBg, fontFamily: "sans-serif",
   </div>
 
   {/* Left content area -- sits above the photo layer */}
-  <div style={{
+  <div data-overflow-clip="1" style={{
     position: "absolute",
     top: 0, left: 0, bottom: isS ? 0 : `${28*fScale}px`,
     width: contentWidth,
     padding: isXL ? `${14*fScale}px ${14*fScale}px` : `${10*fScale}px ${12*fScale}px`,
     display: "flex", flexDirection: "column",
     justifyContent: "space-between",
+    overflow: "hidden",
     zIndex: 2,
   }}>
 
@@ -684,11 +704,12 @@ background: leftBg, fontFamily: "sans-serif",
         )}
         {data.address && (
           <EditableText
-            value={data.address}
+            value={data.address.split(",")[0]}
             onChange={edit("address")}
             style={{
               color: "rgba(255,255,255,0.75)", fontSize: 7.5*fScale,
               fontFamily: "sans-serif", lineHeight: 1.3,
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
             }}
           />
         )}
