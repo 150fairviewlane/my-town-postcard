@@ -1,4 +1,5 @@
 import { useState } from "react";
+// @ts-expect-error JSX module without types
 import PostcardPickerSection from "../PostcardPickerSection";
 import { useIsMobile } from "../hooks/use-mobile";
 
@@ -86,9 +87,20 @@ function NavBar() {
                     {l.label}
                   </button>
                 ))}
+                <a href={`${(import.meta.env.BASE_URL || "/").replace(/\/$/, "")}/dealers`}
+                  onClick={() => setMenuOpen(false)}
+                  style={{
+                    marginTop: 4, background: "#fff", color: RED,
+                    border: `1.5px solid ${RED}`, borderRadius: 8,
+                    padding: "12px 22px", fontSize: 14, fontWeight: 700,
+                    cursor: "pointer", fontFamily: "sans-serif", minHeight: 44,
+                    textAlign: "center", textDecoration: "none",
+                  }}>
+                  💼 Become a Dealer
+                </a>
                 <button onClick={() => handleNav("book")}
                   style={{
-                    marginTop: 8, background: RED, color: "#fff", border: "none",
+                    marginTop: 4, background: RED, color: "#fff", border: "none",
                     borderRadius: 8, padding: "14px 22px", fontSize: 15, fontWeight: 800,
                     cursor: "pointer", fontFamily: "sans-serif", minHeight: 44,
                   }}>
@@ -107,6 +119,12 @@ function NavBar() {
               {l.label}
             </button>
           ))}
+          <a href={`${(import.meta.env.BASE_URL || "/").replace(/\/$/, "")}/dealers`}
+            style={{ fontSize: 14, fontWeight: 700, color: RED,
+              fontFamily: "sans-serif", textDecoration: "none",
+              padding: "9px 14px", borderRadius: 8, border: `1.5px solid ${RED}` }}>
+            💼 Become a Dealer
+          </a>
           <button onClick={() => scrollTo("book")}
             style={{ background: RED, color: "#fff", border: "none", borderRadius: 8,
               padding: "9px 22px", fontSize: 14, fontWeight: 800, cursor: "pointer",

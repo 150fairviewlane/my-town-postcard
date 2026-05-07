@@ -328,6 +328,16 @@ function Dashboard({ token }) {
           >
             📊 Scan Analytics
           </a>
+          <a
+            href={`${import.meta.env.BASE_URL}admin/dealers`}
+            style={{
+              fontSize: 13, fontWeight: 700, color: "#374151",
+              background: "#fff", border: "1px solid #d1d5db",
+              borderRadius: 8, padding: "7px 12px", textDecoration: "none",
+            }}
+          >
+            💼 Dealers
+          </a>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>

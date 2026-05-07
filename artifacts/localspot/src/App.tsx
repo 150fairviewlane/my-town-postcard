@@ -33,6 +33,14 @@ const OutreachPage = lazy(() => import("./pages/OutreachPage"));
 const ScanAnalyticsPage = lazy(() => import("./pages/ScanAnalyticsPage"));
 // @ts-expect-error JSX module without types
 const TestAdPage = lazy(() => import("./pages/TestAdPage"));
+// @ts-expect-error JSX module without types
+const DealerLanding = lazy(() => import("./pages/DealerLanding"));
+// @ts-expect-error JSX module without types
+const DealerSignup = lazy(() => import("./pages/DealerSignup"));
+// @ts-expect-error JSX module without types
+const DealerConfirmation = lazy(() => import("./pages/DealerConfirmation"));
+// @ts-expect-error JSX module without types
+const AdminDealersPage = lazy(() => import("./pages/AdminDealersPage"));
 
 const queryClient = new QueryClient();
 
@@ -70,7 +78,12 @@ function Router() {
         <Route path="/admin/campaign/:id/print" component={AdminPrintPage} />
         <Route path="/admin/outreach" component={OutreachPage} />
         <Route path="/admin/scans" component={ScanAnalyticsPage} />
+        <Route path="/admin/dealers" component={AdminDealersPage} />
         <Route path="/admin" component={AdminDashboard} />
+        {/* Dealer program routes — public landing + signup + confirmation */}
+        <Route path="/dealers" component={DealerLanding} />
+        <Route path="/dealers/signup" component={DealerSignup} />
+        <Route path="/dealers/confirmation" component={DealerConfirmation} />
         {/* /test/ad is a hidden render route used by the Playwright visual
             regression suite. Gated to dev/test builds only — Vite tree-shakes
             the import in production so it adds nothing to the prod bundle. */}

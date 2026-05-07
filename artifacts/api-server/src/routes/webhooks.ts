@@ -6,6 +6,10 @@ import { ensureTrackingCode } from "../lib/trackingCode";
 import { releaseReservedSpot } from "../lib/expirationCleanup";
 import { logger } from "../lib/logger";
 import { getStripeClient } from "../lib/stripeClient";
+import {
+  activateDealerFromCheckoutSession,
+  cancelDealerFromSubscription,
+} from "./dealers";
 
 /**
  * Stripe webhook handler. Mounted at POST /api/webhooks/stripe via
@@ -82,7 +86,26 @@ export async function stripeWebhookHandler(
   try {
     switch (event.type) {
       case "checkout.session.completed": {
-        await handleCheckoutSessionCompleted(event.data.object, req);
+        // Dealer signup sessions carry kind=dealer in metadata. Route them
+        // to the dealer activation path; everything else is a spot order.
+        const meta = (event.data.object?.metadata ?? {}) as Record<string, string>;
+        if (meta.kind === "dealer") {
+          const dealerId = await activateDealerFromCheckoutSession(event.data.object);
+          req.log.info({ dealerId, sessionId: event.data.object?.id }, "Dealer activated via webhook");
+        } else {
+          await handleCheckoutSessionCompleted(event.data.object, req);
+        }
+        break;
+      }
+      case "customer.subscription.deleted": {
+        // Stripe fires this when a dealer's recurring subscription is
+        // cancelled (by the customer, by us, or after dunning failures).
+        // Mark the dealer cancelled so they no longer appear active.
+        const dealerId = await cancelDealerFromSubscription(event.data.object);
+        req.log.info(
+          { dealerId, subscriptionId: event.data.object?.id },
+          "Dealer subscription cancelled via webhook",
+        );
         break;
       }
       case "payment_intent.succeeded": {
