@@ -1,0 +1,103 @@
+I need you to implement an automated visual regression testing system for my React-based ad generator app.
+Context
+My app generates 12x9 postcard ads. Users can create ads using:
+* 38 industries
+* 5 templates
+* 4 ad sizes (Medium, Large, XL variants)
+* dynamic text, images, logos, and CTAs
+There are thousands of possible visual combinations and I am seeing frequent small UI/layout bugs (overflow, misalignment, cropping, spacing issues).
+I do NOT want to manually test all combinations.
+
+Goal
+Build an automated testing system using Playwright that:
+1. Renders ad components in isolation
+* Load my Ad component directly (or via a test page route like /test/ad)
+* Accept props for:
+    * industry
+    * templateId
+    * size
+    * headline
+    * businessName
+    * logoUrl
+    * imageUrl
+    * phoneNumber
+    * CTA text
+
+2. Uses a fixed set of test fixtures (IMPORTANT)
+Do NOT test all 38 industries.
+Instead, create a small deterministic dataset:
+* 5–10 test “industries” (representing short/medium/long text cases)
+* 10–15 total test fixtures covering:
+    * short headline
+    * very long headline (overflow test)
+    * missing logo
+    * large logo
+    * missing image
+    * Missing QR code if website is present 
+    * Truncated phone number
+    * Missing descriptive text
+    * long business name
+    * long CTA text
+    * edge-case spacing scenarios
+
+3. Generates combinations automatically
+For each fixture:
+* run all 5 templates
+* run all 4 sizes
+But optimize so total runs stay manageable (~200–400 cases max).
+
+4. Takes screenshots of each rendered ad
+* Must capture full component
+* consistent viewport size
+* no animations
+* deterministic rendering
+Save screenshots to:
+
+/tests/screenshots/
+
+
+5. Performs visual regression testing
+* First run creates baseline images
+* Subsequent runs compare against baseline
+* Highlight pixel differences
+* Fail test if mismatch exceeds threshold
+Use Playwright’s built-in screenshot comparison tools.
+
+6. Detect layout issues programmatically (IMPORTANT)
+Add assertions for:
+* text overflow (no clipped text)
+* elements outside bounding box
+* missing images/logos
+* CTA button overflow
+* layout collapse on long text
+Fail tests if any of these occur.
+
+7. Create a simple CLI command
+Add:
+
+npm run test:ads
+
+That runs the full suite and outputs:
+* pass/fail summary
+* number of visual diffs
+* failed test screenshots
+
+8. Optional (if easy)
+Create a “debug mode” that launches a browser so I can visually inspect failing ads.
+
+Technical constraints
+* Use Playwright (not Cypress)
+* Must work in a React project
+* Must be easy to extend with new fixtures
+* Keep it lightweight (do NOT require Storybook unless necessary)
+
+Output expectation
+I want:
+* a working Playwright test suite
+* fixture system
+* screenshot baseline system
+* diff detection
+* clear instructions to run it locally
+
+Priority
+This system should dramatically reduce manual QA of ad layouts and catch UI bugs before deployment.

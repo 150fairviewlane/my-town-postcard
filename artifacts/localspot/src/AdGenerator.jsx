@@ -95,7 +95,7 @@ const EDITABLE_CSS = `.editable-text:hover { outline: 1.5px dashed rgba(255,255,
 //
 
 // Ad sizes available on the postcard (4 different sizes)
-const AD_SIZES = {
+export const AD_SIZES = {
 XL: { label: "Extra Large", price: 450, ratio: "4:5",  width: 4, height: 5,   desc: "Hero spot - maximum impact" },
 L:  { label: "Large",       price: 350, ratio: "4:3",  width: 4, height: 3,   desc: "Premium placement" },
 M:  { label: "Medium",      price: 250, ratio: "3:2",  width: 3, height: 2,   desc: "Great visibility" },
@@ -771,7 +771,7 @@ background: leftBg, fontFamily: "sans-serif",
 );
 }
 
-const TEMPLATES = {
+export const TEMPLATES = {
 "photo-bold":  { name: "Photo Bold",    desc: "Hero photo, bold overlay text",   Component: PhotoBoldTemplate },
 "split-clean": { name: "Split Clean",   desc: "50/50 photo + content split",      Component: SplitCleanTemplate },
 "magazine":    { name: "Magazine",      desc: "Editorial multi-photo layout",     Component: MagazineTemplate },

@@ -31,6 +31,8 @@ const AdminPrintPage = lazy(() => import("./pages/AdminPrintPage"));
 const OutreachPage = lazy(() => import("./pages/OutreachPage"));
 // @ts-expect-error JSX module without types
 const ScanAnalyticsPage = lazy(() => import("./pages/ScanAnalyticsPage"));
+// @ts-expect-error JSX module without types
+const TestAdPage = lazy(() => import("./pages/TestAdPage"));
 
 const queryClient = new QueryClient();
 
@@ -69,6 +71,10 @@ function Router() {
         <Route path="/admin/outreach" component={OutreachPage} />
         <Route path="/admin/scans" component={ScanAnalyticsPage} />
         <Route path="/admin" component={AdminDashboard} />
+        {/* /test/ad is a hidden render route used by the Playwright visual
+            regression suite. Gated to dev/test builds only — Vite tree-shakes
+            the import in production so it adds nothing to the prod bundle. */}
+        {import.meta.env.DEV && <Route path="/test/ad" component={TestAdPage} />}
       </Switch>
     </Suspense>
   );
