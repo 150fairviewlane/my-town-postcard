@@ -1,0 +1,25 @@
+Three surgical fixes to the postcard picker. Do not change any backend code, API hooks, spot IDs, reservation logic, pricing, or the back side layout.
+
+FIX 1 - EQUAL BORDERS WITH MAT WRAPPER:
+The missing top and left borders are caused by ads flushing directly against the container edge with nothing on the outside. Fix with this exact structure:
+
+Find the outer container div that holds the postcard grid (the one with maxWidth and margin auto). Inside it, add a new wrapper div BEFORE the existing padding-bottom aspect ratio trick. This new wrapper div gets these exact styles: background #d8d8d8, borderRadius 10, padding 6, boxShadow 0 12px 48px rgba(0,0,0,0.28) and 0 4px 12px rgba(0,0,0,0.16), display inline-block, width 100%, boxSizing border-box. This is the mat frame around the postcard.
+
+The aspect ratio div (position relative, paddingBottom 75%) goes inside that mat wrapper. The postcard inner div (position absolute, inset 0) gets background #bbbbbb and borderRadius 4. This gray background shows through as equal-width lines between all ads.
+
+Remove the existing boxShadow from the postcard inner div since the mat wrapper now handles the shadow.
+
+FIX 2 - AD SEPARATION LINES:
+Remove the outline property from ScaledCell. Instead add boxShadow with value inset 0 0 0 1px rgba(0,0,0,0.10) to the inner scaling div inside ScaledCell – the child div that has transform scale and transformOrigin top left. This creates a subtle border recessed inside each ad cell. Combined with the gray mat background showing between cells, every border line including the outer edges is perfectly equal.
+
+FIX 3 - SAMPLE AD REASSIGNMENT ON FRONT:
+Change only these three XL spot sample assignments:
+
+- XL spot 1 at x=0 leftmost: keep sample as biscuits or Mr Biscuits – no change
+- XL spot 2 at x=400 center: change sample to null so it renders as an available spot
+- XL spot 3 at x=800 rightmost: change sample to dental or Northview Dental key
+
+Front XL row result: Mr. Biscuits sold | Available green | Northview Dental sold
+Front Large row stays: HVAC sample | Available | Lawn sample | Available
+
+Do not change the back side, any API code, or reservation flow.

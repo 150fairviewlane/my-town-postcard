@@ -846,12 +846,12 @@ export function getSampleAd(configKey, sizeKeyOverride) {
 // mailer with room left for the customer.
 // ─────────────────────────────────────────────────────────────────────────────
 export const SPOT_SAMPLE_MAP = {
-  // Front side — mb/dn filled; re/l2/l4 show green available; l1/l3 show L portrait samples
-  "mb": "ref-mrbiscuits", // XL — Mr. Biscuit's
-  "dn": "ref-dental",     // XL — Northview Dental
-  "l1": "ref-hvac",       // L portrait — Climate Comfort HVAC (leftmost)
-  "l3": "ref-lawn",       // L portrait — GreenScapes Lawn Care (third slot)
-  // re, l2, l4 → not listed → render as green AvailableSpot (purchase prompt)
+  // Front side: mb=sold, dn=available, re=dental sample; l1=hvac, l2=available, l3=lawn, l4=available
+  "mb": "ref-mrbiscuits", // XL leftmost  — Mr. Biscuit's (paid)
+  "re": "ref-dental",     // XL rightmost — Northview Dental sample
+  "l1": "ref-hvac",       // L portrait   — Climate Comfort HVAC
+  "l3": "ref-lawn",       // L portrait   — GreenScapes Lawn Care
+  // dn, l2, l4 → not listed → render as green AvailableSpot (purchase prompt)
   // Back side
   "bxl": "ref-roofing",  // XL — Pine Ridge Roofing
   "bl1": "ref-auto",     // L  — Pit Stop Auto Repair

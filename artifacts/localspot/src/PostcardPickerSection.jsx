@@ -88,7 +88,6 @@ function ScaledCell({ pos, children, pointerEvents }) {
       minWidth: 0,
       minHeight: 0,
       pointerEvents: pointerEvents || "auto",
-      outline: "1px solid rgba(0,0,0,0.12)",
     }}>
       <div style={{
         position: "absolute",
@@ -98,6 +97,7 @@ function ScaledCell({ pos, children, pointerEvents }) {
         height: natH,
         transformOrigin: "top left",
         transform: `scale(${scale})`,
+        boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.10)",
       }}>
         {children}
       </div>
@@ -486,13 +486,13 @@ export default function PostcardPickerSection() {
         </span>
       </div>
 
-      {/* Postcard card — plain white card, cells fill edge-to-edge, no
-          separate colored header or footer strips outside the grid.
-          The house-ad cell at the bottom provides the dark visual closure. */}
+      {/* Mat wrapper — gray frame that shows between all ad cells and around
+          the outer edges, giving every grid line the same width.
+          Shadow lives here; the inner grid is flush against the mat. */}
       <div style={{
-        position: "relative",
-        background: "#fff", borderRadius: 8, overflow: "hidden",
-        boxShadow: "0 0 0 1px rgba(0,0,0,0.08),0 8px 32px rgba(0,0,0,0.18)",
+        background: "#d8d8d8", borderRadius: 10, padding: 6,
+        boxShadow: "0 12px 48px rgba(0,0,0,0.28),0 4px 12px rgba(0,0,0,0.16)",
+        display: "inline-block", width: "100%", boxSizing: "border-box",
       }}>
 
         {/* Postcard grid — padding-bottom: 75% guarantees exact 12:9 landscape
@@ -508,7 +508,8 @@ export default function PostcardPickerSection() {
               gridTemplateColumns: "repeat(12, 1fr)",
               gridTemplateRows: "repeat(9, 1fr)",
               gap: 1,
-              background: "rgba(15,23,42,0.08)",
+              background: "#bbbbbb",
+              borderRadius: 4,
               boxSizing: "border-box",
               overflow: "hidden",
             }}>
