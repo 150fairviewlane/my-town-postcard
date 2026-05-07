@@ -536,7 +536,7 @@ export default function AdAssistant({ formData, onUpdate, sizeKey = "L" }) {
       </div>
 
       {/* Messages */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "16px 14px", display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch", overscrollBehavior: "contain", padding: "16px 14px", display: "flex", flexDirection: "column", gap: 12 }}>
         {messages.map((msg, i) => (
           <Message key={i} msg={msg} onApply={handleApply} formData={formData} />
         ))}

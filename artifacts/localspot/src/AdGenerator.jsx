@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { INDUSTRIES, INDUSTRY_LIST } from "./industryAssets";
 import { AdQRCode, InlineQRCode, hasQR, normalizeWebsite, generateSpotCode } from "./qrUtils";
 import AdAssistant from "./AdAssistant";
@@ -913,6 +913,15 @@ const sizeInfo = AD_SIZES[sizeKey];
 const Tpl = TEMPLATES[selectedTemplate].Component;
 const formValid = formData.businessName.trim() && formData.industry && formData.email.trim();
 
+// Prevent the landing page from scrolling while the generator is open.
+// On iOS Safari, touch-scroll events pass through position:fixed overlays
+// to the page below — locking the body is the reliable cross-browser fix.
+useEffect(() => {
+  const prev = document.body.style.overflow;
+  document.body.style.overflow = "hidden";
+  return () => { document.body.style.overflow = prev; };
+}, []);
+
 return (
 <div style={{
 position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)",
@@ -947,7 +956,7 @@ boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
     <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0 }}>
 
       {/* LEFT: form */}
-      <div style={{ width: 380, padding: "20px 24px", overflowY: "auto", borderRight: "1px solid #e5e7eb", background: "#fff", flexShrink: 0 }}>
+      <div style={{ width: 380, padding: "20px 24px", overflowY: "auto", WebkitOverflowScrolling: "touch", overscrollBehavior: "contain", borderRight: "1px solid #e5e7eb", background: "#fff", flexShrink: 0 }}>
 
         {/* Size selector */}
         <div style={{ marginBottom: 20 }}>
@@ -1131,7 +1140,7 @@ boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
 
       {/* CENTER: live preview */}
       <div style={{
-        flex: 1, padding: "20px 24px", overflowY: "auto", display: "flex",
+        flex: 1, padding: "20px 24px", overflowY: "auto", WebkitOverflowScrolling: "touch", overscrollBehavior: "contain", display: "flex",
         flexDirection: "column", alignItems: "center", justifyContent: "flex-start",
         background: "linear-gradient(135deg, #1e293b, #0f172a)",
       }}>
