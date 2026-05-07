@@ -172,7 +172,7 @@ return(
 );
 }
 
-function ScaledCell({spot,scale,children}){return(<div style={{position:"absolute",left:spot.x*scale,top:spot.y*scale,width:spot.w*scale,height:spot.h*scale,overflow:"hidden"}}><div style={{width:spot.w,height:spot.h,transform:"scale("+scale+")",transformOrigin:"top left"}}>{children}</div></div>);}
+function ScaledCell({spot,scale,children}){return(<div style={{position:"absolute",left:spot.x*scale+0.5,top:spot.y*scale+0.5,width:spot.w*scale-1,height:spot.h*scale-1,overflow:"hidden"}}><div style={{width:spot.w,height:spot.h,transform:"scale("+scale+")",transformOrigin:"top left"}}>{children}</div></div>);}
 
 function SpotCell({spot,scale,hov,onHov,onOut,onSel}){
 const k=spot.sample;
@@ -257,7 +257,7 @@ return(<div style={{fontFamily:"sans-serif"}}>
         borderRadius:6,
         boxShadow:"0 0 0 7px #c8c8c8, 0 0 0 8.5px #a8a8a8, 0 16px 48px rgba(0,0,0,0.28), 0 4px 12px rgba(0,0,0,0.14)",
       }}>
-        <div style={{position:"absolute",inset:0,overflow:"hidden",borderRadius:5}}>
+        <div style={{position:"absolute",inset:0,overflow:"hidden",borderRadius:5,background:"#c8c8c8"}}>
           {spots.map(spot=><SpotCell key={spot.id} spot={spot} scale={scale} hov={hov} onHov={setHov} onOut={()=>setHov(null)} onSel={setSel}/>)}
         </div>
       </div>
