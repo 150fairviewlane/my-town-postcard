@@ -268,18 +268,8 @@ function WhyChooseUs() {
 
 function PostcardBook() {
   return (
-    <section id="book" style={{ background: "#dde3ea", padding: "80px 32px" }}>
-      <div style={{ maxWidth: 1280, margin: "0 auto" }}>
-        <h2 style={{ textAlign: "center", fontSize: 36, fontWeight: 900, color: "#111",
-          fontFamily: "Georgia,serif", marginBottom: 10 }}>
-          Reserve Your Spot on the Postcard
-        </h2>
-        <p style={{ textAlign: "center", color: "#555", fontSize: 16, marginBottom: 8,
-          fontFamily: "sans-serif" }}>
-          Click any <span style={{ color: "#16a34a", fontWeight: 700 }}>green spot</span> on the live postcard below to claim yours.
-        </p>
-        <PostcardPickerSection />
-      </div>
+    <section id="book">
+      <PostcardPickerSection />
     </section>
   );
 }

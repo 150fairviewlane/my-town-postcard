@@ -360,7 +360,7 @@ export default function PostcardPickerSection() {
   const sideButtonStyle = (active) => ({
     border: "none",
     cursor: "pointer",
-    padding: "11px 32px",
+    padding: "7px 18px",
     borderRadius: 11,
     background: active ? "linear-gradient(135deg,#991b1b,#7f1d1d)" : "transparent",
     color: active ? "#fff" : "#64748b",
@@ -373,7 +373,17 @@ export default function PostcardPickerSection() {
   });
 
   return (
-    <div style={{ fontFamily: "sans-serif" }}>
+    <div style={{ height: "100vh", overflow: "hidden", display: "flex", flexDirection: "column", background: "#dde3ea", fontFamily: "sans-serif" }}>
+      <style>{`
+        @media (max-width: 768px) and (orientation: portrait) {
+          .ls-rotate-overlay { display: flex !important; }
+        }
+      `}</style>
+      <div className="ls-rotate-overlay" style={{ display: "none", position: "fixed", inset: 0, zIndex: 9999, background: "rgba(15,23,42,0.95)", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20, padding: "0 32px" }}>
+        <div style={{ fontSize: 56 }}>🔄</div>
+        <div style={{ color: "#fff", fontSize: 22, fontWeight: 800, textAlign: "center" }}>Please rotate your device</div>
+        <div style={{ color: "rgba(255,255,255,0.60)", fontSize: 15, textAlign: "center", maxWidth: 300, lineHeight: 1.6 }}>The postcard picker works best in landscape mode. Rotate your phone or tablet to continue.</div>
+      </div>
       {/* Active hold banner — only shown if THIS browser reserved a spot
           and the 30-min hold hasn't lapsed yet. Lets the customer jump
           straight back to /checkout/<id> without picking again. */}
@@ -386,6 +396,7 @@ export default function PostcardPickerSection() {
             borderRadius: 10,
             padding: "10px 14px",
             marginBottom: 14,
+            flexShrink: 0,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -418,39 +429,22 @@ export default function PostcardPickerSection() {
         </div>
       )}
 
-      {/* Front / Back toggle — large pill so customers immediately see they
-          can advertise on either face of the postcard. */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 6,
-          marginBottom: 18,
-        }}
-      >
-        <div
-          style={{
-            fontSize: 11,
-            color: "#6b7280",
-            fontWeight: 700,
-            letterSpacing: 1.5,
-            textTransform: "uppercase",
-          }}
-        >
-          Choose a side to advertise on
+      {/* Compact header — title/subtitle on left, front/back toggle on right */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 20px 8px", flexShrink: 0, gap: 12 }}>
+        <div>
+          <div style={{ fontSize: 20, fontWeight: 900, color: "#111", fontFamily: "Georgia,serif", lineHeight: 1.15 }}>
+            Reserve Your Spot on the Postcard
+          </div>
+          <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
+            Click any{" "}
+            <span style={{ color: "#16a34a", fontWeight: 700 }}>green spot</span>{" "}
+            to claim yours.
+          </div>
         </div>
         <div
           role="tablist"
           aria-label="Postcard side"
-          style={{
-            background: "#fff",
-            borderRadius: 14,
-            padding: 5,
-            display: "flex",
-            gap: 4,
-            boxShadow: "0 1px 8px rgba(0,0,0,0.10)",
-          }}
+          style={{ background: "#fff", borderRadius: 14, padding: 5, display: "flex", gap: 4, boxShadow: "0 1px 8px rgba(0,0,0,0.10)", flexShrink: 0 }}
         >
           {[
             { id: "front", e: "📮", l: "Front Side", stats: frontStats },
@@ -475,7 +469,7 @@ export default function PostcardPickerSection() {
 
       {/* Label chip — sits above the card like the reference's "FRONT SIDE —
           12" × 9"…" badge. Plain dark pill, centered. */}
-      <div style={{ textAlign: "center", marginBottom: 10 }}>
+      <div style={{ textAlign: "center", marginBottom: 6, flexShrink: 0 }}>
         <span style={{
           display: "inline-block",
           background: "#1e293b", color: "rgba(255,255,255,0.65)",
@@ -486,13 +480,16 @@ export default function PostcardPickerSection() {
         </span>
       </div>
 
+      {/* Flex-fill wrapper — takes all remaining vertical space and centers
+          the postcard. Width formula fits both screen width AND height
+          (subtracting ~130px for header + chip + legend + padding). */}
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", minHeight: 0, padding: "0 16px 8px" }}>
       {/* Postcard card — boxShadow layer 1: 7px gray mat border; layer 2:
           thin dark outline; layers 3–4: drop shadow. Background #c8c8c8
           shows through gap: 7 between cells as equal-width dividing lines. */}
       <div ref={gridRef} style={{
         position: "relative",
-        width: "100%",
-        maxWidth: 1000,
+        width: "min(100%, calc((100vh - 130px) * 12 / 9))",
         height: `${9 * PX_PER_CELL * postcardScale}px`,
         background: "#c8c8c8",
         borderRadius: 8,
@@ -561,10 +558,11 @@ export default function PostcardPickerSection() {
         </PostcardScaleContext.Provider>
 
       </div>
+      </div>
 
       {/* Legend — three states matching reference colors exactly */}
-      <div style={{ display: "flex", gap: 28, marginTop: 14, justifyContent: "center",
-        flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 28, marginTop: 0, marginBottom: 10, justifyContent: "center",
+        flexWrap: "wrap", flexShrink: 0 }}>
         {[
           { bg: "linear-gradient(135deg,#f8fffe,#f0fdf4)", border: "2px solid #4ade80", label: "Available — click to reserve" },
           { bg: "#fefce8",                                  border: "2px dashed #fbbf24", label: "Reserved" },
