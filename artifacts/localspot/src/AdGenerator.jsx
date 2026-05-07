@@ -373,14 +373,6 @@ size={32 * fScale} bg={ind.colors.accent} color="#fff" />
 style={{ color: "#fff", fontWeight: 900, fontSize: 17*fScale, fontFamily: "Georgia, serif", lineHeight: 1.0, overflow: "hidden" }} />
 </div>
 </div>
-{!isS && data.phone && (
-<EditableText value={data.phone} onChange={edit("phone")}
-style={{
-color: "#fff", fontSize: 13*fScale, fontWeight: 900,
-background: "rgba(0,0,0,0.3)", padding: `${3*fScale}px ${8*fScale}px`,
-borderRadius: 4, fontFamily: "sans-serif", whiteSpace: "nowrap",
-}} />
-)}
 </div>
 
   {/* Photo strip -- only render photos that exist, max 2 to prevent broken middle image */}
