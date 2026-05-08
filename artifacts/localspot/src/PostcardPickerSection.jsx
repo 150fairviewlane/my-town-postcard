@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from "react";
-import AdGenerator from "./AdGenerator";
 
 // Natural canvas: 1200x900 = 12"x9" landscape at 100px per inch
 // Scale = containerWidth / 1200, height = containerWidth * 0.75
@@ -20,14 +19,14 @@ const FRONT = [
 { id:"l4",  size:"L",  price:399, x:900, y:500, w:300, h:400, sample:null       },
 ];
 
-// BACK: Config 1 – 3 XL (top) + 4 M (mid) + 1 S + house + EDDM (bottom)
-// y=0–500:   3 XL  each 400×500 (3×400=1200 ✓)
-// y=500–700: 4 M   each 300×200 (4×300=1200 ✓)
-// y=700–900: S(200) + house(600) + EDDM(400) = 1200 ✓
+// BACK: Config 1 – 3XL(4"x5") + 4M(3"x2") + 1S(2"x2")
+// y=0-500:   3 XL top row  (each 400x500)
+// y=500-700: 4 M row       (each 300x200, 4x300=1200 perfect)
+// y=700-900: S + house(6"x2") + EDDM(4"x2")
 const BACK = [
 { id:"bxl1", size:"XL", price:499, x:0,   y:0,   w:400, h:500, sample:"biscuits", tmpl:"photo" },
 { id:"bxl2", size:"XL", price:499, x:400, y:0,   w:400, h:500, sample:null                     },
-{ id:"bxl3", size:"XL", price:499, x:800, y:0,   w:400, h:500, sample:"auto",     tmpl:"photo" },
+{ id:"bxl3", size:"XL", price:499, x:800, y:0,   w:400, h:500, sample:"auto",     tmpl:"fade"  },
 { id:"bm1",  size:"M",  price:299, x:0,   y:500, w:300, h:200, sample:"salon",    tmpl:"stamp" },
 { id:"bm2",  size:"M",  price:299, x:300, y:500, w:300, h:200, sample:null                     },
 { id:"bm3",  size:"M",  price:299, x:600, y:500, w:300, h:200, sample:"pizza",    tmpl:"split" },
@@ -37,27 +36,111 @@ const BACK = [
 { id:"bed",  size:"eddm",  price:0, x:800, y:700, w:400, h:200, sample:"eddm"                  },
 ];
 
-// Mr. Biscuit's uses the same single-photo template as the AdGenerator (PhotoBold style)
-// One hero photo, business name, tagline, coupon, phone – no multi-photo grid
 const ADS = {
-biscuits:{biz:"Mr. Biscuit's Cafe",cat:"BREAKFAST & CAFE",tag:"From-Scratch Biscuits & Boba!",services:["Plain Biscuit $2.99","Bacon Biscuit $4.99","Chicken Tender $5.99","NY Bagels $5.49"],offer:"$1 OFF Any Biscuit",fine:"1 per visit - with this postcard",phone:"(706) 754-0105",addr:"596 W Louise St, Clarkesville, GA 30523",web:"mrBiscuitsCafe.com",photo:"https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?w=800&q=80",p:"#7c3a1e",a:"#f59e0b",l:"#fef3c7",d:"#3b1a0a"},
-dental:{biz:"Northview Dental",cat:"FAMILY DENTISTRY",tag:"Healthy Smiles. Confident Lives.",services:["General Dentistry","Cosmetic Dentistry","Dental Implants","Teeth Whitening"],offer:"New Patients Always Welcome",fine:"Call today to schedule",phone:"(770) 704-1633",addr:"Clarkesville, GA",web:"northviewdental.com",photo:"https://images.unsplash.com/photo-1609840114035-3c981b782dfe?w=800&q=80",p:"#1e40af",a:"#3b82f6",l:"#eff6ff",d:"#1e3a5f"},
-lawn:{biz:"GreenScapes Lawn Care",cat:"LAWN & LANDSCAPING",tag:"A Beautiful Lawn You'll Love Coming Home To!",services:["Mowing","Fertilization","Weed Control","Landscaping","Mulch Installation"],offer:"Free Estimate",fine:"Call today to schedule",phone:"(706) 257-1186",addr:"Clarkesville, GA",web:"greenscapeslawncare.com",photo:"https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&q=80",p:"#166534",a:"#22c55e",l:"#f0fdf4",d:"#052e16"},
-hvac:{biz:"Climate Comfort HVAC",cat:"HEATING & COOLING",tag:"Keeping You Comfortable All Year Long",services:["Installation","Repair","Maintenance"],offer:"$50 OFF Any Service",fine:"Show this ad - expires 6/30",phone:"(770) 365-6599",addr:"Clarkesville, GA",web:"climatecomforthvac.com",photo:"https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=800&q=80",p:"#0369a1",a:"#0ea5e9",l:"#f0f9ff",d:"#0c2a3a"},
-auto:{biz:"Pit Stop Auto Repair",cat:"AUTO REPAIR",tag:"Honest Repairs. Fair Prices. Dependable Service.",services:["Oil Change $29.99","Brake Service","AC Repair","Free Estimates"],offer:"Free Diagnostic Check",fine:"With any repair - show this ad",phone:"(706) 219-6136",addr:"Clarkesville, GA",web:"",photo:"https://images.unsplash.com/photo-1530046339160-ce3e530c7d2f?w=800&q=80",p:"#7f1d1d",a:"#ef4444",l:"#fef2f2",d:"#450a0a"},
-vet:{biz:"Paws & Claws Vet Clinic",cat:"VETERINARIAN",tag:"Compassionate Care For Your Pets",services:["Wellness Exams","Vaccinations","Surgery & Dental","Emergency Care"],offer:"Free First Exam",fine:"New patients only - call to schedule",phone:"(770) 592-7387",addr:"Clarkesville, GA",web:"pawsandclawsvet.com",photo:"https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=800&q=80",p:"#065f46",a:"#10b981",l:"#ecfdf5",d:"#022c22"},
-pizza:{biz:"Tony's Pizza",cat:"PIZZA & ITALIAN",tag:"Fresh Ingredients. Great Taste.",services:[],offer:"Large Pizza $12.99",fine:"Pick-up only - show this ad",phone:"(706) 507-1111",addr:"Clarkesville, GA",web:"tonyspizza.com",photo:"https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&q=80",p:"#9a3412",a:"#f97316",l:"#fff7ed",d:"#431407"},
-salon:{biz:"The Cut Above Salon",cat:"SALON & BEAUTY",tag:"Look Your Best.",services:[],offer:"20% OFF First Visit",fine:"New clients - show this ad",phone:"(706) 555-0519",addr:"Clarkesville, GA",web:"",photo:"https://images.unsplash.com/photo-1560066984-138daaa4e4e1?w=800&q=80",p:"#831843",a:"#ec4899",l:"#fdf2f8",d:"#4a0e28"},
+biscuits:{
+biz:"Mr. Biscuit's Cafe", cat:"BREAKFAST & CAFE",
+tag:"From-Scratch Biscuits & Boba!",
+services:["Plain Biscuit $2.99","Bacon Biscuit $4.99","Chicken Tender $5.99","NY Bagels $5.49","Sausage Gravy Biscuit $5.99"],
+offer:"$1 OFF Any Biscuit", fine:"1 per visit - with this postcard - cannot combine",
+phone:"(706) 754-0105", addr:"596 W Louise St, Clarkesville, GA 30523",
+web:"mrbiscuitscafe.com",
+photo:"https://images.unsplash.com/photo-1533089860892-a9b969b7d5aa?w=800&q=80",
+p:"#7c3a1e",a:"#f59e0b",l:"#fef3c7",d:"#3b1a0a",
+},
+dental:{
+biz:"Northview Dental", cat:"FAMILY DENTISTRY",
+tag:"Healthy Smiles. Confident Lives.",
+services:["General Dentistry","Cosmetic Dentistry","Dental Implants","Teeth Whitening","Accepting New Patients"],
+offer:"New Patient Special", fine:"Exam + X-rays $99 - call to schedule",
+phone:"(770) 704-1633", addr:"Clarkesville, GA",
+web:"northviewdental.com",
+photo:"https://images.unsplash.com/photo-1606811971618-4486d14f3f99?w=800&q=80",
+p:"#1e40af",a:"#3b82f6",l:"#eff6ff",d:"#1e3a5f",
+},
+lawn:{
+biz:"GreenScapes Lawn Care", cat:"LAWN & LANDSCAPING",
+tag:"A Beautiful Lawn You'll Love Coming Home To!",
+services:["Mowing & Edging","Fertilization","Weed Control","Landscaping Design","Mulch Installation"],
+offer:"Free Estimate", fine:"Call or scan to schedule - no obligation",
+phone:"(706) 257-1186", addr:"Clarkesville, GA",
+web:"greenscapeslawncare.com",
+photo:"https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80",
+p:"#166534",a:"#22c55e",l:"#f0fdf4",d:"#052e16",
+},
+hvac:{
+biz:"Climate Comfort HVAC", cat:"HEATING & COOLING",
+tag:"Keeping You Comfortable All Year Long",
+services:["AC & Heating Installation","Repair & Maintenance","Emergency Service","Free Estimates"],
+offer:"$50 OFF Any Service", fine:"Show this ad at time of service - expires 6/30",
+phone:"(770) 365-6599", addr:"Clarkesville, GA",
+web:"climatecomforthvac.com",
+photo:"https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=800&q=80",
+p:"#0369a1",a:"#38bdf8",l:"#f0f9ff",d:"#0c2a3a",
+},
+auto:{
+biz:"Pit Stop Auto Repair", cat:"AUTO REPAIR",
+tag:"Honest Repairs. Fair Prices. Dependable Service.",
+services:["Oil Change from $29.99","Brake Service & Repair","AC Diagnostics & Repair","Tires & Alignment","Free Estimates"],
+offer:"Free Diagnostic Check", fine:"With any repair - show this ad",
+phone:"(706) 219-6136", addr:"Clarkesville, GA",
+web:"pitstopclarkesville.com",
+photo:"https://images.unsplash.com/photo-1625047509168-a7026f36de04?w=800&q=80",
+p:"#7f1d1d",a:"#fca5a5",l:"#fef2f2",d:"#3b0000",
+},
+vet:{
+biz:"Paws & Claws Vet Clinic", cat:"VETERINARIAN",
+tag:"Compassionate Care for Every Pet",
+services:["Wellness Exams","Vaccinations","Surgery & Dental","Emergency Care"],
+offer:"Free First Exam", fine:"New patients only - call to schedule",
+phone:"(770) 592-7387", addr:"Clarkesville, GA",
+web:"pawsandclawsvet.com",
+photo:"https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=800&q=80",
+p:"#065f46",a:"#10b981",l:"#ecfdf5",d:"#022c22",
+},
+pizza:{
+biz:"Tony's Pizza", cat:"PIZZA & ITALIAN",
+tag:"Fresh Dough. Real Cheese. Made With Love.",
+services:["Hand-Tossed Pizzas","Pasta & Calzones","Salads & Wings","Dine In or Carry Out"],
+offer:"Large Pizza $12.99", fine:"Pick-up only - show this ad",
+phone:"(706) 507-1111", addr:"Clarkesville, GA",
+web:"tonyspizzaclarkesville.com",
+photo:"https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=800&q=80",
+p:"#9a3412",a:"#fb923c",l:"#fff7ed",d:"#431407",
+},
+salon:{
+biz:"The Cut Above Salon", cat:"SALON & BEAUTY",
+tag:"Where Style Meets Confidence.",
+services:["Cuts & Color","Highlights & Balayage","Blowouts & Styling","Waxing & Brows"],
+offer:"20% OFF Your First Visit", fine:"New clients only - mention this ad",
+phone:"(706) 555-0519", addr:"Clarkesville, GA",
+web:"thecutabovesalon.com",
+photo:"https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&q=80",
+p:"#831843",a:"#f472b6",l:"#fdf2f8",d:"#4a0e28",
+},
 };
 
 function Check({color,sz=14}){return(<svg width={sz} height={sz} viewBox="0 0 14 14" style={{flexShrink:0,marginTop:1}}><circle cx="7" cy="7" r="7" fill={color}/><path d="M4 7l2 2 4-4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>);}
 function Phone({phone,color,size}){return(<div style={{display:"flex",alignItems:"center",gap:5}}><svg width={size} height={size} viewBox="0 0 24 24" fill={color} style={{flexShrink:0}}><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg><span style={{fontSize:size*1.1,fontWeight:900,color,fontFamily:"sans-serif",letterSpacing:-0.5,lineHeight:1}}>{phone}</span></div>);}
-function Coupon({offer,fine,color,dark}){if(!offer)return null;return(<div style={{border:`1.5px dashed ${dark?"rgba(255,255,255,0.65)":color}`,borderRadius:4,padding:"6px 10px",textAlign:"center",background:dark?"rgba(0,0,0,0.3)":`${color}15`,flexShrink:0}}><div style={{fontSize:14,fontWeight:900,color:dark?"#fff":color,lineHeight:1.1}}>{offer}</div>{fine&&<div style={{fontSize:9,color:dark?"rgba(255,255,255,0.55)":"#777",marginTop:2}}>{fine}</div>}</div>);}
+function Coupon({offer,fine,color,dark,scale=1}){
+if(!offer)return null;
+const bdr = dark?"rgba(255,255,255,0.55)":color;
+return(
+<div style={{position:"relative",flexShrink:0,marginTop:4*scale}}>
+<div style={{display:"flex",alignItems:"center",marginBottom:1}}>
+<span style={{fontSize:9*scale,lineHeight:1,opacity:0.75,flexShrink:0}}>✄</span>
+<div style={{flex:1,borderTop:"1px dashed "+bdr+"88",marginLeft:2}}/>
+<span style={{fontSize:9*scale,lineHeight:1,opacity:0.75,flexShrink:0,transform:"scaleX(-1)",display:"inline-block"}}>✄</span>
+</div>
+<div style={{border:"1.5px dashed "+bdr,borderRadius:4,padding:"5px 10px",textAlign:"center",background:dark?"rgba(0,0,0,0.3)":color+"15"}}>
+<div style={{fontSize:13*scale,fontWeight:900,color:dark?"#fff":color,lineHeight:1.1}}>{offer}</div>
+{fine&&<div style={{fontSize:8*scale,color:dark?"rgba(255,255,255,0.55)":"#777",marginTop:2}}>{fine}</div>}
+</div>
+</div>
+);
+}
 
-// XL (400x500) – header bar + hero photo + content + coupon + phone
 function AdXL({d,tmpl}){
 if(tmpl==="clean"){
-// Clean white XL – bold business name, large photo strip, clean content area
 return(<div style={{width:400,height:500,display:"flex",flexDirection:"column",overflow:"hidden",fontFamily:"sans-serif",background:"#fff"}}>
 <div style={{background:d.p,padding:"10px 14px",display:"flex",alignItems:"center",gap:9,flexShrink:0}}>
 <div style={{width:38,height:38,borderRadius:8,overflow:"hidden",flexShrink:0,border:"2px solid rgba(255,255,255,0.4)"}}><img src={d.photo} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/></div>
@@ -66,14 +149,25 @@ return(<div style={{width:400,height:500,display:"flex",flexDirection:"column",o
 <div style={{height:210,flexShrink:0,position:"relative",overflow:"hidden"}}><img src={d.photo} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/></div>
 <div style={{flex:1,padding:"10px 14px",display:"flex",flexDirection:"column",justifyContent:"space-between",background:"#fff"}}>
 <div><div style={{fontSize:14,fontWeight:900,color:d.d,fontFamily:"Georgia,serif",lineHeight:1.2,marginBottom:8}}>{d.tag}</div>{(d.services||[]).slice(0,4).map((s,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}><Check color={d.p} sz={13}/><span style={{fontSize:11,color:"#333",fontWeight:500}}>{s}</span></div>))}</div>
-<div style={{display:"flex",flexDirection:"column",gap:5}}><Coupon offer={d.offer} fine={d.fine} color={d.p}/><Phone phone={d.phone} color={d.p} size={14}/>{d.addr&&<div style={{fontSize:9,color:"#666"}}>{d.addr}{d.web?" - "+d.web:""}</div>}</div>
+<div style={{display:"flex",flexDirection:"column",gap:5}}>
+<Coupon offer={d.offer} fine={d.fine} color={d.p} scale={0.95}/>
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+<Phone phone={d.phone} color={d.p} size={13}/>
+{d.web&&<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
+<div style={{width:36,height:36,background:"#fff",border:"1px solid #e5e7eb",borderRadius:3,padding:2,boxSizing:"border-box"}}>
+<img src={"https://api.qrserver.com/v1/create-qr-code/?size=80x80&data="+encodeURIComponent("https://"+d.web)} style={{width:"100%",height:"100%",display:"block"}} alt="QR"/>
+</div>
+<div style={{fontSize:7,color:"#888"}}>Scan</div>
+</div>}
+</div>
+{d.addr&&<div style={{fontSize:8,color:"#666"}}>{d.addr}</div>}
+</div>
 </div>
 </div>);
 }
-// Default photo-bold XL – full bleed photo with dark gradient overlay
 return(<div style={{width:400,height:500,position:"relative",overflow:"hidden",fontFamily:"sans-serif"}}>
 <img src={d.photo} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
-<div style={{position:"absolute",inset:0,background:"linear-gradient(180deg,"+d.d+"cc 0%,"+d.d+"44 35%,"+d.d+"ee 100%)"}}/>
+<div style={{position:"absolute",inset:0,background:"linear-gradient(180deg,"+d.d+"ee 0%,"+d.d+"22 40%,"+d.d+"dd 75%,"+d.d+"f5 100%)"}}/>
 <div style={{position:"absolute",top:14,left:14,right:14}}>
 <div style={{color:d.a,fontSize:9,fontWeight:700,letterSpacing:2,textTransform:"uppercase"}}>{d.cat}</div>
 <div style={{color:"#fff",fontWeight:900,fontSize:26,lineHeight:1.0,marginTop:3,fontFamily:"Georgia,serif",textShadow:"0 2px 8px rgba(0,0,0,0.8)"}}>{d.biz}</div>
@@ -81,28 +175,33 @@ return(<div style={{width:400,height:500,position:"relative",overflow:"hidden",f
 <div style={{position:"absolute",top:"38%",left:14,right:14,textAlign:"center"}}>
 <div style={{color:"#fff",fontWeight:800,fontSize:20,lineHeight:1.2,fontStyle:"italic",textShadow:"0 2px 12px rgba(0,0,0,0.9)"}}>{d.tag}</div>
 </div>
-<div style={{position:"absolute",bottom:0,left:0,right:0,padding:"12px 14px",display:"flex",flexDirection:"column",gap:7}}>
+<div style={{position:"absolute",bottom:0,left:0,right:0,padding:"12px 14px",display:"flex",flexDirection:"column",gap:6}}>
 <div style={{display:"flex",flexDirection:"column",gap:3}}>{(d.services||[]).slice(0,3).map((s,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:6}}><Check color={d.a} sz={11}/><span style={{fontSize:10,color:"rgba(255,255,255,0.92)",fontWeight:600}}>{s}</span></div>))}</div>
-<Coupon offer={d.offer} fine={d.fine} color="#fff" dark/>
-<div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><Phone phone={d.phone} color="#fff" size={14}/>{d.addr&&<div style={{fontSize:9,color:"rgba(255,255,255,0.7)",textAlign:"right"}}>{d.addr}</div>}</div>
+<Coupon offer={d.offer} fine={d.fine} color={d.a} dark scale={0.9}/>
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+<Phone phone={d.phone} color="#fff" size={13}/>
+{d.web&&<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
+<div style={{width:36,height:36,background:"#fff",borderRadius:3,padding:2,boxSizing:"border-box"}}>
+<img src={"https://api.qrserver.com/v1/create-qr-code/?size=80x80&data="+encodeURIComponent("https://"+d.web)} style={{width:"100%",height:"100%",display:"block"}} alt="QR"/>
+</div>
+<div style={{fontSize:7,color:"rgba(255,255,255,0.7)"}}>Scan</div>
+</div>}
+</div>
+{d.addr&&<div style={{fontSize:8,color:"rgba(255,255,255,0.6)"}}>{d.addr}{d.web?" - "+d.web:""}</div>}
 </div>
 </div>);
 }
 
-// L (300x400 portrait) – two visual styles based on tmpl prop
 function AdL({d,tmpl}){
 if(tmpl==="stamp"){
-// Dark stamp style – full photo background, bold overlay text
 return(<div style={{width:300,height:400,position:"relative",overflow:"hidden",fontFamily:"sans-serif"}}>
 <img src={d.photo} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
 <div style={{position:"absolute",inset:0,background:"linear-gradient(180deg,"+d.d+"dd 0%,"+d.d+"55 45%,"+d.d+"ee 100%)"}}/>
-{/* Top badge */}
 <div style={{position:"absolute",top:10,left:10,right:10}}>
 <div style={{display:"inline-block",background:d.a,color:"#fff",fontSize:7,fontWeight:800,letterSpacing:2,textTransform:"uppercase",padding:"3px 8px",borderRadius:3}}>{d.cat}</div>
 <div style={{color:"#fff",fontWeight:900,fontSize:20,lineHeight:1.0,marginTop:6,fontFamily:"Georgia,serif",textShadow:"0 2px 8px rgba(0,0,0,0.9)"}}>{d.biz}</div>
 <div style={{color:d.a,fontWeight:700,fontSize:12,marginTop:4,fontStyle:"italic"}}>{d.tag}</div>
 </div>
-{/* Bottom content */}
 <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"10px 12px",display:"flex",flexDirection:"column",gap:6}}>
 <div style={{display:"flex",flexDirection:"column",gap:2}}>{(d.services||[]).slice(0,3).map((s,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:5}}><Check color={d.a} sz={10}/><span style={{fontSize:9,color:"rgba(255,255,255,0.9)",fontWeight:600}}>{s}</span></div>))}</div>
 <Coupon offer={d.offer} fine={d.fine} color={d.a} dark/>
@@ -113,7 +212,6 @@ return(<div style={{width:300,height:400,position:"relative",overflow:"hidden",f
 </div>
 </div>);
 }
-// Default split style – photo top, content bottom
 return(<div style={{width:300,height:400,display:"flex",flexDirection:"column",overflow:"hidden",background:"#fff",fontFamily:"sans-serif"}}>
 <div style={{height:150,flexShrink:0,position:"relative",overflow:"hidden"}}>
 <img src={d.photo} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/>
@@ -127,18 +225,24 @@ return(<div style={{width:300,height:400,display:"flex",flexDirection:"column",o
 {(d.services||[]).slice(0,4).map((s,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:5,marginBottom:3}}><Check color={d.p} sz={12}/><span style={{fontSize:10,color:"#333",fontWeight:500}}>{s}</span></div>))}
 </div>
 <div style={{display:"flex",flexDirection:"column",gap:4}}>
-<Coupon offer={d.offer} fine={d.fine} color={d.p}/>
-<Phone phone={d.phone} color={d.p} size={12}/>
-{d.addr&&<div style={{fontSize:8,color:"#555"}}>{d.addr}</div>}
-{d.web&&<div style={{fontSize:8,color:d.p,fontWeight:600}}>{d.web}</div>}
+<Coupon offer={d.offer} fine={d.fine} color={d.p} scale={0.85}/>
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+<Phone phone={d.phone} color={d.p} size={11}/>
+{d.web&&<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
+<div style={{width:30,height:30,background:"#fff",border:"1px solid #e5e7eb",borderRadius:3,padding:2,boxSizing:"border-box"}}>
+<img src={"https://api.qrserver.com/v1/create-qr-code/?size=80x80&data="+encodeURIComponent("https://"+d.web)} style={{width:"100%",height:"100%",display:"block"}} alt="QR"/>
+</div>
+<div style={{fontSize:6,color:"#888"}}>Scan</div>
+</div>}
+</div>
+{d.addr&&<div style={{fontSize:7,color:"#555"}}>{d.addr}</div>}
 </div>
 </div>
 </div>);
 }
 
-function AdM({d,w=200,h=200}){const photoH=Math.round(h*0.21);return(<div style={{width:w,height:h,display:"flex",flexDirection:"column",overflow:"hidden",fontFamily:"sans-serif",border:"none",boxSizing:"border-box",background:"#fff"}}><div style={{background:d.p,padding:"5px 8px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}><div style={{color:"#fff",fontWeight:900,fontSize:11,lineHeight:1,fontFamily:"Georgia,serif",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"55%"}}>{d.biz}</div><div style={{color:"#fff",fontSize:8,fontWeight:700,background:"rgba(0,0,0,0.25)",padding:"1px 5px",borderRadius:3,whiteSpace:"nowrap",flexShrink:0}}>{d.phone}</div></div><div style={{height:photoH,flexShrink:0,position:"relative",overflow:"hidden"}}><img src={d.photo} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/><div style={{position:"absolute",inset:0,background:`linear-gradient(transparent 20%,${d.l}ff 100%)`}}/></div><div style={{flex:1,padding:"4px 8px 6px",background:d.l,display:"flex",flexDirection:"column",justifyContent:"space-between"}}><div><div style={{fontSize:6,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:d.a}}>{d.cat}</div><div style={{fontSize:11,fontWeight:900,color:d.d,fontFamily:"Georgia,serif",lineHeight:1.15}}>{d.tag}</div>{(d.services||[]).length>0&&(<div style={{display:"flex",flexWrap:"wrap",gap:"0px 6px",marginTop:2}}>{(d.services||[]).slice(0,3).map((s,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:2}}><span style={{color:d.p,fontSize:5}}>●</span><span style={{fontSize:7,color:"#333",fontWeight:500}}>{s}</span></div>))}</div>)}</div><Coupon offer={d.offer} fine="" color={d.p}/></div></div>);}
+function AdM({d,w=200,h=200}){return(<div style={{width:w,height:h,display:"flex",flexDirection:"column",overflow:"hidden",fontFamily:"sans-serif",border:"none",boxSizing:"border-box",background:"#fff"}}><div style={{background:d.p,padding:"5px 8px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}><div style={{color:"#fff",fontWeight:900,fontSize:11,lineHeight:1,fontFamily:"Georgia,serif",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"55%"}}>{d.biz}</div><div style={{color:"#fff",fontSize:8,fontWeight:700,background:"rgba(0,0,0,0.25)",padding:"1px 5px",borderRadius:3,whiteSpace:"nowrap",flexShrink:0}}>{d.phone}</div></div><div style={{height:42,flexShrink:0,position:"relative",overflow:"hidden"}}><img src={d.photo} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/><div style={{position:"absolute",inset:0,background:`linear-gradient(transparent 20%,${d.l}ff 100%)`}}/></div><div style={{flex:1,padding:"4px 8px 6px",background:d.l,display:"flex",flexDirection:"column",justifyContent:"space-between"}}><div><div style={{fontSize:6,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:d.a}}>{d.cat}</div><div style={{fontSize:11,fontWeight:900,color:d.d,fontFamily:"Georgia,serif",lineHeight:1.15}}>{d.tag}</div>{(d.services||[]).length>0&&(<div style={{display:"flex",flexWrap:"wrap",gap:"0px 6px",marginTop:2}}>{(d.services||[]).slice(0,3).map((s,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:2}}><span style={{color:d.p,fontSize:5}}>●</span><span style={{fontSize:7,color:"#333",fontWeight:500}}>{s}</span></div>))}</div>)}</div><Coupon offer={d.offer} fine="" color={d.p}/></div></div>);}
 
-// S (200x200) – photo background, condensed info square
 function AdS({d}){return(<div style={{width:200,height:200,overflow:"hidden",position:"relative",fontFamily:"sans-serif"}}><img src={d.photo} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}} alt=""/><div style={{position:"absolute",inset:0,background:`linear-gradient(180deg,${d.d}aa 0%,${d.d}f5 100%)`}}/><div style={{position:"absolute",inset:0,padding:"12px 10px",display:"flex",flexDirection:"column",justifyContent:"space-between",alignItems:"center",textAlign:"center"}}><div><div style={{color:d.a,fontSize:7,fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>{d.cat}</div><div style={{color:"#fff",fontSize:16,fontWeight:900,fontFamily:"Georgia,serif",lineHeight:1.0,marginTop:3}}>{d.biz}</div><div style={{color:"rgba(255,255,255,0.85)",fontSize:10,fontStyle:"italic",marginTop:4,lineHeight:1.3}}>{d.tag}</div></div>{d.offer&&(<div style={{background:d.a,padding:"6px 10px",borderRadius:4,width:"100%",boxSizing:"border-box"}}><div style={{color:"#fff",fontWeight:900,fontSize:12,lineHeight:1.1}}>{d.offer}</div></div>)}<div style={{color:"#fff",fontSize:13,fontWeight:900,lineHeight:1}}>{d.phone}</div></div></div>);}
 
 function AdHouse({w,h}){return(<div style={{width:w,height:h,background:"#0f172a",display:"flex",alignItems:"center",justifyContent:"center",gap:20,padding:"0 24px",boxSizing:"border-box"}}><div style={{width:2,height:36,background:"#991b1b",flexShrink:0}}/><div style={{textAlign:"center"}}><div style={{color:"#f1f5f9",fontWeight:900,fontSize:15,fontFamily:"Georgia,serif",letterSpacing:0.5}}>Shop, Dine & Buy Local</div><div style={{color:"rgba(255,255,255,0.4)",fontSize:9,fontFamily:"sans-serif",marginTop:2,letterSpacing:1,textTransform:"uppercase"}}>Your Ad Here · Reach 5,000 Habersham County Homes</div><div style={{color:"#991b1b",fontWeight:800,fontSize:11,fontFamily:"sans-serif",marginTop:3}}>mytownpostcard.com</div></div><div style={{width:2,height:36,background:"#991b1b",flexShrink:0}}/></div>);}
@@ -177,7 +281,7 @@ return(
 );
 }
 
-function ScaledCell({spot,scale,children}){return(<div style={{position:"absolute",left:spot.x*scale+3.5,top:spot.y*scale+3.5,width:spot.w*scale-7,height:spot.h*scale-7,overflow:"hidden"}}><div style={{width:spot.w,height:spot.h,transform:"scale("+scale+")",transformOrigin:"top left"}}>{children}</div></div>);}
+function ScaledCell({spot,scale,children}){return(<div style={{position:"absolute",left:spot.x*scale+3.5,top:spot.y*scale+3.5,width:spot.w*scale-7,height:spot.h*scale-7,overflow:"hidden",borderRadius:3}}><div style={{width:spot.w,height:spot.h,transform:"scale("+scale+")",transformOrigin:"top left"}}>{children}</div></div>);}
 
 function SpotCell({spot,scale,hov,onHov,onOut,onSel}){
 const k=spot.sample;
@@ -269,18 +373,38 @@ return(<div style={{fontFamily:"sans-serif"}}>
     </div>
   </div>
 
-  {/* Legend -- compact, inside viewport */}
-  <div style={{display:"flex",justifyContent:"center",gap:20,marginTop:8,flexWrap:"wrap",flexShrink:0}}>
-    {[{bg:"linear-gradient(135deg,#f8fffe,#f0fdf4)",border:"2px solid #4ade80",l:"Available -- click to reserve"},{bg:"#fefce8",border:"2px dashed #fbbf24",l:"Reserved"},{bg:"#f1f5f9",border:"2px solid #cbd5e1",l:"Spot taken"}].map(x=>(
-      <div key={x.l} style={{display:"flex",alignItems:"center",gap:7}}>
-        <div style={{width:20,height:20,background:x.bg,border:x.border,borderRadius:4,flexShrink:0}}/>
-        <span style={{fontSize:12,color:"#64748b",fontWeight:500}}>{x.l}</span>
-      </div>
-    ))}
-  </div>
+</div>{/* end postcard flex container */}
 
-  {sel&&<AdGenerator initialSize={sel.size} onComplete={()=>setSel(null)} onClose={()=>setSel(null)}/>}
+{/* Legend -- compact, below postcard */}
+<div style={{display:"flex",justifyContent:"center",gap:20,marginTop:8,flexWrap:"wrap",flexShrink:0}}>
+  {[{bg:"linear-gradient(135deg,#f8fffe,#f0fdf4)",border:"2px solid #4ade80",l:"Available -- click to reserve"},{bg:"#fefce8",border:"2px dashed #fbbf24",l:"Reserved"},{bg:"#f1f5f9",border:"2px solid #cbd5e1",l:"Spot taken"}].map(x=>(
+    <div key={x.l} style={{display:"flex",alignItems:"center",gap:7}}>
+      <div style={{width:20,height:20,background:x.bg,border:x.border,borderRadius:4,flexShrink:0}}/>
+      <span style={{fontSize:12,color:"#64748b",fontWeight:500}}>{x.l}</span>
+    </div>
+  ))}
 </div>
+
+{sel&&(
+  <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:16}} onClick={()=>setSel(null)}>
+    <div style={{background:"#fff",borderRadius:16,padding:32,maxWidth:400,width:"100%",boxShadow:"0 24px 64px rgba(0,0,0,0.3)"}} onClick={e=>e.stopPropagation()}>
+      <div style={{fontSize:22,fontWeight:900,color:"#111",fontFamily:"Georgia,serif",marginBottom:4}}>Reserve Your {SZ[sel.size]?.label}</div>
+      <div style={{fontSize:14,color:"#64748b",marginBottom:20}}>{SZ[sel.size]?.dims} &middot; ${sel.price} &middot; Reaches 5,000 homes</div>
+      <div style={{background:"#f0fdf4",border:"2px solid #22c55e",borderRadius:10,padding:"14px 18px",marginBottom:24}}>
+        <div style={{fontSize:13,color:"#166534",fontWeight:600,lineHeight:1.8}}>
+          &#10003; Clarkesville Community Mailer &mdash; Summer 2026<br/>
+          &#10003; Reaching 5,000 Habersham County homeowners<br/>
+          &#10003; Trackable QR code with website link<br/>
+          &#10003; AI-powered ad builder included free
+        </div>
+      </div>
+      <button onClick={()=>setSel(null)} style={{width:"100%",padding:"14px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#991b1b,#7f1d1d)",color:"#fff",fontWeight:900,fontSize:16,cursor:"pointer",boxShadow:"0 4px 14px rgba(127,29,29,0.4)",letterSpacing:0.3}}>
+        Build My Ad &amp; Reserve &mdash; ${sel.price}
+      </button>
+      <button onClick={()=>setSel(null)} style={{width:"100%",padding:"10px",marginTop:8,borderRadius:10,border:"1px solid #e5e7eb",background:"#f9fafb",color:"#374151",fontWeight:600,fontSize:13,cursor:"pointer"}}>Cancel</button>
+    </div>
+  </div>
+)}
 </div>
 );
 }
