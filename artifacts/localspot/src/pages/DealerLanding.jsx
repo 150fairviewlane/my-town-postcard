@@ -152,7 +152,7 @@ function Hero() {
           {[
             "4 Postcard Territories",
             "20,000+ Households",
-            "Earn 40% Commission",
+            "Earn 80% of Profit",
             "Done-For-You Operations",
           ].map(b => (
             <div key={b} style={{ display: "flex", alignItems: "center", gap: 8,
@@ -209,8 +209,8 @@ function HowItWorks() {
       desc: "We assign you 4 distinct postcard zones (~5,000 homes each) clustered around your hometown. Exclusive — no other dealer can sell in your area." },
     { n: "3", icon: "📞", title: "Sell Local Ad Spots",
       desc: "Reach out to local businesses — restaurants, dentists, HVAC, realtors. Use our pricing, our designs, our mailing. You just close the deal." },
-    { n: "4", icon: "💰", title: "Earn 40% Commission",
-      desc: "When a postcard sells out, that's $2,500+ in profit — and 40% of that ($1,000+) is yours. Sell 4 postcards a year and you're cleared $4,000+." },
+    { n: "4", icon: "💰", title: "Earn ~$2,500 Per Postcard",
+      desc: "A sold-out postcard generates ~$6,000 in ad revenue. After printing and mailing, ~$3,200 in profit remains — and 80% of that ($2,500+) is yours. Fill one card per territory per month and take home $10,000." },
   ];
   return (
     <section id="how-it-works" style={{ background: "#fff", padding: "80px 32px" }}>
@@ -220,7 +220,7 @@ function HowItWorks() {
         <p style={{ textAlign: "center", color: "#666", fontSize: 16, marginBottom: 56,
           maxWidth: 580, margin: "0 auto 56px", fontFamily: "sans-serif" }}>
           You bring the local relationships. We bring the system, the design,
-          the printing, and the mailing. You keep 40% of every spot.
+          the printing, and the mailing. You keep 80% of the profit on every card.
         </p>
         <div style={{ display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 32 }}>
@@ -286,80 +286,113 @@ function WhatYouGet() {
   );
 }
 
-function EarningsCalculator() {
-  const [postcardsPerYear, setPostcardsPerYear] = useState(4);
-  const [avgSpotsSold, setAvgSpotsSold] = useState(12);
-  const [avgPrice, setAvgPrice] = useState(300);
-  const [commissionPct, setCommissionPct] = useState(40);
-
-  const grossPerPostcard = avgSpotsSold * avgPrice;
-  const yourCutPerPostcard = Math.round(grossPerPostcard * (commissionPct / 100));
-  const annualEarnings = yourCutPerPostcard * postcardsPerYear;
-  const annualCost = 99 + 99 * 12;
-  const netAnnual = annualEarnings - annualCost;
-
-  const slider = (label, val, set, min, max, step, suffix = "") => (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline",
-        marginBottom: 6, fontFamily: "sans-serif" }}>
-        <label style={{ fontSize: 13.5, fontWeight: 700, color: "#374151" }}>{label}</label>
-        <span style={{ fontSize: 15, fontWeight: 800, color: RED }}>
-          {val}{suffix}
-        </span>
-      </div>
-      <input type="range" min={min} max={max} step={step} value={val}
-        onChange={e => set(Number(e.target.value))}
-        style={{ width: "100%", accentColor: RED }} />
-    </div>
-  );
+function EarningsBreakdown() {
+  const rows = [
+    { label: "Total ad revenue (sold-out postcard)", value: "$6,000", muted: false, indent: false },
+    { label: "Printing, mailing & fulfillment",       value: "− $2,800", muted: true,  indent: true  },
+    { label: "Profit available for commission",        value: "$3,200", muted: false, bold: true, indent: false },
+    { label: "My Town Postcard (20%)",                 value: "− $640",  muted: true,  indent: true  },
+    { label: "Your dealer commission (80%)",           value: "~$2,500", muted: false, highlight: true, indent: false },
+  ];
 
   return (
-    <section id="earnings" style={{ background: "#fff", padding: "80px 32px" }}>
-      <div style={{ maxWidth: 1000, margin: "0 auto" }}>
-        <h2 style={{ textAlign: "center", fontSize: 32, fontWeight: 900, color: "#111",
-          fontFamily: "Georgia,serif", marginBottom: 10 }}>What Could You Earn?</h2>
-        <p style={{ textAlign: "center", color: "#666", fontSize: 15, marginBottom: 40,
-          fontFamily: "sans-serif" }}>
-          Drag the sliders to model your local market. Honest math, no hype.
+    <section id="earnings" style={{ background: "#fafafa", padding: "80px 32px" }}>
+      <div style={{ maxWidth: 1040, margin: "0 auto" }}>
+
+        <h2 style={{ textAlign: "center", fontSize: 34, fontWeight: 900, color: "#111",
+          fontFamily: "Georgia,serif", marginBottom: 10 }}>
+          The Math Behind Your Earnings
+        </h2>
+        <p style={{ textAlign: "center", color: "#666", fontSize: 15.5, marginBottom: 52,
+          fontFamily: "sans-serif", maxWidth: 560, margin: "0 auto 52px" }}>
+          Honest numbers. A single sold-out postcard puts roughly{" "}
+          <strong style={{ color: "#111" }}>$2,500 in your pocket</strong> — here's exactly how.
         </p>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-          gap: 24, alignItems: "stretch" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+          gap: 32, alignItems: "start" }}>
 
-          <div style={{ background: "#fafafa", borderRadius: 16, padding: 28,
-            display: "flex", flexDirection: "column", gap: 22 }}>
-            {slider("Postcards mailed per year", postcardsPerYear, setPostcardsPerYear, 1, 12, 1)}
-            {slider("Avg spots sold per postcard", avgSpotsSold, setAvgSpotsSold, 1, 16, 1, " of 16")}
-            {slider("Avg spot price", avgPrice, setAvgPrice, 199, 450, 1, " $")}
-            {slider("Your commission %", commissionPct, setCommissionPct, 20, 50, 5, "%")}
+          {/* Waterfall breakdown */}
+          <div style={{ background: "#fff", borderRadius: 16, padding: "32px 28px",
+            boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}>
+            <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 0.8,
+              textTransform: "uppercase", color: "#888", marginBottom: 20,
+              fontFamily: "sans-serif" }}>Per Postcard Breakdown</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+              {rows.map((row, i) => (
+                <div key={i}>
+                  {row.highlight && (
+                    <div style={{ height: 1, background: "#e5e7eb", margin: "8px 0 16px" }} />
+                  )}
+                  <div style={{
+                    display: "flex", justifyContent: "space-between", alignItems: "baseline",
+                    padding: row.highlight ? "12px 16px" : "10px 0",
+                    borderRadius: row.highlight ? 10 : 0,
+                    background: row.highlight ? RED : "transparent",
+                    marginLeft: row.indent ? 12 : 0,
+                  }}>
+                    <span style={{
+                      fontSize: row.highlight ? 15 : 14,
+                      fontWeight: row.bold || row.highlight ? 700 : 500,
+                      color: row.highlight ? "#fff" : row.muted ? "#9ca3af" : "#111",
+                      fontFamily: "sans-serif",
+                    }}>{row.label}</span>
+                    <span style={{
+                      fontSize: row.highlight ? 22 : 15,
+                      fontWeight: row.highlight ? 900 : row.bold ? 700 : 600,
+                      color: row.highlight ? "#fff" : row.muted ? "#9ca3af" : "#111",
+                      fontFamily: "Georgia,serif",
+                    }}>{row.value}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div style={{ background: RED, color: "#fff", borderRadius: 16, padding: 28,
-            display: "flex", flexDirection: "column", justifyContent: "center", gap: 18 }}>
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 700, opacity: 0.85,
-                letterSpacing: 0.5, textTransform: "uppercase",
-                fontFamily: "sans-serif", marginBottom: 4 }}>Per Postcard You Earn</div>
-              <div style={{ fontSize: 40, fontWeight: 900, lineHeight: 1,
-                fontFamily: "Georgia,serif" }}>${yourCutPerPostcard.toLocaleString()}</div>
+          {/* Monthly potential */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            <div style={{ background: RED, color: "#fff", borderRadius: 16, padding: "28px 28px" }}>
+              <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 0.8,
+                textTransform: "uppercase", opacity: 0.85, marginBottom: 10,
+                fontFamily: "sans-serif" }}>Why 4 Territories?</div>
+              <p style={{ fontSize: 15, lineHeight: 1.6, fontFamily: "sans-serif",
+                opacity: 0.95, margin: "0 0 20px" }}>
+                Your 4 exclusive territories give you a natural{" "}
+                <strong>one postcard per week</strong> rhythm — one territory fills up,
+                you move to the next. That pace adds up fast:
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                {[
+                  { label: "Per postcard", value: "~$2,500" },
+                  { label: "Per month (4 cards)", value: "~$10,000" },
+                  { label: "Per year (48 cards)", value: "~$120,000" },
+                  { label: "Your share of profit", value: "80%" },
+                ].map(stat => (
+                  <div key={stat.label} style={{ background: "rgba(255,255,255,0.15)",
+                    borderRadius: 10, padding: "14px 16px" }}>
+                    <div style={{ fontSize: 22, fontWeight: 900, fontFamily: "Georgia,serif",
+                      lineHeight: 1 }}>{stat.value}</div>
+                    <div style={{ fontSize: 12, opacity: 0.85, marginTop: 4,
+                      fontFamily: "sans-serif" }}>{stat.label}</div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div style={{ height: 1, background: "rgba(255,255,255,0.25)" }} />
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 700, opacity: 0.85,
-                letterSpacing: 0.5, textTransform: "uppercase",
-                fontFamily: "sans-serif", marginBottom: 4 }}>Annual Gross Earnings</div>
-              <div style={{ fontSize: 40, fontWeight: 900, lineHeight: 1,
-                fontFamily: "Georgia,serif" }}>${annualEarnings.toLocaleString()}</div>
-            </div>
-            <div style={{ height: 1, background: "rgba(255,255,255,0.25)" }} />
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 700, opacity: 0.85,
-                letterSpacing: 0.5, textTransform: "uppercase",
-                fontFamily: "sans-serif", marginBottom: 4 }}>Net After Subscription</div>
-              <div style={{ fontSize: 40, fontWeight: 900, lineHeight: 1,
-                fontFamily: "Georgia,serif" }}>${netAnnual.toLocaleString()}</div>
-              <div style={{ fontSize: 12, opacity: 0.85, marginTop: 4, fontFamily: "sans-serif" }}>
-                After ${annualCost} setup + 12 months
+
+            <div style={{ background: "#fff", borderRadius: 16, padding: "22px 24px",
+              boxShadow: "0 2px 16px rgba(0,0,0,0.07)", display: "flex", gap: 14,
+              alignItems: "flex-start" }}>
+              <span style={{ fontSize: 26, flexShrink: 0 }}>📬</span>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#111",
+                  fontFamily: "sans-serif", marginBottom: 4 }}>
+                  Commissions paid at mail date
+                </div>
+                <div style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6,
+                  fontFamily: "sans-serif" }}>
+                  Once a postcard ships to USPS, your commission is calculated and
+                  paid within 7 business days. No waiting, no surprises.
+                </div>
               </div>
             </div>
           </div>
@@ -458,7 +491,7 @@ const FAQ_ITEMS = [
   { q: "What does the $99/month subscription cover?",
     a: "Your monthly subscription covers your access to the dealer platform: your assigned territories stay locked to you, you get our online ordering portal, ad-design system, customer-facing checkout pages, QR tracking, and a personal account manager. Printing and mailing are billed separately per postcard run." },
   { q: "How is commission calculated?",
-    a: "You earn 40% of the gross revenue from spots you sell. A typical 16-spot postcard sells out at $4,500–$5,000 — you'd take home $1,800–$2,000 per run. Commissions are paid out within 7 days of the postcard's mail date." },
+    a: "A sold-out postcard generates roughly $6,000 in ad revenue. After printing, mailing, and fulfillment (~$2,800), about $3,200 in profit remains. You keep 80% of that — approximately $2,500 per postcard. With 4 territories running one postcard each per month, that's a $10,000/month earning potential. Commissions are paid within 7 business days of the postcard's mail date." },
   { q: "What if I can't sell out the postcard?",
     a: "You don't have to sell out for the postcard to mail. We have a minimum of 6 spots booked to send a postcard run. If you can't hit that within your campaign window, we'll roll your bookings into the next run with no penalty." },
   { q: "How exclusive are the territories?",
@@ -540,7 +573,7 @@ export default function DealerLanding() {
       <Hero />
       <HowItWorks />
       <WhatYouGet />
-      <EarningsCalculator />
+      <EarningsBreakdown />
       <SampleTerritories />
       <CTABanner />
       <FAQSection />
