@@ -96,9 +96,9 @@ The postcard is 12"×9" landscape and has TWO sides, both sellable through the s
 - Bottom row: `l1` `l2` `l3` `l4` — Large portrait (3"×4", 300×400 natural px), each 3 cols × 4 rows.
 - Grid: rows 1-5 = XL, rows 6-9 = Large portrait. All 108 cells covered (no house ad strip).
 
-**Back side** — 7 spots: `bxl` (xl, $450), `bl1` `bl2` (large, $350), `bm1` `bs1` `bm2` `bs2` (each 2"×2", 200×200px natural, arranged in a row at rows 4-5), plus one house-ad cell `bhr` (cols 1-8, rows 6-9 = 800×400) and the non-sellable `ed` USPS EDDM block (4"×4"). Layout in `artifacts/localspot/src/postcardBack.jsx`.
+**Back side** — 7 spots: `bxl` (xl, $499), `bl1` `bl2` (large, $399), `bm1` `bs1` `bm2` `bs2` (each 2"×2", 200×200px natural, arranged in a row at rows 4-5), plus one house-ad cell `bhr` (cols 1-8, rows 6-9 = 800×400) and the non-sellable `ed` USPS EDDM block (4"×4"). Layout in `artifacts/localspot/src/postcardBack.jsx`.
 
-**Medium and Small spots** are both 2"×2" (200×200 natural px). They differ only in price ($250 vs $199) and content density in the sample ads.
+**Medium and Small spots** are both 2"×2" (200×200 natural px). They differ only in price ($299 vs $199) and content density in the sample ads.
 
 The print page (`/admin/campaign/:id/print`) renders both sides as separate print pages with `page-break-after: always` between them.
 

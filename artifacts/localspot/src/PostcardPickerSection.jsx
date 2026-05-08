@@ -22,12 +22,12 @@ const FRONT = [
 
 // BACK: 1 XL + 2 L + 2 M + 2 S + house + EDDM
 const BACK = [
-{ id:"bxl", size:"XL",    price:450, x:0,    y:0,   w:400, h:500, sample:null   },
-{ id:"bl1", size:"L",     price:350, x:400,  y:0,   w:400, h:300, sample:"auto" },
-{ id:"bl2", size:"L",     price:350, x:800,  y:0,   w:400, h:300, sample:null   },
-{ id:"bm1", size:"M",     price:250, x:400,  y:300, w:200, h:200, sample:"vet"  },
+{ id:"bxl", size:"XL",    price:499, x:0,    y:0,   w:400, h:500, sample:null   },
+{ id:"bl1", size:"L",     price:399, x:400,  y:0,   w:400, h:300, sample:"auto" },
+{ id:"bl2", size:"L",     price:399, x:800,  y:0,   w:400, h:300, sample:null   },
+{ id:"bm1", size:"M",     price:299, x:400,  y:300, w:200, h:200, sample:"vet"  },
 { id:"bs1", size:"S",     price:199, x:600,  y:300, w:200, h:200, sample:"salon"},
-{ id:"bm2", size:"M",     price:250, x:800,  y:300, w:200, h:200, sample:null   },
+{ id:"bm2", size:"M",     price:299, x:800,  y:300, w:200, h:200, sample:null   },
 { id:"bs2", size:"S",     price:199, x:1000, y:300, w:200, h:200, sample:null   },
 { id:"bhs", size:"house", price:0,   x:0,    y:500, w:800, h:400, sample:"house"},
 { id:"bed", size:"eddm",  price:0,   x:800,  y:500, w:400, h:400, sample:"eddm" },

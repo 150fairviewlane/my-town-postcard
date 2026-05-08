@@ -505,7 +505,7 @@ const FAQ_ITEMS = [
   { q: "Can I cancel anytime?",
     a: "Yes — your monthly subscription cancels with one click from your dealer portal (coming in Phase 2). No long-term contracts. The $99 setup fee is non-refundable since we lock your territories the day you sign up." },
   { q: "What does it cost the businesses I sell to?",
-    a: "Spots range from $199 (Small) to $450 (Extra-Large). All include design and mailing. You set the pricing within those tiers based on what your local market will bear." },
+    a: "Spots range from $199 (Small) to $499 (Extra-Large). All include design and mailing. You set the pricing within those tiers based on what your local market will bear." },
   { q: "Is there a sales quota?",
     a: "No quotas. As long as you can hit our 6-spot minimum to mail a postcard at least once a year, you keep your territories. We'll work with you actively if you're not seeing traction." },
 ];
