@@ -96,9 +96,9 @@ const EDITABLE_CSS = `.editable-text:hover { outline: 1.5px dashed rgba(255,255,
 
 // Ad sizes available on the postcard (4 different sizes)
 export const AD_SIZES = {
-XL: { label: "Extra Large", price: 450, ratio: "4:5",  width: 4, height: 5,   desc: "Hero spot - maximum impact" },
-L:  { label: "Large",       price: 350, ratio: "4:3",  width: 4, height: 3,   desc: "Premium placement" },
-M:  { label: "Medium",      price: 250, ratio: "3:2",  width: 3, height: 2,   desc: "Great visibility" },
+XL: { label: "Extra Large", price: 499, ratio: "4:5",  width: 4, height: 5,   desc: "Hero spot - maximum impact" },
+L:  { label: "Large",       price: 399, ratio: "4:3",  width: 4, height: 3,   desc: "Premium placement" },
+M:  { label: "Medium",      price: 299, ratio: "3:2",  width: 3, height: 2,   desc: "Great visibility" },
 S:  { label: "Small",       price: 199, ratio: "2:2",  width: 2, height: 2,   desc: "Affordable local reach" },
 };
 
