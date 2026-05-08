@@ -1,14 +1,10 @@
 import { useState, useRef, useEffect } from "react";
+import AdGenerator from "./AdGenerator";
 
 // Natural canvas: 1200x900 = 12"x9" landscape at 100px per inch
-// Scale = containerWidth / 1200, height = containerWidth * 0.75
 const W = 1200, H = 900;
 
 // FRONT: 3 XL (4"x5") top row + 4 Large (3"x4" portrait) bottom row
-// Top:    3 x XL  = 3*400 = 1200 wide, 500 tall OK
-// Bottom: 4 x L   = 4*300 = 1200 wide, 400 tall OK
-// Total:  1200 x 900 = perfect 12x9 – NO house ad, 100% paid coverage
-// Pricing: XL=$499, L=$399
 const FRONT = [
 { id:"xl1", size:"XL", price:499, x:0,   y:0,   w:400, h:500, sample:"biscuits", tmpl:"photo" },
 { id:"xl2", size:"XL", price:499, x:400, y:0,   w:400, h:500, sample:null       },
@@ -24,29 +20,32 @@ const FRONT = [
 // y=500-700: 4 M row       (each 300x200, 4x300=1200 perfect)
 // y=700-900: S + house(6"x2") + EDDM(4"x2")
 const BACK = [
-{ id:"bxl1", size:"XL", price:499, x:0,   y:0,   w:400, h:500, sample:"biscuits", tmpl:"photo" },
-{ id:"bxl2", size:"XL", price:499, x:400, y:0,   w:400, h:500, sample:null                     },
-{ id:"bxl3", size:"XL", price:499, x:800, y:0,   w:400, h:500, sample:"auto",     tmpl:"fade"  },
-{ id:"bm1",  size:"M",  price:299, x:0,   y:500, w:300, h:200, sample:"salon",    tmpl:"stamp" },
-{ id:"bm2",  size:"M",  price:299, x:300, y:500, w:300, h:200, sample:null                     },
-{ id:"bm3",  size:"M",  price:299, x:600, y:500, w:300, h:200, sample:"pizza",    tmpl:"split" },
-{ id:"bm4",  size:"M",  price:299, x:900, y:500, w:300, h:200, sample:null                     },
-{ id:"bs1",  size:"S",  price:199, x:0,   y:700, w:200, h:200, sample:null                     },
-{ id:"bhs",  size:"house", price:0, x:200, y:700, w:600, h:200, sample:"house"                 },
-{ id:"bed",  size:"eddm",  price:0, x:800, y:700, w:400, h:200, sample:"eddm"                  },
+{ id:"bxl1", size:"XL", price:499, x:0,   y:0,   w:400, h:500, sample:"realty", tmpl:"clean" },
+{ id:"bxl2", size:"XL", price:499, x:400, y:0,   w:400, h:500, sample:null                   },
+{ id:"bxl3", size:"XL", price:499, x:800, y:0,   w:400, h:500, sample:"auto",   tmpl:"photo" },
+{ id:"bm1",  size:"M",  price:299, x:0,   y:500, w:300, h:200, sample:"salon",  tmpl:"banner" },
+{ id:"bm2",  size:"M",  price:299, x:300, y:500, w:300, h:200, sample:null                   },
+{ id:"bm3",  size:"M",  price:299, x:600, y:500, w:300, h:200, sample:"pizza",  tmpl:"slate"  },
+{ id:"bm4",  size:"M",  price:299, x:900, y:500, w:300, h:200, sample:null                   },
+{ id:"bs1",  size:"S",  price:199, x:0,   y:700, w:200, h:200, sample:null                   },
+{ id:"bhs",  size:"house", price:0, x:200, y:700, w:600, h:200, sample:"house"               },
+{ id:"bed",  size:"eddm",  price:0, x:800, y:700, w:400, h:200, sample:"eddm"                },
 ];
 
 const ADS = {
+// ── Front XL1 ── Mr. Biscuit's (photo-bold with real logo)
 biscuits:{
 biz:"Mr. Biscuit's Cafe", cat:"BREAKFAST & CAFE",
 tag:"From-Scratch Biscuits & Boba!",
 services:["Plain Biscuit $2.99","Bacon Biscuit $4.99","Chicken Tender $5.99","NY Bagels $5.49","Sausage Gravy Biscuit $5.99"],
-offer:"$1 OFF Any Biscuit", fine:"1 per visit - with this postcard - cannot combine",
+offer:"$1 OFF Any Biscuit", fine:"1 per visit - with this postcard",
 phone:"(706) 754-0105", addr:"596 W Louise St, Clarkesville, GA 30523",
 web:"mrbiscuitscafe.com",
-photo:"https://images.unsplash.com/photo-1533089860892-a9b969b7d5aa?w=800&q=80",
+photo:"/industries/restaurants/mr-biscuits/gen-buttermilk-biscuit-hero.jpg",
+logo:"/mr-biscuits-logo.jpg",
 p:"#7c3a1e",a:"#f59e0b",l:"#fef3c7",d:"#3b1a0a",
 },
+// ── Front XL3 ── Northview Dental (clean white)
 dental:{
 biz:"Northview Dental", cat:"FAMILY DENTISTRY",
 tag:"Healthy Smiles. Confident Lives.",
@@ -57,6 +56,7 @@ web:"northviewdental.com",
 photo:"https://images.unsplash.com/photo-1606811971618-4486d14f3f99?w=800&q=80",
 p:"#1e40af",a:"#3b82f6",l:"#eff6ff",d:"#1e3a5f",
 },
+// ── Front L3 ── GreenScapes (split)
 lawn:{
 biz:"GreenScapes Lawn Care", cat:"LAWN & LANDSCAPING",
 tag:"A Beautiful Lawn You'll Love Coming Home To!",
@@ -67,6 +67,7 @@ web:"greenscapeslawncare.com",
 photo:"https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80",
 p:"#166534",a:"#22c55e",l:"#f0fdf4",d:"#052e16",
 },
+// ── Front L1 ── Climate Comfort HVAC (stamp)
 hvac:{
 biz:"Climate Comfort HVAC", cat:"HEATING & COOLING",
 tag:"Keeping You Comfortable All Year Long",
@@ -77,6 +78,7 @@ web:"climatecomforthvac.com",
 photo:"https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=800&q=80",
 p:"#0369a1",a:"#38bdf8",l:"#f0f9ff",d:"#0c2a3a",
 },
+// ── Back XL3 ── Pit Stop Auto (photo-bold)
 auto:{
 biz:"Pit Stop Auto Repair", cat:"AUTO REPAIR",
 tag:"Honest Repairs. Fair Prices. Dependable Service.",
@@ -87,16 +89,18 @@ web:"pitstopclarkesville.com",
 photo:"https://images.unsplash.com/photo-1625047509168-a7026f36de04?w=800&q=80",
 p:"#7f1d1d",a:"#fca5a5",l:"#fef2f2",d:"#3b0000",
 },
-vet:{
-biz:"Paws & Claws Vet Clinic", cat:"VETERINARIAN",
-tag:"Compassionate Care for Every Pet",
-services:["Wellness Exams","Vaccinations","Surgery & Dental","Emergency Care"],
-offer:"Free First Exam", fine:"New patients only - call to schedule",
-phone:"(770) 592-7387", addr:"Clarkesville, GA",
-web:"pawsandclawsvet.com",
-photo:"https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=800&q=80",
-p:"#065f46",a:"#10b981",l:"#ecfdf5",d:"#022c22",
+// ── Back XL1 ── Habersham Realty (clean white — maximally different from photo-bold)
+realty:{
+biz:"Habersham Realty Group", cat:"REAL ESTATE",
+tag:"Your Local Experts Since 2003.",
+services:["Buying & Selling","Land & Farms","Investment Properties","Relocation Services","Free Home Valuations"],
+offer:"Free Home Valuation", fine:"No obligation - call or text today",
+phone:"(706) 839-0100", addr:"301 Main St, Clarkesville, GA",
+web:"habershamrealty.com",
+photo:"https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800&q=80",
+p:"#1a3d5c",a:"#c8a84b",l:"#f5f0e8",d:"#0d1f2d",
 },
+// ── Back M3 ── Tony's Pizza (slate template)
 pizza:{
 biz:"Tony's Pizza", cat:"PIZZA & ITALIAN",
 tag:"Fresh Dough. Real Cheese. Made With Love.",
@@ -107,6 +111,7 @@ web:"tonyspizzaclarkesville.com",
 photo:"https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=800&q=80",
 p:"#9a3412",a:"#fb923c",l:"#fff7ed",d:"#431407",
 },
+// ── Back M1 ── The Cut Above Salon (banner template)
 salon:{
 biz:"The Cut Above Salon", cat:"SALON & BEAUTY",
 tag:"Where Style Meets Confidence.",
@@ -117,21 +122,33 @@ web:"thecutabovesalon.com",
 photo:"https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&q=80",
 p:"#831843",a:"#f472b6",l:"#fdf2f8",d:"#4a0e28",
 },
+// ── Spare ── Paws & Claws (for future use)
+vet:{
+biz:"Paws & Claws Vet Clinic", cat:"VETERINARIAN",
+tag:"Compassionate Care for Every Pet",
+services:["Wellness Exams","Vaccinations","Surgery & Dental","Emergency Care"],
+offer:"Free First Exam", fine:"New patients only - call to schedule",
+phone:"(770) 592-7387", addr:"Clarkesville, GA",
+web:"pawsandclawsvet.com",
+photo:"https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=800&q=80",
+p:"#065f46",a:"#10b981",l:"#ecfdf5",d:"#022c22",
+},
 };
 
 function Check({color,sz=14}){return(<svg width={sz} height={sz} viewBox="0 0 14 14" style={{flexShrink:0,marginTop:1}}><circle cx="7" cy="7" r="7" fill={color}/><path d="M4 7l2 2 4-4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>);}
-function Phone({phone,color,size}){return(<div style={{display:"flex",alignItems:"center",gap:5}}><svg width={size} height={size} viewBox="0 0 24 24" fill={color} style={{flexShrink:0}}><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg><span style={{fontSize:size*1.1,fontWeight:900,color,fontFamily:"sans-serif",letterSpacing:-0.5,lineHeight:1}}>{phone}</span></div>);}
+function Phone({phone,color,size}){return(<div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}><svg width={size} height={size} viewBox="0 0 24 24" fill={color} style={{flexShrink:0}}><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg><span style={{fontSize:size*1.1,fontWeight:900,color,fontFamily:"sans-serif",letterSpacing:-0.5,lineHeight:1}}>{phone}</span></div>);}
+
 function Coupon({offer,fine,color,dark,scale=1}){
 if(!offer)return null;
-const bdr = dark?"rgba(255,255,255,0.55)":color;
+const bdr=dark?"rgba(255,255,255,0.55)":color;
 return(
-<div style={{position:"relative",flexShrink:0,marginTop:4*scale}}>
+<div style={{flexShrink:0}}>
 <div style={{display:"flex",alignItems:"center",marginBottom:1}}>
-<span style={{fontSize:9*scale,lineHeight:1,opacity:0.75,flexShrink:0}}>✄</span>
+<span style={{fontSize:9*scale,lineHeight:1,opacity:0.7,flexShrink:0}}>✄</span>
 <div style={{flex:1,borderTop:"1px dashed "+bdr+"88",marginLeft:2}}/>
-<span style={{fontSize:9*scale,lineHeight:1,opacity:0.75,flexShrink:0,transform:"scaleX(-1)",display:"inline-block"}}>✄</span>
+<span style={{fontSize:9*scale,lineHeight:1,opacity:0.7,flexShrink:0,transform:"scaleX(-1)",display:"inline-block"}}>✄</span>
 </div>
-<div style={{border:"1.5px dashed "+bdr,borderRadius:4,padding:"5px 10px",textAlign:"center",background:dark?"rgba(0,0,0,0.3)":color+"15"}}>
+<div style={{border:"1.5px dashed "+bdr,borderRadius:4,padding:"4px 10px",textAlign:"center",background:dark?"rgba(0,0,0,0.3)":color+"15"}}>
 <div style={{fontSize:13*scale,fontWeight:900,color:dark?"#fff":color,lineHeight:1.1}}>{offer}</div>
 {fine&&<div style={{fontSize:8*scale,color:dark?"rgba(255,255,255,0.55)":"#777",marginTop:2}}>{fine}</div>}
 </div>
@@ -139,38 +156,64 @@ return(
 );
 }
 
+// Compact inline coupon for tight spaces — no scissors strip
+function CouponCompact({offer,fine,color,dark}){
+if(!offer)return null;
+return(
+<div style={{border:"1.5px dashed "+(dark?"rgba(255,255,255,0.6)":color),borderRadius:3,padding:"3px 7px",textAlign:"center",background:dark?"rgba(0,0,0,0.35)":color+"18",flexShrink:0}}>
+<div style={{fontSize:9,fontWeight:900,color:dark?"#fff":color,lineHeight:1.1}}>{offer}</div>
+{fine&&<div style={{fontSize:7,color:dark?"rgba(255,255,255,0.5)":"#888",marginTop:1}}>{fine}</div>}
+</div>
+);
+}
+
+function QR({web,size=36}){
+if(!web)return null;
+return(
+<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1,flexShrink:0}}>
+<div style={{width:size,height:size,background:"#fff",border:"1px solid #e5e7eb",borderRadius:3,padding:2,boxSizing:"border-box"}}>
+<img src={"https://api.qrserver.com/v1/create-qr-code/?size=80x80&data="+encodeURIComponent("https://"+web)} style={{width:"100%",height:"100%",display:"block"}} alt="QR"/>
+</div>
+<div style={{fontSize:7,color:"#888"}}>Scan</div>
+</div>
+);
+}
+
+// ── XL (400x500) ────────────────────────────────────────────────────────────
 function AdXL({d,tmpl}){
 if(tmpl==="clean"){
+// Clean white — logo thumbnail + large photo + structured content + QR
 return(<div style={{width:400,height:500,display:"flex",flexDirection:"column",overflow:"hidden",fontFamily:"sans-serif",background:"#fff"}}>
-<div style={{background:d.p,padding:"10px 14px",display:"flex",alignItems:"center",gap:9,flexShrink:0}}>
-<div style={{width:38,height:38,borderRadius:8,overflow:"hidden",flexShrink:0,border:"2px solid rgba(255,255,255,0.4)"}}><img src={d.photo} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/></div>
-<div><div style={{color:"rgba(255,255,255,0.75)",fontSize:8,fontWeight:700,letterSpacing:2,textTransform:"uppercase"}}>{d.cat}</div><div style={{color:"#fff",fontWeight:900,fontSize:20,lineHeight:1.0,fontFamily:"Georgia,serif"}}>{d.biz}</div></div>
+<div style={{background:d.p,padding:"10px 14px",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
+<div style={{width:40,height:40,borderRadius:8,overflow:"hidden",flexShrink:0,border:"2px solid rgba(255,255,255,0.4)"}}><img src={d.photo} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/></div>
+<div style={{flex:1,minWidth:0}}><div style={{color:"rgba(255,255,255,0.75)",fontSize:8,fontWeight:700,letterSpacing:2,textTransform:"uppercase"}}>{d.cat}</div><div style={{color:"#fff",fontWeight:900,fontSize:20,lineHeight:1.0,fontFamily:"Georgia,serif",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{d.biz}</div></div>
 </div>
 <div style={{height:210,flexShrink:0,position:"relative",overflow:"hidden"}}><img src={d.photo} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/></div>
-<div style={{flex:1,padding:"10px 14px",display:"flex",flexDirection:"column",justifyContent:"space-between",background:"#fff"}}>
-<div><div style={{fontSize:14,fontWeight:900,color:d.d,fontFamily:"Georgia,serif",lineHeight:1.2,marginBottom:8}}>{d.tag}</div>{(d.services||[]).slice(0,4).map((s,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}><Check color={d.p} sz={13}/><span style={{fontSize:11,color:"#333",fontWeight:500}}>{s}</span></div>))}</div>
+<div style={{flex:1,padding:"10px 14px",display:"flex",flexDirection:"column",justifyContent:"space-between",background:"#fff",overflow:"hidden"}}>
+<div><div style={{fontSize:14,fontWeight:900,color:d.d,fontFamily:"Georgia,serif",lineHeight:1.2,marginBottom:7}}>{d.tag}</div>{(d.services||[]).slice(0,4).map((s,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}><Check color={d.p} sz={12}/><span style={{fontSize:10,color:"#333",fontWeight:500}}>{s}</span></div>))}</div>
 <div style={{display:"flex",flexDirection:"column",gap:5}}>
 <Coupon offer={d.offer} fine={d.fine} color={d.p} scale={0.95}/>
 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
 <Phone phone={d.phone} color={d.p} size={13}/>
-{d.web&&<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
-<div style={{width:36,height:36,background:"#fff",border:"1px solid #e5e7eb",borderRadius:3,padding:2,boxSizing:"border-box"}}>
-<img src={"https://api.qrserver.com/v1/create-qr-code/?size=80x80&data="+encodeURIComponent("https://"+d.web)} style={{width:"100%",height:"100%",display:"block"}} alt="QR"/>
-</div>
-<div style={{fontSize:7,color:"#888"}}>Scan</div>
-</div>}
+<QR web={d.web} size={36}/>
 </div>
 {d.addr&&<div style={{fontSize:8,color:"#666"}}>{d.addr}</div>}
 </div>
 </div>
 </div>);
 }
+// Default photo-bold — full-bleed photo + gradient overlay, with logo if available
 return(<div style={{width:400,height:500,position:"relative",overflow:"hidden",fontFamily:"sans-serif"}}>
 <img src={d.photo} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
 <div style={{position:"absolute",inset:0,background:"linear-gradient(180deg,"+d.d+"ee 0%,"+d.d+"22 40%,"+d.d+"dd 75%,"+d.d+"f5 100%)"}}/>
 <div style={{position:"absolute",top:14,left:14,right:14}}>
+<div style={{display:"flex",alignItems:"flex-start",gap:10}}>
+{d.logo&&<img src={d.logo} style={{width:54,height:54,borderRadius:8,objectFit:"cover",border:"2px solid rgba(255,255,255,0.55)",flexShrink:0,boxShadow:"0 2px 8px rgba(0,0,0,0.4)"}} alt="logo"/>}
+<div>
 <div style={{color:d.a,fontSize:9,fontWeight:700,letterSpacing:2,textTransform:"uppercase"}}>{d.cat}</div>
-<div style={{color:"#fff",fontWeight:900,fontSize:26,lineHeight:1.0,marginTop:3,fontFamily:"Georgia,serif",textShadow:"0 2px 8px rgba(0,0,0,0.8)"}}>{d.biz}</div>
+<div style={{color:"#fff",fontWeight:900,fontSize:d.logo?22:26,lineHeight:1.0,marginTop:3,fontFamily:"Georgia,serif",textShadow:"0 2px 8px rgba(0,0,0,0.8)"}}>{d.biz}</div>
+</div>
+</div>
 </div>
 <div style={{position:"absolute",top:"38%",left:14,right:14,textAlign:"center"}}>
 <div style={{color:"#fff",fontWeight:800,fontSize:20,lineHeight:1.2,fontStyle:"italic",textShadow:"0 2px 12px rgba(0,0,0,0.9)"}}>{d.tag}</div>
@@ -180,18 +223,14 @@ return(<div style={{width:400,height:500,position:"relative",overflow:"hidden",f
 <Coupon offer={d.offer} fine={d.fine} color={d.a} dark scale={0.9}/>
 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
 <Phone phone={d.phone} color="#fff" size={13}/>
-{d.web&&<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
-<div style={{width:36,height:36,background:"#fff",borderRadius:3,padding:2,boxSizing:"border-box"}}>
-<img src={"https://api.qrserver.com/v1/create-qr-code/?size=80x80&data="+encodeURIComponent("https://"+d.web)} style={{width:"100%",height:"100%",display:"block"}} alt="QR"/>
+<QR web={d.web} size={36}/>
 </div>
-<div style={{fontSize:7,color:"rgba(255,255,255,0.7)"}}>Scan</div>
-</div>}
-</div>
-{d.addr&&<div style={{fontSize:8,color:"rgba(255,255,255,0.6)"}}>{d.addr}{d.web?" - "+d.web:""}</div>}
+{d.addr&&<div style={{fontSize:8,color:"rgba(255,255,255,0.6)"}}>{d.addr}</div>}
 </div>
 </div>);
 }
 
+// ── L (300x400 portrait) ────────────────────────────────────────────────────
 function AdL({d,tmpl}){
 if(tmpl==="stamp"){
 return(<div style={{width:300,height:400,position:"relative",overflow:"hidden",fontFamily:"sans-serif"}}>
@@ -212,12 +251,13 @@ return(<div style={{width:300,height:400,position:"relative",overflow:"hidden",f
 </div>
 </div>);
 }
+// Default split — photo top, content bottom
 return(<div style={{width:300,height:400,display:"flex",flexDirection:"column",overflow:"hidden",background:"#fff",fontFamily:"sans-serif"}}>
 <div style={{height:150,flexShrink:0,position:"relative",overflow:"hidden"}}>
 <img src={d.photo} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/>
 <div style={{position:"absolute",inset:0,background:"linear-gradient(180deg,transparent 50%,"+d.l+" 100%)"}}/>
 </div>
-<div style={{flex:1,background:d.l,display:"flex",flexDirection:"column",justifyContent:"space-between",padding:"10px 12px"}}>
+<div style={{flex:1,background:d.l,display:"flex",flexDirection:"column",justifyContent:"space-between",padding:"10px 12px",overflow:"hidden"}}>
 <div>
 <div style={{fontSize:7,fontWeight:700,letterSpacing:2,textTransform:"uppercase",color:d.a,marginBottom:2}}>{d.cat}</div>
 <div style={{fontSize:18,fontWeight:900,color:d.d,fontFamily:"Georgia,serif",lineHeight:1.0,marginBottom:3}}>{d.biz}</div>
@@ -228,12 +268,7 @@ return(<div style={{width:300,height:400,display:"flex",flexDirection:"column",o
 <Coupon offer={d.offer} fine={d.fine} color={d.p} scale={0.85}/>
 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
 <Phone phone={d.phone} color={d.p} size={11}/>
-{d.web&&<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
-<div style={{width:30,height:30,background:"#fff",border:"1px solid #e5e7eb",borderRadius:3,padding:2,boxSizing:"border-box"}}>
-<img src={"https://api.qrserver.com/v1/create-qr-code/?size=80x80&data="+encodeURIComponent("https://"+d.web)} style={{width:"100%",height:"100%",display:"block"}} alt="QR"/>
-</div>
-<div style={{fontSize:6,color:"#888"}}>Scan</div>
-</div>}
+<QR web={d.web} size={30}/>
 </div>
 {d.addr&&<div style={{fontSize:7,color:"#555"}}>{d.addr}</div>}
 </div>
@@ -241,8 +276,98 @@ return(<div style={{width:300,height:400,display:"flex",flexDirection:"column",o
 </div>);
 }
 
-function AdM({d,w=200,h=200}){return(<div style={{width:w,height:h,display:"flex",flexDirection:"column",overflow:"hidden",fontFamily:"sans-serif",border:"none",boxSizing:"border-box",background:"#fff"}}><div style={{background:d.p,padding:"5px 8px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}><div style={{color:"#fff",fontWeight:900,fontSize:11,lineHeight:1,fontFamily:"Georgia,serif",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"55%"}}>{d.biz}</div><div style={{color:"#fff",fontSize:8,fontWeight:700,background:"rgba(0,0,0,0.25)",padding:"1px 5px",borderRadius:3,whiteSpace:"nowrap",flexShrink:0}}>{d.phone}</div></div><div style={{height:42,flexShrink:0,position:"relative",overflow:"hidden"}}><img src={d.photo} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/><div style={{position:"absolute",inset:0,background:`linear-gradient(transparent 20%,${d.l}ff 100%)`}}/></div><div style={{flex:1,padding:"4px 8px 6px",background:d.l,display:"flex",flexDirection:"column",justifyContent:"space-between"}}><div><div style={{fontSize:6,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:d.a}}>{d.cat}</div><div style={{fontSize:11,fontWeight:900,color:d.d,fontFamily:"Georgia,serif",lineHeight:1.15}}>{d.tag}</div>{(d.services||[]).length>0&&(<div style={{display:"flex",flexWrap:"wrap",gap:"0px 6px",marginTop:2}}>{(d.services||[]).slice(0,3).map((s,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:2}}><span style={{color:d.p,fontSize:5}}>●</span><span style={{fontSize:7,color:"#333",fontWeight:500}}>{s}</span></div>))}</div>)}</div><Coupon offer={d.offer} fine="" color={d.p}/></div></div>);}
+// ── M (variable w×h, defaults 200x200) ─────────────────────────────────────
+// "photo"  — color header bar + photo strip + content + compact coupon (default)
+// "banner" — full-photo cinematic with gradient overlay + bottom info strip
+// "slate"  — clean horizontal split: content left | photo right
 
+function AdM({d,w=200,h=200,tmpl="photo"}){
+
+if(tmpl==="banner"){
+// Full-photo background, dark gradient, badge top + name center + coupon/phone strip bottom
+return(<div style={{width:w,height:h,position:"relative",overflow:"hidden",fontFamily:"sans-serif"}}>
+<img src={d.photo} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
+<div style={{position:"absolute",inset:0,background:"linear-gradient(180deg,"+d.d+"55 0%,"+d.d+"11 30%,"+d.d+"cc 62%,"+d.d+"ff 100%)"}}/>
+{/* category badge */}
+<div style={{position:"absolute",top:8,left:10}}>
+<div style={{display:"inline-block",background:d.a,color:"#fff",fontSize:7,fontWeight:800,letterSpacing:2,textTransform:"uppercase",padding:"2px 7px",borderRadius:3}}>{d.cat}</div>
+</div>
+{/* business name + tagline */}
+<div style={{position:"absolute",bottom:44,left:10,right:10}}>
+<div style={{color:"#fff",fontWeight:900,fontSize:16,fontFamily:"Georgia,serif",lineHeight:1.1,textShadow:"0 2px 8px rgba(0,0,0,0.9)"}}>{d.biz}</div>
+<div style={{color:d.a,fontSize:9,fontWeight:700,marginTop:2,fontStyle:"italic",lineHeight:1.2}}>{d.tag}</div>
+</div>
+{/* bottom info strip */}
+<div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(0,0,0,0.72)",padding:"5px 10px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:6}}>
+<CouponCompact offer={d.offer} fine={d.fine} color={d.a} dark/>
+<div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2,flexShrink:0}}>
+<Phone phone={d.phone} color="#fff" size={9}/>
+{d.web&&<div style={{fontSize:7,color:"rgba(255,255,255,0.6)"}}>{d.web}</div>}
+</div>
+</div>
+</div>);
+}
+
+if(tmpl==="slate"){
+// Clean horizontal: content column (left) + full-height photo (right)
+const pw=Math.round(w*0.36);
+const cw=w-pw;
+return(<div style={{width:w,height:h,display:"flex",overflow:"hidden",fontFamily:"sans-serif",background:d.l}}>
+{/* content column */}
+<div style={{width:cw,display:"flex",flexDirection:"column",overflow:"hidden",flexShrink:0}}>
+<div style={{background:d.p,padding:"5px 8px",flexShrink:0}}>
+<div style={{color:"#fff",fontWeight:900,fontSize:11,fontFamily:"Georgia,serif",lineHeight:1.05,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{d.biz}</div>
+<div style={{color:d.a,fontSize:7,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginTop:1}}>{d.cat}</div>
+</div>
+<div style={{flex:1,padding:"5px 8px",display:"flex",flexDirection:"column",justifyContent:"space-between",overflow:"hidden"}}>
+<div>
+<div style={{fontSize:10,fontWeight:700,color:d.d,fontFamily:"Georgia,serif",lineHeight:1.2,marginBottom:5}}>{d.tag}</div>
+{(d.services||[]).slice(0,2).map((s,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:3,marginBottom:3}}><Check color={d.p} sz={9}/><span style={{fontSize:8,color:"#333",fontWeight:500,lineHeight:1.2}}>{s}</span></div>))}
+</div>
+<div>
+<CouponCompact offer={d.offer} fine={d.fine} color={d.p}/>
+<div style={{marginTop:4,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+<Phone phone={d.phone} color={d.p} size={8}/>
+<QR web={d.web} size={24}/>
+</div>
+</div>
+</div>
+</div>
+{/* photo column */}
+<div style={{flex:1,position:"relative",overflow:"hidden"}}>
+<img src={d.photo} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
+<div style={{position:"absolute",inset:0,background:"linear-gradient(90deg,"+d.l+"99 0%,transparent 35%)"}}/>
+</div>
+</div>);
+}
+
+// Default "photo" — color header + photo strip + content + compact coupon
+const photoH=Math.round(h*0.22);
+return(<div style={{width:w,height:h,display:"flex",flexDirection:"column",overflow:"hidden",fontFamily:"sans-serif",background:"#fff"}}>
+{/* header bar */}
+<div style={{background:d.p,padding:"5px 8px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+<div style={{color:"#fff",fontWeight:900,fontSize:11,lineHeight:1,fontFamily:"Georgia,serif",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{d.biz}</div>
+<div style={{color:"#fff",fontSize:8,fontWeight:700,background:"rgba(0,0,0,0.25)",padding:"1px 5px",borderRadius:3,whiteSpace:"nowrap",flexShrink:0,marginLeft:4}}>{d.phone}</div>
+</div>
+{/* photo strip */}
+<div style={{height:photoH,flexShrink:0,position:"relative",overflow:"hidden"}}>
+<img src={d.photo} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/>
+<div style={{position:"absolute",inset:0,background:`linear-gradient(transparent 20%,${d.l}ff 100%)`}}/>
+</div>
+{/* content */}
+<div style={{flex:1,padding:"4px 8px 5px",background:d.l,display:"flex",flexDirection:"column",justifyContent:"space-between",overflow:"hidden"}}>
+<div style={{overflow:"hidden"}}>
+<div style={{fontSize:6,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:d.a}}>{d.cat}</div>
+<div style={{fontSize:10,fontWeight:900,color:d.d,fontFamily:"Georgia,serif",lineHeight:1.15,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{d.tag}</div>
+{(d.services||[]).length>0&&(<div style={{display:"flex",flexWrap:"wrap",gap:"1px 6px",marginTop:2}}>{(d.services||[]).slice(0,2).map((s,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:2,flexShrink:0}}><span style={{color:d.p,fontSize:6}}>●</span><span style={{fontSize:7,color:"#333",fontWeight:500,whiteSpace:"nowrap"}}>{s}</span></div>))}</div>)}
+</div>
+{/* compact inline coupon — no scissors, no overflow */}
+{d.offer&&<CouponCompact offer={d.offer} color={d.p}/>}
+</div>
+</div>);
+}
+
+// ── S (200x200) ─────────────────────────────────────────────────────────────
 function AdS({d}){return(<div style={{width:200,height:200,overflow:"hidden",position:"relative",fontFamily:"sans-serif"}}><img src={d.photo} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}} alt=""/><div style={{position:"absolute",inset:0,background:`linear-gradient(180deg,${d.d}aa 0%,${d.d}f5 100%)`}}/><div style={{position:"absolute",inset:0,padding:"12px 10px",display:"flex",flexDirection:"column",justifyContent:"space-between",alignItems:"center",textAlign:"center"}}><div><div style={{color:d.a,fontSize:7,fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>{d.cat}</div><div style={{color:"#fff",fontSize:16,fontWeight:900,fontFamily:"Georgia,serif",lineHeight:1.0,marginTop:3}}>{d.biz}</div><div style={{color:"rgba(255,255,255,0.85)",fontSize:10,fontStyle:"italic",marginTop:4,lineHeight:1.3}}>{d.tag}</div></div>{d.offer&&(<div style={{background:d.a,padding:"6px 10px",borderRadius:4,width:"100%",boxSizing:"border-box"}}><div style={{color:"#fff",fontWeight:900,fontSize:12,lineHeight:1.1}}>{d.offer}</div></div>)}<div style={{color:"#fff",fontSize:13,fontWeight:900,lineHeight:1}}>{d.phone}</div></div></div>);}
 
 function AdHouse({w,h}){return(<div style={{width:w,height:h,background:"#0f172a",display:"flex",alignItems:"center",justifyContent:"center",gap:20,padding:"0 24px",boxSizing:"border-box"}}><div style={{width:2,height:36,background:"#991b1b",flexShrink:0}}/><div style={{textAlign:"center"}}><div style={{color:"#f1f5f9",fontWeight:900,fontSize:15,fontFamily:"Georgia,serif",letterSpacing:0.5}}>Shop, Dine & Buy Local</div><div style={{color:"rgba(255,255,255,0.4)",fontSize:9,fontFamily:"sans-serif",marginTop:2,letterSpacing:1,textTransform:"uppercase"}}>Your Ad Here · Reach 5,000 Habersham County Homes</div><div style={{color:"#991b1b",fontWeight:800,fontSize:11,fontFamily:"sans-serif",marginTop:3}}>mytownpostcard.com</div></div><div style={{width:2,height:36,background:"#991b1b",flexShrink:0}}/></div>);}
@@ -290,7 +415,7 @@ if(k==="house")return<ScaledCell spot={spot} scale={scale}><AdHouse w={spot.w} h
 if(k==="eddm") return<ScaledCell spot={spot} scale={scale}><AdEDDM w={spot.w} h={spot.h}/></ScaledCell>;
 if(k===null)   return<ScaledCell spot={spot} scale={scale}><AvailableSpot spot={spot} hovered={hov===spot.id} onClick={()=>onSel(spot)} onEnter={()=>onHov(spot.id)} onLeave={onOut}/></ScaledCell>;
 const d=ADS[k]; if(!d)return null;
-return(<ScaledCell spot={spot} scale={scale}>{spot.size==="XL"&&<AdXL d={d} tmpl={t}/>}{spot.size==="L"&&<AdL d={d} tmpl={t}/>}{spot.size==="M"&&<AdM d={d} w={spot.w} h={spot.h}/>}{spot.size==="S"&&<AdS d={d}/>}</ScaledCell>);
+return(<ScaledCell spot={spot} scale={scale}>{spot.size==="XL"&&<AdXL d={d} tmpl={t}/>}{spot.size==="L"&&<AdL d={d} tmpl={t}/>}{spot.size==="M"&&<AdM d={d} w={spot.w} h={spot.h} tmpl={t}/>}{spot.size==="S"&&<AdS d={d}/>}</ScaledCell>);
 }
 
 export default function PostcardPicker(){
@@ -301,11 +426,7 @@ const [sel,setSel]=useState(null);
 const ref=useRef(null);
 
 useEffect(()=>{
-function upd(){
-if(ref.current){
-setScale(ref.current.offsetWidth / W);
-}
-}
+function upd(){if(ref.current){setScale(ref.current.offsetWidth/W);}}
 upd();
 const ro=new ResizeObserver(upd);
 if(ref.current)ro.observe(ref.current);
@@ -317,10 +438,8 @@ const soldF=FRONT.filter(s=>s.price>0&&s.sample!==null).length;
 const soldB=BACK.filter(s=>s.price>0&&s.sample!==null).length;
 
 return(<div style={{fontFamily:"sans-serif"}}>
-{/* Mobile portrait: show rotate prompt */}
 <style>{`@media (max-width: 768px) and (orientation: portrait) { .rotate-prompt { display: flex !important; } .postcard-section { display: none !important; } } @media (min-width: 769px), (orientation: landscape) { .rotate-prompt { display: none !important; } .postcard-section { display: flex !important; } }`}</style>
 
-{/* Rotate prompt for mobile portrait */}
 <div className="rotate-prompt" style={{display:"none",position:"fixed",inset:0,background:"#0f172a",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:999,gap:24,padding:32}}>
   <div style={{fontSize:64,animation:"spin 2s linear infinite"}}>
     <style>{`@keyframes spin{0%{transform:rotate(0deg)}50%{transform:rotate(90deg)}100%{transform:rotate(90deg)}}`}</style>
@@ -331,15 +450,11 @@ return(<div style={{fontFamily:"sans-serif"}}>
   <div style={{color:"rgba(255,255,255,0.3)",fontSize:40,marginTop:8}}>🔄</div>
 </div>
 
-{/* Main postcard section */}
 <div className="postcard-section" style={{display:"flex",width:"100%",fontFamily:"sans-serif",background:"#f1f5f9",flexDirection:"column",boxSizing:"border-box",height:"100vh",padding:"12px 20px 8px",overflow:"hidden"}}>
-
-  {/* Header -- centered, compact */}
   <div style={{textAlign:"center",marginBottom:6,flexShrink:0}}>
     <div style={{fontSize:22,fontWeight:900,color:"#111",fontFamily:"Georgia,serif",letterSpacing:-0.3}}>Reserve Your Spot on the Postcard</div>
     <div style={{fontSize:12,color:"#64748b",marginTop:2}}>Click any <span style={{color:"#16a34a",fontWeight:700}}>green spot</span> below to claim yours</div>
   </div>
-  {/* Side toggle -- centered */}
   <div style={{display:"flex",justifyContent:"center",marginBottom:6,flexShrink:0}}>
     <div style={{background:"#fff",borderRadius:12,padding:4,display:"flex",gap:3,boxShadow:"0 1px 8px rgba(0,0,0,0.1)"}}>
       {[{id:"front",l:"Front Side",sold:soldF,tot:7},{id:"back",l:"Back Side",sold:soldB,tot:8}].map(s=>(
@@ -350,32 +465,17 @@ return(<div style={{fontFamily:"sans-serif"}}>
       ))}
     </div>
   </div>
-
-  {/* Postcard container -- fills remaining height at correct 12:9 ratio */}
-  {/* Shadow is 8px spread so we give 20px horizontal margin to prevent clipping */}
   <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",minHeight:0,padding:"8px 20px"}}>
-    <div ref={ref} style={{
-      width:"100%",
-      maxWidth:"calc((100vh - 160px) * 12 / 9)",
-    }}>
-      <div style={{
-        position:"relative",
-        width:"100%",
-        paddingBottom:"75%",
-        background:"#c8c8c8",
-        borderRadius:6,
-        boxShadow:"0 0 0 7px #c8c8c8, 0 0 0 8.5px #a8a8a8, 0 16px 48px rgba(0,0,0,0.28), 0 4px 12px rgba(0,0,0,0.14)",
-      }}>
+    <div ref={ref} style={{width:"100%",maxWidth:"calc((100vh - 160px) * 12 / 9)"}}>
+      <div style={{position:"relative",width:"100%",paddingBottom:"75%",background:"#c8c8c8",borderRadius:6,boxShadow:"0 0 0 7px #c8c8c8, 0 0 0 8.5px #a8a8a8, 0 16px 48px rgba(0,0,0,0.28), 0 4px 12px rgba(0,0,0,0.14)"}}>
         <div style={{position:"absolute",inset:0,overflow:"hidden",borderRadius:5,background:"#c8c8c8"}}>
           {spots.map(spot=><SpotCell key={spot.id} spot={spot} scale={scale} hov={hov} onHov={setHov} onOut={()=>setHov(null)} onSel={setSel}/>)}
         </div>
       </div>
     </div>
   </div>
+</div>
 
-</div>{/* end postcard flex container */}
-
-{/* Legend -- compact, below postcard */}
 <div style={{display:"flex",justifyContent:"center",gap:20,marginTop:8,flexWrap:"wrap",flexShrink:0}}>
   {[{bg:"linear-gradient(135deg,#f8fffe,#f0fdf4)",border:"2px solid #4ade80",l:"Available -- click to reserve"},{bg:"#fefce8",border:"2px dashed #fbbf24",l:"Reserved"},{bg:"#f1f5f9",border:"2px solid #cbd5e1",l:"Spot taken"}].map(x=>(
     <div key={x.l} style={{display:"flex",alignItems:"center",gap:7}}>
@@ -385,26 +485,7 @@ return(<div style={{fontFamily:"sans-serif"}}>
   ))}
 </div>
 
-{sel&&(
-  <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:16}} onClick={()=>setSel(null)}>
-    <div style={{background:"#fff",borderRadius:16,padding:32,maxWidth:400,width:"100%",boxShadow:"0 24px 64px rgba(0,0,0,0.3)"}} onClick={e=>e.stopPropagation()}>
-      <div style={{fontSize:22,fontWeight:900,color:"#111",fontFamily:"Georgia,serif",marginBottom:4}}>Reserve Your {SZ[sel.size]?.label}</div>
-      <div style={{fontSize:14,color:"#64748b",marginBottom:20}}>{SZ[sel.size]?.dims} &middot; ${sel.price} &middot; Reaches 5,000 homes</div>
-      <div style={{background:"#f0fdf4",border:"2px solid #22c55e",borderRadius:10,padding:"14px 18px",marginBottom:24}}>
-        <div style={{fontSize:13,color:"#166534",fontWeight:600,lineHeight:1.8}}>
-          &#10003; Clarkesville Community Mailer &mdash; Summer 2026<br/>
-          &#10003; Reaching 5,000 Habersham County homeowners<br/>
-          &#10003; Trackable QR code with website link<br/>
-          &#10003; AI-powered ad builder included free
-        </div>
-      </div>
-      <button onClick={()=>setSel(null)} style={{width:"100%",padding:"14px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#991b1b,#7f1d1d)",color:"#fff",fontWeight:900,fontSize:16,cursor:"pointer",boxShadow:"0 4px 14px rgba(127,29,29,0.4)",letterSpacing:0.3}}>
-        Build My Ad &amp; Reserve &mdash; ${sel.price}
-      </button>
-      <button onClick={()=>setSel(null)} style={{width:"100%",padding:"10px",marginTop:8,borderRadius:10,border:"1px solid #e5e7eb",background:"#f9fafb",color:"#374151",fontWeight:600,fontSize:13,cursor:"pointer"}}>Cancel</button>
-    </div>
-  </div>
-)}
+{sel&&<AdGenerator initialSize={sel.size} onComplete={()=>setSel(null)} onClose={()=>setSel(null)}/>}
 </div>
 );
 }
