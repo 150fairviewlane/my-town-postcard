@@ -1,0 +1,68 @@
+Update the back side of PostcardPickerSection to use the new Config 1 layout. Do not touch the front side, any API code, or reservation logic.
+
+STEP 1 - REPLACE THE BACK SPOTS ARRAY:
+Replace the existing BACK array with exactly this:
+
+const BACK = [
+{ id:“bxl1”, size:“XL”, price:499, x:0,   y:0,   w:400, h:500, sample:“biscuits”, tmpl:“photo” },
+{ id:“bxl2”, size:“XL”, price:499, x:400, y:0,   w:400, h:500, sample:null },
+{ id:“bxl3”, size:“XL”, price:499, x:800, y:0,   w:400, h:500, sample:“auto”, tmpl:“fade” },
+{ id:“bm1”,  size:“M”,  price:299, x:0,   y:500, w:300, h:200, sample:“salon”, tmpl:“stamp” },
+{ id:“bm2”,  size:“M”,  price:299, x:300, y:500, w:300, h:200, sample:null },
+{ id:“bm3”,  size:“M”,  price:299, x:600, y:500, w:300, h:200, sample:“pizza”, tmpl:“split” },
+{ id:“bm4”,  size:“M”,  price:299, x:900, y:500, w:300, h:200, sample:null },
+{ id:“bs1”,  size:“S”,  price:199, x:0,   y:700, w:200, h:200, sample:null },
+{ id:“bhs”,  size:“house”, price:0, x:200, y:700, w:600, h:200, sample:“house” },
+{ id:“bed”,  size:“eddm”,  price:0, x:800, y:700, w:400, h:200, sample:“eddm” },
+];
+
+This layout tiles perfectly with zero gaps:
+
+- Top row y=0 to y=500: three XL spots each 400px wide x 500px tall
+- Mid row y=500 to y=700: four Medium spots each 300px wide x 200px tall (4 x 300 = 1200 exactly)
+- Bottom row y=700 to y=900: Small (200px) + House (600px) + EDDM (400px) = 1200 exactly
+
+STEP 2 - UPDATE MEDIUM PRICE AND DIMENSIONS:
+Update the SZ lookup object so Medium shows price “$299” and dimensions ‘3” x 2”’. The old Medium was $250 and 2”x2”. The new Medium is $299 and 3”x2”.
+
+STEP 3 - UPDATE AdM TO SUPPORT VARIABLE NATURAL SIZE:
+The Medium ad template (AdM) is currently hardcoded to render at 200x200 natural pixels. Back side Mediums are 300x200 natural pixels. Update the AdM function signature to accept w and h props with defaults of 200 and 200. Use those props as the natural pixel dimensions of the outer div. This way ScaledCell will scale the template correctly whether the Medium spot is 200x200 (front) or 300x200 (back). Pass the spot natural dimensions when calling AdM inside SpotCell.
+
+STEP 4 - UPDATE BACK SIDE SPOT COUNT:
+The back side toggle button should show 8 total paid spots (3 XL + 4 M + 1 S = 8). Update the tot value for the back side from 7 to 8.
+
+STEP 5 - EQUAL GRAY BORDER ON BACK SIDE (CRITICAL):
+The front side postcard has a perfectly equal gray border using a specific technique that was carefully implemented. You must apply the EXACT same technique to the back side so the borders look identical.
+
+The technique that makes the borders equal is this: the postcard container div uses box-shadow with a spread value to create the outer gray frame, and the background color of the postcard inner div is the same gray so it shows through between ads as the inner separation lines. Each ScaledCell is offset by 3.5px on left and top, and its width and height are each reduced by 7px. This means adjacent cells have a 3.5 + 3.5 = 7px gap between them, and the outermost cells are inset 3.5px from the container edge. The 7px box-shadow spread on the outside creates the same 7px visual border. Every border line – between ads and around the outside – is exactly 7px of gray.
+
+Specifically, the ScaledCell positioning must be:
+left: spot.x * scale + 3.5
+top: spot.y * scale + 3.5
+width: spot.w * scale - 7
+height: spot.h * scale - 7
+
+The postcard container must have:
+background: “#c8c8c8”
+boxShadow: “0 0 0 7px #c8c8c8, 0 0 0 8.5px #a8a8a8, 0 16px 48px rgba(0,0,0,0.28)”
+overflow: hidden
+borderRadius: 6
+
+The inner absolute div that contains all the SpotCells must have:
+position: “absolute”
+inset: 0
+overflow: “hidden”
+background: “#c8c8c8”
+
+If the front and back sides use the same ScaledCell component and the same postcard container structure, then this is already correct and you do not need to change anything for the border. Only if the back side uses a different rendering path would you need to apply these styles separately. Verify that the back side uses the same ScaledCell and container as the front side and confirm it will inherit the same border behavior automatically.
+
+STEP 6 - VERIFY BEFORE FINISHING:
+After making changes, confirm:
+
+1. The back side shows 3 XL spots across the top (each 4 inches wide by 5 inches tall)
+1. Below that, 4 Medium spots in a row (each 3 inches wide by 2 inches tall)
+1. Below that, Small spot on far left, House Ad in the middle, EDDM indicia on the right
+1. All gray border lines between ads are equal width
+1. The gray border around the outside edges is the same width as the lines between ads
+1. Medium price shows $299 and dimensions show 3” x 2”
+1. Front side is completely unchanged

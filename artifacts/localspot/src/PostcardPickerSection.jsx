@@ -20,17 +20,21 @@ const FRONT = [
 { id:"l4",  size:"L",  price:399, x:900, y:500, w:300, h:400, sample:null       },
 ];
 
-// BACK: 1 XL + 2 L + 2 M + 2 S + house + EDDM
+// BACK: Config 1 – 3 XL (top) + 4 M (mid) + 1 S + house + EDDM (bottom)
+// y=0–500:   3 XL  each 400×500 (3×400=1200 ✓)
+// y=500–700: 4 M   each 300×200 (4×300=1200 ✓)
+// y=700–900: S(200) + house(600) + EDDM(400) = 1200 ✓
 const BACK = [
-{ id:"bxl", size:"XL",    price:499, x:0,    y:0,   w:400, h:500, sample:null   },
-{ id:"bl1", size:"L",     price:399, x:400,  y:0,   w:400, h:300, sample:"auto" },
-{ id:"bl2", size:"L",     price:399, x:800,  y:0,   w:400, h:300, sample:null   },
-{ id:"bm1", size:"M",     price:299, x:400,  y:300, w:200, h:200, sample:"vet"  },
-{ id:"bs1", size:"S",     price:199, x:600,  y:300, w:200, h:200, sample:"salon"},
-{ id:"bm2", size:"M",     price:299, x:800,  y:300, w:200, h:200, sample:null   },
-{ id:"bs2", size:"S",     price:199, x:1000, y:300, w:200, h:200, sample:null   },
-{ id:"bhs", size:"house", price:0,   x:0,    y:500, w:800, h:400, sample:"house"},
-{ id:"bed", size:"eddm",  price:0,   x:800,  y:500, w:400, h:400, sample:"eddm" },
+{ id:"bxl1", size:"XL", price:499, x:0,   y:0,   w:400, h:500, sample:"biscuits", tmpl:"photo" },
+{ id:"bxl2", size:"XL", price:499, x:400, y:0,   w:400, h:500, sample:null                     },
+{ id:"bxl3", size:"XL", price:499, x:800, y:0,   w:400, h:500, sample:"auto",     tmpl:"photo" },
+{ id:"bm1",  size:"M",  price:299, x:0,   y:500, w:300, h:200, sample:"salon",    tmpl:"stamp" },
+{ id:"bm2",  size:"M",  price:299, x:300, y:500, w:300, h:200, sample:null                     },
+{ id:"bm3",  size:"M",  price:299, x:600, y:500, w:300, h:200, sample:"pizza",    tmpl:"split" },
+{ id:"bm4",  size:"M",  price:299, x:900, y:500, w:300, h:200, sample:null                     },
+{ id:"bs1",  size:"S",  price:199, x:0,   y:700, w:200, h:200, sample:null                     },
+{ id:"bhs",  size:"house", price:0, x:200, y:700, w:600, h:200, sample:"house"                 },
+{ id:"bed",  size:"eddm",  price:0, x:800, y:700, w:400, h:200, sample:"eddm"                  },
 ];
 
 // Mr. Biscuit's uses the same single-photo template as the AdGenerator (PhotoBold style)
@@ -132,7 +136,7 @@ return(<div style={{width:300,height:400,display:"flex",flexDirection:"column",o
 </div>);
 }
 
-function AdM({d}){return(<div style={{width:200,height:200,display:"flex",flexDirection:"column",overflow:"hidden",fontFamily:"sans-serif",border:"none",boxSizing:"border-box",background:"#fff"}}><div style={{background:d.p,padding:"5px 8px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}><div style={{color:"#fff",fontWeight:900,fontSize:11,lineHeight:1,fontFamily:"Georgia,serif",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"55%"}}>{d.biz}</div><div style={{color:"#fff",fontSize:8,fontWeight:700,background:"rgba(0,0,0,0.25)",padding:"1px 5px",borderRadius:3,whiteSpace:"nowrap",flexShrink:0}}>{d.phone}</div></div><div style={{height:42,flexShrink:0,position:"relative",overflow:"hidden"}}><img src={d.photo} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/><div style={{position:"absolute",inset:0,background:`linear-gradient(transparent 20%,${d.l}ff 100%)`}}/></div><div style={{flex:1,padding:"4px 8px 6px",background:d.l,display:"flex",flexDirection:"column",justifyContent:"space-between"}}><div><div style={{fontSize:6,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:d.a}}>{d.cat}</div><div style={{fontSize:11,fontWeight:900,color:d.d,fontFamily:"Georgia,serif",lineHeight:1.15}}>{d.tag}</div>{(d.services||[]).length>0&&(<div style={{display:"flex",flexWrap:"wrap",gap:"0px 6px",marginTop:2}}>{(d.services||[]).slice(0,3).map((s,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:2}}><span style={{color:d.p,fontSize:5}}>●</span><span style={{fontSize:7,color:"#333",fontWeight:500}}>{s}</span></div>))}</div>)}</div><Coupon offer={d.offer} fine="" color={d.p}/></div></div>);}
+function AdM({d,w=200,h=200}){const photoH=Math.round(h*0.21);return(<div style={{width:w,height:h,display:"flex",flexDirection:"column",overflow:"hidden",fontFamily:"sans-serif",border:"none",boxSizing:"border-box",background:"#fff"}}><div style={{background:d.p,padding:"5px 8px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}><div style={{color:"#fff",fontWeight:900,fontSize:11,lineHeight:1,fontFamily:"Georgia,serif",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"55%"}}>{d.biz}</div><div style={{color:"#fff",fontSize:8,fontWeight:700,background:"rgba(0,0,0,0.25)",padding:"1px 5px",borderRadius:3,whiteSpace:"nowrap",flexShrink:0}}>{d.phone}</div></div><div style={{height:photoH,flexShrink:0,position:"relative",overflow:"hidden"}}><img src={d.photo} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/><div style={{position:"absolute",inset:0,background:`linear-gradient(transparent 20%,${d.l}ff 100%)`}}/></div><div style={{flex:1,padding:"4px 8px 6px",background:d.l,display:"flex",flexDirection:"column",justifyContent:"space-between"}}><div><div style={{fontSize:6,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:d.a}}>{d.cat}</div><div style={{fontSize:11,fontWeight:900,color:d.d,fontFamily:"Georgia,serif",lineHeight:1.15}}>{d.tag}</div>{(d.services||[]).length>0&&(<div style={{display:"flex",flexWrap:"wrap",gap:"0px 6px",marginTop:2}}>{(d.services||[]).slice(0,3).map((s,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:2}}><span style={{color:d.p,fontSize:5}}>●</span><span style={{fontSize:7,color:"#333",fontWeight:500}}>{s}</span></div>))}</div>)}</div><Coupon offer={d.offer} fine="" color={d.p}/></div></div>);}
 
 // S (200x200) – photo background, condensed info square
 function AdS({d}){return(<div style={{width:200,height:200,overflow:"hidden",position:"relative",fontFamily:"sans-serif"}}><img src={d.photo} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}} alt=""/><div style={{position:"absolute",inset:0,background:`linear-gradient(180deg,${d.d}aa 0%,${d.d}f5 100%)`}}/><div style={{position:"absolute",inset:0,padding:"12px 10px",display:"flex",flexDirection:"column",justifyContent:"space-between",alignItems:"center",textAlign:"center"}}><div><div style={{color:d.a,fontSize:7,fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>{d.cat}</div><div style={{color:"#fff",fontSize:16,fontWeight:900,fontFamily:"Georgia,serif",lineHeight:1.0,marginTop:3}}>{d.biz}</div><div style={{color:"rgba(255,255,255,0.85)",fontSize:10,fontStyle:"italic",marginTop:4,lineHeight:1.3}}>{d.tag}</div></div>{d.offer&&(<div style={{background:d.a,padding:"6px 10px",borderRadius:4,width:"100%",boxSizing:"border-box"}}><div style={{color:"#fff",fontWeight:900,fontSize:12,lineHeight:1.1}}>{d.offer}</div></div>)}<div style={{color:"#fff",fontSize:13,fontWeight:900,lineHeight:1}}>{d.phone}</div></div></div>);}
@@ -182,7 +186,7 @@ if(k==="house")return<ScaledCell spot={spot} scale={scale}><AdHouse w={spot.w} h
 if(k==="eddm") return<ScaledCell spot={spot} scale={scale}><AdEDDM w={spot.w} h={spot.h}/></ScaledCell>;
 if(k===null)   return<ScaledCell spot={spot} scale={scale}><AvailableSpot spot={spot} hovered={hov===spot.id} onClick={()=>onSel(spot)} onEnter={()=>onHov(spot.id)} onLeave={onOut}/></ScaledCell>;
 const d=ADS[k]; if(!d)return null;
-return(<ScaledCell spot={spot} scale={scale}>{spot.size==="XL"&&<AdXL d={d} tmpl={t}/>}{spot.size==="L"&&<AdL d={d} tmpl={t}/>}{spot.size==="M"&&<AdM d={d}/>}{spot.size==="S"&&<AdS d={d}/>}</ScaledCell>);
+return(<ScaledCell spot={spot} scale={scale}>{spot.size==="XL"&&<AdXL d={d} tmpl={t}/>}{spot.size==="L"&&<AdL d={d} tmpl={t}/>}{spot.size==="M"&&<AdM d={d} w={spot.w} h={spot.h}/>}{spot.size==="S"&&<AdS d={d}/>}</ScaledCell>);
 }
 
 export default function PostcardPicker(){
@@ -234,7 +238,7 @@ return(<div style={{fontFamily:"sans-serif"}}>
   {/* Side toggle -- centered */}
   <div style={{display:"flex",justifyContent:"center",marginBottom:6,flexShrink:0}}>
     <div style={{background:"#fff",borderRadius:12,padding:4,display:"flex",gap:3,boxShadow:"0 1px 8px rgba(0,0,0,0.1)"}}>
-      {[{id:"front",l:"Front Side",sold:soldF,tot:7},{id:"back",l:"Back Side",sold:soldB,tot:7}].map(s=>(
+      {[{id:"front",l:"Front Side",sold:soldF,tot:7},{id:"back",l:"Back Side",sold:soldB,tot:8}].map(s=>(
         <button key={s.id} onClick={()=>setSide(s.id)} style={{padding:"7px 22px",borderRadius:9,border:"none",cursor:"pointer",background:side===s.id?"linear-gradient(135deg,#991b1b,#7f1d1d)":"transparent",color:side===s.id?"#fff":"#64748b",fontWeight:700,fontSize:13,transition:"all 0.18s",lineHeight:1.3}}>
           {s.l}<br/>
           <span style={{fontSize:10,fontWeight:400,opacity:0.8}}>{s.sold} of {s.tot} sold</span>
