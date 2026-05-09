@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from "react";
+import { useLocation } from "wouter";
+import { useGetActiveCampaign, useReserveSpot } from "@workspace/api-client-react";
 import AdGenerator from "./AdGenerator";
 
 // Natural canvas: 1200x900 = 12"x9" landscape at 100px per inch
@@ -418,12 +420,49 @@ const d=ADS[k]; if(!d)return null;
 return(<ScaledCell spot={spot} scale={scale}>{spot.size==="XL"&&<AdXL d={d} tmpl={t}/>}{spot.size==="L"&&<AdL d={d} tmpl={t}/>}{spot.size==="M"&&<AdM d={d} w={spot.w} h={spot.h} tmpl={t}/>}{spot.size==="S"&&<AdS d={d}/>}</ScaledCell>);
 }
 
+const SIZE_MAP = { XL: "xl", L: "large", M: "medium", S: "small" };
+
 export default function PostcardPicker(){
 const [side,setSide]=useState("front");
 const [scale,setScale]=useState(0.5);
 const [hov,setHov]=useState(null);
 const [sel,setSel]=useState(null);
+const [reserving,setReserving]=useState(false);
+const [reserveError,setReserveError]=useState(null);
 const ref=useRef(null);
+const [,navigate]=useLocation();
+const {data:campaign}=useGetActiveCampaign();
+const reserveMutation=useReserveSpot();
+
+const handleComplete=async(formData)=>{
+  if(!campaign){setReserveError("Campaign not found. Please refresh and try again.");return;}
+  const apiSize=SIZE_MAP[sel?.size];
+  const realSpot=campaign.spots?.find(s=>s.size===apiSize&&s.side===side&&s.status==="available");
+  if(!realSpot){
+    setReserveError("Sorry, that spot size is no longer available. Please choose another.");
+    return;
+  }
+  setReserving(true);
+  setReserveError(null);
+  try{
+    const result=await reserveMutation.mutateAsync({
+      id:realSpot.id,
+      data:{
+        businessName:formData.businessName,
+        businessCategory:formData.industry,
+        contactEmail:formData.email,
+        contactPhone:formData.phone||undefined,
+        website:formData.website||undefined,
+      },
+    });
+    setSel(null);
+    navigate(`/checkout/${result.id}`);
+  }catch(err){
+    setReserveError(err?.data?.error||err?.message||"Something went wrong. Please try again.");
+  }finally{
+    setReserving(false);
+  }
+};
 
 useEffect(()=>{
 function upd(){if(ref.current){setScale(ref.current.offsetWidth/W);}}
@@ -485,7 +524,7 @@ return(<div style={{fontFamily:"sans-serif"}}>
   ))}
 </div>
 
-{sel&&<AdGenerator initialSize={sel.size} onComplete={()=>setSel(null)} onClose={()=>setSel(null)}/>}
+{sel&&<AdGenerator initialSize={sel.size} onComplete={handleComplete} onClose={()=>{setSel(null);setReserveError(null);}} isReserving={reserving} reserveError={reserveError}/>}
 </div>
 );
 }

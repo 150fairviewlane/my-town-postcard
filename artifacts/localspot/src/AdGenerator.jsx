@@ -874,7 +874,7 @@ Uploaded<br />
 //
 //   MAIN COMPONENT – Full UI with form, template picker, preview
 //
-export default function AdGenerator({ initialSize = "L", onComplete, onClose }) {
+export default function AdGenerator({ initialSize = "L", onComplete, onClose, isReserving = false, reserveError = null }) {
 const [sizeKey, setSizeKey] = useState(initialSize);
 const [step, setStep] = useState(1);
 const [formData, setFormData] = useState({
@@ -1193,6 +1193,7 @@ boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
             </div>
 
             <button
+              disabled={isReserving}
               onClick={() => {
                 if (!formData.email.trim()) {
                   setEmailError(true);
@@ -1203,12 +1204,20 @@ boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
                 onComplete?.({ sizeKey, price: sizeInfo.price, template: selectedTemplate, ...formData });
               }}
               style={{
-                marginTop: 20, padding: "14px 32px", background: "#991b1b",
+                marginTop: 20, padding: "14px 32px",
+                background: isReserving ? "#7f1d1d" : "#991b1b",
                 color: "#fff", border: "none", borderRadius: 10, fontSize: 15,
-                fontWeight: 800, cursor: "pointer", letterSpacing: 0.5,
+                fontWeight: 800, cursor: isReserving ? "not-allowed" : "pointer",
+                letterSpacing: 0.5, opacity: isReserving ? 0.75 : 1,
+                transition: "all 0.15s",
               }}>
-              Approve &amp; Reserve Spot -- ${sizeInfo.price}
+              {isReserving ? "Reserving your spot…" : `Approve & Reserve Spot — $${sizeInfo.price}`}
             </button>
+            {reserveError && (
+              <div style={{ color: "#fca5a5", fontSize: 13, marginTop: 10, textAlign: "center", maxWidth: 340 }}>
+                {reserveError}
+              </div>
+            )}
           </>
         ) : (
           <div style={{
