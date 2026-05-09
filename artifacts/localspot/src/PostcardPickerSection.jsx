@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useGetActiveCampaign, useReserveSpot } from "@workspace/api-client-react";
+import { useGetActiveCampaign, useReserveSpot, getGetActiveCampaignQueryKey } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import AdGenerator from "./AdGenerator";
 
 // Natural canvas: 1200x900 = 12"x9" landscape at 100px per inch
@@ -420,7 +421,10 @@ const d=ADS[k]; if(!d)return null;
 return(<ScaledCell spot={spot} scale={scale}>{spot.size==="XL"&&<AdXL d={d} tmpl={t}/>}{spot.size==="L"&&<AdL d={d} tmpl={t}/>}{spot.size==="M"&&<AdM d={d} w={spot.w} h={spot.h} tmpl={t}/>}{spot.size==="S"&&<AdS d={d}/>}</ScaledCell>);
 }
 
-const SIZE_MAP = { XL: "xl", L: "large", M: "medium", S: "small" };
+// Maps each static demo spot ID to its exact grid_area in the DB (front is 1:1 positional)
+const FRONT_GRID_MAP = { xl1:"mb", xl2:"dn", xl3:"re", l1:"l1", l2:"l2", l3:"l3", l4:"l4" };
+// Back demo layout doesn't perfectly match DB layout, so try sizes in priority order
+const BACK_SIZE_PRIORITY = { XL:["xl","large"], L:["large"], M:["medium"], S:["small"] };
 
 export default function PostcardPicker(){
 const [side,setSide]=useState("front");
@@ -431,20 +435,42 @@ const [reserving,setReserving]=useState(false);
 const [reserveError,setReserveError]=useState(null);
 const ref=useRef(null);
 const [,navigate]=useLocation();
+const queryClient=useQueryClient();
 const {data:campaign}=useGetActiveCampaign();
 const reserveMutation=useReserveSpot();
 
 const handleComplete=async(formData)=>{
   if(!campaign){setReserveError("Campaign not found. Please refresh and try again.");return;}
-  const apiSize=SIZE_MAP[sel?.size];
-  const realSpot=campaign.spots?.find(s=>s.size===apiSize&&s.side===side&&s.status==="available");
-  if(!realSpot){
-    setReserveError("Sorry, that spot size is no longer available. Please choose another.");
-    return;
-  }
   setReserving(true);
   setReserveError(null);
   try{
+    // Refresh campaign data so we don't pick a spot that was just taken
+    const fresh=await queryClient.fetchQuery({queryKey:getGetActiveCampaignQueryKey(),staleTime:0});
+    const spots=fresh?.spots||[];
+
+    let realSpot=null;
+    if(side==="front"){
+      // Use direct positional mapping — each demo spot corresponds to an exact DB grid_area
+      const gridArea=FRONT_GRID_MAP[sel?.id];
+      if(!gridArea){setReserveError("Unknown spot position. Please close and try again.");setReserving(false);return;}
+      realSpot=spots.find(s=>s.gridArea===gridArea);
+      if(!realSpot||realSpot.status!=="available"){
+        setReserveError("Sorry, that spot was just taken. Please close and choose another.");
+        setReserving(false);return;
+      }
+    }else{
+      // Back: demo and DB layouts differ — find first available spot by size priority
+      const sizeTry=BACK_SIZE_PRIORITY[sel?.size]??["medium"];
+      for(const sz of sizeTry){
+        realSpot=spots.find(s=>s.size===sz&&s.side==="back"&&s.status==="available");
+        if(realSpot)break;
+      }
+      if(!realSpot){
+        setReserveError("Sorry, no spots of that size are currently available.");
+        setReserving(false);return;
+      }
+    }
+
     const result=await reserveMutation.mutateAsync({
       id:realSpot.id,
       data:{
