@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { useIsMobile } from "../hooks/use-mobile";
+import { MailboxLogo } from "../components/MailboxLogo";
 
 const RED = "#7B1418";
 const GOLD = "#d4a017";
@@ -30,14 +31,14 @@ function NavBar() {
       position: "sticky", top: 0, zIndex: 50, background: "#fff",
       borderBottom: "1px solid #e5e7eb",
       padding: isMobile ? "0 16px" : "0 32px", display: "flex", alignItems: "center",
-      justifyContent: "space-between", height: 64, gap: 12,
+      justifyContent: "space-between", height: isMobile ? 72 : 92, gap: 12,
     }}>
       <Link href="/"
-        style={{ display: "flex", alignItems: "center", gap: 10,
+        style={{ display: "flex", alignItems: "center", gap: 14,
           textDecoration: "none", color: "inherit", minWidth: 0 }}>
-        <span style={{ fontSize: isMobile ? 24 : 32, flexShrink: 0 }}>📮</span>
+        <MailboxLogo height={isMobile ? 44 : 64} />
         <div style={{
-          fontWeight: 900, fontSize: isMobile ? 18 : 30, color: "#111",
+          fontWeight: 900, fontSize: isMobile ? 22 : 40, color: "#111",
           fontFamily: "Georgia,serif", lineHeight: 1,
           whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
         }}>
@@ -68,10 +69,10 @@ function NavBar() {
           {menuOpen && (
             <>
               <div onClick={() => setMenuOpen(false)} style={{
-                position: "fixed", inset: 0, top: 64, background: "rgba(0,0,0,0.4)", zIndex: 40,
+                position: "fixed", inset: 0, top: 72, background: "rgba(0,0,0,0.4)", zIndex: 40,
               }} />
               <nav style={{
-                position: "fixed", top: 64, left: 0, right: 0, background: "#fff",
+                position: "fixed", top: 72, left: 0, right: 0, background: "#fff",
                 borderBottom: "1px solid #e5e7eb", padding: "12px 16px 16px",
                 display: "flex", flexDirection: "column", gap: 4, zIndex: 41,
                 boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
