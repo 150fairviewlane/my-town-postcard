@@ -1109,25 +1109,6 @@ boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
       {/* LEFT: form */}
       <div style={{ width: 380, padding: "20px 24px", overflowY: "auto", borderRight: "1px solid #e5e7eb", background: "#fff", flexShrink: 0 }}>
 
-        {/* Size selector */}
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 12, fontWeight: 800, color: "#111", marginBottom: 8, letterSpacing: 1, textTransform: "uppercase" }}>
-            Ad Size
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-            {Object.entries(AD_SIZES).map(([k, s]) => (
-              <button key={k} onClick={() => setSizeKey(k)}
-                style={{
-                  padding: "8px 10px", borderRadius: 8, border: `2px solid ${sizeKey === k ? "#991b1b" : "#e5e7eb"}`,
-                  background: sizeKey === k ? "#fef2f2" : "#fff", cursor: "pointer", textAlign: "left",
-                }}>
-                <div style={{ fontWeight: 800, fontSize: 12, color: "#111" }}>{s.label}</div>
-                <div style={{ fontSize: 10, color: "#6b7280", marginTop: 1 }}>${s.price} - {s.ratio}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Form fields */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div>
