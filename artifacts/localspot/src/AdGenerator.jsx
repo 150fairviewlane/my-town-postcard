@@ -244,6 +244,11 @@ const photo = data.photo || ind.photos[0];
 const isXL = sizeKey === "XL", isL = sizeKey === "L", isM = sizeKey === "M", isS = sizeKey === "S";
 const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.65;
 const edit = (field) => (val) => onEdit(field, val);
+const editMenu = (i) => (val) => onEdit("menuItems", data.menuItems.map((m, j) => {
+  if (j !== i) return m;
+  if (typeof m === "object") return { ...m, text: val };
+  return val;
+}));
 
 // ef(): spread onto EditableText to enable the resize toolbar
 const ef = (key) => ({
@@ -276,6 +281,21 @@ return (
     <div style={{ position: "absolute", top: "42%", left: 12*fScale, right: 12*fScale, textAlign: "center" }}>
       <EditableText value={data.tagline || ind.taglines[0]} onChange={edit("tagline")} {...ef("tagline")}
         style={{ color: "#fff", fontWeight: 800, fontSize: (isXL?22:isL?18:14)*fScale, lineHeight: 1.1, fontStyle: "italic", textShadow: "0 2px 12px rgba(0,0,0,0.8)", textAlign: "center" }} />
+    </div>
+  )}
+
+  {/* Menu / services list — shown on all sizes except S */}
+  {!isS && (
+    <div style={{ position: "absolute", top: "60%", left: 12*fScale, right: 12*fScale, display: "flex", flexDirection: "column", gap: 3*fScale }}>
+      {getActiveItems(data.menuItems, ind.menu).slice(0, isM ? 2 : 3).map((item, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: 6*fScale }}>
+          <div style={{ width: 12*fScale, height: 12*fScale, borderRadius: "50%", background: ind.colors.primary, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ color: "#fff", fontSize: 7*fScale, fontWeight: 900 }}>✓</span>
+          </div>
+          <EditableText value={item} onChange={editMenu(i)}
+            style={{ color: "#fff", fontSize: 9*fScale, fontWeight: 600, fontFamily: "sans-serif", textShadow: "0 1px 4px rgba(0,0,0,0.8)" }} />
+        </div>
+      ))}
     </div>
   )}
 
