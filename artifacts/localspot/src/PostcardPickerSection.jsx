@@ -515,12 +515,12 @@ return(<div style={{fontFamily:"sans-serif"}}>
   <div style={{color:"rgba(255,255,255,0.3)",fontSize:40,marginTop:8}}>🔄</div>
 </div>
 
-<div className="postcard-section" style={{display:"flex",width:"100%",fontFamily:"sans-serif",background:"transparent",flexDirection:"column",boxSizing:"border-box",height:"100vh",padding:"12px 20px 8px",overflow:"hidden"}}>
-  <div style={{textAlign:"center",marginBottom:6,flexShrink:0}}>
+<div className="postcard-section" style={{display:"flex",width:"100%",fontFamily:"sans-serif",background:"transparent",flexDirection:"column",boxSizing:"border-box",height:"100vh",padding:"8px 20px 8px",overflow:"hidden"}}>
+  <div style={{textAlign:"center",marginBottom:2,flexShrink:0}}>
     <div style={{fontSize:28,fontWeight:900,color:"#111",fontFamily:"Georgia,serif",letterSpacing:-0.3}}>Reserve Your Spot on the Postcard</div>
-    <div style={{fontSize:12,color:"#64748b",marginTop:2}}>Click any <span style={{color:"#16a34a",fontWeight:700}}>green spot</span> below to claim yours</div>
+    <div style={{fontSize:14,color:"#64748b",marginTop:1}}>Click any <span style={{color:"#16a34a",fontWeight:700}}>green spot</span> below to claim yours</div>
   </div>
-  <div style={{display:"flex",justifyContent:"center",marginBottom:6,flexShrink:0}}>
+  <div style={{display:"flex",justifyContent:"center",marginBottom:2,flexShrink:0}}>
     <div style={{background:"#fff",borderRadius:12,padding:4,display:"flex",gap:3,boxShadow:"0 1px 8px rgba(0,0,0,0.1)"}}>
       {[{id:"front",l:"Front Side",sold:soldF,tot:7},{id:"back",l:"Back Side",sold:soldB,tot:8}].map(s=>(
         <button key={s.id} onClick={()=>setSide(s.id)} style={{padding:"7px 22px",borderRadius:9,border:"none",cursor:"pointer",background:side===s.id?"linear-gradient(135deg,#991b1b,#7f1d1d)":"transparent",color:side===s.id?"#fff":"#64748b",fontWeight:700,fontSize:13,transition:"all 0.18s",lineHeight:1.3}}>
@@ -530,7 +530,7 @@ return(<div style={{fontFamily:"sans-serif"}}>
       ))}
     </div>
   </div>
-  <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",minHeight:0,padding:"8px 20px"}}>
+  <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",minHeight:0,padding:"4px 20px 8px"}}>
     <div ref={ref} style={{width:"100%",maxWidth:"calc((100vh - 160px) * 12 / 9)"}}>
       <div style={{position:"relative",width:"100%",paddingBottom:"75%",background:"#c8c8c8",borderRadius:6,boxShadow:"0 0 0 7px #c8c8c8, 0 0 0 8.5px #a8a8a8, 0 16px 48px rgba(0,0,0,0.28), 0 4px 12px rgba(0,0,0,0.14)"}}>
         <div style={{position:"absolute",inset:0,overflow:"hidden",borderRadius:5,background:"#c8c8c8"}}>
@@ -541,7 +541,7 @@ return(<div style={{fontFamily:"sans-serif"}}>
   </div>
 </div>
 
-<div style={{display:"flex",justifyContent:"center",gap:20,marginTop:8,flexWrap:"wrap",flexShrink:0}}>
+<div style={{display:"flex",justifyContent:"center",gap:20,marginTop:2,flexWrap:"wrap",flexShrink:0}}>
   {[{bg:"linear-gradient(135deg,#f8fffe,#f0fdf4)",border:"2px solid #4ade80",l:"Available -- click to reserve"},{bg:"#f1f5f9",border:"2px solid #cbd5e1",l:"Spot taken"}].map(x=>(
     <div key={x.l} style={{display:"flex",alignItems:"center",gap:7}}>
       <div style={{width:20,height:20,background:x.bg,border:x.border,borderRadius:4,flexShrink:0}}/>
