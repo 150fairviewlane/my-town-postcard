@@ -300,8 +300,9 @@ size={36 * fScale} bg={ind.colors.primary} color="#fff" border={`2px solid #fff`
     </div>
 
     {/* Middle: editable services list -- show on L and XL and M */}
+    {!isS && (
     <div style={{ display: "flex", flexDirection: "column", gap: 3*fScale, margin: `${5*fScale}px 0` }}>
-        {getActiveItems(data.menuItems, ind.menu).slice(0, isS ? 2 : 4).map((item, i) => (
+        {getActiveItems(data.menuItems, ind.menu).slice(0, 4).map((item, i) => (
           <div key={i} style={{ display: "flex", gap: 6, alignItems: "center" }}>
             <div style={{ width: 14*fScale, height: 14*fScale, borderRadius: "50%", background: ind.colors.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <span style={{ color: "#fff", fontSize: 8*fScale, fontWeight: 900 }}>&#10003;</span>
