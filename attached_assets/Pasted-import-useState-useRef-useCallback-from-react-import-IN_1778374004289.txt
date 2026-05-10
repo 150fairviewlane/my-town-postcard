@@ -39,7 +39,7 @@ position: “relative”,
 
 if (editing) {
 const sharedInputStyle = {
-...style,
+…style,
 background: “rgba(0,0,0,0.55)”,
 border: “none”,
 outline: “2px solid #fff”,
@@ -71,7 +71,7 @@ style={sharedInputStyle} />
 
 return (
 <div onClick={startEdit} title=“Click to edit”
-style={{ ...style, ...editHoverStyle, display: style.display || “block” }}
+style={{ …style, …editHoverStyle, display: style.display || “block” }}
 className=“editable-text”>
 {value || <span style={{ opacity: 0.4, fontStyle: “italic” }}>{placeholder}</span>}
 {/* Tiny pencil hint on hover */}
@@ -176,6 +176,8 @@ return (
 <div style={{ width: “100%”, height: “100%”, position: “relative”, overflow: “hidden”, fontFamily: “Georgia, serif” }}>
 <img src={photo} alt=”” style={{ position: “absolute”, inset: 0, width: “100%”, height: “100%”, objectFit: “cover” }} />
 <div style={{ position: “absolute”, inset: 0, background: `linear-gradient(180deg, ${ind.colors.dark}99 0%, ${ind.colors.dark}55 40%, ${ind.colors.dark}f0 100%)` }} />
+
+```
   {/* Top: logo + name */}
   <div style={{ position: "absolute", top: 0, left: 0, right: 0, padding: `${10*fScale}px ${12*fScale}px`, display: "flex", alignItems: "center", gap: 8*fScale }}>
     <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji} size={36*fScale} bg={`${ind.colors.primary}cc`} color="#fff" />
@@ -223,6 +225,8 @@ return (
     </div>
   </div>
 </div>
+```
+
 );
 }
 
@@ -240,7 +244,7 @@ const isVertical = isXL;
 const edit = (field) => (val) => onEdit(field, val);
 const editMenu = (i) => (val) => onEdit(“menuItems”, data.menuItems.map((m, j) => {
 if (j !== i) return m;
-if (typeof m === “object”) return { ...m, text: val };
+if (typeof m === “object”) return { …m, text: val };
 return val;
 })); // XL goes photo-on-top, others side-by-side
 
@@ -267,6 +271,8 @@ position: “absolute”, top: 8 * fScale, left: 8 * fScale,
 size={36 * fScale} bg={ind.colors.primary} color=”#fff” border={`2px solid #fff`} />
 </div>
 </div>
+
+```
   {/* Content half */}
   <div style={{ flex: 1, padding: `${10*fScale}px ${12*fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", background: ind.colors.light, minWidth: 0 }}>
     {/* Top */}
@@ -324,6 +330,8 @@ size={36 * fScale} bg={ind.colors.primary} color=”#fff” border={`2px solid #
     </div>
   </div>
 </div>
+```
+
 );
 }
 
@@ -340,7 +348,7 @@ const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.65;
 const edit = (field) => (val) => onEdit(field, val);
 const editMenu = (i) => (val) => onEdit(“menuItems”, data.menuItems.map((m, j) => {
 if (j !== i) return m;
-if (typeof m === “object”) return { ...m, text: val };
+if (typeof m === “object”) return { …m, text: val };
 return val;
 }));
 
@@ -370,6 +378,8 @@ borderRadius: 4, fontFamily: “sans-serif”, whiteSpace: “nowrap”,
 }} />
 )}
 </div>
+
+```
   {/* Photo strip -- only render photos that exist, max 2 to prevent broken middle image */}
   {!isS && (
     <div style={{ display: "flex", gap: 1, height: isXL ? "30%" : isL ? "35%" : "40%", flexShrink: 0 }}>
@@ -431,6 +441,8 @@ borderRadius: 4, fontFamily: “sans-serif”, whiteSpace: “nowrap”,
     </div>
   </div>
 </div>
+```
+
 );
 }
 
@@ -463,6 +475,8 @@ position: “absolute”, inset: 0,
 background: `linear-gradient(180deg, ${ind.colors.dark}50 0%, ${ind.colors.dark}cc 100%)`
 }} />
 </div>
+
+```
   {/* Top: emergency/feature badge */}
   <div style={{
     position: "absolute", top: 8 * fScale, left: 10 * fScale, zIndex: 3,
@@ -530,6 +544,8 @@ background: `linear-gradient(180deg, ${ind.colors.dark}50 0%, ${ind.colors.dark}
     </div>
   </div>
 </div>
+```
+
 );
 }
 
@@ -567,6 +583,8 @@ return (
 width: “100%”, height: “100%”, position: “relative”, overflow: “hidden”,
 background: leftBg, fontFamily: “sans-serif”,
 }}>
+
+```
   {/* Right: photo that fades out to the left */}
   <div style={{
     position: "absolute",
@@ -768,6 +786,8 @@ background: leftBg, fontFamily: “sans-serif”,
     </div>
   )}
 </div>
+```
+
 );
 }
 
@@ -895,13 +915,13 @@ const emailRef = useRef(null);
 const handleIndustryChange = (e) => {
 const industry = e.target.value;
 const defaultMenu = INDUSTRIES[industry]?.menu || [];
-setFormData(d => ({ ...d, industry, menuItems: [...defaultMenu] }));
+setFormData(d => ({ …d, industry, menuItems: […defaultMenu] }));
 if (industry) setSelectedTemplate(suggestTemplate(industry));
 };
 
 // Handler for inline edits made directly in the preview
 const handleInlineEdit = useCallback((field, value) => {
-setFormData(d => ({ ...d, [field]: value }));
+setFormData(d => ({ …d, [field]: value }));
 }, []);
 
 const dims = getRenderDimensions(sizeKey);
@@ -919,6 +939,8 @@ background: “#f8fafc”, borderRadius: 18, width: “100%”, maxWidth: 1280, 
 overflow: “hidden”, display: “flex”, flexDirection: “column”,
 boxShadow: “0 40px 100px rgba(0,0,0,0.4)”, fontFamily: “system-ui, sans-serif”,
 }}>
+
+```
     {/* Header */}
     <div style={{
       padding: "16px 24px", borderBottom: "1px solid #e5e7eb", background: "#fff",
@@ -1286,6 +1308,8 @@ boxShadow: “0 40px 100px rgba(0,0,0,0.4)”, fontFamily: “system-ui, sans-se
     </div>
   </div>
 </div>
+```
+
 );
 }
 
