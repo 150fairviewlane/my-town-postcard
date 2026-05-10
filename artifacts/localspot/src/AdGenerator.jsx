@@ -102,8 +102,8 @@ M:  { label: "Medium",      price: 250, ratio: "3:2",  width: 3, height: 2,   de
 S:  { label: "Small",       price: 199, ratio: "2:2",  width: 2, height: 2,   desc: "Affordable local reach" },
 };
 
-// 4 visually distinct template styles
-const TEMPLATE_STYLES = ["photo-bold", "split-clean", "magazine", "stamp"];
+// 5 visually distinct template styles
+const TEMPLATE_STYLES = ["photo-bold", "split-clean", "magazine", "stamp", "fade-out"];
 
 //  Helper: Logo Badge with fallback
 function LogoBadge({ logo, name, emoji, size = 40, bg = "rgba(255,255,255,0.15)", color = "#fff", border }) {
@@ -171,6 +171,11 @@ const photo = data.photo || ind.photos[0];
 const isXL = sizeKey === "XL", isL = sizeKey === "L", isM = sizeKey === "M", isS = sizeKey === "S";
 const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.65;
 const edit = (field) => (val) => onEdit(field, val);
+const editMenu = (i) => (val) => onEdit("menuItems", data.menuItems.map((m, j) => {
+  if (j !== i) return m;
+  const base = typeof m === "object" ? m : { text: m, enabled: true };
+  return { ...base, text: val };
+}));
 
 return (
 <div style={{ width: "100%", height: "100%", position: "relative", overflow: "hidden", fontFamily: "Georgia, serif" }}>
@@ -191,9 +196,22 @@ return (
 
   {/* Center: tagline */}
   {!isS && (
-    <div style={{ position: "absolute", top: "42%", left: 12*fScale, right: 12*fScale, textAlign: "center" }}>
+    <div style={{ position: "absolute", top: "38%", left: 12*fScale, right: 12*fScale, textAlign: "center" }}>
       <EditableText value={data.tagline || ind.taglines[0]} onChange={edit("tagline")}
         style={{ color: "#fff", fontWeight: 800, fontSize: (isXL?22:isL?18:14)*fScale, lineHeight: 1.1, fontStyle: "italic", textShadow: "0 2px 12px rgba(0,0,0,0.8)", textAlign: "center" }} />
+    </div>
+  )}
+
+  {/* Menu items: centered pill row, shown on XL and L only */}
+  {(isXL || isL) && (
+    <div style={{ position: "absolute", top: isXL ? "58%" : "62%", left: 12*fScale, right: 12*fScale, display: "flex", flexWrap: "wrap", justifyContent: "center", gap: `${4*fScale}px ${8*fScale}px` }}>
+      {getActiveItems(data.menuItems, ind.menu).slice(0, 4).map((item, i) => (
+        <div key={i} style={{ background: "rgba(0,0,0,0.45)", borderRadius: 20, padding: `${3*fScale}px ${9*fScale}px`, display: "flex", alignItems: "center", gap: 5*fScale }}>
+          <span style={{ color: ind.colors.accent, fontSize: 9*fScale, lineHeight: 1 }}>&#8226;</span>
+          <EditableText value={item} onChange={editMenu(i)}
+            style={{ color: "#fff", fontSize: 9*fScale, fontFamily: "sans-serif", fontWeight: 600, whiteSpace: "nowrap" }} />
+        </div>
+      ))}
     </div>
   )}
 
