@@ -388,10 +388,10 @@ function AvailableSpot({spot,hovered,onClick,onEnter,onLeave}){
 const info=SZ[spot.size]||{};
 const isXL=spot.size==="XL",isL=spot.size==="L",isM=spot.size==="M";
 const csz=isXL?80:isL?60:isM?44:28;
-const lsz=isXL?20:isL?16:isM?13:9;
-const psz=isXL?34:isL?26:isM?20:12;
-const dsz=isXL?14:isL?11:isM?10:7;
-const showBtn=isXL||isL||isM;
+const lsz=isXL?20:isL?16:isM?13:11;
+const psz=isXL?34:isL?26:isM?20:15;
+const dsz=isXL?14:isL?11:isM?10:9;
+const showBtn=true;
 const bh=isXL?44:isL?34:26;
 const bf=isXL?13:isL?11:10;
 return(
@@ -517,7 +517,7 @@ return(<div style={{fontFamily:"sans-serif"}}>
 
 <div className="postcard-section" style={{display:"flex",width:"100%",fontFamily:"sans-serif",background:"transparent",flexDirection:"column",boxSizing:"border-box",height:"100vh",padding:"8px 20px 8px",overflow:"hidden"}}>
   <div style={{textAlign:"center",marginBottom:2,flexShrink:0}}>
-    <div style={{fontSize:28,fontWeight:900,color:"#111",fontFamily:"Georgia,serif",letterSpacing:-0.3}}>Reserve Your Spot on the Postcard</div>
+    <div style={{fontSize:22,fontWeight:900,color:"#111",fontFamily:"Georgia,serif",letterSpacing:-0.3}}>Reserve Your Spot on the Postcard</div>
     <div style={{fontSize:14,color:"#64748b",marginTop:1}}>Click any <span style={{color:"#16a34a",fontWeight:700}}>green spot</span> below to claim yours</div>
   </div>
   <div style={{display:"flex",justifyContent:"center",marginBottom:2,flexShrink:0}}>
@@ -542,12 +542,7 @@ return(<div style={{fontFamily:"sans-serif"}}>
 </div>
 
 <div style={{display:"flex",justifyContent:"center",gap:20,marginTop:2,flexWrap:"wrap",flexShrink:0}}>
-  {[{bg:"linear-gradient(135deg,#f8fffe,#f0fdf4)",border:"2px solid #4ade80",l:"Available -- click to reserve"},{bg:"#f1f5f9",border:"2px solid #cbd5e1",l:"Spot taken"}].map(x=>(
-    <div key={x.l} style={{display:"flex",alignItems:"center",gap:7}}>
-      <div style={{width:20,height:20,background:x.bg,border:x.border,borderRadius:4,flexShrink:0}}/>
-      <span style={{fontSize:12,color:"#64748b",fontWeight:500}}>{x.l}</span>
-    </div>
-  ))}
+  
 </div>
 
 {sel&&<AdGenerator initialSize={sel.size} onComplete={handleComplete} onClose={()=>{setSel(null);setReserveError(null);}} isReserving={reserving} reserveError={reserveError}/>}
