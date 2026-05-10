@@ -284,20 +284,18 @@ return (
     </div>
   )}
 
-  {/* Menu / services list — shown on all sizes except S */}
-  {!isS && (
-    <div style={{ position: "absolute", top: "60%", left: 12*fScale, right: 12*fScale, display: "flex", flexDirection: "column", gap: 3*fScale }}>
-      {getActiveItems(data.menuItems, ind.menu).slice(0, isS ? 2 : 4).map((item, i) => (
-        <div key={i} style={{ display: "flex", alignItems: "center", gap: 6*fScale }}>
-          <div style={{ width: 12*fScale, height: 12*fScale, borderRadius: "50%", background: ind.colors.primary, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ color: "#fff", fontSize: 7*fScale, fontWeight: 900 }}>✓</span>
-          </div>
-          <EditableText value={item} onChange={editMenu(i)}
-            style={{ color: "#fff", fontSize: 9*fScale, fontWeight: 600, fontFamily: "sans-serif", textShadow: "0 1px 4px rgba(0,0,0,0.8)" }} />
+  {/* Menu / services list — 2 items on S, 4 on all larger sizes */}
+  <div style={{ position: "absolute", top: "60%", left: 12*fScale, right: 12*fScale, display: "flex", flexDirection: "column", gap: 3*fScale }}>
+    {getActiveItems(data.menuItems, ind.menu).slice(0, isS ? 2 : 4).map((item, i) => (
+      <div key={i} style={{ display: "flex", alignItems: "center", gap: 6*fScale }}>
+        <div style={{ width: 12*fScale, height: 12*fScale, borderRadius: "50%", background: ind.colors.primary, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ color: "#fff", fontSize: 7*fScale, fontWeight: 900 }}>✓</span>
         </div>
-      ))}
-    </div>
-  )}
+        <EditableText value={item} onChange={editMenu(i)}
+          style={{ color: "#fff", fontSize: 9*fScale, fontWeight: 600, fontFamily: "sans-serif", textShadow: "0 1px 4px rgba(0,0,0,0.8)" }} />
+      </div>
+    ))}
+  </div>
 
   {/* Bottom: coupon + contact */}
   <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: `${8*fScale}px ${12*fScale}px`, display: "flex", flexDirection: "column", gap: 4*fScale }}>
