@@ -287,7 +287,7 @@ return (
   {/* Menu / services list — shown on all sizes except S */}
   {!isS && (
     <div style={{ position: "absolute", top: "60%", left: 12*fScale, right: 12*fScale, display: "flex", flexDirection: "column", gap: 3*fScale }}>
-      {getActiveItems(data.menuItems, ind.menu).slice(0, isM ? 2 : 3).map((item, i) => (
+      {getActiveItems(data.menuItems, ind.menu).slice(0, isS ? 2 : 4).map((item, i) => (
         <div key={i} style={{ display: "flex", alignItems: "center", gap: 6*fScale }}>
           <div style={{ width: 12*fScale, height: 12*fScale, borderRadius: "50%", background: ind.colors.primary, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <span style={{ color: "#fff", fontSize: 7*fScale, fontWeight: 900 }}>✓</span>
