@@ -1469,7 +1469,7 @@ boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
               );
             })()}
 
-            <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 10, marginTop: 10, textAlign: "center", fontStyle: "italic" }}>
+            <div style={{ color: "#111827", background: "rgba(255,255,255,0.92)", fontSize: 14, fontWeight: 800, marginTop: 10, textAlign: "center", fontStyle: "normal", padding: "8px 12px", borderRadius: 999, boxShadow: "0 4px 16px rgba(0,0,0,0.12)" }}>
                Click any text in the preview to edit it directly
             </div>
             <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 10, marginTop: 4, textAlign: "center" }}>
