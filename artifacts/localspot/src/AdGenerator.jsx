@@ -636,6 +636,7 @@ background: leftBg, fontFamily: "sans-serif",
               fontSize: isXL ? 22*fScale : isL ? 18*fScale : isM ? 13*fScale : 10*fScale,
               lineHeight: 1.0, fontFamily: "Georgia, serif",
               textShadow: "0 1px 6px rgba(0,0,0,0.5)",
+              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
             }}
           />
           <div style={{
@@ -652,12 +653,12 @@ background: leftBg, fontFamily: "sans-serif",
         <EditableText
           value={data.tagline || ind.taglines[0]}
           onChange={edit("tagline")}
-          multiline
           style={{
             color: "#fff", fontWeight: 800,
             fontSize: isXL ? 17*fScale : isL ? 14*fScale : 10*fScale,
             lineHeight: 1.25, fontFamily: "Georgia, serif",
             marginBottom: 6*fScale, display: "block",
+            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
           }}
         />
       )}
@@ -702,7 +703,7 @@ background: leftBg, fontFamily: "sans-serif",
             value={data.address}
             onChange={edit("address")}
             style={{
-              color: "rgba(255,255,255,0.85)", fontSize: Math.max(11, 9*fScale),
+              color: "rgba(255,255,255,0.85)", fontSize: Math.max(13, 11*fScale),
               fontFamily: "sans-serif", lineHeight: 1.3,
             }}
           />
