@@ -16,7 +16,7 @@ import { fetchScanCountForSpot } from "../lib/scanCounts";
 const router: IRouter = Router();
 
 const serializeSpot = <
-  T extends { createdAt: Date | string; expiresAt?: Date | string | null },
+  T extends { createdAt: Date | string; expiresAt?: Date | string | null; templateData?: string | null },
 >(s: T, scanCount = 0) => ({
   ...s,
   createdAt: s.createdAt instanceof Date ? s.createdAt.toISOString() : s.createdAt,
@@ -24,6 +24,10 @@ const serializeSpot = <
     s.expiresAt instanceof Date
       ? s.expiresAt.toISOString()
       : (s.expiresAt ?? null),
+  // Parse stored JSON back to object so clients receive a typed object, not a string.
+  templateData: s.templateData
+    ? (() => { try { return JSON.parse(s.templateData!); } catch { return null; } })()
+    : null,
   scanCount,
 });
 
@@ -125,6 +129,11 @@ router.post("/spots/:id/reserve", async (req, res): Promise<void> => {
       contactEmail: body.data.contactEmail,
       contactPhone: body.data.contactPhone ?? null,
       website: body.data.website ?? null,
+      // Persist the full AdGenerator design state so the picker can render the
+      // real ad for this spot after payment is confirmed.
+      templateData: body.data.templateData
+        ? JSON.stringify(body.data.templateData)
+        : null,
       expiresAt,
     })
     .where(eq(spotsTable.id, params.data.id))

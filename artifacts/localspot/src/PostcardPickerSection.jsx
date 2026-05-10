@@ -1,21 +1,21 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useGetActiveCampaign, useReserveSpot, getGetActiveCampaignQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import AdGenerator from "./AdGenerator";
+import AdGenerator, { AdTemplatePreview } from "./AdGenerator";
 
 // Natural canvas: 1200x900 = 12"x9" landscape at 100px per inch
 const W = 1200, H = 900;
 
 // FRONT: 3 XL (4"x5") top row + 4 Large (3"x4" portrait) bottom row
 const FRONT = [
-{ id:"xl1", size:"XL", price:499, x:0,   y:0,   w:400, h:500, sample:"biscuits", tmpl:"photo" },
-{ id:"xl2", size:"XL", price:499, x:400, y:0,   w:400, h:500, sample:null       },
-{ id:"xl3", size:"XL", price:499, x:800, y:0,   w:400, h:500, sample:"dental",   tmpl:"clean" },
-{ id:"l1",  size:"L",  price:399, x:0,   y:500, w:300, h:400, sample:"hvac",    tmpl:"stamp"  },
-{ id:"l2",  size:"L",  price:399, x:300, y:500, w:300, h:400, sample:null       },
-{ id:"l3",  size:"L",  price:399, x:600, y:500, w:300, h:400, sample:"lawn",    tmpl:"split"  },
-{ id:"l4",  size:"L",  price:399, x:900, y:500, w:300, h:400, sample:null       },
+{ id:"xl1", dbGridArea:"mb", size:"XL", price:499, x:0,   y:0,   w:400, h:500, sample:"biscuits", tmpl:"photo" },
+{ id:"xl2", dbGridArea:"dn", size:"XL", price:499, x:400, y:0,   w:400, h:500, sample:null       },
+{ id:"xl3", dbGridArea:"re", size:"XL", price:499, x:800, y:0,   w:400, h:500, sample:"dental",   tmpl:"clean" },
+{ id:"l1",  dbGridArea:"l1", size:"L",  price:399, x:0,   y:500, w:300, h:400, sample:"hvac",    tmpl:"stamp"  },
+{ id:"l2",  dbGridArea:"l2", size:"L",  price:399, x:300, y:500, w:300, h:400, sample:null       },
+{ id:"l3",  dbGridArea:"l3", size:"L",  price:399, x:600, y:500, w:300, h:400, sample:"lawn",    tmpl:"split"  },
+{ id:"l4",  dbGridArea:"l4", size:"L",  price:399, x:900, y:500, w:300, h:400, sample:null       },
 ];
 
 // BACK: Config 1 – 3XL(4"x5") + 4M(3"x2") + 1S(2"x2")
@@ -23,16 +23,16 @@ const FRONT = [
 // y=500-700: 4 M row       (each 300x200, 4x300=1200 perfect)
 // y=700-900: S + house(6"x2") + EDDM(4"x2")
 const BACK = [
-{ id:"bxl1", size:"XL", price:499, x:0,   y:0,   w:400, h:500, sample:"realty", tmpl:"clean" },
-{ id:"bxl2", size:"XL", price:499, x:400, y:0,   w:400, h:500, sample:null                   },
-{ id:"bxl3", size:"XL", price:499, x:800, y:0,   w:400, h:500, sample:"auto",   tmpl:"photo" },
-{ id:"bm1",  size:"M",  price:299, x:0,   y:500, w:300, h:200, sample:"salon",  tmpl:"banner" },
-{ id:"bm2",  size:"M",  price:299, x:300, y:500, w:300, h:200, sample:null                   },
-{ id:"bm3",  size:"M",  price:299, x:600, y:500, w:300, h:200, sample:"pizza",  tmpl:"slate"  },
-{ id:"bm4",  size:"M",  price:299, x:900, y:500, w:300, h:200, sample:null                   },
-{ id:"bs1",  size:"S",  price:199, x:0,   y:700, w:200, h:200, sample:null                   },
-{ id:"bhs",  size:"house", price:0, x:200, y:700, w:600, h:200, sample:"house"               },
-{ id:"bed",  size:"eddm",  price:0, x:800, y:700, w:400, h:200, sample:"eddm"                },
+{ id:"bxl1", dbGridArea:"bxl", size:"XL", price:499, x:0,   y:0,   w:400, h:500, sample:"realty", tmpl:"clean" },
+{ id:"bxl2", dbGridArea:null,  size:"XL", price:499, x:400, y:0,   w:400, h:500, sample:null                   },
+{ id:"bxl3", dbGridArea:null,  size:"XL", price:499, x:800, y:0,   w:400, h:500, sample:"auto",   tmpl:"photo" },
+{ id:"bm1",  dbGridArea:"bm1", size:"M",  price:299, x:0,   y:500, w:300, h:200, sample:"salon",  tmpl:"banner" },
+{ id:"bm2",  dbGridArea:null,  size:"M",  price:299, x:300, y:500, w:300, h:200, sample:null                   },
+{ id:"bm3",  dbGridArea:"bm2", size:"M",  price:299, x:600, y:500, w:300, h:200, sample:"pizza",  tmpl:"slate"  },
+{ id:"bm4",  dbGridArea:null,  size:"M",  price:299, x:900, y:500, w:300, h:200, sample:null                   },
+{ id:"bs1",  dbGridArea:"bs1", size:"S",  price:199, x:0,   y:700, w:200, h:200, sample:null                   },
+{ id:"bhs",  dbGridArea:null,  size:"house", price:0, x:200, y:700, w:600, h:200, sample:"house"               },
+{ id:"bed",  dbGridArea:null,  size:"eddm",  price:0, x:800, y:700, w:400, h:200, sample:"eddm"                },
 ];
 
 const ADS = {
@@ -411,11 +411,21 @@ return(
 
 function ScaledCell({spot,scale,children}){return(<div style={{position:"absolute",left:spot.x*scale+3.5,top:spot.y*scale+3.5,width:spot.w*scale-7,height:spot.h*scale-7,overflow:"hidden",borderRadius:3}}><div style={{width:spot.w,height:spot.h,transform:"scale("+scale+")",transformOrigin:"top left"}}>{children}</div></div>);}
 
-function SpotCell({spot,scale,hov,onHov,onOut,onSel}){
+function SpotCell({spot,scale,hov,onHov,onOut,onSel,liveSpot}){
 const k=spot.sample;
 const t=spot.tmpl||"photo";
 if(k==="house")return<ScaledCell spot={spot} scale={scale}><AdHouse w={spot.w} h={spot.h}/></ScaledCell>;
 if(k==="eddm") return<ScaledCell spot={spot} scale={scale}><AdEDDM w={spot.w} h={spot.h}/></ScaledCell>;
+// Paid spot with saved template data → render the real customer ad (pointer-events off so it's display only)
+if(liveSpot&&liveSpot.status==="paid"&&liveSpot.templateData){
+  const{template,sizeKey,...adData}=liveSpot.templateData;
+  const sk=sizeKey||(spot.size==="XL"?"XL":spot.size==="L"?"L":spot.size==="M"?"M":"S");
+  return(<ScaledCell spot={spot} scale={scale}><div style={{width:spot.w,height:spot.h,pointerEvents:"none"}}><AdTemplatePreview templateKey={template||"split-clean"} formData={adData} sizeKey={sk}/></div></ScaledCell>);
+}
+// Live available slot → always show reservation UI (overrides any demo sample)
+if(liveSpot&&liveSpot.status==="available"){
+  return<ScaledCell spot={spot} scale={scale}><AvailableSpot spot={spot} hovered={hov===spot.id} onClick={()=>onSel(spot)} onEnter={()=>onHov(spot.id)} onLeave={onOut}/></ScaledCell>;
+}
 if(k===null)   return<ScaledCell spot={spot} scale={scale}><AvailableSpot spot={spot} hovered={hov===spot.id} onClick={()=>onSel(spot)} onEnter={()=>onHov(spot.id)} onLeave={onOut}/></ScaledCell>;
 const d=ADS[k]; if(!d)return null;
 return(<ScaledCell spot={spot} scale={scale}>{spot.size==="XL"&&<AdXL d={d} tmpl={t}/>}{spot.size==="L"&&<AdL d={d} tmpl={t}/>}{spot.size==="M"&&<AdM d={d} w={spot.w} h={spot.h} tmpl={t}/>}{spot.size==="S"&&<AdS d={d}/>}</ScaledCell>);
@@ -438,6 +448,12 @@ const [,navigate]=useLocation();
 const queryClient=useQueryClient();
 const {data:campaign}=useGetActiveCampaign();
 const reserveMutation=useReserveSpot();
+// Build gridArea → live spot lookup so each picker cell can check the DB status
+const spotByGridArea=useMemo(()=>{
+  const m={};
+  (campaign?.spots||[]).forEach(s=>{m[s.gridArea]=s;});
+  return m;
+},[campaign]);
 
 const handleComplete=async(formData)=>{
   if(!campaign){setReserveError("Campaign not found. Please refresh and try again.");return;}
@@ -479,6 +495,24 @@ const handleComplete=async(formData)=>{
         contactEmail:formData.email,
         contactPhone:formData.phone||undefined,
         website:formData.website||undefined,
+        // Save the full AdGenerator design state so the picker renders the real ad
+        templateData:{
+          template:formData.template,
+          sizeKey:formData.sizeKey,
+          businessName:formData.businessName,
+          industry:formData.industry,
+          tagline:formData.tagline,
+          offer:formData.offer,
+          offerFine:formData.offerFine,
+          phone:formData.phone,
+          address:formData.address,
+          website:formData.website,
+          logo:formData.logo,
+          photo:formData.photo,
+          menuItems:formData.menuItems,
+          fontSizes:formData.fontSizes,
+          fieldWidths:formData.fieldWidths,
+        },
       },
     });
     setSel(null);
@@ -499,8 +533,9 @@ return()=>ro.disconnect();
 },[]);
 
 const spots=side==="front"?FRONT:BACK;
-const soldF=FRONT.filter(s=>s.price>0&&s.sample!==null).length;
-const soldB=BACK.filter(s=>s.price>0&&s.sample!==null).length;
+// Use live DB status for sold counts so the tally stays accurate
+const soldF=FRONT.filter(s=>s.dbGridArea&&spotByGridArea[s.dbGridArea]?.status==="paid").length;
+const soldB=BACK.filter(s=>s.dbGridArea&&spotByGridArea[s.dbGridArea]?.status==="paid").length;
 
 return(<div style={{fontFamily:"sans-serif"}}>
 <style>{`@media (max-width: 768px) and (orientation: portrait) { .rotate-prompt { display: flex !important; } .postcard-section { display: none !important; } } @media (min-width: 769px), (orientation: landscape) { .rotate-prompt { display: none !important; } .postcard-section { display: flex !important; } }`}</style>
@@ -534,7 +569,10 @@ return(<div style={{fontFamily:"sans-serif"}}>
     <div ref={ref} style={{width:"100%",maxWidth:"calc((100vh - 160px) * 12 / 9)"}}>
       <div style={{position:"relative",width:"100%",paddingBottom:"75%",background:"#c8c8c8",borderRadius:6,boxShadow:"0 0 0 7px #c8c8c8, 0 0 0 8.5px #a8a8a8, 0 16px 48px rgba(0,0,0,0.28), 0 4px 12px rgba(0,0,0,0.14)"}}>
         <div style={{position:"absolute",inset:0,overflow:"hidden",borderRadius:5,background:"#c8c8c8"}}>
-          {spots.map(spot=><SpotCell key={spot.id} spot={spot} scale={scale} hov={hov} onHov={setHov} onOut={()=>setHov(null)} onSel={setSel}/>)}
+          {spots.map(spot=>{
+            const liveSpot=spot.dbGridArea?spotByGridArea[spot.dbGridArea]:null;
+            return<SpotCell key={spot.id} spot={spot} scale={scale} hov={hov} onHov={setHov} onOut={()=>setHov(null)} onSel={setSel} liveSpot={liveSpot}/>;
+          })}
         </div>
       </div>
     </div>

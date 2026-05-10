@@ -31,6 +31,9 @@ export const spotsTable = pgTable("spots", {
   // whose hold has lapsed. NULL for available rows and for paid rows (a
   // paid spot has no expiry); only meaningful on status="reserved" rows.
   expiresAt: timestamp("expires_at", { withTimezone: true }),
+  // Full AdGenerator state (JSON) captured at reservation time so the postcard
+  // picker can render the exact ad the customer designed.
+  templateData: text("template_data"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

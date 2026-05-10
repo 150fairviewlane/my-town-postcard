@@ -1504,3 +1504,21 @@ width: "100%", padding: "9px 12px", borderRadius: 7,
 border: "1.5px solid #e5e7eb", fontSize: 13, outline: "none",
 fontFamily: "system-ui, sans-serif", boxSizing: "border-box", background: "#fff",
 };
+
+// ── Read-only template renderer for the postcard picker grid ────────────────
+// Renders the exact same template the customer designed, at the spot's natural
+// pixel dimensions, with all interactive handlers disabled (pointer-events off
+// is applied by the caller via a wrapper div).
+export function AdTemplatePreview({ templateKey, formData, sizeKey }) {
+  const Tpl = (TEMPLATES[templateKey] || TEMPLATES["split-clean"]).Component;
+  if (!Tpl) return null;
+  return (
+    <Tpl
+      data={formData}
+      sizeKey={sizeKey}
+      onEdit={() => {}}
+      onFontSizeChange={() => {}}
+      onWidthChange={() => {}}
+    />
+  );
+}

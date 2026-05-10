@@ -645,6 +645,9 @@ components:
           type: ["string", "null"]
         trackingCode:
           type: ["string", "null"]
+        templateData:
+          type: ["object", "null"]
+          additionalProperties: true
         scanCount:
           type: integer
         expiresAt:
@@ -686,6 +689,9 @@ components:
           type: string
         website:
           type: string
+        templateData:
+          type: ["object", "null"]
+          additionalProperties: true
       required:
         - businessName
         - businessCategory

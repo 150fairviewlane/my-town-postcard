@@ -58,6 +58,11 @@ export const SpotStatus = {
   paid: "paid",
 } as const;
 
+/**
+ * @nullable
+ */
+export type SpotTemplateData = { [key: string]: unknown } | null;
+
 export interface Spot {
   id: number;
   campaignId: number;
@@ -84,6 +89,8 @@ export interface Spot {
   adStatus?: string | null;
   /** @nullable */
   trackingCode?: string | null;
+  /** @nullable */
+  templateData?: SpotTemplateData;
   scanCount?: number;
   /** @nullable */
   expiresAt?: string | null;
@@ -94,12 +101,19 @@ export type CampaignWithSpots = Campaign & {
   spots: Spot[];
 };
 
+/**
+ * @nullable
+ */
+export type ReserveSpotBodyTemplateData = { [key: string]: unknown } | null;
+
 export interface ReserveSpotBody {
   businessName: string;
   businessCategory: string;
   contactEmail: string;
   contactPhone?: string;
   website?: string;
+  /** @nullable */
+  templateData?: ReserveSpotBodyTemplateData;
 }
 
 export interface CreatePaymentIntentBody {
