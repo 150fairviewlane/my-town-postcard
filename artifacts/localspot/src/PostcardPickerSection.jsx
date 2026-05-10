@@ -222,7 +222,7 @@ return(<div style={{width:400,height:500,position:"relative",overflow:"hidden",f
 <div style={{color:"#fff",fontWeight:800,fontSize:20,lineHeight:1.2,fontStyle:"italic",textShadow:"0 2px 12px rgba(0,0,0,0.9)"}}>{d.tag}</div>
 </div>
 <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"12px 14px",display:"flex",flexDirection:"column",gap:6}}>
-<div style={{display:"flex",flexDirection:"column",gap:3}}>{(d.services||[]).slice(0,3).map((s,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:6}}><Check color={d.a} sz={11}/><span style={{fontSize:10,color:"rgba(255,255,255,0.92)",fontWeight:600}}>{s}</span></div>))}</div>
+<div style={{display:"flex",flexDirection:"column",gap:3}}>{(d.services||[]).slice(0,4).map((s,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:6}}><Check color={d.a} sz={11}/><span style={{fontSize:10,color:"rgba(255,255,255,0.92)",fontWeight:600}}>{s}</span></div>))}</div>
 <Coupon offer={d.offer} fine={d.fine} color={d.a} dark scale={0.9}/>
 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
 <Phone phone={d.phone} color="#fff" size={13}/>

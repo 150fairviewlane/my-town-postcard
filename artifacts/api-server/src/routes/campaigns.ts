@@ -30,6 +30,11 @@ router.get("/campaigns/active", async (req, res): Promise<void> => {
   const serializeDate = (d: Date | string | null | undefined) =>
     d instanceof Date ? d.toISOString() : (d ?? null);
 
+  const parseTemplateData = (raw: string | null | undefined) => {
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch { return null; }
+  };
+
   const response = {
     ...campaign,
     createdAt: serializeDate(campaign.createdAt),
@@ -37,6 +42,7 @@ router.get("/campaigns/active", async (req, res): Promise<void> => {
       ...s,
       createdAt: serializeDate(s.createdAt),
       expiresAt: serializeDate(s.expiresAt),
+      templateData: parseTemplateData(s.templateData),
       scanCount: counts.get(s.id) ?? 0,
     })),
   };

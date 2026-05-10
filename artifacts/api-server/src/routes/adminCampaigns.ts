@@ -117,10 +117,15 @@ async function buildCampaignDetail(
 
   const enrichedSpots = spots.map((spot) => {
     const order = paidOrdersBySpot.get(spot.id);
+    const parseTemplateData = (raw: string | null | undefined) => {
+      if (!raw) return null;
+      try { return JSON.parse(raw); } catch { return null; }
+    };
     return {
       ...spot,
       createdAt: serializeDate(spot.createdAt) ?? new Date().toISOString(),
       expiresAt: serializeDate(spot.expiresAt),
+      templateData: parseTemplateData(spot.templateData),
       isPaid: spot.status === "paid",
       stripePaymentIntentId: order?.stripePaymentIntentId ?? null,
       scanCount: scanCounts.get(spot.id) ?? 0,
