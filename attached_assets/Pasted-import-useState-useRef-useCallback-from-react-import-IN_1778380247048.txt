@@ -1,12 +1,12 @@
-import { useState, useRef, useCallback } from "react";
-import { INDUSTRIES, INDUSTRY_LIST } from "./industryAssets";
-import { AdQRCode, InlineQRCode, hasQR, normalizeWebsite, generateSpotCode } from "./qrUtils";
-import AdAssistant from "./AdAssistant";
+import { useState, useRef, useCallback } from “react”;
+import { INDUSTRIES, INDUSTRY_LIST } from “./industryAssets”;
+import { AdQRCode, InlineQRCode, hasQR, normalizeWebsite, generateSpotCode } from “./qrUtils”;
+import AdAssistant from “./AdAssistant”;
 
 //
 //   EDITABLE TEXT – click any text in the preview to edit it inline
 //
-function EditableText({ value, onChange, style = {}, multiline = false, placeholder = "Click to edit" }) {
+function EditableText({ value, onChange, style = {}, multiline = false, placeholder = “Click to edit” }) {
 const [editing, setEditing] = useState(false);
 const [draft, setDraft] = useState(value);
 const inputRef = useRef();
@@ -24,37 +24,37 @@ if (draft.trim() !== value) onChange(draft.trim() || value);
 };
 
 const handleKey = (e) => {
-if (e.key === "Enter" && !multiline) { e.preventDefault(); commit(); }
-if (e.key === "Escape") { setEditing(false); setDraft(value); }
+if (e.key === “Enter” && !multiline) { e.preventDefault(); commit(); }
+if (e.key === “Escape”) { setEditing(false); setDraft(value); }
 };
 
 const editHoverStyle = {
-cursor: "text",
-outline: editing ? "2px solid rgba(255,255,255,0.9)" : "none",
+cursor: “text”,
+outline: editing ? “2px solid rgba(255,255,255,0.9)” : “none”,
 outlineOffset: 2,
 borderRadius: 2,
-transition: "outline 0.1s",
-position: "relative",
+transition: “outline 0.1s”,
+position: “relative”,
 };
 
 if (editing) {
 const sharedInputStyle = {
-...style,
-background: "rgba(0,0,0,0.55)",
-border: "none",
-outline: "2px solid #fff",
+…style,
+background: “rgba(0,0,0,0.55)”,
+border: “none”,
+outline: “2px solid #fff”,
 outlineOffset: 2,
 borderRadius: 3,
-color: style.color || "#fff",
-padding: "1px 3px",
-width: "100%",
-fontFamily: style.fontFamily || "inherit",
-fontSize: style.fontSize || "inherit",
-fontWeight: style.fontWeight || "inherit",
-lineHeight: style.lineHeight || "inherit",
-letterSpacing: style.letterSpacing || "inherit",
-resize: "none",
-boxSizing: "border-box",
+color: style.color || “#fff”,
+padding: “1px 3px”,
+width: “100%”,
+fontFamily: style.fontFamily || “inherit”,
+fontSize: style.fontSize || “inherit”,
+fontWeight: style.fontWeight || “inherit”,
+lineHeight: style.lineHeight || “inherit”,
+letterSpacing: style.letterSpacing || “inherit”,
+resize: “none”,
+boxSizing: “border-box”,
 };
 return multiline ? (
 <textarea ref={inputRef} value={draft} rows={2}
@@ -62,7 +62,7 @@ onChange={e => setDraft(e.target.value)}
 onBlur={commit} onKeyDown={handleKey}
 style={sharedInputStyle} />
 ) : (
-<input ref={inputRef} value={draft} type="text"
+<input ref={inputRef} value={draft} type=“text”
 onChange={e => setDraft(e.target.value)}
 onBlur={commit} onKeyDown={handleKey}
 style={sharedInputStyle} />
@@ -70,17 +70,17 @@ style={sharedInputStyle} />
 }
 
 return (
-<div onClick={startEdit} title="Click to edit"
-style={{ ...style, ...editHoverStyle, display: style.display || "block" }}
-className="editable-text">
-{value || <span style={{ opacity: 0.4, fontStyle: "italic" }}>{placeholder}</span>}
+<div onClick={startEdit} title=“Click to edit”
+style={{ …style, …editHoverStyle, display: style.display || “block” }}
+className=“editable-text”>
+{value || <span style={{ opacity: 0.4, fontStyle: “italic” }}>{placeholder}</span>}
 {/* Tiny pencil hint on hover */}
 <span style={{
-position: "absolute", top: -8, right: -6,
-fontSize: 9, opacity: 0, transition: "opacity 0.15s",
-pointerEvents: "none", background: "rgba(0,0,0,0.7)",
-color: "#fff", borderRadius: 3, padding: "1px 3px",
-}} className="edit-hint"></span>
+position: “absolute”, top: -8, right: -6,
+fontSize: 9, opacity: 0, transition: “opacity 0.15s”,
+pointerEvents: “none”, background: “rgba(0,0,0,0.7)”,
+color: “#fff”, borderRadius: 3, padding: “1px 3px”,
+}} className=“edit-hint”></span>
 </div>
 );
 }
@@ -96,26 +96,26 @@ const EDITABLE_CSS = `.editable-text:hover { outline: 1.5px dashed rgba(255,255,
 
 // Ad sizes available on the postcard (4 different sizes)
 const AD_SIZES = {
-XL: { label: "Extra Large", price: 450, ratio: "4:5",  width: 4, height: 5,   desc: "Hero spot - maximum impact" },
-L:  { label: "Large",       price: 350, ratio: "4:3",  width: 4, height: 3,   desc: "Premium placement" },
-M:  { label: "Medium",      price: 250, ratio: "3:2",  width: 3, height: 2,   desc: "Great visibility" },
-S:  { label: "Small",       price: 199, ratio: "2:2",  width: 2, height: 2,   desc: "Affordable local reach" },
+XL: { label: “Extra Large”, price: 450, ratio: “4:5”,  width: 4, height: 5,   desc: “Hero spot - maximum impact” },
+L:  { label: “Large”,       price: 350, ratio: “4:3”,  width: 4, height: 3,   desc: “Premium placement” },
+M:  { label: “Medium”,      price: 250, ratio: “3:2”,  width: 3, height: 2,   desc: “Great visibility” },
+S:  { label: “Small”,       price: 199, ratio: “2:2”,  width: 2, height: 2,   desc: “Affordable local reach” },
 };
 
 // 4 visually distinct template styles
-const TEMPLATE_STYLES = ["photo-bold", "split-clean", "magazine", "stamp"];
+const TEMPLATE_STYLES = [“photo-bold”, “split-clean”, “magazine”, “stamp”];
 
 //  Helper: Logo Badge with fallback
-function LogoBadge({ logo, name, emoji, size = 40, bg = "rgba(255,255,255,0.15)", color = "#fff", border }) {
+function LogoBadge({ logo, name, emoji, size = 40, bg = “rgba(255,255,255,0.15)”, color = “#fff”, border }) {
 return (
 <div style={{
-width: size, height: size, borderRadius: "50%", background: bg,
+width: size, height: size, borderRadius: “50%”, background: bg,
 border: border || `2px solid ${color}55`,
-display: "flex", alignItems: "center", justifyContent: "center",
-overflow: "hidden", flexShrink: 0,
+display: “flex”, alignItems: “center”, justifyContent: “center”,
+overflow: “hidden”, flexShrink: 0,
 }}>
 {logo ? (
-<img src={logo} alt="logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+<img src={logo} alt=“logo” style={{ width: “100%”, height: “100%”, objectFit: “cover” }} />
 ) : (
 <span style={{ fontSize: size * 0.5 }}>{emoji}</span>
 )}
@@ -129,32 +129,32 @@ if (!offer) return null;
 return (
 <div style={{
 border: `${1.5*scale}px dashed ${accent}`,
-background: dark ? "rgba(0,0,0,0.3)" : `${accent}15`,
+background: dark ? “rgba(0,0,0,0.3)” : `${accent}15`,
 borderRadius: 4*scale,
 // Extra top padding gives the scissors strip room to show without being clipped
 padding: `${8*scale}px ${10*scale}px ${5*scale}px`,
-textAlign: "center",
-position: "relative",
+textAlign: “center”,
+position: “relative”,
 flexShrink: 0,
-marginTop: 5*scale, // ensures scissors aren't flush with parent edge
+marginTop: 5*scale, // ensures scissors aren’t flush with parent edge
 }}>
 {/* Scissors strip */}
-<div style={{ position: "absolute", top: -(1*scale), left: 0, right: 0, display: "flex", alignItems: "center", padding: `0 ${4*scale}px` }}>
+<div style={{ position: “absolute”, top: -(1*scale), left: 0, right: 0, display: “flex”, alignItems: “center”, padding: `0 ${4*scale}px` }}>
 <span style={{ fontSize: 10*scale, lineHeight: 1, flexShrink: 0, opacity: 0.8 }}></span>
 <div style={{ flex: 1, marginLeft: 3*scale, borderTop: `${1.2*scale}px dashed ${accent}88` }} />
-<span style={{ fontSize: 10*scale, lineHeight: 1, flexShrink: 0, opacity: 0.8, transform: "scaleX(-1)", display: "inline-block" }}></span>
+<span style={{ fontSize: 10*scale, lineHeight: 1, flexShrink: 0, opacity: 0.8, transform: “scaleX(-1)”, display: “inline-block” }}></span>
 </div>
 {onEditOffer ? (
 <EditableText value={offer} onChange={onEditOffer}
-style={{ color: dark ? "#fff" : accent, fontWeight: 900, fontSize: 13*scale, lineHeight: 1.1, letterSpacing: 0.3 }} />
+style={{ color: dark ? “#fff” : accent, fontWeight: 900, fontSize: 13*scale, lineHeight: 1.1, letterSpacing: 0.3 }} />
 ) : (
-<div style={{ color: dark ? "#fff" : accent, fontWeight: 900, fontSize: 13*scale, lineHeight: 1.1, letterSpacing: 0.3 }}>{offer}</div>
+<div style={{ color: dark ? “#fff” : accent, fontWeight: 900, fontSize: 13*scale, lineHeight: 1.1, letterSpacing: 0.3 }}>{offer}</div>
 )}
 {fine && onEditFine ? (
 <EditableText value={fine} onChange={onEditFine}
-style={{ color: dark ? "rgba(255,255,255,0.7)" : "#666", fontSize: 7*scale, marginTop: 2, fontFamily: "sans-serif" }} />
+style={{ color: dark ? “rgba(255,255,255,0.7)” : “#666”, fontSize: 7*scale, marginTop: 2, fontFamily: “sans-serif” }} />
 ) : fine ? (
-<div style={{ color: dark ? "rgba(255,255,255,0.7)" : "#666", fontSize: 7*scale, marginTop: 2, fontFamily: "sans-serif" }}>{fine}</div>
+<div style={{ color: dark ? “rgba(255,255,255,0.7)” : “#666”, fontSize: 7*scale, marginTop: 2, fontFamily: “sans-serif” }}>{fine}</div>
 ) : null}
 </div>
 );
@@ -166,16 +166,18 @@ style={{ color: dark ? "rgba(255,255,255,0.7)" : "#666", fontSize: 7*scale, marg
 // Best for: restaurants, salons, photography
 //
 function PhotoBoldTemplate({ data, sizeKey, onEdit }) {
-const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
+const ind = INDUSTRIES[data.industry] || INDUSTRIES[“Other Service”];
 const photo = data.photo || ind.photos[0];
-const isXL = sizeKey === "XL", isL = sizeKey === "L", isM = sizeKey === "M", isS = sizeKey === "S";
+const isXL = sizeKey === “XL”, isL = sizeKey === “L”, isM = sizeKey === “M”, isS = sizeKey === “S”;
 const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.65;
 const edit = (field) => (val) => onEdit(field, val);
 
 return (
-<div style={{ width: "100%", height: "100%", position: "relative", overflow: "hidden", fontFamily: "Georgia, serif" }}>
-<img src={photo} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-<div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${ind.colors.dark}99 0%, ${ind.colors.dark}55 40%, ${ind.colors.dark}f0 100%)` }} />
+<div style={{ width: “100%”, height: “100%”, position: “relative”, overflow: “hidden”, fontFamily: “Georgia, serif” }}>
+<img src={photo} alt=”” style={{ position: “absolute”, inset: 0, width: “100%”, height: “100%”, objectFit: “cover” }} />
+<div style={{ position: “absolute”, inset: 0, background: `linear-gradient(180deg, ${ind.colors.dark}99 0%, ${ind.colors.dark}55 40%, ${ind.colors.dark}f0 100%)` }} />
+
+```
   {/* Top: logo + name */}
   <div style={{ position: "absolute", top: 0, left: 0, right: 0, padding: `${10*fScale}px ${12*fScale}px`, display: "flex", alignItems: "center", gap: 8*fScale }}>
     <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji} size={36*fScale} bg={`${ind.colors.primary}cc`} color="#fff" />
@@ -223,6 +225,8 @@ return (
     </div>
   </div>
 </div>
+```
+
 );
 }
 
@@ -232,42 +236,44 @@ return (
 // Best for: dental, medical, professional services
 //
 function SplitCleanTemplate({ data, sizeKey, onEdit }) {
-const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
+const ind = INDUSTRIES[data.industry] || INDUSTRIES[“Other Service”];
 const photo = data.photo || ind.photos[0];
-const isXL = sizeKey === "XL", isL = sizeKey === "L", isM = sizeKey === "M", isS = sizeKey === "S";
+const isXL = sizeKey === “XL”, isL = sizeKey === “L”, isM = sizeKey === “M”, isS = sizeKey === “S”;
 const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.65;
 const isVertical = isXL;
 const edit = (field) => (val) => onEdit(field, val);
-const editMenu = (i) => (val) => onEdit("menuItems", data.menuItems.map((m, j) => {
+const editMenu = (i) => (val) => onEdit(“menuItems”, data.menuItems.map((m, j) => {
 if (j !== i) return m;
 // Always treat as object (normalized on industry change)
-const base = typeof m === "object" ? m : { text: m, enabled: true };
-return { ...base, text: val };
+const base = typeof m === “object” ? m : { text: m, enabled: true };
+return { …base, text: val };
 })); // XL goes photo-on-top, others side-by-side
 
 return (
 <div style={{
-width: "100%", height: "100%", overflow: "hidden", display: "flex",
-flexDirection: isVertical ? "column" : "row",
-background: ind.colors.light, fontFamily: "sans-serif",
+width: “100%”, height: “100%”, overflow: “hidden”, display: “flex”,
+flexDirection: isVertical ? “column” : “row”,
+background: ind.colors.light, fontFamily: “sans-serif”,
 }}>
 {/* Photo half */}
 <div style={{
-width: isVertical ? "100%" : "45%",
-height: isVertical ? "45%" : "100%",
-position: "relative", flexShrink: 0,
+width: isVertical ? “100%” : “45%”,
+height: isVertical ? “45%” : “100%”,
+position: “relative”, flexShrink: 0,
 }}>
-<img src={photo} alt="" style={{
-width: "100%", height: "100%", objectFit: "cover", display: "block"
+<img src={photo} alt=”” style={{
+width: “100%”, height: “100%”, objectFit: “cover”, display: “block”
 }} />
 {/* Logo overlay */}
 <div style={{
-position: "absolute", top: 8 * fScale, left: 8 * fScale,
+position: “absolute”, top: 8 * fScale, left: 8 * fScale,
 }}>
 <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji}
-size={36 * fScale} bg={ind.colors.primary} color="#fff" border={`2px solid #fff`} />
+size={36 * fScale} bg={ind.colors.primary} color=”#fff” border={`2px solid #fff`} />
 </div>
 </div>
+
+```
   {/* Content half */}
   <div style={{ flex: 1, padding: `${10*fScale}px ${12*fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", background: ind.colors.light, minWidth: 0 }}>
     {/* Top */}
@@ -323,6 +329,8 @@ size={36 * fScale} bg={ind.colors.primary} color="#fff" border={`2px solid #fff`
     </div>
   </div>
 </div>
+```
+
 );
 }
 
@@ -332,7 +340,7 @@ size={36 * fScale} bg={ind.colors.primary} color="#fff" border={`2px solid #fff`
 // Best for: real estate, insurance, financial, retail
 //
 function MagazineTemplate({ data, sizeKey, onEdit }) {
-const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
+const ind = INDUSTRIES[data.industry] || INDUSTRIES[“Other Service”];
 // Magazine uses 2 photos: the selected/primary photo + one supporting photo
 // If user picked a specific stock photo, show it first + the next one in rotation
 const primaryPhoto = data.photo || ind.photos[0];
@@ -341,41 +349,43 @@ const secondPhoto = primaryIdx >= 0
 ? ind.photos[(primaryIdx + 1) % ind.photos.length]  // next stock photo in rotation
 : (ind.photos[0] !== primaryPhoto ? ind.photos[0] : ind.photos[1]); // fallback
 const photos = [primaryPhoto, secondPhoto].filter(Boolean);
-const isXL = sizeKey === "XL", isL = sizeKey === "L", isM = sizeKey === "M", isS = sizeKey === "S";
+const isXL = sizeKey === “XL”, isL = sizeKey === “L”, isM = sizeKey === “M”, isS = sizeKey === “S”;
 const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.65;
 const edit = (field) => (val) => onEdit(field, val);
-const editMenu = (i) => (val) => onEdit("menuItems", data.menuItems.map((m, j) => {
+const editMenu = (i) => (val) => onEdit(“menuItems”, data.menuItems.map((m, j) => {
 if (j !== i) return m;
-if (typeof m === "object") return { ...m, text: val };
+if (typeof m === “object”) return { …m, text: val };
 return val;
 }));
 
 return (
 <div style={{
-width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: "column",
-background: "#fff", fontFamily: "Georgia, serif",
-border: `${3 * fScale}px solid ${ind.colors.primary}`, boxSizing: "border-box",
+width: “100%”, height: “100%”, overflow: “hidden”, display: “flex”, flexDirection: “column”,
+background: “#fff”, fontFamily: “Georgia, serif”,
+border: `${3 * fScale}px solid ${ind.colors.primary}`, boxSizing: “border-box”,
 }}>
 {/* Header bar */}
 <div style={{
 background: ind.colors.primary, padding: `${6 * fScale}px ${10 * fScale}px`,
-display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0,
+display: “flex”, alignItems: “center”, justifyContent: “space-between”, flexShrink: 0,
 }}>
-<div style={{ display: "flex", alignItems: "center", gap: 7 * fScale }}>
+<div style={{ display: “flex”, alignItems: “center”, gap: 7 * fScale }}>
 <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji}
-size={32 * fScale} bg={ind.colors.accent} color="#fff" />
-<EditableText value={data.businessName} onChange={edit("businessName")}
-style={{ color: "#fff", fontWeight: 900, fontSize: 17*fScale, fontFamily: "Georgia, serif", lineHeight: 1.0 }} />
+size={32 * fScale} bg={ind.colors.accent} color=”#fff” />
+<EditableText value={data.businessName} onChange={edit(“businessName”)}
+style={{ color: “#fff”, fontWeight: 900, fontSize: 17*fScale, fontFamily: “Georgia, serif”, lineHeight: 1.0 }} />
 </div>
 {!isS && data.phone && (
-<EditableText value={data.phone} onChange={edit("phone")}
+<EditableText value={data.phone} onChange={edit(“phone”)}
 style={{
-color: "#fff", fontSize: 13*fScale, fontWeight: 900,
-background: "rgba(0,0,0,0.3)", padding: `${3*fScale}px ${8*fScale}px`,
-borderRadius: 4, fontFamily: "sans-serif", whiteSpace: "nowrap",
+color: “#fff”, fontSize: 13*fScale, fontWeight: 900,
+background: “rgba(0,0,0,0.3)”, padding: `${3*fScale}px ${8*fScale}px`,
+borderRadius: 4, fontFamily: “sans-serif”, whiteSpace: “nowrap”,
 }} />
 )}
 </div>
+
+```
   {/* Photo strip -- only render photos that exist, max 2 to prevent broken middle image */}
   {!isS && (
     <div style={{ display: "flex", gap: 1, height: isXL ? "30%" : isL ? "35%" : "40%", flexShrink: 0 }}>
@@ -434,6 +444,8 @@ borderRadius: 4, fontFamily: "sans-serif", whiteSpace: "nowrap",
     </div>
   </div>
 </div>
+```
+
 );
 }
 
@@ -443,29 +455,31 @@ borderRadius: 4, fontFamily: "sans-serif", whiteSpace: "nowrap",
 // Best for: services (HVAC, plumber, electrician, lawn, auto)
 //
 function StampTemplate({ data, sizeKey, onEdit }) {
-const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
+const ind = INDUSTRIES[data.industry] || INDUSTRIES[“Other Service”];
 const photo = data.photo || ind.photos[0];
-const isXL = sizeKey === "XL", isL = sizeKey === "L", isM = sizeKey === "M", isS = sizeKey === "S";
+const isXL = sizeKey === “XL”, isL = sizeKey === “L”, isM = sizeKey === “M”, isS = sizeKey === “S”;
 const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.65;
 const edit = (field) => (val) => onEdit(field, val);
 
 return (
 <div style={{
-width: "100%", height: "100%", overflow: "hidden", position: "relative",
-background: ind.colors.dark, fontFamily: "sans-serif",
+width: “100%”, height: “100%”, overflow: “hidden”, position: “relative”,
+background: ind.colors.dark, fontFamily: “sans-serif”,
 }}>
 {/* Diagonal photo on top half */}
 <div style={{
-position: "absolute", inset: 0,
-clipPath: "polygon(0 0, 100% 0, 100% 55%, 0 75%)",
-overflow: "hidden",
+position: “absolute”, inset: 0,
+clipPath: “polygon(0 0, 100% 0, 100% 55%, 0 75%)”,
+overflow: “hidden”,
 }}>
-<img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+<img src={photo} alt=”” style={{ width: “100%”, height: “100%”, objectFit: “cover” }} />
 <div style={{
-position: "absolute", inset: 0,
+position: “absolute”, inset: 0,
 background: `linear-gradient(180deg, ${ind.colors.dark}50 0%, ${ind.colors.dark}cc 100%)`
 }} />
 </div>
+
+```
   {/* Top: emergency/feature badge */}
   <div style={{
     position: "absolute", top: 8 * fScale, left: 10 * fScale, zIndex: 3,
@@ -531,6 +545,8 @@ background: `linear-gradient(180deg, ${ind.colors.dark}50 0%, ${ind.colors.dark}
     </div>
   </div>
 </div>
+```
+
 );
 }
 
@@ -544,9 +560,9 @@ background: `linear-gradient(180deg, ${ind.colors.dark}50 0%, ${ind.colors.dark}
 // Best for: real estate, home services, lawn care, roofing, HVAC
 //
 function FadeOutTemplate({ data, sizeKey, onEdit }) {
-const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
+const ind = INDUSTRIES[data.industry] || INDUSTRIES[“Other Service”];
 const photo = data.photo || ind.photos[0];
-const isXL = sizeKey === "XL", isL = sizeKey === "L", isM = sizeKey === "M", isS = sizeKey === "S";
+const isXL = sizeKey === “XL”, isL = sizeKey === “L”, isM = sizeKey === “M”, isS = sizeKey === “S”;
 const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.65;
 const edit = (field) => (val) => onEdit(field, val);
 
@@ -556,18 +572,20 @@ const leftBg = ind.colors.dark || ind.colors.primary;
 // How wide the left content zone is (photo fills the rest)
 // For XL (portrait): content left 55%, photo right 45%
 // For L/M/S (landscape): content left 50%, photo right 50%
-const contentWidth = isXL ? "55%" : "50%";
+const contentWidth = isXL ? “55%” : “50%”;
 
 // Bottom bar – amber/accent colored strip with phone + website
 // (matching the GreenScapes / Hometown reference style)
 const barBg = ind.colors.accent || ind.colors.primary;
-const barTextColor = "#fff";
+const barTextColor = “#fff”;
 
 return (
 <div style={{
-width: "100%", height: "100%", position: "relative", overflow: "hidden",
-background: leftBg, fontFamily: "sans-serif",
+width: “100%”, height: “100%”, position: “relative”, overflow: “hidden”,
+background: leftBg, fontFamily: “sans-serif”,
 }}>
+
+```
   {/* Right: photo that fades out to the left */}
   <div style={{
     position: "absolute",
@@ -767,15 +785,17 @@ background: leftBg, fontFamily: "sans-serif",
     </div>
   )}
 </div>
+```
+
 );
 }
 
 const TEMPLATES = {
-"photo-bold":  { name: "Photo Bold",    desc: "Hero photo, bold overlay text",   Component: PhotoBoldTemplate },
-"split-clean": { name: "Split Clean",   desc: "50/50 photo + content split",      Component: SplitCleanTemplate },
-"magazine":    { name: "Magazine",      desc: "Editorial multi-photo layout",     Component: MagazineTemplate },
-"stamp":       { name: "Service Stamp", desc: "Diagonal cut, oversized phone",    Component: StampTemplate },
-"fade-out":    { name: "Fade Out",      desc: "Photo fades right to brand color", Component: FadeOutTemplate },
+“photo-bold”:  { name: “Photo Bold”,    desc: “Hero photo, bold overlay text”,   Component: PhotoBoldTemplate },
+“split-clean”: { name: “Split Clean”,   desc: “50/50 photo + content split”,      Component: SplitCleanTemplate },
+“magazine”:    { name: “Magazine”,      desc: “Editorial multi-photo layout”,     Component: MagazineTemplate },
+“stamp”:       { name: “Service Stamp”, desc: “Diagonal cut, oversized phone”,    Component: StampTemplate },
+“fade-out”:    { name: “Fade Out”,      desc: “Photo fades right to brand color”, Component: FadeOutTemplate },
 };
 
 // Helper: normalize menuItems array (handles both string items and {text,enabled} objects)
@@ -786,8 +806,8 @@ if (!menuItems || !Array.isArray(menuItems) || menuItems.length === 0) {
 return fallback || [];
 }
 const active = menuItems
-.filter(m => m != null && (typeof m === "string" ? m.trim() !== "" : m.enabled !== false))
-.map(m => (typeof m === "object" && m !== null) ? (m.text || "") : String(m));
+.filter(m => m != null && (typeof m === “string” ? m.trim() !== “” : m.enabled !== false))
+.map(m => (typeof m === “object” && m !== null) ? (m.text || “”) : String(m));
 // If ALL items are disabled/empty, fall back to industry defaults
 if (active.length === 0) return fallback || [];
 return active;
@@ -795,29 +815,29 @@ return active;
 
 //  Smart template suggestion based on industry
 function suggestTemplate(industry) {
-const restaurantTypes = ["Pizza Restaurant", "Mexican Restaurant", "Chinese Restaurant",
-"Breakfast & Cafe", "Bar & Grill", "Italian Restaurant", "Bakery", "Coffee Shop"];
-const medicalTypes = ["Dentist", "Medical & Healthcare", "Chiropractor", "Veterinarian"];
-const editorialTypes = ["Real Estate", "Insurance", "Financial Services", "Photography",
-"Retail Shop", "Daycare", "Salon & Beauty"];
-const serviceTypes = ["HVAC", "Plumber", "Electrician", "Lawn & Landscaping",
-"Roofing", "Painting", "Cleaning Service", "Pest Control", "Auto Repair"];
+const restaurantTypes = [“Pizza Restaurant”, “Mexican Restaurant”, “Chinese Restaurant”,
+“Breakfast & Cafe”, “Bar & Grill”, “Italian Restaurant”, “Bakery”, “Coffee Shop”];
+const medicalTypes = [“Dentist”, “Medical & Healthcare”, “Chiropractor”, “Veterinarian”];
+const editorialTypes = [“Real Estate”, “Insurance”, “Financial Services”, “Photography”,
+“Retail Shop”, “Daycare”, “Salon & Beauty”];
+const serviceTypes = [“HVAC”, “Plumber”, “Electrician”, “Lawn & Landscaping”,
+“Roofing”, “Painting”, “Cleaning Service”, “Pest Control”, “Auto Repair”];
 
-if (restaurantTypes.includes(industry)) return "photo-bold";
-if (medicalTypes.includes(industry)) return "split-clean";
-if (editorialTypes.includes(industry)) return "magazine";
-if (serviceTypes.includes(industry)) return "stamp";
-return "split-clean";
+if (restaurantTypes.includes(industry)) return “photo-bold”;
+if (medicalTypes.includes(industry)) return “split-clean”;
+if (editorialTypes.includes(industry)) return “magazine”;
+if (serviceTypes.includes(industry)) return “stamp”;
+return “split-clean”;
 }
 
 //  Render dimensions for preview
 function getRenderDimensions(sizeKey) {
-// 1 inch = 55px fills the 530px preview column correctly for the 9" postcard.
+// 1 inch = 55px fills the 530px preview column correctly for the 9” postcard.
 // Real sizes match the picker exactly:
-//   XL = 4x5"  -> 220x275px
-//   L  = 4x3"  -> 220x165px
-//   M  = 3x2"  -> 165x110px
-//   S  = 2x2"  -> 110x110px
+//   XL = 4x5”  -> 220x275px
+//   L  = 4x3”  -> 220x165px
+//   M  = 3x2”  -> 165x110px
+//   S  = 2x2”  -> 110x110px
 const PX_PER_INCH = 55;
 const sizes = {
 XL: { w: 4, h: 5 },
@@ -843,31 +863,31 @@ reader.readAsDataURL(file);
 };
 return (
 <div>
-<div style={{ fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 3 }}>{label}</div>
-{hint && <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 5 }}>{hint}</div>}
+<div style={{ fontSize: 12, fontWeight: 700, color: “#374151”, marginBottom: 3 }}>{label}</div>
+{hint && <div style={{ fontSize: 11, color: “#9ca3af”, marginBottom: 5 }}>{hint}</div>}
 <div onClick={() => ref.current.click()}
 style={{
 border: `2px dashed ${value ? "#16a34a" : "#d1d5db"}`,
-borderRadius: 8, padding: value ? "5px" : "10px",
-cursor: "pointer", textAlign: "center", background: value ? "#f0fdf4" : "#fafafa",
-display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+borderRadius: 8, padding: value ? “5px” : “10px”,
+cursor: “pointer”, textAlign: “center”, background: value ? “#f0fdf4” : “#fafafa”,
+display: “flex”, alignItems: “center”, justifyContent: “center”, gap: 8,
 }}>
 {value ? (
 <>
-<img src={value} alt="" style={{ height: 40, maxWidth: 60, objectFit: "contain", borderRadius: 3 }} />
-<div style={{ fontSize: 11, color: "#16a34a", fontWeight: 700 }}>
+<img src={value} alt=”” style={{ height: 40, maxWidth: 60, objectFit: “contain”, borderRadius: 3 }} />
+<div style={{ fontSize: 11, color: “#16a34a”, fontWeight: 700 }}>
 Uploaded<br />
-<span style={{ color: "#6b7280", fontWeight: 400 }}>Click to change</span>
+<span style={{ color: “#6b7280”, fontWeight: 400 }}>Click to change</span>
 </div>
 </>
 ) : (
 <>
 <span style={{ fontSize: 18 }}></span>
-<div style={{ fontSize: 11, color: "#6b7280" }}>Click to upload</div>
+<div style={{ fontSize: 11, color: “#6b7280” }}>Click to upload</div>
 </>
 )}
 </div>
-<input ref={ref} type="file" accept="image/*" onChange={handleFile} style={{ display: "none" }} />
+<input ref={ref} type=“file” accept=“image/*” onChange={handleFile} style={{ display: “none” }} />
 </div>
 );
 }
@@ -875,24 +895,24 @@ Uploaded<br />
 //
 //   MAIN COMPONENT – Full UI with form, template picker, preview
 //
-export default function AdGenerator({ initialSize = "L", onComplete, onClose }) {
+export default function AdGenerator({ initialSize = “L”, onComplete, onClose }) {
 const [sizeKey, setSizeKey] = useState(initialSize);
 const [step, setStep] = useState(1);
 const [formData, setFormData] = useState({
-businessName: "",
-email: "",
-industry: "",
-tagline: "",
-offer: "",
-offerFine: "",
-address: "",
-phone: "",
-website: "",
+businessName: “”,
+email: “”,
+industry: “”,
+tagline: “”,
+offer: “”,
+offerFine: “”,
+address: “”,
+phone: “”,
+website: “”,
 logo: null,
 photo: null,
 menuItems: [],
 });
-const [selectedTemplate, setSelectedTemplate] = useState("photo-bold");
+const [selectedTemplate, setSelectedTemplate] = useState(“photo-bold”);
 const [emailError, setEmailError] = useState(false);
 const emailRef = useRef(null);
 
@@ -902,15 +922,15 @@ const industry = e.target.value;
 const defaultMenu = INDUSTRIES[industry]?.menu || [];
 // Convert to {text, enabled} objects immediately for consistent format
 const normalizedMenu = defaultMenu.map(item =>
-typeof item === "object" ? item : { text: item, enabled: true }
+typeof item === “object” ? item : { text: item, enabled: true }
 );
-setFormData(d => ({ ...d, industry, menuItems: normalizedMenu }));
+setFormData(d => ({ …d, industry, menuItems: normalizedMenu }));
 if (industry) setSelectedTemplate(suggestTemplate(industry));
 };
 
 // Handler for inline edits made directly in the preview
 const handleInlineEdit = useCallback((field, value) => {
-setFormData(d => ({ ...d, [field]: value }));
+setFormData(d => ({ …d, [field]: value }));
 }, []);
 
 const dims = getRenderDimensions(sizeKey);
@@ -920,14 +940,16 @@ const formValid = formData.businessName.trim() && formData.industry && formData.
 
 return (
 <div style={{
-position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)",
-display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16,
+position: “fixed”, inset: 0, background: “rgba(0,0,0,0.75)”,
+display: “flex”, alignItems: “center”, justifyContent: “center”, zIndex: 1000, padding: 16,
 }}>
 <div style={{
-background: "#f8fafc", borderRadius: 18, width: "100%", maxWidth: 1280, maxHeight: "94vh",
-overflow: "hidden", display: "flex", flexDirection: "column",
-boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
+background: “#f8fafc”, borderRadius: 18, width: “100%”, maxWidth: 1280, maxHeight: “94vh”,
+overflow: “hidden”, display: “flex”, flexDirection: “column”,
+boxShadow: “0 40px 100px rgba(0,0,0,0.4)”, fontFamily: “system-ui, sans-serif”,
 }}>
+
+```
     {/* Header */}
     <div style={{
       padding: "16px 24px", borderBottom: "1px solid #e5e7eb", background: "#fff",
@@ -1366,12 +1388,14 @@ boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
     </div>
   </div>
 </div>
+```
+
 );
 }
 
 // Reusable styles
 const inputStyle = {
-width: "100%", padding: "9px 12px", borderRadius: 7,
-border: "1.5px solid #e5e7eb", fontSize: 13, outline: "none",
-fontFamily: "system-ui, sans-serif", boxSizing: "border-box", background: "#fff",
+width: “100%”, padding: “9px 12px”, borderRadius: 7,
+border: “1.5px solid #e5e7eb”, fontSize: 13, outline: “none”,
+fontFamily: “system-ui, sans-serif”, boxSizing: “border-box”, background: “#fff”,
 };
