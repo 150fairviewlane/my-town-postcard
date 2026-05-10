@@ -278,14 +278,14 @@ return (
 
   {/* Center: tagline */}
   {!isS && (
-    <div style={{ position: "absolute", top: "42%", left: 12*fScale, right: 12*fScale, textAlign: "center" }}>
+    <div style={{ position: "absolute", top: "28%", left: 12*fScale, right: 12*fScale, textAlign: "center" }}>
       <EditableText value={data.tagline || ind.taglines[0]} onChange={edit("tagline")} {...ef("tagline")}
         style={{ color: "#fff", fontWeight: 800, fontSize: (isXL?22:isL?18:14)*fScale, lineHeight: 1.1, fontStyle: "italic", textShadow: "0 2px 12px rgba(0,0,0,0.8)", textAlign: "center" }} />
     </div>
   )}
 
   {/* Menu / services list — 2 items on S, 4 on all larger sizes */}
-  <div style={{ position: "absolute", top: "60%", left: 12*fScale, right: 12*fScale, display: "flex", flexDirection: "column", gap: 3*fScale }}>
+  <div style={{ position: "absolute", top: "44%", left: 12*fScale, right: 12*fScale, display: "flex", flexDirection: "column", gap: 3*fScale }}>
     {getActiveItems(data.menuItems, ind.menu).slice(0, isS ? 2 : 4).map((item, i) => (
       <div key={i} style={{ display: "flex", alignItems: "center", gap: 6*fScale }}>
         <div style={{ width: 12*fScale, height: 12*fScale, borderRadius: "50%", background: ind.colors.primary, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
