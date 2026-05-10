@@ -291,7 +291,7 @@ return (
         <div style={{ width: 12*fScale, height: 12*fScale, borderRadius: "50%", background: ind.colors.primary, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <span style={{ color: "#fff", fontSize: 7*fScale, fontWeight: 900 }}>✓</span>
         </div>
-        <EditableText value={item} onChange={editMenu(i)}
+        <EditableText value={item} onChange={editMenu(i)} {...ef(`menuItem_${i}`)}
           style={{ color: "#fff", fontSize: 9*fScale, fontWeight: 600, fontFamily: "sans-serif", textShadow: "0 1px 4px rgba(0,0,0,0.8)" }} />
       </div>
     ))}
@@ -398,7 +398,7 @@ size={36 * fScale} bg={ind.colors.primary} color="#fff" border={`2px solid #fff`
             <div style={{ width: 14*fScale, height: 14*fScale, borderRadius: "50%", background: ind.colors.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <span style={{ color: "#fff", fontSize: 8*fScale, fontWeight: 900 }}>&#10003;</span>
             </div>
-            <EditableText value={item} onChange={editMenu(i)}
+            <EditableText value={item} onChange={editMenu(i)} {...ef(`menuItem_${i}`)}
               style={{ fontSize: 10*fScale, color: "#222", fontWeight: 500 }} />
           </div>
         ))}
@@ -519,7 +519,7 @@ borderRadius: 4, fontFamily: "sans-serif", whiteSpace: "nowrap",
         {getActiveItems(data.menuItems, ind.menu).slice(0, isS ? 2 : 4).map((item, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", gap: 3 }}>
             <span style={{ color: ind.colors.primary, fontSize: 9*fScale, fontWeight: 900, marginTop: 1 }}>&#8226;</span>
-            <EditableText value={item} onChange={editMenu(i)}
+            <EditableText value={item} onChange={editMenu(i)} {...ef(`menuItem_${i}`)}
               style={{ fontSize: 10*fScale, color: "#333", fontFamily: "sans-serif", fontWeight: 500 }} />
           </div>
         ))}
@@ -577,6 +577,11 @@ fieldWidths: data.fieldWidths || {},
 onFontSizeChange,
 onWidthChange,
 });
+const editMenu = (i) => (val) => onEdit("menuItems", data.menuItems.map((m, j) => {
+if (j !== i) return m;
+if (typeof m === "object") return { ...m, text: val };
+return val;
+}));
 
 return (
 <div style={{
@@ -632,7 +637,7 @@ background: `linear-gradient(180deg, ${ind.colors.dark}50 0%, ${ind.colors.dark}
   <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: `${6*fScale}px ${10*fScale}px ${8*fScale}px`, display: "flex", flexDirection: "column", gap: 4*fScale, zIndex: 3 }}>
     <div style={{ display: "flex", flexWrap: "wrap", gap: `2px ${8*fScale}px`, justifyContent: "center" }}>
         {getActiveItems(data.menuItems, ind.menu).slice(0, isS ? 2 : 4).map((item, i) => (
-          <EditableText key={i} value={` ${item}`} onChange={(v) => edit("menuItems")(data.menuItems.map((m, j) => { if (j !== i) return m; if (typeof m === "object") return {...m, text: v.replace(" ", "")}; return v.replace(" ", ""); }))}
+          <EditableText key={i} value={` ${item}`} onChange={(v) => editMenu(i)(v.replace(/^ /, ""))} {...ef(`menuItem_${i}`)}
             style={{ color: "rgba(255,255,255,0.9)", fontSize: Math.max(9, 8*fScale) }} />
         ))}
     </div>
@@ -688,6 +693,11 @@ fieldWidths: data.fieldWidths || {},
 onFontSizeChange,
 onWidthChange,
 });
+const editMenu = (i) => (val) => onEdit("menuItems", data.menuItems.map((m, j) => {
+if (j !== i) return m;
+if (typeof m === "object") return { ...m, text: val };
+return val;
+}));
 
 // The left color – use industry primary darkened slightly for richness
 const leftBg = ind.colors.dark || ind.colors.primary;
@@ -790,9 +800,8 @@ background: leftBg, fontFamily: "sans-serif",
                 <circle cx="7" cy="7" r="7" fill={ind.colors.accent}/>
                 <path d="M4 7l2 2 4-4" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
               </svg>
-              <span style={{ color: "rgba(255,255,255,0.92)", fontSize: 10*fScale, fontWeight: 600, lineHeight: 1.3 }}>
-                {item}
-              </span>
+              <EditableText value={item} onChange={editMenu(i)} {...ef(`menuItem_${i}`)}
+                style={{ color: "rgba(255,255,255,0.92)", fontSize: 10*fScale, fontWeight: 600, lineHeight: 1.3 }} />
             </div>
           ))}
       </div>
