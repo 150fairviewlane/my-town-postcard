@@ -515,9 +515,9 @@ return(<div style={{fontFamily:"sans-serif"}}>
   <div style={{color:"rgba(255,255,255,0.3)",fontSize:40,marginTop:8}}>🔄</div>
 </div>
 
-<div className="postcard-section" style={{display:"flex",width:"100%",fontFamily:"sans-serif",background:"#f1f5f9",flexDirection:"column",boxSizing:"border-box",height:"100vh",padding:"12px 20px 8px",overflow:"hidden"}}>
+<div className="postcard-section" style={{display:"flex",width:"100%",fontFamily:"sans-serif",background:"transparent",flexDirection:"column",boxSizing:"border-box",height:"100vh",padding:"12px 20px 8px",overflow:"hidden"}}>
   <div style={{textAlign:"center",marginBottom:6,flexShrink:0}}>
-    <div style={{fontSize:22,fontWeight:900,color:"#111",fontFamily:"Georgia,serif",letterSpacing:-0.3}}>Reserve Your Spot on the Postcard</div>
+    <div style={{fontSize:28,fontWeight:900,color:"#111",fontFamily:"Georgia,serif",letterSpacing:-0.3}}>Reserve Your Spot on the Postcard</div>
     <div style={{fontSize:12,color:"#64748b",marginTop:2}}>Click any <span style={{color:"#16a34a",fontWeight:700}}>green spot</span> below to claim yours</div>
   </div>
   <div style={{display:"flex",justifyContent:"center",marginBottom:6,flexShrink:0}}>
@@ -542,7 +542,7 @@ return(<div style={{fontFamily:"sans-serif"}}>
 </div>
 
 <div style={{display:"flex",justifyContent:"center",gap:20,marginTop:8,flexWrap:"wrap",flexShrink:0}}>
-  {[{bg:"linear-gradient(135deg,#f8fffe,#f0fdf4)",border:"2px solid #4ade80",l:"Available -- click to reserve"},{bg:"#fefce8",border:"2px dashed #fbbf24",l:"Reserved"},{bg:"#f1f5f9",border:"2px solid #cbd5e1",l:"Spot taken"}].map(x=>(
+  {[{bg:"linear-gradient(135deg,#f8fffe,#f0fdf4)",border:"2px solid #4ade80",l:"Available -- click to reserve"},{bg:"#f1f5f9",border:"2px solid #cbd5e1",l:"Spot taken"}].map(x=>(
     <div key={x.l} style={{display:"flex",alignItems:"center",gap:7}}>
       <div style={{width:20,height:20,background:x.bg,border:x.border,borderRadius:4,flexShrink:0}}/>
       <span style={{fontSize:12,color:"#64748b",fontWeight:500}}>{x.l}</span>
