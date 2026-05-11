@@ -210,6 +210,7 @@ textAlign: "center",
 position: "relative",
 flexShrink: 0,
 width: "fit-content",
+alignSelf: "center", // prevents flex-column stretch from overriding fit-content width
 margin: `${5*scale}px auto 0`, // centers the coupon; top margin ensures scissors aren't flush with parent edge
 }}>
 {/* Scissors strip */}

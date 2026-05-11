@@ -144,7 +144,7 @@ function Coupon({offer,fine,color,dark,scale=1}){
 if(!offer)return null;
 const bdr=dark?"rgba(255,255,255,0.55)":color;
 return(
-<div style={{flexShrink:0}}>
+<div style={{flexShrink:0,width:"fit-content",alignSelf:"center",margin:"0 auto"}}>
 <div style={{display:"flex",alignItems:"center",marginBottom:1}}>
 <span style={{fontSize:9*scale,lineHeight:1,opacity:0.7,flexShrink:0}}>✄</span>
 <div style={{flex:1,borderTop:"1px dashed "+bdr+"88",marginLeft:2}}/>
@@ -162,7 +162,7 @@ return(
 function CouponCompact({offer,fine,color,dark}){
 if(!offer)return null;
 return(
-<div style={{border:"1.5px dashed "+(dark?"rgba(255,255,255,0.6)":color),borderRadius:3,padding:"3px 7px",textAlign:"center",background:dark?"rgba(0,0,0,0.35)":color+"18",flexShrink:0}}>
+<div style={{border:"1.5px dashed "+(dark?"rgba(255,255,255,0.6)":color),borderRadius:3,padding:"3px 7px",textAlign:"center",background:dark?"rgba(0,0,0,0.35)":color+"18",flexShrink:0,width:"fit-content",alignSelf:"center",margin:"0 auto"}}>
 <div style={{fontSize:9,fontWeight:900,color:dark?"#fff":color,lineHeight:1.1}}>{offer}</div>
 {fine&&<div style={{fontSize:7,color:dark?"rgba(255,255,255,0.5)":"#888",marginTop:1}}>{fine}</div>}
 </div>
