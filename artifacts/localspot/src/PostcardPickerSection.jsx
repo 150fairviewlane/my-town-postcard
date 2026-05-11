@@ -18,32 +18,20 @@ const FRONT = [
 { id:"l4",  dbGridArea:"l4", size:"L",  price:399, x:900, y:500, w:300, h:400, sample:null       },
 ];
 
-// BACK: matches postcardBack.jsx exactly.
-// Natural canvas 1200×900 (1 col = 1 inch = 100px, 1 row = 100px).
-//   cols: 1  2  3  4  5  6  7  8  9  10 11 12
-//  row 1: bxl bxl bxl bxl bl1 bl1 bl1 bl1 bl2 bl2 bl2 bl2
-//  row 2: bxl bxl bxl bxl bl1 bl1 bl1 bl1 bl2 bl2 bl2 bl2
-//  row 3: bxl bxl bxl bxl bl1 bl1 bl1 bl1 bl2 bl2 bl2 bl2
-//  row 4: bxl bxl bxl bxl bm1 bm1 bm1 bm2 bm2 bm2 bhs bhs
-//  row 5: bxl bxl bxl bxl bm1 bm1 bm1 bm2 bm2 bm2 bhs bhs
-//  row 6: bhr bhr bhr bhr bs1 bs1 bs2 bs2 ed  ed  ed  ed
-//  row 7: bhr bhr bhr bhr bs1 bs1 bs2 bs2 ed  ed  ed  ed
-//  row 8: bhr bhr bhr bhr bhn bhn bhn bhn ed  ed  ed  ed
-//  row 9: bhr bhr bhr bhr bhn bhn bhn bhn ed  ed  ed  ed
+// BACK: visual layout (3 XL columns + 4 M row + S/house/EDDM bottom row).
+// dbGridArea links each visual cell to its DB row. Cells with dbGridArea:null
+// are visual-only filler or house ads with no dedicated DB spot.
 const BACK = [
-// ── Sellable spots (7 total) ──────────────────────────────────
-{ id:"bxl", dbGridArea:"bxl", size:"XL", price:499, x:0,   y:0,   w:400, h:500, sample:"realty", tmpl:"clean"  },
-{ id:"bl1", dbGridArea:"bl1", size:"L",  price:399, x:400, y:0,   w:400, h:300, sample:null                    },
-{ id:"bl2", dbGridArea:"bl2", size:"L",  price:399, x:800, y:0,   w:400, h:300, sample:null                    },
-{ id:"bm1", dbGridArea:"bm1", size:"M",  price:299, x:400, y:300, w:300, h:200, sample:"salon",  tmpl:"banner" },
-{ id:"bm2", dbGridArea:"bm2", size:"M",  price:299, x:700, y:300, w:300, h:200, sample:"pizza",  tmpl:"slate"  },
-{ id:"bs1", dbGridArea:"bs1", size:"S",  price:199, x:400, y:500, w:200, h:200, sample:null                    },
-{ id:"bs2", dbGridArea:"bs2", size:"S",  price:199, x:600, y:500, w:200, h:200, sample:null                    },
-// ── Non-sellable ──────────────────────────────────────────────
-{ id:"bhs", dbGridArea:null, size:"house", price:0, x:1000, y:300, w:200, h:200, sample:"house"  },
-{ id:"bhr", dbGridArea:null, size:"house", price:0, x:0,    y:500, w:400, h:400, sample:"house"  },
-{ id:"bhn", dbGridArea:null, size:"house", price:0, x:400,  y:700, w:400, h:200, sample:"house"  },
-{ id:"bed", dbGridArea:null, size:"eddm",  price:0, x:800,  y:500, w:400, h:400, sample:"eddm"   },
+{ id:"bxl1", dbGridArea:"bxl", size:"XL", price:499, x:0,   y:0,   w:400, h:500, sample:"realty", tmpl:"clean" },
+{ id:"bxl2", dbGridArea:null,  size:"XL", price:499, x:400, y:0,   w:400, h:500, sample:null                   },
+{ id:"bxl3", dbGridArea:null,  size:"XL", price:499, x:800, y:0,   w:400, h:500, sample:"auto",   tmpl:"photo" },
+{ id:"bm1",  dbGridArea:"bm1", size:"M",  price:299, x:0,   y:500, w:300, h:200, sample:"salon",  tmpl:"banner" },
+{ id:"bm2",  dbGridArea:null,  size:"M",  price:299, x:300, y:500, w:300, h:200, sample:null                   },
+{ id:"bm3",  dbGridArea:"bm2", size:"M",  price:299, x:600, y:500, w:300, h:200, sample:"pizza",  tmpl:"slate"  },
+{ id:"bm4",  dbGridArea:null,  size:"M",  price:299, x:900, y:500, w:300, h:200, sample:null                   },
+{ id:"bs1",  dbGridArea:"bs1", size:"S",  price:199, x:0,   y:700, w:200, h:200, sample:null                   },
+{ id:"bhs",  dbGridArea:null,  size:"house", price:0, x:200, y:700, w:600, h:200, sample:"house"               },
+{ id:"bed",  dbGridArea:null,  size:"eddm",  price:0, x:800, y:700, w:400, h:200, sample:"eddm"                },
 ];
 
 const ADS = {
@@ -442,10 +430,12 @@ const d=ADS[k]; if(!d)return null;
 return(<ScaledCell spot={spot} scale={scale}>{spot.size==="XL"&&<AdXL d={d} tmpl={t}/>}{spot.size==="L"&&<AdL d={d} tmpl={t}/>}{spot.size==="M"&&<AdM d={d} w={spot.w} h={spot.h} tmpl={t}/>}{spot.size==="S"&&<AdS d={d}/>}</ScaledCell>);
 }
 
-// Maps each picker spot id to its exact DB grid_area — ensures the user always
-// reserves exactly the spot they clicked, on both sides.
+// Maps each picker spot id to its exact DB grid_area.
+// Front: every visual cell has a 1:1 DB row.
+// Back: only some visual cells have a dedicated DB row (dbGridArea set); the rest
+// are visual-only filler that fall back to size-priority reservation.
 const FRONT_GRID_MAP = { xl1:"mb", xl2:"dn", xl3:"re", l1:"l1", l2:"l2", l3:"l3", l4:"l4" };
-const BACK_GRID_MAP  = { bxl:"bxl", bl1:"bl1", bl2:"bl2", bm1:"bm1", bm2:"bm2", bs1:"bs1", bs2:"bs2" };
+const BACK_GRID_MAP  = { bxl1:"bxl", bm1:"bm1", bm3:"bm2", bs1:"bs1" };
 
 export default function PostcardPicker(){
 const [side,setSide]=useState("front");
@@ -486,13 +476,30 @@ const handleComplete=async(formData)=>{
         setReserving(false);return;
       }
     }else{
-      // Back: exact gridArea match — same guarantee as front, user gets the spot they clicked
+      // Back: prefer exact DB match for cells that have one; fall back to
+      // size-priority for the visual-only filler cells (dbGridArea:null).
       const gridArea=BACK_GRID_MAP[sel?.id];
-      if(!gridArea){setReserveError("Unknown spot position. Please close and try again.");setReserving(false);return;}
-      realSpot=spots.find(s=>s.gridArea===gridArea);
-      if(!realSpot||realSpot.status!=="available"){
-        setReserveError("Sorry, that spot was just taken. Please close and choose another.");
-        setReserving(false);return;
+      if(gridArea){
+        realSpot=spots.find(s=>s.gridArea===gridArea);
+        if(!realSpot||realSpot.status!=="available"){
+          setReserveError("Sorry, that spot was just taken. Please close and choose another.");
+          setReserving(false);return;
+        }
+      }else{
+        // Visual filler cell — claim any available back spot of the same size
+        // that isn't already covered by a mapped visual cell.
+        const mappedAreas=new Set(Object.values(BACK_GRID_MAP));
+        const sizeMap={XL:"xl",L:"large",M:"medium",S:"small"};
+        const dbSize=sizeMap[sel?.size];
+        realSpot=spots.find(s=>s.size===dbSize&&s.side==="back"&&s.status==="available"&&!mappedAreas.has(s.gridArea));
+        if(!realSpot){
+          // All unmapped spots of this size taken — claim any available of this size
+          realSpot=spots.find(s=>s.size===dbSize&&s.side==="back"&&s.status==="available");
+        }
+        if(!realSpot){
+          setReserveError("Sorry, no spots of that size are currently available.");
+          setReserving(false);return;
+        }
       }
     }
 
