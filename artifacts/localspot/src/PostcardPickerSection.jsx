@@ -399,15 +399,18 @@ if(liveSpot&&liveSpot.status==="paid"&&liveSpot.templateData){
   const sk=sizeKey||(spot.size==="XL"?"XL":spot.size==="L"?"L":spot.size==="M"?"M":"S");
   return(<ScaledCell spot={spot} scale={scale}><div style={{width:spot.w,height:spot.h,pointerEvents:"none"}}><AdTemplatePreview templateKey={template||"split-clean"} formData={adData} sizeKey={sk}/></div></ScaledCell>);
 }
-// Paid spot without template data → show sample ad or SOLD placeholder, never clickable
+// Paid spot without template data → show sample ad or business-name placeholder, never "SOLD"
 if(liveSpot&&liveSpot.status==="paid"){
   if(k&&ADS[k]){const d=ADS[k];return(<ScaledCell spot={spot} scale={scale}><div style={{width:spot.w,height:spot.h,pointerEvents:"none"}}>{spot.size==="XL"&&<AdXL d={d} tmpl={t}/>}{spot.size==="L"&&<AdL d={d} tmpl={t}/>}{spot.size==="M"&&<AdM d={d} w={spot.w} h={spot.h} tmpl={t}/>}{spot.size==="S"&&<AdS d={d}/>}</div></ScaledCell>);}
-  return(<ScaledCell spot={spot} scale={scale}><div style={{width:spot.w,height:spot.h,background:"#1f2937",display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}><div style={{color:"#6b7280",fontWeight:900,fontSize:14,letterSpacing:2,textTransform:"uppercase"}}>SOLD</div></div></ScaledCell>);
+  const biz=liveSpot.businessName||"Local Business";
+  const fz=spot.size==="XL"?22:spot.size==="L"?18:13;
+  return(<ScaledCell spot={spot} scale={scale}><div style={{width:spot.w,height:spot.h,background:"linear-gradient(135deg,#1a2744,#0f1729)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",pointerEvents:"none",padding:12,boxSizing:"border-box",gap:8}}><div style={{color:"rgba(255,255,255,0.35)",fontSize:7,fontWeight:700,letterSpacing:2,textTransform:"uppercase"}}>Community Ad</div><div style={{color:"#fff",fontWeight:900,fontSize:fz,fontFamily:"Georgia,serif",textAlign:"center",lineHeight:1.2}}>{biz}</div><div style={{width:32,height:2,background:"rgba(255,255,255,0.2)",borderRadius:1}}/><div style={{color:"rgba(255,255,255,0.4)",fontSize:8,fontFamily:"sans-serif"}}>mytownpostcard.com</div></div></ScaledCell>);
 }
-// Reserved spot → non-clickable (hold in progress by another customer)
+// Reserved spot → show as green/available; the 30-min hold is transient.
+// If the spot is still held when someone tries to reserve it, the error banner in
+// the AdGenerator will show "Sorry, that spot was just taken."
 if(liveSpot&&liveSpot.status==="reserved"){
-  if(k&&ADS[k]){const d=ADS[k];return(<ScaledCell spot={spot} scale={scale}><div style={{width:spot.w,height:spot.h,pointerEvents:"none",position:"relative"}}>{spot.size==="XL"&&<AdXL d={d} tmpl={t}/>}{spot.size==="L"&&<AdL d={d} tmpl={t}/>}{spot.size==="M"&&<AdM d={d} w={spot.w} h={spot.h} tmpl={t}/>}{spot.size==="S"&&<AdS d={d}/>}<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.55)",display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{color:"#fbbf24",fontWeight:900,fontSize:12,letterSpacing:2,textTransform:"uppercase",background:"rgba(0,0,0,0.6)",padding:"4px 10px",borderRadius:4}}>HOLD</div></div></div></ScaledCell>);}
-  return(<ScaledCell spot={spot} scale={scale}><div style={{width:spot.w,height:spot.h,background:"#374151",display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}><div style={{color:"#fbbf24",fontWeight:900,fontSize:14,letterSpacing:2,textTransform:"uppercase"}}>HOLD</div></div></ScaledCell>);
+  return<ScaledCell spot={spot} scale={scale}><AvailableSpot spot={spot} hovered={hov===spot.id} onClick={()=>onSel(spot)} onEnter={()=>onHov(spot.id)} onLeave={onOut}/></ScaledCell>;
 }
 // Live available slot → always show reservation UI (overrides any demo sample)
 if(liveSpot&&liveSpot.status==="available"){
