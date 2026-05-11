@@ -33,8 +33,8 @@ export default function ConfirmationPage() {
             You're on the Postcard!
           </h1>
           <p style={{ color: "#374151", fontSize: 15, lineHeight: 1.6, marginBottom: 24 }}>
-            Your ad will appear on the next <strong>Clarkesville Community Mailer</strong>,
-            reaching <strong>5,000 homes</strong> across Habersham County.
+            Your ad will appear on the next <strong>Habersham Community Mailer</strong>,
+            reaching <strong>5,000 homes</strong> across Clarksville, Cornelia, Demorest and Alto.
           </p>
 
           {/* Order summary card — pulls live from the server so even on a
