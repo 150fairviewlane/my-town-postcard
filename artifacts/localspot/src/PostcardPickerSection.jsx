@@ -527,9 +527,15 @@ return()=>ro.disconnect();
 },[]);
 
 const spots=side==="front"?FRONT:BACK;
-// Use live DB status for sold counts so the tally stays accurate
-const soldF=FRONT.filter(s=>s.dbGridArea&&spotByGridArea[s.dbGridArea]?.status==="paid").length;
-const soldB=BACK.filter(s=>s.dbGridArea&&spotByGridArea[s.dbGridArea]?.status==="paid").length;
+// Count sold spots directly from campaign API data (by side) so all DB rows
+// are included — not just the subset that have a visual grid cell mapped.
+const allSpots=campaign?.spots||[];
+const soldF=allSpots.filter(s=>s.side==="front"&&s.status==="paid").length;
+const soldB=allSpots.filter(s=>s.side==="back"&&s.status==="paid").length;
+// Totals: front has 7 sellable cells; back visual grid has 8 sellable cells
+// (3 XL + 4 M + 1 S, excluding the house-ad and EDDM blocks).
+const totF=7;
+const totB=8;
 
 return(<div style={{fontFamily:"sans-serif"}}>
 <style>{`@media (max-width: 768px) and (orientation: portrait) { .rotate-prompt { display: flex !important; } .postcard-section { display: none !important; } } @media (min-width: 769px), (orientation: landscape) { .rotate-prompt { display: none !important; } .postcard-section { display: flex !important; } }`}</style>
@@ -551,7 +557,7 @@ return(<div style={{fontFamily:"sans-serif"}}>
   </div>
   <div style={{display:"flex",justifyContent:"center",marginBottom:2,flexShrink:0}}>
     <div style={{background:"#fff",borderRadius:12,padding:4,display:"flex",gap:3,boxShadow:"0 1px 8px rgba(0,0,0,0.1)"}}>
-      {[{id:"front",l:"Front Side",sold:soldF,tot:7},{id:"back",l:"Back Side",sold:soldB,tot:7}].map(s=>(
+      {[{id:"front",l:"Front Side",sold:soldF,tot:totF},{id:"back",l:"Back Side",sold:soldB,tot:totB}].map(s=>(
         <button key={s.id} onClick={()=>setSide(s.id)} style={{padding:"7px 22px",borderRadius:9,border:"none",cursor:"pointer",background:side===s.id?"linear-gradient(135deg,#991b1b,#7f1d1d)":"transparent",color:side===s.id?"#fff":"#64748b",fontWeight:700,fontSize:15,transition:"all 0.18s",lineHeight:1.3}}>
           {s.l}<br/>
           <span style={{fontSize:12,fontWeight:400,opacity:0.8}}>{s.sold} of {s.tot} sold</span>
