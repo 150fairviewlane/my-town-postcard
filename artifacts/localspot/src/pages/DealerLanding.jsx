@@ -367,12 +367,11 @@ function EarningsBreakdown() {
                   { label: "Per postcard", value: "~$2,500" },
                   { label: "Per month (4 cards)", value: "~$10,000" },
                   { label: "Per year (48 cards)", value: "~$120,000" },
-                  { label: "Your share of profit", value: "80%" },
                 ].map(stat => (
                   <div key={stat.label} style={{ background: "rgba(255,255,255,0.15)",
-                    borderRadius: 10, padding: "14px 16px" }}>
+                    borderRadius: 10, padding: "14px 16px", minHeight: 88 }}>
                     <div style={{ fontSize: 22, fontWeight: 900, fontFamily: "Georgia,serif",
-                      lineHeight: 1 }}>{stat.value}</div>
+                      lineHeight: 1, marginBottom: 6 }}>{stat.value}</div>
                     <div style={{ fontSize: 12, opacity: 0.85, marginTop: 4,
                       fontFamily: "sans-serif" }}>{stat.label}</div>
                   </div>
