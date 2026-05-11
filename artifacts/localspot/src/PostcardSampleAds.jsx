@@ -153,7 +153,6 @@ function AdXL({ d }) {
         </div>
         <div>
           <div style={{ color: "#fff", fontWeight: 900, fontSize: 18, fontFamily: "Georgia,serif", lineHeight: 1 }}>{d.biz}</div>
-          <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600, marginTop: 2 }}>{d.cat}</div>
         </div>
       </div>
 
@@ -217,7 +216,6 @@ function AdL({ d }) {
         flex: 1, padding: "9px 12px", display: "flex", flexDirection: "column",
         gap: 6, background: d.l, overflow: "hidden",
       }}>
-        <div style={{ color: d.a, fontSize: 8.5, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>{d.cat}</div>
         <div style={{ color: d.p, fontSize: 11, fontWeight: 700, fontStyle: "italic", lineHeight: 1.2 }}>{d.tag}</div>
 
         {d.services.length > 0 && (
@@ -261,7 +259,6 @@ function AdM({ d }) {
           </div>
           <div>
             <div style={{ color: "#fff", fontWeight: 900, fontSize: 11, fontFamily: "Georgia,serif", lineHeight: 1, overflow: "hidden", whiteSpace: "nowrap", maxWidth: 82 }}>{d.biz}</div>
-            <div style={{ color: "rgba(255,255,255,0.72)", fontSize: 6.5, letterSpacing: 1.2, textTransform: "uppercase" }}>{d.cat}</div>
           </div>
         </div>
         <PhoneRow phone={d.phone} color="rgba(255,255,255,0.9)" size={10} />
@@ -307,7 +304,6 @@ function AdS({ d }) {
       }}>
         <div>
           <div style={{ color: "#fff", fontWeight: 900, fontSize: 13, lineHeight: 1.2, fontFamily: "Georgia,serif" }}>{d.biz}</div>
-          <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 9, letterSpacing: 1, textTransform: "uppercase", marginTop: 2 }}>{d.cat}</div>
         </div>
         <div>
           <RefCoupon offer={d.offer} fine={null} color="#fff" dark={true} />
@@ -524,7 +520,6 @@ function PhotoBoldAd({ data, sizeKey }) {
         <LogoBadge emoji={ind.emoji} size={42 * fScale} bg={`${ind.colors.primary}dd`} color="#fff" border="2.5px solid #fff" />
         <div style={{ flex: 1, minWidth: 0, paddingRight: data.starburst && !isS ? 50 * fScale : 0 }}>
           <div style={{ color: "#fff", fontWeight: 900, fontSize: 20 * fScale, lineHeight: 1.0, textShadow: "0 2px 12px rgba(0,0,0,0.95)", letterSpacing: -0.3 }}>{data.businessName}</div>
-          {!isS && <div style={{ color: "#fff", opacity: 0.95, fontSize: 9 * fScale, marginTop: 2, fontFamily: "sans-serif", fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", textShadow: "0 1px 4px rgba(0,0,0,0.7)" }}>{data.industry}</div>}
         </div>
       </div>
 
@@ -615,11 +610,7 @@ function SplitCleanAd({ data, sizeKey }) {
           {isS && (
             <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 3 }}>
               <LogoBadge emoji={ind.emoji} size={22 * fScale} bg={ind.colors.primary} color="#fff" />
-              <div style={{ color: ind.colors.accent, fontSize: 7 * fScale, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase" }}>{data.industry}</div>
             </div>
-          )}
-          {!isS && (
-            <div style={{ color: ind.colors.accent, fontSize: 9 * fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 3 }}>{data.industry}</div>
           )}
           <div style={{ color: ind.colors.dark, fontWeight: 900, fontSize: (isS ? 12 : 21) * fScale, fontFamily: "Georgia, serif", lineHeight: 1.0, marginBottom: 3 * fScale }}>{data.businessName}</div>
           {!isS && (
@@ -699,7 +690,6 @@ function MagazineAd({ data, sizeKey }) {
       {/* Content */}
       <div style={{ flex: 1, padding: `${4 * fScale}px ${9 * fScale}px ${6 * fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 0, gap: 3 * fScale }}>
         <div>
-          <div style={{ color: ind.colors.accent, fontSize: 8.5 * fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>{data.industry}</div>
           <div style={{ color: ind.colors.dark, fontSize: (isS ? 12 : 15) * fScale, fontWeight: 900, fontFamily: "Georgia, serif", lineHeight: 1.1, marginTop: 2 }}>{data.tagline}</div>
         </div>
 

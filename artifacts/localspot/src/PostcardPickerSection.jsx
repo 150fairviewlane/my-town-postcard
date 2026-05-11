@@ -178,7 +178,7 @@ if(tmpl==="clean"){
 return(<div style={{width:400,height:500,display:"flex",flexDirection:"column",overflow:"hidden",fontFamily:"sans-serif",background:"#fff",position:"relative"}}>
 <div style={{background:d.p,padding:"10px 14px",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
 <div style={{width:40,height:40,borderRadius:8,overflow:"hidden",flexShrink:0,border:"2px solid rgba(255,255,255,0.4)"}}><img src={d.photo} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/></div>
-<div style={{flex:1,minWidth:0}}><div style={{color:"rgba(255,255,255,0.75)",fontSize:8,fontWeight:700,letterSpacing:2,textTransform:"uppercase"}}>{d.cat}</div><div style={{color:"#fff",fontWeight:900,fontSize:20,lineHeight:1.0,fontFamily:"Georgia,serif",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{d.biz}</div></div>
+<div style={{flex:1,minWidth:0}}><div style={{color:"#fff",fontWeight:900,fontSize:20,lineHeight:1.0,fontFamily:"Georgia,serif",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{d.biz}</div></div>
 </div>
 <div style={{height:210,flexShrink:0,position:"relative",overflow:"hidden"}}><img src={d.photo} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/></div>
 <div style={{flex:1,padding:"10px 14px",display:"flex",flexDirection:"column",justifyContent:"space-between",background:"#fff",overflow:"hidden"}}>
@@ -200,7 +200,6 @@ return(<div style={{width:400,height:500,position:"relative",overflow:"hidden",f
 <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
 {d.logo&&<img src={d.logo} style={{width:54,height:54,borderRadius:8,objectFit:"cover",border:"2px solid rgba(255,255,255,0.55)",flexShrink:0,boxShadow:"0 2px 8px rgba(0,0,0,0.4)"}} alt="logo"/>}
 <div>
-<div style={{color:d.a,fontSize:9,fontWeight:700,letterSpacing:2,textTransform:"uppercase"}}>{d.cat}</div>
 <div style={{color:"#fff",fontWeight:900,fontSize:d.logo?22:26,lineHeight:1.0,marginTop:3,fontFamily:"Georgia,serif",textShadow:"0 2px 8px rgba(0,0,0,0.8)"}}>{d.biz}</div>
 </div>
 </div>
@@ -225,7 +224,6 @@ return(<div style={{width:300,height:400,position:"relative",overflow:"hidden",f
 <img src={d.photo} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
 <div style={{position:"absolute",inset:0,background:"linear-gradient(180deg,"+d.d+"dd 0%,"+d.d+"55 45%,"+d.d+"ee 100%)"}}/>
 <div style={{position:"absolute",top:10,left:10,right:10}}>
-<div style={{display:"inline-block",background:d.a,color:"#fff",fontSize:7,fontWeight:800,letterSpacing:2,textTransform:"uppercase",padding:"3px 8px",borderRadius:3}}>{d.cat}</div>
 <div style={{color:"#fff",fontWeight:900,fontSize:20,lineHeight:1.0,marginTop:6,fontFamily:"Georgia,serif",textShadow:"0 2px 8px rgba(0,0,0,0.9)"}}>{d.biz}</div>
 <div style={{color:d.a,fontWeight:700,fontSize:12,marginTop:4,fontStyle:"italic"}}>{d.tag}</div>
 </div>
@@ -245,7 +243,6 @@ return(<div style={{width:300,height:400,display:"flex",flexDirection:"column",o
 </div>
 <div style={{flex:1,background:d.l,display:"flex",flexDirection:"column",justifyContent:"space-between",padding:"10px 12px",overflow:"hidden"}}>
 <div>
-<div style={{fontSize:7,fontWeight:700,letterSpacing:2,textTransform:"uppercase",color:d.a,marginBottom:2}}>{d.cat}</div>
 <div style={{fontSize:18,fontWeight:900,color:d.d,fontFamily:"Georgia,serif",lineHeight:1.0,marginBottom:3}}>{d.biz}</div>
 <div style={{fontSize:11,fontWeight:700,color:d.p,fontStyle:"italic",marginBottom:7}}>{d.tag}</div>
 {(d.services||[]).slice(0,4).map((s,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:5,marginBottom:3}}><Check color={d.p} sz={12}/><span style={{fontSize:10,color:"#333",fontWeight:500}}>{s}</span></div>))}
@@ -272,10 +269,6 @@ if(tmpl==="banner"){
 return(<div style={{width:w,height:h,position:"relative",overflow:"hidden",fontFamily:"sans-serif"}}>
 <img src={d.photo} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
 <div style={{position:"absolute",inset:0,background:"linear-gradient(180deg,"+d.d+"55 0%,"+d.d+"11 30%,"+d.d+"cc 62%,"+d.d+"ff 100%)"}}/>
-{/* category badge */}
-<div style={{position:"absolute",top:8,left:10}}>
-<div style={{display:"inline-block",background:d.a,color:"#fff",fontSize:7,fontWeight:800,letterSpacing:2,textTransform:"uppercase",padding:"2px 7px",borderRadius:3}}>{d.cat}</div>
-</div>
 {/* business name + tagline */}
 <div style={{position:"absolute",bottom:44,left:10,right:10}}>
 <div style={{color:"#fff",fontWeight:900,fontSize:16,fontFamily:"Georgia,serif",lineHeight:1.1,textShadow:"0 2px 8px rgba(0,0,0,0.9)"}}>{d.biz}</div>
@@ -299,7 +292,6 @@ return(<div style={{width:w,height:h,display:"flex",overflow:"hidden",fontFamily
 <div style={{width:cw,display:"flex",flexDirection:"column",overflow:"hidden",flexShrink:0}}>
 <div style={{background:d.p,padding:"5px 8px",flexShrink:0}}>
 <div style={{color:"#fff",fontWeight:900,fontSize:11,fontFamily:"Georgia,serif",lineHeight:1.05,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{d.biz}</div>
-<div style={{color:d.a,fontSize:7,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginTop:1}}>{d.cat}</div>
 </div>
 <div style={{flex:1,padding:"5px 8px",display:"flex",flexDirection:"column",justifyContent:"space-between",overflow:"hidden"}}>
 <div>
@@ -337,7 +329,6 @@ return(<div style={{width:w,height:h,display:"flex",flexDirection:"column",overf
 {/* content */}
 <div style={{flex:1,padding:"4px 8px 5px",background:d.l,display:"flex",flexDirection:"column",justifyContent:"space-between",overflow:"hidden"}}>
 <div style={{overflow:"hidden"}}>
-<div style={{fontSize:6,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:d.a}}>{d.cat}</div>
 <div style={{fontSize:10,fontWeight:900,color:d.d,fontFamily:"Georgia,serif",lineHeight:1.15,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{d.tag}</div>
 {(d.services||[]).length>0&&(<div style={{display:"flex",flexWrap:"wrap",gap:"1px 6px",marginTop:2}}>{(d.services||[]).slice(0,2).map((s,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:2,flexShrink:0}}><span style={{color:d.p,fontSize:6}}>●</span><span style={{fontSize:7,color:"#333",fontWeight:500,whiteSpace:"nowrap"}}>{s}</span></div>))}</div>)}
 </div>
@@ -348,7 +339,7 @@ return(<div style={{width:w,height:h,display:"flex",flexDirection:"column",overf
 }
 
 // ── S (200x200) ─────────────────────────────────────────────────────────────
-function AdS({d}){return(<div style={{width:200,height:200,overflow:"hidden",position:"relative",fontFamily:"sans-serif"}}><img src={d.photo} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}} alt=""/><div style={{position:"absolute",inset:0,background:`linear-gradient(180deg,${d.d}aa 0%,${d.d}f5 100%)`}}/><div style={{position:"absolute",inset:0,padding:"12px 10px",display:"flex",flexDirection:"column",justifyContent:"space-between",alignItems:"center",textAlign:"center"}}><div><div style={{color:d.a,fontSize:7,fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>{d.cat}</div><div style={{color:"#fff",fontSize:16,fontWeight:900,fontFamily:"Georgia,serif",lineHeight:1.0,marginTop:3}}>{d.biz}</div><div style={{color:"rgba(255,255,255,0.85)",fontSize:10,fontStyle:"italic",marginTop:4,lineHeight:1.3}}>{d.tag}</div></div>{d.offer&&(<div style={{background:d.a,padding:"6px 10px",borderRadius:4,width:"100%",boxSizing:"border-box"}}><div style={{color:"#fff",fontWeight:900,fontSize:12,lineHeight:1.1}}>{d.offer}</div></div>)}<div style={{color:"#fff",fontSize:13,fontWeight:900,lineHeight:1}}>{d.phone}</div></div><PositionedQR website={d.web} fScale={0.65} dark /></div>);}
+function AdS({d}){return(<div style={{width:200,height:200,overflow:"hidden",position:"relative",fontFamily:"sans-serif"}}><img src={d.photo} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}} alt=""/><div style={{position:"absolute",inset:0,background:`linear-gradient(180deg,${d.d}aa 0%,${d.d}f5 100%)`}}/><div style={{position:"absolute",inset:0,padding:"12px 10px",display:"flex",flexDirection:"column",justifyContent:"space-between",alignItems:"center",textAlign:"center"}}><div><div style={{color:"#fff",fontSize:16,fontWeight:900,fontFamily:"Georgia,serif",lineHeight:1.0,marginTop:3}}>{d.biz}</div><div style={{color:"rgba(255,255,255,0.85)",fontSize:10,fontStyle:"italic",marginTop:4,lineHeight:1.3}}>{d.tag}</div></div>{d.offer&&(<div style={{background:d.a,padding:"6px 10px",borderRadius:4,width:"100%",boxSizing:"border-box"}}><div style={{color:"#fff",fontWeight:900,fontSize:12,lineHeight:1.1}}>{d.offer}</div></div>)}<div style={{color:"#fff",fontSize:13,fontWeight:900,lineHeight:1}}>{d.phone}</div></div><PositionedQR website={d.web} fScale={0.65} dark /></div>);}
 
 function AdHouse({w,h}){return(<div style={{width:w,height:h,background:"#0f172a",display:"flex",alignItems:"stretch",justifyContent:"center",gap:18,padding:"0 22px",boxSizing:"border-box"}}><div style={{width:2,height:44,background:"#991b1b",flexShrink:0,alignSelf:"center"}}/><div style={{textAlign:"center",flex:1,display:"flex",flexDirection:"column",justifyContent:"center"}}><div style={{color:"#f1f5f9",fontWeight:900,fontSize:22,fontFamily:"Georgia,serif",letterSpacing:0.5,lineHeight:1.1}}>Shop, Dine & Buy Local</div><div style={{height:12}}/><div style={{color:"rgba(255,255,255,0.5)",fontSize:12,fontFamily:"sans-serif",marginTop:0,letterSpacing:1,textTransform:"uppercase",lineHeight:1.3}}>Your Ad Here · Reach 5,000 Habersham County Homes</div><div style={{color:"#991b1b",fontWeight:800,fontSize:15,fontFamily:"sans-serif",marginTop:5}}>mytownpostcard.com</div></div><div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",gap:4,flexShrink:0,alignSelf:"stretch",paddingBottom:4}}><div style={{background:"#fff",borderRadius:4,padding:4,boxSizing:"border-box"}}><img src={"https://api.qrserver.com/v1/create-qr-code/?size=120x120&data="+encodeURIComponent("https://mytownpostcard.com")} style={{width:64,height:64,display:"block"}} alt="QR"/></div><div style={{color:"rgba(255,255,255,0.55)",fontSize:9,fontFamily:"sans-serif",letterSpacing:0.5}}>Scan to learn more</div></div><div style={{width:2,height:44,background:"#991b1b",flexShrink:0,alignSelf:"center"}}/></div>);}
 

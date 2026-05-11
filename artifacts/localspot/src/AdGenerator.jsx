@@ -271,10 +271,6 @@ return (
     <div style={{ flex: 1, minWidth: 0 }}>
       <EditableText value={data.businessName} onChange={edit("businessName")} {...ef("businessName")}
         style={{ color: "#fff", fontWeight: 900, fontSize: 16*fScale, lineHeight: 1.05, textShadow: "0 2px 8px rgba(0,0,0,0.7)" }} />
-      {!isS && (
-        <EditableText value={data.industry} onChange={edit("industry")}
-          style={{ color: "rgba(255,255,255,0.85)", fontSize: 8*fScale, marginTop: 2, fontFamily: "sans-serif", letterSpacing: 1, textTransform: "uppercase" }} />
-      )}
     </div>
   </div>
 
@@ -375,7 +371,6 @@ size={36 * fScale} bg={ind.colors.primary} color="#fff" border={`2px solid #fff`
   <div style={{ flex: 1, padding: `${10*fScale}px ${12*fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", background: ind.colors.light, minWidth: 0 }}>
     {/* Top */}
     <div>
-      <div style={{ color: ind.colors.accent, fontSize: 8*fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 3 }}>{data.industry}</div>
       <EditableText value={data.businessName} onChange={edit("businessName")} {...ef("businessName")}
         style={{ color: ind.colors.dark, fontWeight: 900, fontSize: 20*fScale, fontFamily: "Georgia, serif", lineHeight: 1.0 }} />
       {!isS && (
@@ -494,7 +489,6 @@ borderRadius: 4, fontFamily: "sans-serif", whiteSpace: "nowrap",
   {/* Content */}
   <div style={{ flex: 1, padding: `${4*fScale}px ${10*fScale}px ${5*fScale}px`, display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 0 }}>
     <div>
-      <div style={{ color: ind.colors.accent, fontSize: 8*fScale, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>{data.industry}</div>
       <EditableText value={data.tagline || ind.taglines[0]} onChange={edit("tagline")} {...ef("tagline")}
         style={{ color: ind.colors.dark, fontSize: 16*fScale, fontWeight: 900, fontFamily: "Georgia, serif", lineHeight: 1.1, marginTop: 2 }} />
     </div>
@@ -735,12 +729,6 @@ background: leftBg, fontFamily: "sans-serif",
               wordBreak: "break-word",
             }}
           />
-          <div style={{
-            color: ind.colors.accent, fontSize: Math.max(8, 7*fScale), fontWeight: 700,
-            letterSpacing: 1.5, textTransform: "uppercase", marginTop: 2,
-          }}>
-            {data.industry}
-          </div>
         </div>
       </div>
 

@@ -150,10 +150,6 @@ function PaidAd({ spot }) {
           <div style={{ color: "#fff", fontWeight: 800, fontSize: f.name, lineHeight: 1.2,
             overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2,
             WebkitBoxOrient: "vertical" }}>{d.name}</div>
-          {!isSmall && (
-            <div style={{ color: "rgba(255,255,255,0.85)", fontSize: f.cat, marginTop: 1,
-              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.cat}</div>
-          )}
         </div>
       </div>
 
