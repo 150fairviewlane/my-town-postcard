@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useGetActiveCampaign, useReserveSpot, getGetActiveCampaignQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import AdGenerator, { AdTemplatePreview } from "./AdGenerator";
+import { PositionedQR } from "./qrUtils";
 
 // Natural canvas: 1200x900 = 12"x9" landscape at 100px per inch
 const W = 1200, H = 900;
@@ -169,17 +170,6 @@ return(
 );
 }
 
-function QR({web,size=36}){
-if(!web)return null;
-return(
-<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1,flexShrink:0}}>
-<div style={{width:size,height:size,background:"#fff",border:"1px solid #e5e7eb",borderRadius:3,padding:2,boxSizing:"border-box"}}>
-<img src={"https://api.qrserver.com/v1/create-qr-code/?size=80x80&data="+encodeURIComponent("https://"+web)} style={{width:"100%",height:"100%",display:"block"}} alt="QR"/>
-</div>
-<div style={{fontSize:7,color:"#888"}}>Scan</div>
-</div>
-);
-}
 
 // ── XL (400x500) ────────────────────────────────────────────────────────────
 function AdXL({d,tmpl}){
@@ -199,7 +189,7 @@ return(<div style={{width:400,height:500,display:"flex",flexDirection:"column",o
 {d.addr&&<div style={{fontSize:8,color:"#666"}}>{d.addr}</div>}
 </div>
 </div>
-{d.web&&<div style={{position:"absolute",bottom:12,right:17}}><QR web={d.web} size={36}/></div>}
+<PositionedQR website={d.web} fScale={1.45} />
 </div>);
 }
 // Default photo-bold — full-bleed photo + gradient overlay, with logo if available
@@ -224,7 +214,7 @@ return(<div style={{width:400,height:500,position:"relative",overflow:"hidden",f
 <Phone phone={d.phone} color="#fff" size={13}/>
 {d.addr&&<div style={{fontSize:8,color:"rgba(255,255,255,0.6)"}}>{d.addr}</div>}
 </div>
-{d.web&&<div style={{position:"absolute",bottom:12,right:17}}><QR web={d.web} size={36}/></div>}
+<PositionedQR website={d.web} fScale={1.45} dark />
 </div>);
 }
 
@@ -244,7 +234,7 @@ return(<div style={{width:300,height:400,position:"relative",overflow:"hidden",f
 <Coupon offer={d.offer} fine={d.fine} color={d.a} dark/>
 <Phone phone={d.phone} color="#fff" size={12}/>
 </div>
-{d.web&&<div style={{position:"absolute",bottom:9,right:14}}><QR web={d.web} size={24}/></div>}
+<PositionedQR website={d.web} fScale={1.15} dark />
 </div>);
 }
 // Default split — photo top, content bottom
@@ -266,7 +256,7 @@ return(<div style={{width:300,height:400,display:"flex",flexDirection:"column",o
 {d.addr&&<div style={{fontSize:7,color:"#555"}}>{d.addr}</div>}
 </div>
 </div>
-{d.web&&<div style={{position:"absolute",bottom:9,right:14}}><QR web={d.web} size={30}/></div>}
+<PositionedQR website={d.web} fScale={1.15} />
 </div>);
 }
 
@@ -296,7 +286,7 @@ return(<div style={{width:w,height:h,position:"relative",overflow:"hidden",fontF
 <CouponCompact offer={d.offer} fine={d.fine} color={d.a} dark/>
 <Phone phone={d.phone} color="#fff" size={9}/>
 </div>
-{d.web&&<div style={{position:"absolute",bottom:6,right:9}}><QR web={d.web} size={22}/></div>}
+<PositionedQR website={d.web} fScale={0.75} dark />
 </div>);
 }
 
@@ -327,7 +317,7 @@ return(<div style={{width:w,height:h,display:"flex",overflow:"hidden",fontFamily
 <img src={d.photo} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
 <div style={{position:"absolute",inset:0,background:"linear-gradient(90deg,"+d.l+"99 0%,transparent 35%)"}}/>
 </div>
-{d.web&&<div style={{position:"absolute",bottom:6,right:9}}><QR web={d.web} size={24}/></div>}
+<PositionedQR website={d.web} fScale={0.75} dark />
 </div>);
 }
 
@@ -353,12 +343,12 @@ return(<div style={{width:w,height:h,display:"flex",flexDirection:"column",overf
 </div>
 {d.offer&&<CouponCompact offer={d.offer} color={d.p}/>}
 </div>
-{d.web&&<div style={{position:"absolute",bottom:6,right:9}}><QR web={d.web} size={20}/></div>}
+<PositionedQR website={d.web} fScale={0.75} />
 </div>);
 }
 
 // ── S (200x200) ─────────────────────────────────────────────────────────────
-function AdS({d}){return(<div style={{width:200,height:200,overflow:"hidden",position:"relative",fontFamily:"sans-serif"}}><img src={d.photo} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}} alt=""/><div style={{position:"absolute",inset:0,background:`linear-gradient(180deg,${d.d}aa 0%,${d.d}f5 100%)`}}/><div style={{position:"absolute",inset:0,padding:"12px 10px",display:"flex",flexDirection:"column",justifyContent:"space-between",alignItems:"center",textAlign:"center"}}><div><div style={{color:d.a,fontSize:7,fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>{d.cat}</div><div style={{color:"#fff",fontSize:16,fontWeight:900,fontFamily:"Georgia,serif",lineHeight:1.0,marginTop:3}}>{d.biz}</div><div style={{color:"rgba(255,255,255,0.85)",fontSize:10,fontStyle:"italic",marginTop:4,lineHeight:1.3}}>{d.tag}</div></div>{d.offer&&(<div style={{background:d.a,padding:"6px 10px",borderRadius:4,width:"100%",boxSizing:"border-box"}}><div style={{color:"#fff",fontWeight:900,fontSize:12,lineHeight:1.1}}>{d.offer}</div></div>)}<div style={{color:"#fff",fontSize:13,fontWeight:900,lineHeight:1}}>{d.phone}</div></div>{d.web&&<div style={{position:"absolute",bottom:5,right:8}}><QR web={d.web} size={22}/></div>}</div>);}
+function AdS({d}){return(<div style={{width:200,height:200,overflow:"hidden",position:"relative",fontFamily:"sans-serif"}}><img src={d.photo} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}} alt=""/><div style={{position:"absolute",inset:0,background:`linear-gradient(180deg,${d.d}aa 0%,${d.d}f5 100%)`}}/><div style={{position:"absolute",inset:0,padding:"12px 10px",display:"flex",flexDirection:"column",justifyContent:"space-between",alignItems:"center",textAlign:"center"}}><div><div style={{color:d.a,fontSize:7,fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>{d.cat}</div><div style={{color:"#fff",fontSize:16,fontWeight:900,fontFamily:"Georgia,serif",lineHeight:1.0,marginTop:3}}>{d.biz}</div><div style={{color:"rgba(255,255,255,0.85)",fontSize:10,fontStyle:"italic",marginTop:4,lineHeight:1.3}}>{d.tag}</div></div>{d.offer&&(<div style={{background:d.a,padding:"6px 10px",borderRadius:4,width:"100%",boxSizing:"border-box"}}><div style={{color:"#fff",fontWeight:900,fontSize:12,lineHeight:1.1}}>{d.offer}</div></div>)}<div style={{color:"#fff",fontSize:13,fontWeight:900,lineHeight:1}}>{d.phone}</div></div><PositionedQR website={d.web} fScale={0.65} dark /></div>);}
 
 function AdHouse({w,h}){return(<div style={{width:w,height:h,background:"#0f172a",display:"flex",alignItems:"stretch",justifyContent:"center",gap:18,padding:"0 22px",boxSizing:"border-box"}}><div style={{width:2,height:44,background:"#991b1b",flexShrink:0,alignSelf:"center"}}/><div style={{textAlign:"center",flex:1,display:"flex",flexDirection:"column",justifyContent:"center"}}><div style={{color:"#f1f5f9",fontWeight:900,fontSize:22,fontFamily:"Georgia,serif",letterSpacing:0.5,lineHeight:1.1}}>Shop, Dine & Buy Local</div><div style={{height:12}}/><div style={{color:"rgba(255,255,255,0.5)",fontSize:12,fontFamily:"sans-serif",marginTop:0,letterSpacing:1,textTransform:"uppercase",lineHeight:1.3}}>Your Ad Here · Reach 5,000 Habersham County Homes</div><div style={{color:"#991b1b",fontWeight:800,fontSize:15,fontFamily:"sans-serif",marginTop:5}}>mytownpostcard.com</div></div><div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",gap:4,flexShrink:0,alignSelf:"stretch",paddingBottom:4}}><div style={{background:"#fff",borderRadius:4,padding:4,boxSizing:"border-box"}}><img src={"https://api.qrserver.com/v1/create-qr-code/?size=120x120&data="+encodeURIComponent("https://mytownpostcard.com")} style={{width:64,height:64,display:"block"}} alt="QR"/></div><div style={{color:"rgba(255,255,255,0.55)",fontSize:9,fontFamily:"sans-serif",letterSpacing:0.5}}>Scan to learn more</div></div><div style={{width:2,height:44,background:"#991b1b",flexShrink:0,alignSelf:"center"}}/></div>);}
 

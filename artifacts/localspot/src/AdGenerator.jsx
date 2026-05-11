@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { INDUSTRIES, INDUSTRY_LIST } from "./industryAssets";
-import { AdQRCode, InlineQRCode, hasQR, normalizeWebsite, generateSpotCode } from "./qrUtils";
+import { AdQRCode, InlineQRCode, hasQR, normalizeWebsite, generateSpotCode, PositionedQR } from "./qrUtils";
 import AdAssistant from "./AdAssistant";
 
 //
@@ -313,18 +313,9 @@ return (
             style={{ color: "rgba(255,255,255,0.85)", fontSize: 9*fScale, fontWeight: 800, fontFamily: "sans-serif", whiteSpace: "normal" }} />
         )}
       </div>
-      {hasQR(data) && !isS && (
-        <AdQRCode
-          website={normalizeWebsite(data.website)}
-          spotCode={generateSpotCode(data.businessName, "current")}
-          size={isXL ? 54 : isL ? 46 : 34}
-          dark={true}
-          showLabel={false}
-          scale={fScale * 0.7}
-        />
-      )}
     </div>
   </div>
+  {!isS && <PositionedQR website={data.website} fScale={fScale} dark />}
 </div>
 );
 }
@@ -359,7 +350,7 @@ return { ...base, text: val };
 
 return (
 <div style={{
-width: "100%", height: "100%", overflow: "hidden", display: "flex",
+width: "100%", height: "100%", overflow: "hidden", position: "relative", display: "flex",
 flexDirection: isVertical ? "column" : "row",
 background: ind.colors.light, fontFamily: "sans-serif",
 }}>
@@ -421,19 +412,10 @@ size={36 * fScale} bg={ind.colors.primary} color="#fff" border={`2px solid #fff`
               style={{ fontSize: 14*fScale, color: ind.colors.primary, fontWeight: 900, whiteSpace: "nowrap" }} />
           )}
         </div>
-        {hasQR(data) && !isS && (
-          <AdQRCode
-            website={normalizeWebsite(data.website)}
-            spotCode={generateSpotCode(data.businessName, "current")}
-            size={isXL ? 56 : isL ? 46 : 34}
-            dark={false}
-            showLabel={false}
-            scale={fScale * 0.65}
-          />
-        )}
       </div>
     </div>
   </div>
+  {!isS && <PositionedQR website={data.website} fScale={fScale} />}
 </div>
 );
 }
@@ -473,7 +455,7 @@ return val;
 
 return (
 <div style={{
-width: "100%", height: "100%", overflow: "hidden", display: "flex", flexDirection: "column",
+width: "100%", height: "100%", overflow: "hidden", position: "relative", display: "flex", flexDirection: "column",
 background: "#fff", fontFamily: "Georgia, serif",
 border: `${3 * fScale}px solid ${ind.colors.primary}`, boxSizing: "border-box",
 }}>
@@ -542,19 +524,10 @@ borderRadius: 4, fontFamily: "sans-serif", whiteSpace: "nowrap",
               style={{ fontSize: 12*fScale, color: ind.colors.primary, fontWeight: 900, fontFamily: "sans-serif", whiteSpace: "nowrap" }} />
           )}
         </div>
-        {hasQR(data) && !isS && (
-          <AdQRCode
-            website={normalizeWebsite(data.website)}
-            spotCode={generateSpotCode(data.businessName, "current")}
-            size={isXL ? 54 : isL ? 44 : 34}
-            dark={false}
-            showLabel={false}
-            scale={fScale * 0.65}
-          />
-        )}
       </div>
     </div>
   </div>
+  {!isS && <PositionedQR website={data.website} fScale={fScale} />}
 </div>
 );
 }
@@ -655,18 +628,9 @@ background: `linear-gradient(180deg, ${ind.colors.dark}50 0%, ${ind.colors.dark}
         {data.address && <EditableText value={data.address.split(",")[0]} onChange={edit("address")} {...ef("address")} style={{ color: "rgba(255,255,255,0.85)", fontSize: Math.max(10, 9*fScale), display: "block", whiteSpace: "nowrap" }} />}
         {isS && data.phone && <EditableText value={data.phone} onChange={edit("phone")} {...ef("phone")} style={{ color: "rgba(255,255,255,0.95)", fontSize: Math.max(11, 10*fScale), fontWeight: 700, display: "block", whiteSpace: "nowrap" }} />}
       </div>
-      {hasQR(data) && !isS && (
-        <InlineQRCode
-          website={normalizeWebsite(data.website)}
-          spotCode={generateSpotCode(data.businessName, "current")}
-          size={isXL ? 52 : isL ? 44 : 34}
-          dark={true}
-          showLabel={false}
-          scale={fScale * 0.72}
-        />
-      )}
     </div>
   </div>
+  {!isS && <PositionedQR website={data.website} fScale={fScale} dark />}
 </div>
 );
 }
@@ -885,29 +849,9 @@ background: leftBg, fontFamily: "sans-serif",
           }}
         />
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 5*fScale }}>
-        {hasQR(data) ? (
-          <AdQRCode
-            website={normalizeWebsite(data.website)}
-            spotCode={generateSpotCode(data.businessName, "current")}
-            size={isXL ? 36 : isL ? 30 : 24}
-            dark
-            showLabel={false}
-            scale={fScale * 0.7}
-          />
-        ) : data.website ? (
-          <EditableText
-            value={data.website}
-            onChange={edit("website")}
-            style={{
-              color: "rgba(255,255,255,0.88)", fontSize: isXL ? 10*fScale : 8*fScale,
-              fontFamily: "sans-serif", fontWeight: 600,
-            }}
-          />
-        ) : null}
-      </div>
     </div>
   )}
+  {!isS && <PositionedQR website={data.website} fScale={fScale} dark />}
 </div>
 );
 }

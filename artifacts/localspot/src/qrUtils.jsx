@@ -60,3 +60,21 @@ export function InlineQRCode({ website, spotCode, size = 28, dark = true, scale 
     />
   );
 }
+
+// Canonical positioned QR — absolute bottom-right with proportional DJ's-Pizza spacing.
+// Use this in EVERY template (AdGenerator + PostcardPickerSection) so positioning is
+// defined in one place. Offset formula: bottom = 8*fScale, right = 12*fScale.
+export function PositionedQR({ website, fScale = 1, dark = false }) {
+  if (!hasQR({ website })) return null;
+  return (
+    <div style={{
+      position: "absolute",
+      bottom: Math.round(8 * fScale),
+      right: Math.round(12 * fScale),
+      zIndex: 10,
+      pointerEvents: "none",
+    }}>
+      <AdQRCode website={website} size={44} dark={dark} scale={fScale * 0.7} />
+    </div>
+  );
+}
