@@ -1306,7 +1306,7 @@ boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
 
           {!formData.industry && (
             <div style={{ paddingTop: 8, borderTop: "1px solid #f3f4f6" }}>
-              <ImageUpload label="Your Photo" hint="Or select industry first for stock photos"
+              <ImageUpload label="YOUR PHOTO" hint="Or select industry first for stock photos"
                 value={formData.photo} onChange={v => setFormData(d => ({ ...d, photo: v }))} />
             </div>
           )}
