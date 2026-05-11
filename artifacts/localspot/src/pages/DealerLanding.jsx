@@ -205,7 +205,7 @@ function Hero() {
 function HowItWorks() {
   const steps = [
     { n: "1", icon: "📝", title: "Apply & Pay $99 Setup",
-      desc: "Sign up below, see your 4 proposed territories, and pay the one-time $99 setup fee plus your first $99 monthly subscription." },
+      desc: "Sign up below, see your 4 proposed territories, and pay the one-time $99 setup fee, which includes your first month of subscription. You can have your first card — or multiple cards — completed before your next subscription payment is due." },
     { n: "2", icon: "🗺️", title: "Get Your Territories",
       desc: "We assign you 4 distinct postcard zones (~5,000 homes each) clustered around your hometown. Exclusive — no other dealer can sell in your area." },
     { n: "3", icon: "📞", title: "Sell Local Ad Spots",
