@@ -26,8 +26,8 @@ export default function ConfirmationPage() {
 
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "clamp(24px, 6vw, 48px) clamp(14px, 4vw, 20px)" }}>
         <div style={{ maxWidth: 520, width: "100%", textAlign: "center" }}>
-          <div style={{ width: 80, height: 80, borderRadius: "50%", background: "#f0fdf4", border: "3px solid #22c55e", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px", fontSize: 36 }}>
-            🎉
+          <div style={{ margin: "0 auto 24px", display: "flex", justifyContent: "center" }}>
+            <img src="/mailbox-logo.png" alt="My Town Postcard" style={{ width: 120, height: 120, objectFit: "contain" }} />
           </div>
           <h1 style={{ fontSize: "clamp(22px, 6vw, 32px)", fontWeight: 900, color: "#111", fontFamily: "Georgia,serif", margin: "0 0 12px", lineHeight: 1.2 }}>
             You're on the Postcard!
