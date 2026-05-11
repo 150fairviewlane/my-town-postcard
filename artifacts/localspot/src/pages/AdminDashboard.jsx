@@ -73,7 +73,9 @@ function StatusPill({ status }) {
 
 function NewCampaignForm({ token, onCreated, onCancel }) {
   const queryClient = useQueryClient();
-  const createMutation = useCreateCampaign();
+  const createMutation = useCreateCampaign({
+    request: { headers: { Authorization: `Bearer ${token}` } },
+  });
   const [form, setForm] = useState({
     name: "", territory: "", zipCode: "", homesCount: 5000, mailDate: "",
   });
@@ -90,21 +92,15 @@ function NewCampaignForm({ token, onCreated, onCancel }) {
       return;
     }
     try {
-      const created = await createMutation.mutateAsync(
-        {
-          data: {
-            name: form.name.trim(),
-            territory: form.territory.trim(),
-            zipCode: form.zipCode.trim(),
-            homesCount: Number(form.homesCount) || 0,
-            mailDate: form.mailDate ? form.mailDate : null,
-          },
+      const created = await createMutation.mutateAsync({
+        data: {
+          name: form.name.trim(),
+          territory: form.territory.trim(),
+          zipCode: form.zipCode.trim(),
+          homesCount: Number(form.homesCount) || 0,
+          mailDate: form.mailDate ? form.mailDate : null,
         },
-        {
-          meta: { headers: { Authorization: `Bearer ${token}` } },
-          request: { headers: { Authorization: `Bearer ${token}` } },
-        },
-      );
+      });
       queryClient.invalidateQueries({ queryKey: getListAdminCampaignsQueryKey() });
       onCreated(created.campaign.id);
     } catch (err) {
@@ -177,9 +173,10 @@ function NewCampaignForm({ token, onCreated, onCancel }) {
 
 function Dashboard({ token }) {
   const queryClient = useQueryClient();
-  const approveMutation = useApproveAd();
-  const activateMutation = useActivateCampaign();
-  const completeMutation = useCompleteCampaign();
+  const authRequest = { headers: { Authorization: `Bearer ${token}` } };
+  const approveMutation = useApproveAd({ request: authRequest });
+  const activateMutation = useActivateCampaign({ request: authRequest });
+  const completeMutation = useCompleteCampaign({ request: authRequest });
   const [approving, setApproving] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [showNewForm, setShowNewForm] = useState(false);
@@ -227,7 +224,7 @@ function Dashboard({ token }) {
   const handleApprove = async (spotId) => {
     setApproving(spotId);
     try {
-      await approveMutation.mutateAsync({ id: spotId }, authOpts);
+      await approveMutation.mutateAsync({ id: spotId });
       queryClient.invalidateQueries({ queryKey: detailQueryKey });
     } catch {
       alert("Failed to approve ad");
@@ -247,7 +244,7 @@ function Dashboard({ token }) {
     if (selectedId == null) return;
     if (!confirm("Mark this campaign active? Any other active campaign will be moved to completed.")) return;
     try {
-      await activateMutation.mutateAsync({ id: selectedId }, authOpts);
+      await activateMutation.mutateAsync({ id: selectedId });
       refreshAll();
     } catch {
       alert("Failed to activate campaign");
@@ -258,7 +255,7 @@ function Dashboard({ token }) {
     if (selectedId == null) return;
     if (!confirm("Mark this campaign completed? Spots will be locked from new purchases.")) return;
     try {
-      await completeMutation.mutateAsync({ id: selectedId }, authOpts);
+      await completeMutation.mutateAsync({ id: selectedId });
       refreshAll();
     } catch {
       alert("Failed to complete campaign");
