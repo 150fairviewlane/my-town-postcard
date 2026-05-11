@@ -209,7 +209,8 @@ padding: `${8*scale}px ${10*scale}px ${5*scale}px`,
 textAlign: "center",
 position: "relative",
 flexShrink: 0,
-marginTop: 5*scale, // ensures scissors aren't flush with parent edge
+width: "fit-content",
+margin: `${5*scale}px auto 0`, // centers the coupon; top margin ensures scissors aren't flush with parent edge
 }}>
 {/* Scissors strip */}
 <div style={{ position: "absolute", top: -(1*scale), left: 0, right: 0, display: "flex", alignItems: "center", padding: `0 ${4*scale}px` }}>
