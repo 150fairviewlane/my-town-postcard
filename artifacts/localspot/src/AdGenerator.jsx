@@ -961,7 +961,7 @@ Uploaded<br />
 //
 //   MAIN COMPONENT – Full UI with form, template picker, preview
 //
-export default function AdGenerator({ initialSize = "L", onComplete, onClose }) {
+export default function AdGenerator({ initialSize = "L", onComplete, onClose, isReserving = false, reserveError = null }) {
 const [sizeKey, setSizeKey] = useState(initialSize);
 const [step, setStep] = useState(1);
 const [formData, setFormData] = useState({
@@ -1404,7 +1404,13 @@ boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
               {!formData.photo && formData.industry && <> - Using stock photo for {formData.industry}</>}
             </div>
 
+            {reserveError && (
+              <div style={{ marginTop: 14, background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8, padding: "10px 16px", color: "#991b1b", fontSize: 13, fontWeight: 600, textAlign: "center" }}>
+                {reserveError}
+              </div>
+            )}
             <button
+              disabled={isReserving}
               onClick={() => {
                 if (!formData.email.trim()) {
                   setEmailError(true);
@@ -1415,11 +1421,12 @@ boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
                 onComplete?.({ sizeKey, price: sizeInfo.price, template: selectedTemplate, ...formData });
               }}
               style={{
-                marginTop: 20, padding: "14px 32px", background: "#991b1b",
+                marginTop: 12, padding: "14px 32px", background: isReserving ? "#6b7280" : "#991b1b",
                 color: "#fff", border: "none", borderRadius: 10, fontSize: 15,
-                fontWeight: 800, cursor: "pointer", letterSpacing: 0.5,
+                fontWeight: 800, cursor: isReserving ? "not-allowed" : "pointer", letterSpacing: 0.5,
+                opacity: isReserving ? 0.75 : 1,
               }}>
-              Approve &amp; Reserve Spot -- ${sizeInfo.price}
+              {isReserving ? "Reserving your spot…" : `Approve & Reserve Spot — $${sizeInfo.price}`}
             </button>
           </>
         ) : (

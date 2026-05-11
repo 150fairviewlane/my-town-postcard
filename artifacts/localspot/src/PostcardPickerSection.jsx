@@ -399,6 +399,16 @@ if(liveSpot&&liveSpot.status==="paid"&&liveSpot.templateData){
   const sk=sizeKey||(spot.size==="XL"?"XL":spot.size==="L"?"L":spot.size==="M"?"M":"S");
   return(<ScaledCell spot={spot} scale={scale}><div style={{width:spot.w,height:spot.h,pointerEvents:"none"}}><AdTemplatePreview templateKey={template||"split-clean"} formData={adData} sizeKey={sk}/></div></ScaledCell>);
 }
+// Paid spot without template data → show sample ad or SOLD placeholder, never clickable
+if(liveSpot&&liveSpot.status==="paid"){
+  if(k&&ADS[k]){const d=ADS[k];return(<ScaledCell spot={spot} scale={scale}><div style={{width:spot.w,height:spot.h,pointerEvents:"none"}}>{spot.size==="XL"&&<AdXL d={d} tmpl={t}/>}{spot.size==="L"&&<AdL d={d} tmpl={t}/>}{spot.size==="M"&&<AdM d={d} w={spot.w} h={spot.h} tmpl={t}/>}{spot.size==="S"&&<AdS d={d}/>}</div></ScaledCell>);}
+  return(<ScaledCell spot={spot} scale={scale}><div style={{width:spot.w,height:spot.h,background:"#1f2937",display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}><div style={{color:"#6b7280",fontWeight:900,fontSize:14,letterSpacing:2,textTransform:"uppercase"}}>SOLD</div></div></ScaledCell>);
+}
+// Reserved spot → non-clickable (hold in progress by another customer)
+if(liveSpot&&liveSpot.status==="reserved"){
+  if(k&&ADS[k]){const d=ADS[k];return(<ScaledCell spot={spot} scale={scale}><div style={{width:spot.w,height:spot.h,pointerEvents:"none",position:"relative"}}>{spot.size==="XL"&&<AdXL d={d} tmpl={t}/>}{spot.size==="L"&&<AdL d={d} tmpl={t}/>}{spot.size==="M"&&<AdM d={d} w={spot.w} h={spot.h} tmpl={t}/>}{spot.size==="S"&&<AdS d={d}/>}<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.55)",display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{color:"#fbbf24",fontWeight:900,fontSize:12,letterSpacing:2,textTransform:"uppercase",background:"rgba(0,0,0,0.6)",padding:"4px 10px",borderRadius:4}}>HOLD</div></div></div></ScaledCell>);}
+  return(<ScaledCell spot={spot} scale={scale}><div style={{width:spot.w,height:spot.h,background:"#374151",display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}><div style={{color:"#fbbf24",fontWeight:900,fontSize:14,letterSpacing:2,textTransform:"uppercase"}}>HOLD</div></div></ScaledCell>);
+}
 // Live available slot → always show reservation UI (overrides any demo sample)
 if(liveSpot&&liveSpot.status==="available"){
   return<ScaledCell spot={spot} scale={scale}><AvailableSpot spot={spot} hovered={hov===spot.id} onClick={()=>onSel(spot)} onEnter={()=>onHov(spot.id)} onLeave={onOut}/></ScaledCell>;
