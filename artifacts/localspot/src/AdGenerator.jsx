@@ -406,9 +406,11 @@ size={36 * fScale} bg={ind.colors.primary} color="#fff" border={`2px solid #fff`
         ))}
       </div>
 
-    {/* Bottom: contact + coupon */}
+    {/* Bottom: coupon + contact */}
     <div style={{ flexShrink: 0, overflow: "visible" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: data.offer ? 0 : 0 }}>
+      <Coupon offer={data.offer} fine={data.offerFine} accent={ind.colors.primary} scale={fScale}
+        onEditOffer={edit("offer")} onEditFine={edit("offerFine")} fontSizes={data.fontSizes||{}} fieldWidths={data.fieldWidths||{}} onFontSizeChange={onFontSizeChange} onWidthChange={onWidthChange} />
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: data.offer ? 3 : 0 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
           {data.address && (
             <EditableText value={data.address.split(",")[0]} onChange={edit("address")} {...ef("address")}
@@ -430,8 +432,6 @@ size={36 * fScale} bg={ind.colors.primary} color="#fff" border={`2px solid #fff`
           />
         )}
       </div>
-      <Coupon offer={data.offer} fine={data.offerFine} accent={ind.colors.primary} scale={fScale}
-        onEditOffer={edit("offer")} onEditFine={edit("offerFine")} fontSizes={data.fontSizes||{}} fieldWidths={data.fieldWidths||{}} onFontSizeChange={onFontSizeChange} onWidthChange={onWidthChange} />
     </div>
   </div>
 </div>
@@ -527,9 +527,11 @@ borderRadius: 4, fontFamily: "sans-serif", whiteSpace: "nowrap",
         ))}
     </div>
 
-    {/* Bottom: address row then coupon row */}
+    {/* Bottom: coupon then address+contact row */}
     <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 3*fScale, overflow: "visible", paddingBottom: 2*fScale }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <Coupon offer={data.offer} fine={data.offerFine} accent={ind.colors.primary} scale={fScale}
+        onEditOffer={edit("offer")} onEditFine={edit("offerFine")} fontSizes={data.fontSizes||{}} fieldWidths={data.fieldWidths||{}} onFontSizeChange={onFontSizeChange} onWidthChange={onWidthChange} />
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
           {data.address && (
             <EditableText value={data.address.split(",")[0]} onChange={edit("address")} {...ef("address")}
@@ -551,8 +553,6 @@ borderRadius: 4, fontFamily: "sans-serif", whiteSpace: "nowrap",
           />
         )}
       </div>
-      <Coupon offer={data.offer} fine={data.offerFine} accent={ind.colors.primary} scale={fScale}
-        onEditOffer={edit("offer")} onEditFine={edit("offerFine")} fontSizes={data.fontSizes||{}} fieldWidths={data.fieldWidths||{}} onFontSizeChange={onFontSizeChange} onWidthChange={onWidthChange} />
     </div>
   </div>
 </div>
