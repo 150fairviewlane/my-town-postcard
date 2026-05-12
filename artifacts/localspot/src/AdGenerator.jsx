@@ -904,8 +904,7 @@ function MenuCardTemplate({ data, sizeKey, onEdit, onFontSizeChange, onWidthChan
               fontWeight: 900,
               fontSize: (isXL ? 30 : isL ? 24 : isM ? 15 : 13) * fScale,
               lineHeight: 0.95,
-              letterSpacing: 0.2 * fScale,
-              textShadow: "0 2px 8px rgba(0,0,0,0.55)"
+              letterSpacing: 0.2 * fScale
             }}
           />
           {!isS && (
@@ -921,8 +920,7 @@ function MenuCardTemplate({ data, sizeKey, onEdit, onFontSizeChange, onWidthChan
                   fontSize: (isXL ? 15 : isL ? 12 : 9) * fScale,
                   lineHeight: 1.05,
                   fontStyle: "italic",
-                  textAlign: "center",
-                  textShadow: "0 2px 6px rgba(0,0,0,0.45)"
+                  textAlign: "center"
                 }}
               />
               <div style={{ flex: 1, height: 2 * fScale, background: `linear-gradient(90deg, transparent 0%, ${ind.colors.accent} 35%, transparent 100%)`, opacity: 0.95 }} />
@@ -953,8 +951,7 @@ function MenuCardTemplate({ data, sizeKey, onEdit, onFontSizeChange, onWidthChan
                         fontFamily: "Arial,sans-serif",
                         whiteSpace: "nowrap",
                         overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        textShadow: "0 1px 4px rgba(0,0,0,0.75)"
+                        textOverflow: "ellipsis"
                       }}
                     />
                     {!isS && <div style={{ flex: 1, borderBottom: `${1 * fScale}px dotted rgba(255,235,210,0.8)`, transform: `translateY(${-2 * fScale}px)` }} />}
@@ -968,8 +965,7 @@ function MenuCardTemplate({ data, sizeKey, onEdit, onFontSizeChange, onWidthChan
                           fontSize: (isXL ? 11.5 : isL ? 10 : 8.8) * fScale,
                           fontWeight: 900,
                           fontFamily: "Arial,sans-serif",
-                          whiteSpace: "nowrap",
-                          textShadow: "0 1px 4px rgba(0,0,0,0.75)"
+                          whiteSpace: "nowrap"
                         }}
                       />
                     )}
@@ -1013,8 +1009,7 @@ function MenuCardTemplate({ data, sizeKey, onEdit, onFontSizeChange, onWidthChan
               fontWeight: 900,
               fontSize: (isXL ? 21 : isL ? 17 : isM ? 12 : 10.5) * fScale,
               lineHeight: 1,
-              fontFamily: "Arial,sans-serif",
-              textShadow: "0 2px 6px rgba(0,0,0,0.55)"
+              fontFamily: "Arial,sans-serif"
             }}
           />
         </div>
@@ -1028,7 +1023,6 @@ function MenuCardTemplate({ data, sizeKey, onEdit, onFontSizeChange, onWidthChan
               fontSize: (isXL ? 9.3 : isL ? 8.2 : isM ? 6.8 : 6.3) * fScale,
               lineHeight: 1.15,
               fontFamily: "Arial,sans-serif",
-              textShadow: "0 1px 4px rgba(0,0,0,0.55)",
               maxWidth: "100%"
             }}
           />

@@ -206,10 +206,10 @@ if(tmpl==="menu-card"){
           </div>
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ color: "#f7efe1", fontWeight: 900, fontSize: 30, lineHeight: 0.95, letterSpacing: 0.2, textShadow: "0 2px 8px rgba(0,0,0,0.55)" }}>{d.biz}</div>
+          <div style={{ color: "#f7efe1", fontWeight: 900, fontSize: 30, lineHeight: 0.95, letterSpacing: 0.2 }}>{d.biz}</div>
           <div style={{ marginTop: 7, display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ flex: 1, height: 2, background: "linear-gradient(90deg, transparent 0%, #d4a017 35%, transparent 100%)", opacity: 0.95 }} />
-            <div style={{ color: "#f1b13a", fontWeight: 700, fontSize: 13, lineHeight: 1.05, fontStyle: "italic", textAlign: "center", textShadow: "0 2px 6px rgba(0,0,0,0.45)" }}>{d.tag}</div>
+            <div style={{ color: "#f1b13a", fontWeight: 700, fontSize: 13, lineHeight: 1.05, fontStyle: "italic", textAlign: "center" }}>{d.tag}</div>
             <div style={{ flex: 1, height: 2, background: "linear-gradient(90deg, transparent 0%, #d4a017 35%, transparent 100%)", opacity: 0.95 }} />
           </div>
         </div>
@@ -232,9 +232,9 @@ if(tmpl==="menu-card"){
                   <span style={{ color: "#fff", fontSize: 10, fontWeight: 900, lineHeight: 1 }}>✓</span>
                 </div>
                 <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "baseline", gap: 4 }}>
-                  <span style={{ color: "#f4f0ea", fontSize: 11.5, fontWeight: 800, fontFamily: "Arial,sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textShadow: "0 1px 4px rgba(0,0,0,0.75)" }}>{name}</span>
+                  <span style={{ color: "#f4f0ea", fontSize: 11.5, fontWeight: 800, fontFamily: "Arial,sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</span>
                   <div style={{ flex: 1, borderBottom: "1px dotted rgba(255,235,210,0.8)", transform: "translateY(-2px)" }} />
-                  <span style={{ color: "#f0a61a", fontSize: 11.5, fontWeight: 900, fontFamily: "Arial,sans-serif", whiteSpace: "nowrap", textShadow: "0 1px 4px rgba(0,0,0,0.75)" }}>{price}</span>
+                  <span style={{ color: "#f0a61a", fontSize: 11.5, fontWeight: 900, fontFamily: "Arial,sans-serif", whiteSpace: "nowrap" }}>{price}</span>
                 </div>
               </div>
             );
@@ -243,7 +243,7 @@ if(tmpl==="menu-card"){
 
         <div style={{ width: 150, flexShrink: 0 }}>
           <div style={{ border: "2px dashed rgba(255,255,255,0.95)", borderRadius: 12, background: "linear-gradient(180deg, rgba(58,23,0,0.78) 0%, rgba(35,12,0,0.88) 100%)", boxShadow: "0 8px 18px rgba(0,0,0,0.28)", padding: "12px 12px 10px", textAlign: "center" }}>
-            <div style={{ color: "#f7efe1", fontSize: 31, fontWeight: 900, lineHeight: 0.95, letterSpacing: 0.4, textShadow: "0 2px 6px rgba(0,0,0,0.35)" }}>$1 OFF</div>
+            <div style={{ color: "#f7efe1", fontSize: 31, fontWeight: 900, lineHeight: 0.95, letterSpacing: 0.4 }}>$1 OFF</div>
             <div style={{ color: "#f1b13a", fontSize: 19, fontWeight: 700, fontStyle: "italic", lineHeight: 1.05, marginTop: 2 }}>Any Biscuit</div>
             <div style={{ color: "rgba(255,255,255,0.92)", fontSize: 8, fontFamily: "Arial,sans-serif", marginTop: 7, lineHeight: 1.15 }}>1 per visit • with this postcard</div>
           </div>
@@ -255,9 +255,9 @@ if(tmpl==="menu-card"){
           <div style={{ width: 29, height: 29, borderRadius: "50%", border: "1.5px solid #d4a017", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(20,8,0,0.55)", flexShrink: 0, boxShadow: "0 2px 8px rgba(0,0,0,0.35)" }}>
             <span style={{ color: "#fff", fontSize: 15, lineHeight: 1 }}>☎</span>
           </div>
-          <div style={{ color: "#f6f1ea", fontWeight: 900, fontSize: 24, lineHeight: 1, fontFamily: "Arial,sans-serif", textShadow: "0 2px 6px rgba(0,0,0,0.55)" }}>(706) 754-0105</div>
+          <div style={{ color: "#f6f1ea", fontWeight: 900, fontSize: 24, lineHeight: 1, fontFamily: "Arial,sans-serif" }}>(706) 754-0105</div>
         </div>
-        <div style={{ color: "rgba(255,245,235,0.96)", fontSize: 8.5, lineHeight: 1.15, fontFamily: "Arial,sans-serif", textShadow: "0 1px 4px rgba(0,0,0,0.55)" }}>596 W Louise St, Clarkesville, GA 30523</div>
+        <div style={{ color: "rgba(255,245,235,0.96)", fontSize: 8.5, lineHeight: 1.15, fontFamily: "Arial,sans-serif" }}>596 W Louise St, Clarkesville, GA 30523</div>
       </div>
 
       <PositionedQR website={d.web} fScale={1.45} dark />
