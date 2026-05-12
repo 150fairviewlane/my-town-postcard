@@ -176,7 +176,7 @@ S:  { label: "Small",       price: 199, ratio: "2:2",  width: 2, height: 2,   de
 };
 
 // 4 visually distinct template styles
-const TEMPLATE_STYLES = ["menu-card", "photo-bold", "split-clean", "magazine", "stamp", "fade-out"];
+const TEMPLATE_STYLES = ["photo-bold", "split-clean", "magazine", "stamp", "fade-out"];
 
 //  Helper: Logo Badge with fallback
 function LogoBadge({ logo, name, emoji, size = 40, bg = "rgba(255,255,255,0.15)", color = "#fff", border }) {
@@ -844,198 +844,7 @@ background: leftBg, fontFamily: "sans-serif",
 );
 }
 
-//
-// TEMPLATE 6: MENU CARD
-// Dark warm background, header with logo+name, large hero photo,
-// menu items with gold checkmarks + price, coupon box, phone/address footer.
-// Best for: restaurants, cafes, bakeries.
-//
-function MenuCardTemplate({ data, sizeKey, onEdit, onFontSizeChange, onWidthChange }) {
-  const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
-  const photo = data.photo || ind.photos[0];
-  const isXL = sizeKey === "XL", isL = sizeKey === "L", isM = sizeKey === "M", isS = sizeKey === "S";
-  const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.65;
-  const edit = (field) => (val) => onEdit(field, val);
-  const items = getActiveItems(data.menuItems, ind.menu).slice(0, isS ? 2 : 4);
-  const ef = (key) => ({
-    fieldKey: key,
-    fontSizes: data.fontSizes || {},
-    fieldWidths: data.fieldWidths || {},
-    onFontSizeChange,
-    onWidthChange
-  });
-
-  const editMenu = (i) => (val) => {
-    const current = getActiveItems(data.menuItems, ind.menu);
-    const updated = current.map((m, j) => (j === i ? val : m));
-    onEdit("menuItems", updated);
-  };
-
-  const splitPrice = (text) => {
-    const m = String(text || "").match(/^(.*?)(\s+\$[\d]+(?:\.\d{2})?)$/);
-    if (!m) return { name: String(text || ""), price: "" };
-    return { name: m[1], price: m[2].trim() };
-  };
-
-  return (
-    <div style={{ width: "100%", height: "100%", position: "relative", overflow: "hidden", fontFamily: "'Playfair Display', Georgia, serif", background: ind.colors.dark }}>
-      <img src={photo} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-      <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${ind.colors.dark}d9 0%, ${ind.colors.dark}55 22%, ${ind.colors.dark}1a 42%, ${ind.colors.dark}a6 62%, ${ind.colors.dark}f2 100%)` }} />
-      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 50% 32%, rgba(255,214,120,0.18) 0%, rgba(255,214,120,0.08) 20%, rgba(0,0,0,0) 48%)" }} />
-
-      <div style={{ position: "absolute", top: 10 * fScale, left: 12 * fScale, right: 12 * fScale, display: "flex", alignItems: "flex-start", gap: 10 * fScale }}>
-        <div style={{ flexShrink: 0, padding: 3 * fScale, borderRadius: 12 * fScale, background: "rgba(255,248,238,0.92)", boxShadow: "0 4px 14px rgba(0,0,0,0.35)", border: `${1.5 * fScale}px solid rgba(255,255,255,0.65)` }}>
-          <LogoBadge
-            logo={data.logo}
-            name={data.businessName}
-            emoji={ind.emoji}
-            size={50 * fScale}
-            bg={`${ind.colors.primary}cc`}
-            color="#fff"
-          />
-        </div>
-        <div style={{ flex: 1, minWidth: 0, paddingTop: 1 * fScale }}>
-          <EditableText
-            value={data.businessName}
-            onChange={edit("businessName")}
-            {...ef("businessName")}
-            style={{
-              color: "#f7efe1",
-              fontWeight: 900,
-              fontSize: (isXL ? 30 : isL ? 24 : isM ? 15 : 13) * fScale,
-              lineHeight: 0.95,
-              letterSpacing: 0.2 * fScale
-            }}
-          />
-          {!isS && (
-            <div style={{ marginTop: 5 * fScale, display: "flex", alignItems: "center", gap: 8 * fScale }}>
-              <div style={{ flex: 1, height: 2 * fScale, background: `linear-gradient(90deg, transparent 0%, ${ind.colors.accent} 35%, transparent 100%)`, opacity: 0.95 }} />
-              <EditableText
-                value={data.tagline || ind.taglines[0]}
-                onChange={edit("tagline")}
-                {...ef("tagline")}
-                style={{
-                  color: ind.colors.accent,
-                  fontWeight: 700,
-                  fontSize: (isXL ? 15 : isL ? 12 : 9) * fScale,
-                  lineHeight: 1.05,
-                  fontStyle: "italic",
-                  textAlign: "center"
-                }}
-              />
-              <div style={{ flex: 1, height: 2 * fScale, background: `linear-gradient(90deg, transparent 0%, ${ind.colors.accent} 35%, transparent 100%)`, opacity: 0.95 }} />
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div style={{ position: "absolute", left: 14 * fScale, right: 14 * fScale, bottom: 92 * fScale, display: "flex", gap: 12 * fScale, alignItems: "flex-end" }}>
-        <div style={{ flex: 1, minWidth: 0, background: "linear-gradient(180deg, rgba(20,8,0,0.18) 0%, rgba(20,8,0,0.46) 100%)", borderRadius: 14 * fScale, padding: `${10 * fScale}px ${10 * fScale}px ${8 * fScale}px`, boxShadow: "0 10px 24px rgba(0,0,0,0.28)" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 5 * fScale }}>
-            {items.map((item, i) => {
-              const parts = splitPrice(item);
-              return (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 7 * fScale }}>
-                  <div style={{ width: 16 * fScale, height: 16 * fScale, borderRadius: "50%", background: ind.colors.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 2px 6px rgba(0,0,0,0.35)" }}>
-                    <span style={{ color: "#fff", fontSize: 10 * fScale, fontWeight: 900, lineHeight: 1 }}>✓</span>
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "baseline", gap: 4 * fScale }}>
-                    <EditableText
-                      value={parts.name}
-                      onChange={(val) => editMenu(i)(parts.price ? `${val} ${parts.price}` : val)}
-                      {...ef(`menuItem_${i}`)}
-                      style={{
-                        color: "#f4f0ea",
-                        fontSize: (isXL ? 11.5 : isL ? 10 : 8.8) * fScale,
-                        fontWeight: 700,
-                        fontFamily: "'Lato', Arial, sans-serif",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis"
-                      }}
-                    />
-                    {!isS && <div style={{ flex: 1, borderBottom: `${1 * fScale}px dotted rgba(255,235,210,0.8)`, transform: `translateY(${-2 * fScale}px)` }} />}
-                    {parts.price && (
-                      <EditableText
-                        value={parts.price}
-                        onChange={(val) => editMenu(i)(`${parts.name} ${val}`)}
-                        {...ef(`menuPrice_${i}`)}
-                        style={{
-                          color: ind.colors.accent,
-                          fontSize: (isXL ? 11.5 : isL ? 10 : 8.8) * fScale,
-                          fontWeight: 900,
-                          fontFamily: "'Lato', Arial, sans-serif",
-                          whiteSpace: "nowrap"
-                        }}
-                      />
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {!isS && data.offer && (
-          <div style={{ width: isXL ? 150 * fScale : 142 * fScale, flexShrink: 0 }}>
-            <Coupon
-              offer={data.offer}
-              fine={data.offerFine}
-              accent="#fff"
-              scale={fScale}
-              dark={true}
-              onEditOffer={edit("offer")}
-              onEditFine={edit("offerFine")}
-              fontSizes={data.fontSizes || {}}
-              fieldWidths={data.fieldWidths || {}}
-              onFontSizeChange={onFontSizeChange}
-              onWidthChange={onWidthChange}
-            />
-          </div>
-        )}
-      </div>
-
-      <div style={{ position: "absolute", left: 12 * fScale, right: isS ? 12 * fScale : 84 * fScale, bottom: 12 * fScale, display: "flex", flexDirection: "column", gap: 5 * fScale }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 * fScale }}>
-          <div style={{ width: 28 * fScale, height: 28 * fScale, borderRadius: "50%", border: `${1.5 * fScale}px solid ${ind.colors.accent}`, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(20,8,0,0.55)", flexShrink: 0, boxShadow: "0 2px 8px rgba(0,0,0,0.35)" }}>
-            <span style={{ color: "#fff", fontSize: 15 * fScale, lineHeight: 1 }}>☎</span>
-          </div>
-          <EditableText
-            value={data.phone || "(000) 000-0000"}
-            onChange={edit("phone")}
-            {...ef("phone")}
-            style={{
-              color: "#f6f1ea",
-              fontWeight: 900,
-              fontSize: (isXL ? 21 : isL ? 17 : isM ? 12 : 10.5) * fScale,
-              lineHeight: 1,
-              fontFamily: "'Lato', Arial, sans-serif"
-            }}
-          />
-        </div>
-        {data.address && (
-          <EditableText
-            value={data.address}
-            onChange={edit("address")}
-            {...ef("address")}
-            style={{
-              color: "rgba(255,245,235,0.96)",
-              fontSize: (isXL ? 13 : isL ? 11 : isM ? 9 : 8) * fScale,
-              lineHeight: 1.15,
-              fontFamily: "'Lato', Arial, sans-serif",
-              maxWidth: "100%"
-            }}
-          />
-        )}
-      </div>
-
-      {!isS && <PositionedQR website={data.website} fScale={fScale} dark />}
-    </div>
-  );
-}
-
 const TEMPLATES = {
-"menu-card":   { name: "Menu Card",     desc: "Dark bg, photo, menu + coupon",   Component: MenuCardTemplate },
 "photo-bold":  { name: "Photo Bold",    desc: "Hero photo, bold overlay text",   Component: PhotoBoldTemplate },
 "split-clean": { name: "Split Clean",   desc: "50/50 photo + content split",      Component: SplitCleanTemplate },
 "magazine":    { name: "Magazine",      desc: "Editorial multi-photo layout",     Component: MagazineTemplate },
@@ -1171,7 +980,7 @@ const defaultMenu = INDUSTRIES[industry]?.menu || [];
 const normalizedMenu = defaultMenu.map(item =>
 typeof item === "object" ? item : { text: item, enabled: true }
 );
-setFormData(d => ({ ...d, industry, menuItems: normalizedMenu, photo: null }));
+setFormData(d => ({ ...d, industry, menuItems: normalizedMenu }));
 if (industry) setSelectedTemplate(suggestTemplate(industry));
 };
 

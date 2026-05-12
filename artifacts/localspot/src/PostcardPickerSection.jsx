@@ -10,7 +10,7 @@ const W = 1200, H = 900;
 
 // FRONT: 3 XL (4"x5") top row + 4 Large (3"x4" portrait) bottom row
 const FRONT = [
-{ id:"xl1", dbGridArea:"mb", size:"XL", price:499, x:0,   y:0,   w:400, h:500, sample:"biscuits", tmpl:"menu-card" },
+{ id:"xl1", dbGridArea:"mb", size:"XL", price:499, x:0,   y:0,   w:400, h:500, sample:"biscuits", tmpl:"photo" },
 { id:"xl2", dbGridArea:"dn", size:"XL", price:499, x:400, y:0,   w:400, h:500, sample:null       },
 { id:"xl3", dbGridArea:"re", size:"XL", price:499, x:800, y:0,   w:400, h:500, sample:"dental",   tmpl:"clean" },
 { id:"l1",  dbGridArea:"l1", size:"L",  price:399, x:0,   y:500, w:300, h:400, sample:"hvac",    tmpl:"stamp"  },
@@ -44,7 +44,7 @@ services:["Plain Biscuit $2.99","Bacon Biscuit $4.99","Chicken Tender $5.99","NY
 offer:"$1 OFF Any Biscuit", fine:"1 per visit - with this postcard",
 phone:"(706) 754-0105", addr:"596 W Louise St, Clarkesville, GA 30523",
 web:"mrbiscuitscafe.com",
-photo:"/mr-biscuits-hero.png",
+photo:"/industries/restaurants/mr-biscuits/gen-buttermilk-biscuit-hero.jpg",
 logo:"/mr-biscuits-logo.jpg",
 p:"#7c3a1e",a:"#f59e0b",l:"#fef3c7",d:"#3b1a0a",
 },
@@ -191,73 +191,6 @@ return(<div style={{width:400,height:500,display:"flex",flexDirection:"column",o
 </div>
 <PositionedQR website={d.web} fScale={1.45} />
 </div>);
-}
-if(tmpl==="menu-card"){
-  return(
-    <div style={{ width: 400, height: 500, position: "relative", overflow: "hidden", background: "#1a0b00" }}>
-      <img src={d.photo} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(18,7,0,0.88) 0%, rgba(18,7,0,0.22) 32%, rgba(18,7,0,0.08) 50%, rgba(18,7,0,0.74) 72%, rgba(18,7,0,0.96) 100%)" }} />
-      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 50% 38%, rgba(255,195,80,0.10) 0%, transparent 55%)" }} />
-
-      <div style={{ position: "absolute", top: 16, left: 16, right: 16, display: "flex", alignItems: "flex-start", gap: 11 }}>
-        <div style={{ padding: 3, borderRadius: 12, background: "rgba(255,248,236,0.90)", flexShrink: 0 }}>
-          <div style={{ width: 54, height: 54, borderRadius: 10, overflow: "hidden" }}>
-            <img src={d.logo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-          </div>
-        </div>
-        <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
-          <div style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#f5ece0", fontWeight: 900, fontSize: 28, lineHeight: 0.95, letterSpacing: 0.3 }}>{d.biz}</div>
-          <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 7 }}>
-            <div style={{ flex: 1, height: 1, background: "linear-gradient(90deg, rgba(210,156,18,0.75), transparent)" }} />
-            <div style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#e8aa2a", fontWeight: 700, fontSize: 12, fontStyle: "italic", lineHeight: 1 }}>{d.tag}</div>
-            <div style={{ flex: 1, height: 1, background: "linear-gradient(270deg, rgba(210,156,18,0.75), transparent)" }} />
-          </div>
-        </div>
-      </div>
-
-      <div style={{ position: "absolute", left: 16, right: 164, bottom: 94 }}>
-        <div style={{ background: "rgba(14,5,0,0.58)", borderRadius: 12, padding: "10px 11px 9px" }}>
-          {["Plain Biscuit $2.99","Bacon Biscuit $4.99","Chicken Tender $5.99","NY Bagels $5.49"].map((s, i) => {
-            const m = s.match(/^(.*?)(\s+\$[\d]+(?:\.\d{2})?)$/);
-            const name = m ? m[1] : s;
-            const price = m ? m[2].trim() : "";
-            return (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: i === 3 ? 0 : 5 }}>
-                <div style={{ width: 15, height: 15, borderRadius: "50%", background: "#c8890e", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ fontFamily: "'Lato', Arial, sans-serif", color: "#fff", fontSize: 9, fontWeight: 900, lineHeight: 1 }}>✓</span>
-                </div>
-                <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "baseline", gap: 4 }}>
-                  <span style={{ fontFamily: "'Lato', Arial, sans-serif", color: "#efe6d4", fontSize: 11.5, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</span>
-                  <div style={{ flex: 1, borderBottom: "1px dotted rgba(230,210,160,0.45)", transform: "translateY(-2px)" }} />
-                  <span style={{ fontFamily: "'Lato', Arial, sans-serif", color: "#e8aa2a", fontSize: 11.5, fontWeight: 900, whiteSpace: "nowrap" }}>{price}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <div style={{ position: "absolute", right: 16, bottom: 94, width: 140 }}>
-        <div style={{ border: "2px dashed rgba(255,255,255,0.78)", borderRadius: 10, background: "rgba(36,13,0,0.84)", padding: "11px 11px 9px", textAlign: "center" }}>
-          <div style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#f5ece0", fontSize: 30, fontWeight: 900, lineHeight: 0.92, letterSpacing: 0.3 }}>$1 OFF</div>
-          <div style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#e8aa2a", fontSize: 18, fontWeight: 700, fontStyle: "italic", lineHeight: 1.05, marginTop: 2 }}>Any Biscuit</div>
-          <div style={{ fontFamily: "'Lato', Arial, sans-serif", color: "rgba(255,255,255,0.72)", fontSize: 8, marginTop: 7, lineHeight: 1.2 }}>1 per visit · with this postcard</div>
-        </div>
-      </div>
-
-      <div style={{ position: "absolute", left: 16, right: 80, bottom: 16 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
-          <div style={{ width: 27, height: 27, borderRadius: "50%", border: "1.5px solid #b87e0a", background: "rgba(14,5,0,0.55)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontFamily: "'Lato', Arial, sans-serif", color: "#e8aa2a", fontSize: 13, lineHeight: 1 }}>☎</span>
-          </div>
-          <div style={{ fontFamily: "'Lato', Arial, sans-serif", color: "#efe6d4", fontWeight: 900, fontSize: 22, lineHeight: 1 }}>(706) 754-0105</div>
-        </div>
-        <div style={{ fontFamily: "'Lato', Arial, sans-serif", color: "rgba(239,230,212,0.78)", fontSize: 11, lineHeight: 1.2 }}>596 W Louise St, Clarkesville, GA 30523</div>
-      </div>
-
-      <PositionedQR website={d.web} fScale={1.45} dark />
-    </div>
-  );
 }
 // Default photo-bold — full-bleed photo + gradient overlay, with logo if available
 return(<div style={{width:400,height:500,position:"relative",overflow:"hidden",fontFamily:"sans-serif"}}>
@@ -444,7 +377,7 @@ return(
 );
 }
 
-function ScaledCell({spot,scale,children}){return(<div style={{position:"absolute",left:spot.x*scale+3.5,top:spot.y*scale+3.5,width:spot.w*scale-7,height:spot.h*scale-7,overflow:"hidden",borderRadius:3}}><div style={{width:spot.w,height:spot.h,transform:"scale("+scale+") translateZ(0)",transformOrigin:"top left",willChange:"transform"}}>{children}</div></div>);}
+function ScaledCell({spot,scale,children}){return(<div style={{position:"absolute",left:spot.x*scale+3.5,top:spot.y*scale+3.5,width:spot.w*scale-7,height:spot.h*scale-7,overflow:"hidden",borderRadius:3}}><div style={{width:spot.w,height:spot.h,transform:"scale("+scale+")",transformOrigin:"top left"}}>{children}</div></div>);}
 
 function SpotCell({spot,scale,hov,onHov,onOut,onSel,liveSpot,isHighlighted}){
 const k=spot.sample;
