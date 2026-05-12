@@ -548,7 +548,7 @@ function ReserveForm() {
 
 function Footer() {
   return (
-    <footer style={{ background: "#fff", padding: "48px 32px 32px", borderTop: "1px solid #e5e7eb" }}>
+    <footer style={{ background: "#fff", padding: "48px 32px 32px", borderTop: "1px solid #7B1418" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto",
         display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 40, alignItems: "start" }}>
         <div>
@@ -583,7 +583,7 @@ function Footer() {
           </p>
         </div>
       </div>
-      <div style={{ maxWidth: 1100, margin: "32px auto 0", borderTop: "1px solid #e5e7eb",
+      <div style={{ maxWidth: 1100, margin: "32px auto 0", borderTop: "1px solid #7B1418",
         paddingTop: 20, textAlign: "center" }}>
         <span style={{ fontSize: 12, color: "#9ca3af", fontFamily: "sans-serif" }}>
           © 2025 My Town Postcard · mytownpostcard.com · Clarkesville, GA
