@@ -493,7 +493,7 @@ const FAQ_ITEMS = [
   { q: "Is there a sales quota?",
     a: "No quotas. As long as you can hit our 12-spot minimum to mail a postcard at least once a year, you keep your territories. We'll work with you actively if you're not seeing traction." },
   { q: "When and how are commissions paid?",
-    a: "Commissions are paid at the mail date. Once a postcard ships to USPS, your commission is calculated and paid within 7 business days. No waiting, no surprises." },
+    a: "Commissions are paid at the mail date. Once a postcard ships to USPS, your commission is calculated and paid within 3 business days. No waiting, no surprises." },
 ];
 
 function FAQSection() {
