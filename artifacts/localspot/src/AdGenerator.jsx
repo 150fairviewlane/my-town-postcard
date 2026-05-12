@@ -878,7 +878,7 @@ function MenuCardTemplate({ data, sizeKey, onEdit, onFontSizeChange, onWidthChan
   };
 
   return (
-    <div style={{ width: "100%", height: "100%", position: "relative", overflow: "hidden", fontFamily: "Georgia,serif", background: ind.colors.dark }}>
+    <div style={{ width: "100%", height: "100%", position: "relative", overflow: "hidden", fontFamily: "'Playfair Display', Georgia, serif", background: ind.colors.dark }}>
       <img src={photo} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
       <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${ind.colors.dark}d9 0%, ${ind.colors.dark}55 22%, ${ind.colors.dark}1a 42%, ${ind.colors.dark}a6 62%, ${ind.colors.dark}f2 100%)` }} />
       <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 50% 32%, rgba(255,214,120,0.18) 0%, rgba(255,214,120,0.08) 20%, rgba(0,0,0,0) 48%)" }} />
@@ -930,7 +930,7 @@ function MenuCardTemplate({ data, sizeKey, onEdit, onFontSizeChange, onWidthChan
       </div>
 
       <div style={{ position: "absolute", left: 14 * fScale, right: 14 * fScale, bottom: 92 * fScale, display: "flex", gap: 12 * fScale, alignItems: "flex-end" }}>
-        <div style={{ flex: 1, minWidth: 0, background: "linear-gradient(180deg, rgba(20,8,0,0.18) 0%, rgba(20,8,0,0.46) 100%)", borderRadius: 14 * fScale, padding: `${10 * fScale}px ${10 * fScale}px ${8 * fScale}px`, boxShadow: "0 10px 24px rgba(0,0,0,0.28)", backdropFilter: "blur(1px)" }}>
+        <div style={{ flex: 1, minWidth: 0, background: "linear-gradient(180deg, rgba(20,8,0,0.18) 0%, rgba(20,8,0,0.46) 100%)", borderRadius: 14 * fScale, padding: `${10 * fScale}px ${10 * fScale}px ${8 * fScale}px`, boxShadow: "0 10px 24px rgba(0,0,0,0.28)" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 5 * fScale }}>
             {items.map((item, i) => {
               const parts = splitPrice(item);
@@ -947,8 +947,8 @@ function MenuCardTemplate({ data, sizeKey, onEdit, onFontSizeChange, onWidthChan
                       style={{
                         color: "#f4f0ea",
                         fontSize: (isXL ? 11.5 : isL ? 10 : 8.8) * fScale,
-                        fontWeight: 800,
-                        fontFamily: "Arial,sans-serif",
+                        fontWeight: 700,
+                        fontFamily: "'Lato', Arial, sans-serif",
                         whiteSpace: "nowrap",
                         overflow: "hidden",
                         textOverflow: "ellipsis"
@@ -964,7 +964,7 @@ function MenuCardTemplate({ data, sizeKey, onEdit, onFontSizeChange, onWidthChan
                           color: ind.colors.accent,
                           fontSize: (isXL ? 11.5 : isL ? 10 : 8.8) * fScale,
                           fontWeight: 900,
-                          fontFamily: "Arial,sans-serif",
+                          fontFamily: "'Lato', Arial, sans-serif",
                           whiteSpace: "nowrap"
                         }}
                       />
@@ -1009,7 +1009,7 @@ function MenuCardTemplate({ data, sizeKey, onEdit, onFontSizeChange, onWidthChan
               fontWeight: 900,
               fontSize: (isXL ? 21 : isL ? 17 : isM ? 12 : 10.5) * fScale,
               lineHeight: 1,
-              fontFamily: "Arial,sans-serif"
+              fontFamily: "'Lato', Arial, sans-serif"
             }}
           />
         </div>
@@ -1020,9 +1020,9 @@ function MenuCardTemplate({ data, sizeKey, onEdit, onFontSizeChange, onWidthChan
             {...ef("address")}
             style={{
               color: "rgba(255,245,235,0.96)",
-              fontSize: (isXL ? 9.3 : isL ? 8.2 : isM ? 6.8 : 6.3) * fScale,
+              fontSize: (isXL ? 13 : isL ? 11 : isM ? 9 : 8) * fScale,
               lineHeight: 1.15,
-              fontFamily: "Arial,sans-serif",
+              fontFamily: "'Lato', Arial, sans-serif",
               maxWidth: "100%"
             }}
           />

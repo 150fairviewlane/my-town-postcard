@@ -194,7 +194,7 @@ return(<div style={{width:400,height:500,display:"flex",flexDirection:"column",o
 }
 if(tmpl==="menu-card"){
   return(
-    <div style={{ width: 400, height: 500, position: "relative", overflow: "hidden", fontFamily: "Georgia,serif", background: "#1a0b00" }}>
+    <div style={{ width: 400, height: 500, position: "relative", overflow: "hidden", fontFamily: "'Playfair Display', Georgia, serif", background: "#1a0b00" }}>
       <img src={d.photo} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(26,11,0,0.84) 0%, rgba(26,11,0,0.30) 24%, rgba(26,11,0,0.08) 44%, rgba(26,11,0,0.60) 66%, rgba(26,11,0,0.92) 100%)" }} />
       <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 50% 30%, rgba(255,208,109,0.16) 0%, rgba(255,208,109,0.08) 18%, rgba(0,0,0,0) 46%)" }} />
@@ -232,9 +232,9 @@ if(tmpl==="menu-card"){
                   <span style={{ color: "#fff", fontSize: 10, fontWeight: 900, lineHeight: 1 }}>✓</span>
                 </div>
                 <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "baseline", gap: 4 }}>
-                  <span style={{ color: "#f4f0ea", fontSize: 11.5, fontWeight: 800, fontFamily: "Arial,sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</span>
+                  <span style={{ color: "#f4f0ea", fontSize: 11.5, fontWeight: 700, fontFamily: "'Lato', Arial, sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</span>
                   <div style={{ flex: 1, borderBottom: "1px dotted rgba(255,235,210,0.8)", transform: "translateY(-2px)" }} />
-                  <span style={{ color: "#f0a61a", fontSize: 11.5, fontWeight: 900, fontFamily: "Arial,sans-serif", whiteSpace: "nowrap" }}>{price}</span>
+                  <span style={{ color: "#f0a61a", fontSize: 11.5, fontWeight: 900, fontFamily: "'Lato', Arial, sans-serif", whiteSpace: "nowrap" }}>{price}</span>
                 </div>
               </div>
             );
@@ -255,9 +255,9 @@ if(tmpl==="menu-card"){
           <div style={{ width: 29, height: 29, borderRadius: "50%", border: "1.5px solid #d4a017", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(20,8,0,0.55)", flexShrink: 0, boxShadow: "0 2px 8px rgba(0,0,0,0.35)" }}>
             <span style={{ color: "#fff", fontSize: 15, lineHeight: 1 }}>☎</span>
           </div>
-          <div style={{ color: "#f6f1ea", fontWeight: 900, fontSize: 24, lineHeight: 1, fontFamily: "Arial,sans-serif" }}>(706) 754-0105</div>
+          <div style={{ color: "#f6f1ea", fontWeight: 900, fontSize: 24, lineHeight: 1, fontFamily: "'Lato', Arial, sans-serif" }}>(706) 754-0105</div>
         </div>
-        <div style={{ color: "rgba(255,245,235,0.96)", fontSize: 8.5, lineHeight: 1.15, fontFamily: "Arial,sans-serif" }}>596 W Louise St, Clarkesville, GA 30523</div>
+        <div style={{ color: "rgba(255,245,235,0.96)", fontSize: 11, lineHeight: 1.15, fontFamily: "'Lato', Arial, sans-serif" }}>596 W Louise St, Clarkesville, GA 30523</div>
       </div>
 
       <PositionedQR website={d.web} fScale={1.45} dark />
@@ -449,7 +449,7 @@ return(
 );
 }
 
-function ScaledCell({spot,scale,children}){return(<div style={{position:"absolute",left:spot.x*scale+3.5,top:spot.y*scale+3.5,width:spot.w*scale-7,height:spot.h*scale-7,overflow:"hidden",borderRadius:3}}><div style={{width:spot.w,height:spot.h,transform:"scale("+scale+")",transformOrigin:"top left"}}>{children}</div></div>);}
+function ScaledCell({spot,scale,children}){return(<div style={{position:"absolute",left:spot.x*scale+3.5,top:spot.y*scale+3.5,width:spot.w*scale-7,height:spot.h*scale-7,overflow:"hidden",borderRadius:3}}><div style={{width:spot.w,height:spot.h,transform:"scale("+scale+")",transformOrigin:"top left",isolation:"isolate",WebkitFontSmoothing:"antialiased"}}>{children}</div></div>);}
 
 function SpotCell({spot,scale,hov,onHov,onOut,onSel,liveSpot,isHighlighted}){
 const k=spot.sample;
