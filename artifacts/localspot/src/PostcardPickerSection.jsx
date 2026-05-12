@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { useGetActiveCampaign, useReserveSpot, getGetActiveCampaignQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import AdGenerator, { AdTemplatePreview } from "./AdGenerator";
@@ -379,7 +379,7 @@ return(
 
 function ScaledCell({spot,scale,children}){return(<div style={{position:"absolute",left:spot.x*scale+3.5,top:spot.y*scale+3.5,width:spot.w*scale-7,height:spot.h*scale-7,overflow:"hidden",borderRadius:3}}><div style={{width:spot.w,height:spot.h,transform:"scale("+scale+")",transformOrigin:"top left"}}>{children}</div></div>);}
 
-function SpotCell({spot,scale,hov,onHov,onOut,onSel,liveSpot}){
+function SpotCell({spot,scale,hov,onHov,onOut,onSel,liveSpot,isHighlighted}){
 const k=spot.sample;
 const t=spot.tmpl||"photo";
 if(k==="house")return<ScaledCell spot={spot} scale={scale}><AdHouse w={spot.w} h={spot.h}/></ScaledCell>;
@@ -388,7 +388,15 @@ if(k==="eddm") return<ScaledCell spot={spot} scale={scale}><AdEDDM w={spot.w} h=
 if(liveSpot&&liveSpot.status==="paid"&&liveSpot.templateData){
   const{template,sizeKey,...adData}=liveSpot.templateData;
   const sk=sizeKey||(spot.size==="XL"?"XL":spot.size==="L"?"L":spot.size==="M"?"M":"S");
-  return(<ScaledCell spot={spot} scale={scale}><div style={{width:spot.w,height:spot.h,pointerEvents:"none"}}><AdTemplatePreview templateKey={template||"split-clean"} formData={adData} sizeKey={sk}/></div></ScaledCell>);
+  return(<ScaledCell spot={spot} scale={scale}>
+    <div style={{width:spot.w,height:spot.h,pointerEvents:"none",position:"relative"}}>
+      <AdTemplatePreview templateKey={template||"split-clean"} formData={adData} sizeKey={sk}/>
+      {isHighlighted&&<>
+        <style>{`@keyframes lsPulse{0%,100%{box-shadow:0 0 0 0 rgba(22,163,74,0.85),inset 0 0 0 4px #16a34a}50%{box-shadow:0 0 0 10px rgba(22,163,74,0),inset 0 0 0 4px #15803d}}`}</style>
+        <div style={{position:"absolute",inset:0,borderRadius:2,border:"4px solid #16a34a",animation:"lsPulse 0.8s ease-in-out 3",pointerEvents:"none",boxSizing:"border-box"}}/>
+      </>}
+    </div>
+  </ScaledCell>);
 }
 // Paid spot without template data → show sample ad or business-name placeholder, never "SOLD"
 if(liveSpot&&liveSpot.status==="paid"){
@@ -420,14 +428,25 @@ const FRONT_GRID_MAP = { xl1:"mb", xl2:"dn", xl3:"re", l1:"l1", l2:"l2", l3:"l3"
 const BACK_GRID_MAP  = { bxl1:"bxl", bm1:"bm1", bm3:"bm2", bs1:"bs1" };
 
 export default function PostcardPicker(){
-const [side,setSide]=useState("front");
+const search=useSearch();
+const params=new URLSearchParams(search);
+const initialSide=params.get("side")==="back"?"back":"front";
+const highlightArea=params.get("highlight")||null;
+const [side,setSide]=useState(initialSide);
 const [scale,setScale]=useState(0.5);
 const [hov,setHov]=useState(null);
 const [sel,setSel]=useState(null);
 const [reserving,setReserving]=useState(false);
 const [reserveError,setReserveError]=useState(null);
+const [highlighted,setHighlighted]=useState(highlightArea);
 const ref=useRef(null);
 const [,navigate]=useLocation();
+// Auto-clear the highlight after 3 seconds
+useEffect(()=>{
+  if(!highlighted)return;
+  const t=setTimeout(()=>setHighlighted(null),3000);
+  return()=>clearTimeout(t);
+},[highlighted]);
 const queryClient=useQueryClient();
 const {data:campaign}=useGetActiveCampaign();
 const reserveMutation=useReserveSpot();
@@ -575,7 +594,8 @@ return(<div style={{fontFamily:"sans-serif"}}>
         <div style={{position:"absolute",inset:0,overflow:"hidden",borderRadius:5,background:"#c8c8c8"}}>
           {spots.map(spot=>{
             const liveSpot=spot.dbGridArea?spotByGridArea[spot.dbGridArea]:null;
-            return<SpotCell key={spot.id} spot={spot} scale={scale} hov={hov} onHov={setHov} onOut={()=>setHov(null)} onSel={setSel} liveSpot={liveSpot}/>;
+            const isHighlighted=highlighted&&spot.dbGridArea===highlighted;
+            return<SpotCell key={spot.id} spot={spot} scale={scale} hov={hov} onHov={setHov} onOut={()=>setHov(null)} onSel={setSel} liveSpot={liveSpot} isHighlighted={isHighlighted}/>;
           })}
         </div>
       </div>

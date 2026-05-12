@@ -96,7 +96,11 @@ export default function ConfirmationPage() {
           </p>
 
           <button
-            onClick={() => navigate("/")}
+            onClick={() => {
+              const side = spot?.side || "front";
+              const area = spot?.gridArea || "";
+              navigate(`/?side=${side}${area ? `&highlight=${area}` : ""}`);
+            }}
             style={{ background: "#991b1b", color: "#fff", border: "none", borderRadius: 10, padding: "13px 32px", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>
             Back to Postcard
           </button>
