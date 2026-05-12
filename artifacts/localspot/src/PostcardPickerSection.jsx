@@ -386,11 +386,14 @@ if(k==="house")return<ScaledCell spot={spot} scale={scale}><AdHouse w={spot.w} h
 if(k==="eddm") return<ScaledCell spot={spot} scale={scale}><AdEDDM w={spot.w} h={spot.h}/></ScaledCell>;
 // Paid spot with saved template data → render the real customer ad (pointer-events off so it's display only)
 if(liveSpot&&liveSpot.status==="paid"&&liveSpot.templateData){
-  const{template,sizeKey,...adData}=liveSpot.templateData;
+  const{template,sizeKey,finishedAdUrl,...adData}=liveSpot.templateData;
   const sk=sizeKey||(spot.size==="XL"?"XL":spot.size==="L"?"L":spot.size==="M"?"M":"S");
   return(<ScaledCell spot={spot} scale={scale}>
     <div style={{width:spot.w,height:spot.h,pointerEvents:"none",position:"relative"}}>
-      <AdTemplatePreview templateKey={template||"split-clean"} formData={adData} sizeKey={sk}/>
+      {finishedAdUrl
+        ?<img src={finishedAdUrl} alt="" style={{width:"100%",height:"100%",objectFit:"contain",display:"block",background:"#fff"}}/>
+        :<AdTemplatePreview templateKey={template||"split-clean"} formData={adData} sizeKey={sk}/>
+      }
       {isHighlighted&&<>
         <style>{`@keyframes lsPulse{0%,100%{box-shadow:0 0 0 0 rgba(22,163,74,0.85),inset 0 0 0 4px #16a34a}50%{box-shadow:0 0 0 10px rgba(22,163,74,0),inset 0 0 0 4px #15803d}}`}</style>
         <div style={{position:"absolute",inset:0,borderRadius:2,border:"4px solid #16a34a",animation:"lsPulse 0.8s ease-in-out 3",pointerEvents:"none",boxSizing:"border-box"}}/>
@@ -520,6 +523,7 @@ const handleComplete=async(formData)=>{
         templateData:{
           template:formData.template,
           sizeKey:formData.sizeKey,
+          finishedAdUrl:formData.finishedAdUrl||undefined,
           businessName:formData.businessName,
           industry:formData.industry,
           tagline:formData.tagline,
