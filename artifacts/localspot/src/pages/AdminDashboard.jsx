@@ -335,6 +335,18 @@ function Dashboard({ token }) {
           >
             💼 Dealers
           </a>
+          <a
+            href="/api/admin/image-library"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              fontSize: 13, fontWeight: 700, color: "#1d4ed8",
+              background: "#eff6ff", border: "1px solid #bfdbfe",
+              borderRadius: 8, padding: "7px 12px", textDecoration: "none",
+            }}
+          >
+            📷 Image Library
+          </a>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
