@@ -10,7 +10,7 @@ const W = 1200, H = 900;
 
 // FRONT: 3 XL (4"x5") top row + 4 Large (3"x4" portrait) bottom row
 const FRONT = [
-{ id:"xl1", dbGridArea:"mb", size:"XL", price:499, x:0,   y:0,   w:400, h:500, sample:"biscuits", tmpl:"mrbiscuits" },
+{ id:"xl1", dbGridArea:"mb", size:"XL", price:499, x:0,   y:0,   w:400, h:500, sample:"biscuits", tmpl:"menu-card" },
 { id:"xl2", dbGridArea:"dn", size:"XL", price:499, x:400, y:0,   w:400, h:500, sample:null       },
 { id:"xl3", dbGridArea:"re", size:"XL", price:499, x:800, y:0,   w:400, h:500, sample:"dental",   tmpl:"clean" },
 { id:"l1",  dbGridArea:"l1", size:"L",  price:399, x:0,   y:500, w:300, h:400, sample:"hvac",    tmpl:"stamp"  },
@@ -192,57 +192,75 @@ return(<div style={{width:400,height:500,display:"flex",flexDirection:"column",o
 <PositionedQR website={d.web} fScale={1.45} />
 </div>);
 }
-// Mr. Biscuit's exact design — dark warm bg, hero photo, menu items, coupon box
-if(tmpl==="mrbiscuits"){
-  const GOLD="#d4a017";
-  const BG="#1a0b00";
-  const WHITE="#fff9f0";
-  const items=[
-    {name:"Plain Biscuit",price:"$2.99"},
-    {name:"Bacon Biscuit",price:"$4.99"},
-    {name:"Chicken Tender",price:"$5.99"},
-    {name:"NY Bagels",price:"$5.49"},
-  ];
+if(tmpl==="menu-card"){
   return(
-    <div style={{width:400,height:500,display:"flex",flexDirection:"column",overflow:"hidden",fontFamily:"sans-serif",background:BG,position:"relative"}}>
-      {/* Header */}
-      <div style={{padding:"12px 14px 6px",flexShrink:0}}>
-        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:5}}>
-          <img src={d.logo} style={{width:54,height:54,borderRadius:10,objectFit:"cover",border:"2px solid rgba(255,255,255,0.2)",flexShrink:0}} alt="logo"/>
-          <div style={{color:WHITE,fontWeight:900,fontSize:30,lineHeight:1.0,fontFamily:"Georgia,serif",textShadow:"0 2px 8px rgba(0,0,0,0.8)"}}>Mr. Biscuit's Cafe</div>
+    <div style={{ width: 400, height: 500, position: "relative", overflow: "hidden", fontFamily: "Georgia,serif", background: "#1a0b00" }}>
+      <img src={d.photo} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(26,11,0,0.84) 0%, rgba(26,11,0,0.30) 24%, rgba(26,11,0,0.08) 44%, rgba(26,11,0,0.60) 66%, rgba(26,11,0,0.92) 100%)" }} />
+      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 50% 30%, rgba(255,208,109,0.16) 0%, rgba(255,208,109,0.08) 18%, rgba(0,0,0,0) 46%)" }} />
+
+      <div style={{ position: "absolute", top: 14, left: 14, right: 14, display: "flex", alignItems: "flex-start", gap: 12 }}>
+        <div style={{ padding: 4, borderRadius: 13, background: "rgba(255,248,238,0.92)", boxShadow: "0 4px 14px rgba(0,0,0,0.35)", border: "1.5px solid rgba(255,255,255,0.7)", flexShrink: 0 }}>
+          <div style={{ width: 56, height: 56, borderRadius: 12, overflow: "hidden", background: "#fff" }}>
+            <img src={d.logo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          </div>
         </div>
-        <div style={{color:GOLD,fontWeight:700,fontSize:14,fontStyle:"italic",textAlign:"center",letterSpacing:0.5}}>— From-Scratch Biscuits &amp; Boba! —</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ color: "#f7efe1", fontWeight: 900, fontSize: 30, lineHeight: 0.95, letterSpacing: 0.2, textShadow: "0 2px 8px rgba(0,0,0,0.55)" }}>{d.biz}</div>
+          <div style={{ marginTop: 7, display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ flex: 1, height: 2, background: "linear-gradient(90deg, transparent 0%, #d4a017 35%, transparent 100%)", opacity: 0.95 }} />
+            <div style={{ color: "#f1b13a", fontWeight: 700, fontSize: 13, lineHeight: 1.05, fontStyle: "italic", textAlign: "center", textShadow: "0 2px 6px rgba(0,0,0,0.45)" }}>{d.tag}</div>
+            <div style={{ flex: 1, height: 2, background: "linear-gradient(90deg, transparent 0%, #d4a017 35%, transparent 100%)", opacity: 0.95 }} />
+          </div>
+        </div>
       </div>
-      {/* Hero photo */}
-      <div style={{height:220,flexShrink:0,overflow:"hidden"}}>
-        <img src={d.photo} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/>
-      </div>
-      {/* Menu + Coupon */}
-      <div style={{flex:1,display:"flex",gap:8,padding:"8px 12px",minHeight:0,alignItems:"center"}}>
-        <div style={{flex:1,display:"flex",flexDirection:"column",gap:7,justifyContent:"center"}}>
-          {items.map((item,i)=>(
-            <div key={i} style={{display:"flex",alignItems:"center",gap:7}}>
-              <div style={{width:17,height:17,borderRadius:"50%",background:GOLD,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                <span style={{color:"#fff",fontSize:10,fontWeight:900}}>✓</span>
+
+      <div style={{ position: "absolute", left: 16, right: 16, bottom: 94, display: "flex", gap: 12, alignItems: "flex-end" }}>
+        <div style={{ flex: 1, minWidth: 0, background: "linear-gradient(180deg, rgba(20,8,0,0.18) 0%, rgba(20,8,0,0.46) 100%)", borderRadius: 14, padding: "11px 11px 9px", boxShadow: "0 10px 24px rgba(0,0,0,0.28)" }}>
+          {[
+            "Plain Biscuit $2.99",
+            "Bacon Biscuit $4.99",
+            "Chicken Tender $5.99",
+            "NY Bagels $5.49"
+          ].map((s, i) => {
+            const m = s.match(/^(.*?)(\s+\$[\d]+(?:\.\d{2})?)$/);
+            const name = m ? m[1] : s;
+            const price = m ? m[2].trim() : "";
+            return (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: i === 3 ? 0 : 5 }}>
+                <div style={{ width: 16, height: 16, borderRadius: "50%", background: "#f0a61a", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 2px 6px rgba(0,0,0,0.35)" }}>
+                  <span style={{ color: "#fff", fontSize: 10, fontWeight: 900, lineHeight: 1 }}>✓</span>
+                </div>
+                <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "baseline", gap: 4 }}>
+                  <span style={{ color: "#f4f0ea", fontSize: 11.5, fontWeight: 800, fontFamily: "Arial,sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textShadow: "0 1px 4px rgba(0,0,0,0.75)" }}>{name}</span>
+                  <div style={{ flex: 1, borderBottom: "1px dotted rgba(255,235,210,0.8)", transform: "translateY(-2px)" }} />
+                  <span style={{ color: "#f0a61a", fontSize: 11.5, fontWeight: 900, fontFamily: "Arial,sans-serif", whiteSpace: "nowrap", textShadow: "0 1px 4px rgba(0,0,0,0.75)" }}>{price}</span>
+                </div>
               </div>
-              <span style={{color:WHITE,fontWeight:700,fontSize:13,flex:1}}>{item.name}</span>
-              <div style={{flex:"0 1 30px",borderBottom:"1px dotted rgba(255,255,255,0.2)",margin:"0 4px 2px"}}/>
-              <span style={{color:GOLD,fontWeight:900,fontSize:13,flexShrink:0}}>{item.price}</span>
-            </div>
-          ))}
+            );
+          })}
         </div>
-        <div style={{border:"1.5px dashed "+GOLD+"77",borderRadius:7,padding:"8px 10px",background:"rgba(0,0,0,0.4)",flexShrink:0,width:112,textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",gap:4}}>
-          <div style={{color:WHITE,fontWeight:900,fontSize:24,lineHeight:1.0}}>$1 OFF</div>
-          <div style={{color:GOLD,fontWeight:700,fontSize:14,fontStyle:"italic",lineHeight:1.1}}>Any Biscuit</div>
-          <div style={{color:"rgba(255,255,255,0.55)",fontSize:8.5,lineHeight:1.3}}>1 per visit · with this postcard</div>
+
+        <div style={{ width: 150, flexShrink: 0 }}>
+          <div style={{ border: "2px dashed rgba(255,255,255,0.95)", borderRadius: 12, background: "linear-gradient(180deg, rgba(58,23,0,0.78) 0%, rgba(35,12,0,0.88) 100%)", boxShadow: "0 8px 18px rgba(0,0,0,0.28)", padding: "12px 12px 10px", textAlign: "center" }}>
+            <div style={{ color: "#f7efe1", fontSize: 31, fontWeight: 900, lineHeight: 0.95, letterSpacing: 0.4, textShadow: "0 2px 6px rgba(0,0,0,0.35)" }}>$1 OFF</div>
+            <div style={{ color: "#f1b13a", fontSize: 19, fontWeight: 700, fontStyle: "italic", lineHeight: 1.05, marginTop: 2 }}>Any Biscuit</div>
+            <div style={{ color: "rgba(255,255,255,0.92)", fontSize: 8, fontFamily: "Arial,sans-serif", marginTop: 7, lineHeight: 1.15 }}>1 per visit • with this postcard</div>
+          </div>
         </div>
       </div>
-      {/* Footer */}
-      <div style={{padding:"5px 12px 8px",borderTop:"1px solid "+GOLD+"33",flexShrink:0}}>
-        <Phone phone={d.phone} color={WHITE} size={14}/>
-        <div style={{fontSize:9,color:"rgba(255,255,255,0.55)",marginTop:3}}>{d.addr}</div>
+
+      <div style={{ position: "absolute", left: 14, right: 86, bottom: 14, display: "flex", flexDirection: "column", gap: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ width: 29, height: 29, borderRadius: "50%", border: "1.5px solid #d4a017", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(20,8,0,0.55)", flexShrink: 0, boxShadow: "0 2px 8px rgba(0,0,0,0.35)" }}>
+            <span style={{ color: "#fff", fontSize: 15, lineHeight: 1 }}>☎</span>
+          </div>
+          <div style={{ color: "#f6f1ea", fontWeight: 900, fontSize: 24, lineHeight: 1, fontFamily: "Arial,sans-serif", textShadow: "0 2px 6px rgba(0,0,0,0.55)" }}>(706) 754-0105</div>
+        </div>
+        <div style={{ color: "rgba(255,245,235,0.96)", fontSize: 8.5, lineHeight: 1.15, fontFamily: "Arial,sans-serif", textShadow: "0 1px 4px rgba(0,0,0,0.55)" }}>596 W Louise St, Clarkesville, GA 30523</div>
       </div>
-      <PositionedQR website={d.web} fScale={1.45} dark/>
+
+      <PositionedQR website={d.web} fScale={1.45} dark />
     </div>
   );
 }

@@ -6,6 +6,7 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "gen-restaurant-assets": "tsx ./src/generate-restaurant-assets.ts",
+    "gen:template": "tsx ./src/generateAdTemplate.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {

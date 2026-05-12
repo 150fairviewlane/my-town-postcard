@@ -851,101 +851,193 @@ background: leftBg, fontFamily: "sans-serif",
 // Best for: restaurants, cafes, bakeries.
 //
 function MenuCardTemplate({ data, sizeKey, onEdit, onFontSizeChange, onWidthChange }) {
-const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
-const photo = data.photo || ind.photos[0];
-const isXL = sizeKey === "XL", isL = sizeKey === "L", isM = sizeKey === "M", isS = sizeKey === "S";
-const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.65;
-const edit = (field) => (val) => onEdit(field, val);
-const ef = (key) => ({
-  fieldKey: key,
-  fontSizes: data.fontSizes || {},
-  fieldWidths: data.fieldWidths || {},
-  onFontSizeChange,
-  onWidthChange,
-});
-const editMenu = (i) => (val) => onEdit("menuItems", data.menuItems.map((m, j) => {
-  if (j !== i) return m;
-  if (typeof m === "object") return { ...m, text: val };
-  return val;
-}));
-const gold = ind.colors.accent || "#d4a017";
-const bg = ind.colors.dark || "#1a0b00";
-const white = "#fff9f0";
-return (
-<div style={{ width:"100%", height:"100%", display:"flex", flexDirection:"column", overflow:"hidden", fontFamily:"sans-serif", background:bg, position:"relative" }}>
-  {/* Header */}
-  <div style={{ padding:`${8*fScale}px ${10*fScale}px ${5*fScale}px`, flexShrink:0 }}>
-    <div style={{ display:"flex", alignItems:"center", gap:8*fScale, marginBottom:4*fScale }}>
-      <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji} size={32*fScale} bg={`${ind.colors.primary}cc`} color="#fff" />
-      <EditableText value={data.businessName} onChange={edit("businessName")} {...ef("businessName")}
-        style={{ color:white, fontWeight:900, fontSize:17*fScale, lineHeight:1.0, fontFamily:"Georgia,serif", textShadow:"0 2px 8px rgba(0,0,0,0.8)" }} />
-    </div>
-    {!isS && (
-      <EditableText value={data.tagline || ind.taglines[0]} onChange={edit("tagline")} {...ef("tagline")}
-        style={{ color:gold, fontWeight:700, fontSize:9.5*fScale, fontStyle:"italic", textAlign:"center", display:"block", letterSpacing:0.5 }} />
-    )}
-  </div>
-  {/* Photo */}
-  <div style={{ flexShrink:0, overflow:"hidden", height:isXL?"43%":isL?"40%":"38%" }}>
-    <img src={photo} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
-  </div>
-  {/* Menu items + coupon */}
-  {!isS ? (
-    <div style={{ flex:1, display:"flex", gap:6*fScale, padding:`${5*fScale}px ${10*fScale}px`, minHeight:0 }}>
-      <div style={{ flex:1, display:"flex", flexDirection:"column", gap:4*fScale, justifyContent:"center" }}>
-        {getActiveItems(data.menuItems, ind.menu).slice(0,4).map((item,i) => {
-          const m = item.match(/^(.+?)\s*(\$[\d.]+)$/);
-          const name = m ? m[1].trim() : item;
-          const price = m ? m[2] : "";
-          return (
-            <div key={i} style={{ display:"flex", alignItems:"center", gap:5*fScale }}>
-              <div style={{ width:13*fScale, height:13*fScale, borderRadius:"50%", background:gold, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
-                <span style={{ color:"#fff", fontSize:7*fScale, fontWeight:900 }}>✓</span>
-              </div>
-              <EditableText value={item} onChange={editMenu(i)} {...ef(`menuItem_${i}`)}
-                style={{ color:white, fontWeight:700, fontSize:9*fScale, flex:1 }} />
-              {price && <span style={{ color:gold, fontWeight:900, fontSize:9*fScale, flexShrink:0 }}>{price}</span>}
+  const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
+  const photo = data.photo || ind.photos[0];
+  const isXL = sizeKey === "XL", isL = sizeKey === "L", isM = sizeKey === "M", isS = sizeKey === "S";
+  const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.65;
+  const edit = (field) => (val) => onEdit(field, val);
+  const items = getActiveItems(data.menuItems, ind.menu).slice(0, isS ? 2 : 4);
+  const ef = (key) => ({
+    fieldKey: key,
+    fontSizes: data.fontSizes || {},
+    fieldWidths: data.fieldWidths || {},
+    onFontSizeChange,
+    onWidthChange
+  });
+
+  const editMenu = (i) => (val) => {
+    const current = getActiveItems(data.menuItems, ind.menu);
+    const updated = current.map((m, j) => (j === i ? val : m));
+    onEdit("menuItems", updated);
+  };
+
+  const splitPrice = (text) => {
+    const m = String(text || "").match(/^(.*?)(\s+\$[\d]+(?:\.\d{2})?)$/);
+    if (!m) return { name: String(text || ""), price: "" };
+    return { name: m[1], price: m[2].trim() };
+  };
+
+  return (
+    <div style={{ width: "100%", height: "100%", position: "relative", overflow: "hidden", fontFamily: "Georgia,serif", background: ind.colors.dark }}>
+      <img src={photo} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+      <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${ind.colors.dark}d9 0%, ${ind.colors.dark}55 22%, ${ind.colors.dark}1a 42%, ${ind.colors.dark}a6 62%, ${ind.colors.dark}f2 100%)` }} />
+      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 50% 32%, rgba(255,214,120,0.18) 0%, rgba(255,214,120,0.08) 20%, rgba(0,0,0,0) 48%)" }} />
+
+      <div style={{ position: "absolute", top: 10 * fScale, left: 12 * fScale, right: 12 * fScale, display: "flex", alignItems: "flex-start", gap: 10 * fScale }}>
+        <div style={{ flexShrink: 0, padding: 3 * fScale, borderRadius: 12 * fScale, background: "rgba(255,248,238,0.92)", boxShadow: "0 4px 14px rgba(0,0,0,0.35)", border: `${1.5 * fScale}px solid rgba(255,255,255,0.65)` }}>
+          <LogoBadge
+            logo={data.logo}
+            name={data.businessName}
+            emoji={ind.emoji}
+            size={50 * fScale}
+            bg={`${ind.colors.primary}cc`}
+            color="#fff"
+          />
+        </div>
+        <div style={{ flex: 1, minWidth: 0, paddingTop: 1 * fScale }}>
+          <EditableText
+            value={data.businessName}
+            onChange={edit("businessName")}
+            {...ef("businessName")}
+            style={{
+              color: "#f7efe1",
+              fontWeight: 900,
+              fontSize: (isXL ? 30 : isL ? 24 : isM ? 15 : 13) * fScale,
+              lineHeight: 0.95,
+              letterSpacing: 0.2 * fScale,
+              textShadow: "0 2px 8px rgba(0,0,0,0.55)"
+            }}
+          />
+          {!isS && (
+            <div style={{ marginTop: 5 * fScale, display: "flex", alignItems: "center", gap: 8 * fScale }}>
+              <div style={{ flex: 1, height: 2 * fScale, background: `linear-gradient(90deg, transparent 0%, ${ind.colors.accent} 35%, transparent 100%)`, opacity: 0.95 }} />
+              <EditableText
+                value={data.tagline || ind.taglines[0]}
+                onChange={edit("tagline")}
+                {...ef("tagline")}
+                style={{
+                  color: ind.colors.accent,
+                  fontWeight: 700,
+                  fontSize: (isXL ? 15 : isL ? 12 : 9) * fScale,
+                  lineHeight: 1.05,
+                  fontStyle: "italic",
+                  textAlign: "center",
+                  textShadow: "0 2px 6px rgba(0,0,0,0.45)"
+                }}
+              />
+              <div style={{ flex: 1, height: 2 * fScale, background: `linear-gradient(90deg, transparent 0%, ${ind.colors.accent} 35%, transparent 100%)`, opacity: 0.95 }} />
             </div>
-          );
-        })}
-      </div>
-      {data.offer && (
-        <div style={{ border:`1.5px dashed ${gold}77`, borderRadius:5*fScale, padding:`${6*fScale}px ${7*fScale}px`, background:"rgba(0,0,0,0.4)", flexShrink:0, width:isXL?115:85, textAlign:"center", display:"flex", flexDirection:"column", justifyContent:"center", gap:2*fScale }}>
-          <EditableText value={data.offer} onChange={edit("offer")} {...ef("offer")}
-            style={{ color:white, fontWeight:900, fontSize:12*fScale, lineHeight:1.1 }} />
-          {data.offerFine && (
-            <EditableText value={data.offerFine} onChange={edit("offerFine")} {...ef("offerFine")}
-              style={{ color:"rgba(255,255,255,0.6)", fontSize:6.5*fScale, lineHeight:1.3 }} />
           )}
         </div>
-      )}
-    </div>
-  ) : (
-    <div style={{ flex:1, padding:`${5*fScale}px ${10*fScale}px`, display:"flex", flexDirection:"column", justifyContent:"center", gap:4*fScale }}>
-      {getActiveItems(data.menuItems, ind.menu).slice(0,2).map((item,i) => (
-        <div key={i} style={{ display:"flex", alignItems:"center", gap:5*fScale }}>
-          <div style={{ width:12*fScale, height:12*fScale, borderRadius:"50%", background:gold, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
-            <span style={{ color:"#fff", fontSize:7*fScale, fontWeight:900 }}>✓</span>
+      </div>
+
+      <div style={{ position: "absolute", left: 14 * fScale, right: 14 * fScale, bottom: 92 * fScale, display: "flex", gap: 12 * fScale, alignItems: "flex-end" }}>
+        <div style={{ flex: 1, minWidth: 0, background: "linear-gradient(180deg, rgba(20,8,0,0.18) 0%, rgba(20,8,0,0.46) 100%)", borderRadius: 14 * fScale, padding: `${10 * fScale}px ${10 * fScale}px ${8 * fScale}px`, boxShadow: "0 10px 24px rgba(0,0,0,0.28)", backdropFilter: "blur(1px)" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 5 * fScale }}>
+            {items.map((item, i) => {
+              const parts = splitPrice(item);
+              return (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 7 * fScale }}>
+                  <div style={{ width: 16 * fScale, height: 16 * fScale, borderRadius: "50%", background: ind.colors.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 2px 6px rgba(0,0,0,0.35)" }}>
+                    <span style={{ color: "#fff", fontSize: 10 * fScale, fontWeight: 900, lineHeight: 1 }}>✓</span>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "baseline", gap: 4 * fScale }}>
+                    <EditableText
+                      value={parts.name}
+                      onChange={(val) => editMenu(i)(parts.price ? `${val} ${parts.price}` : val)}
+                      {...ef(`menuItem_${i}`)}
+                      style={{
+                        color: "#f4f0ea",
+                        fontSize: (isXL ? 11.5 : isL ? 10 : 8.8) * fScale,
+                        fontWeight: 800,
+                        fontFamily: "Arial,sans-serif",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        textShadow: "0 1px 4px rgba(0,0,0,0.75)"
+                      }}
+                    />
+                    {!isS && <div style={{ flex: 1, borderBottom: `${1 * fScale}px dotted rgba(255,235,210,0.8)`, transform: `translateY(${-2 * fScale}px)` }} />}
+                    {parts.price && (
+                      <EditableText
+                        value={parts.price}
+                        onChange={(val) => editMenu(i)(`${parts.name} ${val}`)}
+                        {...ef(`menuPrice_${i}`)}
+                        style={{
+                          color: ind.colors.accent,
+                          fontSize: (isXL ? 11.5 : isL ? 10 : 8.8) * fScale,
+                          fontWeight: 900,
+                          fontFamily: "Arial,sans-serif",
+                          whiteSpace: "nowrap",
+                          textShadow: "0 1px 4px rgba(0,0,0,0.75)"
+                        }}
+                      />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          <span style={{ color:white, fontSize:9*fScale, fontWeight:600 }}>{typeof item==="object"?item.text:item}</span>
         </div>
-      ))}
+
+        {!isS && data.offer && (
+          <div style={{ width: isXL ? 150 * fScale : 142 * fScale, flexShrink: 0 }}>
+            <Coupon
+              offer={data.offer}
+              fine={data.offerFine}
+              accent="#fff"
+              scale={fScale}
+              dark={true}
+              onEditOffer={edit("offer")}
+              onEditFine={edit("offerFine")}
+              fontSizes={data.fontSizes || {}}
+              fieldWidths={data.fieldWidths || {}}
+              onFontSizeChange={onFontSizeChange}
+              onWidthChange={onWidthChange}
+            />
+          </div>
+        )}
+      </div>
+
+      <div style={{ position: "absolute", left: 12 * fScale, right: isS ? 12 * fScale : 84 * fScale, bottom: 12 * fScale, display: "flex", flexDirection: "column", gap: 5 * fScale }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 * fScale }}>
+          <div style={{ width: 28 * fScale, height: 28 * fScale, borderRadius: "50%", border: `${1.5 * fScale}px solid ${ind.colors.accent}`, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(20,8,0,0.55)", flexShrink: 0, boxShadow: "0 2px 8px rgba(0,0,0,0.35)" }}>
+            <span style={{ color: "#fff", fontSize: 15 * fScale, lineHeight: 1 }}>☎</span>
+          </div>
+          <EditableText
+            value={data.phone || "(000) 000-0000"}
+            onChange={edit("phone")}
+            {...ef("phone")}
+            style={{
+              color: "#f6f1ea",
+              fontWeight: 900,
+              fontSize: (isXL ? 21 : isL ? 17 : isM ? 12 : 10.5) * fScale,
+              lineHeight: 1,
+              fontFamily: "Arial,sans-serif",
+              textShadow: "0 2px 6px rgba(0,0,0,0.55)"
+            }}
+          />
+        </div>
+        {data.address && (
+          <EditableText
+            value={data.address}
+            onChange={edit("address")}
+            {...ef("address")}
+            style={{
+              color: "rgba(255,245,235,0.96)",
+              fontSize: (isXL ? 9.3 : isL ? 8.2 : isM ? 6.8 : 6.3) * fScale,
+              lineHeight: 1.15,
+              fontFamily: "Arial,sans-serif",
+              textShadow: "0 1px 4px rgba(0,0,0,0.55)",
+              maxWidth: "100%"
+            }}
+          />
+        )}
+      </div>
+
+      {!isS && <PositionedQR website={data.website} fScale={fScale} dark />}
     </div>
-  )}
-  {/* Footer */}
-  <div style={{ padding:`${4*fScale}px ${10*fScale}px ${5*fScale}px`, borderTop:`1px solid ${gold}33`, flexShrink:0 }}>
-    {data.phone && (
-      <EditableText value={data.phone} onChange={edit("phone")} {...ef("phone")}
-        style={{ color:white, fontSize:10*fScale, fontWeight:900, display:"block" }} />
-    )}
-    {data.address && (
-      <EditableText value={data.address} onChange={edit("address")} {...ef("address")}
-        style={{ color:"rgba(255,255,255,0.6)", fontSize:7*fScale, display:"block", whiteSpace:"normal" }} />
-    )}
-  </div>
-  {!isS && <PositionedQR website={data.website} fScale={fScale} dark />}
-</div>
-);
+  );
 }
 
 const TEMPLATES = {
