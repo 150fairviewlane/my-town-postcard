@@ -362,14 +362,14 @@ function EarningsBreakdown() {
                 <strong>one postcard per week</strong> rhythm — one territory fills up,
                 you move to the next. That pace adds up fast:
               </p>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
                 {[
                   { label: "Per postcard", value: "~$2,500" },
                   { label: "Per month (4 cards)", value: "~$10,000" },
                   { label: "Per year (48 cards)", value: "~$120,000" },
                 ].map(stat => (
                   <div key={stat.label} style={{ background: "rgba(255,255,255,0.15)",
-                    borderRadius: 10, padding: "14px 16px", minHeight: 88 }}>
+                    borderRadius: 10, padding: "14px 16px" }}>
                     <div style={{ fontSize: 22, fontWeight: 900, fontFamily: "Georgia,serif",
                       lineHeight: 1, marginBottom: 6 }}>{stat.value}</div>
                     <div style={{ fontSize: 12, opacity: 0.85, marginTop: 4,
@@ -379,22 +379,6 @@ function EarningsBreakdown() {
               </div>
             </div>
 
-            <div style={{ background: "#fff", borderRadius: 16, padding: "22px 24px",
-              boxShadow: "0 2px 16px rgba(0,0,0,0.07)", display: "flex", gap: 14,
-              alignItems: "flex-start" }}>
-              <span style={{ fontSize: 26, flexShrink: 0 }}>📬</span>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#111",
-                  fontFamily: "sans-serif", marginBottom: 4 }}>
-                  Commissions paid at mail date
-                </div>
-                <div style={{ fontSize: 13.5, color: "#555", lineHeight: 1.6,
-                  fontFamily: "sans-serif" }}>
-                  Once a postcard ships to USPS, your commission is calculated and
-                  paid within 7 business days. No waiting, no surprises.
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -508,6 +492,8 @@ const FAQ_ITEMS = [
     a: "Spots range from $199 (Small) to $499 (Extra-Large). All include design and mailing. You set the pricing within those tiers based on what your local market will bear." },
   { q: "Is there a sales quota?",
     a: "No quotas. As long as you can hit our 6-spot minimum to mail a postcard at least once a year, you keep your territories. We'll work with you actively if you're not seeing traction." },
+  { q: "When and how are commissions paid?",
+    a: "Commissions are paid at the mail date. Once a postcard ships to USPS, your commission is calculated and paid within 7 business days. No waiting, no surprises." },
 ];
 
 function FAQSection() {
