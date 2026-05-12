@@ -419,7 +419,7 @@ const FAQ_ITEMS = [
   { q: "Is my business good for this postcard?",
     a: "Any local business that serves Habersham County residents is a great fit — restaurants, home services, medical, legal, retail, and more." },
   { q: "What happens if another business like mine is already on it?",
-    a: "We guarantee exclusivity by category. If a competing business is already in your category, we'll let you know before you pay anything." },
+    a: "We guarantee exclusivity by category. If a competing business is already in your category, contact us and we'll get you queued up for the next card." },
   { q: "Do I have to design the ad myself?",
     a: "Not at all. Professional ad design is included with every spot. Just provide your logo, photos, and key details — we handle the rest." },
   { q: "How big will my ad be on the postcard?",
