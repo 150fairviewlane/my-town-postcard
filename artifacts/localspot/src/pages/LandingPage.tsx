@@ -548,47 +548,44 @@ function ReserveForm() {
 
 function Footer() {
   return (
-    <footer style={{ background: "#111", padding: "48px 32px 32px", color: "#ccc" }}>
+    <footer style={{ background: "#fff", padding: "48px 32px 32px", borderTop: "1px solid #e5e7eb" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto",
-        display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 40 }}>
-        <div style={{
-          background: "#fff", borderRadius: 12, padding: "24px 28px",
-          boxShadow: "0 2px 16px rgba(0,0,0,0.25)", alignSelf: "start",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+        display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 40, alignItems: "start" }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
             <img src="/mailbox-logo.png" alt="My Town Postcard" height={56} style={{ height: 56, width: "auto" }}/>
             <div style={{ fontWeight: 900, fontSize: 18, color: "#111", fontFamily: "Georgia,serif", lineHeight: 1.2 }}>
               My Town Postcard
             </div>
           </div>
-          <p style={{ fontSize: 13, lineHeight: 1.6, color: "#333", fontFamily: "sans-serif", maxWidth: 220, margin: 0 }}>
+          <p style={{ fontSize: 13, lineHeight: 1.6, color: "#555", fontFamily: "sans-serif", maxWidth: 240, margin: 0 }}>
             Helping local businesses connect with their neighbors through cost-effective postcard marketing.
           </p>
         </div>
-        <div>
-          <div style={{ fontWeight: 700, color: "#fff", fontSize: 14, marginBottom: 14,
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontWeight: 700, color: "#111", fontSize: 14, marginBottom: 14,
             fontFamily: "sans-serif" }}>Quick Links</div>
           {["How It Works", "Pricing & Availability", "FAQ"].map(l => (
             <div key={l} style={{ marginBottom: 8 }}>
               <a href="#" onClick={e => { e.preventDefault(); scrollTo(l === "How It Works" ? "how-it-works" : l === "FAQ" ? "faq" : "pricing"); }}
-                style={{ fontSize: 13, color: "#9ca3af", textDecoration: "none", fontFamily: "sans-serif" }}>
+                style={{ fontSize: 13, color: "#555", textDecoration: "none", fontFamily: "sans-serif" }}>
                 {l}
               </a>
             </div>
           ))}
         </div>
         <div>
-          <div style={{ fontWeight: 700, color: "#fff", fontSize: 14, marginBottom: 14,
+          <div style={{ fontWeight: 700, color: "#111", fontSize: 14, marginBottom: 14,
             fontFamily: "sans-serif" }}>Contact</div>
-          <p style={{ fontSize: 13, color: "#9ca3af", lineHeight: 1.6, fontFamily: "sans-serif" }}>
+          <p style={{ fontSize: 13, color: "#555", lineHeight: 1.6, fontFamily: "sans-serif" }}>
             Serving Clarkesville, Demorest, Cornelia &amp; Alto.<br />
             Questions? Email us at info@mytownpostcard.com
           </p>
         </div>
       </div>
-      <div style={{ maxWidth: 1100, margin: "32px auto 0", borderTop: "1px solid #222",
+      <div style={{ maxWidth: 1100, margin: "32px auto 0", borderTop: "1px solid #e5e7eb",
         paddingTop: 20, textAlign: "center" }}>
-        <span style={{ fontSize: 12, color: "#6b7280", fontFamily: "sans-serif" }}>
+        <span style={{ fontSize: 12, color: "#9ca3af", fontFamily: "sans-serif" }}>
           © 2025 My Town Postcard · mytownpostcard.com · Clarkesville, GA
         </span>
       </div>
