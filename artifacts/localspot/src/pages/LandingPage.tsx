@@ -550,7 +550,7 @@ function Footer() {
   return (
     <footer style={{ background: "#fff", padding: "48px 32px 32px", borderTop: "1px solid #7B1418" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto",
-        display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 40, alignItems: "start" }}>
+        display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 40, alignItems: "start" }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
             <img src="/mailbox-logo.png" alt="My Town Postcard" height={56} style={{ height: 56, width: "auto" }}/>
@@ -558,7 +558,7 @@ function Footer() {
               My Town Postcard
             </div>
           </div>
-          <p style={{ fontSize: 13, lineHeight: 1.6, color: "#555", fontFamily: "sans-serif", margin: 0, paddingLeft: 68 }}>
+          <p style={{ fontSize: 13, lineHeight: 1.6, color: "#555", fontFamily: "sans-serif", margin: 0, paddingLeft: 68, maxWidth: 300 }}>
             Helping local businesses connect with their neighbors through cost-effective postcard marketing.
           </p>
         </div>
