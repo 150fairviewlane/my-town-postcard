@@ -1,0 +1,37 @@
+Build a simple admin image curation tool for my My Town Postcard platform. This is a standalone admin page — do not modify any existing files.
+What to build:
+	1.	New admin page at /admin/image-library (password protected with a simple hardcoded password stored in environment variables as ADMIN_PASSWORD)
+	2.	Search panel — a form with:
+	•	Keyword search input
+	•	Source selector (Unsplash / Pexels / Both)
+	•	Industry tag dropdown (all 32 industries listed below)
+	•	Search button that returns a grid of 24 candidate images
+	3.	Image grid — each result shows:
+	•	The photo thumbnail
+	•	Photographer credit
+	•	An Approve button
+	•	Clicking the image opens it full size in a new tab
+	4.	Approve action — when approved, save to the database:
+	•	image_url (full resolution URL)
+	•	thumb_url (thumbnail URL)
+	•	industry (selected tag, but allow “Multiple” as an option)
+	•	mood (short text field the admin fills in, e.g. “warm, cinematic”)
+	•	text_safe_region (dropdown: Left, Right, Center, Bottom)
+	•	photographer_credit
+	•	source (unsplash or pexels)
+	•	approved (boolean, default true)
+	•	created_at timestamp
+	5.	Library panel — below the search, show all approved images in a grid organized by industry, with the ability to:
+	•	Remove/unapprove an image
+	•	Edit the industry tag, mood, and text_safe_region
+	•	See a count per industry (goal: 8 per industry)
+	•	Highlight industries with fewer than 8 images in yellow, 0 images in red
+	6.	API keys — use environment variables UNSPLASH_ACCESS_KEY and PEXELS_API_KEY (I will add these to secrets)
+Industry list:
+Pizza Restaurant, Mexican Restaurant, Chinese Restaurant, Breakfast & Cafe, Bar & Grill, Italian Restaurant, Bakery, Coffee Shop, Dentist, Medical & Healthcare, Chiropractor, Veterinarian, HVAC, Plumber, Electrician, Lawn & Landscaping, Roofing, Painting, Cleaning Service, Pest Control, Real Estate, Insurance, Auto Repair, Salon & Beauty, Barbershop, Gym & Fitness, Pet Services, Financial Services, Daycare, Photography, Retail Shop, Other Service, Multiple (cross-industry)
+Tech notes:
+	•	Use the existing database already in the project for the new image_library table
+	•	Unsplash API base URL: https://api.unsplash.com/search/photos
+	•	Pexels API base URL: https://api.pexels.com/v1/search
+	•	Keep the UI clean and simple — this is an internal admin tool, not customer-facing
+	•	Do not touch any existing files, routes, or database tables”**

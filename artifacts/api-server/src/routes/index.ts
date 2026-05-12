@@ -9,6 +9,7 @@ import adminOutreachRouter from "./adminOutreach";
 import adAssistantRouter from "./adAssistant";
 import adGeneratorV2Router from "./adGeneratorV2";
 import adGeneratorV3Router from "./adGeneratorV3";
+import imageLibraryRouter from "./imageLibrary";
 import dealersRouter from "./dealers";
 
 const router: IRouter = Router();
@@ -23,6 +24,7 @@ router.use(adminOutreachRouter);
 router.use(adAssistantRouter);
 router.use(adGeneratorV2Router);
 router.use(adGeneratorV3Router);
+router.use(imageLibraryRouter);
 router.use(dealersRouter);
 
 export default router;
