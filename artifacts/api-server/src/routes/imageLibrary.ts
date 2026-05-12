@@ -6,6 +6,26 @@ const router: IRouter = Router();
 
 const TIMEOUT_MS = 15_000;
 
+// ── Public: GET /api/image-library?industry= ─────────────────────────────────
+// Used by ad-generator-v4 to fetch approved photos for a given industry.
+// Returns snake_case field names to match what the frontend JS expects.
+router.get("/image-library", async (req, res): Promise<void> => {
+  const industry = typeof req.query.industry === "string" ? req.query.industry.trim() : null;
+  if (!industry) {
+    res.status(400).json({ error: "industry query param is required" });
+    return;
+  }
+  const rows = await db
+    .select({
+      image_url: imageLibraryTable.imageUrl,
+      thumb_url: imageLibraryTable.thumbUrl,
+      photographer_credit: imageLibraryTable.photographerCredit,
+    })
+    .from(imageLibraryTable)
+    .where(eq(imageLibraryTable.industry, industry));
+  res.json({ images: rows });
+});
+
 // ── Search ────────────────────────────────────────────────────────────────────
 router.post("/admin/image-library/search", async (req, res) => {
   const { query, source } = req.body ?? {};

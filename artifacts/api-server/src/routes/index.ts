@@ -9,6 +9,7 @@ import adminOutreachRouter from "./adminOutreach";
 import adAssistantRouter from "./adAssistant";
 import adGeneratorV2Router from "./adGeneratorV2";
 import adGeneratorV3Router from "./adGeneratorV3";
+import adGeneratorV4Router from "./adGeneratorV4";
 import imageLibraryRouter from "./imageLibrary";
 import dealersRouter from "./dealers";
 
@@ -24,6 +25,7 @@ router.use(adminOutreachRouter);
 router.use(adAssistantRouter);
 router.use(adGeneratorV2Router);
 router.use(adGeneratorV3Router);
+router.use(adGeneratorV4Router);
 router.use(imageLibraryRouter);
 router.use(dealersRouter);
 

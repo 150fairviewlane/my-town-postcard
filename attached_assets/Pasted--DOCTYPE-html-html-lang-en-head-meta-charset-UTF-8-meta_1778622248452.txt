@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Town Postcard — Ad Generator v4</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Oswald:wght@400;500;600;700&family=Dancing+Script:wght@600;700&family=DM+Sans:wght@300;400;500;600;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --burg:#7C1C2E;--burg-dark:#5a1220;--burg-pale:#f9eaed;
+  --ink:#111827;--ink-mid:#374151;--ink-light:#6B7280;
+  --surface:#F7F5F2;--card:#fff;--border:#E5E0D8;
+  --green:#1a5c3a;--red:#c0392b;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh;color:var(--ink)}
+
+/* HEADER */
+.hdr{background:var(–ink);padding:14px 32px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(–burg)}
+.brand{font-family:‘Bebas Neue’,sans-serif;font-size:22px;color:#fff;letter-spacing:.08em}
+.brand span{color:#C8A882}
+.hdr-badge{background:var(–burg);color:#fff;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:4px 12px;border-radius:20px}
+
+/* LAYOUT */
+.layout{display:grid;grid-template-columns:440px 1fr;min-height:calc(100vh - 55px)}
+
+/* FORM PANEL */
+.fpanel{background:var(–card);border-right:1px solid var(–border);padding:22px 20px;overflow-y:auto}
+.ptitle{font-family:‘Bebas Neue’,sans-serif;font-size:22px;letter-spacing:.06em;margin-bottom:2px}
+.psub{font-size:11.5px;color:var(–ink-light);margin-bottom:18px;line-height:1.5}
+.fsec{margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(–border)}
+.fsec:last-of-type{border-bottom:none;margin-bottom:0}
+.slbl{font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(–burg);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.slbl::after{content:’’;flex:1;height:1px;background:var(–burg-pale)}
+.field{margin-bottom:9px}
+.field:last-child{margin-bottom:0}
+.field>label{display:block;font-size:11px;font-weight:600;color:var(–ink-mid);margin-bottom:3px;letter-spacing:.04em;text-transform:uppercase}
+.field input,.field select,.field textarea{width:100%;padding:8px 11px;border:1.5px solid var(–border);border-radius:7px;font-family:‘DM Sans’,sans-serif;font-size:13px;color:var(–ink);background:var(–surface);outline:none;transition:border-color .2s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(–burg);background:#fff}
+.field textarea{resize:vertical;min-height:60px;line-height:1.5}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+
+/* MENU BUILDER */
+.menu-list{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.mrow{display:flex;gap:6px;align-items:center}
+.mrow input{flex:1;padding:7px 10px;border:1.5px solid var(–border);border-radius:6px;font-family:‘DM Sans’,sans-serif;font-size:12.5px;color:var(–ink);background:var(–surface);outline:none;transition:border-color .2s}
+.mrow input:focus{border-color:var(–burg);background:#fff}
+.rm-btn{width:26px;height:26px;border-radius:6px;border:1.5px solid var(–border);background:var(–surface);color:var(–ink-light);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;line-height:1}
+.rm-btn:hover{border-color:var(–red);color:var(–red);background:#fef2f2}
+.add-btn{font-size:11px;font-weight:600;color:var(–burg);background:none;border:1.5px dashed var(–burg);border-radius:6px;padding:6px 12px;cursor:pointer;width:100%;transition:all .2s;font-family:‘DM Sans’,sans-serif}
+.add-btn:hover{background:var(–burg-pale)}
+
+/* IMAGE PICKER */
+.img-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}
+.img-thumb{position:relative;aspect-ratio:4/3;border-radius:6px;overflow:hidden;cursor:pointer;border:2.5px solid transparent;transition:all .2s}
+.img-thumb:hover{transform:scale(1.03)}
+.img-thumb.selected{border-color:var(–burg);box-shadow:0 0 0 2px var(–burg)}
+.img-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.img-thumb .sel-check{display:none;position:absolute;top:4px;right:4px;background:var(–burg);color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;align-items:center;justify-content:center}
+.img-thumb.selected .sel-check{display:flex}
+.img-loading{grid-column:1/-1;text-align:center;padding:20px;font-size:12px;color:var(–ink-light)}
+.img-none{grid-column:1/-1;text-align:center;padding:20px;font-size:12px;color:var(–ink-light);font-style:italic}
+
+/* STYLE PICKER */
+.style-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.scard{position:relative}
+.scard input[type=radio]{position:absolute;opacity:0;width:0;height:0}
+.scard label{display:flex;align-items:center;gap:10px;padding:10px 12px;border:2px solid var(–border);border-radius:9px;cursor:pointer;background:var(–surface);transition:all .2s;text-transform:none;letter-spacing:normal}
+.scard label:hover{border-color:#bbb;background:#f0ece6}
+.scard input:checked+label{border-color:var(–burg);background:var(–burg-pale);box-shadow:0 0 0 1px var(–burg)}
+.swatch{width:34px;height:34px;border-radius:7px;flex-shrink:0}
+.sinfo .sname{font-size:12px;font-weight:700;color:var(–ink)}
+.sinfo .sdesc{font-size:10px;color:var(–ink-light);line-height:1.3;margin-top:1px}
+.selbadge{display:none;position:absolute;top:5px;right:5px;background:var(–burg);color:#fff;font-size:9px;font-weight:700;width:15px;height:15px;border-radius:50%;align-items:center;justify-content:center;pointer-events:none}
+.scard input:checked~.selbadge{display:flex}
+
+/* COLOR CHIPS */
+.crow{display:flex;gap:7px;flex-wrap:wrap;margin-top:2px}
+.chip{position:relative}
+.chip input[type=radio]{position:absolute;opacity:0;width:0;height:0}
+.chip label{width:28px;height:28px;border-radius:50%;display:block;cursor:pointer;border:3px solid transparent;transition:transform .2s,border-color .2s;text-transform:none}
+.chip input:checked+label{border-color:var(–ink);transform:scale(1.15)}
+.chip label:hover{transform:scale(1.1)}
+
+/* UPLOAD ZONE */
+.upload-zone{border:2px dashed var(–border);border-radius:9px;padding:12px;text-align:center;cursor:pointer;transition:all .2s;background:var(–surface);position:relative;overflow:hidden}
+.upload-zone:hover{border-color:var(–burg);background:var(–burg-pale)}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-icon{font-size:20px;margin-bottom:3px}
+.upload-txt{font-size:11px;font-weight:600;color:var(–ink-mid)}
+.upload-sub{font-size:9.5px;color:var(–ink-light);margin-top:1px}
+.upload-preview{width:100%;height:60px;object-fit:cover;border-radius:5px;margin-top:6px;display:none}
+
+/* GEN BUTTON */
+.gen-btn{width:100%;padding:13px;background:var(–burg);color:#fff;border:none;border-radius:9px;font-family:‘Bebas Neue’,sans-serif;font-size:19px;letter-spacing:.12em;cursor:pointer;transition:background .2s,transform .15s;margin-top:6px;display:flex;align-items:center;justify-content:center;gap:9px}
+.gen-btn:hover:not(:disabled){background:var(–burg-dark)}
+.gen-btn:active:not(:disabled){transform:scale(.98)}
+.gen-btn:disabled{background:#bbb;cursor:not-allowed}
+
+/* PREVIEW PANEL */
+.ppanel{background:#E8E4DE;padding:32px;display:flex;flex-direction:column;align-items:center;gap:18px;overflow-y:auto}
+.ptoolbar{width:100%;max-width:500px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.plabel{font-family:‘Bebas Neue’,sans-serif;font-size:17px;letter-spacing:.1em;color:var(–ink-mid)}
+.tactions{display:flex;gap:7px;flex-wrap:wrap}
+.tbtn{padding:6px 13px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid var(–border);background:var(–card);color:var(–ink-mid);transition:all .2s;font-family:‘DM Sans’,sans-serif}
+.tbtn:hover:not(:disabled){border-color:var(–burg);color:var(–burg)}
+.tbtn.primary{background:var(–green);border-color:var(–green);color:#fff}
+.tbtn.primary:hover:not(:disabled){background:#144d30}
+.tbtn:disabled{opacity:.4;cursor:not-allowed}
+
+/* AD CANVAS — 4:5 ratio */
+.ad-canvas-wrap{width:100%;max-width:500px;position:relative}
+#adCanvas{
+width:100%;
+aspect-ratio:4/5;
+position:relative;
+border-radius:10px;
+overflow:hidden;
+box-shadow:0 12px 50px rgba(0,0,0,.22);
+display:none;
+background:#111;
+}
+#adCanvas.visible{display:block}
+
+.empty-state{
+width:100%;max-width:500px;
+aspect-ratio:4/5;
+background:#1a1a1a;
+border-radius:10px;
+display:flex;flex-direction:column;align-items:center;justify-content:center;
+gap:14px;text-align:center;padding:36px;
+box-shadow:0 12px 50px rgba(0,0,0,.22);
+}
+.empty-state.hidden{display:none}
+.ei{font-size:44px;opacity:.28}
+.et{font-family:‘Crimson Pro’,serif;font-size:19px;font-style:italic;color:rgba(255,255,255,.4)}
+.es{font-size:11.5px;color:rgba(255,255,255,.28);line-height:1.6}
+
+/* ═══════════════════════════════════════════════
+THE 6 AD TEMPLATES — all inside #adCanvas
+═══════════════════════════════════════════════ */
+
+/* Shared: hero bg image */
+.ad-bg{position:absolute;inset:0;background-size:cover;background-position:center;z-index:0}
+
+/* ── TEMPLATE 1: RUSTIC ── */
+.tpl-rustic .ad-bg{filter:brightness(.7) saturate(1.1)}
+.tpl-rustic .ad-overlay{position:absolute;inset:0;z-index:1;
+background:linear-gradient(160deg,rgba(30,15,5,.55) 0%,rgba(10,5,2,.2) 40%,rgba(10,5,2,.7) 100%)}
+.tpl-rustic .ad-brush{position:absolute;bottom:0;left:0;right:0;height:55%;z-index:2;
+background:linear-gradient(to top,rgba(15,8,3,.97) 0%,rgba(15,8,3,.9) 40%,transparent 100%)}
+/* top left badge */
+.tpl-rustic .ad-badge{position:absolute;top:18px;left:18px;z-index:10;
+background:rgba(180,90,20,.9);border:2px solid rgba(255,200,100,.4);
+border-radius:4px;padding:6px 12px;
+font-family:‘Oswald’,sans-serif;font-size:11px;font-weight:600;
+letter-spacing:.15em;text-transform:uppercase;color:#FFE4B0}
+.tpl-rustic .ad-content{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;justify-content:flex-end;padding:22px 20px 18px}
+.tpl-rustic .ad-name{font-family:‘Playfair Display’,serif;font-weight:900;font-size:clamp(28px,6vw,48px);color:#fff;line-height:.95;letter-spacing:-.01em;text-shadow:2px 3px 12px rgba(0,0,0,.7)}
+.tpl-rustic .ad-name .accent{color:#FFB347;font-style:italic;display:block;font-size:1.15em}
+.tpl-rustic .ad-tagline{font-family:‘Dancing Script’,cursive;font-size:clamp(14px,3vw,20px);color:rgba(255,220,160,.9);margin-top:4px;margin-bottom:10px}
+.tpl-rustic .ad-divider{width:50px;height:2px;background:linear-gradient(90deg,#FFB347,transparent);margin-bottom:10px;border-radius:2px}
+.tpl-rustic .ad-menu{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.tpl-rustic .ad-menu-item{display:flex;align-items:center;gap:7px;font-family:‘DM Sans’,sans-serif;font-size:clamp(11px,2.2vw,14px);color:rgba(255,255,255,.88);font-weight:500}
+.tpl-rustic .ad-menu-item::before{content:‘✦’;color:#FFB347;font-size:8px;flex-shrink:0}
+.tpl-rustic .ad-coupon{border:2px dashed rgba(255,180,80,.5);border-radius:6px;padding:7px 12px;margin-bottom:12px;background:rgba(0,0,0,.3);display:inline-block}
+.tpl-rustic .ad-coupon-text{font-family:‘Oswald’,sans-serif;font-size:clamp(14px,2.8vw,20px);font-weight:700;color:#FFB347;letter-spacing:.06em;text-transform:uppercase}
+.tpl-rustic .ad-coupon-fine{font-size:9px;color:rgba(255,255,255,.5);margin-top:1px;font-family:‘DM Sans’,sans-serif}
+.tpl-rustic .ad-footer{display:flex;align-items:flex-end;justify-content:space-between;border-top:1px solid rgba(255,180,80,.2);padding-top:10px}
+.tpl-rustic .ad-phone{font-family:‘Bebas Neue’,sans-serif;font-size:clamp(20px,4vw,30px);letter-spacing:.06em;color:#fff;line-height:1;text-shadow:0 2px 8px rgba(0,0,0,.6)}
+.tpl-rustic .ad-address{font-size:clamp(9px,1.8vw,11px);color:rgba(255,255,255,.5);margin-top:2px;font-family:‘DM Sans’,sans-serif}
+.tpl-rustic .ad-qr{display:flex;flex-direction:column;align-items:center;gap:3px}
+.tpl-rustic .ad-qr-box{width:44px;height:44px;background:#fff;border-radius:4px;padding:3px}
+.tpl-rustic .ad-qr-label{font-size:8px;color:rgba(255,255,255,.35);letter-spacing:.1em;text-transform:uppercase;font-family:‘DM Sans’,sans-serif}
+
+/* ── TEMPLATE 2: DARK CINEMATIC ── */
+.tpl-dark .ad-bg{filter:brightness(.5) saturate(.8)}
+.tpl-dark .ad-overlay{position:absolute;inset:0;z-index:1;
+background:radial-gradient(ellipse at 70% 30%,rgba(120,20,30,.6) 0%,rgba(0,0,0,.1) 60%),
+linear-gradient(to bottom,rgba(0,0,0,.3) 0%,rgba(0,0,0,.95) 100%)}
+.tpl-dark .ad-content{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;justify-content:flex-end;padding:24px 22px 20px}
+.tpl-dark .ad-name{font-family:‘Bebas Neue’,sans-serif;font-size:clamp(36px,7vw,58px);letter-spacing:.04em;color:#fff;line-height:.9;text-shadow:0 4px 20px rgba(0,0,0,.5)}
+.tpl-dark .ad-name .accent{color:#FF4444;display:block}
+.tpl-dark .ad-tagline{font-family:‘DM Sans’,sans-serif;font-size:clamp(10px,2vw,13px);font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-top:6px;margin-bottom:14px}
+.tpl-dark .ad-menu{display:flex;flex-direction:column;gap:3px;margin-bottom:12px}
+.tpl-dark .ad-menu-item{display:flex;align-items:center;gap:8px;font-family:‘DM Sans’,sans-serif;font-size:clamp(11px,2.2vw,13px);color:rgba(255,255,255,.75);font-weight:400}
+.tpl-dark .ad-menu-dot{width:4px;height:4px;border-radius:50%;background:#FF4444;flex-shrink:0}
+.tpl-dark .ad-coupon{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:8px 14px;margin-bottom:14px;display:inline-block}
+.tpl-dark .ad-coupon-text{font-family:‘Bebas Neue’,sans-serif;font-size:clamp(18px,3.5vw,26px);letter-spacing:.06em;color:#fff}
+.tpl-dark .ad-coupon-text span{color:#FF4444}
+.tpl-dark .ad-coupon-fine{font-size:9px;color:rgba(255,255,255,.4);margin-top:1px}
+.tpl-dark .ad-footer{display:flex;align-items:flex-end;justify-content:space-between;border-top:1px solid rgba(255,255,255,.1);padding-top:10px}
+.tpl-dark .ad-phone{font-family:‘Bebas Neue’,sans-serif;font-size:clamp(22px,4.5vw,32px);letter-spacing:.06em;color:#fff;line-height:1}
+.tpl-dark .ad-address{font-size:clamp(9px,1.8vw,11px);color:rgba(255,255,255,.4);margin-top:2px}
+.tpl-dark .ad-qr .ad-qr-box{width:44px;height:44px;background:#fff;border-radius:4px;padding:3px}
+.tpl-dark .ad-qr{display:flex;flex-direction:column;align-items:center;gap:3px}
+.tpl-dark .ad-qr-label{font-size:8px;color:rgba(255,255,255,.3);letter-spacing:.1em;text-transform:uppercase}
+
+/* ── TEMPLATE 3: BOLD SPLIT ── */
+.tpl-bold .ad-bg{filter:brightness(.65) saturate(1.2);clip-path:polygon(0 0,100% 0,100% 100%,0 100%)}
+.tpl-bold .ad-overlay{position:absolute;inset:0;z-index:1;
+background:linear-gradient(105deg,rgba(10,10,20,.95) 0%,rgba(10,10,20,.9) 42%,transparent 43%)}
+.tpl-bold .ad-accent-bar{position:absolute;top:0;left:320px;width:6px;height:100%;background:var(–accent-color,#E63946);z-index:5;transform:skewX(-3deg)}
+.tpl-bold .ad-content{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;justify-content:center;padding:24px 22px}
+.tpl-bold .ad-name{font-family:‘Bebas Neue’,sans-serif;font-size:clamp(32px,6.5vw,52px);letter-spacing:.03em;color:#fff;line-height:.9;max-width:280px}
+.tpl-bold .ad-name .accent{color:var(–accent-color,#E63946);display:block;font-size:1.1em}
+.tpl-bold .ad-tagline{font-family:‘DM Sans’,sans-serif;font-size:clamp(9px,1.8vw,12px);font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-top:8px;margin-bottom:16px;max-width:260px}
+.tpl-bold .ad-menu{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;max-width:260px}
+.tpl-bold .ad-menu-item{display:flex;align-items:center;gap:8px;font-family:‘DM Sans’,sans-serif;font-size:clamp(11px,2.2vw,13px);color:rgba(255,255,255,.8);font-weight:500}
+.tpl-bold .ad-check{width:16px;height:16px;background:var(–accent-color,#E63946);border-radius:3px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;color:#fff;font-weight:700}
+.tpl-bold .ad-coupon{border:2px dashed rgba(255,255,255,.3);border-radius:6px;padding:8px 12px;margin-bottom:16px;display:inline-block;max-width:260px}
+.tpl-bold .ad-coupon-text{font-family:‘Bebas Neue’,sans-serif;font-size:clamp(16px,3.2vw,24px);letter-spacing:.04em;color:#fff}
+.tpl-bold .ad-coupon-text span{color:var(–accent-color,#E63946)}
+.tpl-bold .ad-coupon-fine{font-size:9px;color:rgba(255,255,255,.4);margin-top:1px}
+.tpl-bold .ad-footer{display:flex;align-items:flex-end;justify-content:space-between;border-top:1px solid rgba(255,255,255,.12);padding-top:10px;max-width:260px}
+.tpl-bold .ad-phone{font-family:‘Bebas Neue’,sans-serif;font-size:clamp(18px,3.8vw,28px);letter-spacing:.06em;color:#fff;line-height:1}
+.tpl-bold .ad-address{font-size:clamp(9px,1.8vw,10px);color:rgba(255,255,255,.4);margin-top:2px}
+.tpl-bold .ad-qr{display:flex;flex-direction:column;align-items:center;gap:3px}
+.tpl-bold .ad-qr-box{width:40px;height:40px;background:#fff;border-radius:4px;padding:3px}
+.tpl-bold .ad-qr-label{font-size:8px;color:rgba(255,255,255,.3);letter-spacing:.1em;text-transform:uppercase}
+
+/* ── TEMPLATE 4: LUXURY ── */
+.tpl-luxury .ad-bg{filter:brightness(.45) saturate(.7)}
+.tpl-luxury .ad-overlay{position:absolute;inset:0;z-index:1;
+background:linear-gradient(to bottom,rgba(10,8,5,.4) 0%,rgba(5,4,2,.85) 100%)}
+.tpl-luxury .ad-frame{position:absolute;inset:12px;z-index:2;border:1px solid rgba(200,160,60,.3);pointer-events:none}
+.tpl-luxury .ad-frame-inner{position:absolute;inset:18px;z-index:2;border:0.5px solid rgba(200,160,60,.15);pointer-events:none}
+.tpl-luxury .ad-content{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:28px 26px 22px;text-align:center}
+.tpl-luxury .ad-ornament{font-size:12px;letter-spacing:.4em;color:rgba(200,160,60,.7);margin-bottom:8px}
+.tpl-luxury .ad-name{font-family:‘Playfair Display’,serif;font-weight:700;font-size:clamp(24px,5vw,40px);color:#fff;letter-spacing:.04em;line-height:1.05;text-shadow:0 2px 12px rgba(0,0,0,.5)}
+.tpl-luxury .ad-tagline{font-family:‘Crimson Pro’,serif;font-style:italic;font-size:clamp(12px,2.5vw,17px);color:rgba(200,160,60,.85);margin-top:6px;margin-bottom:10px}
+.tpl-luxury .ad-rule{width:60px;height:1px;background:linear-gradient(90deg,transparent,rgba(200,160,60,.7),transparent);margin:0 auto 12px}
+.tpl-luxury .ad-menu{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;width:100%}
+.tpl-luxury .ad-menu-item{font-family:‘DM Sans’,sans-serif;font-size:clamp(10px,2vw,12.5px);color:rgba(255,255,255,.7);font-weight:400;letter-spacing:.04em;text-align:center}
+.tpl-luxury .ad-coupon{border:1px solid rgba(200,160,60,.4);border-radius:3px;padding:7px 16px;margin-bottom:12px;display:inline-block;background:rgba(200,160,60,.07)}
+.tpl-luxury .ad-coupon-text{font-family:‘Playfair Display’,serif;font-size:clamp(14px,2.8vw,20px);color:#fff;letter-spacing:.04em}
+.tpl-luxury .ad-coupon-fine{font-size:9px;color:rgba(255,255,255,.4);margin-top:2px}
+.tpl-luxury .ad-footer{display:flex;align-items:flex-end;justify-content:space-between;border-top:1px solid rgba(200,160,60,.2);padding-top:10px;width:100%}
+.tpl-luxury .ad-phone{font-family:‘Playfair Display’,serif;font-size:clamp(16px,3.2vw,24px);color:rgba(200,160,60,.9);line-height:1;letter-spacing:.04em}
+.tpl-luxury .ad-address{font-size:clamp(9px,1.8vw,10.5px);color:rgba(255,255,255,.4);margin-top:2px}
+.tpl-luxury .ad-qr{display:flex;flex-direction:column;align-items:center;gap:3px}
+.tpl-luxury .ad-qr-box{width:44px;height:44px;background:#fff;border-radius:3px;padding:3px}
+.tpl-luxury .ad-qr-label{font-size:8px;color:rgba(200,160,60,.4);letter-spacing:.1em;text-transform:uppercase}
+
+/* ── TEMPLATE 5: BRIGHT & BOLD ── */
+.tpl-bright .ad-bg{filter:brightness(.55) saturate(1.3)}
+.tpl-bright .ad-overlay{position:absolute;inset:0;z-index:1;
+background:linear-gradient(to bottom,rgba(255,255,255,.0) 0%,rgba(0,0,0,.85) 100%)}
+.tpl-bright .ad-top-band{position:absolute;top:0;left:0;right:0;height:80px;z-index:5;
+background:var(–accent-color,#FF6B35);
+clip-path:polygon(0 0,100% 0,100% 70%,0 100%)}
+.tpl-bright .ad-top-name{position:absolute;top:12px;left:18px;right:18px;z-index:10;
+font-family:‘Bebas Neue’,sans-serif;font-size:clamp(28px,5.5vw,44px);letter-spacing:.04em;color:#fff;
+line-height:1;text-shadow:1px 2px 6px rgba(0,0,0,.3)}
+.tpl-bright .ad-content{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;justify-content:flex-end;padding:20px 18px 16px}
+.tpl-bright .ad-name{display:none}/* name shown in top band */
+.tpl-bright .ad-tagline{font-family:‘DM Sans’,sans-serif;font-size:clamp(10px,2vw,13px);font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.7);margin-bottom:10px}
+.tpl-bright .ad-menu{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.tpl-bright .ad-menu-item{display:flex;align-items:center;gap:7px;font-family:‘DM Sans’,sans-serif;font-size:clamp(11px,2.2vw,13.5px);color:#fff;font-weight:600}
+.tpl-bright .ad-menu-bullet{width:18px;height:18px;border-radius:50%;background:var(–accent-color,#FF6B35);display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:700;flex-shrink:0}
+.tpl-bright .ad-coupon{background:var(–accent-color,#FF6B35);border-radius:6px;padding:8px 14px;margin-bottom:12px;display:inline-block}
+.tpl-bright .ad-coupon-text{font-family:‘Bebas Neue’,sans-serif;font-size:clamp(16px,3.2vw,24px);letter-spacing:.06em;color:#fff}
+.tpl-bright .ad-coupon-fine{font-size:9px;color:rgba(255,255,255,.7);margin-top:1px}
+.tpl-bright .ad-footer{display:flex;align-items:flex-end;justify-content:space-between;border-top:1px solid rgba(255,255,255,.15);padding-top:10px}
+.tpl-bright .ad-phone{font-family:‘Bebas Neue’,sans-serif;font-size:clamp(20px,4vw,30px);letter-spacing:.06em;color:#fff;line-height:1}
+.tpl-bright .ad-address{font-size:clamp(9px,1.8vw,10.5px);color:rgba(255,255,255,.5);margin-top:2px}
+.tpl-bright .ad-qr{display:flex;flex-direction:column;align-items:center;gap:3px}
+.tpl-bright .ad-qr-box{width:44px;height:44px;background:#fff;border-radius:4px;padding:3px}
+.tpl-bright .ad-qr-label{font-size:8px;color:rgba(255,255,255,.35);letter-spacing:.1em;text-transform:uppercase}
+
+/* ── TEMPLATE 6: CLEAN EDITORIAL ── */
+.tpl-clean .ad-bg{filter:brightness(.4) saturate(.6)}
+.tpl-clean .ad-overlay{position:absolute;inset:0;z-index:1;
+background:linear-gradient(160deg,rgba(255,255,255,.92) 0%,rgba(255,255,255,.88) 45%,rgba(0,0,0,.6) 100%)}
+.tpl-clean .ad-content{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;justify-content:space-between;padding:24px 22px 20px}
+.tpl-clean .ad-top{border-left:4px solid var(–ink);padding-left:12px;margin-bottom:0}
+.tpl-clean .ad-name{font-family:‘Playfair Display’,serif;font-weight:900;font-size:clamp(22px,4.5vw,36px);color:var(–ink);line-height:1;letter-spacing:-.01em}
+.tpl-clean .ad-name .accent{color:var(–accent-color,#1B3A6B);font-style:italic}
+.tpl-clean .ad-tagline{font-family:‘DM Sans’,sans-serif;font-size:clamp(9px,1.8vw,11px);font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(–ink-light);margin-top:5px}
+.tpl-clean .ad-middle{flex:1;display:flex;flex-direction:column;justify-content:center;padding:16px 0}
+.tpl-clean .ad-menu{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.tpl-clean .ad-menu-item{display:flex;align-items:center;justify-content:space-between;font-family:‘DM Sans’,sans-serif;font-size:clamp(11px,2.2vw,13px);color:var(–ink-mid);font-weight:500;padding-bottom:5px;border-bottom:1px solid rgba(0,0,0,.08)}
+.tpl-clean .ad-coupon{background:var(–ink);border-radius:5px;padding:8px 14px;margin-top:4px;display:inline-block}
+.tpl-clean .ad-coupon-text{font-family:‘Bebas Neue’,sans-serif;font-size:clamp(16px,3.2vw,22px);letter-spacing:.06em;color:#fff}
+.tpl-clean .ad-coupon-fine{font-size:9px;color:rgba(255,255,255,.55);margin-top:1px}
+.tpl-clean .ad-footer{display:flex;align-items:flex-end;justify-content:space-between;border-top:2px solid var(–ink);padding-top:10px}
+.tpl-clean .ad-phone{font-family:‘Bebas Neue’,sans-serif;font-size:clamp(20px,4vw,30px);letter-spacing:.04em;color:var(–ink);line-height:1}
+.tpl-clean .ad-address{font-size:clamp(9px,1.8vw,11px);color:var(–ink-light);margin-top:2px}
+.tpl-clean .ad-qr{display:flex;flex-direction:column;align-items:center;gap:3px}
+.tpl-clean .ad-qr-box{width:44px;height:44px;background:var(–ink);border-radius:4px;padding:4px}
+.tpl-clean .ad-qr-label{font-size:8px;color:var(–ink-light);letter-spacing:.1em;text-transform:uppercase}
+
+@media(max-width:900px){.layout{grid-template-columns:1fr}.ppanel{padding:20px 14px}}
+</style>
+
+</head>
+<body>
+
+<header class="hdr">
+  <div class="brand">My Town <span>Postcard</span></div>
+  <div class="hdr-badge">✦ Ad Generator v4</div>
+</header>
+
+<div class="layout">
+
+  <!-- ══ FORM ══ -->
+
+  <div class="fpanel">
+    <div class="ptitle">Build Your Ad</div>
+    <div class="psub">Choose your industry, fill in details, pick a photo and style. Your ad updates live as you make changes.</div>
+
+```
+<!-- Industry -->
+<div class="fsec">
+  <div class="slbl">Industry</div>
+  <div class="field">
+    <label>Business Category *</label>
+    <select id="industry" onchange="onIndustryChange()">
+      <option value="">— Select your industry —</option>
+      <option>Pizza Restaurant</option><option>Mexican Restaurant</option><option>Chinese Restaurant</option>
+      <option>Breakfast & Cafe</option><option>Bar & Grill</option><option>Italian Restaurant</option>
+      <option>Bakery</option><option>Coffee Shop</option><option>Dentist</option>
+      <option>Medical & Healthcare</option><option>Chiropractor</option><option>Veterinarian</option>
+      <option>HVAC</option><option>Plumber</option><option>Electrician</option>
+      <option>Lawn & Landscaping</option><option>Roofing</option><option>Painting</option>
+      <option>Cleaning Service</option><option>Pest Control</option><option>Real Estate</option>
+      <option>Insurance</option><option>Auto Repair</option><option>Salon & Beauty</option>
+      <option>Barbershop</option><option>Gym & Fitness</option><option>Pet Services</option>
+      <option>Financial Services</option><option>Daycare</option><option>Photography</option>
+      <option>Retail Shop</option><option>Other Service</option>
+    </select>
+  </div>
+</div>
+
+<!-- Business Info -->
+<div class="fsec">
+  <div class="slbl">Business Info</div>
+  <div class="field"><label>Business Name *</label><input type="text" id="bizName" placeholder="e.g. Tony's Pizza" oninput="renderAd()"></div>
+  <div class="field"><label>Tagline / Slogan</label><input type="text" id="tagline" placeholder="e.g. Hand-Tossed. Oven Fresh." oninput="renderAd()"></div>
+  <div class="frow">
+    <div class="field"><label>Phone *</label><input type="text" id="phone" placeholder="(706) 555-0100" oninput="renderAd()"></div>
+    <div class="field"><label>City, State</label><input type="text" id="city" placeholder="Clarkesville, GA" oninput="renderAd()"></div>
+  </div>
+  <div class="field"><label>Address</label><input type="text" id="address" placeholder="596 W Louise St" oninput="renderAd()"></div>
+  <div class="field"><label>Website</label><input type="text" id="website" placeholder="www.example.com" oninput="renderAd()"></div>
+</div>
+
+<!-- Photo Picker -->
+<div class="fsec">
+  <div class="slbl">Hero Photo</div>
+  <div class="img-grid" id="imgGrid">
+    <div class="img-loading">Select an industry to load photos</div>
+  </div>
+  <div style="margin-top:10px">
+    <div style="font-size:11px;font-weight:600;color:var(--ink-mid);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">Or upload your own</div>
+    <div class="upload-zone">
+      <input type="file" accept="image/*" onchange="handlePhotoUpload(this)">
+      <div class="upload-icon">📸</div>
+      <div class="upload-txt">Upload Photo</div>
+      <div class="upload-sub">Your storefront, product, team</div>
+      <img class="upload-preview" id="uploadPreview">
+    </div>
+  </div>
+</div>
+
+<!-- Menu Items -->
+<div class="fsec">
+  <div class="slbl">Services / Menu Items</div>
+  <div class="menu-list" id="menuList"></div>
+  <button class="add-btn" onclick="addMenuItem()">+ Add Item</button>
+</div>
+
+<!-- Offer -->
+<div class="fsec">
+  <div class="slbl">Special Offer / Coupon</div>
+  <div class="field"><label>Offer Text</label><input type="text" id="offer" placeholder="e.g. $1 OFF Any Pizza · 1 per visit" oninput="renderAd()"></div>
+</div>
+
+<!-- Design Style -->
+<div class="fsec">
+  <div class="slbl">Design Style</div>
+  <div class="style-grid">
+    <div class="scard">
+      <input type="radio" name="style" id="s-rustic" value="rustic" checked onchange="renderAd()">
+      <label for="s-rustic"><div class="swatch" style="background:linear-gradient(135deg,#e8dcc8,#8B4513)"></div><div class="sinfo"><div class="sname">Rustic &amp; Artisan</div><div class="sdesc">Warm, textured, handcrafted</div></div></label>
+      <div class="selbadge">✓</div>
+    </div>
+    <div class="scard">
+      <input type="radio" name="style" id="s-dark" value="dark" onchange="renderAd()">
+      <label for="s-dark"><div class="swatch" style="background:linear-gradient(135deg,#0a0a0f,#3D0A0A)"></div><div class="sinfo"><div class="sname">Dark &amp; Cinematic</div><div class="sdesc">Bold, dramatic, high contrast</div></div></label>
+      <div class="selbadge">✓</div>
+    </div>
+    <div class="scard">
+      <input type="radio" name="style" id="s-bold" value="bold" onchange="renderAd()">
+      <label for="s-bold"><div class="swatch" style="background:linear-gradient(135deg,#1a1a2e 50%,#E63946 50%)"></div><div class="sinfo"><div class="sname">Bold &amp; Split</div><div class="sdesc">Geometric, high impact</div></div></label>
+      <div class="selbadge">✓</div>
+    </div>
+    <div class="scard">
+      <input type="radio" name="style" id="s-luxury" value="luxury" onchange="renderAd()">
+      <label for="s-luxury"><div class="swatch" style="background:linear-gradient(135deg,#1a1410,#C8952A)"></div><div class="sinfo"><div class="sname">Luxury &amp; Elegant</div><div class="sdesc">Refined, gold, upscale</div></div></label>
+      <div class="selbadge">✓</div>
+    </div>
+    <div class="scard">
+      <input type="radio" name="style" id="s-bright" value="bright" onchange="renderAd()">
+      <label for="s-bright"><div class="swatch" style="background:linear-gradient(135deg,#FF6B35,#FFF0F3)"></div><div class="sinfo"><div class="sname">Bright &amp; Bold</div><div class="sdesc">Colorful, energetic, fun</div></div></label>
+      <div class="selbadge">✓</div>
+    </div>
+    <div class="scard">
+      <input type="radio" name="style" id="s-clean" value="clean" onchange="renderAd()">
+      <label for="s-clean"><div class="swatch" style="background:#fff;border:1.5px solid #ddd"></div><div class="sinfo"><div class="sname">Clean &amp; Editorial</div><div class="sdesc">Simple, professional</div></div></label>
+      <div class="selbadge">✓</div>
+    </div>
+  </div>
+</div>
+
+<!-- Accent Color -->
+<div class="fsec">
+  <div class="slbl">Accent Color</div>
+  <div class="crow" id="colorPicker">
+    <div class="chip"><input type="radio" name="color" id="c-red" value="#E63946" checked onchange="renderAd()"><label for="c-red" style="background:#E63946" title="Red"></label></div>
+    <div class="chip"><input type="radio" name="color" id="c-burg" value="#7C1C2E" onchange="renderAd()"><label for="c-burg" style="background:#7C1C2E" title="Burgundy"></label></div>
+    <div class="chip"><input type="radio" name="color" id="c-navy" value="#1B3A6B" onchange="renderAd()"><label for="c-navy" style="background:#1B3A6B" title="Navy"></label></div>
+    <div class="chip"><input type="radio" name="color" id="c-green" value="#1E5128" onchange="renderAd()"><label for="c-green" style="background:#1E5128" title="Forest Green"></label></div>
+    <div class="chip"><input type="radio" name="color" id="c-orange" value="#C85A11" onchange="renderAd()"><label for="c-orange" style="background:#C85A11" title="Orange"></label></div>
+    <div class="chip"><input type="radio" name="color" id="c-gold" value="#C8952A" onchange="renderAd()"><label for="c-gold" style="background:#C8952A" title="Gold"></label></div>
+    <div class="chip"><input type="radio" name="color" id="c-teal" value="#0D7377" onchange="renderAd()"><label for="c-teal" style="background:#0D7377" title="Teal"></label></div>
+    <div class="chip"><input type="radio" name="color" id="c-bright" value="#FF6B35" onchange="renderAd()"><label for="c-bright" style="background:#FF6B35" title="Bright Orange"></label></div>
+  </div>
+</div>
+
+<button class="gen-btn" id="generateBtn" onclick="renderAd()">✦ Preview My Ad</button>
+```
+
+  </div>
+
+  <!-- ══ PREVIEW ══ -->
+
+  <div class="ppanel">
+    <div class="ptoolbar">
+      <div class="plabel">Ad Preview</div>
+      <div class="tactions">
+        <button class="tbtn" id="shuffleBtn" onclick="shufflePhoto()" disabled>⟳ Shuffle Photo</button>
+        <button class="tbtn primary" id="useBtn" onclick="useAd()" disabled>✓ Use This Ad</button>
+      </div>
+    </div>
+
+```
+<div class="ad-canvas-wrap">
+  <div class="empty-state" id="emptyState">
+    <div class="ei">✦</div>
+    <div class="et">Your ad will appear here</div>
+    <div class="es">Select an industry, fill in your business name, choose a photo and style — your ad renders instantly.</div>
+  </div>
+  <div id="adCanvas"></div>
+</div>
+
+<div style="max-width:500px;width:100%;font-size:11px;color:var(--ink-light);line-height:1.6;text-align:center;padding:0 8px">
+  All text is rendered as crisp HTML — no AI image generation means no spelling errors, instant previews, and zero per-ad cost.
+</div>
+```
+
+  </div>
+</div>
+
+<script>
+// ── INDUSTRY DATA ──────────────────────────────────────────────
+const INDUSTRIES = {
+"Pizza Restaurant":{photos:["https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&q=80","https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800&q=80","https://images.unsplash.com/photo-1571997478779-2adcbbe9ab2f?w=800&q=80","https://images.pexels.com/photos/9685273/pexels-photo-9685273.jpeg?auto=compress&cs=tinysrgb&w=800"],colors:{primary:"#c0392b",accent:"#f4d03f"},taglines:["Hand-Tossed. Oven Fresh.","The Best Slice in Town!","Authentic Italian Since 1985"],menu:["Large Pizza $14.99","Family Special $24.99","Wings & Pizza Combo","Free Delivery"]},
+"Mexican Restaurant":{photos:["https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=800&q=80","https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?w=800&q=80","https://images.unsplash.com/photo-1599974579688-8dbdd335c77f?w=800&q=80","https://images.unsplash.com/photo-1588013273468-315fd88ea34c?w=800&q=80"],colors:{primary:"#e67e22",accent:"#27ae60"},taglines:["Auténtico Mexican Cuisine","Family Recipes Since 1992","¡Tacos Fresca Todos los Días!"],menu:["Taco Tuesday $1 Each","Margarita Happy Hour","Family Fajita Platter","Free Chips & Salsa"]},
+"Chinese Restaurant":{photos:["https://images.unsplash.com/photo-1525755662778-989d0524087e?w=800&q=80","https://images.unsplash.com/photo-1582450871972-ab5ca641643d?w=800&q=80","https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=800&q=80","https://images.unsplash.com/photo-1496116218417-1a781b1c416c?w=800&q=80"],colors:{primary:"#c0392b",accent:"#d4af37"},taglines:["Authentic Asian Flavors","Wok-Fired Perfection","Family Owned & Operated"],menu:["Lunch Special $8.99","Family Dinner $29.99","Free Egg Roll w/ Order","Catering Available"]},
+"Breakfast & Cafe":{photos:["https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?w=800&q=80","https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&q=80","https://images.unsplash.com/photo-1541167760496-1628856ab772?w=800&q=80","https://images.unsplash.com/photo-1644561146633-34f3f9c5c58e?w=800&q=80"],colors:{primary:"#c8541a",accent:"#f39c12"},taglines:["Made From Scratch Daily","Your Morning Made Better","Coffee · Biscuits · Smiles"],menu:["Breakfast Plate $8.99","Specialty Coffee $4.49","Bagel & Cream Cheese","Drive-Thru Available"]},
+"Bar & Grill":{photos:["https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800&q=80","https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=800&q=80","https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800&q=80","https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=800&q=80"],colors:{primary:"#1c1917",accent:"#dc2626"},taglines:["Where Locals Gather","Burgers · Beer · Good Times","Sports · Drinks · Great Food"],menu:["Half-Price Wings","Happy Hour 4-6pm","Burger & Beer Combo","Live Music Weekends"]},
+"Italian Restaurant":{photos:["https://images.unsplash.com/photo-1551183053-bf91a1d81141?w=800&q=80","https://images.unsplash.com/photo-1473093295043-cdd812d0e601?w=800&q=80","https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&q=80","https://images.unsplash.com/photo-1481931098730-318b6f776db0?w=800&q=80"],colors:{primary:"#166534",accent:"#dc2626"},taglines:["Authentic Italian Cuisine","Family Recipes Since 1978","Buon Appetito!"],menu:["Pasta Special $12.99","Wine & Dine for 2","Wood-Fired Pizza","Tiramisu Made Daily"]},
+"Bakery":{photos:["https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=800&q=80","https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800&q=80","https://images.unsplash.com/photo-1486427944299-d1955d23e34d?w=800&q=80","https://images.unsplash.com/photo-1517686469429-8bdb88b9f907?w=800&q=80"],colors:{primary:"#92400e",accent:"#f59e0b"},taglines:["Fresh Baked Daily","From Our Oven to Your Table","Artisan Breads & Pastries"],menu:["Custom Cakes","Fresh Bread Daily","Birthday Specials","Wedding Cakes"]},
+"Coffee Shop":{photos:["https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=800&q=80","https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=800&q=80","https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=800&q=80","https://images.unsplash.com/photo-1541167760496-1628856ab772?w=800&q=80"],colors:{primary:"#5d4037",accent:"#d4a574"},taglines:["Locally Roasted, Locally Loved","Your Daily Ritual","Specialty Coffee & More"],menu:["Specialty Lattes","Cold Brew on Tap","Pastries Daily","Free WiFi"]},
+"Dentist":{photos:["https://images.unsplash.com/photo-1606811971618-4486d14f3f99?w=800&q=80","https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=800&q=80","https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=800&q=80","https://images.unsplash.com/photo-1609840114035-3c981b782dfe?w=800&q=80"],colors:{primary:"#1e3a5f",accent:"#c8a44a"},taglines:["Accepting New Patients!","Gentle Care for the Whole Family","Your Smile is Our Priority"],menu:["Cleanings & Exams","Cosmetic Dentistry","Emergency Care","Insurance Accepted"]},
+"HVAC":{photos:["https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=800&q=80","https://images.unsplash.com/photo-1566917064245-1c6bff30dbf1?w=800&q=80","https://images.pexels.com/photos/5463587/pexels-photo-5463587.jpeg?auto=compress&cs=tinysrgb&w=800","https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=800&q=80"],colors:{primary:"#003f6b",accent:"#dc2626"},taglines:["24/7 Emergency Service","Heating & Cooling Experts","Fast · Reliable · Affordable"],menu:["A/C Tune-Up Special","Free Estimates","Emergency Service 24/7","Financing Available"]},
+"Real Estate":{photos:["https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800&q=80","https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&q=80","https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800&q=80","https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80"],colors:{primary:"#2d6a4f",accent:"#b8962e"},taglines:["Your Local Real Estate Expert","Buying or Selling? Call Me!","Trusted in Your Neighborhood"],menu:["Free Home Valuation","Buyer Representation","Listing Services","Investment Properties"]},
+"Auto Repair":{photos:["https://images.unsplash.com/photo-1486006920555-c77dcf18193c?w=800&q=80","https://images.unsplash.com/photo-1593142927747-8c1b758967a6?w=800&q=80","https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=800&q=80","https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&q=80"],colors:{primary:"#1c1917",accent:"#dc2626"},taglines:["Honest Auto Repair","ASE Certified Mechanics","Family Owned Since 1992"],menu:["Oil Change Special","Brake Service","AC Repair","Free Estimates"]},
+"Salon & Beauty":{photos:["https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&q=80","https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&q=80","https://images.unsplash.com/photo-1562322140-8baeececf3df?w=800&q=80","https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?w=800&q=80"],colors:{primary:"#9d174d",accent:"#d4af37"},taglines:["Look Beautiful. Feel Confident.","Your Best Self Awaits","Cuts · Color · Style"],menu:["Cut & Color Special","Wedding Hair","Bridal Packages","Walk-Ins Welcome"]},
+"Gym & Fitness":{photos:["https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&q=80","https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&q=80","https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&q=80","https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=800&q=80"],colors:{primary:"#dc2626",accent:"#fbbf24"},taglines:["Stronger Every Day","Get Fit. Feel Great.","Your Fitness Journey Starts Here"],menu:["Free 7-Day Trial","Personal Training","Group Classes","24/7 Access"]},
+"Other Service":{photos:["https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=800&q=80","https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=800&q=80","https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=800&q=80","https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&q=80"],colors:{primary:"#374151",accent:"#f59e0b"},taglines:["Quality Service You Can Trust","Locally Owned & Operated","Serving Our Community"],menu:["Free Consultation","Quality Service","Satisfaction Guaranteed","Local & Trusted"]},
+};
+
+// ── STATE ────────────────────────────────────────────────────
+let selectedPhotoUrl = null;
+let uploadedPhotoUrl = null;
+let currentIndustryPhotos = [];
+let currentPhotoIndex = 0;
+
+// QR SVG (static placeholder — replace with real QR in Replit)
+const QR_SVG = `<svg width="38" height="38" viewBox="0 0 44 44" fill="none">
+  <rect width="44" height="44" fill="white"/>
+  <rect x="3" y="3" width="14" height="14" rx="1" fill="#111"/>
+  <rect x="5" y="5" width="10" height="10" rx=".5" fill="white"/>
+  <rect x="7" y="7" width="6" height="6" fill="#111"/>
+  <rect x="27" y="3" width="14" height="14" rx="1" fill="#111"/>
+  <rect x="29" y="5" width="10" height="10" rx=".5" fill="white"/>
+  <rect x="31" y="7" width="6" height="6" fill="#111"/>
+  <rect x="3" y="27" width="14" height="14" rx="1" fill="#111"/>
+  <rect x="5" y="29" width="10" height="10" rx=".5" fill="white"/>
+  <rect x="7" y="31" width="6" height="6" fill="#111"/>
+  <rect x="21" y="21" width="4" height="4" fill="#111"/>
+  <rect x="27" y="21" width="4" height="4" fill="#111"/>
+  <rect x="33" y="21" width="4" height="4" fill="#111"/>
+  <rect x="21" y="27" width="4" height="4" fill="#111"/>
+  <rect x="33" y="27" width="4" height="4" fill="#111"/>
+  <rect x="27" y="33" width="4" height="4" fill="#111"/>
+  <rect x="21" y="39" width="4" height="4" fill="#111"/>
+</svg>`;
+
+// ── INDUSTRY CHANGE ──────────────────────────────────────────
+function onIndustryChange(){
+  const ind = document.getElementById('industry').value;
+  if(!ind) return;
+
+  const data = INDUSTRIES[ind] || INDUSTRIES['Other Service'];
+
+  // Auto-fill tagline if empty
+  const tg = document.getElementById('tagline');
+  if(!tg.value) tg.value = data.taglines[0];
+
+  // Auto-fill accent color from industry
+  const accentInput = document.querySelector(`input[name="color"][value="${data.accent}"]`);
+  // (silently skip if no exact match — user can pick manually)
+
+  // Populate menu
+  buildMenu(data.menu);
+
+  // Load photos — in Replit this will hit /api/image-library?industry=...
+  // For standalone demo we use the hardcoded photos
+  loadIndustryPhotos(ind, data.photos);
+
+  renderAd();
+}
+
+// ── LOAD PHOTOS ───────────────────────────────────────────────
+async function loadIndustryPhotos(industry, fallbackPhotos){
+  const grid = document.getElementById('imgGrid');
+  grid.innerHTML = '<div class="img-loading">Loading photos...</div>';
+
+  let photos = fallbackPhotos || [];
+
+  // In Replit: replace this block with a real fetch to your image library API
+  // try {
+  //   const res = await fetch(`/api/image-library?industry=${encodeURIComponent(industry)}`);
+  //   const data = await res.json();
+  //   if(data.images && data.images.length) photos = data.images.map(i=>({url:i.image_url,thumb:i.thumb_url,credit:i.photographer_credit}));
+  // } catch(e) { console.log('Using fallback photos'); }
+
+  currentIndustryPhotos = photos;
+
+  if(!photos.length){
+    grid.innerHTML = '<div class="img-none">No photos found for this industry yet. Upload your own above, or add photos in the admin image library.</div>';
+    return;
+  }
+
+  grid.innerHTML = '';
+  photos.forEach((p, i) => {
+    const url = typeof p === 'string' ? p : p.url;
+    const thumb = typeof p === 'string' ? p : (p.thumb || p.url);
+    const div = document.createElement('div');
+    div.className = 'img-thumb' + (i===0?' selected':'');
+    div.onclick = () => selectPhoto(url, div);
+    div.innerHTML = `<img src="${thumb}" loading="lazy" alt="photo ${i+1}"><div class="sel-check">✓</div>`;
+    grid.appendChild(div);
+  });
+
+  // Select first photo
+  if(photos.length){
+    selectedPhotoUrl = typeof photos[0]==='string'?photos[0]:photos[0].url;
+    currentPhotoIndex = 0;
+    document.getElementById('shuffleBtn').disabled = false;
+  }
+
+  renderAd();
+}
+
+function selectPhoto(url, el){
+  selectedPhotoUrl = url;
+  uploadedPhotoUrl = null;
+  document.getElementById('uploadPreview').style.display='none';
+  document.querySelectorAll('.img-thumb').forEach(t=>t.classList.remove('selected'));
+  el.classList.add('selected');
+  renderAd();
+}
+
+function shufflePhoto(){
+  if(!currentIndustryPhotos.length) return;
+  currentPhotoIndex = (currentPhotoIndex+1) % currentIndustryPhotos.length;
+  const p = currentIndustryPhotos[currentPhotoIndex];
+  const url = typeof p==='string'?p:p.url;
+  selectedPhotoUrl = url;
+  document.querySelectorAll('.img-thumb').forEach((t,i)=>{
+    t.classList.toggle('selected', i===currentPhotoIndex);
+  });
+  renderAd();
+}
+
+// ── PHOTO UPLOAD ─────────────────────────────────────────────
+function handlePhotoUpload(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    uploadedPhotoUrl = e.target.result;
+    selectedPhotoUrl = uploadedPhotoUrl;
+    const preview = document.getElementById('uploadPreview');
+    preview.src = uploadedPhotoUrl;
+    preview.style.display = 'block';
+    document.querySelectorAll('.img-thumb').forEach(t=>t.classList.remove('selected'));
+    renderAd();
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── MENU BUILDER ─────────────────────────────────────────────
+function buildMenu(items){
+  const list = document.getElementById('menuList');
+  list.innerHTML = '';
+  items.forEach(item=>addMenuItem(item));
+}
+
+function addMenuItem(val=''){
+  const list = document.getElementById('menuList');
+  const row = document.createElement('div');
+  row.className = 'mrow';
+  row.innerHTML = `<input type="text" placeholder="e.g. Large Pizza $14.99" value="${val}" oninput="renderAd()"><button class="rm-btn" onclick="this.parentElement.remove();renderAd()">×</button>`;
+  list.appendChild(row);
+}
+
+function getMenu(){
+  return Array.from(document.querySelectorAll('.mrow input')).map(i=>i.value.trim()).filter(Boolean);
+}
+
+// ── GET FORM DATA ────────────────────────────────────────────
+function getFormData(){
+  return {
+    bizName: document.getElementById('bizName').value.trim() || 'Business Name',
+    tagline: document.getElementById('tagline').value.trim(),
+    phone:   document.getElementById('phone').value.trim(),
+    city:    document.getElementById('city').value.trim(),
+    address: document.getElementById('address').value.trim(),
+    website: document.getElementById('website').value.trim(),
+    menu:    getMenu(),
+    offer:   document.getElementById('offer').value.trim(),
+    style:   document.querySelector('input[name="style"]:checked')?.value || 'rustic',
+    color:   document.querySelector('input[name="color"]:checked')?.value || '#E63946',
+    photo:   selectedPhotoUrl || '',
+  };
+}
+
+// ── MENU HTML HELPER ─────────────────────────────────────────
+function menuItemsHTML(d, tplClass){
+  return d.menu.slice(0,4).map(item => {
+    if(tplClass==='tpl-rustic') return `<div class="ad-menu-item">${item}</div>`;
+    if(tplClass==='tpl-dark')   return `<div class="ad-menu-item"><div class="ad-menu-dot"></div>${item}</div>`;
+    if(tplClass==='tpl-bold')   return `<div class="ad-menu-item"><div class="ad-check">✓</div>${item}</div>`;
+    if(tplClass==='tpl-luxury') return `<div class="ad-menu-item">${item}</div>`;
+    if(tplClass==='tpl-bright') return `<div class="ad-menu-item"><div class="ad-menu-bullet">✓</div>${item}</div>`;
+    if(tplClass==='tpl-clean')  return `<div class="ad-menu-item"><span>${item}</span></div>`;
+    return `<div class="ad-menu-item">${item}</div>`;
+  }).join('');
+}
+
+// ── COUPON HTML HELPER ───────────────────────────────────────
+function couponHTML(d, tplClass){
+  if(!d.offer) return '';
+  const parts = d.offer.split('·');
+  const main = parts[0].trim();
+  const fine = parts[1] ? parts[1].trim() : '1 per visit · with this postcard';
+
+  if(tplClass==='tpl-dark'){
+    // Parse "$X OFF Item" for styled version
+    const m = main.match(/^(\$[\d.]+)\s+(.+)$/);
+    if(m) return `<div class="ad-coupon"><div class="ad-coupon-text"><span>${m[1]}</span> ${m[2]}</div><div class="ad-coupon-fine">${fine}</div></div>`;
+  }
+  if(tplClass==='tpl-bold'){
+    const m = main.match(/^(\$[\d.]+)\s+(.+)$/);
+    if(m) return `<div class="ad-coupon"><div class="ad-coupon-text"><span>${m[1]}</span> ${m[2]}</div><div class="ad-coupon-fine">${fine}</div></div>`;
+  }
+  return `<div class="ad-coupon"><div class="ad-coupon-text">${main}</div><div class="ad-coupon-fine">${fine}</div></div>`;
+}
+
+// ── QR BOX HTML ───────────────────────────────────────────────
+function qrHTML(){
+  return `<div class="ad-qr"><div class="ad-qr-box">${QR_SVG}</div><div class="ad-qr-label">Scan</div></div>`;
+}
+
+// ── RENDER AD ────────────────────────────────────────────────
+function renderAd(){
+  const d = getFormData();
+  if(!d.photo && !d.bizName) return;
+
+  const canvas = document.getElementById('adCanvas');
+  const empty  = document.getElementById('emptyState');
+  const tpl = d.style;
+  const tplClass = `tpl-${tpl}`;
+  const bgStyle = d.photo ? `background-image:url('${d.photo}')` : 'background:#333';
+
+  // Name split: if contains space, first word is main, rest is accent
+  const nameParts = d.bizName.split(' ');
+  const nameMain = nameParts.length > 1 ? nameParts.slice(0,-1).join(' ') : d.bizName;
+  const nameAccent = nameParts.length > 1 ? nameParts[nameParts.length-1] : '';
+
+  // Address line
+  const addrLine = [d.address, d.city].filter(Boolean).join(', ');
+
+  let html = '';
+
+  if(tpl==='rustic'){
+    html = `
+      <div class="${tplClass}">
+        <div class="ad-bg" style="${bgStyle}"></div>
+        <div class="ad-overlay"></div>
+        <div class="ad-brush"></div>
+        ${d.tagline?`<div class="ad-badge">${d.tagline}</div>`:''}
+        <div class="ad-content">
+          <div class="ad-name">${nameMain}${nameAccent?`<span class="accent">${nameAccent}</span>`:''}</div>
+          ${d.tagline?`<div class="ad-tagline">${d.tagline}</div>`:''}
+          <div class="ad-divider"></div>
+          ${d.menu.length?`<div class="ad-menu">${menuItemsHTML(d,tplClass)}</div>`:''}
+          ${couponHTML(d,tplClass)}
+          <div class="ad-footer">
+            <div><div class="ad-phone">${d.phone||'—'}</div><div class="ad-address">${addrLine}</div></div>
+            ${qrHTML()}
+          </div>
+        </div>
+      </div>`;
+  } else if(tpl==='dark'){
+    html = `
+      <div class="${tplClass}">
+        <div class="ad-bg" style="${bgStyle}"></div>
+        <div class="ad-overlay"></div>
+        <div class="ad-content">
+          <div class="ad-name">${nameMain}${nameAccent?`<span class="accent">${nameAccent}</span>`:''}</div>
+          <div class="ad-tagline">${d.tagline}</div>
+          ${d.menu.length?`<div class="ad-menu">${menuItemsHTML(d,tplClass)}</div>`:''}
+          ${couponHTML(d,tplClass)}
+          <div class="ad-footer">
+            <div><div class="ad-phone">${d.phone||'—'}</div><div class="ad-address">${addrLine}</div></div>
+            ${qrHTML()}
+          </div>
+        </div>
+      </div>`;
+  } else if(tpl==='bold'){
+    html = `
+      <div class="${tplClass}" style="--accent-color:${d.color}">
+        <div class="ad-bg" style="${bgStyle}"></div>
+        <div class="ad-overlay"></div>
+        <div class="ad-accent-bar"></div>
+        <div class="ad-content">
+          <div class="ad-name">${nameMain}${nameAccent?`<span class="accent">${nameAccent}</span>`:''}</div>
+          <div class="ad-tagline">${d.tagline}</div>
+          ${d.menu.length?`<div class="ad-menu">${menuItemsHTML(d,tplClass)}</div>`:''}
+          ${couponHTML(d,tplClass)}
+          <div class="ad-footer">
+            <div><div class="ad-phone">${d.phone||'—'}</div><div class="ad-address">${addrLine}</div></div>
+            ${qrHTML()}
+          </div>
+        </div>
+      </div>`;
+  } else if(tpl==='luxury'){
+    html = `
+      <div class="${tplClass}">
+        <div class="ad-bg" style="${bgStyle}"></div>
+        <div class="ad-overlay"></div>
+        <div class="ad-frame"></div>
+        <div class="ad-frame-inner"></div>
+        <div class="ad-content">
+          <div class="ad-ornament">— ✦ —</div>
+          <div class="ad-name">${d.bizName}</div>
+          <div class="ad-tagline">${d.tagline}</div>
+          <div class="ad-rule"></div>
+          ${d.menu.length?`<div class="ad-menu">${menuItemsHTML(d,tplClass)}</div>`:''}
+          ${couponHTML(d,tplClass)}
+          <div class="ad-footer">
+            <div><div class="ad-phone">${d.phone||'—'}</div><div class="ad-address">${addrLine}</div></div>
+            ${qrHTML()}
+          </div>
+        </div>
+      </div>`;
+  } else if(tpl==='bright'){
+    html = `
+      <div class="${tplClass}" style="--accent-color:${d.color}">
+        <div class="ad-bg" style="${bgStyle}"></div>
+        <div class="ad-overlay"></div>
+        <div class="ad-top-band"></div>
+        <div class="ad-top-name">${d.bizName}</div>
+        <div class="ad-content">
+          <div></div>
+          <div>
+            <div class="ad-tagline">${d.tagline}</div>
+            ${d.menu.length?`<div class="ad-menu">${menuItemsHTML(d,tplClass)}</div>`:''}
+            ${couponHTML(d,tplClass)}
+            <div class="ad-footer">
+              <div><div class="ad-phone">${d.phone||'—'}</div><div class="ad-address">${addrLine}</div></div>
+              ${qrHTML()}
+            </div>
+          </div>
+        </div>
+      </div>`;
+  } else if(tpl==='clean'){
+    html = `
+      <div class="${tplClass}" style="--accent-color:${d.color}">
+        <div class="ad-bg" style="${bgStyle}"></div>
+        <div class="ad-overlay"></div>
+        <div class="ad-content">
+          <div class="ad-top">
+            <div class="ad-name">${nameMain}${nameAccent?` <span class="accent">${nameAccent}</span>`:''}</div>
+            <div class="ad-tagline">${d.tagline}</div>
+          </div>
+          <div class="ad-middle">
+            ${d.menu.length?`<div class="ad-menu">${menuItemsHTML(d,tplClass)}</div>`:''}
+            ${couponHTML(d,tplClass)}
+          </div>
+          <div class="ad-footer">
+            <div><div class="ad-phone">${d.phone||'—'}</div><div class="ad-address">${addrLine}</div></div>
+            ${qrHTML()}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  canvas.innerHTML = html;
+  canvas.classList.add('visible');
+  empty.classList.add('hidden');
+  document.getElementById('useBtn').disabled = false;
+}
+
+// ── USE AD ───────────────────────────────────────────────────
+function useAd(){
+  const d = getFormData();
+  // In Replit: POST { html: canvas.innerHTML, photoUrl: d.photo, ...d } to your backend
+  alert('✓ Ad accepted!\n\nIn Replit, wire useAd() to save the ad HTML and photo URL to your database for this advertiser.');
+}
+
+// ── INIT ─────────────────────────────────────────────────────
+addMenuItem('');
+addMenuItem('');
+addMenuItem('');
+</script>
+
+</body>
+</html>
