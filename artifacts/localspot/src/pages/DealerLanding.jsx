@@ -491,7 +491,7 @@ const FAQ_ITEMS = [
   { q: "What does it cost the businesses I sell to?",
     a: "Spots range from $199 (Small) to $499 (Extra-Large). All include design and mailing. You set the pricing within those tiers based on what your local market will bear." },
   { q: "Is there a sales quota?",
-    a: "No quotas. As long as you can hit our 6-spot minimum to mail a postcard at least once a year, you keep your territories. We'll work with you actively if you're not seeing traction." },
+    a: "No quotas. As long as you can hit our 12-spot minimum to mail a postcard at least once a year, you keep your territories. We'll work with you actively if you're not seeing traction." },
   { q: "When and how are commissions paid?",
     a: "Commissions are paid at the mail date. Once a postcard ships to USPS, your commission is calculated and paid within 7 business days. No waiting, no surprises." },
 ];
