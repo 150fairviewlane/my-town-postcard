@@ -126,12 +126,6 @@ function NavBar() {
               padding: "9px 14px", borderRadius: 8, border: `1.5px solid ${RED}` }}>
             💼 Become a Dealer
           </a>
-          <button onClick={() => scrollTo("book")}
-            style={{ background: RED, color: "#fff", border: "none", borderRadius: 8,
-              padding: "9px 22px", fontSize: 14, fontWeight: 800, cursor: "pointer",
-              fontFamily: "sans-serif", letterSpacing: 0.2 }}>
-            Save Your Spot →
-          </button>
         </nav>
       )}
     </header>
