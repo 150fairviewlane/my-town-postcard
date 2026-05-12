@@ -168,7 +168,7 @@ const EDITABLE_CSS = `.editable-text { cursor: text !important; }`;
 //
 
 // Ad sizes available on the postcard (4 different sizes)
-const AD_SIZES = {
+export const AD_SIZES = {
 XL: { label: "Extra Large", price: 499, ratio: "4:5",  width: 4, height: 5,   desc: "Hero spot - maximum impact" },
 L:  { label: "Large",       price: 399, ratio: "4:3",  width: 4, height: 3,   desc: "Premium placement" },
 M:  { label: "Medium",      price: 299, ratio: "3:2",  width: 3, height: 2,   desc: "Great visibility" },
@@ -971,10 +971,6 @@ fieldWidths: {},
 const [selectedTemplate, setSelectedTemplate] = useState("photo-bold");
 const [emailError, setEmailError] = useState(false);
 const emailRef = useRef(null);
-const [finishedAdUrl, setFinishedAdUrl] = useState(null);
-const finishedAdRef = useRef();
-const [nameError, setNameError] = useState(false);
-const nameRef = useRef(null);
 
 // Auto-suggest template + populate menuItems when industry changes
 const handleIndustryChange = (e) => {
@@ -1011,7 +1007,6 @@ const dims = getRenderDimensions(sizeKey);
 const sizeInfo = AD_SIZES[sizeKey];
 const Tpl = TEMPLATES[selectedTemplate].Component;
 const formValid = formData.businessName.trim() && formData.industry && formData.email.trim();
-const showPreview = formValid || !!finishedAdUrl;
 
 return (
 <div style={{
@@ -1048,31 +1043,17 @@ boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
       {/* LEFT: form */}
       <div style={{ width: 380, padding: "20px 24px", overflowY: "auto", borderRight: "1px solid #e5e7eb", background: "#fff", flexShrink: 0 }}>
 
-        {/* Finished-ad mode banner */}
-        {finishedAdUrl && (
-          <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 8, padding: "10px 14px", marginBottom: 16, display: "flex", gap: 10, alignItems: "flex-start" }}>
-            <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>📋</span>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 12, color: "#1e40af", marginBottom: 2 }}>Using your uploaded ad</div>
-              <div style={{ fontSize: 11, color: "#3b82f6", lineHeight: 1.5 }}>
-                Only your <strong>Business Name</strong> and <strong>Email</strong> are needed. All other fields are locked.
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Form fields */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div>
-            <label style={{ fontSize: 12, fontWeight: 700, color: nameError ? "#dc2626" : "#374151", display: "block", marginBottom: 3 }}>
-              Business Name *{nameError && <span style={{ fontWeight: 400, marginLeft: 6, fontSize: 11 }}>Required to reserve your spot</span>}
+            <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>
+              Business Name *
             </label>
             <input
-              ref={nameRef}
               value={formData.businessName}
-              onChange={e => { setFormData(d => ({ ...d, businessName: e.target.value })); if (e.target.value.trim()) setNameError(false); }}
+              onChange={e => setFormData(d => ({ ...d, businessName: e.target.value }))}
               placeholder="e.g. Joe's Pizza"
-              style={{ ...inputStyle, borderColor: nameError ? "#dc2626" : undefined, background: nameError ? "#fef2f2" : undefined, outline: nameError ? "2px solid #fca5a5" : undefined }}
+              style={inputStyle}
             />
           </div>
 
@@ -1090,8 +1071,6 @@ boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
             />
           </div>
 
-          </div>{/* end required-fields group */}
-          <div style={finishedAdUrl ? { opacity: 0.35, pointerEvents: "none", userSelect: "none", display: "flex", flexDirection: "column", gap: 12 } : { display: "flex", flexDirection: "column", gap: 12 }}>
           <div>
             <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>
               Industry *
@@ -1369,17 +1348,22 @@ boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
           Live Preview - {sizeInfo.label} - {sizeInfo.ratio}
         </div>
 
-        {showPreview ? (
+        {formValid ? (
           <>
-            {!finishedAdUrl && <style>{EDITABLE_CSS}</style>}
+            <style>{EDITABLE_CSS}</style>
 
             {/* Label */}
             <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 11, marginBottom: 10, textAlign: "center", fontFamily: "sans-serif" }}>
               {sizeInfo.label} - {AD_SIZES[sizeKey].width}" x {AD_SIZES[sizeKey].height}" - ${sizeInfo.price}
             </div>
 
-            {/* Ad preview — finished upload or live template */}
+            {/* Ad preview -- natural pixel dimensions matching the actual print sizes */}
             {(() => {
+              // Natural pixel dimensions at 100px/inch, scaled to fit preview panel
+              // XL: 4"x5" portrait = 400x500 natural -> 360x450 preview
+              // L:  3"x4" portrait = 300x400 natural -> 270x360 preview
+              // M:  3"x2" landscape = 300x200 natural -> 300x200 preview
+              // S:  2"x2" square   = 200x200 natural -> 200x200 preview
               const previewDims = {
                 XL: { w: 360, h: 450 },
                 L:  { w: 270, h: 360 },
@@ -1387,13 +1371,7 @@ boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
                 S:  { w: 200, h: 200 },
               };
               const { w: pw, h: ph } = previewDims[sizeKey] || { w: 360, h: 450 };
-              if (finishedAdUrl) {
-                return (
-                  <div style={{ position: "relative", width: pw, height: ph, borderRadius: 6, overflow: "hidden", boxShadow: "0 12px 48px rgba(0,0,0,0.6)", flexShrink: 0, background: "#fff" }}>
-                    <img src={finishedAdUrl} alt="Your finished ad" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
-                  </div>
-                );
-              }
+              // Natural template render dimensions
               const naturalDims = { XL: { w: 400, h: 500 }, L: { w: 300, h: 400 }, M: { w: 300, h: 200 }, S: { w: 200, h: 200 } };
               const { w: nw, h: nh } = naturalDims[sizeKey] || { w: 400, h: 500 };
               const tScale = pw / nw;
@@ -1406,21 +1384,13 @@ boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
               );
             })()}
 
-            {finishedAdUrl ? (
-              <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 11, marginTop: 10, textAlign: "center" }}>
-                Your finished ad will be printed exactly as uploaded — no changes will be made.
-              </div>
-            ) : (
-              <>
-                <div style={{ color: "#111827", background: "rgba(255,255,255,0.92)", fontSize: 14, fontWeight: 800, marginTop: 10, textAlign: "center", fontStyle: "normal", padding: "8px 12px", borderRadius: 999, boxShadow: "0 4px 16px rgba(0,0,0,0.12)" }}>
-                   Click any text in the preview to edit it directly
-                </div>
-                <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 10, marginTop: 4, textAlign: "center" }}>
-                  Style: <strong style={{ color: "#fff" }}>{TEMPLATES[selectedTemplate].name}</strong>
-                  {!formData.photo && formData.industry && <> - Using stock photo for {formData.industry}</>}
-                </div>
-              </>
-            )}
+            <div style={{ color: "#111827", background: "rgba(255,255,255,0.92)", fontSize: 14, fontWeight: 800, marginTop: 10, textAlign: "center", fontStyle: "normal", padding: "8px 12px", borderRadius: 999, boxShadow: "0 4px 16px rgba(0,0,0,0.12)" }}>
+               Click any text in the preview to edit it directly
+            </div>
+            <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 10, marginTop: 4, textAlign: "center" }}>
+              Style: <strong style={{ color: "#fff" }}>{TEMPLATES[selectedTemplate].name}</strong>
+              {!formData.photo && formData.industry && <> - Using stock photo for {formData.industry}</>}
+            </div>
 
             {reserveError && (
               <div style={{ marginTop: 14, background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8, padding: "10px 16px", color: "#991b1b", fontSize: 13, fontWeight: 600, textAlign: "center" }}>
@@ -1436,7 +1406,7 @@ boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
                   emailRef.current?.focus();
                   return;
                 }
-                onComplete?.({ sizeKey, price: sizeInfo.price, template: selectedTemplate, ...formData, finishedAdUrl: finishedAdUrl || undefined });
+                onComplete?.({ sizeKey, price: sizeInfo.price, template: selectedTemplate, ...formData });
               }}
               style={{
                 marginTop: 12, padding: "14px 32px", background: isReserving ? "#6b7280" : "#991b1b",
@@ -1460,63 +1430,6 @@ boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
             Fill in your business name and<br />industry to see your ad preview
           </div>
         )}
-
-        {/* ── Upload a finished ad ── */}
-        <div style={{ marginTop: 24, width: "100%", maxWidth: 360 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-            <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.12)" }} />
-            <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>or</span>
-            <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.12)" }} />
-          </div>
-
-          <div style={{ background: "rgba(255,255,255,0.05)", border: `1.5px dashed ${finishedAdUrl ? "rgba(74,222,128,0.5)" : "rgba(255,255,255,0.18)"}`, borderRadius: 10, padding: 16 }}>
-            <div style={{ color: "rgba(255,255,255,0.85)", fontSize: 13, fontWeight: 700, marginBottom: 3 }}>
-              Already have a finished ad?
-            </div>
-            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, lineHeight: 1.5, marginBottom: 12 }}>
-              Upload your completed artwork and we'll print it exactly as-is. No editing.
-            </div>
-
-            {finishedAdUrl ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ flexShrink: 0, width: 48, height: 60, borderRadius: 5, overflow: "hidden", border: "1px solid rgba(255,255,255,0.15)", background: "#fff" }}>
-                  <img src={finishedAdUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ color: "#4ade80", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>✓ Ad uploaded</div>
-                  <button
-                    onClick={() => setFinishedAdUrl(null)}
-                    style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", background: "none", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 5, padding: "3px 10px", cursor: "pointer" }}>
-                    Remove &amp; use generator instead
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div
-                onClick={() => finishedAdRef.current?.click()}
-                style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 7, cursor: "pointer" }}
-              >
-                <span style={{ fontSize: 20, lineHeight: 1 }}>📎</span>
-                <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>Click to upload your finished ad image</span>
-              </div>
-            )}
-
-            <input
-              ref={finishedAdRef}
-              type="file"
-              accept="image/*"
-              style={{ display: "none" }}
-              onChange={e => {
-                const f = e.target.files[0];
-                if (!f) return;
-                const r = new FileReader();
-                r.onload = ev => setFinishedAdUrl(ev.target.result);
-                r.readAsDataURL(f);
-                e.target.value = "";
-              }}
-            />
-          </div>
-        </div>
       </div>
 
       {/* RIGHT: AI Assistant */}

@@ -3,6 +3,7 @@ import { useLocation, useSearch } from "wouter";
 import { useGetActiveCampaign, useReserveSpot, getGetActiveCampaignQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import AdGenerator, { AdTemplatePreview } from "./AdGenerator";
+import AdUploadModal from "./AdUploadModal";
 import { PositionedQR } from "./qrUtils";
 
 // Natural canvas: 1200x900 = 12"x9" landscape at 100px per inch
@@ -439,8 +440,11 @@ const [side,setSide]=useState(initialSide);
 const [scale,setScale]=useState(0.5);
 const [hov,setHov]=useState(null);
 const [sel,setSel]=useState(null);
+const [adMethod,setAdMethod]=useState(null);
 const [reserving,setReserving]=useState(false);
 const [reserveError,setReserveError]=useState(null);
+
+const handleSpotSelect=(spot)=>{setSel(spot);setAdMethod(null);};
 const [highlighted,setHighlighted]=useState(highlightArea);
 const ref=useRef(null);
 const [,navigate]=useLocation();
@@ -603,7 +607,7 @@ return(<div style={{fontFamily:"sans-serif"}}>
           {spots.map(spot=>{
             const liveSpot=spot.dbGridArea?spotByGridArea[spot.dbGridArea]:null;
             const isHighlighted=highlighted&&spot.dbGridArea===highlighted;
-            return<SpotCell key={spot.id} spot={spot} scale={scale} hov={hov} onHov={setHov} onOut={()=>setHov(null)} onSel={setSel} liveSpot={liveSpot} isHighlighted={isHighlighted}/>;
+            return<SpotCell key={spot.id} spot={spot} scale={scale} hov={hov} onHov={setHov} onOut={()=>setHov(null)} onSel={handleSpotSelect} liveSpot={liveSpot} isHighlighted={isHighlighted}/>;
           })}
         </div>
       </div>
@@ -615,7 +619,65 @@ return(<div style={{fontFamily:"sans-serif"}}>
   
 </div>
 
-{sel&&<AdGenerator initialSize={sel.size} onComplete={handleComplete} onClose={()=>{setSel(null);setReserveError(null);}} isReserving={reserving} reserveError={reserveError}/>}
+{/* Choice modal — shown when a spot is selected but method not yet chosen */}
+{sel&&!adMethod&&(
+  <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:16}}>
+    <div style={{background:"#fff",borderRadius:14,width:"100%",maxWidth:520,padding:"36px 32px",boxShadow:"0 24px 64px rgba(0,0,0,0.4)"}}>
+      <div style={{textAlign:"center",marginBottom:10}}>
+        <span style={{display:"inline-block",background:"#991b1b",color:"#fff",borderRadius:99,padding:"5px 18px",fontSize:13,fontWeight:800}}>
+          {sel.size} Spot — ${sel.price}
+        </span>
+      </div>
+      <h2 style={{textAlign:"center",fontWeight:900,fontSize:21,color:"#111",margin:"0 0 6px"}}>How would you like to create your ad?</h2>
+      <p style={{textAlign:"center",color:"#6b7280",fontSize:13,margin:"0 0 28px",lineHeight:1.5}}>Choose a path — you can always go back.</p>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:20}}>
+        <button
+          onClick={()=>setAdMethod("upload")}
+          onMouseEnter={e=>{e.currentTarget.style.borderColor="#991b1b";e.currentTarget.style.background="#fef2f2";}}
+          onMouseLeave={e=>{e.currentTarget.style.borderColor="#e5e7eb";e.currentTarget.style.background="#fff";}}
+          style={{padding:"24px 18px",border:"2px solid #e5e7eb",borderRadius:12,background:"#fff",cursor:"pointer",textAlign:"left",transition:"border-color 0.15s, background 0.15s"}}>
+          <div style={{fontSize:34,marginBottom:10}}>📎</div>
+          <div style={{fontWeight:800,fontSize:14,color:"#111",marginBottom:5}}>Upload Finished Ad</div>
+          <div style={{fontSize:12,color:"#6b7280",lineHeight:1.5}}>I already have a completed ad ready. Upload it and we'll print it exactly as-is.</div>
+        </button>
+        <button
+          onClick={()=>setAdMethod("generator")}
+          onMouseEnter={e=>{e.currentTarget.style.borderColor="#991b1b";e.currentTarget.style.background="#fef2f2";}}
+          onMouseLeave={e=>{e.currentTarget.style.borderColor="#e5e7eb";e.currentTarget.style.background="#fff";}}
+          style={{padding:"24px 18px",border:"2px solid #e5e7eb",borderRadius:12,background:"#fff",cursor:"pointer",textAlign:"left",transition:"border-color 0.15s, background 0.15s"}}>
+          <div style={{fontSize:34,marginBottom:10}}>🎨</div>
+          <div style={{fontWeight:800,fontSize:14,color:"#111",marginBottom:5}}>Ad Generator</div>
+          <div style={{fontSize:12,color:"#6b7280",lineHeight:1.5}}>Build your ad online with our design tool. Pick a template, add your info, and preview live.</div>
+        </button>
+      </div>
+      <div style={{textAlign:"center"}}>
+        <button onClick={()=>{setSel(null);setAdMethod(null);setReserveError(null);}} style={{background:"none",border:"none",color:"#9ca3af",fontSize:13,cursor:"pointer",padding:"4px 8px"}}>Cancel</button>
+      </div>
+    </div>
+  </div>
+)}
+
+{/* Ad Generator */}
+{sel&&adMethod==="generator"&&(
+  <AdGenerator
+    initialSize={sel.size}
+    onComplete={handleComplete}
+    onClose={()=>{setSel(null);setAdMethod(null);setReserveError(null);}}
+    isReserving={reserving}
+    reserveError={reserveError}
+  />
+)}
+
+{/* Upload finished ad */}
+{sel&&adMethod==="upload"&&(
+  <AdUploadModal
+    initialSize={sel.size}
+    onComplete={handleComplete}
+    onBack={()=>setAdMethod(null)}
+    isReserving={reserving}
+    reserveError={reserveError}
+  />
+)}
 </div>
 );
 }
