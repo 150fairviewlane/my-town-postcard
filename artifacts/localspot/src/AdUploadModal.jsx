@@ -7,13 +7,28 @@ const inputStyle = {
   fontFamily: "system-ui, sans-serif", boxSizing: "border-box", background: "#fff",
 };
 
+async function uploadToCloudinary(file) {
+  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+  const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+  if (!cloudName || !uploadPreset) return null;
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("upload_preset", uploadPreset);
+  const resp = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, { method: "POST", body: fd });
+  const data = await resp.json();
+  return data.secure_url || null;
+}
+
 export default function AdUploadModal({ initialSize = "L", onComplete, onBack, isReserving = false, reserveError = null }) {
   const sizeInfo = AD_SIZES[initialSize] || AD_SIZES["L"];
   const previewDims = { XL: { w: 320, h: 400 }, L: { w: 240, h: 320 }, M: { w: 300, h: 200 }, S: { w: 200, h: 200 } };
   const { w: pw, h: ph } = previewDims[initialSize] || { w: 320, h: 400 };
 
   const [form, setForm] = useState({ businessName: "", email: "", phone: "", website: "" });
-  const [adUrl, setAdUrl] = useState(null);
+  const [localPreviewUrl, setLocalPreviewUrl] = useState(null);
+  const [cloudinaryUrl, setCloudinaryUrl] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState(false);
   const [nameError, setNameError] = useState(false);
   const [emailError, setEmailError] = useState(false);
   const [adError, setAdError] = useState(false);
@@ -22,13 +37,29 @@ export default function AdUploadModal({ initialSize = "L", onComplete, onBack, i
   const nameRef = useRef();
   const emailRef = useRef();
 
-  const handleFile = (e) => {
+  const handleFile = async (e) => {
     const f = e.target.files[0];
     if (!f) return;
-    const r = new FileReader();
-    r.onload = ev => { setAdUrl(ev.target.result); setAdError(false); };
-    r.readAsDataURL(f);
     e.target.value = "";
+    setAdError(false);
+    setUploadError(false);
+    setCloudinaryUrl(null);
+
+    // Show local preview immediately
+    const reader = new FileReader();
+    reader.onload = ev => setLocalPreviewUrl(ev.target.result);
+    reader.readAsDataURL(f);
+
+    // Upload to Cloudinary in the background
+    setUploading(true);
+    try {
+      const url = await uploadToCloudinary(f);
+      setCloudinaryUrl(url);
+    } catch {
+      setUploadError(true);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSubmit = () => {
@@ -43,16 +74,20 @@ export default function AdUploadModal({ initialSize = "L", onComplete, onBack, i
       if (!err) { emailRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }); emailRef.current?.focus(); }
       err = true;
     }
-    if (!adUrl) {
+    if (!localPreviewUrl) {
       setAdError(true);
       err = true;
     }
     if (err) return;
+
+    // Prefer the hosted Cloudinary URL; fall back to base64 for unconfigured environments
+    const finalAdUrl = cloudinaryUrl || localPreviewUrl;
+
     onComplete?.({
       sizeKey: initialSize,
       price: sizeInfo.price,
       template: "upload",
-      finishedAdUrl: adUrl,
+      finishedAdUrl: finalAdUrl,
       businessName: form.businessName,
       email: form.email,
       phone: form.phone,
@@ -69,6 +104,9 @@ export default function AdUploadModal({ initialSize = "L", onComplete, onBack, i
       fieldWidths: {},
     });
   };
+
+  const hasAd = !!localPreviewUrl;
+  const busy = isReserving || uploading;
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16 }}>
@@ -163,16 +201,31 @@ export default function AdUploadModal({ initialSize = "L", onComplete, onBack, i
               Your Ad — {sizeInfo.label}
             </div>
 
-            {adUrl ? (
+            {hasAd ? (
               <>
-                <div style={{ width: pw, height: ph, borderRadius: 6, overflow: "hidden", boxShadow: "0 12px 48px rgba(0,0,0,0.6)", flexShrink: 0, background: "#fff" }}>
-                  <img src={adUrl} alt="Your finished ad" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
+                {/* Preview with upload-status overlay */}
+                <div style={{ position: "relative", width: pw, height: ph, borderRadius: 6, overflow: "hidden", boxShadow: "0 12px 48px rgba(0,0,0,0.6)", flexShrink: 0, background: "#fff" }}>
+                  <img src={localPreviewUrl} alt="Your finished ad" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
+                  {uploading && (
+                    <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                      <div style={{ width: 28, height: 28, border: "3px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+                      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+                      <div style={{ color: "#fff", fontSize: 12, fontWeight: 600 }}>Uploading…</div>
+                    </div>
+                  )}
+                  {uploadError && !uploading && (
+                    <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(220,38,38,0.88)", padding: "6px 10px", fontSize: 11, color: "#fff", textAlign: "center" }}>
+                      Cloud upload failed — your ad will still be submitted
+                    </div>
+                  )}
                 </div>
-                <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 11, marginTop: 8, textAlign: "center" }}>
-                  {sizeInfo.label} · {AD_SIZES[initialSize].width}" × {AD_SIZES[initialSize].height}" — printed exactly as shown
+                <div style={{ color: uploading ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.45)", fontSize: 11, marginTop: 8, textAlign: "center" }}>
+                  {uploading
+                    ? "Uploading your ad…"
+                    : `${sizeInfo.label} · ${AD_SIZES[initialSize].width}" × ${AD_SIZES[initialSize].height}" — printed exactly as shown`}
                 </div>
                 <button
-                  onClick={() => setAdUrl(null)}
+                  onClick={() => { setLocalPreviewUrl(null); setCloudinaryUrl(null); setAdError(false); setUploadError(false); }}
                   style={{ marginTop: 6, fontSize: 11, color: "rgba(255,255,255,0.4)", background: "none", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, padding: "4px 12px", cursor: "pointer" }}>
                   Upload a different image
                 </button>
@@ -209,16 +262,20 @@ export default function AdUploadModal({ initialSize = "L", onComplete, onBack, i
             )}
 
             <button
-              disabled={isReserving}
+              disabled={busy}
               onClick={handleSubmit}
               style={{
                 marginTop: 16, padding: "14px 0", width: "100%", maxWidth: pw,
-                background: isReserving ? "#6b7280" : "#991b1b",
+                background: busy ? "#6b7280" : "#991b1b",
                 color: "#fff", border: "none", borderRadius: 10, fontSize: 15,
-                fontWeight: 800, cursor: isReserving ? "not-allowed" : "pointer", letterSpacing: 0.5,
-                opacity: isReserving ? 0.75 : 1,
+                fontWeight: 800, cursor: busy ? "not-allowed" : "pointer", letterSpacing: 0.5,
+                opacity: busy ? 0.75 : 1,
               }}>
-              {isReserving ? "Reserving your spot…" : `Proceed to Payment — $${sizeInfo.price}`}
+              {uploading
+                ? "Uploading your ad…"
+                : isReserving
+                  ? "Reserving your spot…"
+                  : `Proceed to Payment — $${sizeInfo.price}`}
             </button>
           </div>
         </div>

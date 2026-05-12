@@ -44,8 +44,8 @@ app.post(
   stripeWebhookHandler,
 );
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Public QR redirect lives at the app root (no /api prefix) so printed
 // codes are short and human-readable. Mount BEFORE the /api router so it
