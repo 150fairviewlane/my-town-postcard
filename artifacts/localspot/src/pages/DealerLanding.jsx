@@ -311,7 +311,7 @@ function EarningsBreakdown() {
         </p>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-          gap: 32, alignItems: "start" }}>
+          gap: 32, alignItems: "stretch" }}>
 
           {/* Waterfall breakdown */}
           <div style={{ background: "#fff", borderRadius: 16, padding: "32px 28px",
@@ -351,8 +351,8 @@ function EarningsBreakdown() {
           </div>
 
           {/* Monthly potential */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-            <div style={{ background: RED, color: "#fff", borderRadius: 16, padding: "28px 28px" }}>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <div style={{ background: RED, color: "#fff", borderRadius: 16, padding: "28px 28px", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
               <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 0.8,
                 textTransform: "uppercase", opacity: 0.85, marginBottom: 10,
                 fontFamily: "sans-serif" }}>Why 4 Territories?</div>
