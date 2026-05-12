@@ -399,7 +399,7 @@ size={36 * fScale} bg={ind.colors.primary} color="#fff" border={`2px solid #fff`
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: data.offer ? 3 : 0 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
           {data.address && (
-            <EditableText value={data.address.split(",")[0]} onChange={edit("address")} {...ef("address")}
+            <EditableText value={data.address} onChange={edit("address")} {...ef("address")}
               style={{ fontSize: Math.max(11, 10*fScale), color: "#555", whiteSpace: "normal", wordBreak: "break-word" }} />
           )}
           {data.phone && (
@@ -510,8 +510,8 @@ borderRadius: 4, fontFamily: "sans-serif", whiteSpace: "nowrap",
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
           {data.address && (
-            <EditableText value={data.address.split(",")[0]} onChange={edit("address")} {...ef("address")}
-              style={{ fontSize: Math.max(11, 10*fScale), color: "#555", fontFamily: "sans-serif", whiteSpace: "nowrap" }} />
+            <EditableText value={data.address} onChange={edit("address")} {...ef("address")}
+              style={{ fontSize: Math.max(11, 10*fScale), color: "#555", fontFamily: "sans-serif", whiteSpace: "normal", wordBreak: "break-word" }} />
           )}
           {data.phone && (
             <EditableText value={data.phone} onChange={edit("phone")} {...ef("phone")}
@@ -619,7 +619,7 @@ background: `linear-gradient(180deg, ${ind.colors.dark}50 0%, ${ind.colors.dark}
     )}
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontFamily: "sans-serif" }}>
       <div>
-        {data.address && <EditableText value={data.address.split(",")[0]} onChange={edit("address")} {...ef("address")} style={{ color: "rgba(255,255,255,0.85)", fontSize: Math.max(10, 9*fScale), display: "block", whiteSpace: "nowrap" }} />}
+        {data.address && <EditableText value={data.address} onChange={edit("address")} {...ef("address")} style={{ color: "rgba(255,255,255,0.85)", fontSize: Math.max(10, 9*fScale), display: "block", whiteSpace: "normal", wordBreak: "break-word" }} />}
         {isS && data.phone && <EditableText value={data.phone} onChange={edit("phone")} {...ef("phone")} style={{ color: "rgba(255,255,255,0.95)", fontSize: Math.max(11, 10*fScale), fontWeight: 700, display: "block", whiteSpace: "nowrap" }} />}
       </div>
     </div>
@@ -1137,7 +1137,7 @@ boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
             <input
               value={formData.address}
               onChange={e => setFormData(d => ({ ...d, address: e.target.value }))}
-              placeholder="123 Main St, Your Town"
+              placeholder="123 Main St, Your Town — or service area (e.g. Habersham, White & Hall Counties)"
               style={inputStyle}
             />
           </div>
