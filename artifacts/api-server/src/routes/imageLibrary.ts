@@ -75,9 +75,13 @@ router.post("/admin/image-library/search", requireAdmin, async (req, res) => {
 
     if (doPexels) {
       fetches.push((async () => {
+        const key = pexelsKey!.trim();
         const url = `https://api.pexels.com/v1/search?query=${encodeURIComponent(query.trim())}&per_page=${perPage}`;
-        const r = await fetch(url, { headers: { Authorization: pexelsKey! }, signal: AbortSignal.timeout(TIMEOUT_MS) });
-        if (!r.ok) throw new Error(`Pexels error ${r.status}`);
+        const r = await fetch(url, { headers: { Authorization: key }, signal: AbortSignal.timeout(TIMEOUT_MS) });
+        if (!r.ok) {
+          const body = await r.text().catch(() => "");
+          throw new Error(`Pexels error ${r.status}: ${body.slice(0, 120)}`);
+        }
         const data = await r.json() as { photos: { id: number; src: { medium: string; original: string }; photographer: string; url: string }[] };
         for (const p of data.photos ?? []) {
           results.push({ id: `p-${p.id}`, thumbUrl: p.src.medium, imageUrl: p.src.original, photographerCredit: p.photographer, source: "pexels", pageUrl: p.url });
@@ -85,7 +89,11 @@ router.post("/admin/image-library/search", requireAdmin, async (req, res) => {
       })());
     }
 
-    await Promise.all(fetches);
+    await Promise.allSettled(fetches).then(settled => {
+      const errs = settled.filter(s => s.status === "rejected").map(s => (s as PromiseRejectedResult).reason?.message ?? "unknown");
+      if (errs.length === fetches.length) throw new Error(errs.join(" | "));
+      if (errs.length) req.log.warn({ errors: errs }, "partial image-library search failure");
+    });
 
     // Shuffle when combining both sources
     if (source === "both") {
