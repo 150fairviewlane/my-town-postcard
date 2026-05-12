@@ -392,7 +392,7 @@ if(liveSpot&&liveSpot.status==="paid"&&liveSpot.templateData){
   return(<ScaledCell spot={spot} scale={scale}>
     <div style={{width:spot.w,height:spot.h,pointerEvents:"none",position:"relative"}}>
       {finishedAdUrl
-        ?<img src={finishedAdUrl} alt="" style={{width:"100%",height:"100%",objectFit:"contain",display:"block",background:"#fff"}}/>
+        ?<img src={finishedAdUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
         :<AdTemplatePreview templateKey={template||"split-clean"} formData={adData} sizeKey={sk}/>
       }
       {isHighlighted&&<>

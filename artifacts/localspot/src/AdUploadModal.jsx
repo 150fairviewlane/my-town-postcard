@@ -228,8 +228,8 @@ export default function AdUploadModal({ initialSize = "L", onComplete, onBack, i
             {hasAd ? (
               <>
                 {/* Preview with upload-status overlay */}
-                <div style={{ position: "relative", width: pw, height: ph, borderRadius: 6, overflow: "hidden", boxShadow: "0 12px 48px rgba(0,0,0,0.6)", flexShrink: 0, background: "#fff" }}>
-                  <img src={localPreviewUrl} alt="Your finished ad" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
+                <div style={{ position: "relative", width: pw, height: ph, borderRadius: 6, overflow: "hidden", boxShadow: "0 12px 48px rgba(0,0,0,0.6)", flexShrink: 0, background: "#000" }}>
+                  <img src={localPreviewUrl} alt="Your finished ad" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                   {uploading && (
                     <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8 }}>
                       <div style={{ width: 28, height: 28, border: "3px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
