@@ -370,7 +370,7 @@ function Features() {
     { icon: "🛡️", title: "Category Exclusive",
       desc: "Only one business per category is featured on each postcard. No direct competition on your ad." },
     { icon: "⏰", title: "Summer 2026 Mailing",
-      desc: "Timed to reach 5,000 Habersham County homes during peak local shopping season — targeted for the first week of June 2026." },
+      desc: "Timed to reach 5,000 Habersham County homes during peak local shopping season — targeted for the third week of June 2026." },
     { icon: "🎯", title: "Targeted Areas",
       desc: "We focus on specific Habersham County neighborhoods where your customers already live." },
   ];
@@ -413,7 +413,7 @@ const FAQ_ITEMS = [
   { q: "How do you pick which homes get the postcard?",
     a: "We use USPS Every Door Direct Mail (EDDM) to target specific Habersham County postal routes — reaching 5,000 households across Clarkesville, Demorest, Cornelia, and Alto." },
   { q: "When will my ad hit mailboxes?",
-    a: "The Summer 2026 mailing is targeted for the first week of June 2026. Once all spots are filled, your ad is designed, printed, and mailed." },
+    a: "The Summer 2026 mailing is targeted for the third week of June 2026. Once all spots are filled, your ad is designed, printed, and mailed." },
   { q: "How much does it cost?",
     a: "Spots range from $199 (Small, 2\"×2\") to $499 (Extra-Large, 4\"×5\"). All sizes include professional ad design and mailing to 5,000 homes." },
   { q: "Is my business good for this postcard?",
