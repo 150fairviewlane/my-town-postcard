@@ -551,7 +551,7 @@ function Footer() {
     <footer style={{ background: "#fff", padding: "48px 32px 32px", borderTop: "1px solid #7B1418" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto",
         display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 40, alignItems: "start" }}>
-        <div>
+        <div style={{ marginTop: -16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
             <img src="/mailbox-logo.png" alt="My Town Postcard" height={56} style={{ height: 56, width: "auto" }}/>
             <div style={{ fontWeight: 900, fontSize: 18, color: "#111", fontFamily: "Georgia,serif", lineHeight: 1.2 }}>
