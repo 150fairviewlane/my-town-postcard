@@ -194,70 +194,65 @@ return(<div style={{width:400,height:500,display:"flex",flexDirection:"column",o
 }
 if(tmpl==="menu-card"){
   return(
-    <div style={{ width: 400, height: 500, position: "relative", overflow: "hidden", fontFamily: "'Playfair Display', Georgia, serif", background: "#1a0b00" }}>
+    <div style={{ width: 400, height: 500, position: "relative", overflow: "hidden", background: "#1a0b00" }}>
       <img src={d.photo} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(26,11,0,0.84) 0%, rgba(26,11,0,0.30) 24%, rgba(26,11,0,0.08) 44%, rgba(26,11,0,0.60) 66%, rgba(26,11,0,0.92) 100%)" }} />
-      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 50% 30%, rgba(255,208,109,0.16) 0%, rgba(255,208,109,0.08) 18%, rgba(0,0,0,0) 46%)" }} />
+      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(18,7,0,0.88) 0%, rgba(18,7,0,0.22) 32%, rgba(18,7,0,0.08) 50%, rgba(18,7,0,0.74) 72%, rgba(18,7,0,0.96) 100%)" }} />
+      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 50% 38%, rgba(255,195,80,0.10) 0%, transparent 55%)" }} />
 
-      <div style={{ position: "absolute", top: 14, left: 14, right: 14, display: "flex", alignItems: "flex-start", gap: 12 }}>
-        <div style={{ padding: 4, borderRadius: 13, background: "rgba(255,248,238,0.92)", boxShadow: "0 4px 14px rgba(0,0,0,0.35)", border: "1.5px solid rgba(255,255,255,0.7)", flexShrink: 0 }}>
-          <div style={{ width: 56, height: 56, borderRadius: 12, overflow: "hidden", background: "#fff" }}>
+      <div style={{ position: "absolute", top: 16, left: 16, right: 16, display: "flex", alignItems: "flex-start", gap: 11 }}>
+        <div style={{ padding: 3, borderRadius: 12, background: "rgba(255,248,236,0.90)", flexShrink: 0 }}>
+          <div style={{ width: 54, height: 54, borderRadius: 10, overflow: "hidden" }}>
             <img src={d.logo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
           </div>
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ color: "#f7efe1", fontWeight: 900, fontSize: 30, lineHeight: 0.95, letterSpacing: 0.2 }}>{d.biz}</div>
-          <div style={{ marginTop: 7, display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ flex: 1, height: 2, background: "linear-gradient(90deg, transparent 0%, #d4a017 35%, transparent 100%)", opacity: 0.95 }} />
-            <div style={{ color: "#f1b13a", fontWeight: 700, fontSize: 13, lineHeight: 1.05, fontStyle: "italic", textAlign: "center" }}>{d.tag}</div>
-            <div style={{ flex: 1, height: 2, background: "linear-gradient(90deg, transparent 0%, #d4a017 35%, transparent 100%)", opacity: 0.95 }} />
+        <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
+          <div style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#f5ece0", fontWeight: 900, fontSize: 28, lineHeight: 0.95, letterSpacing: 0.3 }}>{d.biz}</div>
+          <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 7 }}>
+            <div style={{ flex: 1, height: 1, background: "linear-gradient(90deg, rgba(210,156,18,0.75), transparent)" }} />
+            <div style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#e8aa2a", fontWeight: 700, fontSize: 12, fontStyle: "italic", lineHeight: 1 }}>{d.tag}</div>
+            <div style={{ flex: 1, height: 1, background: "linear-gradient(270deg, rgba(210,156,18,0.75), transparent)" }} />
           </div>
         </div>
       </div>
 
-      <div style={{ position: "absolute", left: 16, right: 16, bottom: 94, display: "flex", gap: 12, alignItems: "flex-end" }}>
-        <div style={{ flex: 1, minWidth: 0, background: "linear-gradient(180deg, rgba(20,8,0,0.18) 0%, rgba(20,8,0,0.46) 100%)", borderRadius: 14, padding: "11px 11px 9px", boxShadow: "0 10px 24px rgba(0,0,0,0.28)" }}>
-          {[
-            "Plain Biscuit $2.99",
-            "Bacon Biscuit $4.99",
-            "Chicken Tender $5.99",
-            "NY Bagels $5.49"
-          ].map((s, i) => {
+      <div style={{ position: "absolute", left: 16, right: 164, bottom: 94 }}>
+        <div style={{ background: "rgba(14,5,0,0.58)", borderRadius: 12, padding: "10px 11px 9px" }}>
+          {["Plain Biscuit $2.99","Bacon Biscuit $4.99","Chicken Tender $5.99","NY Bagels $5.49"].map((s, i) => {
             const m = s.match(/^(.*?)(\s+\$[\d]+(?:\.\d{2})?)$/);
             const name = m ? m[1] : s;
             const price = m ? m[2].trim() : "";
             return (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: i === 3 ? 0 : 5 }}>
-                <div style={{ width: 16, height: 16, borderRadius: "50%", background: "#f0a61a", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 2px 6px rgba(0,0,0,0.35)" }}>
-                  <span style={{ color: "#fff", fontSize: 10, fontWeight: 900, lineHeight: 1 }}>✓</span>
+                <div style={{ width: 15, height: 15, borderRadius: "50%", background: "#c8890e", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontFamily: "'Lato', Arial, sans-serif", color: "#fff", fontSize: 9, fontWeight: 900, lineHeight: 1 }}>✓</span>
                 </div>
                 <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "baseline", gap: 4 }}>
-                  <span style={{ color: "#f4f0ea", fontSize: 11.5, fontWeight: 700, fontFamily: "'Lato', Arial, sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</span>
-                  <div style={{ flex: 1, borderBottom: "1px dotted rgba(255,235,210,0.8)", transform: "translateY(-2px)" }} />
-                  <span style={{ color: "#f0a61a", fontSize: 11.5, fontWeight: 900, fontFamily: "'Lato', Arial, sans-serif", whiteSpace: "nowrap" }}>{price}</span>
+                  <span style={{ fontFamily: "'Lato', Arial, sans-serif", color: "#efe6d4", fontSize: 11.5, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</span>
+                  <div style={{ flex: 1, borderBottom: "1px dotted rgba(230,210,160,0.45)", transform: "translateY(-2px)" }} />
+                  <span style={{ fontFamily: "'Lato', Arial, sans-serif", color: "#e8aa2a", fontSize: 11.5, fontWeight: 900, whiteSpace: "nowrap" }}>{price}</span>
                 </div>
               </div>
             );
           })}
         </div>
+      </div>
 
-        <div style={{ width: 150, flexShrink: 0 }}>
-          <div style={{ border: "2px dashed rgba(255,255,255,0.95)", borderRadius: 12, background: "linear-gradient(180deg, rgba(58,23,0,0.78) 0%, rgba(35,12,0,0.88) 100%)", boxShadow: "0 8px 18px rgba(0,0,0,0.28)", padding: "12px 12px 10px", textAlign: "center" }}>
-            <div style={{ color: "#f7efe1", fontSize: 31, fontWeight: 900, lineHeight: 0.95, letterSpacing: 0.4 }}>$1 OFF</div>
-            <div style={{ color: "#f1b13a", fontSize: 19, fontWeight: 700, fontStyle: "italic", lineHeight: 1.05, marginTop: 2 }}>Any Biscuit</div>
-            <div style={{ color: "rgba(255,255,255,0.92)", fontSize: 8, fontFamily: "Arial,sans-serif", marginTop: 7, lineHeight: 1.15 }}>1 per visit • with this postcard</div>
-          </div>
+      <div style={{ position: "absolute", right: 16, bottom: 94, width: 140 }}>
+        <div style={{ border: "2px dashed rgba(255,255,255,0.78)", borderRadius: 10, background: "rgba(36,13,0,0.84)", padding: "11px 11px 9px", textAlign: "center" }}>
+          <div style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#f5ece0", fontSize: 30, fontWeight: 900, lineHeight: 0.92, letterSpacing: 0.3 }}>$1 OFF</div>
+          <div style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#e8aa2a", fontSize: 18, fontWeight: 700, fontStyle: "italic", lineHeight: 1.05, marginTop: 2 }}>Any Biscuit</div>
+          <div style={{ fontFamily: "'Lato', Arial, sans-serif", color: "rgba(255,255,255,0.72)", fontSize: 8, marginTop: 7, lineHeight: 1.2 }}>1 per visit · with this postcard</div>
         </div>
       </div>
 
-      <div style={{ position: "absolute", left: 14, right: 86, bottom: 14, display: "flex", flexDirection: "column", gap: 6 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 29, height: 29, borderRadius: "50%", border: "1.5px solid #d4a017", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(20,8,0,0.55)", flexShrink: 0, boxShadow: "0 2px 8px rgba(0,0,0,0.35)" }}>
-            <span style={{ color: "#fff", fontSize: 15, lineHeight: 1 }}>☎</span>
+      <div style={{ position: "absolute", left: 16, right: 80, bottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+          <div style={{ width: 27, height: 27, borderRadius: "50%", border: "1.5px solid #b87e0a", background: "rgba(14,5,0,0.55)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ fontFamily: "'Lato', Arial, sans-serif", color: "#e8aa2a", fontSize: 13, lineHeight: 1 }}>☎</span>
           </div>
-          <div style={{ color: "#f6f1ea", fontWeight: 900, fontSize: 24, lineHeight: 1, fontFamily: "'Lato', Arial, sans-serif" }}>(706) 754-0105</div>
+          <div style={{ fontFamily: "'Lato', Arial, sans-serif", color: "#efe6d4", fontWeight: 900, fontSize: 22, lineHeight: 1 }}>(706) 754-0105</div>
         </div>
-        <div style={{ color: "rgba(255,245,235,0.96)", fontSize: 11, lineHeight: 1.15, fontFamily: "'Lato', Arial, sans-serif" }}>596 W Louise St, Clarkesville, GA 30523</div>
+        <div style={{ fontFamily: "'Lato', Arial, sans-serif", color: "rgba(239,230,212,0.78)", fontSize: 11, lineHeight: 1.2 }}>596 W Louise St, Clarkesville, GA 30523</div>
       </div>
 
       <PositionedQR website={d.web} fScale={1.45} dark />
@@ -449,7 +444,7 @@ return(
 );
 }
 
-function ScaledCell({spot,scale,children}){return(<div style={{position:"absolute",left:spot.x*scale+3.5,top:spot.y*scale+3.5,width:spot.w*scale-7,height:spot.h*scale-7,overflow:"hidden",borderRadius:3}}><div style={{width:spot.w,height:spot.h,transform:"scale("+scale+")",transformOrigin:"top left",isolation:"isolate",WebkitFontSmoothing:"antialiased"}}>{children}</div></div>);}
+function ScaledCell({spot,scale,children}){return(<div style={{position:"absolute",left:spot.x*scale+3.5,top:spot.y*scale+3.5,width:spot.w*scale-7,height:spot.h*scale-7,overflow:"hidden",borderRadius:3}}><div style={{width:spot.w,height:spot.h,transform:"scale("+scale+") translateZ(0)",transformOrigin:"top left",willChange:"transform"}}>{children}</div></div>);}
 
 function SpotCell({spot,scale,hov,onHov,onOut,onSel,liveSpot,isHighlighted}){
 const k=spot.sample;

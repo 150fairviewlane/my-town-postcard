@@ -1171,7 +1171,7 @@ const defaultMenu = INDUSTRIES[industry]?.menu || [];
 const normalizedMenu = defaultMenu.map(item =>
 typeof item === "object" ? item : { text: item, enabled: true }
 );
-setFormData(d => ({ ...d, industry, menuItems: normalizedMenu }));
+setFormData(d => ({ ...d, industry, menuItems: normalizedMenu, photo: null }));
 if (industry) setSelectedTemplate(suggestTemplate(industry));
 };
 
