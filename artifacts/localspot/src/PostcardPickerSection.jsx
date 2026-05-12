@@ -10,7 +10,7 @@ const W = 1200, H = 900;
 
 // FRONT: 3 XL (4"x5") top row + 4 Large (3"x4" portrait) bottom row
 const FRONT = [
-{ id:"xl1", dbGridArea:"mb", size:"XL", price:499, x:0,   y:0,   w:400, h:500, sample:"biscuits", tmpl:"photo" },
+{ id:"xl1", dbGridArea:"mb", size:"XL", price:499, x:0,   y:0,   w:400, h:500, sample:"biscuits", tmpl:"mrbiscuits" },
 { id:"xl2", dbGridArea:"dn", size:"XL", price:499, x:400, y:0,   w:400, h:500, sample:null       },
 { id:"xl3", dbGridArea:"re", size:"XL", price:499, x:800, y:0,   w:400, h:500, sample:"dental",   tmpl:"clean" },
 { id:"l1",  dbGridArea:"l1", size:"L",  price:399, x:0,   y:500, w:300, h:400, sample:"hvac",    tmpl:"stamp"  },
@@ -44,7 +44,7 @@ services:["Plain Biscuit $2.99","Bacon Biscuit $4.99","Chicken Tender $5.99","NY
 offer:"$1 OFF Any Biscuit", fine:"1 per visit - with this postcard",
 phone:"(706) 754-0105", addr:"596 W Louise St, Clarkesville, GA 30523",
 web:"mrbiscuitscafe.com",
-photo:"/industries/restaurants/mr-biscuits/gen-buttermilk-biscuit-hero.jpg",
+photo:"/mr-biscuits-hero.png",
 logo:"/mr-biscuits-logo.jpg",
 p:"#7c3a1e",a:"#f59e0b",l:"#fef3c7",d:"#3b1a0a",
 },
@@ -191,6 +191,60 @@ return(<div style={{width:400,height:500,display:"flex",flexDirection:"column",o
 </div>
 <PositionedQR website={d.web} fScale={1.45} />
 </div>);
+}
+// Mr. Biscuit's exact design — dark warm bg, hero photo, menu items, coupon box
+if(tmpl==="mrbiscuits"){
+  const GOLD="#d4a017";
+  const BG="#1a0b00";
+  const WHITE="#fff9f0";
+  const items=[
+    {name:"Plain Biscuit",price:"$2.99"},
+    {name:"Bacon Biscuit",price:"$4.99"},
+    {name:"Chicken Tender",price:"$5.99"},
+    {name:"NY Bagels",price:"$5.49"},
+  ];
+  return(
+    <div style={{width:400,height:500,display:"flex",flexDirection:"column",overflow:"hidden",fontFamily:"sans-serif",background:BG,position:"relative"}}>
+      {/* Header */}
+      <div style={{padding:"12px 14px 6px",flexShrink:0}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:5}}>
+          <img src={d.logo} style={{width:54,height:54,borderRadius:10,objectFit:"cover",border:"2px solid rgba(255,255,255,0.2)",flexShrink:0}} alt="logo"/>
+          <div style={{color:WHITE,fontWeight:900,fontSize:30,lineHeight:1.0,fontFamily:"Georgia,serif",textShadow:"0 2px 8px rgba(0,0,0,0.8)"}}>Mr. Biscuit's Cafe</div>
+        </div>
+        <div style={{color:GOLD,fontWeight:700,fontSize:14,fontStyle:"italic",textAlign:"center",letterSpacing:0.5}}>— From-Scratch Biscuits &amp; Boba! —</div>
+      </div>
+      {/* Hero photo */}
+      <div style={{height:220,flexShrink:0,overflow:"hidden"}}>
+        <img src={d.photo} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt=""/>
+      </div>
+      {/* Menu + Coupon */}
+      <div style={{flex:1,display:"flex",gap:8,padding:"8px 12px",minHeight:0,alignItems:"center"}}>
+        <div style={{flex:1,display:"flex",flexDirection:"column",gap:7,justifyContent:"center"}}>
+          {items.map((item,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:7}}>
+              <div style={{width:17,height:17,borderRadius:"50%",background:GOLD,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <span style={{color:"#fff",fontSize:10,fontWeight:900}}>✓</span>
+              </div>
+              <span style={{color:WHITE,fontWeight:700,fontSize:13,flex:1}}>{item.name}</span>
+              <div style={{flex:"0 1 30px",borderBottom:"1px dotted rgba(255,255,255,0.2)",margin:"0 4px 2px"}}/>
+              <span style={{color:GOLD,fontWeight:900,fontSize:13,flexShrink:0}}>{item.price}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{border:"1.5px dashed "+GOLD+"77",borderRadius:7,padding:"8px 10px",background:"rgba(0,0,0,0.4)",flexShrink:0,width:112,textAlign:"center",display:"flex",flexDirection:"column",justifyContent:"center",gap:4}}>
+          <div style={{color:WHITE,fontWeight:900,fontSize:24,lineHeight:1.0}}>$1 OFF</div>
+          <div style={{color:GOLD,fontWeight:700,fontSize:14,fontStyle:"italic",lineHeight:1.1}}>Any Biscuit</div>
+          <div style={{color:"rgba(255,255,255,0.55)",fontSize:8.5,lineHeight:1.3}}>1 per visit · with this postcard</div>
+        </div>
+      </div>
+      {/* Footer */}
+      <div style={{padding:"5px 12px 8px",borderTop:"1px solid "+GOLD+"33",flexShrink:0}}>
+        <Phone phone={d.phone} color={WHITE} size={14}/>
+        <div style={{fontSize:9,color:"rgba(255,255,255,0.55)",marginTop:3}}>{d.addr}</div>
+      </div>
+      <PositionedQR website={d.web} fScale={1.45} dark/>
+    </div>
+  );
 }
 // Default photo-bold — full-bleed photo + gradient overlay, with logo if available
 return(<div style={{width:400,height:500,position:"relative",overflow:"hidden",fontFamily:"sans-serif"}}>

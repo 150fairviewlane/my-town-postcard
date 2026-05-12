@@ -176,7 +176,7 @@ S:  { label: "Small",       price: 199, ratio: "2:2",  width: 2, height: 2,   de
 };
 
 // 4 visually distinct template styles
-const TEMPLATE_STYLES = ["photo-bold", "split-clean", "magazine", "stamp", "fade-out"];
+const TEMPLATE_STYLES = ["menu-card", "photo-bold", "split-clean", "magazine", "stamp", "fade-out"];
 
 //  Helper: Logo Badge with fallback
 function LogoBadge({ logo, name, emoji, size = 40, bg = "rgba(255,255,255,0.15)", color = "#fff", border }) {
@@ -844,7 +844,112 @@ background: leftBg, fontFamily: "sans-serif",
 );
 }
 
+//
+// TEMPLATE 6: MENU CARD
+// Dark warm background, header with logo+name, large hero photo,
+// menu items with gold checkmarks + price, coupon box, phone/address footer.
+// Best for: restaurants, cafes, bakeries.
+//
+function MenuCardTemplate({ data, sizeKey, onEdit, onFontSizeChange, onWidthChange }) {
+const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
+const photo = data.photo || ind.photos[0];
+const isXL = sizeKey === "XL", isL = sizeKey === "L", isM = sizeKey === "M", isS = sizeKey === "S";
+const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.65;
+const edit = (field) => (val) => onEdit(field, val);
+const ef = (key) => ({
+  fieldKey: key,
+  fontSizes: data.fontSizes || {},
+  fieldWidths: data.fieldWidths || {},
+  onFontSizeChange,
+  onWidthChange,
+});
+const editMenu = (i) => (val) => onEdit("menuItems", data.menuItems.map((m, j) => {
+  if (j !== i) return m;
+  if (typeof m === "object") return { ...m, text: val };
+  return val;
+}));
+const gold = ind.colors.accent || "#d4a017";
+const bg = ind.colors.dark || "#1a0b00";
+const white = "#fff9f0";
+return (
+<div style={{ width:"100%", height:"100%", display:"flex", flexDirection:"column", overflow:"hidden", fontFamily:"sans-serif", background:bg, position:"relative" }}>
+  {/* Header */}
+  <div style={{ padding:`${8*fScale}px ${10*fScale}px ${5*fScale}px`, flexShrink:0 }}>
+    <div style={{ display:"flex", alignItems:"center", gap:8*fScale, marginBottom:4*fScale }}>
+      <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji} size={32*fScale} bg={`${ind.colors.primary}cc`} color="#fff" />
+      <EditableText value={data.businessName} onChange={edit("businessName")} {...ef("businessName")}
+        style={{ color:white, fontWeight:900, fontSize:17*fScale, lineHeight:1.0, fontFamily:"Georgia,serif", textShadow:"0 2px 8px rgba(0,0,0,0.8)" }} />
+    </div>
+    {!isS && (
+      <EditableText value={data.tagline || ind.taglines[0]} onChange={edit("tagline")} {...ef("tagline")}
+        style={{ color:gold, fontWeight:700, fontSize:9.5*fScale, fontStyle:"italic", textAlign:"center", display:"block", letterSpacing:0.5 }} />
+    )}
+  </div>
+  {/* Photo */}
+  <div style={{ flexShrink:0, overflow:"hidden", height:isXL?"43%":isL?"40%":"38%" }}>
+    <img src={photo} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+  </div>
+  {/* Menu items + coupon */}
+  {!isS ? (
+    <div style={{ flex:1, display:"flex", gap:6*fScale, padding:`${5*fScale}px ${10*fScale}px`, minHeight:0 }}>
+      <div style={{ flex:1, display:"flex", flexDirection:"column", gap:4*fScale, justifyContent:"center" }}>
+        {getActiveItems(data.menuItems, ind.menu).slice(0,4).map((item,i) => {
+          const m = item.match(/^(.+?)\s*(\$[\d.]+)$/);
+          const name = m ? m[1].trim() : item;
+          const price = m ? m[2] : "";
+          return (
+            <div key={i} style={{ display:"flex", alignItems:"center", gap:5*fScale }}>
+              <div style={{ width:13*fScale, height:13*fScale, borderRadius:"50%", background:gold, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <span style={{ color:"#fff", fontSize:7*fScale, fontWeight:900 }}>✓</span>
+              </div>
+              <EditableText value={item} onChange={editMenu(i)} {...ef(`menuItem_${i}`)}
+                style={{ color:white, fontWeight:700, fontSize:9*fScale, flex:1 }} />
+              {price && <span style={{ color:gold, fontWeight:900, fontSize:9*fScale, flexShrink:0 }}>{price}</span>}
+            </div>
+          );
+        })}
+      </div>
+      {data.offer && (
+        <div style={{ border:`1.5px dashed ${gold}77`, borderRadius:5*fScale, padding:`${6*fScale}px ${7*fScale}px`, background:"rgba(0,0,0,0.4)", flexShrink:0, width:isXL?115:85, textAlign:"center", display:"flex", flexDirection:"column", justifyContent:"center", gap:2*fScale }}>
+          <EditableText value={data.offer} onChange={edit("offer")} {...ef("offer")}
+            style={{ color:white, fontWeight:900, fontSize:12*fScale, lineHeight:1.1 }} />
+          {data.offerFine && (
+            <EditableText value={data.offerFine} onChange={edit("offerFine")} {...ef("offerFine")}
+              style={{ color:"rgba(255,255,255,0.6)", fontSize:6.5*fScale, lineHeight:1.3 }} />
+          )}
+        </div>
+      )}
+    </div>
+  ) : (
+    <div style={{ flex:1, padding:`${5*fScale}px ${10*fScale}px`, display:"flex", flexDirection:"column", justifyContent:"center", gap:4*fScale }}>
+      {getActiveItems(data.menuItems, ind.menu).slice(0,2).map((item,i) => (
+        <div key={i} style={{ display:"flex", alignItems:"center", gap:5*fScale }}>
+          <div style={{ width:12*fScale, height:12*fScale, borderRadius:"50%", background:gold, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
+            <span style={{ color:"#fff", fontSize:7*fScale, fontWeight:900 }}>✓</span>
+          </div>
+          <span style={{ color:white, fontSize:9*fScale, fontWeight:600 }}>{typeof item==="object"?item.text:item}</span>
+        </div>
+      ))}
+    </div>
+  )}
+  {/* Footer */}
+  <div style={{ padding:`${4*fScale}px ${10*fScale}px ${5*fScale}px`, borderTop:`1px solid ${gold}33`, flexShrink:0 }}>
+    {data.phone && (
+      <EditableText value={data.phone} onChange={edit("phone")} {...ef("phone")}
+        style={{ color:white, fontSize:10*fScale, fontWeight:900, display:"block" }} />
+    )}
+    {data.address && (
+      <EditableText value={data.address} onChange={edit("address")} {...ef("address")}
+        style={{ color:"rgba(255,255,255,0.6)", fontSize:7*fScale, display:"block", whiteSpace:"normal" }} />
+    )}
+  </div>
+  {!isS && <PositionedQR website={data.website} fScale={fScale} dark />}
+</div>
+);
+}
+
 const TEMPLATES = {
+"menu-card":   { name: "Menu Card",     desc: "Dark bg, photo, menu + coupon",   Component: MenuCardTemplate },
 "photo-bold":  { name: "Photo Bold",    desc: "Hero photo, bold overlay text",   Component: PhotoBoldTemplate },
 "split-clean": { name: "Split Clean",   desc: "50/50 photo + content split",      Component: SplitCleanTemplate },
 "magazine":    { name: "Magazine",      desc: "Editorial multi-photo layout",     Component: MagazineTemplate },
