@@ -973,6 +973,8 @@ const [emailError, setEmailError] = useState(false);
 const emailRef = useRef(null);
 const [finishedAdUrl, setFinishedAdUrl] = useState(null);
 const finishedAdRef = useRef();
+const [nameError, setNameError] = useState(false);
+const nameRef = useRef(null);
 
 // Auto-suggest template + populate menuItems when industry changes
 const handleIndustryChange = (e) => {
@@ -1009,8 +1011,7 @@ const dims = getRenderDimensions(sizeKey);
 const sizeInfo = AD_SIZES[sizeKey];
 const Tpl = TEMPLATES[selectedTemplate].Component;
 const formValid = formData.businessName.trim() && formData.industry && formData.email.trim();
-const canReserveFinished = !!(finishedAdUrl && formData.businessName.trim() && formData.email.trim());
-const showPreview = formValid || canReserveFinished;
+const showPreview = formValid || !!finishedAdUrl;
 
 return (
 <div style={{
@@ -1047,17 +1048,31 @@ boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
       {/* LEFT: form */}
       <div style={{ width: 380, padding: "20px 24px", overflowY: "auto", borderRight: "1px solid #e5e7eb", background: "#fff", flexShrink: 0 }}>
 
+        {/* Finished-ad mode banner */}
+        {finishedAdUrl && (
+          <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 8, padding: "10px 14px", marginBottom: 16, display: "flex", gap: 10, alignItems: "flex-start" }}>
+            <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>📋</span>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 12, color: "#1e40af", marginBottom: 2 }}>Using your uploaded ad</div>
+              <div style={{ fontSize: 11, color: "#3b82f6", lineHeight: 1.5 }}>
+                Only your <strong>Business Name</strong> and <strong>Email</strong> are needed. All other fields are locked.
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Form fields */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div>
-            <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>
-              Business Name *
+            <label style={{ fontSize: 12, fontWeight: 700, color: nameError ? "#dc2626" : "#374151", display: "block", marginBottom: 3 }}>
+              Business Name *{nameError && <span style={{ fontWeight: 400, marginLeft: 6, fontSize: 11 }}>Required to reserve your spot</span>}
             </label>
             <input
+              ref={nameRef}
               value={formData.businessName}
-              onChange={e => setFormData(d => ({ ...d, businessName: e.target.value }))}
+              onChange={e => { setFormData(d => ({ ...d, businessName: e.target.value })); if (e.target.value.trim()) setNameError(false); }}
               placeholder="e.g. Joe's Pizza"
-              style={inputStyle}
+              style={{ ...inputStyle, borderColor: nameError ? "#dc2626" : undefined, background: nameError ? "#fef2f2" : undefined, outline: nameError ? "2px solid #fca5a5" : undefined }}
             />
           </div>
 
@@ -1075,6 +1090,8 @@ boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
             />
           </div>
 
+          </div>{/* end required-fields group */}
+          <div style={finishedAdUrl ? { opacity: 0.35, pointerEvents: "none", userSelect: "none", display: "flex", flexDirection: "column", gap: 12 } : { display: "flex", flexDirection: "column", gap: 12 }}>
           <div>
             <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>
               Industry *
