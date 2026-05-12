@@ -44,6 +44,7 @@ const AD_GENERATOR_V4_HTML = `<!DOCTYPE html>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Oswald:wght@400;500;600;700&family=Dancing+Script:wght@600;700&family=DM+Sans:wght@300;400;500;600;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
 :root{
   --burg:#7C1C2E;--burg-dark:#5a1220;--burg-pale:#f9eaed;
   --ink:#111827;--ink-mid:#374151;--ink-light:#6B7280;
@@ -59,7 +60,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
 .hdr-badge{background:var(--burg);color:#fff;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:4px 12px;border-radius:20px}
 
 /* LAYOUT */
-.layout{display:grid;grid-template-columns:440px 1fr;min-height:calc(100vh - 55px)}
+.layout{display:grid;grid-template-columns:440px 1fr;height:calc(100vh - 55px)}
 
 /* FORM PANEL */
 .fpanel{background:var(--card);border-right:1px solid var(--border);padding:22px 20px;overflow-y:auto}
