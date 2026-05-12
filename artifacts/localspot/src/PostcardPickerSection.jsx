@@ -441,11 +441,15 @@ const [reserveError,setReserveError]=useState(null);
 const [highlighted,setHighlighted]=useState(highlightArea);
 const ref=useRef(null);
 const [,navigate]=useLocation();
-// Auto-clear the highlight after 3 seconds
+// Scroll to the picker and auto-clear the highlight after 3 seconds
 useEffect(()=>{
   if(!highlighted)return;
-  const t=setTimeout(()=>setHighlighted(null),3000);
-  return()=>clearTimeout(t);
+  // Small delay to let the page finish rendering before scrolling
+  const scrollT=setTimeout(()=>{
+    document.getElementById("book")?.scrollIntoView({behavior:"smooth"});
+  },100);
+  const clearT=setTimeout(()=>setHighlighted(null),3000);
+  return()=>{clearTimeout(scrollT);clearTimeout(clearT);};
 },[highlighted]);
 const queryClient=useQueryClient();
 const {data:campaign}=useGetActiveCampaign();
