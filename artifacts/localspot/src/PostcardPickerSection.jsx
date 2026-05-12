@@ -630,7 +630,7 @@ return(<div style={{fontFamily:"sans-serif"}}>
       </div>
       <h2 style={{textAlign:"center",fontWeight:900,fontSize:21,color:"#111",margin:"0 0 6px"}}>How would you like to create your ad?</h2>
       <p style={{textAlign:"center",color:"#6b7280",fontSize:13,margin:"0 0 28px",lineHeight:1.5}}>Choose a path — you can always go back.</p>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:20}}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>
         <button
           onClick={()=>setAdMethod("upload")}
           onMouseEnter={e=>{e.currentTarget.style.borderColor="#991b1b";e.currentTarget.style.background="#fef2f2";}}
@@ -654,10 +654,19 @@ return(<div style={{fontFamily:"sans-serif"}}>
           onMouseEnter={e=>{e.currentTarget.style.borderColor="#7c3aed";e.currentTarget.style.background="#f5f3ff";}}
           onMouseLeave={e=>{e.currentTarget.style.borderColor="#e5e7eb";e.currentTarget.style.background="#fff";}}
           style={{padding:"20px 14px",border:"2px solid #e5e7eb",borderRadius:12,background:"#fff",cursor:"pointer",textAlign:"left",transition:"border-color 0.15s, background 0.15s",position:"relative"}}>
-          <div style={{position:"absolute",top:8,right:8,background:"#7c3aed",color:"#fff",fontSize:8,fontWeight:800,letterSpacing:"0.08em",padding:"2px 6px",borderRadius:99,textTransform:"uppercase"}}>NEW</div>
           <div style={{fontSize:30,marginBottom:8}}>✦</div>
-          <div style={{fontWeight:800,fontSize:13,color:"#111",marginBottom:4}}>AI Generator v2</div>
-          <div style={{fontSize:11,color:"#6b7280",lineHeight:1.5}}>Describe your business and let AI design a unique ad from scratch.</div>
+          <div style={{fontWeight:800,fontSize:13,color:"#111",marginBottom:4}}>AI Generator (Claude)</div>
+          <div style={{fontSize:11,color:"#6b7280",lineHeight:1.5}}>Describe your business and let Claude AI design a unique HTML ad from scratch.</div>
+        </button>
+        <button
+          onClick={()=>window.open("/api/ad-generator-v3","_blank")}
+          onMouseEnter={e=>{e.currentTarget.style.borderColor="#0891b2";e.currentTarget.style.background="#ecfeff";}}
+          onMouseLeave={e=>{e.currentTarget.style.borderColor="#e5e7eb";e.currentTarget.style.background="#fff";}}
+          style={{padding:"20px 14px",border:"2px solid #e5e7eb",borderRadius:12,background:"#fff",cursor:"pointer",textAlign:"left",transition:"border-color 0.15s, background 0.15s",position:"relative"}}>
+          <div style={{position:"absolute",top:8,right:8,background:"#0891b2",color:"#fff",fontSize:8,fontWeight:800,letterSpacing:"0.08em",padding:"2px 6px",borderRadius:99,textTransform:"uppercase"}}>NEW</div>
+          <div style={{fontSize:30,marginBottom:8}}>🖼️</div>
+          <div style={{fontWeight:800,fontSize:13,color:"#111",marginBottom:4}}>AI Generator (DALL·E)</div>
+          <div style={{fontSize:11,color:"#6b7280",lineHeight:1.5}}>Generate a stunning photographic ad image with DALL·E 3, no design skills needed.</div>
         </button>
       </div>
       <div style={{textAlign:"center"}}>
