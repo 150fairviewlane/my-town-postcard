@@ -475,7 +475,7 @@ const FAQ_ITEMS = [
   { q: "What does the $99/month subscription cover?",
     a: "Your monthly subscription covers your access to the dealer platform: your assigned territories stay locked to you, you get our online ordering portal, ad-design system, customer-facing checkout pages, QR tracking, and a personal account manager." },
   { q: "How is commission calculated?",
-    a: "A sold-out postcard generates roughly $6,000 in ad revenue. After printing, mailing, and fulfillment (~$2,800), about $3,200 in profit remains. You keep 80% of that — approximately $2,500 per postcard. With 4 territories running one postcard each per month, that's a $10,000/month earning potential. Commissions are paid within 7 business days of the postcard's mail date." },
+    a: "A sold-out postcard generates roughly $6,000 in ad revenue. After printing, mailing, and fulfillment (~$2,800), about $3,200 in profit remains. You keep 80% of that — approximately $2,500 per postcard. With 4 territories running one postcard each per month, that's a $10,000/month earning potential. Commissions are paid within 3 business days of the postcard's mail date." },
   { q: "What if I can't sell out the postcard?",
     a: "You don't have to sell out for the postcard to mail. We have a minimum of 6 spots booked to send a postcard run. If you can't hit that within your campaign window, we'll roll your bookings into the next run with no penalty." },
   { q: "How exclusive are the territories?",
