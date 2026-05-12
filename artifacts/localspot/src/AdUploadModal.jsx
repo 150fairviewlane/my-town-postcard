@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { AD_SIZES } from "./AdGenerator";
+import { INDUSTRY_LIST } from "./industryAssets";
 
 const inputStyle = {
   width: "100%", padding: "9px 12px", borderRadius: 7,
@@ -24,17 +25,19 @@ export default function AdUploadModal({ initialSize = "L", onComplete, onBack, i
   const previewDims = { XL: { w: 320, h: 400 }, L: { w: 240, h: 320 }, M: { w: 300, h: 200 }, S: { w: 200, h: 200 } };
   const { w: pw, h: ph } = previewDims[initialSize] || { w: 320, h: 400 };
 
-  const [form, setForm] = useState({ businessName: "", email: "", phone: "", website: "" });
+  const [form, setForm] = useState({ businessName: "", industry: "", email: "", phone: "", website: "" });
   const [localPreviewUrl, setLocalPreviewUrl] = useState(null);
   const [cloudinaryUrl, setCloudinaryUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState(false);
   const [nameError, setNameError] = useState(false);
+  const [industryError, setIndustryError] = useState(false);
   const [emailError, setEmailError] = useState(false);
   const [adError, setAdError] = useState(false);
 
   const fileRef = useRef();
   const nameRef = useRef();
+  const industryRef = useRef();
   const emailRef = useRef();
 
   const handleFile = async (e) => {
@@ -69,6 +72,11 @@ export default function AdUploadModal({ initialSize = "L", onComplete, onBack, i
       if (!err) { nameRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }); nameRef.current?.focus(); }
       err = true;
     }
+    if (!form.industry) {
+      setIndustryError(true);
+      if (!err) { industryRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }); industryRef.current?.focus(); }
+      err = true;
+    }
     if (!form.email.trim()) {
       setEmailError(true);
       if (!err) { emailRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }); emailRef.current?.focus(); }
@@ -92,7 +100,7 @@ export default function AdUploadModal({ initialSize = "L", onComplete, onBack, i
       email: form.email,
       phone: form.phone,
       website: form.website,
-      industry: "",
+      industry: form.industry,
       tagline: "",
       offer: "",
       offerFine: "",
@@ -152,6 +160,22 @@ export default function AdUploadModal({ initialSize = "L", onComplete, onBack, i
                   placeholder="e.g. Joe's Pizza"
                   style={{ ...inputStyle, borderColor: nameError ? "#dc2626" : undefined, background: nameError ? "#fef2f2" : undefined, outline: nameError ? "2px solid #fca5a5" : undefined }}
                 />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: industryError ? "#dc2626" : "#374151", display: "block", marginBottom: 3 }}>
+                  Business Category *
+                  {industryError && <span style={{ fontWeight: 400, marginLeft: 6, color: "#dc2626" }}>Required</span>}
+                </label>
+                <select
+                  ref={industryRef}
+                  value={form.industry}
+                  onChange={e => { setForm(d => ({ ...d, industry: e.target.value })); if (e.target.value) setIndustryError(false); }}
+                  style={{ ...inputStyle, borderColor: industryError ? "#dc2626" : undefined, background: industryError ? "#fef2f2" : undefined, outline: industryError ? "2px solid #fca5a5" : undefined, color: form.industry ? "#111" : "#9ca3af" }}
+                >
+                  <option value="">Select your business type…</option>
+                  {INDUSTRY_LIST.map(ind => <option key={ind} value={ind}>{ind}</option>)}
+                </select>
               </div>
 
               <div>
