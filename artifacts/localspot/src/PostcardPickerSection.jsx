@@ -630,24 +630,34 @@ return(<div style={{fontFamily:"sans-serif"}}>
       </div>
       <h2 style={{textAlign:"center",fontWeight:900,fontSize:21,color:"#111",margin:"0 0 6px"}}>How would you like to create your ad?</h2>
       <p style={{textAlign:"center",color:"#6b7280",fontSize:13,margin:"0 0 28px",lineHeight:1.5}}>Choose a path — you can always go back.</p>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:20}}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:20}}>
         <button
           onClick={()=>setAdMethod("upload")}
           onMouseEnter={e=>{e.currentTarget.style.borderColor="#991b1b";e.currentTarget.style.background="#fef2f2";}}
           onMouseLeave={e=>{e.currentTarget.style.borderColor="#e5e7eb";e.currentTarget.style.background="#fff";}}
-          style={{padding:"24px 18px",border:"2px solid #e5e7eb",borderRadius:12,background:"#fff",cursor:"pointer",textAlign:"left",transition:"border-color 0.15s, background 0.15s"}}>
-          <div style={{fontSize:34,marginBottom:10}}>📎</div>
-          <div style={{fontWeight:800,fontSize:14,color:"#111",marginBottom:5}}>Upload Finished Ad</div>
-          <div style={{fontSize:12,color:"#6b7280",lineHeight:1.5}}>I already have a completed ad ready. Upload it and we'll print it exactly as-is.</div>
+          style={{padding:"20px 14px",border:"2px solid #e5e7eb",borderRadius:12,background:"#fff",cursor:"pointer",textAlign:"left",transition:"border-color 0.15s, background 0.15s"}}>
+          <div style={{fontSize:30,marginBottom:8}}>📎</div>
+          <div style={{fontWeight:800,fontSize:13,color:"#111",marginBottom:4}}>Upload Finished Ad</div>
+          <div style={{fontSize:11,color:"#6b7280",lineHeight:1.5}}>I already have a completed ad. Upload it and we'll print it exactly as-is.</div>
         </button>
         <button
           onClick={()=>setAdMethod("generator")}
           onMouseEnter={e=>{e.currentTarget.style.borderColor="#991b1b";e.currentTarget.style.background="#fef2f2";}}
           onMouseLeave={e=>{e.currentTarget.style.borderColor="#e5e7eb";e.currentTarget.style.background="#fff";}}
-          style={{padding:"24px 18px",border:"2px solid #e5e7eb",borderRadius:12,background:"#fff",cursor:"pointer",textAlign:"left",transition:"border-color 0.15s, background 0.15s"}}>
-          <div style={{fontSize:34,marginBottom:10}}>🎨</div>
-          <div style={{fontWeight:800,fontSize:14,color:"#111",marginBottom:5}}>Ad Generator</div>
-          <div style={{fontSize:12,color:"#6b7280",lineHeight:1.5}}>Build your ad online with our design tool. Pick a template, add your info, and preview live.</div>
+          style={{padding:"20px 14px",border:"2px solid #e5e7eb",borderRadius:12,background:"#fff",cursor:"pointer",textAlign:"left",transition:"border-color 0.15s, background 0.15s"}}>
+          <div style={{fontSize:30,marginBottom:8}}>🎨</div>
+          <div style={{fontWeight:800,fontSize:13,color:"#111",marginBottom:4}}>Ad Generator</div>
+          <div style={{fontSize:11,color:"#6b7280",lineHeight:1.5}}>Pick a template, add your info, and preview your ad live.</div>
+        </button>
+        <button
+          onClick={()=>window.open("/api/ad-generator-v2","_blank")}
+          onMouseEnter={e=>{e.currentTarget.style.borderColor="#7c3aed";e.currentTarget.style.background="#f5f3ff";}}
+          onMouseLeave={e=>{e.currentTarget.style.borderColor="#e5e7eb";e.currentTarget.style.background="#fff";}}
+          style={{padding:"20px 14px",border:"2px solid #e5e7eb",borderRadius:12,background:"#fff",cursor:"pointer",textAlign:"left",transition:"border-color 0.15s, background 0.15s",position:"relative"}}>
+          <div style={{position:"absolute",top:8,right:8,background:"#7c3aed",color:"#fff",fontSize:8,fontWeight:800,letterSpacing:"0.08em",padding:"2px 6px",borderRadius:99,textTransform:"uppercase"}}>NEW</div>
+          <div style={{fontSize:30,marginBottom:8}}>✦</div>
+          <div style={{fontWeight:800,fontSize:13,color:"#111",marginBottom:4}}>AI Generator v2</div>
+          <div style={{fontSize:11,color:"#6b7280",lineHeight:1.5}}>Describe your business and let AI design a unique ad from scratch.</div>
         </button>
       </div>
       <div style={{textAlign:"center"}}>

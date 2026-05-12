@@ -7,6 +7,7 @@ import adminRouter from "./admin";
 import adminCampaignsRouter from "./adminCampaigns";
 import adminOutreachRouter from "./adminOutreach";
 import adAssistantRouter from "./adAssistant";
+import adGeneratorV2Router from "./adGeneratorV2";
 import dealersRouter from "./dealers";
 
 const router: IRouter = Router();
@@ -19,6 +20,7 @@ router.use(adminRouter);
 router.use(adminCampaignsRouter);
 router.use(adminOutreachRouter);
 router.use(adAssistantRouter);
+router.use(adGeneratorV2Router);
 router.use(dealersRouter);
 
 export default router;
