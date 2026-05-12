@@ -190,10 +190,13 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--i
 
 /* ── RESULTS GRID ── */
 .imgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:10px}
-.rcard{background:#0f172a;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.rcard{background:#0f172a;border:1px solid var(--border);border-radius:8px;overflow:hidden;position:relative}
+.rcard.approved{border-color:rgba(34,197,94,.5)}
 .rthumb{width:100%;height:120px;object-fit:cover;cursor:pointer;display:block}
 .rthumb:hover{opacity:.85}
 .rcredit{padding:5px 7px 0;font-size:10px;color:var(--ink-mid);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.approved-badge{position:absolute;top:6px;left:6px;background:rgba(34,197,94,.9);color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px}
+.ind-counter{font-size:11px;color:#86efac;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.25);border-radius:99px;padding:2px 9px;font-weight:700;white-space:nowrap;align-self:center}
 .loading,.empty,.status{color:var(--ink-mid);font-size:13px;padding:16px 0}
 
 /* ── STATS BAR ── */
@@ -269,9 +272,10 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--i
           <option value="unsplash">Unsplash only</option>
           <option value="pexels">Pexels only</option>
         </select>
-        <select id="sindustry" class="sselect">
+        <select id="sindustry" class="sselect" onchange="updateIndCounter()">
           <option value="">No industry pre-fill</option>
         </select>
+        <span id="indCounter" class="ind-counter" style="display:none"></span>
         <button onclick="doSearch()" class="btn-primary" id="searchBtn">Search</button>
       </div>
       <div id="searchStatus" class="status"></div>
@@ -288,55 +292,34 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--i
   </div>
 </div>
 
-<!-- ── APPROVE MODAL ── -->
-<div id="approveModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeApprove()">
-  <div class="modal">
-    <div class="modal-title">Approve Image</div>
-    <img id="approveThumb" class="approve-thumb">
-    <div class="modal-credit" id="approveCredit"></div>
-    <div class="field">
-      <label>Industry Tag</label>
-      <select id="appIndustry" class="sselect full"></select>
-    </div>
-    <div class="field">
-      <label>Mood / Vibe</label>
-      <input id="appMood" class="sinput full" placeholder="e.g. warm, rustic, cinematic">
-    </div>
-    <div class="field">
-      <label>Text Safe Region</label>
-      <select id="appRegion" class="sselect full">
-        <option value="Bottom">Bottom</option>
-        <option value="Left">Left</option>
-        <option value="Right">Right</option>
-        <option value="Center">Center</option>
-      </select>
-    </div>
-    <div class="modal-actions">
-      <button onclick="confirmApprove()" class="btn-primary">✓ Approve</button>
-      <button onclick="closeApprove()" class="btn-ghost">Cancel</button>
-    </div>
-  </div>
-</div>
 
 <script>
 const INDUSTRIES = ["Pizza Restaurant","Mexican Restaurant","Chinese Restaurant","Breakfast & Cafe","Bar & Grill","Italian Restaurant","Bakery","Coffee Shop","Dentist","Medical & Healthcare","Chiropractor","Veterinarian","HVAC","Plumber","Electrician","Lawn & Landscaping","Roofing","Painting","Cleaning Service","Pest Control","Real Estate","Insurance","Auto Repair","Salon & Beauty","Barbershop","Gym & Fitness","Pet Services","Financial Services","Daycare","Photography","Retail Shop","Other Service","Multiple (cross-industry)"];
 const GOAL = 8;
 
 let RESULTS = [];
-let PENDING = null;
 let IMAGES = [];
 
 // ── Init ──────────────────────────────────────────────────────
 function init(){
   const indOpts = INDUSTRIES.map(i => \`<option value="\${i}">\${i}</option>\`).join('');
   document.getElementById('sindustry').innerHTML += indOpts;
-  document.getElementById('appIndustry').innerHTML = indOpts;
   document.getElementById('lscreen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   loadLibrary();
 }
 
 function doLogout(){}
+
+// ── Industry counter ───────────────────────────────────────────
+function updateIndCounter(){
+  const ind = document.getElementById('sindustry').value;
+  const el = document.getElementById('indCounter');
+  if(!ind){ el.style.display='none'; return; }
+  const cnt = IMAGES.filter(img => img.industry === ind).length;
+  el.textContent = \`\${cnt} approved\`;
+  el.style.display='inline-block';
+}
 
 // ── API helper ────────────────────────────────────────────────
 async function api(method,path,body){
@@ -373,44 +356,52 @@ function renderResults(){
   const grid = document.getElementById('resultsGrid');
   if(!RESULTS.length){grid.innerHTML='<div class="empty">No results found.</div>';return;}
   grid.innerHTML = RESULTS.map((r,i) => \`
-    <div class="rcard">
+    <div class="rcard" id="rcard-\${i}">
       <img src="\${r.thumbUrl}" class="rthumb" onclick="window.open('\${r.imageUrl}','_blank')" title="Click to open full size">
       <div class="rcredit">\${r.photographerCredit} · \${r.source}</div>
-      <button class="btn-approve" onclick="openApprove(\${i})">+ Approve</button>
+      <button class="btn-approve" id="rbtn-\${i}" onclick="approveImage(\${i})">+ Approve</button>
     </div>
   \`).join('');
 }
 
-// ── Approve ───────────────────────────────────────────────────
-function openApprove(i){
-  PENDING = RESULTS[i];
-  document.getElementById('approveThumb').src = PENDING.thumbUrl;
-  document.getElementById('approveCredit').textContent = \`\${PENDING.photographerCredit} · \${PENDING.source}\`;
-  const preInd = document.getElementById('sindustry').value;
-  if(preInd) document.getElementById('appIndustry').value=preInd;
-  document.getElementById('appMood').value='';
-  document.getElementById('approveModal').style.display='flex';
-}
+// ── Approve (inline, no modal) ────────────────────────────────
+async function approveImage(i){
+  const result = RESULTS[i];
+  const industry = document.getElementById('sindustry').value;
+  if(!industry){ alert('Please select an industry from the dropdown first'); return; }
 
-function closeApprove(){
-  document.getElementById('approveModal').style.display='none';
-  PENDING=null;
-}
+  const btn = document.getElementById(\`rbtn-\${i}\`);
+  btn.disabled = true; btn.textContent = '…';
 
-async function confirmApprove(){
-  if(!PENDING) return;
-  const industry = document.getElementById('appIndustry').value;
-  if(!industry){alert('Please select an industry');return;}
-  const mood = document.getElementById('appMood').value.trim();
-  const textSafeRegion = document.getElementById('appRegion').value;
   const data = await api('POST','/api/admin/image-library/images',{
-    imageUrl:PENDING.imageUrl, thumbUrl:PENDING.thumbUrl,
-    industry, mood, textSafeRegion,
-    photographerCredit:PENDING.photographerCredit, source:PENDING.source,
+    imageUrl: result.imageUrl, thumbUrl: result.thumbUrl,
+    industry, mood: '', textSafeRegion: 'Bottom',
+    photographerCredit: result.photographerCredit, source: result.source,
   });
-  if(!data||data.error){alert(data?.error||'Error approving');return;}
-  closeApprove();
-  loadLibrary();
+
+  if(!data || data.error){
+    btn.disabled=false; btn.textContent='+ Approve';
+    alert(data?.error||'Error approving');
+    return;
+  }
+
+  // Mark card as approved visually
+  const card = document.getElementById(\`rcard-\${i}\`);
+  card.classList.add('approved');
+  btn.textContent='✓ Approved';
+  btn.style.background='#16a34a';
+  btn.style.cursor='default';
+
+  // Add badge over thumbnail
+  const badge = document.createElement('div');
+  badge.className='approved-badge';
+  badge.textContent='✓ Approved';
+  card.prepend(badge);
+
+  // Update local IMAGES and refresh counter + library panel
+  if(data.image) IMAGES.push(data.image);
+  updateIndCounter();
+  renderLibrary();
 }
 
 // ── Library ───────────────────────────────────────────────────
@@ -419,6 +410,7 @@ async function loadLibrary(){
   if(!data) return;
   IMAGES = data.images||[];
   renderLibrary();
+  updateIndCounter();
 }
 
 function renderLibrary(){
