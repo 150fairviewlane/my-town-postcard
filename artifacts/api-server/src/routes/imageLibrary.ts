@@ -1,41 +1,13 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { db, imageLibraryTable } from "@workspace/db";
-import jwt from "jsonwebtoken";
 
 const router: IRouter = Router();
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "localspot-admin-2025";
-const JWT_SECRET = process.env.SESSION_SECRET || "localspot-secret";
 const TIMEOUT_MS = 15_000;
 
-function requireAdmin(req: any, res: any, next: any): void {
-  const auth = req.headers.authorization as string | undefined;
-  if (!auth?.startsWith("Bearer ")) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
-  try {
-    jwt.verify(auth.slice(7), JWT_SECRET);
-    next();
-  } catch {
-    res.status(401).json({ error: "Invalid or expired token" });
-  }
-}
-
-// ── Login ─────────────────────────────────────────────────────────────────────
-router.post("/admin/image-library/login", (req, res) => {
-  const { password } = req.body ?? {};
-  if (password !== ADMIN_PASSWORD) {
-    res.status(401).json({ error: "Invalid password" });
-    return;
-  }
-  const token = jwt.sign({ admin: true, tool: "image-library" }, JWT_SECRET, { expiresIn: "24h" });
-  res.json({ token });
-});
-
 // ── Search ────────────────────────────────────────────────────────────────────
-router.post("/admin/image-library/search", requireAdmin, async (req, res) => {
+router.post("/admin/image-library/search", async (req, res) => {
   const { query, source } = req.body ?? {};
   if (!query || typeof query !== "string" || !query.trim()) {
     res.status(400).json({ error: "query is required" });
@@ -112,7 +84,7 @@ router.post("/admin/image-library/search", requireAdmin, async (req, res) => {
 });
 
 // ── Approve image ─────────────────────────────────────────────────────────────
-router.post("/admin/image-library/images", requireAdmin, async (req, res) => {
+router.post("/admin/image-library/images", async (req, res) => {
   const { imageUrl, thumbUrl, industry, mood, textSafeRegion, photographerCredit, source } = req.body ?? {};
   if (!imageUrl || !thumbUrl || !industry || !photographerCredit || !source) {
     res.status(400).json({ error: "imageUrl, thumbUrl, industry, photographerCredit, source are required" });
@@ -128,13 +100,13 @@ router.post("/admin/image-library/images", requireAdmin, async (req, res) => {
 });
 
 // ── List images ───────────────────────────────────────────────────────────────
-router.get("/admin/image-library/images", requireAdmin, async (_req, res) => {
+router.get("/admin/image-library/images", async (_req, res) => {
   const rows = await db.select().from(imageLibraryTable).orderBy(imageLibraryTable.createdAt);
   res.json({ images: rows });
 });
 
 // ── Update image ──────────────────────────────────────────────────────────────
-router.patch("/admin/image-library/images/:id", requireAdmin, async (req, res) => {
+router.patch("/admin/image-library/images/:id", async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid id" }); return; }
   const { industry, mood, textSafeRegion } = req.body ?? {};
@@ -148,7 +120,7 @@ router.patch("/admin/image-library/images/:id", requireAdmin, async (req, res) =
 });
 
 // ── Remove image ──────────────────────────────────────────────────────────────
-router.delete("/admin/image-library/images/:id", requireAdmin, async (req, res) => {
+router.delete("/admin/image-library/images/:id", async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid id" }); return; }
   await db.delete(imageLibraryTable).where(eq(imageLibraryTable.id, id));
@@ -350,7 +322,6 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--i
 const INDUSTRIES = ["Pizza Restaurant","Mexican Restaurant","Chinese Restaurant","Breakfast & Cafe","Bar & Grill","Italian Restaurant","Bakery","Coffee Shop","Dentist","Medical & Healthcare","Chiropractor","Veterinarian","HVAC","Plumber","Electrician","Lawn & Landscaping","Roofing","Painting","Cleaning Service","Pest Control","Real Estate","Insurance","Auto Repair","Salon & Beauty","Barbershop","Gym & Fitness","Pet Services","Financial Services","Daycare","Photography","Retail Shop","Other Service","Multiple (cross-industry)"];
 const GOAL = 8;
 
-let TOKEN = localStorage.getItem('ilToken') || '';
 let RESULTS = [];
 let PENDING = null;
 let IMAGES = [];
@@ -360,40 +331,16 @@ function init(){
   const indOpts = INDUSTRIES.map(i => \`<option value="\${i}">\${i}</option>\`).join('');
   document.getElementById('sindustry').innerHTML += indOpts;
   document.getElementById('appIndustry').innerHTML = indOpts;
-  if(TOKEN) showApp(); else showLogin();
-}
-
-function showLogin(){
-  document.getElementById('lscreen').style.display = 'flex';
-  document.getElementById('app').style.display = 'none';
-}
-
-function showApp(){
   document.getElementById('lscreen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   loadLibrary();
 }
 
-async function doLogin(){
-  const pw = document.getElementById('pw').value;
-  const r = await fetch('/api/admin/image-library/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
-  const d = await r.json();
-  if(!r.ok){document.getElementById('lerr').textContent = d.error||'Invalid password';return;}
-  TOKEN = d.token;
-  localStorage.setItem('ilToken',TOKEN);
-  document.getElementById('lerr').textContent='';
-  showApp();
-}
-
-function doLogout(){
-  TOKEN='';
-  localStorage.removeItem('ilToken');
-  showLogin();
-}
+function doLogout(){}
 
 // ── API helper ────────────────────────────────────────────────
 async function api(method,path,body){
-  const opts={method,headers:{'Content-Type':'application/json','Authorization':\`Bearer \${TOKEN}\`}};
+  const opts={method,headers:{'Content-Type':'application/json'}};
   if(body) opts.body=JSON.stringify(body);
   const r = await fetch(path,opts);
   if(r.status===401){doLogout();return null;}
