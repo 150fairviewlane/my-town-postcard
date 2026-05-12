@@ -558,7 +558,7 @@ function Footer() {
               My Town Postcard
             </div>
           </div>
-          <p style={{ fontSize: 13, lineHeight: 1.6, color: "#555", fontFamily: "sans-serif", maxWidth: 240, margin: 0 }}>
+          <p style={{ fontSize: 13, lineHeight: 1.6, color: "#555", fontFamily: "sans-serif", maxWidth: 240, margin: 0, paddingLeft: 68 }}>
             Helping local businesses connect with their neighbors through cost-effective postcard marketing.
           </p>
         </div>
