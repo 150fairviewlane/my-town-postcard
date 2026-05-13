@@ -887,8 +887,11 @@ function renderAd(){
   ───────────────────────────────────────────────────────────── */
   } else if(tpl === 'clean'){
     // Split name into up to 3 display lines for dramatic stacking
-    const n1 = words.length >= 3 ? words.slice(0, words.length - 2).join(' ') : (words.length === 1 ? d.bizName.slice(0, Math.ceil(d.bizName.length/3)) : '');
-    const n2 = words.length >= 2 ? words[words.length - (words.length >= 3 ? 2 : 2)].toUpperCase() : nm1.toUpperCase();
+    // 1 word: n1='', n2=FULLNAME, n3=''
+    // 2 words: n1='', n2=WORD1, n3=word2
+    // 3+ words: n1=leading words, n2=second-to-last, n3=last
+    const n1 = words.length >= 3 ? words.slice(0, words.length - 2).join(' ') : '';
+    const n2 = words.length >= 2 ? words[words.length - 2].toUpperCase() : d.bizName.toUpperCase();
     const n3 = words.length >= 2 ? words[words.length - 1] : '';
 
     const menuRows = d.menu.slice(0,4).map(item => {
