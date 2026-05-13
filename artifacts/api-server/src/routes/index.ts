@@ -10,6 +10,7 @@ import adAssistantRouter from "./adAssistant";
 import adGeneratorV2Router from "./adGeneratorV2";
 import adGeneratorV3Router from "./adGeneratorV3";
 import adGeneratorV4Router from "./adGeneratorV4";
+import aiUpgradeRouter from "./aiUpgrade";
 import imageLibraryRouter from "./imageLibrary";
 import dealersRouter from "./dealers";
 
@@ -26,6 +27,7 @@ router.use(adAssistantRouter);
 router.use(adGeneratorV2Router);
 router.use(adGeneratorV3Router);
 router.use(adGeneratorV4Router);
+router.use(aiUpgradeRouter);
 router.use(imageLibraryRouter);
 router.use(dealersRouter);
 

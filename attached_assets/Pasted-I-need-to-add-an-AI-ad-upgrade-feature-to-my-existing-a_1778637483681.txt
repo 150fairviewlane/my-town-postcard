@@ -1,0 +1,171 @@
+I need to add an AI ad upgrade feature to my existing ad generator. Please do the following carefully — do not modify any existing files except where explicitly stated below.
+
+════════════════════════════════════════════════
+OVERVIEW
+════════════════════════════════════════════════
+
+The ad generator (ad-generator-v4.html) currently has a two-step process:
+
+Step 1: Instant HTML template preview (already working — do not touch)
+Step 2: A “Make It Stunning with AI” button that sends the selected photo and business data to GPT-4o Vision + DALL-E 3 to generate a professionally redesigned ad image
+
+════════════════════════════════════════════════
+CHANGE 1 — ADD BACKEND PROXY ROUTE
+════════════════════════════════════════════════
+
+Add a new POST route at /api/ai-upgrade
+
+This route receives a JSON body with these fields:
+photoUrl    — string, a remote https:// URL or a base64 data: URL
+bizName     — string
+industry    — string
+tagline     — string
+menu        — array of strings
+offer       — string
+style       — one of: rustic, dark, bold, luxury, bright, clean
+phone       — string
+city        — string
+address     — string
+
+STYLE DIRECTION MAPPING (use in the GPT-4o prompt):
+rustic  = “rustic artisan with warm parchment tones, brush stroke textures, hand-lettered typography”
+dark    = “dark cinematic with dramatic lighting, deep shadows, bold contrast”
+bold    = “editorial magazine with clean white panels and strong Playfair Display typography”
+luxury  = “luxury elegant with gold accents, double border frames, refined centered layout”
+bright  = “retro poster with bold color bands, dynamic skewed elements, pill-shaped accents”
+clean   = “neon night with glowing typography and electric accent colors”
+
+THE ROUTE MAKES TWO SEQUENTIAL API CALLS using process.env.OPENAI_API_KEY:
+
+── CALL 1: GPT-4o Vision ──────────────────────
+
+Endpoint: POST https://api.openai.com/v1/chat/completions
+Model: gpt-4o
+Max tokens: 800
+
+Send a messages array with one user message containing two content blocks:
+
+Content block 1 — the image:
+If photoUrl starts with “https://” or “http://”:
+type: “image_url”
+image_url: { url: photoUrl, detail: “high” }
+If photoUrl starts with “data:”:
+type: “image_url”
+image_url: { url: photoUrl }
+Do NOT attempt to download or proxy the image. Pass the URL directly.
+
+Content block 2 — the text instruction:
+You are a professional print ad designer. I am showing you a photo that will be the hero image for a local business advertisement. Analyze this photo and describe in 2-3 sentences the subject matter, lighting quality, composition, and mood. Then write a precise DALL-E 3 image generation prompt of 150-200 words that will create a stunning print advertisement using this photo’s content and style as the hero visual.
+
+The ad is for: [bizName] — [industry]
+Tagline: [tagline]
+Style direction: [mapped style string from above]
+
+The DALL-E prompt must:
+
+- Incorporate the photo subject as the central hero image, describing it specifically based on what you see
+- Include artistic typography requirements: mix font sizes dramatically, some words much larger than others, rotate or angle text elements slightly, layer text at different depths, use script or cursive for the tagline
+- Describe brush stroke textures, starburst lines, and ornamental decorative elements
+- NOT include any phone numbers or street addresses
+- Leave the bottom 18 percent of the image slightly darkened for a contact info overlay to be added later
+- Be specific about colors, lighting, and composition
+- Make it look like a $500 professional design
+
+Return ONLY the DALL-E prompt text. No explanation, no preamble, nothing else.
+
+Extract the response text from: choices[0].message.content
+
+── CALL 2: DALL-E 3 ───────────────────────────
+
+Endpoint: POST https://api.openai.com/v1/images/generations
+Model: dall-e-3
+Size: 1024x1024
+Quality: standard
+n: 1
+response_format: url
+
+Prompt: Take the full text returned from GPT-4o Call 1 and append the following text to it:
+
+Create a STUNNING professional print advertisement. The business name must appear with ARTISTIC DYNAMIC typography — mix font sizes dramatically, angle text elements, layer text at different depths, use script or cursive for the tagline. Include decorative brush strokes, paint textures, starburst lines, and ornamental dividers. Feature the menu items as a beautiful list with circular checkmarks. The special offer must appear in a dashed-border coupon box with large bold typography. Use dramatic lighting and depth. Portrait orientation 4 by 5 ratio. Leave the bottom 18 percent darkened. Do NOT include phone number or address — those will be overlaid separately.
+
+Extract the image URL from: data[0].url
+
+── ROUTE RESPONSE ─────────────────────────────
+
+On success, return JSON:
+imageUrl: the URL string from DALL-E
+
+On any error (either API call fails), return JSON with the error message and an appropriate HTTP error status code:
+error: the error message string
+
+════════════════════════════════════════════════
+CHANGE 2 — UPDATE FRONTEND in ad-generator-v4.html
+════════════════════════════════════════════════
+
+Find the aiUpgrade() JavaScript function in ad-generator-v4.html.
+
+Replace the two direct OpenAI fetch calls inside that function (the GPT-4o vision call and the DALL-E call and all the code between them) with this single fetch call:
+
+const res = await fetch(’/api/ai-upgrade’, {
+method: ‘POST’,
+headers: { ‘Content-Type’: ‘application/json’ },
+body: JSON.stringify({
+photoUrl: selectedPhotoUrl,
+bizName: d.bizName,
+industry: d.industry,
+tagline: d.tagline,
+menu: d.menu,
+offer: d.offer,
+style: d.style,
+phone: d.phone,
+city: d.city,
+address: d.address
+})
+});
+
+const data = await res.json();
+if(data.error) throw new Error(data.error);
+const imgUrl = data.imageUrl;
+
+Keep all the code after that point (the part that sets aiOverlayPhone, aiOverlayAddr, loads the image into aiResultImg, and calls setAIState) exactly as-is.
+
+Also remove the OpenAI API key input field from the HTML form. Find and delete the entire field div that contains the input with id “openaiKey” and its surrounding label and note text. The key is now handled server-side.
+
+════════════════════════════════════════════════
+CHANGE 3 — ENVIRONMENT VARIABLE
+════════════════════════════════════════════════
+
+The backend route must read the OpenAI API key from process.env.OPENAI_API_KEY
+
+I will add OPENAI_API_KEY to Replit Secrets manually — do not hardcode any key value.
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+Do not modify any of the following:
+
+- The postcard composer
+- Payment pages
+- Dealer portal
+- Image library tool
+- Any other ad generator versions (v1, v2, v3)
+- Any other existing routes or files not mentioned above
+- Step 1 of the ad generator (the instant HTML template preview)
+
+════════════════════════════════════════════════
+TEST AFTER BUILDING
+════════════════════════════════════════════════
+
+Test the feature with these values:
+Business Name: Mr. Biscuit’s Cafe
+Industry: Breakfast & Cafe
+Style: rustic
+Select any photo from the photo grid
+
+Click “Make It Stunning with AI” and confirm:
+
+1. The loading state appears
+1. An AI-generated image appears below the template preview
+1. The phone number and address are overlaid as HTML text on top of the image
+1. No API key input field is visible in the form

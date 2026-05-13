@@ -174,9 +174,7 @@ box-shadow:0 12px 50px rgba(0,0,0,.22);
 .et{font-family:'Crimson Pro',serif;font-size:19px;font-style:italic;color:rgba(255,255,255,.4)}
 .es{font-size:11.5px;color:rgba(255,255,255,.28);line-height:1.6}
 
-/* ═══════════════════════════════════════════════
-THE 6 AD TEMPLATES — radically distinct
-═══════════════════════════════════════════════ */
+/* THE 6 AD TEMPLATES */
 .ad-bg{position:absolute;inset:0;background-size:cover;background-position:center;z-index:0}
 
 /* TEMPLATE 1: RUSTIC LAYERED */
@@ -453,6 +451,55 @@ text-shadow:0 0 10px var(--accent-color,#0088FF)}
 .tpl-clean .ad-qr-box{width:38px;height:38px;background:#fff;border-radius:3px;padding:3px}
 .tpl-clean .ad-qr-label{font-size:8px;color:rgba(255,255,255,.3);letter-spacing:.1em;text-transform:uppercase}
 
+/* AI UPGRADE BUTTON */
+.ai-btn{width:100%;padding:14px;background:linear-gradient(135deg,#1a1a2e,#2d1b4e);color:#fff;border:none;border-radius:9px;font-family:'Bebas Neue',sans-serif;font-size:19px;letter-spacing:.12em;cursor:pointer;transition:all .2s;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:10px;position:relative;overflow:hidden}
+.ai-btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(120,80,255,.3),rgba(0,200,255,.2));opacity:0;transition:opacity .3s}
+.ai-btn:hover:not(:disabled)::before{opacity:1}
+.ai-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 24px rgba(100,60,255,.35)}
+.ai-btn:disabled{background:#888;cursor:not-allowed;transform:none;box-shadow:none}
+.ai-btn .ai-spark{font-size:16px;animation:pulse 2s ease infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.7;transform:scale(1.2)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* AI RESULT OVERLAY */
+.ai-result-wrap{width:100%;max-width:500px;position:relative;display:none}
+.ai-result-wrap.visible{display:block}
+.ai-result-img{width:100%;border-radius:10px;display:block;box-shadow:0 12px 50px rgba(0,0,0,.22)}
+.ai-overlay-bar{position:absolute;bottom:0;left:0;right:0;
+background:linear-gradient(to top,rgba(0,0,0,.92) 0%,rgba(0,0,0,.7) 60%,transparent 100%);
+border-radius:0 0 10px 10px;
+padding:14px 18px 12px;
+display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.ai-overlay-phone{font-family:'Bebas Neue',sans-serif;font-size:clamp(20px,4vw,30px);letter-spacing:.06em;color:#fff;line-height:1}
+.ai-overlay-addr{font-size:10px;color:rgba(255,255,255,.5);margin-top:2px}
+.ai-overlay-qr{display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0}
+.ai-overlay-qr-box{width:46px;height:46px;background:#fff;border-radius:4px;padding:3px}
+.ai-overlay-scan{font-size:8px;color:rgba(255,255,255,.35);letter-spacing:.1em;text-transform:uppercase}
+
+/* AI loading / error states */
+.ai-loading{width:100%;max-width:500px;background:#1a1a2e;border-radius:10px;
+aspect-ratio:4/5;display:none;flex-direction:column;align-items:center;justify-content:center;
+gap:18px;box-shadow:0 12px 50px rgba(0,0,0,.22)}
+.ai-loading.active{display:flex}
+.ai-spin{width:48px;height:48px;border:3px solid rgba(255,255,255,.1);border-top-color:#a78bfa;border-radius:50%;animation:spin .9s linear infinite}
+.ai-load-txt{font-family:'Crimson Pro',serif;font-size:18px;font-style:italic;color:rgba(255,255,255,.6)}
+.ai-load-step{font-size:11px;color:rgba(255,255,255,.3)}
+.ai-error{width:100%;max-width:500px;background:#1a0a0a;border-radius:10px;
+padding:28px;display:none;flex-direction:column;align-items:center;justify-content:center;
+gap:10px;text-align:center;box-shadow:0 12px 50px rgba(0,0,0,.22)}
+.ai-error.active{display:flex}
+.ai-error-icon{font-size:32px}
+.ai-error-msg{font-size:12px;color:#f87171;line-height:1.6}
+
+/* Dividers & cost strip */
+.ai-divider{width:100%;max-width:500px;display:flex;align-items:center;gap:12px;margin:4px 0}
+.ai-divider-line{flex:1;height:1px;background:rgba(0,0,0,.12)}
+.ai-divider-txt{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-light);white-space:nowrap}
+.ai-cost{width:100%;max-width:500px;background:rgba(0,0,0,.05);border-radius:7px;padding:8px 13px;display:none;align-items:center;justify-content:space-between;font-size:11px;color:var(--ink-mid)}
+.ai-cost.visible{display:flex}
+.ai-cost-model{font-weight:600;color:var(--ink)}
+.ai-cost-amt{color:var(--ink-light)}
+
 @media(max-width:900px){.layout{grid-template-columns:1fr}.ppanel{padding:20px 14px}}
 </style>
 </head>
@@ -589,6 +636,17 @@ text-shadow:0 0 10px var(--accent-color,#0088FF)}
     </div>
 
     <button class="gen-btn" id="generateBtn" onclick="renderAd()">✦ Preview My Ad</button>
+
+    <!-- AI UPGRADE SECTION -->
+    <div style="margin-top:18px;padding-top:18px;border-top:1px solid var(--border)">
+      <div class="slbl" style="margin-bottom:10px">Step 2 — AI Upgrade (Optional)</div>
+      <div style="font-size:11.5px;color:var(--ink-light);line-height:1.6;margin-bottom:12px">
+        Preview your ad above first, then click below to send it to GPT-4o for a professional redesign — dynamic typography, layered textures, and stunning visual composition.
+      </div>
+      <button class="ai-btn" id="aiUpgradeBtn" onclick="aiUpgrade()" disabled>
+        <span class="ai-spark">✨</span> Make It Stunning with AI
+      </button>
+    </div>
   </div>
 
   <!-- ══ PREVIEW ══ -->
@@ -601,6 +659,8 @@ text-shadow:0 0 10px var(--accent-color,#0088FF)}
       </div>
     </div>
 
+    <div class="ai-divider"><div class="ai-divider-line"></div><div class="ai-divider-txt">Step 1 — Template Preview</div><div class="ai-divider-line"></div></div>
+
     <div class="ad-canvas-wrap">
       <div class="empty-state" id="emptyState">
         <div class="ei">✦</div>
@@ -610,8 +670,60 @@ text-shadow:0 0 10px var(--accent-color,#0088FF)}
       <div id="adCanvas"></div>
     </div>
 
+    <div class="ai-divider" id="aiDivider" style="display:none"><div class="ai-divider-line"></div><div class="ai-divider-txt">Step 2 — AI Upgraded Version</div><div class="ai-divider-line"></div></div>
+
+    <div class="ai-loading" id="aiLoading">
+      <div class="ai-spin"></div>
+      <div class="ai-load-txt">GPT-4o is designing your ad...</div>
+      <div class="ai-load-step" id="aiLoadStep">Analyzing your business details</div>
+    </div>
+
+    <div class="ai-error" id="aiError">
+      <div class="ai-error-icon">⚠</div>
+      <div class="ai-error-msg" id="aiErrorMsg">Something went wrong. Please try again.</div>
+    </div>
+
+    <div class="ai-result-wrap" id="aiResultWrap">
+      <img id="aiResultImg" class="ai-result-img" alt="AI-designed ad">
+      <div class="ai-overlay-bar">
+        <div>
+          <div class="ai-overlay-phone" id="aiOverlayPhone"></div>
+          <div class="ai-overlay-addr" id="aiOverlayAddr"></div>
+        </div>
+        <div class="ai-overlay-qr">
+          <div class="ai-overlay-qr-box">
+            <svg width="40" height="40" viewBox="0 0 44 44" fill="none">
+              <rect width="44" height="44" fill="white"/>
+              <rect x="3" y="3" width="14" height="14" rx="1" fill="#111"/>
+              <rect x="5" y="5" width="10" height="10" rx=".5" fill="white"/>
+              <rect x="7" y="7" width="6" height="6" fill="#111"/>
+              <rect x="27" y="3" width="14" height="14" rx="1" fill="#111"/>
+              <rect x="29" y="5" width="10" height="10" rx=".5" fill="white"/>
+              <rect x="31" y="7" width="6" height="6" fill="#111"/>
+              <rect x="3" y="27" width="14" height="14" rx="1" fill="#111"/>
+              <rect x="5" y="29" width="10" height="10" rx=".5" fill="white"/>
+              <rect x="7" y="31" width="6" height="6" fill="#111"/>
+              <rect x="21" y="21" width="4" height="4" fill="#111"/>
+              <rect x="27" y="21" width="4" height="4" fill="#111"/>
+              <rect x="33" y="21" width="4" height="4" fill="#111"/>
+              <rect x="21" y="27" width="4" height="4" fill="#111"/>
+              <rect x="33" y="27" width="4" height="4" fill="#111"/>
+              <rect x="27" y="33" width="4" height="4" fill="#111"/>
+              <rect x="21" y="39" width="4" height="4" fill="#111"/>
+            </svg>
+          </div>
+          <div class="ai-overlay-scan">Scan</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ai-cost" id="aiCostStrip">
+      <span>Designed by <span class="ai-cost-model">GPT-4o + DALL·E 3</span></span>
+      <span class="ai-cost-amt" id="aiCostAmt">~$0.04</span>
+    </div>
+
     <div style="max-width:500px;width:100%;font-size:11px;color:var(--ink-light);line-height:1.6;text-align:center;padding:0 8px">
-      All text is rendered as crisp HTML — no AI image generation means no spelling errors, instant previews, and zero per-ad cost.
+      Phone, address &amp; QR are always rendered as accurate HTML overlays — never left to the AI.
     </div>
   </div>
 </div>
@@ -679,7 +791,7 @@ async function loadIndustryPhotos(industry, fallbackPhotos){
     const res = await fetch(\`/api/image-library?industry=\${encodeURIComponent(industry)}\`);
     const data = await res.json();
     if(data.images && data.images.length) photos = data.images.map(i=>({url:i.image_url,thumb:i.thumb_url,credit:i.photographer_credit}));
-  } catch(e) { /* use fallback photos */ }
+  } catch(e) { /* use fallback */ }
 
   currentIndustryPhotos = photos;
 
@@ -816,24 +928,16 @@ function renderAd(){
       <div class="ad-wash"></div>
       <div class="brush-top"></div>
       <div class="brush-bot"></div>
-      <div class="ad-ribbon">
-        <span class="ad-ribbon-emoji">✦</span>
-        <div class="ad-ribbon-txt">EST.<br>LOCAL</div>
-      </div>
+      <div class="ad-ribbon"><span class="ad-ribbon-emoji">✦</span><div class="ad-ribbon-txt">EST.<br>LOCAL</div></div>
       <div class="ad-name-block">
         <div class="ad-name-line1">\${nameLine1}</div>
         <span class="ad-name-script"><span class="ad-sparks">— </span>\${nameLine2||d.bizName}</span>
       </div>
       \${d.tagline?\`<div class="ad-tagline">\${d.tagline}</div>\`:''}
       \${menuRows?\`<div class="ad-menu">\${menuRows}</div>\`:''}
-      \${cp?\`<div class="ad-coupon">
-        <div class="ad-coupon-amount">\${cp.amount}</div>
-        \${cp.item?\`<div class="ad-coupon-item">\${cp.item}</div>\`:''}
-        <div class="ad-coupon-fine">\${cp.fine}</div>
-      </div>\`:''}
+      \${cp?\`<div class="ad-coupon"><div class="ad-coupon-amount">\${cp.amount}</div>\${cp.item?\`<div class="ad-coupon-item">\${cp.item}</div>\`:''}<div class="ad-coupon-fine">\${cp.fine}</div></div>\`:''}
       <div class="ad-footer">
-        <div class="ad-phone-wrap">
-          <div class="ad-phone-icon">☎</div>
+        <div class="ad-phone-wrap"><div class="ad-phone-icon">☎</div>
           <div><div class="ad-phone">\${d.phone||'—'}</div><div class="ad-address">\${[d.address,d.city].filter(Boolean).join(', ')}</div></div>
         </div>
         \${qrHTML()}
@@ -845,19 +949,13 @@ function renderAd(){
       \`<div class="ad-menu-item"><div class="ad-menu-dot"></div>\${item}</div>\`).join('');
     html = \`<div class="tpl-dark" style="--accent-color:\${ac}">
       <div class="ad-bg" style="\${bgStyle}"></div>
-      <div class="ad-vignette"></div>
-      <div class="ad-glow"></div>
+      <div class="ad-vignette"></div><div class="ad-glow"></div>
       <div class="ad-name-block">
         <div class="ad-name-line1">\${nameLine1}</div>
         \${nameLine2?\`<span class="ad-name-line2">\${nameLine2}</span>\`:''}
       </div>
       <div class="ad-vline"></div>
-      \${cp?\`<div class="ad-coupon">
-        <div class="ad-coupon-amount">\${cp.amount}</div>
-        <div class="ad-coupon-off">OFF</div>
-        <div class="ad-coupon-item">\${cp.item||'Any Item'}</div>
-        <div class="ad-coupon-fine">\${cp.fine}</div>
-      </div>\`:''}
+      \${cp?\`<div class="ad-coupon"><div class="ad-coupon-amount">\${cp.amount}</div><div class="ad-coupon-off">OFF</div><div class="ad-coupon-item">\${cp.item||'Any Item'}</div><div class="ad-coupon-fine">\${cp.fine}</div></div>\`:''}
       \${d.tagline?\`<div class="ad-tagline">\${d.tagline}</div>\`:''}
       \${menuRows?\`<div class="ad-menu">\${menuRows}</div>\`:''}
       <div class="ad-footer">
@@ -874,8 +972,7 @@ function renderAd(){
     }).join('');
     html = \`<div class="tpl-bold" style="--accent-color:\${ac}">
       <div class="ad-bg" style="\${bgStyle}"></div>
-      <div class="ad-panel"></div>
-      <div class="ad-stripe"></div>
+      <div class="ad-panel"></div><div class="ad-stripe"></div>
       <div class="ad-name-block">
         <div class="ad-name-line1">\${nameLine1}</div>
         \${nameLine2?\`<span class="ad-name-line2">\${nameLine2}</span>\`:''}
@@ -890,8 +987,7 @@ function renderAd(){
     </div>\`;
 
   } else if(tpl === 'luxury'){
-    const menuRows = d.menu.slice(0,4).map(item=>
-      \`<div class="ad-menu-item">\${item}</div>\`).join('');
+    const menuRows = d.menu.slice(0,4).map(item=>\`<div class="ad-menu-item">\${item}</div>\`).join('');
     html = \`<div class="tpl-luxury">
       <div class="ad-bg" style="\${bgStyle}"></div>
       <div class="ad-overlay"></div>
@@ -913,22 +1009,13 @@ function renderAd(){
     </div>\`;
 
   } else if(tpl === 'bright'){
-    const menuBadges = d.menu.slice(0,4).map(item=>
-      \`<div class="ad-menu-item">\${item}</div>\`).join('');
+    const menuBadges = d.menu.slice(0,4).map(item=>\`<div class="ad-menu-item">\${item}</div>\`).join('');
     html = \`<div class="tpl-bright" style="--accent-color:\${ac}">
       <div class="ad-bg" style="\${bgStyle}"></div>
-      <div class="ad-overlay"></div>
-      <div class="ad-banner"></div>
+      <div class="ad-overlay"></div><div class="ad-banner"></div>
       <div class="ad-banner-name">\${nameLine1}\${nameLine2?' '+nameLine2:''}</div>
       \${d.tagline?\`<div class="ad-banner-tag">\${d.tagline}</div>\`:''}
-      \${cp?\`<div class="ad-coupon">
-        <div class="ad-coupon-left">
-          <div class="ad-coupon-amount">\${cp.amount}</div>
-          <div class="ad-coupon-item">\${cp.item||'Any Item'}</div>
-          <div class="ad-coupon-fine">\${cp.fine}</div>
-        </div>
-        <div class="ad-coupon-right"><div class="ad-coupon-badge">With This Card</div></div>
-      </div>\`:''}
+      \${cp?\`<div class="ad-coupon"><div class="ad-coupon-left"><div class="ad-coupon-amount">\${cp.amount}</div><div class="ad-coupon-item">\${cp.item||'Any Item'}</div><div class="ad-coupon-fine">\${cp.fine}</div></div><div class="ad-coupon-right"><div class="ad-coupon-badge">With This Card</div></div></div>\`:''}
       \${menuBadges?\`<div class="ad-menu">\${menuBadges}</div>\`:''}
       <div class="ad-footer">
         <div><div class="ad-phone">\${d.phone||'—'}</div><div class="ad-address">\${[d.address,d.city].filter(Boolean).join(', ')}</div></div>
@@ -937,25 +1024,17 @@ function renderAd(){
     </div>\`;
 
   } else if(tpl === 'clean'){
-    const menuChips = d.menu.slice(0,6).map(item=>
-      \`<div class="ad-menu-item">\${item}</div>\`).join('');
+    const menuChips = d.menu.slice(0,6).map(item=>\`<div class="ad-menu-item">\${item}</div>\`).join('');
     html = \`<div class="tpl-clean" style="--accent-color:\${ac}">
       <div class="ad-bg" style="\${bgStyle}"></div>
-      <div class="ad-overlay"></div>
-      <div class="ad-neon-bar"></div>
+      <div class="ad-overlay"></div><div class="ad-neon-bar"></div>
       <div class="ad-name-block">
         <div class="ad-name-line1">\${nameLine1}</div>
         \${nameLine2?\`<span class="ad-name-line2">\${nameLine2}</span>\`:''}
         \${d.tagline?\`<div class="ad-tagline">\${d.tagline}</div>\`:''}
       </div>
       \${menuChips?\`<div class="ad-menu">\${menuChips}</div>\`:''}
-      \${cp?\`<div class="ad-coupon">
-        <div class="ad-coupon-text">\${cp.amount}</div>
-        <div class="ad-coupon-detail">
-          <div class="ad-coupon-item">\${cp.item||'Any Item'}</div>
-          <div class="ad-coupon-fine">\${cp.fine}</div>
-        </div>
-      </div>\`:''}
+      \${cp?\`<div class="ad-coupon"><div class="ad-coupon-text">\${cp.amount}</div><div class="ad-coupon-detail"><div class="ad-coupon-item">\${cp.item||'Any Item'}</div><div class="ad-coupon-fine">\${cp.fine}</div></div></div>\`:''}
       <div class="ad-footer">
         <div><div class="ad-phone">\${d.phone||'—'}</div><div class="ad-address">\${[d.address,d.city].filter(Boolean).join(', ')}</div></div>
         \${qrHTML()}
@@ -967,12 +1046,103 @@ function renderAd(){
   canvas.classList.add('visible');
   empty.classList.add('hidden');
   document.getElementById('useBtn').disabled = false;
+  document.getElementById('aiUpgradeBtn').disabled = false;
+}
+
+async function aiUpgrade(){
+  if(!selectedPhotoUrl){ alert('Please select a hero photo first.'); return; }
+  const d = getFormData();
+  if(!d.bizName || d.bizName === 'Business Name'){ alert('Please enter a business name first.'); return; }
+
+  setAIState('loading');
+
+  const steps = [
+    'Analyzing your business details...',
+    'Studying your hero photo...',
+    'Composing the visual layout...',
+    'Adding dynamic typography...',
+    'Applying textures and depth...',
+    'Finishing touches...',
+  ];
+  let si = 0;
+  const stepEl = document.getElementById('aiLoadStep');
+  const iv = setInterval(()=>{ si=(si+1)%steps.length; if(stepEl) stepEl.textContent=steps[si]; }, 3500);
+
+  try {
+    const res = await fetch('/api/ai-upgrade', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        photoUrl: selectedPhotoUrl,
+        bizName: d.bizName,
+        industry: document.getElementById('industry').value,
+        tagline: d.tagline,
+        menu: d.menu,
+        offer: d.offer,
+        style: d.style,
+        phone: d.phone,
+        city: d.city,
+        address: d.address,
+      })
+    });
+
+    const data = await res.json();
+    if(data.error) throw new Error(data.error);
+    const imgUrl = data.imageUrl;
+
+    clearInterval(iv);
+    if(stepEl) stepEl.textContent = 'Generating your ad image...';
+
+    document.getElementById('aiOverlayPhone').textContent = d.phone || '';
+    document.getElementById('aiOverlayAddr').textContent = [d.address, d.city].filter(Boolean).join(', ');
+
+    const img = document.getElementById('aiResultImg');
+    img.onload = () => setAIState('success');
+    img.onerror = () => { throw new Error('Failed to load generated image.'); };
+    img.src = imgUrl;
+
+    window.lastAiImageUrl = imgUrl;
+
+  } catch(err){
+    clearInterval(iv);
+    document.getElementById('aiErrorMsg').textContent = err.message;
+    setAIState('error');
+  }
+}
+
+function setAIState(state){
+  const loading    = document.getElementById('aiLoading');
+  const error      = document.getElementById('aiError');
+  const result     = document.getElementById('aiResultWrap');
+  const cost       = document.getElementById('aiCostStrip');
+  const divider    = document.getElementById('aiDivider');
+  const upgradeBtn = document.getElementById('aiUpgradeBtn');
+
+  loading.classList.remove('active');
+  error.classList.remove('active');
+  result.classList.remove('visible');
+  cost.classList.remove('visible');
+  upgradeBtn.disabled = false;
+  divider.style.display = 'flex';
+
+  if(state==='loading'){
+    loading.classList.add('active');
+    upgradeBtn.disabled = true;
+    document.querySelector('.ppanel').scrollTo({top:9999,behavior:'smooth'});
+  } else if(state==='success'){
+    result.classList.add('visible');
+    cost.classList.add('visible');
+    document.getElementById('useBtn').disabled = false;
+    setTimeout(()=>document.querySelector('.ppanel').scrollTo({top:9999,behavior:'smooth'}),100);
+  } else if(state==='error'){
+    error.classList.add('active');
+  }
 }
 
 async function useAd(){
-  const d = getFormData();
   const canvas = document.getElementById('adCanvas');
   const adHtml = canvas.innerHTML;
+  const d = getFormData();
   const params = new URLSearchParams(location.search);
   const leadId = params.get('leadId');
 
@@ -984,7 +1154,7 @@ async function useAd(){
     const r = await fetch('/api/ad-generator-v4/save', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ leadId, adHtml, photoUrl: d.photo }),
+      body: JSON.stringify({ leadId, adHtml, photoUrl: window.lastAiImageUrl || d.photo }),
     });
     const data = await r.json();
     if(data.ok){
