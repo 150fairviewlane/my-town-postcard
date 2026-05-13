@@ -230,53 +230,71 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 
 /* ═══════════════════════════════════════════════════════════════
    TEMPLATE 3 — BOLD RETRO BLOCK  (value: bold)
-   Split-screen: solid accent-color left panel + photo right panel
-   Massive Oswald name · Dancing Script tagline · badge-style menu
-   White floating coupon ticket on photo side
+   Full-bleed photo background · skewed diagonal accent banner top
+   Giant Oswald name in banner · Dancing Script tagline
+   Left-side vertical accent stripe with rotated menu items
+   Full-width torn-paper coupon strip across center (jagged clip-path)
+   Dark footer strip
 ═══════════════════════════════════════════════════════════════ */
-.tpl-retro{position:relative;width:100%;height:100%;overflow:hidden;display:flex}
-.tpl-retro .ad-left{position:relative;z-index:5;width:52%;min-height:100%;
-  background:var(--accent-color,#E63946);display:flex;flex-direction:column;
-  padding:18px 16px 10px;overflow:hidden}
-.tpl-retro .ad-left::after{content:'';position:absolute;top:0;bottom:0;right:-22px;width:44px;
-  background:var(--accent-color,#E63946);transform:skewX(-4deg);z-index:1}
-.tpl-retro .ad-right{flex:1;position:relative;overflow:hidden}
-/* label above name */
-.tpl-retro .ad-label{font-family:'DM Sans',sans-serif;font-size:8.5px;font-weight:700;
-  letter-spacing:.28em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-bottom:5px}
-/* giant name */
-.tpl-retro .ad-name{font-family:'Oswald',sans-serif;font-weight:700;text-transform:uppercase;
-  font-size:clamp(34px,7.5vw,62px);letter-spacing:.02em;
+.tpl-retro{position:relative;width:100%;height:100%;overflow:hidden}
+.tpl-retro .ad-bg{position:absolute;inset:0;background-size:cover;background-position:center;z-index:0;filter:brightness(.42) saturate(1.1)}
+.tpl-retro .ad-dark-overlay{position:absolute;inset:0;z-index:1;
+  background:linear-gradient(to bottom,rgba(0,0,0,.05) 0%,rgba(0,0,0,.55) 40%,rgba(0,0,0,.7) 100%)}
+/* full-width diagonal accent banner — top ~40% */
+.tpl-retro .ad-top-banner{position:absolute;top:0;left:0;right:0;z-index:5;
+  background:var(--accent-color,#E63946);
+  padding:16px 18px 46px;
+  clip-path:polygon(0 0,100% 0,100% 78%,0 100%)}
+.tpl-retro .ad-banner-sub{font-family:'DM Sans',sans-serif;font-size:8.5px;font-weight:700;
+  letter-spacing:.28em;text-transform:uppercase;color:rgba(255,255,255,.58);margin-bottom:4px}
+.tpl-retro .ad-banner-name{font-family:'Oswald',sans-serif;font-weight:700;text-transform:uppercase;
+  font-size:clamp(36px,7.5vw,62px);letter-spacing:.02em;
   color:#fff;line-height:.9;text-shadow:3px 4px 0 rgba(0,0,0,.18)}
-/* tagline in Dancing Script */
-.tpl-retro .ad-tagline{font-family:'Dancing Script',cursive;font-size:clamp(17px,3.5vw,26px);
-  color:rgba(255,255,255,.88);margin-top:6px;margin-bottom:12px;line-height:1.2}
-/* separator rule */
-.tpl-retro .ad-rule{height:2px;background:rgba(255,255,255,.35);margin:0 0 12px;flex-shrink:0}
-/* menu as stacked items with white outline */
-.tpl-retro .ad-menu{display:flex;flex-direction:column;gap:5px;flex:1;overflow:hidden}
-.tpl-retro .ad-menu-row{display:flex;align-items:center;gap:6px}
-.tpl-retro .ad-num{font-family:'Bebas Neue',sans-serif;font-size:clamp(18px,3.8vw,28px);
-  color:rgba(255,255,255,.25);line-height:1;min-width:22px;flex-shrink:0}
-.tpl-retro .ad-item-name{font-family:'DM Sans',sans-serif;font-size:clamp(10.5px,2.1vw,13px);
-  font-weight:600;color:#fff;flex:1;letter-spacing:.02em;line-height:1.2}
-.tpl-retro .ad-item-price{font-family:'Oswald',sans-serif;font-weight:700;
-  font-size:clamp(12px,2.5vw,16px);color:rgba(255,255,255,.7)}
-/* footer strip in left panel */
-.tpl-retro .ad-footer{margin-top:auto;padding-top:10px;border-top:1.5px solid rgba(255,255,255,.22)}
+.tpl-retro .ad-banner-tagline{font-family:'Dancing Script',cursive;font-size:clamp(16px,3.3vw,24px);
+  color:rgba(255,255,255,.88);margin-top:5px;line-height:1.2}
+/* left accent-color menu stripe — runs from below banner to footer */
+.tpl-retro .ad-menu-stripe{position:absolute;left:0;top:40%;bottom:50px;
+  width:19%;z-index:7;background:var(--accent-color,#E63946);
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:flex-start;padding:12px 3px 8px;gap:6px;overflow:hidden}
+.tpl-retro .ad-stripe-item{font-family:'Oswald',sans-serif;font-weight:600;
+  writing-mode:vertical-rl;transform:rotate(180deg);
+  font-size:clamp(9px,1.9vw,12px);text-transform:uppercase;letter-spacing:.1em;
+  color:rgba(255,255,255,.92);white-space:nowrap;
+  overflow:hidden;max-height:85px;text-overflow:ellipsis}
+/* full-width torn-paper coupon strip — center-card, jagged clip-path */
+.tpl-retro .ad-torn-coupon{position:absolute;left:-2px;right:-2px;
+  top:55%;height:82px;z-index:8;
+  background:#F5F0E6;
+  clip-path:polygon(
+    0% 16%,2.5% 0%,5% 18%,7.5% 2%,10% 20%,12.5% 4%,15% 22%,17.5% 6%,
+    20% 24%,22.5% 8%,25% 26%,27.5% 10%,30% 28%,32.5% 12%,35% 30%,37.5% 14%,
+    40% 32%,42.5% 16%,45% 34%,47.5% 18%,50% 36%,52.5% 20%,55% 38%,57.5% 22%,
+    60% 36%,62.5% 18%,65% 34%,67.5% 16%,70% 32%,72.5% 14%,75% 30%,77.5% 12%,
+    80% 28%,82.5% 10%,85% 26%,87.5% 8%,90% 24%,92.5% 6%,95% 22%,97.5% 4%,100% 18%,
+    100% 84%,
+    97.5% 100%,95% 78%,92.5% 96%,90% 74%,87.5% 92%,85% 70%,82.5% 88%,80% 66%,
+    77.5% 84%,75% 62%,72.5% 80%,70% 58%,67.5% 76%,65% 54%,62.5% 72%,60% 50%,
+    57.5% 68%,55% 46%,52.5% 64%,50% 42%,47.5% 60%,45% 38%,42.5% 56%,40% 34%,
+    37.5% 52%,35% 30%,32.5% 48%,30% 26%,27.5% 44%,25% 22%,22.5% 40%,20% 18%,
+    17.5% 36%,15% 14%,12.5% 32%,10% 10%,7.5% 28%,5% 6%,2.5% 24%,0% 8%
+  );
+  display:flex;align-items:center;justify-content:center;text-align:center}
+.tpl-retro .ad-torn-inner{padding:4px 20px}
+.tpl-retro .ad-torn-amount{font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(22px,4.6vw,36px);color:#111;line-height:1;letter-spacing:.04em}
+.tpl-retro .ad-torn-item{font-family:'Oswald',sans-serif;font-size:clamp(10px,2vw,13px);
+  letter-spacing:.08em;text-transform:uppercase;color:var(--accent-color,#E63946);margin-top:1px}
+.tpl-retro .ad-torn-fine{font-size:7.5px;color:#777;margin-top:2px;font-family:'DM Sans',sans-serif}
+/* footer */
+.tpl-retro .ad-footer{position:absolute;bottom:0;left:0;right:0;z-index:10;
+  background:rgba(0,0,0,.88);padding:9px 14px;
+  display:flex;align-items:center;justify-content:space-between}
 .tpl-retro .ad-phone{font-family:'Bebas Neue',sans-serif;font-size:clamp(18px,3.8vw,28px);
   letter-spacing:.06em;color:#fff;line-height:1}
-.tpl-retro .ad-address{font-size:clamp(7.5px,1.5vw,10px);color:rgba(255,255,255,.45);margin-top:1px}
-/* floating white coupon ticket on the photo side */
-.tpl-retro .ad-coupon-wrap{position:absolute;bottom:68px;right:14px;z-index:20;
-  background:#fff;border-radius:5px;padding:4px;
-  box-shadow:2px 4px 14px rgba(0,0,0,.35)}
-.tpl-retro .ad-coupon{border:2.5px dashed var(--accent-color,#E63946);border-radius:3px;padding:10px 12px;text-align:center;min-width:110px}
-.tpl-retro .ad-coupon-dollar{font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,5.8vw,46px);color:#111;line-height:.95;letter-spacing:.04em}
-.tpl-retro .ad-coupon-item{font-family:'Oswald',sans-serif;font-size:clamp(11px,2.2vw,14px);letter-spacing:.06em;text-transform:uppercase;color:var(--accent-color,#E63946);margin-top:1px}
-.tpl-retro .ad-coupon-fine{font-size:8px;color:#888;margin-top:3px}
-.tpl-retro .ad-right-footer{position:absolute;bottom:0;left:0;right:0;z-index:10;
-  background:rgba(0,0,0,.75);padding:9px 12px;display:flex;align-items:center;justify-content:flex-end}
+.tpl-retro .ad-address{font-size:clamp(7.5px,1.5vw,10px);color:rgba(255,255,255,.38);margin-top:1px}
+.tpl-retro .ad-qr-box{width:40px;height:40px;background:#fff;border-radius:2px;padding:3px}
+.tpl-retro .ad-qr-label{font-size:8px;color:rgba(255,255,255,.3);letter-spacing:.1em;text-transform:uppercase;margin-top:2px;text-align:center}
 
 /* ═══════════════════════════════════════════════════════════════
    TEMPLATE 4 — LUXURY GOLD  (value: luxury)
@@ -787,33 +805,29 @@ function renderAd(){
      TEMPLATE 3: BOLD RETRO BLOCK
   ───────────────────────────────────────────────────────────── */
   } else if(tpl === 'bold'){
-    const menuRows = d.menu.slice(0,4).map((item, i) => {
+    const stripeItems = d.menu.slice(0,5).map(item => {
       const p = parseItem(item);
-      return \`<div class="ad-menu-row"><span class="ad-num">\${String(i+1).padStart(2,'0')}</span><span class="ad-item-name">\${p.name}</span><span class="ad-item-price">\${p.price}</span></div>\`;
+      return \`<span class="ad-stripe-item">\${p.name}\${p.price ? ' · '+p.price : ''}</span>\`;
     }).join('');
 
-    const photoStyle = d.photo ? \`background-image:url('\${d.photo}');background-size:cover;background-position:center;filter:brightness(.72) saturate(1.1)\` : 'background:#555';
-
     html = \`<div class="tpl-retro" style="--accent-color:\${ac}">
-      <div class="ad-left">
-        <div class="ad-label">★ Serving You Locally ★</div>
-        <div class="ad-name">\${d.bizName}</div>
-        \${d.tagline ? \`<div class="ad-tagline">\${d.tagline}</div>\` : '<div style="margin-bottom:12px"></div>'}
-        <div class="ad-rule"></div>
-        \${menuRows ? \`<div class="ad-menu">\${menuRows}</div>\` : ''}
-        <div class="ad-footer">
+      <div class="ad-bg" style="\${bg}"></div>
+      <div class="ad-dark-overlay"></div>
+      <div class="ad-top-banner">
+        <div class="ad-banner-sub">★ Serving You Locally ★</div>
+        <div class="ad-banner-name">\${d.bizName}</div>
+        \${d.tagline ? \`<div class="ad-banner-tagline">\${d.tagline}</div>\` : ''}
+      </div>
+      \${stripeItems ? \`<div class="ad-menu-stripe">\${stripeItems}</div>\` : ''}
+      \${cp ? \`<div class="ad-torn-coupon"><div class="ad-torn-inner"><div class="ad-torn-amount">\${cp.amt}</div>\${cp.item ? \`<div class="ad-torn-item">\${cp.item}</div>\` : ''}<div class="ad-torn-fine">\${cp.fine}</div></div></div>\` : ''}
+      <div class="ad-footer">
+        <div>
           <div class="ad-phone">\${d.phone || '—'}</div>
           <div class="ad-address">\${[d.address, d.city].filter(Boolean).join(', ')}</div>
         </div>
-      </div>
-      <div class="ad-right">
-        <div style="position:absolute;inset:0;\${photoStyle}"></div>
-        \${cp ? \`<div class="ad-coupon-wrap"><div class="ad-coupon"><div class="ad-coupon-dollar">\${cp.amt}</div><div class="ad-coupon-item">\${cp.item || 'Any Item'}</div><div class="ad-coupon-fine">\${cp.fine}</div></div></div>\` : ''}
-        <div class="ad-right-footer">
-          <div style="display:flex;flex-direction:column;align-items:center">
-            <div style="width:38px;height:38px;background:#fff;border-radius:2px;padding:3px">\${QR_SVG}</div>
-            <div style="font-family:'DM Sans',sans-serif;font-size:8px;color:rgba(255,255,255,.45);letter-spacing:.1em;margin-top:2px;text-transform:uppercase">Scan</div>
-          </div>
+        <div style="display:flex;flex-direction:column;align-items:center">
+          <div class="ad-qr-box">\${QR_SVG}</div>
+          <div class="ad-qr-label">Scan</div>
         </div>
       </div>
     </div>\`;
