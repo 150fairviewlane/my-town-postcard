@@ -2,6 +2,8 @@ import { Router, type IRouter } from "express";
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import jwt from "jsonwebtoken";
+import { db, generatedAdsTable } from "@workspace/db";
+import { desc } from "drizzle-orm";
 
 const router: IRouter = Router();
 const JWT_SECRET = process.env.SESSION_SECRET || "localspot-secret";
@@ -111,11 +113,38 @@ async function runDirect(openai: OpenAI, userPrompt: string): Promise<string> {
 }
 
 const MODEL_META: Record<string, { label: string; desc: string }> = {
-  "gpt4o-enhanced":   { label: "GPT-4o → gpt-image-1",    desc: "GPT-4o vision analysis → enhanced prompt → gpt-image-1 generation" },
-  "claude-enhanced":  { label: "Claude → gpt-image-1",     desc: "Claude vision analysis → enhanced prompt → gpt-image-1 generation" },
-  "direct":           { label: "gpt-image-1 Direct",        desc: "User prompt sent directly to gpt-image-1 (no image analysis)" },
+  "gpt4o-enhanced":  { label: "GPT-4o → gpt-image-1",  desc: "GPT-4o vision analysis → enhanced prompt → gpt-image-1 generation" },
+  "claude-enhanced": { label: "Claude → gpt-image-1",   desc: "Claude vision analysis → enhanced prompt → gpt-image-1 generation" },
+  "direct":          { label: "gpt-image-1 Direct",      desc: "User prompt sent directly to gpt-image-1 (no image analysis)" },
 };
 
+// GET /api/admin/generated-ads — list all saved results, newest first
+router.get("/admin/generated-ads", requireAdmin, async (_req, res): Promise<void> => {
+  try {
+    const rows = await db
+      .select()
+      .from(generatedAdsTable)
+      .orderBy(desc(generatedAdsTable.createdAt));
+    res.json({ ads: rows });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "DB error" });
+  }
+});
+
+// DELETE /api/admin/generated-ads/:id — remove a single saved ad
+router.delete("/admin/generated-ads/:id", requireAdmin, async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
+  try {
+    const { eq } = await import("drizzle-orm");
+    await db.delete(generatedAdsTable).where(eq(generatedAdsTable.id, id));
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "DB error" });
+  }
+});
+
+// POST /api/admin/ai-model-test — run models in parallel, save successes to DB
 router.post("/admin/ai-model-test", requireAdmin, async (req, res): Promise<void> => {
   const { imageData, prompt, models } = req.body ?? {};
 
@@ -136,7 +165,11 @@ router.post("/admin/ai-model-test", requireAdmin, async (req, res): Promise<void
     res.status(500).json({ error: "OpenAI integration not configured (AI_INTEGRATIONS_OPENAI_BASE_URL missing)" }); return;
   }
 
-  type ModelResult = { model: string; label: string; desc: string; imageUrl: string | null; timeTaken: number; error: string | null };
+  type ModelResult = {
+    id: number | null;
+    model: string; label: string; desc: string;
+    imageUrl: string | null; timeTaken: number; error: string | null;
+  };
 
   const tasks = (models as string[]).map(async (modelId): Promise<ModelResult> => {
     const meta = MODEL_META[modelId] ?? { label: modelId, desc: "" };
@@ -153,14 +186,26 @@ router.post("/admin/ai-model-test", requireAdmin, async (req, res): Promise<void
       } else {
         throw new Error(`Unknown model: ${modelId}`);
       }
-      return { model: modelId, label: meta.label, desc: meta.desc, imageUrl, timeTaken: Date.now() - start, error: null };
+
+      // Persist to DB
+      const [saved] = await db.insert(generatedAdsTable).values({
+        model: modelId,
+        label: meta.label,
+        prompt,
+        imageData: imageUrl,
+      }).returning({ id: generatedAdsTable.id });
+
+      return { id: saved?.id ?? null, model: modelId, label: meta.label, desc: meta.desc, imageUrl, timeTaken: Date.now() - start, error: null };
     } catch (err) {
-      return { model: modelId, label: meta.label, desc: meta.desc, imageUrl: null, timeTaken: Date.now() - start, error: err instanceof Error ? err.message : String(err) };
+      return { id: null, model: modelId, label: meta.label, desc: meta.desc, imageUrl: null, timeTaken: Date.now() - start, error: err instanceof Error ? err.message : String(err) };
     }
   });
 
   const settled = await Promise.allSettled(tasks);
-  const results = settled.map(r => r.status === "fulfilled" ? r.value : { model: "unknown", label: "Unknown", desc: "", imageUrl: null, timeTaken: 0, error: "Unexpected failure" });
+  const results = settled.map(r =>
+    r.status === "fulfilled" ? r.value :
+    { id: null, model: "unknown", label: "Unknown", desc: "", imageUrl: null, timeTaken: 0, error: "Unexpected failure" }
+  );
 
   res.json({ results });
 });
