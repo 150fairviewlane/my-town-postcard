@@ -121,55 +121,54 @@ body{font-family:'Montserrat',sans-serif;background:var(--surface);color:var(--i
 .tbtn.primary:hover:not(:disabled){background:#144d30}
 .tbtn:disabled{opacity:.4;cursor:not-allowed}
 
-/* AD CANVAS  4:5 ratio */
+/* AD CANVAS - Parchment print style, 4:5 ratio */
 .ad-outer{width:100%;max-width:500px}
-.ad-canvas{width:100%;aspect-ratio:4/5;position:relative;overflow:hidden;border-radius:24px;background:#2A160B;box-shadow:0 16px 60px rgba(0,0,0,.28);display:none;font-family:'Montserrat',sans-serif}
+.ad-canvas{width:100%;aspect-ratio:4/5;position:relative;overflow:hidden;border-radius:16px;background:#F4EAD5;box-shadow:0 16px 60px rgba(0,0,0,.28);display:none;font-family:'Montserrat',sans-serif}
 .ad-canvas.visible{display:block}
-.ad-hero{position:absolute;inset:0;background-size:cover;background-position:center;filter:brightness(.78);z-index:1}
-.ad-gradient{position:absolute;inset:0;z-index:2;background:linear-gradient(to top,rgba(0,0,0,.78) 0%,rgba(0,0,0,.35) 45%,rgba(0,0,0,.08) 100%)}
-.ad-wash{position:absolute;inset:0;z-index:3;background:linear-gradient(135deg,rgba(42,22,11,.72) 0%,rgba(0,0,0,0) 55%)}
-.ad-content{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;justify-content:space-between;padding:5% 6%;color:#FFF8F0}
-
-/* Header section */
-.ad-header{display:flex;align-items:flex-start;gap:4%}
-.ad-logo-wrap{width:14%;aspect-ratio:1;border-radius:14%;overflow:hidden;flex-shrink:0;border:2px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:1.8vw}
-.ad-logo-wrap img{width:100%;height:100%;object-fit:cover}
-.ad-title-block{flex:1}
-.ad-biz-name{font-family:'Bebas Neue',sans-serif;font-size:clamp(22px,5.5vw,56px);line-height:.9;letter-spacing:.03em;color:#fff;text-shadow:2px 2px 12px rgba(0,0,0,.5)}
-.ad-tagline-script{font-family:'Pacifico',cursive;font-size:clamp(11px,2.4vw,24px);color:#D39A42;display:block;margin-top:2%;line-height:1}
-.ad-tagline-script::before,.ad-tagline-script::after{content:' \u2014 ';color:#C8882E;font-family:'Montserrat',sans-serif;font-style:normal;font-size:.85em}
-
-/* Middle spacer */
-.ad-middle{flex:1}
-
-/* Bottom section */
-.ad-menu{background:rgba(0,0,0,.38);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:clamp(8px,2vw,20px);padding:3% 4%;margin-bottom:3%}
-.ad-menu-item{display:flex;align-items:center;justify-content:space-between;padding:1.2% 0;border-bottom:1px solid rgba(255,255,255,.08);gap:8px}
+/* Parchment background */
+.ad-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 18% 12%,#FBF5E6 0%,#F0E2C4 55%,#E8D5B0 100%);z-index:0}
+/* Floating hero food photo — product shot, not background */
+.ad-photo{position:absolute;right:-2%;top:11%;width:60%;aspect-ratio:.82;background-size:cover;background-position:center top;z-index:6;border-radius:8px 8px 0 0;box-shadow:-4px 10px 40px rgba(0,0,0,.45)}
+/* Dark brush stroke band behind the photo */
+.ad-brush{position:absolute;left:-10%;right:-10%;top:47%;height:22%;background:#1C0E05;z-index:4;clip-path:polygon(0 18%,100% 0%,100% 82%,0% 100%)}
+/* Content overlay */
+.ad-content{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column}
+/* TOP: ribbon + giant title */
+.ad-top{display:flex;align-items:flex-start;padding:3.5% 4% 0;gap:2.5%;flex-shrink:0}
+.ad-ribbon{flex-shrink:0;width:19%}
+.ad-ribbon-tag{width:100%;padding:14% 8% 22%;clip-path:polygon(0 0,100% 0,100% 88%,50% 100%,0 88%);display:flex;flex-direction:column;align-items:center;gap:6%}
+.ad-logo-img{width:82%;aspect-ratio:1;border-radius:50%;border:2.5px solid rgba(255,255,255,.95);background:rgba(255,255,255,.98);display:flex;align-items:center;justify-content:center;font-size:clamp(10px,2.2vw,20px);overflow:hidden}
+.ad-logo-img img{width:100%;height:100%;object-fit:cover}
+.ad-title-block{flex:1;padding-top:.5%}
+.ad-biz-name{font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,7.8vw,80px);line-height:.85;letter-spacing:.03em;color:#1a1008}
+.ad-subtitle{font-family:'Pacifico',cursive;font-size:clamp(18px,5vw,52px);line-height:1;margin-top:1%}
+/* Tagline slogan — large script, left side */
+.ad-tagline-wrap{padding:2% 0 0 4%;flex-shrink:0;width:48%}
+.ad-tagline{font-family:'Dancing Script',cursive;font-size:clamp(13px,3.4vw,34px);color:#1a1008;font-weight:700;line-height:1.3}
+.ad-spacer{flex:1;min-height:0}
+/* Lower body: menu left, coupon right */
+.ad-lower{padding:0 3.5%;display:grid;grid-template-columns:1fr 1fr;gap:2.5%;align-items:end;flex-shrink:0}
+.ad-menu{background:rgba(255,255,255,.65);border-radius:clamp(5px,1.2vw,10px);padding:2.5% 3%}
+.ad-menu-item{display:flex;align-items:center;justify-content:space-between;padding:.85% 0;border-bottom:1px dotted rgba(0,0,0,.18);gap:4px}
 .ad-menu-item:last-child{border-bottom:none;padding-bottom:0}
 .ad-menu-item:first-child{padding-top:0}
-.ad-menu-left{display:flex;align-items:center;gap:3%}
-.ad-check-badge{width:clamp(14px,2.5vw,22px);height:clamp(14px,2.5vw,22px);border-radius:50%;border:2px solid #D39A42;display:flex;align-items:center;justify-content:center;font-size:clamp(7px,1.3vw,11px);color:#D39A42;flex-shrink:0;font-weight:700}
-.ad-item-name{font-family:'Montserrat',sans-serif;font-size:clamp(9px,1.8vw,16px);font-weight:600;color:#FFF8F0;letter-spacing:.02em}
-.ad-item-dots{flex:1;border-bottom:1px dotted rgba(255,255,255,.2);margin:0 2%;position:relative;top:-1px;min-width:10px}
-.ad-item-price{font-family:'Montserrat',sans-serif;font-size:clamp(9px,1.8vw,16px);font-weight:700;color:#D39A42;white-space:nowrap}
-
-/* Coupon box */
-.ad-coupon{border:2px dashed rgba(255,255,255,.4);border-radius:clamp(6px,1.5vw,14px);padding:2.5% 4%;margin-bottom:3%;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:space-between;gap:4%}
-.ad-coupon-amount{font-family:'Bebas Neue',sans-serif;font-size:clamp(20px,4.5vw,44px);color:#fff;line-height:1;letter-spacing:.02em}
-.ad-coupon-item-name{font-family:'Pacifico',cursive;font-size:clamp(12px,2.5vw,24px);color:#D39A42;line-height:1;display:block;margin-top:1%}
-.ad-coupon-fine{font-size:clamp(7px,1.3vw,11px);color:rgba(255,255,255,.5);margin-top:2%;font-family:'Montserrat',sans-serif}
-.ad-coupon-right{text-align:center;flex-shrink:0}
-.ad-coupon-badge{background:rgba(211,154,66,.15);border:1px solid rgba(211,154,66,.4);border-radius:clamp(4px,1vw,8px);padding:3% 6%;font-family:'Montserrat',sans-serif;font-size:clamp(7px,1.3vw,11px);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(211,154,66,.85);line-height:1.3}
-
-/* Footer */
-.ad-footer{display:flex;align-items:center;justify-content:space-between;gap:4%;border-top:1px solid rgba(255,255,255,.12);padding-top:2.5%}
-.ad-footer-left{display:flex;align-items:center;gap:3%}
-.ad-phone-icon{width:clamp(18px,3.2vw,30px);height:clamp(18px,3.2vw,30px);border-radius:50%;border:1.5px solid #D39A42;display:flex;align-items:center;justify-content:center;font-size:clamp(8px,1.5vw,13px);flex-shrink:0;color:#D39A42}
-.ad-phone-num{font-family:'Bebas Neue',sans-serif;font-size:clamp(16px,3.5vw,34px);letter-spacing:.06em;color:#fff;line-height:1;text-shadow:0 2px 8px rgba(0,0,0,.5)}
-.ad-address-txt{font-size:clamp(7px,1.3vw,11px);color:rgba(255,255,255,.5);margin-top:1%;font-family:'Montserrat',sans-serif;font-weight:400}
+.ad-menu-left{display:flex;align-items:center;gap:5%}
+.ad-check-circle{width:clamp(12px,2.4vw,20px);height:clamp(12px,2.4vw,20px);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:clamp(6px,1.2vw,10px);color:#fff;flex-shrink:0;font-weight:900}
+.ad-item-name{font-size:clamp(6.5px,1.4vw,12px);font-weight:700;color:#1a1008;letter-spacing:.06em;text-transform:uppercase}
+.ad-item-price{font-size:clamp(7.5px,1.6vw,14px);font-weight:800;white-space:nowrap}
+.ad-coupon{border-radius:clamp(5px,1.2vw,10px);padding:4% 4.5%;border:2px dashed rgba(255,255,255,.25);text-align:center;background:#1a1008}
+.ad-coupon-amount{font-family:'Bebas Neue',sans-serif;font-size:clamp(20px,5.2vw,54px);color:#fff;line-height:.88;letter-spacing:.02em}
+.ad-coupon-item{font-family:'Bebas Neue',sans-serif;font-size:clamp(11px,2.8vw,28px);line-height:1.05;letter-spacing:.04em}
+.ad-coupon-fine{font-size:clamp(5.5px,1vw,8.5px);color:rgba(255,255,255,.45);margin-top:5%;font-family:'Montserrat',sans-serif;letter-spacing:.05em}
+/* Footer dark bar */
+.ad-footer{background:#1a1008;display:flex;align-items:center;justify-content:space-between;padding:2.5% 4%;margin-top:2%;flex-shrink:0}
+.ad-footer-left{display:flex;align-items:center;gap:2.5%}
+.ad-phone-icon{width:clamp(16px,3.2vw,28px);height:clamp(16px,3.2vw,28px);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:clamp(8px,1.6vw,14px);flex-shrink:0;color:#fff}
+.ad-phone-num{font-family:'Bebas Neue',sans-serif;font-size:clamp(14px,3.8vw,38px);letter-spacing:.06em;color:#fff;line-height:1}
+.ad-address-txt{font-size:clamp(5.5px,1.1vw,9px);color:rgba(255,255,255,.45);margin-top:1%;font-family:'Montserrat',sans-serif}
 .ad-qr-wrap{display:flex;flex-direction:column;align-items:center;gap:2%;flex-shrink:0}
-.ad-qr-box{width:clamp(32px,6vw,56px);height:clamp(32px,6vw,56px);background:#fff;border-radius:clamp(4px,1vw,8px);padding:3px}
-.ad-qr-scan{font-size:clamp(6px,1.1vw,9px);color:rgba(255,255,255,.4);letter-spacing:.1em;text-transform:uppercase;font-family:'Montserrat',sans-serif;font-weight:600}
+.ad-qr-box{width:clamp(24px,4.8vw,42px);height:clamp(24px,4.8vw,42px);background:#fff;border-radius:clamp(2px,.6vw,5px);padding:2px}
+.ad-qr-scan{font-size:clamp(5px,.9vw,7.5px);color:rgba(255,255,255,.4);letter-spacing:.1em;text-transform:uppercase;font-family:'Montserrat',sans-serif;font-weight:600;font-family:'Pacifico',cursive}
 
 /* Empty state */
 .ad-empty{width:100%;aspect-ratio:4/5;max-width:500px;background:#1a1a1a;border-radius:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:36px;box-shadow:0 16px 60px rgba(0,0,0,.28)}
@@ -307,9 +306,9 @@ body{font-family:'Montserrat',sans-serif;background:var(--surface);color:var(--i
       </div>
 
       <div class="ad-canvas" id="adCanvas">
-        <div class="ad-hero" id="adHero"></div>
-        <div class="ad-gradient"></div>
-        <div class="ad-wash"></div>
+        <div class="ad-bg"></div>
+        <div class="ad-photo" id="adHero"></div>
+        <div class="ad-brush"></div>
         <div class="ad-content" id="adContent"></div>
       </div>
     </div>
@@ -447,6 +446,12 @@ function parseCoupon(offer){
   return m ? {amount:m[1], item:m[2], fine} : {amount:main, item:'', fine};
 }
 
+function splitBizName(name){
+  const words = name.trim().split(/\\s+/);
+  if(words.length <= 1) return {main: name, script: ''};
+  return {main: words.slice(0,-1).join(' '), script: words[words.length-1]};
+}
+
 function renderAd(){
   const d = getFormData();
   const canvas  = document.getElementById('adCanvas');
@@ -463,6 +468,8 @@ function renderAd(){
   const aiBtn = document.getElementById('aiBtn');
   if(aiBtn && d.photo) aiBtn.disabled = false;
 
+  const {main: bizMain, script: bizScript} = splitBizName(d.bizName);
+
   const menuHTML = d.menu.slice(0,4).map(item => {
     const m = item.match(/^(.+?)\\s{0,2}(\\.{2,}|\\u2014|--)\\s{0,2}(\\$[\\d.]+.*)$/);
     const nm = item.match(/^(.+?)\\s+(\\$[\\d.].*)$/);
@@ -470,54 +477,55 @@ function renderAd(){
     const price = m ? m[3].trim() : (nm ? nm[2].trim() : '');
     return '<div class="ad-menu-item">' +
       '<div class="ad-menu-left">' +
-        '<div class="ad-check-badge" style="border-color:' + ac + ';color:' + ac + '">&#10003;</div>' +
+        '<div class="ad-check-circle" style="background:' + ac + '">&#10003;</div>' +
         '<div class="ad-item-name">' + name + '</div>' +
       '</div>' +
-      (price ? '<div class="ad-item-dots"></div><div class="ad-item-price" style="color:' + ac + '">' + price + '</div>' : '') +
+      (price ? '<div class="ad-item-price" style="color:' + ac + '">' + price + '</div>' : '') +
     '</div>';
   }).join('');
 
   const cp = parseCoupon(d.offer);
   const couponHTML = cp ? (
     '<div class="ad-coupon">' +
-      '<div class="ad-coupon-main">' +
-        '<div class="ad-coupon-amount">' + cp.amount + '</div>' +
-        '<span class="ad-coupon-item-name" style="color:' + ac + '">' + (cp.item || 'Any Item') + '</span>' +
-        '<div class="ad-coupon-fine">' + cp.fine + '</div>' +
-      '</div>' +
-      '<div class="ad-coupon-right"><div class="ad-coupon-badge">WITH<br>POSTCARD</div></div>' +
+      '<div class="ad-coupon-amount">' + cp.amount + '</div>' +
+      '<div class="ad-coupon-item" style="color:' + ac + '">' + (cp.item || 'Any Item') + '</div>' +
+      '<div class="ad-coupon-fine">' + cp.fine + '</div>' +
     '</div>'
-  ) : '';
+  ) : '<div></div>';
 
   const addr = [d.address, d.city].filter(Boolean).join(', ');
 
   content.innerHTML =
-    '<div class="ad-header">' +
-      '<div class="ad-logo-wrap">&#10022;</div>' +
+    '<div class="ad-top">' +
+      '<div class="ad-ribbon">' +
+        '<div class="ad-ribbon-tag" style="background:' + ac + '">' +
+          '<div class="ad-logo-img">&#10022;</div>' +
+        '</div>' +
+      '</div>' +
       '<div class="ad-title-block">' +
-        '<div class="ad-biz-name">' + d.bizName + '</div>' +
-        (d.tagline ? '<span class="ad-tagline-script">' + d.tagline + '</span>' : '') +
+        '<div class="ad-biz-name">' + bizMain + '</div>' +
+        (bizScript ? '<div class="ad-subtitle" style="color:' + ac + '">' + bizScript + '</div>' : '') +
       '</div>' +
     '</div>' +
-    '<div class="ad-middle"></div>' +
-    '<div class="ad-bottom">' +
-      (d.menu.length ? '<div class="ad-menu">' + menuHTML + '</div>' : '') +
+    (d.tagline ? '<div class="ad-tagline-wrap"><div class="ad-tagline">' + d.tagline + '</div></div>' : '') +
+    '<div class="ad-spacer"></div>' +
+    '<div class="ad-lower">' +
+      (d.menu.length ? '<div class="ad-menu">' + menuHTML + '</div>' : '<div></div>') +
       couponHTML +
-      '<div class="ad-footer">' +
-        '<div class="ad-footer-left">' +
-          '<div class="ad-phone-icon">&#9742;</div>' +
-          '<div>' +
-            '<div class="ad-phone-num">' + (d.phone || '&mdash;') + '</div>' +
-            '<div class="ad-address-txt">' + addr + '</div>' +
-          '</div>' +
-        '</div>' +
-        '<div class="ad-qr-wrap">' +
-          '<div class="ad-qr-box">' + QR_SVG + '</div>' +
-          '<div class="ad-qr-scan">Scan</div>' +
+    '</div>' +
+    '<div class="ad-footer">' +
+      '<div class="ad-footer-left">' +
+        '<div class="ad-phone-icon" style="background:' + ac + '">&#9742;</div>' +
+        '<div>' +
+          '<div class="ad-phone-num">' + (d.phone || '&mdash;') + '</div>' +
+          '<div class="ad-address-txt">' + addr + '</div>' +
         '</div>' +
       '</div>' +
+      '<div class="ad-qr-wrap">' +
+        '<div class="ad-qr-box">' + QR_SVG + '</div>' +
+        '<div class="ad-qr-scan">Scan</div>' +
+      '</div>' +
     '</div>';
-
 }
 
 async function aiEnhance(){
