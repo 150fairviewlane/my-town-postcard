@@ -13,6 +13,7 @@ import adGeneratorV4Router from "./adGeneratorV4";
 import aiUpgradeRouter from "./aiUpgrade";
 import aiEnhanceRouter from "./aiEnhance";
 import adGeneratorV5Router from "./adGeneratorV5";
+import adGeneratorV6Router from "./adGeneratorV6";
 import imageLibraryRouter from "./imageLibrary";
 import dealersRouter from "./dealers";
 
@@ -32,6 +33,7 @@ router.use(adGeneratorV4Router);
 router.use(aiUpgradeRouter);
 router.use(aiEnhanceRouter);
 router.use(adGeneratorV5Router);
+router.use(adGeneratorV6Router);
 router.use(imageLibraryRouter);
 router.use(dealersRouter);
 

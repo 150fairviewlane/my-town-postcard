@@ -1,0 +1,125 @@
+Add a new ad generator page (v6) to the project. Follow these instructions carefully and do not modify any existing files.
+
+════════════════════════════════════════════════
+CHANGE 1 — ADD NEW FILE
+════════════════════════════════════════════════
+
+Add the attached file ad-generator-v6.html to the project.
+
+Create a new route at /ad-generator-v6 that serves this file.
+
+Add a link to this page from wherever the other ad generators are linked, labeled “Ad Generator v6 (Mr. Biscuit’s Style)”.
+
+Do not remove or modify any existing ad generator versions.
+
+════════════════════════════════════════════════
+CHANGE 2 — CONNECT IMAGE LIBRARY
+════════════════════════════════════════════════
+
+In the loadPhotos() function in ad-generator-v6.html, find this comment:
+
+In Replit: fetch from /api/image-library?industry=…
+
+Replace that comment with a real fetch call to the existing image library endpoint:
+
+try {
+const res = await fetch(’/api/image-library?industry=’ + encodeURIComponent(industry));
+const data = await res.json();
+if (data.images && data.images.length > 0) {
+photos = data.images.map(img => img.image_url);
+}
+} catch(e) {
+console.log(‘Using fallback photos’);
+}
+
+Keep the fallback photos array as a backup if the fetch fails or returns no results.
+
+════════════════════════════════════════════════
+CHANGE 3 — CONNECT LOGO UPLOAD
+════════════════════════════════════════════════
+
+The ad canvas has a logo placeholder in the header (the ad-logo-wrap div showing a star symbol).
+
+If the advertiser has a logo stored in the database for their account, load it into this element as an img tag instead of the star placeholder.
+
+If no logo exists, keep the star placeholder as-is.
+
+This should use whatever existing logo storage mechanism is already in the project. If no logo system exists yet, skip this change and leave the placeholder.
+
+════════════════════════════════════════════════
+CHANGE 4 — WIRE THE USE THIS AD BUTTON
+════════════════════════════════════════════════
+
+Find the useAd() function in ad-generator-v6.html.
+
+Replace the alert with a POST request to the existing endpoint that saves ad data for an advertiser. Send these fields:
+
+adVersion: “v6”
+templateStyle: “mr-biscuits-rustic”
+photoUrl: the currently selected photo URL (selectedPhotoUrl variable)
+bizName: from the form
+tagline: from the form
+phone: from the form
+address: from the form
+city: from the form
+menu: array of menu items from the form
+offer: from the form
+accentColor: the selected color hex value
+
+Use whatever existing save endpoint the other ad generators use. If unsure, check how useAd() or a similar save function works in ad-generator-v4.html or ad-generator-v5.html and match that pattern.
+
+════════════════════════════════════════════════
+CHANGE 5 — ADD INDUSTRY LIST
+════════════════════════════════════════════════
+
+The industry dropdown in v6 currently only has a subset of industries hardcoded in the JavaScript INDUSTRIES object.
+
+For any industry selected that is not in the hardcoded INDUSTRIES object, the loadPhotos() function should still attempt to fetch photos from /api/image-library?industry=… and use whatever is returned.
+
+For the tagline and menu defaults, fall back to the Other Service entry in the INDUSTRIES object if the selected industry has no hardcoded data.
+
+This means all 32 industries in the dropdown will work — they will just use the image library photos and generic defaults if not hardcoded.
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+Do not modify any of the following:
+
+The postcard composer or layout builder
+Payment pages or Stripe integration
+Dealer portal
+Image library admin tool
+Ad generator v1, v2, v3, v4, or v5
+Any existing API routes
+Any database tables other than reading from image_library
+Any authentication or session logic
+
+════════════════════════════════════════════════
+TEST AFTER BUILDING
+════════════════════════════════════════════════
+
+Test with these values:
+
+Industry: Breakfast & Cafe
+Business Name: Mr. Biscuit’s Cafe
+Tagline: From-Scratch Biscuits & Boba!
+Phone: (706) 754-0105
+Address: 596 W Louise St
+City: Clarkesville, GA
+Menu items: Plain Biscuit $2.99 / Bacon Biscuit $4.99 / Chicken Tender $5.99 / NY Bagels $5.49
+Offer: $1 OFF Any Biscuit · 1 per visit
+Accent color: Warm Gold (first chip)
+Select any breakfast food photo
+
+Expected result:
+
+1. Ad renders instantly with no API calls
+1. Business name appears in large Bebas Neue font at the top
+1. Tagline appears in Pacifico cursive script with dashes either side
+1. Hero photo fills the background with warm brown gradient overlays
+1. Menu items appear with circular gold checkmarks and dotted lines to prices
+1. Dashed border coupon box shows the offer with WITH POSTCARD badge
+1. Footer shows phone number with circle icon, address below, and QR code
+1. All text is fully visible — nothing cut off or overlapping
+1. Use This Ad button saves the ad data correctly
