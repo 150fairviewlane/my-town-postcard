@@ -2,10 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 
 const DEFAULT_PROMPT =
-  "Transform this advertisement into a polished, professional print-ready design. " +
-  "Create a compelling direct-mail postcard ad with strong visual hierarchy, " +
-  "excellent composition, professional photography aesthetic, vivid colors, and a " +
-  "layout that immediately grabs attention and communicates the offer clearly.";
+  "Transform this advertisement into a polished, professional print-ready design. Create a compelling direct-mail postcard ad with strong visual hierarchy, excellent composition, professional photography aesthetic, vivid colors, and a layout that immediately grabs attention and communicates the offer clearly. The image, style, design, layout, fonts,, etc. can be changed, but all data must remain on the new ad. Fonts for the company name and tagline should be oversized. Phone number and address should be easily visible.";
 
 const ACTIVE_MODELS = [
   {
