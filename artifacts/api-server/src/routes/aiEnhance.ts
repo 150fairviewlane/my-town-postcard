@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import OpenAI from "openai";
 
 const router: IRouter = Router();
 
@@ -13,10 +14,17 @@ const STYLE_ATMOSPHERE: Record<string, string> = {
 
 const DALLE_APPEND = "Photorealistic commercial photography style. Shot on professional camera with natural lighting. No AI-rendered or illustrated look. No painterly, artistic, or cartoon elements. Hyper-realistic food photography or product photography aesthetic — the kind used in premium restaurant menus or national advertising campaigns. Shallow depth of field with beautiful bokeh where appropriate. Rich, true-to-life colors with professional color grading. Abstract atmospheric background only. Absolutely no text, letters, numbers, words, signs, menus, or readable content of any kind anywhere in the image.";
 
+function getOpenAIClient(): OpenAI | null {
+  const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+  const apiKey  = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+  if (!baseURL || !apiKey) return null;
+  return new OpenAI({ apiKey, baseURL });
+}
+
 router.post("/ai-enhance", async (req, res): Promise<void> => {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    res.status(500).json({ error: "OPENAI_API_KEY is not configured on the server." });
+  const openai = getOpenAIClient();
+  if (!openai) {
+    res.status(500).json({ error: "OpenAI integration not configured on server." });
     return;
   }
 
@@ -29,9 +37,9 @@ router.post("/ai-enhance", async (req, res): Promise<void> => {
 
   const atmosphere = STYLE_ATMOSPHERE[style as string] ?? "professional print advertisement atmosphere";
 
-  const imageContent = (photoUrl as string).startsWith("data:")
-    ? { type: "image_url", image_url: { url: photoUrl } }
-    : { type: "image_url", image_url: { url: photoUrl, detail: "high" } };
+  const imageContent: OpenAI.Chat.ChatCompletionContentPart = (photoUrl as string).startsWith("data:")
+    ? { type: "image_url", image_url: { url: photoUrl as string } }
+    : { type: "image_url", image_url: { url: photoUrl as string, detail: "high" } };
 
   const visionInstruction = `You are an expert art director for premium print advertising. I am showing you a hero photograph that will be used in a local business advertisement.
 
@@ -56,27 +64,16 @@ Return ONLY the DALL-E prompt. No explanation, no preamble.`;
 
   let enhancedPrompt: string;
   try {
-    const visionRes = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: "gpt-4o",
-        max_tokens: 600,
-        messages: [{
-          role: "user",
-          content: [imageContent, { type: "text", text: visionInstruction }],
-        }],
-      }),
+    const visionRes = await openai.chat.completions.create({
+      model: "gpt-4o",
+      max_tokens: 600,
+      messages: [{
+        role: "user",
+        content: [imageContent, { type: "text", text: visionInstruction }],
+      }],
     });
 
-    if (!visionRes.ok) {
-      const e = await visionRes.json().catch(() => ({})) as { error?: { message?: string } };
-      res.status(502).json({ error: e?.error?.message ?? `GPT-4o error ${visionRes.status}` });
-      return;
-    }
-
-    const visionData = await visionRes.json() as { choices?: { message?: { content?: string } }[] };
-    enhancedPrompt = visionData.choices?.[0]?.message?.content?.trim() ?? "";
+    enhancedPrompt = visionRes.choices?.[0]?.message?.content?.trim() ?? "";
     if (!enhancedPrompt) {
       res.status(502).json({ error: "No prompt returned from GPT-4o. Please try again." });
       return;
@@ -88,35 +85,21 @@ Return ONLY the DALL-E prompt. No explanation, no preamble.`;
   }
 
   try {
-    const dalleRes = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: "dall-e-3",
-        prompt: enhancedPrompt + "\n\n" + DALLE_APPEND,
-        n: 1,
-        size: "1024x1024",
-        quality: "standard",
-        response_format: "url",
-      }),
+    const imageRes = await openai.images.generate({
+      model: "gpt-image-1",
+      prompt: enhancedPrompt + "\n\n" + DALLE_APPEND,
+      size: "1024x1536",
     });
 
-    if (!dalleRes.ok) {
-      const e = await dalleRes.json().catch(() => ({})) as { error?: { message?: string } };
-      res.status(502).json({ error: e?.error?.message ?? `DALL-E error ${dalleRes.status}` });
+    const b64 = imageRes.data?.[0]?.b64_json;
+    if (!b64) {
+      res.status(502).json({ error: "No image returned from image model. Please try again." });
       return;
     }
 
-    const dalleData = await dalleRes.json() as { data?: { url?: string }[] };
-    const backgroundUrl = dalleData.data?.[0]?.url;
-    if (!backgroundUrl) {
-      res.status(502).json({ error: "No image returned from DALL-E. Please try again." });
-      return;
-    }
-
-    res.json({ backgroundUrl });
+    res.json({ backgroundUrl: `data:image/png;base64,${b64}` });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "DALL-E request failed.";
+    const msg = err instanceof Error ? err.message : "Image generation failed.";
     res.status(502).json({ error: msg });
   }
 });

@@ -500,9 +500,7 @@ box-shadow:0 0 14px 4px var(--accent-color,#0088FF),0 0 32px 8px var(--accent-co
       </div>
     </div>
 
-    <button class="gen-btn" id="generateBtn" onclick="renderAd()">✦ Preview My Ad</button>
-
-    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+    <div style="margin-top:6px;padding-top:16px;border-top:1px solid var(--border)">
       <div class="slbl" style="margin-bottom:8px">AI Background Enhancement</div>
       <div style="font-size:11.5px;color:var(--ink-light);line-height:1.6;margin-bottom:10px">
         AI analyzes your photo and generates a custom atmospheric background — textures, lighting, decorative elements. All text stays as crisp HTML. ~$0.04 per use, ~20 seconds.
