@@ -659,6 +659,16 @@ return(<div style={{fontFamily:"sans-serif"}}>
           <div style={{fontWeight:800,fontSize:13,color:"#111",marginBottom:4}}>Ad Generator v4</div>
           <div style={{fontSize:11,color:"#6b7280",lineHeight:1.5}}>Pick a template, add your info, choose a library photo and preview your ad instantly.</div>
         </button>
+        <button
+          onClick={()=>window.open("/api/ad-generator-v5","_blank")}
+          onMouseEnter={e=>{e.currentTarget.style.borderColor="#2d1b4e";e.currentTarget.style.background="#f5f0ff";}}
+          onMouseLeave={e=>{e.currentTarget.style.borderColor="#e5e7eb";e.currentTarget.style.background="#fff";}}
+          style={{padding:"20px 14px",border:"2px solid #e5e7eb",borderRadius:12,background:"#fff",cursor:"pointer",textAlign:"left",transition:"border-color 0.15s, background 0.15s",position:"relative"}}>
+          <div style={{position:"absolute",top:8,right:8,background:"linear-gradient(135deg,#1a1a2e,#2d1b4e)",color:"#fff",fontSize:8,fontWeight:800,letterSpacing:"0.08em",padding:"2px 6px",borderRadius:99,textTransform:"uppercase"}}>✨ AI v5</div>
+          <div style={{fontSize:30,marginBottom:8}}>✨</div>
+          <div style={{fontWeight:800,fontSize:13,color:"#111",marginBottom:4}}>Ad Generator v5 (Hybrid AI)</div>
+          <div style={{fontSize:11,color:"#6b7280",lineHeight:1.5}}>Instant template preview + AI-generated background atmosphere. Text is always crisp HTML.</div>
+        </button>
       </div>
       <div style={{textAlign:"center"}}>
         <button onClick={()=>{setSel(null);setAdMethod(null);setReserveError(null);}} style={{background:"none",border:"none",color:"#9ca3af",fontSize:13,cursor:"pointer",padding:"4px 8px"}}>Cancel</button>

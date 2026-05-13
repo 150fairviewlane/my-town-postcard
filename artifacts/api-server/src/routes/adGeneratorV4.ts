@@ -507,7 +507,10 @@ gap:10px;text-align:center;box-shadow:0 12px 50px rgba(0,0,0,.22)}
 
 <header class="hdr">
   <div class="brand">My Town <span>Postcard</span></div>
-  <div class="hdr-badge">✦ Ad Generator v4</div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="hdr-badge">✦ Ad Generator v4</div>
+    <a href="/api/ad-generator-v5" target="_blank" style="background:linear-gradient(135deg,#1a1a2e,#2d1b4e);color:#fff;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:4px 12px;border-radius:20px;text-decoration:none;white-space:nowrap">✨ Try v5 (Hybrid AI)</a>
+  </div>
 </header>
 
 <div class="layout">

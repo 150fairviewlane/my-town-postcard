@@ -1,0 +1,184 @@
+I need to add a v5 ad generator with a new AI enhancement architecture. This is a significant improvement over v4. Please follow these instructions carefully and do not modify any existing files except where explicitly stated.
+
+════════════════════════════════════════════════
+OVERVIEW — WHY THIS IS DIFFERENT FROM V4
+════════════════════════════════════════════════
+
+In v4, AI generated the entire ad as one image. This caused:
+
+- Text spelling errors
+- Menu items cut off by overlapping elements
+- Slow generation (60+ seconds)
+- Layout inconsistency between generations
+
+In v5, the architecture is split:
+
+- AI generates ONLY the background atmosphere layer (textures, lighting, decorative elements, NO text)
+- All text (business name, tagline, menu, coupon, phone, address, QR) is rendered as crisp HTML/CSS
+- The AI background fades in behind the HTML text layer
+- Result: ~20 seconds, perfect text accuracy, consistent layout every time
+
+════════════════════════════════════════════════
+CHANGE 1 — ADD NEW FILE
+════════════════════════════════════════════════
+
+Add the attached file ad-generator-v5.html to the project.
+
+Create a new route at /ad-generator-v5 that serves this file.
+
+Add a link to this page from wherever v4 is linked, labeled “Ad Generator v5 (Hybrid AI)”.
+
+Do not remove or modify the v4 generator.
+
+════════════════════════════════════════════════
+CHANGE 2 — NEW BACKEND ROUTE: /api/ai-enhance
+════════════════════════════════════════════════
+
+Create a new POST route at /api/ai-enhance
+
+This route uses process.env.OPENAI_API_KEY — do not hardcode any key.
+
+The route receives a JSON body with:
+photoUrl   — string, an https:// URL or base64 data: URL
+bizName    — string
+industry   — string
+style      — one of: rustic, dark, bold, luxury, bright, clean
+color      — hex color string like #E63946
+tagline    — string
+
+STYLE TO ATMOSPHERE MAPPING:
+rustic  = warm rustic parchment atmosphere with brush stroke paint textures, earthy ochre and burnt sienna tones, vintage decorative ornamental borders, warm golden lighting that glows from behind
+dark    = dark cinematic atmosphere with deep dramatic shadows, rich vignette edges, subtle crimson spotlight glow, film noir depth and mystery
+bold    = editorial magazine atmosphere with clean photographic clarity, crisp white negative space zones in the lower half, bold architectural composition
+luxury  = luxury dark atmosphere with rich deep blacks, subtle warm gold light rays, elegant bokeh depth of field, high-end product photography feel
+bright  = retro poster atmosphere with vibrant saturated colors, bold graphic paint strokes across the frame, energetic carnival poster energy
+clean   = neon night atmosphere with deep dark background, electric accent color light bloom, subtle chromatic aberration, cinematic urban night photography
+
+THE ROUTE MAKES TWO SEQUENTIAL API CALLS:
+
+CALL 1 — GPT-4o Vision Analysis
+Endpoint: POST https://api.openai.com/v1/chat/completions
+Model: gpt-4o
+Max tokens: 600
+
+Messages: one user message with two content blocks.
+
+Content block 1 is the image:
+If photoUrl starts with https:// or http://, use type image_url with image_url.url set to photoUrl and detail set to high
+If photoUrl starts with data:, use type image_url with image_url.url set to photoUrl
+Do NOT download or proxy the image. Pass the URL directly to the API.
+
+Content block 2 is this text instruction (fill in the bracketed values from the request body):
+
+You are an expert art director for premium print advertising. I am showing you a hero photograph that will be used in a local business advertisement.
+
+Analyze this photo carefully and return a single precise DALL-E 3 image generation prompt of exactly 120-150 words.
+
+The prompt must describe ONLY a background atmospheric layer — NOT a complete advertisement. It will be used as the background layer behind HTML text overlays, so it must NOT contain any text, business names, phone numbers, prices, menus, or coupon boxes.
+
+The background should:
+
+- Extend and enhance the visual atmosphere of the provided photo
+- Apply this style atmosphere: [STYLE ATMOSPHERE FROM MAPPING ABOVE]
+- Use color tones harmonizing with: [color from request]
+- Be appropriate for a [industry] business
+- Include decorative atmospheric elements matching the style (brush strokes, light rays, bokeh, textures, ornamental borders — depending on style)
+- Have the bottom 20 percent of the image darkened for text legibility
+- Be portrait orientation 4 by 5 ratio
+- Look like it was shot by a professional commercial photographer for a $500 print advertisement — photorealistic, not illustrated or AI-rendered
+- Use photorealistic commercial photography language in the prompt (lens type, lighting setup, camera angle, depth of field) to ensure DALL-E renders realistically
+
+Do NOT include: any text, words, numbers, prices, phone numbers, business names, menu items, or coupon shapes.
+Return ONLY the DALL-E prompt. No explanation, no preamble.
+
+Extract the response from choices[0].message.content and trim whitespace.
+
+CALL 2 — DALL-E 3 Generation
+Endpoint: POST https://api.openai.com/v1/images/generations
+Model: dall-e-3
+Size: 1024x1024
+Quality: standard
+n: 1
+response_format: url
+
+Prompt: Use the exact text returned from GPT-4o Call 1, then append this text:
+
+Photorealistic commercial photography style. Shot on professional camera with natural lighting. No AI-rendered or illustrated look. No painterly, artistic, or cartoon elements. Hyper-realistic food photography or product photography aesthetic — the kind used in premium restaurant menus or national advertising campaigns. Shallow depth of field with beautiful bokeh where appropriate. Rich, true-to-life colors with professional color grading. Abstract atmospheric background only. Absolutely no text, letters, numbers, words, signs, menus, or readable content of any kind anywhere in the image.
+
+Extract the image URL from data[0].url
+
+ROUTE RESPONSE:
+On success return JSON: backgroundUrl set to the DALL-E image URL
+On any error return JSON: error set to the error message, with appropriate HTTP error status
+
+════════════════════════════════════════════════
+CHANGE 3 — UPDATE FRONTEND IN ad-generator-v5.html
+════════════════════════════════════════════════
+
+The aiEnhance() function in ad-generator-v5.html already calls /api/ai-enhance with the correct request body and handles the response correctly. No changes needed to that function.
+
+However, find and remove this comment block from the aiEnhance() function since the backend route now exists:
+“For standalone testing it calls OpenAI directly (remove in production)”
+
+The fetch call in aiEnhance() should stay exactly as written — it already points to /api/ai-enhance.
+
+════════════════════════════════════════════════
+CHANGE 4 — CONNECT IMAGE LIBRARY
+════════════════════════════════════════════════
+
+In the loadPhotos() function in ad-generator-v5.html, find this comment:
+“In Replit: fetch from /api/image-library?industry=…”
+
+Replace the comment with an actual fetch call to /api/image-library?industry=[industry name].
+
+The response format from that existing endpoint should return an array of image objects with image_url, thumb_url, and photographer_credit fields.
+
+Map those to photo URLs for the grid. If the fetch fails or returns no results, fall back to the hardcoded fallback photos array already in the function.
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+Do not modify any of the following:
+
+- The postcard composer or layout builder
+- Payment pages or Stripe integration
+- Dealer portal
+- Image library admin tool
+- Ad generator v1, v2, v3, or v4
+- Any existing API routes
+- Any database tables (only read from image_library, do not write)
+- Any authentication or session logic
+
+════════════════════════════════════════════════
+ENVIRONMENT VARIABLE
+════════════════════════════════════════════════
+
+The /api/ai-enhance route must use process.env.OPENAI_API_KEY
+
+I will add OPENAI_API_KEY to Replit Secrets manually. Do not hardcode any key value.
+
+The existing /api/generate-ad-image route (from v4) also uses OPENAI_API_KEY — that is correct and should remain unchanged.
+
+════════════════════════════════════════════════
+TEST AFTER BUILDING
+════════════════════════════════════════════════
+
+Test with:
+Business Name: El Campesino
+Industry: Mexican Restaurant
+Style: Rustic Layered
+Select any Mexican food photo from the library
+
+Expected behavior:
+
+1. Ad renders instantly in the template (Step 1 — no API call)
+1. All menu items visible, no text cut off, phone number in footer
+1. Click “Enhance with AI Background” button
+1. Loading overlay appears inside the ad canvas with progress bar
+1. After approximately 20 seconds, a beautiful atmospheric background fades in behind the HTML text
+1. The AI Enhanced badge appears in the corner
+1. All text (name, menu items, phone, address) remains perfectly readable and accurate
+1. Cost strip shows “Background by GPT-4o Vision + DALL-E 3”
+
+The key difference from v4: the menu items should NEVER be obscured by the phone number or fade out. All text is HTML and fully controlled.
