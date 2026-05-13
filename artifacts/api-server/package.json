@@ -19,6 +19,7 @@
     "express": "^5",
     "express-session": "^1.19.0",
     "jsonwebtoken": "^9.0.3",
+    "openai": "^6.34.0",
     "pino": "^9",
     "pino-http": "^10",
     "resend": "^6.12.2",
