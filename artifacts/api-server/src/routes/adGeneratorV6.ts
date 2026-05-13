@@ -32,12 +32,13 @@ const AD_GENERATOR_V6_HTML = `<!DOCTYPE html>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Pacifico&family=Great+Vibes&family=Montserrat:wght@400;500;600;700;800&family=Dancing+Script:wght@600;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
 :root{
   --burg:#7C1C2E;--burg-dark:#5a1220;--burg-pale:#f9eaed;
   --ink:#111827;--ink-mid:#374151;--ink-light:#6B7280;
   --surface:#F7F5F2;--card:#fff;--border:#E5E0D8;--green:#1a5c3a;
 }
-body{font-family:'Montserrat',sans-serif;background:var(--surface);min-height:100vh;color:var(--ink)}
+body{font-family:'Montserrat',sans-serif;background:var(--surface);color:var(--ink)}
 
 /* HEADER */
 .hdr{background:var(--ink);padding:14px 32px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--burg)}
@@ -46,10 +47,10 @@ body{font-family:'Montserrat',sans-serif;background:var(--surface);min-height:10
 .hdr-badge{background:var(--burg);color:#fff;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:4px 12px;border-radius:20px}
 
 /* LAYOUT */
-.layout{display:grid;grid-template-columns:420px 1fr;min-height:calc(100vh - 55px)}
+.layout{display:grid;grid-template-columns:420px 1fr;height:calc(100vh - 55px)}
 
 /* FORM PANEL */
-.fpanel{background:var(--card);border-right:1px solid var(--border);padding:22px 20px;overflow-y:auto}
+.fpanel{background:var(--card);border-right:1px solid var(--border);padding:22px 20px;overflow-y:auto;min-height:0}
 .ptitle{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.06em;margin-bottom:2px}
 .psub{font-size:11.5px;color:var(--ink-light);margin-bottom:18px;line-height:1.5}
 .fsec{margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--border)}
@@ -103,7 +104,14 @@ body{font-family:'Montserrat',sans-serif;background:var(--surface);min-height:10
 .gen-btn:disabled{background:#bbb;cursor:not-allowed}
 
 /* PREVIEW PANEL */
-.ppanel{background:#E8E4DE;padding:28px 32px;display:flex;flex-direction:column;align-items:center;gap:16px;overflow-y:auto}
+.ppanel{background:#E8E4DE;padding:28px 32px;display:flex;flex-direction:column;align-items:center;gap:16px;overflow-y:auto;min-height:0}
+
+/* AI BUTTON */
+.ai-btn{width:100%;padding:13px;background:linear-gradient(135deg,#1a1a2e,#2d1b4e);color:#fff;border:none;border-radius:9px;font-family:'Bebas Neue',sans-serif;font-size:19px;letter-spacing:.12em;cursor:pointer;transition:all .25s;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:10px;position:relative;overflow:hidden}
+.ai-btn:hover:not(:disabled){background:linear-gradient(135deg,#2a2a4e,#4a2b7e);transform:translateY(-1px);box-shadow:0 6px 24px rgba(100,60,255,.3)}
+.ai-btn:disabled{background:#888;cursor:not-allowed;transform:none;box-shadow:none}
+.ai-spark{font-size:16px}
+.ai-error{color:#c0392b;font-size:11.5px;margin-top:8px;line-height:1.5;display:none}
 .ptoolbar{width:100%;max-width:500px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
 .plabel{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:.1em;color:var(--ink-mid)}
 .tactions{display:flex;gap:7px}
@@ -268,6 +276,17 @@ body{font-family:'Montserrat',sans-serif;background:var(--surface);min-height:10
       </div>
     </div>
 
+    <div style="margin-top:6px;padding-top:16px;border-top:1px solid var(--border)">
+      <div class="slbl" style="margin-bottom:8px">AI Background Enhancement</div>
+      <div style="font-size:11.5px;color:var(--ink-light);line-height:1.6;margin-bottom:10px">
+        AI analyzes your photo and generates a custom atmospheric background — textures, lighting, bokeh effects. All text stays as crisp HTML. ~$0.04 per use, ~20 seconds.
+      </div>
+      <button class="ai-btn" id="aiBtn" onclick="aiEnhance()" disabled>
+        <span class="ai-spark">&#10024;</span> Generate Ad with AI
+      </button>
+      <div class="ai-error" id="aiError"></div>
+    </div>
+
   </div>
 
   <!-- PREVIEW -->
@@ -276,7 +295,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--surface);min-height:10
       <div class="plabel">Ad Preview</div>
       <div class="tactions">
         <button class="tbtn" id="shuffleBtn" onclick="shufflePhoto()" disabled>&#10227; New Photo</button>
-        <button class="tbtn primary" id="useBtn" onclick="useAd()" disabled>&#10003; Use This Ad</button>
+        <button class="tbtn" id="regenAiBtn" onclick="aiEnhance()" disabled style="display:none">&#8635; Re-generate</button>
       </div>
     </div>
 
@@ -322,6 +341,7 @@ const INDUSTRIES = {
 let selectedPhotoUrl = null;
 let currentIndustryPhotos = [];
 let currentPhotoIndex = 0;
+let aiEnhancedBg = null;
 
 const QR_SVG = '<svg width="100%" height="100%" viewBox="0 0 44 44" fill="none"><rect width="44" height="44" fill="white"/><rect x="3" y="3" width="14" height="14" rx="1" fill="#1C1B1A"/><rect x="5" y="5" width="10" height="10" rx=".5" fill="white"/><rect x="7" y="7" width="6" height="6" fill="#1C1B1A"/><rect x="27" y="3" width="14" height="14" rx="1" fill="#1C1B1A"/><rect x="29" y="5" width="10" height="10" rx=".5" fill="white"/><rect x="31" y="7" width="6" height="6" fill="#1C1B1A"/><rect x="3" y="27" width="14" height="14" rx="1" fill="#1C1B1A"/><rect x="5" y="29" width="10" height="10" rx=".5" fill="white"/><rect x="7" y="31" width="6" height="6" fill="#1C1B1A"/><rect x="21" y="21" width="4" height="4" fill="#1C1B1A"/><rect x="27" y="21" width="4" height="4" fill="#1C1B1A"/><rect x="33" y="21" width="4" height="4" fill="#1C1B1A"/><rect x="21" y="27" width="4" height="4" fill="#1C1B1A"/><rect x="33" y="27" width="4" height="4" fill="#1C1B1A"/><rect x="27" y="33" width="4" height="4" fill="#1C1B1A"/><rect x="21" y="39" width="4" height="4" fill="#1C1B1A"/></svg>';
 
@@ -438,7 +458,10 @@ function renderAd(){
   canvas.classList.add('visible');
   empty.classList.add('hidden');
   canvas.style.setProperty('--ac', ac);
-  hero.style.backgroundImage = d.photo ? "url('" + d.photo + "')" : 'none';
+  const bgSrc = aiEnhancedBg || d.photo;
+  hero.style.backgroundImage = bgSrc ? "url('" + bgSrc + "')" : 'none';
+  const aiBtn = document.getElementById('aiBtn');
+  if(aiBtn && d.photo) aiBtn.disabled = false;
 
   const menuHTML = d.menu.slice(0,4).map(item => {
     const m = item.match(/^(.+?)\\s{0,2}(\\.{2,}|\\u2014|--)\\s{0,2}(\\$[\\d.]+.*)$/);
@@ -495,40 +518,43 @@ function renderAd(){
       '</div>' +
     '</div>';
 
-  document.getElementById('useBtn').disabled = false;
 }
 
-async function useAd(){
+async function aiEnhance(){
   const d = getFormData();
-  const btn = document.getElementById('useBtn');
+  if(!d.photo){ alert('Please select a photo first.'); return; }
+  const btn = document.getElementById('aiBtn');
+  const regenBtn = document.getElementById('regenAiBtn');
+  const errEl = document.getElementById('aiError');
   btn.disabled = true;
-  btn.textContent = 'Saving...';
+  btn.innerHTML = '<span class="ai-spark">&#10024;</span> Generating... (~20s)';
+  errEl.style.display = 'none';
   try {
-    await fetch('/api/ad-generator-v6/save', {
+    const res = await fetch('/api/ai-enhance', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({
-        adVersion: 'v6',
-        templateStyle: 'mr-biscuits-rustic',
-        photoUrl:    d.photo,
-        bizName:     d.bizName,
-        tagline:     d.tagline,
-        phone:       d.phone,
-        address:     d.address,
-        city:        d.city,
-        menu:        d.menu,
-        offer:       d.offer,
-        accentColor: d.color,
+        photoUrl: d.photo,
+        bizName:  d.bizName,
+        industry: d.industry,
+        style:    'rustic',
+        color:    d.color,
+        tagline:  d.tagline,
       }),
     });
-    btn.textContent = '\\u2713 Ad Saved!';
-    btn.style.background = '#1a5c3a';
-    btn.style.borderColor = '#1a5c3a';
-    setTimeout(()=>{ btn.disabled=false; btn.textContent='\\u2713 Use This Ad'; btn.style.background=''; btn.style.borderColor=''; }, 2500);
-  } catch(e) {
+    const data = await res.json();
+    if(!res.ok || data.error){ throw new Error(data.error || 'AI request failed'); }
+    aiEnhancedBg = data.backgroundUrl;
+    document.getElementById('adHero').style.backgroundImage = "url('" + aiEnhancedBg + "')";
+    btn.innerHTML = '<span class="ai-spark">&#10024;</span> Re-generate with AI';
     btn.disabled = false;
-    btn.textContent = '\\u2713 Use This Ad';
-    alert('Save failed. Please try again.');
+    regenBtn.style.display = 'inline-flex';
+    regenBtn.disabled = false;
+  } catch(e) {
+    errEl.textContent = 'AI Enhancement failed: ' + (e.message || 'Unknown error');
+    errEl.style.display = 'block';
+    btn.innerHTML = '<span class="ai-spark">&#10024;</span> Generate Ad with AI';
+    btn.disabled = false;
   }
 }
 
