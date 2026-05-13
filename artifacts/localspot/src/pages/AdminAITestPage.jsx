@@ -17,24 +17,6 @@ const ACTIVE_MODELS = [
     desc: "Claude reads your ad, writes an enhanced prompt, then gpt-image-1 generates the result",
     badge: "#7c3aed", badgeBg: "#f5f3ff",
   },
-  {
-    id: "gpt4o-dalle3",
-    label: "GPT-4o → OpenAI Image",
-    desc: "GPT-4o reads your ad, writes an enhanced prompt, then OpenAI image generation creates the result",
-    badge: "#0369a1", badgeBg: "#e0f2fe",
-  },
-  {
-    id: "claude-dalle3",
-    label: "Claude → OpenAI Image",
-    desc: "Claude reads your ad, writes an enhanced prompt, then OpenAI image generation creates the result",
-    badge: "#6d28d9", badgeBg: "#ede9fe",
-  },
-  {
-    id: "dalle3-direct",
-    label: "OpenAI Image Direct",
-    desc: "Your prompt goes straight to OpenAI image generation with no image analysis — useful as a baseline",
-    badge: "#374151", badgeBg: "#f3f4f6",
-  },
 ];
 
 const COMING_SOON = [
@@ -169,7 +151,7 @@ export default function AdminAITestPage() {
   const [imageData, setImageData]     = useState(null);
   const [imageName, setImageName]     = useState("");
   const [prompt, setPrompt]           = useState(DEFAULT_PROMPT);
-  const [selected, setSelected]       = useState(["gpt4o-enhanced", "claude-enhanced", "gpt4o-dalle3", "claude-dalle3", "dalle3-direct"]);
+  const [selected, setSelected]       = useState(["gpt4o-enhanced", "claude-enhanced"]);
   const [running, setRunning]         = useState(false);
   const [results, setResults]         = useState([]);
   const [globalError, setGlobalError] = useState(null);

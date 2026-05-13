@@ -79,8 +79,6 @@ async function enhanceWithClaude(anthropic: Anthropic, imageData: string, userPr
 // ── Generators ──────────────────────────────────────────────────────────────
 
 const GPT_IMAGE_SUFFIX = "Photorealistic commercial photography style. Professional studio lighting. Rich, true-to-life colors. No text, letters, numbers, or readable content of any kind.";
-const DALLE3_SUFFIX    = "High-quality commercial advertising photograph. Professional studio lighting and composition. Vivid, true-to-life colors. No text, words, letters, or numbers visible anywhere in the image.";
-
 async function generateWithGptImage1(openai: OpenAI, prompt: string): Promise<string> {
   const imgRes = await openai.images.generate({
     model: "gpt-image-1",
@@ -92,34 +90,11 @@ async function generateWithGptImage1(openai: OpenAI, prompt: string): Promise<st
   return `data:image/png;base64,${b64}`;
 }
 
-async function generateWithDalle3(openai: OpenAI, prompt: string): Promise<string> {
-  const imgRes = await (openai.images.generate as any)({
-    model: "gpt-image-1",
-    prompt: prompt + "\n\n" + DALLE3_SUFFIX,
-    size: "1024x1792",
-    response_format: "b64_json",
-  });
-
-  // Prefer b64_json; fall back to fetching the URL for persistent storage
-  const b64 = imgRes.data?.[0]?.b64_json;
-  if (b64) return `data:image/png;base64,${b64}`;
-
-  const url = imgRes.data?.[0]?.url;
-  if (!url) throw new Error("Image generator returned no image");
-  const resp = await fetch(url);
-  const buf  = await resp.arrayBuffer();
-  const ct   = resp.headers.get("content-type") ?? "image/png";
-  return `data:${ct};base64,${Buffer.from(buf).toString("base64")}`;
-}
-
 // ── Pipeline definitions ────────────────────────────────────────────────────
 
 const MODEL_META: Record<string, { label: string; desc: string }> = {
   "gpt4o-enhanced":  { label: "GPT-4o → gpt-image-1",  desc: "GPT-4o vision analysis → enhanced prompt → gpt-image-1 generation" },
   "claude-enhanced": { label: "Claude → gpt-image-1",   desc: "Claude vision analysis → enhanced prompt → gpt-image-1 generation" },
-  "gpt4o-dalle3":    { label: "GPT-4o → OpenAI Image",   desc: "GPT-4o vision analysis → enhanced prompt → OpenAI image generation" },
-  "claude-dalle3":   { label: "Claude → OpenAI Image",    desc: "Claude vision analysis → enhanced prompt → OpenAI image generation" },
-  "dalle3-direct":   { label: "OpenAI Image Direct",      desc: "User prompt sent directly to OpenAI image generation (no image analysis)" },
 };
 
 async function runPipeline(
@@ -139,17 +114,6 @@ async function runPipeline(
       const prompt = await enhanceWithClaude(anthropic, imageData, userPrompt);
       return generateWithGptImage1(openai, prompt);
     }
-    case "gpt4o-dalle3": {
-      const prompt = await enhanceWithGpt4o(openai, imageData, userPrompt);
-      return generateWithDalle3(openai, prompt);
-    }
-    case "claude-dalle3": {
-      if (!anthropic) throw new Error("Anthropic API key not configured");
-      const prompt = await enhanceWithClaude(anthropic, imageData, userPrompt);
-      return generateWithDalle3(openai, prompt);
-    }
-    case "dalle3-direct":
-      return generateWithDalle3(openai, userPrompt);
     default:
       throw new Error(`Unknown model: ${modelId}`);
   }
