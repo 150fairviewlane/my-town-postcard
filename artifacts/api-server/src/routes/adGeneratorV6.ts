@@ -38,7 +38,7 @@ html,body{height:100%;overflow:hidden}
   --ink:#111827;--ink-mid:#374151;--ink-light:#6B7280;
   --surface:#F7F5F2;--card:#fff;--border:#E5E0D8;--green:#1a5c3a;
 }
-body{font-family:'Montserrat',sans-serif;background:var(--surface);color:var(--ink)}
+body{font-family:'Montserrat',sans-serif;background:var(--surface);color:var(--ink);display:flex;flex-direction:column}
 
 /* HEADER */
 .hdr{background:var(--ink);padding:14px 32px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--burg)}
@@ -47,10 +47,10 @@ body{font-family:'Montserrat',sans-serif;background:var(--surface);color:var(--i
 .hdr-badge{background:var(--burg);color:#fff;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:4px 12px;border-radius:20px}
 
 /* LAYOUT */
-.layout{display:grid;grid-template-columns:420px 1fr;height:calc(100vh - 55px)}
+.layout{display:grid;grid-template-columns:420px 1fr;flex:1;min-height:0}
 
 /* FORM PANEL */
-.fpanel{background:var(--card);border-right:1px solid var(--border);padding:22px 20px;overflow-y:auto;min-height:0}
+.fpanel{background:var(--card);border-right:1px solid var(--border);padding:22px 20px 48px;overflow-y:auto;min-height:0}
 .ptitle{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.06em;margin-bottom:2px}
 .psub{font-size:11.5px;color:var(--ink-light);margin-bottom:18px;line-height:1.5}
 .fsec{margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--border)}
