@@ -21,9 +21,21 @@ const ACTIVE_MODELS = [
     badge: "#7c3aed", badgeBg: "#f5f3ff",
   },
   {
-    id: "direct",
-    label: "gpt-image-1 Direct",
-    desc: "Your prompt goes straight to gpt-image-1 with no image analysis — useful as a baseline",
+    id: "gpt4o-dalle3",
+    label: "GPT-4o → DALL-E 3",
+    desc: "GPT-4o reads your ad, writes an enhanced prompt, then DALL-E 3 HD generates the result",
+    badge: "#0369a1", badgeBg: "#e0f2fe",
+  },
+  {
+    id: "claude-dalle3",
+    label: "Claude → DALL-E 3",
+    desc: "Claude reads your ad, writes an enhanced prompt, then DALL-E 3 HD generates the result",
+    badge: "#6d28d9", badgeBg: "#ede9fe",
+  },
+  {
+    id: "dalle3-direct",
+    label: "DALL-E 3 Direct",
+    desc: "Your prompt goes straight to DALL-E 3 HD with no image analysis — useful as a baseline",
     badge: "#374151", badgeBg: "#f3f4f6",
   },
 ];
@@ -160,7 +172,7 @@ export default function AdminAITestPage() {
   const [imageData, setImageData]     = useState(null);
   const [imageName, setImageName]     = useState("");
   const [prompt, setPrompt]           = useState(DEFAULT_PROMPT);
-  const [selected, setSelected]       = useState(["gpt4o-enhanced", "claude-enhanced", "direct"]);
+  const [selected, setSelected]       = useState(["gpt4o-enhanced", "claude-enhanced", "gpt4o-dalle3", "claude-dalle3", "dalle3-direct"]);
   const [running, setRunning]         = useState(false);
   const [results, setResults]         = useState([]);
   const [globalError, setGlobalError] = useState(null);
