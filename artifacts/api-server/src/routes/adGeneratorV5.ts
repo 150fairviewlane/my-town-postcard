@@ -55,7 +55,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .layout{display:grid;grid-template-columns:440px 1fr;height:calc(100vh - 55px)}
 
 /* FORM PANEL */
-.fpanel{background:var(--card);border-right:1px solid var(--border);padding:22px 20px;overflow-y:auto}
+.fpanel{background:var(--card);border-right:1px solid var(--border);padding:22px 20px;overflow-y:auto;min-height:0}
 .ptitle{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.06em;margin-bottom:2px}
 .psub{font-size:11.5px;color:var(--ink-light);margin-bottom:18px;line-height:1.5}
 .fsec{margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--border)}
@@ -506,7 +506,7 @@ box-shadow:0 0 14px 4px var(--accent-color,#0088FF),0 0 32px 8px var(--accent-co
         AI analyzes your photo and generates a custom atmospheric background — textures, lighting, decorative elements. All text stays as crisp HTML. ~$0.04 per use, ~20 seconds.
       </div>
       <button class="ai-btn" id="aiBtn" onclick="aiEnhance()" disabled>
-        <span class="ai-spark">✨</span> Enhance with AI Background
+        <span class="ai-spark">✨</span> Generate Ad with AI
       </button>
     </div>
   </div>
