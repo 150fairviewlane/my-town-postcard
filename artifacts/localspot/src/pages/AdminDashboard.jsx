@@ -336,6 +336,16 @@ function Dashboard({ token }) {
             💼 Dealers
           </a>
           <a
+            href={`${import.meta.env.BASE_URL}admin/ai-test`}
+            style={{
+              fontSize: 13, fontWeight: 700, color: "#7c3aed",
+              background: "#f5f3ff", border: "1px solid #ddd6fe",
+              borderRadius: 8, padding: "7px 12px", textDecoration: "none",
+            }}
+          >
+            🧪 AI Model Testing
+          </a>
+          <a
             href="/api/admin/image-library"
             target="_blank"
             rel="noopener noreferrer"
