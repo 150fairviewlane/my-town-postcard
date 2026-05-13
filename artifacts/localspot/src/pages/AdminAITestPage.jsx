@@ -19,20 +19,20 @@ const ACTIVE_MODELS = [
   },
   {
     id: "gpt4o-dalle3",
-    label: "GPT-4o → DALL-E 3",
-    desc: "GPT-4o reads your ad, writes an enhanced prompt, then DALL-E 3 HD generates the result",
+    label: "GPT-4o → OpenAI Image",
+    desc: "GPT-4o reads your ad, writes an enhanced prompt, then OpenAI image generation creates the result",
     badge: "#0369a1", badgeBg: "#e0f2fe",
   },
   {
     id: "claude-dalle3",
-    label: "Claude → DALL-E 3",
-    desc: "Claude reads your ad, writes an enhanced prompt, then DALL-E 3 HD generates the result",
+    label: "Claude → OpenAI Image",
+    desc: "Claude reads your ad, writes an enhanced prompt, then OpenAI image generation creates the result",
     badge: "#6d28d9", badgeBg: "#ede9fe",
   },
   {
     id: "dalle3-direct",
-    label: "DALL-E 3 Direct",
-    desc: "Your prompt goes straight to DALL-E 3 HD with no image analysis — useful as a baseline",
+    label: "OpenAI Image Direct",
+    desc: "Your prompt goes straight to OpenAI image generation with no image analysis — useful as a baseline",
     badge: "#374151", badgeBg: "#f3f4f6",
   },
 ];

@@ -94,10 +94,9 @@ async function generateWithGptImage1(openai: OpenAI, prompt: string): Promise<st
 
 async function generateWithDalle3(openai: OpenAI, prompt: string): Promise<string> {
   const imgRes = await (openai.images.generate as any)({
-    model: "dall-e-3",
+    model: "gpt-image-1",
     prompt: prompt + "\n\n" + DALLE3_SUFFIX,
     size: "1024x1792",
-    quality: "hd",
     response_format: "b64_json",
   });
 
@@ -106,7 +105,7 @@ async function generateWithDalle3(openai: OpenAI, prompt: string): Promise<strin
   if (b64) return `data:image/png;base64,${b64}`;
 
   const url = imgRes.data?.[0]?.url;
-  if (!url) throw new Error("DALL-E 3 returned no image");
+  if (!url) throw new Error("Image generator returned no image");
   const resp = await fetch(url);
   const buf  = await resp.arrayBuffer();
   const ct   = resp.headers.get("content-type") ?? "image/png";
@@ -118,9 +117,9 @@ async function generateWithDalle3(openai: OpenAI, prompt: string): Promise<strin
 const MODEL_META: Record<string, { label: string; desc: string }> = {
   "gpt4o-enhanced":  { label: "GPT-4o → gpt-image-1",  desc: "GPT-4o vision analysis → enhanced prompt → gpt-image-1 generation" },
   "claude-enhanced": { label: "Claude → gpt-image-1",   desc: "Claude vision analysis → enhanced prompt → gpt-image-1 generation" },
-  "gpt4o-dalle3":    { label: "GPT-4o → DALL-E 3",      desc: "GPT-4o vision analysis → enhanced prompt → DALL-E 3 HD generation" },
-  "claude-dalle3":   { label: "Claude → DALL-E 3",       desc: "Claude vision analysis → enhanced prompt → DALL-E 3 HD generation" },
-  "dalle3-direct":   { label: "DALL-E 3 Direct",         desc: "User prompt sent directly to DALL-E 3 HD (no image analysis)" },
+  "gpt4o-dalle3":    { label: "GPT-4o → OpenAI Image",   desc: "GPT-4o vision analysis → enhanced prompt → OpenAI image generation" },
+  "claude-dalle3":   { label: "Claude → OpenAI Image",    desc: "Claude vision analysis → enhanced prompt → OpenAI image generation" },
+  "dalle3-direct":   { label: "OpenAI Image Direct",      desc: "User prompt sent directly to OpenAI image generation (no image analysis)" },
 };
 
 async function runPipeline(
