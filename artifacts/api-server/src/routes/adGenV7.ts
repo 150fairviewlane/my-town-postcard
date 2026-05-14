@@ -37,6 +37,13 @@ const LayoutResponseSchema = z.object({
   headline1: z.string().min(1),
   headline2: z.string().optional().default(""),
   tagline: z.string().optional().default(""),
+  palette: z
+    .object({
+      accent: z.string().optional().default("#C8541A"),
+      dark: z.string().optional().default("#1C1B1A"),
+    })
+    .optional()
+    .default({}),
   menu: z.array(MenuItemSchema).optional().default([]),
   offer: z
     .object({
@@ -106,6 +113,10 @@ router.post("/ad-gen/layout", async (req, res): Promise<void> => {
     '    "amount": "e.g. $5 OFF or FREE",\n' +
     '    "item": "short item description, 1-5 words",\n' +
     '    "fine": "1 per visit · with this postcard"\n' +
+    "  },\n" +
+    '  "palette": {\n' +
+    '    "accent": "#hex — primary brand accent color that complements the industry and personality",\n' +
+    '    "dark": "#hex — rich dark text/background color (near-black or very dark brown)"\n' +
     "  },\n" +
     '  "heroPrompt": "90-word cinematic commercial food/product photography prompt: camera angle, lighting, subject focus, intentionally empty left 30% for text overlay, warm shallow depth of field, photorealistic, portrait 3:4 aspect, NO text or logos visible"\n' +
     "}";

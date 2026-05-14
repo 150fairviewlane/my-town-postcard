@@ -295,7 +295,8 @@ export default function AdGenV7Page() {
       if (L.offer?.amount) setOfferAmount(L.offer.amount);
       if (L.offer?.item)   setOfferItem(L.offer.item);
       if (L.offer?.fine)   setOfferFine(L.offer.fine);
-      if (L.heroPrompt)    setHeroPrompt(L.heroPrompt);
+      if (L.heroPrompt)              setHeroPrompt(L.heroPrompt);
+      if (L.palette?.accent)         setAccentColor(L.palette.accent);
 
       if (heroResp) {
         const heroData = await heroResp.json();
@@ -354,18 +355,51 @@ export default function AdGenV7Page() {
     }
   }, []);
 
-  const handleDownload = useCallback(() => {
+  const handleDownload = useCallback(async () => {
     const stage = stageRef.current;
     if (!stage) return;
     try {
-      // EXPORT_PIXEL_RATIO ≈ 2.4 → ~1152×1375 px (native template resolution, print-ready)
-      const dataUrl = stage.toDataURL({ pixelRatio: EXPORT_PIXEL_RATIO, mimeType: "image/png" });
+      // Step 1: Export portrait canvas at native template resolution (~1152×1375 px)
+      const adDataUrl = stage.toDataURL({ pixelRatio: EXPORT_PIXEL_RATIO, mimeType: "image/png" });
+
+      // Step 2: Composite onto 3600×2700 postcard canvas (12"×9" @ 300 DPI per spec)
+      const out = document.createElement("canvas");
+      out.width = 3600;
+      out.height = 2700;
+      const ctx = out.getContext("2d");
+      if (!ctx) throw new Error("Canvas context unavailable");
+
+      // Parchment-toned background fill
+      ctx.fillStyle = "#EDD9AB";
+      ctx.fillRect(0, 0, 3600, 2700);
+
+      // Load the rendered ad image
+      const adImg = await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error("Failed to load ad for export"));
+        img.src = adDataUrl;
+      });
+
+      // Scale portrait ad to fill the full postcard height (2700 px), centered horizontally
+      const adNativeW = Math.round(W * EXPORT_PIXEL_RATIO); // ~1152
+      const adNativeH = Math.round(H * EXPORT_PIXEL_RATIO); // ~1375
+      const scale = 2700 / adNativeH;                        // ~1.96
+      const scaledAdW = Math.round(adNativeW * scale);        // ~2260
+      const adOffsetX = Math.round((3600 - scaledAdW) / 2);  // ~670
+
+      ctx.drawImage(adImg, adOffsetX, 0, scaledAdW, 2700);
+
+      const finalUrl = out.toDataURL("image/png");
       const a = document.createElement("a");
       a.download = (bizLine1 || "my-ad").replace(/\s+/g, "-").toLowerCase() + ".png";
-      a.href = dataUrl;
+      a.href = finalUrl;
       a.click();
-    } catch {
-      setError("Download failed. This can happen when using stock photos with CORS restrictions. Try uploading your own photo instead.");
+    } catch (err) {
+      setError(
+        "Download failed. " +
+          (err instanceof Error ? err.message : "Try uploading your own photo to avoid CORS restrictions.")
+      );
     }
   }, [bizLine1]);
 
@@ -563,12 +597,18 @@ export default function AdGenV7Page() {
           />
         ) : null}
 
-        {/* 13 — Logo (optional) */}
+        {/* 13 — Logo (optional) with soft drop shadow */}
         {logoImg ? (
-          <Group>
+          <Group
+            shadowColor="rgba(0,0,0,0.42)"
+            shadowBlur={7}
+            shadowOffsetX={1}
+            shadowOffsetY={2}
+            shadowEnabled
+          >
             <Rect
               x={LG_X - 2} y={LG_Y - 2} width={LG_S + 4} height={LG_S + 4}
-              fill="#fff" cornerRadius={5} opacity={0.92}
+              fill="#fff" cornerRadius={5} opacity={0.93}
             />
             <KImage x={LG_X} y={LG_Y} width={LG_S} height={LG_S} image={logoImg} cornerRadius={3} />
           </Group>
