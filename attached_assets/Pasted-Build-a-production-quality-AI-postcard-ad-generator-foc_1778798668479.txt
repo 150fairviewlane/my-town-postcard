@@ -1,0 +1,284 @@
+Build a production-quality AI postcard ad generator focused on local business marketing (restaurants, cafes, HVAC, salons, dentists, realtors, etc).
+
+The system must produce ads that look professionally art-directed and print-ready — NOT like generic AI graphics or HTML overlays.
+
+PRIMARY GOAL:
+The ads must feel cohesive, cinematic, polished, and commercially usable by real businesses.
+
+IMPORTANT DESIGN PRINCIPLE:
+Do NOT rely on HTML text overlays as the final rendering method.
+All final output should be rendered into a unified high-resolution canvas before export.
+
+==================================================
+TARGET ARCHITECTURE
+==================================================
+
+Use a HYBRID PIPELINE:
+
+1. AI generates:
+   - ad copy
+   - layout structure
+   - visual direction
+   - color palette
+   - typography recommendations
+   - image prompts
+
+2. Deterministic rendering engine creates:
+   - precise typography
+   - spacing
+   - hierarchy
+   - alignment
+   - shadows
+   - masks
+   - composition
+   - export
+
+3. Final AI POLISH PASS:
+   - visually integrates everything
+   - improves realism/cohesion
+   - removes “floating overlay” appearance
+   - preserves all exact text
+
+==================================================
+TECH STACK
+==================================================
+
+Frontend:
+- React
+- Tailwind
+- react-konva
+
+Backend:
+- Node.js
+- Sharp
+
+AI:
+- OpenAI GPT-5 for layout planning
+- OpenAI image generation for hero images
+- OpenAI image editing for final polish pass
+
+==================================================
+STEP 1 — STRUCTURED LAYOUT ENGINE
+==================================================
+
+Create a layout-planning system using structured JSON.
+
+Example output:
+
+{
+  "style": "rustic cafe",
+  "palette": {
+    "primary": "#D96A1B",
+    "secondary": "#1B1A18",
+    "background": "#F4E7D1"
+  },
+  "headline": {
+    "text": "MR. BISCUIT'S Cafe",
+    "weight": "bold",
+    "placement": "top-right"
+  },
+  "cta": {
+    "text": "$1 OFF ANY BISCUIT",
+    "placement": "bottom-right"
+  },
+  "layout": {
+    "heroArea": {...},
+    "menuArea": {...},
+    "footerArea": {...}
+  }
+}
+
+The layout engine must:
+- dynamically scale typography
+- auto-fit text
+- prevent overflow
+- preserve gutters
+- maintain hierarchy
+- adapt to varying text lengths
+
+==================================================
+STEP 2 — HERO IMAGE GENERATION
+==================================================
+
+Generate ONLY:
+- food/product imagery
+- atmosphere
+- lighting
+- composition
+- textures
+- background
+
+DO NOT generate:
+- prices
+- phone numbers
+- QR codes
+- addresses
+- detailed typography
+
+The hero image should intentionally leave negative space for text placement.
+
+Use prompts emphasizing:
+- cinematic food photography
+- ad composition
+- commercial lighting
+- clean focal points
+- empty areas for typography
+
+==================================================
+STEP 3 — SMART COMPOSITION ENGINE
+==================================================
+
+Render everything into a SINGLE high-resolution canvas using react-konva.
+
+DO NOT use DOM overlays for final rendering.
+
+The renderer must support:
+- layered composition
+- adaptive typography
+- texture overlays
+- gradient masks
+- drop shadows
+- blend modes
+- clipping masks
+- smart image cropping
+- cinematic contrast shaping
+
+Implement:
+- safe zones
+- optical alignment
+- proportional spacing
+- vertical rhythm
+- hierarchy scaling
+
+==================================================
+TYPOGRAPHY SYSTEM
+==================================================
+
+Implement a true typography engine.
+
+Requirements:
+- measureText()
+- dynamic font scaling
+- auto line wrapping
+- kerning adjustments
+- optical centering
+- consistent spacing
+- baseline alignment
+
+Typography must:
+- feel integrated into the design
+- not appear pasted on top
+- maintain visual hierarchy
+
+Add:
+- subtle shadows
+- texture blending
+- edge softness
+- slight lighting interaction
+
+==================================================
+IMAGE ANALYSIS
+==================================================
+
+Before text placement:
+- analyze image brightness
+- detect focal regions
+- detect busy/high-detail areas
+- locate negative space
+
+Avoid placing text:
+- over faces
+- over food focal points
+- over highly detailed areas
+
+Add adaptive dark/light overlays behind text when needed.
+
+==================================================
+STEP 4 — FINAL AI POLISH PASS (CRITICAL)
+==================================================
+
+After deterministic rendering:
+- flatten ad to PNG
+- send to AI image editing model
+
+VERY IMPORTANT:
+The polish pass should preserve ALL rendered text EXACTLY.
+
+Use editing instructions similar to:
+
+"Refine this advertisement into a premium professionally art-directed direct-mail postcard. Preserve ALL wording, phone numbers, prices, QR codes, and branding exactly as rendered. Improve visual cohesion, typography integration, lighting interaction, texture blending, depth, realism, shadow harmony, composition quality, and overall print-ready polish. Do not alter text content."
+
+Goals:
+- eliminate “floating HTML overlay” appearance
+- blend text naturally into image
+- improve lighting realism
+- improve texture consistency
+- improve cinematic quality
+- subtly unify the composition
+
+==================================================
+PERFORMANCE TARGETS
+==================================================
+
+Draft Generation:
+- 5–15 seconds
+
+Full Premium Render:
+- 30–90 seconds
+
+Target API Cost:
+- under $1 per final ad
+
+Optimize by:
+- generating hero image ONCE
+- refining layout locally
+- performing polish pass ONLY on final selected layout
+
+==================================================
+EXPORT REQUIREMENTS
+==================================================
+
+Support:
+- PNG
+- PDF
+- print-ready exports
+
+Render at:
+- 300 DPI
+- high-resolution postcard dimensions
+
+Maintain:
+- sharp typography
+- QR code scannability
+- print-safe margins
+
+==================================================
+QUALITY TARGET
+==================================================
+
+The final ads should resemble:
+- professionally designed local direct-mail postcards
+- restaurant mailers
+- agency-quality promotional pieces
+
+The ads should NOT resemble:
+- Canva templates
+- HTML overlays
+- generic AI posters
+- social media graphics
+- low-effort AI generations
+
+==================================================
+IMPLEMENTATION PRIORITIES
+==================================================
+
+PRIORITY 1:
+Build the deterministic layout/composition engine.
+
+PRIORITY 2:
+Implement adaptive typography and smart image-aware placement.
+
+PRIORITY 3:
+Implement the AI polish pass to visually unify the final composition.
+
+The AI polish pass is essential to achieving premium-quality output.
