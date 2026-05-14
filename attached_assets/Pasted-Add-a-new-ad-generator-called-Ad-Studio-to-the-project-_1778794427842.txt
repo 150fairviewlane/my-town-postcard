@@ -1,0 +1,160 @@
+Add a new ad generator called Ad Studio to the project. Follow these instructions carefully and do not modify any existing files except where explicitly stated.
+
+════════════════════════════════════════════════
+CHANGE 1 — UPLOAD THE TEMPLATE IMAGE
+════════════════════════════════════════════════
+
+Upload the attached file mr_biscuits_template_no_logo.png to the project’s public assets folder, wherever other static images are served from.
+
+Rename it to template-rustic-parchment.png when saving it.
+
+Make note of the public URL path it will be served from, for example:
+/assets/template-rustic-parchment.png
+/public/template-rustic-parchment.png
+/images/template-rustic-parchment.png
+
+You will use this path in Change 3.
+
+════════════════════════════════════════════════
+CHANGE 2 — ADD THE HTML FILE AND ROUTE
+════════════════════════════════════════════════
+
+Add the attached file ad-studio.html to the project.
+
+Create a new route at /ad-studio that serves this file.
+
+Add a link to this page from wherever the other ad generators are linked, labeled “Ad Studio”.
+
+Do not remove or modify any existing ad generator versions.
+
+════════════════════════════════════════════════
+CHANGE 3 — FIX THE TEMPLATE IMAGE PATH
+════════════════════════════════════════════════
+
+In ad-studio.html, find the img tag that reads:
+
+<img class="ad-template-img" id="adTemplateImg"
+src="/mnt/user-data/uploads/mr_biscuits_template_no_logo.png"
+alt="Ad template background">
+
+Update the src attribute to the correct public path from Change 1, for example:
+src=”/assets/template-rustic-parchment.png”
+
+Also find the TEMPLATES object in the JavaScript near the top of the script section:
+
+const TEMPLATES = {
+rustic: ‘/assets/template-rustic-parchment.png’,
+…
+};
+
+Update the rustic path to match the same correct public path.
+
+Also find the onTemplateChange() function and uncomment these two lines inside it by removing the two forward slashes at the start of each:
+
+// const img = document.getElementById(‘adTemplateImg’);
+// if(TEMPLATES[tpl]) img.src = TEMPLATES[tpl];
+
+════════════════════════════════════════════════
+CHANGE 4 — CONNECT THE IMAGE LIBRARY
+════════════════════════════════════════════════
+
+The loadPhotos() function in ad-studio.html already contains a fetch call to /api/image-library?industry=… inside a try/catch block. This is already written correctly.
+
+Confirm that the existing /api/image-library route returns a JSON object with an images array, where each image object has an image_url field. If it returns a different structure, update just the mapping line inside the try block to match:
+
+photos = data.images.map(i => i.image_url);
+
+Change image_url to whatever field name your route actually returns for the full-size image URL. Do not change anything else in the function.
+
+════════════════════════════════════════════════
+CHANGE 5 — WIRE THE SAVE BUTTON
+════════════════════════════════════════════════
+
+Find the useAd() function in ad-studio.html. It currently builds a payload object and logs it to the console.
+
+Replace the console.log and alert at the bottom of that function with a POST request to the same save endpoint used by the other ad generators in the project. Check how useAd() works in ad-generator-v5.html or ad-generator-v6.html and match that pattern.
+
+The payload object is already built correctly in the function. Send it as JSON in the request body. The fields it contains are:
+
+adVersion, template, industry, bizLine1, bizLine2, tagline,
+phone, address, city, qrUrl, menu, offerAmount, offerItem,
+offerFine, accentColor, photoUrl
+
+After a successful save, show a brief success message to the user such as “Ad saved successfully” and enable any next-step workflow that exists in the other generators (such as navigating to a review page or closing a modal).
+
+════════════════════════════════════════════════
+CHANGE 6 — HANDLE PHOTO UPLOAD TO STORAGE
+════════════════════════════════════════════════
+
+The handleUpload() function currently reads the file as a base64 data URL for preview only. This means uploaded photos are not saved server-side.
+
+If the project already has a photo upload endpoint (check how the image library admin tool handles uploads), wire the photo upload in ad-studio.html to that same endpoint.
+
+After a successful upload, store the returned server-side URL in the selectedPhotoUrl variable so it gets included correctly in the useAd() payload.
+
+If no upload endpoint exists yet, leave the photo upload as base64 preview only and skip this part of Change 6.
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+Do not modify any of the following:
+
+The postcard composer or layout builder
+Payment pages or Stripe integration
+Dealer portal
+Image library admin tool
+Ad generator v1, v2, v3, v4, v5, v6, or mr-biscuits
+Any existing API routes
+Any database tables other than reading from image_library
+Any authentication or session logic
+
+════════════════════════════════════════════════
+TEST AFTER BUILDING
+════════════════════════════════════════════════
+
+Go to /ad-studio and run through this full test:
+
+TEST 1 — Template loads
+The rustic parchment template background image loads correctly.
+You should see: parchment background, brush strokes, orange ribbon
+top left, four checkmark circles on the left side, dashed coupon
+box lower right, phone icon and QR code in the footer.
+
+TEST 2 — Industry switching works
+Select Pizza Restaurant from the industry dropdown.
+Confirm these fields update automatically:
+Tagline becomes: Hand-Tossed. Oven Fresh.
+Menu items become: Large Pizza $14.99, Family Special $24.99,
+Wings & Pizza Combo, Free Delivery
+Offer Amount becomes: $5 OFF
+Offer Description becomes: Any Large Pizza
+Photo grid loads pizza photos
+
+Then switch to Mexican Restaurant.
+Confirm ALL of those fields update again with Mexican Restaurant
+defaults. The tagline, menu, and coupon should all change.
+This is the key test — fields must update every time the
+industry changes, not just on first selection.
+
+TEST 3 — Ad renders live
+With any industry selected and fields populated, the ad preview
+updates instantly as you type in any field. No button press needed.
+
+TEST 4 — Photo selection works
+Clicking any photo in the grid selects it and blends it into
+the hero area of the ad template. The shuffle button cycles
+through available photos.
+
+TEST 5 — Coupon shows and hides
+If Offer Amount and Offer Description are both blank, the coupon
+overlay does not appear on the ad.
+If either has content, the coupon appears inside the dashed box.
+
+TEST 6 — Accent color updates
+Clicking any color chip immediately updates the script text color,
+price color, and tagline rule color throughout the ad.
+
+TEST 7 — Save works
+Click Use This Ad and confirm the payload is saved correctly
+and the user sees a success confirmation.
