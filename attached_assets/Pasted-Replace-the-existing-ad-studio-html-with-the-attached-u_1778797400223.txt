@@ -1,0 +1,97 @@
+Replace the existing ad-studio.html with the attached updated version. Same route, same filename, drop-in replacement.
+
+════════════════════════════════════════════════
+WHAT CHANGED
+════════════════════════════════════════════════
+
+This update fixes font sizing and element positioning throughout the ad canvas.
+
+ROOT CAUSE OF ALL PREVIOUS ISSUES:
+Every font was using vw units (viewport width), which reference the full
+browser width of ~1300px on desktop. The ad canvas is only ~480px wide,
+so all fonts were rendering at roughly 2.7x the intended size. This caused
+the company name to overflow, the tagline to be enormous, the menu items
+to collide with the coupon, and the coupon to render too large.
+
+FIXES APPLIED:
+All font sizes now use cqw (container query width) or min() with a px cap,
+so they scale relative to the ad canvas width, not the browser viewport.
+
+Specific changes:
+Business name Line 1: was 7.8vw, now min(9.5cqw, 46px)
+Business name Line 2: was 9.5vw, now min(11cqw, 54px)
+Tagline: was 3.9vw, now min(4.8cqw, 23px)
+Menu item names: was 2.1vw, now min(2.5cqw, 12px)
+Menu item prices: was 2.1vw, now min(2.5cqw, 12px)
+Coupon amount: was 5.8vw, now min(6.5cqw, 32px)
+Coupon item: was 4vw, now min(4.8cqw, 23px)
+Coupon fine print: was 1.2vw, now min(1.8cqw, 9px)
+Phone number: was 5vw, now min(5.5cqw, 27px)
+Address: was 1.3vw, now min(1.8cqw, 9px)
+
+Menu block vertical position adjusted:
+top changed from 50% to 49% so row centers align with checkmark circles
+at 53.03%, 60.69%, 67.98%, 75.64% of card height
+
+════════════════════════════════════════════════
+INSTRUCTIONS
+════════════════════════════════════════════════
+
+Step 1
+Replace the entire contents of ad-studio.html with the attached file.
+The route /ad-studio continues serving the same file — no route changes.
+
+Step 2
+Fix the template image src as before — update from:
+/mnt/user-data/uploads/mr_biscuits_template_no_logo.png
+To whatever path the template image is already stored at in the project,
+for example:
+/assets/template-rustic-parchment.png
+
+Step 3
+No other changes needed. All other files remain untouched.
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+Postcard composer, payment pages, dealer portal
+Image library admin tool
+Ad generators v1 through v6 and mr-biscuits
+Any existing API routes or database tables
+Any authentication logic
+
+════════════════════════════════════════════════
+TEST AFTER DEPLOYING
+════════════════════════════════════════════════
+
+Go to /ad-studio, select Breakfast & Cafe, fill in:
+Business Name Line 1: MR. BISCUITS
+Business Name Line 2: Cafe
+Tagline: Made From Scratch Daily
+Phone: (706) 754-0105
+Address: 596 W Louise St
+City: Clarkesville, GA
+Menu: Breakfast Plate $8.99 / Specialty Coffee $4.49 / Bacon Biscuit $4.99 / Chicken Tender $5.99
+Offer Amount: $1 OFF
+Offer Item: Any Breakfast Item
+Fine Print: 1 per visit with this postcard
+
+Confirm all of the following:
+
+1. Company name Line 1 fits within the top right zone without
+   overflowing the right edge of the card
+1. Pacifico script Line 2 overlaps the bottom of Line 1 and is
+   slightly larger, at a slight angle — does not overflow
+1. Tagline fits neatly in the left column without being enormous —
+   should be readable but not dominating the left side
+1. All 4 menu items appear next to their respective checkmark circles
+   with item names on the left and prices on the right, connected by
+   dotted lines — no text overlapping the coupon box
+1. The coupon box shows the offer amount in large bold Bebas Neue,
+   the item in Pacifico script below it, and the fine print below that
+   — all fitting within the dashed border box
+1. The phone number appears large and clear in the dark footer bar,
+   to the right of the phone icon, with the address below it in
+   smaller text
+1. No empty checkmark circles with no text next to them

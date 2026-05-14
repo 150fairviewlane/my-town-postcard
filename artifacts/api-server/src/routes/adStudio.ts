@@ -119,13 +119,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
 .tbtn.primary:hover{background:#144d30}
 .tbtn:disabled{opacity:.4;cursor:not-allowed}
 
-/* AD CANVAS */
+/* AD CANVAS — template 1148×1371px, canvas ~480px wide, cqw relative to ad-wrap */
 .ad-outer{width:100%;max-width:520px}
-.ad-wrap{width:100%;position:relative;border-radius:12px;overflow:hidden;box-shadow:0 16px 60px rgba(0,0,0,.28);display:none}
+.ad-wrap{width:100%;position:relative;border-radius:12px;overflow:hidden;box-shadow:0 16px 60px rgba(0,0,0,.28);display:none;container-type:inline-size}
 .ad-wrap.visible{display:block}
 .ad-template-img{width:100%;display:block}
 
-/* FOOD PHOTO — prominent foreground, right side, z-index 2 */
+/* FOOD PHOTO — right 73% of card, z-index 2 */
 .ad-photo-wrap{
   position:absolute;
   top:0;left:27%;right:0;bottom:20%;
@@ -138,126 +138,133 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
 .ad-photo-wrap::after{
   content:'';position:absolute;inset:0;
   background:
-    linear-gradient(to right,rgba(236,220,188,.55) 0%,transparent 22%),
-    linear-gradient(to bottom,transparent 52%,rgba(0,0,0,.78) 100%),
-    linear-gradient(to top,transparent 85%,rgba(236,220,188,.25) 100%);
+    linear-gradient(to right,rgba(236,220,188,.6) 0%,transparent 25%),
+    linear-gradient(to bottom,transparent 50%,rgba(0,0,0,.82) 100%);
 }
 
-/* BUSINESS NAME */
+/* BUSINESS NAME — top=2%, left=25%, font sizes capped for 480px canvas */
 .ov-bizname{
   position:absolute;
-  top:1%;left:25%;right:1%;
-  z-index:10;line-height:.85;
+  top:2%;left:25%;right:2%;
+  z-index:10;line-height:.88;
 }
 .biz-l1{
   font-family:'Bebas Neue',sans-serif;
-  font-size:clamp(20px,7.8vw,76px);
-  color:#1C1B1A;letter-spacing:.015em;display:block;
+  font-size:min(9.5cqw,46px);
+  color:#1C1B1A;letter-spacing:.02em;display:block;
   transform:rotate(-1.5deg);transform-origin:left top;
-  text-shadow:2px 2px 0 rgba(255,255,255,.4);
+  text-shadow:2px 2px 0 rgba(255,255,255,.45);
   position:relative;z-index:2;
+  line-height:.92;
 }
 .biz-l2{
   font-family:'Pacifico',cursive;
-  font-size:clamp(24px,9.5vw,92px);
+  font-size:min(11cqw,54px);
   color:var(--ac,#C8541A);display:block;
-  line-height:.82;margin-top:-6%;
+  line-height:.88;margin-top:-3%;
   transform:rotate(-3deg);transform-origin:left center;
-  text-shadow:2px 3px 10px rgba(0,0,0,.22);
+  text-shadow:2px 3px 8px rgba(0,0,0,.2);
   position:relative;z-index:3;
 }
-.biz-ticks{position:absolute;top:10%;right:2%;z-index:4}
-.tick{display:block;background:#1C1B1A;height:2px;opacity:.5;border-radius:1px;margin-bottom:4px}
+.biz-ticks{
+  position:absolute;top:2%;right:0;z-index:4;
+  display:flex;flex-direction:column;align-items:flex-end;gap:3px;
+}
+.tick{display:block;background:#1C1B1A;height:1.5px;opacity:.4;border-radius:1px}
 
-/* TAGLINE */
+/* TAGLINE — left column ~24% wide */
 .ov-tagline{
   position:absolute;
-  top:21%;left:1.5%;width:26%;z-index:10;
+  top:21%;left:1.5%;width:24%;z-index:10;
 }
 .tagline-txt{
   font-family:'Dancing Script',cursive;
-  font-size:clamp(10px,3.9vw,38px);
+  font-size:min(4.8cqw,23px);
   font-weight:700;color:#1C1B1A;
-  line-height:1.15;display:block;transform:rotate(-1deg);
+  line-height:1.2;display:block;
+  transform:rotate(-1deg);
+  word-break:normal;overflow-wrap:break-word;
 }
 .tagline-rule{
-  display:block;width:60%;height:2.5px;
+  display:block;width:65%;height:2px;
   background:linear-gradient(90deg,var(--ac,#C8541A),transparent);
-  margin-top:4%;border-radius:1px;
+  margin-top:5%;border-radius:1px;
 }
 
-/* MENU ROWS — circles pixel-scanned at y=727,832,932,1037px */
+/* MENU ROWS — circle centers at 53.03%,60.69%,67.98%,75.64% of card height
+   block top = 53% - 7.66%/2 = 49% */
 .ov-menu{
   position:absolute;
-  top:50%;left:10.5%;right:43%;z-index:10;
+  top:49%;left:10.5%;right:42%;z-index:10;
 }
-.menu-row{height:7.7%;display:flex;align-items:center;gap:3%}
+.menu-row{height:7.66%;display:flex;align-items:center;gap:2%;overflow:hidden}
 .mi-name{
   font-family:'Montserrat',sans-serif;
-  font-size:clamp(7px,2.1vw,20px);
+  font-size:min(2.5cqw,12px);
   font-weight:800;color:#1C1B1A;
-  text-transform:uppercase;letter-spacing:.05em;
-  white-space:nowrap;flex-shrink:0;line-height:1;
+  text-transform:uppercase;letter-spacing:.04em;
+  white-space:nowrap;flex-shrink:1;line-height:1;
+  min-width:0;overflow:hidden;text-overflow:ellipsis;
 }
-.mi-dots{flex:1;border-bottom:2px dotted rgba(28,27,26,.28);margin-bottom:1px;min-width:4px}
+.mi-dots{flex:1;border-bottom:1.5px dotted rgba(28,27,26,.25);margin-bottom:1px;min-width:3px;flex-shrink:1}
 .mi-price{
   font-family:'Montserrat',sans-serif;
-  font-size:clamp(7px,2.1vw,20px);
+  font-size:min(2.5cqw,12px);
   font-weight:800;color:var(--ac,#C8541A);
   white-space:nowrap;flex-shrink:0;line-height:1;
 }
 
-/* COUPON BOX — pixel-scanned boundaries */
+/* COUPON BOX — pixel-scanned dashed border boundaries */
 .ov-coupon{
   position:absolute;
-  top:55.5%;left:40.5%;right:2.5%;bottom:21%;
+  top:55%;left:40%;right:2.5%;bottom:21%;
   z-index:10;
   display:flex;flex-direction:column;align-items:center;
-  justify-content:center;text-align:center;padding:1% 3%;
+  justify-content:center;text-align:center;padding:1% 2%;
 }
 .coupon-amount{
   font-family:'Bebas Neue',sans-serif;
-  font-size:clamp(14px,5.8vw,56px);
-  color:#fff;line-height:.88;letter-spacing:.02em;display:block;
+  font-size:min(6.5cqw,32px);
+  color:#fff;line-height:.9;letter-spacing:.02em;display:block;
 }
 .coupon-item{
   font-family:'Pacifico',cursive;
-  font-size:clamp(11px,4vw,38px);
+  font-size:min(4.8cqw,23px);
   color:var(--ac,#C8541A);display:block;
-  line-height:1;margin-top:1.5%;transform:rotate(-1.5deg);
+  line-height:1.05;margin-top:2%;transform:rotate(-1.5deg);
 }
 .coupon-fine{
   font-family:'DM Sans',sans-serif;
-  font-size:clamp(5px,1.2vw,12px);
+  font-size:min(1.8cqw,9px);
   color:rgba(255,255,255,.55);
-  display:block;margin-top:3%;letter-spacing:.04em;
+  display:block;margin-top:3%;letter-spacing:.03em;
 }
 
-/* FOOTER — dark bar starts at y=1132 (82.57%) */
+/* FOOTER — dark bar at y=1132 (82.57%) */
 .ov-phone{
   position:absolute;
-  top:83%;left:12%;right:20%;z-index:10;
+  top:83%;left:12%;right:18%;z-index:10;
 }
 .phone-num{
   font-family:'Bebas Neue',sans-serif;
-  font-size:clamp(13px,5vw,48px);
+  font-size:min(5.5cqw,27px);
   color:#fff;letter-spacing:.04em;line-height:1;display:block;
 }
 .phone-addr{
   font-family:'DM Sans',sans-serif;
-  font-size:clamp(5px,1.3vw,13px);
+  font-size:min(1.8cqw,9px);
   color:rgba(255,255,255,.62);
   display:block;margin-top:1%;font-weight:500;letter-spacing:.03em;
 }
 
 .ov-qr-label{
   position:absolute;bottom:2%;right:1.5%;
-  text-align:center;width:11%;z-index:10;
+  text-align:center;width:12%;z-index:10;
 }
 .qr-url-txt{
   font-family:'DM Sans',sans-serif;
-  font-size:clamp(4px,1vw,9px);
-  color:rgba(255,255,255,.45);
+  font-size:min(1.4cqw,7px);
+  color:rgba(255,255,255,.4);
   display:block;word-break:break-all;line-height:1.2;
 }
 
