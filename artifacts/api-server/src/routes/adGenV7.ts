@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import OpenAI, { toFile } from "openai";
+import { z } from "zod";
 
 const router: IRouter = Router();
 
@@ -10,36 +11,74 @@ function getOpenAIClient(): OpenAI | null {
   return new OpenAI({ apiKey, baseURL });
 }
 
+// ── Zod schemas ───────────────────────────────────────────────────────────────
+
+const LayoutRequestSchema = z.object({
+  industry: z.string().min(1, "industry is required"),
+  bizLine1: z.string().min(1, "bizLine1 is required"),
+  bizLine2: z.string().optional().default(""),
+  tagline: z.string().optional().default(""),
+  phone: z.string().optional().default(""),
+  address: z.string().optional().default(""),
+  city: z.string().optional().default(""),
+  menu: z.array(z.string()).optional().default([]),
+  offerAmount: z.string().optional().default(""),
+  offerItem: z.string().optional().default(""),
+  offerFine: z.string().optional().default(""),
+  accentColor: z.string().optional().default("#C8541A"),
+});
+
+const MenuItemSchema = z.object({
+  name: z.string(),
+  price: z.string().optional().default(""),
+});
+
+const LayoutResponseSchema = z.object({
+  headline1: z.string().min(1),
+  headline2: z.string().optional().default(""),
+  tagline: z.string().optional().default(""),
+  menu: z.array(MenuItemSchema).optional().default([]),
+  offer: z
+    .object({
+      amount: z.string().optional().default(""),
+      item: z.string().optional().default(""),
+      fine: z.string().optional().default(""),
+    })
+    .optional()
+    .default({}),
+  heroPrompt: z.string().optional().default(""),
+});
+
+const HeroRequestSchema = z.object({
+  prompt: z.string().min(1, "prompt is required"),
+});
+
+const PolishRequestSchema = z.object({
+  imageData: z.string().min(1, "imageData is required"),
+});
+
 const LAYOUT_SYSTEM =
   "You are an expert print advertising art director for local businesses. " +
   "Return ONLY valid JSON — no markdown fences, no extra text.";
 
 // POST /api/ad-gen/layout — GPT-4o enriches ad copy + generates hero prompt
 router.post("/ad-gen/layout", async (req, res): Promise<void> => {
+  const parsed = LayoutRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" });
+    return;
+  }
+
   const openai = getOpenAIClient();
   if (!openai) {
     res.status(503).json({ error: "AI not configured" });
     return;
   }
 
-  const body = req.body as Record<string, unknown>;
-  const industry = String(body.industry ?? "");
-  const bizLine1 = String(body.bizLine1 ?? "");
-  if (!industry || !bizLine1) {
-    res.status(400).json({ error: "industry and bizLine1 are required" });
-    return;
-  }
+  const { industry, bizLine1, bizLine2, tagline, phone, address, city, menu,
+          offerAmount, offerItem, offerFine, accentColor } = parsed.data;
 
-  const bizLine2 = String(body.bizLine2 ?? "");
-  const tagline = String(body.tagline ?? "");
-  const phone = String(body.phone ?? "");
-  const address = String(body.address ?? "");
-  const city = String(body.city ?? "");
-  const menuArr = Array.isArray(body.menu) ? (body.menu as unknown[]).map(String).filter(Boolean) : [];
-  const offerAmount = String(body.offerAmount ?? "");
-  const offerItem = String(body.offerItem ?? "");
-  const offerFine = String(body.offerFine ?? "");
-  const accentColor = String(body.accentColor ?? "#C8541A");
+  const menuStr = menu.filter(Boolean).join(", ");
 
   const prompt =
     "Generate layout JSON for a premium local direct-mail postcard ad.\n\n" +
@@ -48,12 +87,12 @@ router.post("/ad-gen/layout", async (req, res): Promise<void> => {
     "Tagline input: " + (tagline || "(generate a compelling, specific tagline under 35 chars)") + "\n" +
     "Phone: " + phone + "\n" +
     "Address: " + address + (city ? ", " + city : "") + "\n" +
-    "Menu/Services: " + (menuArr.join(", ") || "(generate 4 relevant items with prices)") + "\n" +
+    "Menu/Services: " + (menuStr || "(generate 4 relevant items with prices)") + "\n" +
     "Special Offer: " + (offerAmount || "(generate a compelling offer)") + " " + offerItem + "\n" +
     "Fine Print: " + (offerFine || "1 per visit · with this postcard") + "\n" +
     "Accent Color: " + accentColor + "\n\n" +
-    'Return this exact JSON structure:\n' +
-    '{\n' +
+    "Return this exact JSON structure:\n" +
+    "{\n" +
     '  "headline1": "BUSINESS NAME in ALL CAPS, max 20 chars per word",\n' +
     '  "headline2": "memorable 1-3 word script accent, title case, max 14 chars",\n' +
     '  "tagline": "compelling tagline under 35 chars",\n' +
@@ -62,14 +101,14 @@ router.post("/ad-gen/layout", async (req, res): Promise<void> => {
     '    {"name": "Item or Service", "price": "$X.XX"},\n' +
     '    {"name": "Item or Service", "price": "$X.XX"},\n' +
     '    {"name": "Item or Service", "price": "$X.XX"}\n' +
-    '  ],\n' +
+    "  ],\n" +
     '  "offer": {\n' +
     '    "amount": "e.g. $5 OFF or FREE",\n' +
     '    "item": "short item description, 1-5 words",\n' +
     '    "fine": "1 per visit · with this postcard"\n' +
-    '  },\n' +
-    '  "heroPrompt": "90-word cinematic commercial food/product photography prompt: camera angle, lighting (backlit/golden hour/studio), subject focus, intentionally empty left 30% for text overlay, warm shallow depth of field, photorealistic, portrait 3:4 aspect, NO text or logos visible"\n' +
-    '}';
+    "  },\n" +
+    '  "heroPrompt": "90-word cinematic commercial food/product photography prompt: camera angle, lighting, subject focus, intentionally empty left 30% for text overlay, warm shallow depth of field, photorealistic, portrait 3:4 aspect, NO text or logos visible"\n' +
+    "}";
 
   try {
     const completion = await openai.chat.completions.create({
@@ -83,14 +122,24 @@ router.post("/ad-gen/layout", async (req, res): Promise<void> => {
     });
 
     const content = completion.choices[0]?.message?.content ?? "";
-    let layout: unknown;
+    let rawLayout: unknown;
     try {
-      layout = JSON.parse(content);
+      rawLayout = JSON.parse(content);
     } catch {
       res.status(502).json({ error: "AI returned invalid JSON" });
       return;
     }
-    res.json({ layout });
+
+    // Validate the AI response against our schema
+    const layoutParsed = LayoutResponseSchema.safeParse(rawLayout);
+    if (!layoutParsed.success) {
+      req.log?.warn({ issues: layoutParsed.error.errors }, "AI layout response failed schema validation");
+      // Return raw content as-is with a warning — don't block the user
+      res.json({ layout: rawLayout, warning: "AI response had unexpected shape" });
+      return;
+    }
+
+    res.json({ layout: layoutParsed.data });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "GPT-4o request failed";
     res.status(502).json({ error: msg });
@@ -99,15 +148,15 @@ router.post("/ad-gen/layout", async (req, res): Promise<void> => {
 
 // POST /api/ad-gen/hero — gpt-image-1 hero photo generation
 router.post("/ad-gen/hero", async (req, res): Promise<void> => {
-  const openai = getOpenAIClient();
-  if (!openai) {
-    res.status(503).json({ error: "AI not configured" });
+  const parsed = HeroRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" });
     return;
   }
 
-  const { prompt } = req.body as { prompt?: string };
-  if (!prompt || typeof prompt !== "string") {
-    res.status(400).json({ error: "prompt is required" });
+  const openai = getOpenAIClient();
+  if (!openai) {
+    res.status(503).json({ error: "AI not configured" });
     return;
   }
 
@@ -118,7 +167,7 @@ router.post("/ad-gen/hero", async (req, res): Promise<void> => {
   try {
     const imageRes = await openai.images.generate({
       model: "gpt-image-1",
-      prompt: prompt + appendix,
+      prompt: parsed.data.prompt + appendix,
       size: "1024x1536",
     });
 
@@ -136,21 +185,22 @@ router.post("/ad-gen/hero", async (req, res): Promise<void> => {
 
 // POST /api/ad-gen/polish — AI polish pass on the rendered canvas
 router.post("/ad-gen/polish", async (req, res): Promise<void> => {
+  const parsed = PolishRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" });
+    return;
+  }
+
   const openai = getOpenAIClient();
   if (!openai) {
     res.status(503).json({ error: "AI not configured" });
     return;
   }
 
-  const { imageData } = req.body as { imageData?: string };
-  if (!imageData || typeof imageData !== "string") {
-    res.status(400).json({ error: "imageData is required" });
-    return;
-  }
-
+  const { imageData } = parsed.data;
   const base64 = imageData.startsWith("data:") ? imageData.split(",")[1] : imageData;
   if (!base64) {
-    res.status(400).json({ error: "Invalid imageData" });
+    res.status(400).json({ error: "Invalid imageData format" });
     return;
   }
 

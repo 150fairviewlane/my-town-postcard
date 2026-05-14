@@ -25,6 +25,11 @@ const ACCENT_COLORS = [
   "#6B21A8", "#0e7490", "#92400e", "#374151",
 ];
 
+// ── Export pixel ratio: display=480 → native template=1148 → ratio≈2.39 ──────
+// Exporting at 2.4× gives ~1152×1375 px (native parchment template resolution,
+// print-ready at ~300 DPI for a 3.8"×4.6" ad spot).
+const EXPORT_PIXEL_RATIO = Math.round((1148 / W) * 10) / 10; // 2.4
+
 // ── Measure text width via offscreen canvas ───────────────────────────────────
 function measureText(text, fontSize, fontFamily, fontStyle = "normal") {
   const cv = document.createElement("canvas");
@@ -39,6 +44,34 @@ function fitFontSize(text, maxW, startSize, fontFamily, fontStyle = "normal", mi
   let size = startSize;
   while (size > minSize && measureText(text, size, fontFamily, fontStyle) > maxW) size--;
   return size;
+}
+
+// ── Two-line headline wrap ────────────────────────────────────────────────────
+// If the headline fits single-line at a comfortable size (≥18px), keep it single.
+// Otherwise find the best word-boundary split that maximises the font size.
+function wrapHeadline(text, maxW, startSize, fontFamily) {
+  const upper = (text || "YOUR BUSINESS").toUpperCase();
+  const singleSize = fitFontSize(upper, maxW, startSize, fontFamily);
+  if (singleSize >= 18) return { lines: [upper], fontSize: singleSize };
+
+  const words = upper.split(/\s+/);
+  if (words.length < 2) return { lines: [upper], fontSize: singleSize };
+
+  let bestSplit = 1;
+  let bestSize = 0;
+  for (let i = 1; i < words.length; i++) {
+    const line1 = words.slice(0, i).join(" ");
+    const line2 = words.slice(i).join(" ");
+    const sz = Math.min(
+      fitFontSize(line1, maxW, startSize, fontFamily),
+      fitFontSize(line2, maxW, startSize, fontFamily),
+    );
+    if (sz > bestSize) { bestSize = sz; bestSplit = i; }
+  }
+  return {
+    lines: [words.slice(0, bestSplit).join(" "), words.slice(bestSplit).join(" ")],
+    fontSize: bestSize,
+  };
 }
 
 // ── Load image URL → HTMLImageElement ─────────────────────────────────────────
@@ -176,9 +209,10 @@ export default function AdGenV7Page() {
       .catch(() => setQrDataUrl(null));
   }, [website]);
 
-  // ── Auto-fit font sizes ───────────────────────────────────────────────────
-  const hn1Size = useMemo(() =>
-    fitFontSize((bizLine1 || "BUSINESS NAME").toUpperCase(), BN1_W - 4, 46, "'Bebas Neue'"),
+  // ── Auto-fit font sizes & two-line wrap ──────────────────────────────────
+  // wrapHeadline returns { lines: string[], fontSize: number }
+  const hn1Wrap = useMemo(() =>
+    wrapHeadline(bizLine1 || "YOUR BUSINESS", BN1_W - 4, 46, "'Bebas Neue'"),
     [bizLine1]);
 
   const hn2Size = useMemo(() =>
@@ -216,48 +250,64 @@ export default function AdGenV7Page() {
     if (!bizLine1) { setError("Enter a business name first."); return; }
     setError("");
     setGenerating(true);
-    try {
-      const resp = await fetch("/api/ad-gen/layout", {
+
+    // Fire layout and hero (if AI tab) in parallel — spec step 9: "runs steps 1 + 2 in parallel"
+    const layoutFetch = fetch("/api/ad-gen/layout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        industry, bizLine1, bizLine2, tagline, phone, address, city,
+        menu: menuItems.filter(Boolean), offerAmount, offerItem, offerFine, accentColor,
+      }),
+    });
+
+    // Hero: start immediately with a rich default prompt; layout's heroPrompt is better
+    // but runs concurrently so the image is ready sooner
+    let heroFetch = null;
+    if (heroTab === "ai") {
+      setGeneratingHero(true);
+      const defaultPrompt =
+        heroPrompt ||
+        "Cinematic commercial photography for a " + bizLine1 + " " + industry +
+        " business, warm golden-hour backlit lighting, food or product hero shot centered right, " +
+        "intentionally empty darker left 30% of frame for text overlay, shallow depth of field, " +
+        "portrait 3:4 aspect, photorealistic, no text no logos no words anywhere";
+      heroFetch = fetch("/api/ad-gen/hero", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          industry, bizLine1, bizLine2, tagline, phone, address, city,
-          menu: menuItems.filter(Boolean), offerAmount, offerItem, offerFine, accentColor,
-        }),
+        body: JSON.stringify({ prompt: defaultPrompt }),
       });
-      const data = await resp.json();
-      if (!resp.ok) throw new Error(data.error ?? "Layout generation failed");
-      const L = data.layout;
-      if (L.headline1) setBizLine1(L.headline1);
-      if (L.headline2) setBizLine2(L.headline2);
-      if (L.tagline)   setTagline(L.tagline);
+    }
+
+    try {
+      const [layoutResp, heroResp] = await Promise.all([
+        layoutFetch,
+        heroFetch ?? Promise.resolve(null),
+      ]);
+
+      const layoutData = await layoutResp.json();
+      if (!layoutResp.ok) throw new Error(layoutData.error ?? "Layout generation failed");
+      const L = layoutData.layout;
+      if (L.headline1)    setBizLine1(L.headline1);
+      if (L.headline2)    setBizLine2(L.headline2);
+      if (L.tagline)      setTagline(L.tagline);
       if (L.menu?.length) setMenuItems(L.menu.map((m) => m.name + (m.price ? " " + m.price : "")));
       if (L.offer?.amount) setOfferAmount(L.offer.amount);
       if (L.offer?.item)   setOfferItem(L.offer.item);
       if (L.offer?.fine)   setOfferFine(L.offer.fine);
       if (L.heroPrompt)    setHeroPrompt(L.heroPrompt);
 
-      // Auto-generate hero image if AI tab is active
-      if (heroTab === "ai" && L.heroPrompt) {
-        setGeneratingHero(true);
-        try {
-          const hr = await fetch("/api/ad-gen/hero", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt: L.heroPrompt }),
-          });
-          const hd = await hr.json();
-          if (hr.ok && hd.imageUrl) setHeroSrc(hd.imageUrl);
-        } catch { /* non-fatal */ } finally {
-          setGeneratingHero(false);
-        }
+      if (heroResp) {
+        const heroData = await heroResp.json();
+        if (heroResp.ok && heroData.imageUrl) setHeroSrc(heroData.imageUrl);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generation failed");
     } finally {
       setGenerating(false);
+      if (heroFetch) setGeneratingHero(false);
     }
-  }, [industry, bizLine1, bizLine2, tagline, phone, address, city, menuItems, offerAmount, offerItem, offerFine, accentColor, heroTab]);
+  }, [industry, bizLine1, bizLine2, tagline, phone, address, city, menuItems, offerAmount, offerItem, offerFine, accentColor, heroTab, heroPrompt]);
 
   const handleGenerateHeroOnly = useCallback(async () => {
     const p = heroPrompt ||
@@ -308,7 +358,8 @@ export default function AdGenV7Page() {
     const stage = stageRef.current;
     if (!stage) return;
     try {
-      const dataUrl = stage.toDataURL({ pixelRatio: 3, mimeType: "image/png" });
+      // EXPORT_PIXEL_RATIO ≈ 2.4 → ~1152×1375 px (native template resolution, print-ready)
+      const dataUrl = stage.toDataURL({ pixelRatio: EXPORT_PIXEL_RATIO, mimeType: "image/png" });
       const a = document.createElement("a");
       a.download = (bizLine1 || "my-ad").replace(/\s+/g, "-").toLowerCase() + ".png";
       a.href = dataUrl;
@@ -352,25 +403,33 @@ export default function AdGenV7Page() {
           />
         )}
 
-        {/* 5 — Tick marks beside headline */}
-        <Line
-          points={[BN1_X - 8, BN1_Y + 7, BN1_X - 8, BN1_Y + hn1Size - 3]}
-          stroke={accentColor} strokeWidth={2.5}
-        />
-        <Line
-          points={[BN1_X - 14, BN1_Y + 9, BN1_X - 14, BN1_Y + hn1Size - 5]}
-          stroke={accentColor + "66"} strokeWidth={1.5}
-        />
+        {/* 5 — Tick marks beside headline (height spans all wrapped lines) */}
+        {(() => {
+          const tickH = hn1Wrap.lines.length * (hn1Wrap.fontSize * 1.1);
+          return (
+            <>
+              <Line points={[BN1_X - 8, BN1_Y + 6, BN1_X - 8, BN1_Y + tickH - 2]}
+                    stroke={accentColor} strokeWidth={2.5} />
+              <Line points={[BN1_X - 14, BN1_Y + 8, BN1_X - 14, BN1_Y + tickH - 4]}
+                    stroke={accentColor + "66"} strokeWidth={1.5} />
+            </>
+          );
+        })()}
 
-        {/* 6 — Headline row 1 (Bebas Neue) */}
-        <Text
-          x={BN1_X} y={BN1_Y} width={BN1_W}
-          text={(bizLine1 || "YOUR BUSINESS").toUpperCase()}
-          fontFamily="'Bebas Neue', 'Arial Narrow', sans-serif"
-          fontSize={hn1Size}
-          fill="#1C1B1A"
-          rotation={-1.5}
-        />
+        {/* 6 — Headline row 1 (Bebas Neue) — wraps to two lines for long names */}
+        {hn1Wrap.lines.map((line, i) => (
+          <Text
+            key={"hn1-" + i}
+            x={BN1_X}
+            y={BN1_Y + i * Math.round(hn1Wrap.fontSize * 1.1)}
+            width={BN1_W}
+            text={line}
+            fontFamily="'Bebas Neue', 'Arial Narrow', sans-serif"
+            fontSize={hn1Wrap.fontSize}
+            fill="#1C1B1A"
+            rotation={-1.5}
+          />
+        ))}
 
         {/* 7 — Headline row 2 (Pacifico script) */}
         {bizLine2 ? (
