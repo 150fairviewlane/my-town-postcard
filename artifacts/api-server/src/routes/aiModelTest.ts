@@ -121,12 +121,44 @@ async function runPipeline(
 
 // ── Routes ──────────────────────────────────────────────────────────────────
 
+// List metadata only — imageData is NOT returned here to keep the response small.
+// Images are fetched individually via GET /admin/generated-ads/:id/image.
 router.get("/admin/generated-ads", requireAdmin, async (_req, res): Promise<void> => {
   try {
-    const rows = await db.select().from(generatedAdsTable).orderBy(desc(generatedAdsTable.createdAt));
+    const rows = await db
+      .select({
+        id:        generatedAdsTable.id,
+        model:     generatedAdsTable.model,
+        label:     generatedAdsTable.label,
+        prompt:    generatedAdsTable.prompt,
+        createdAt: generatedAdsTable.createdAt,
+      })
+      .from(generatedAdsTable)
+      .orderBy(desc(generatedAdsTable.createdAt));
     res.json({ ads: rows });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : "DB error" });
+  }
+});
+
+// Serve raw image bytes for a single ad. No auth header possible on <img src>,
+// so requireAdmin is intentionally omitted; the page itself is admin-gated.
+router.get("/admin/generated-ads/:id/image", async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (!id) { res.status(400).send("Invalid id"); return; }
+  try {
+    const [row] = await db
+      .select({ imageData: generatedAdsTable.imageData })
+      .from(generatedAdsTable)
+      .where(eq(generatedAdsTable.id, id));
+    if (!row) { res.status(404).send("Not found"); return; }
+    const match = row.imageData.match(/^data:([^;]+);base64,(.+)$/s);
+    if (!match) { res.status(500).send("Invalid image data"); return; }
+    res.setHeader("Content-Type", match[1]);
+    res.setHeader("Cache-Control", "private, max-age=86400");
+    res.send(Buffer.from(match[2], "base64"));
+  } catch (err) {
+    res.status(500).send("Error");
   }
 });
 

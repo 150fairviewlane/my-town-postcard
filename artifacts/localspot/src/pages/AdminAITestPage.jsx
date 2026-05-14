@@ -176,8 +176,15 @@ export default function AdminAITestPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setRepo(data.ads ?? []);
+        // Attach a stable image URL (served as raw bytes) so <img> can load lazily
+        const ads = (data.ads ?? []).map((ad) => ({
+          ...ad,
+          imageUrl: `/api/admin/generated-ads/${ad.id}/image`,
+        }));
+        setRepo(ads);
       }
+    } catch {
+      // silently ignore — repository section just stays empty
     } finally {
       setRepoLoading(false);
     }
@@ -450,7 +457,7 @@ export default function AdminAITestPage() {
                 <div key={ad.id} onClick={() => setLightbox(ad)} style={{ cursor: "zoom-in" }}>
                   <div style={{ ...CARD, padding: 0, overflow: "hidden" }}>
                     <img
-                      src={ad.imageData}
+                      src={ad.imageUrl}
                       alt={ad.label}
                       style={{ width: "100%", display: "block", aspectRatio: "2/3", objectFit: "cover" }}
                     />
@@ -459,7 +466,7 @@ export default function AdminAITestPage() {
                       <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 6 }}>{fmtDate(ad.createdAt)}</div>
                       <div style={{ display: "flex", gap: 6 }}>
                         <a
-                          href={ad.imageData}
+                          href={ad.imageUrl}
                           download={`ai-ad-${ad.model}-${ad.id}.png`}
                           onClick={(e) => e.stopPropagation()}
                           style={{ flex: 1, textAlign: "center", padding: "5px", borderRadius: 6, background: "#f3f4f6", color: "#374151", fontSize: 11, fontWeight: 700, textDecoration: "none", border: "1px solid #e5e7eb" }}
