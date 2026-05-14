@@ -1,0 +1,94 @@
+Replace the existing ad-studio.html file with the new attached version. This is a drop-in replacement — same route, same filename, no other changes needed.
+
+════════════════════════════════════════════════
+WHAT CHANGED IN THIS VERSION
+════════════════════════════════════════════════
+
+1. FOOD PHOTO is now a prominent foreground element
+   Previously the photo was a faded background blend using mix-blend-mode.
+   It is now a real img element occupying the right 73% of the card at
+   z-index 2 (above the template, below all text). Gradient edges blend
+   it naturally into the parchment template.
+1. BUSINESS NAME typography now matches the original reference ad style
+   Line 1 (company name) is in Bebas Neue bold, tilted -1.5 degrees
+   Line 2 (script word) is in Pacifico cursive, larger than Line 1,
+   tilted -3 degrees, with a negative margin-top so it overlaps the
+   bottom of Line 1 — exactly like the original reference ad design
+   Decorative tick marks added to the top right
+1. ALL OVERLAY POSITIONS are now pixel-scanned from the actual template
+   Checkmark circle centers measured at y=727, 832, 932, 1037 pixels
+   Menu text left edge at 10.5% of container width
+   Coupon box boundaries measured from actual dashed border pixel positions
+   Footer dark bar measured at y=1132 pixels (82.57% from top)
+1. INDUSTRY SWITCHING now always updates all fields
+   Switching industry always repopulates tagline, all 4 menu items,
+   offer amount, offer description, and fine print — not just on
+   first selection
+
+════════════════════════════════════════════════
+INSTRUCTIONS
+════════════════════════════════════════════════
+
+Step 1 — Replace the file
+Find the existing ad-studio.html file in the project.
+Replace its entire contents with the attached ad-studio.html file.
+Do not rename it. The route /ad-studio should continue to serve it.
+
+Step 2 — Fix the template image path
+In the new file, find this img tag:
+src=”/mnt/user-data/uploads/mr_biscuits_template_no_logo.png”
+Update the src to the correct path where the template image is
+already stored in the project from the previous deployment, for
+example:
+src=”/assets/template-rustic-parchment.png”
+Use whatever path was set correctly in the previous version.
+
+Step 3 — Verify the image library connection
+The loadPhotos() function fetches from /api/image-library?industry=…
+This was already wired in the previous version and should continue
+working without any changes.
+
+Step 4 — No other changes needed
+All other routes, files, database tables, and existing generators
+remain unchanged. This is a frontend-only update to one file.
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+The postcard composer or layout builder
+Payment pages or Stripe integration
+Dealer portal
+Image library admin tool
+Ad generator v1, v2, v3, v4, v5, v6, or mr-biscuits
+Any existing API routes
+Any database tables
+Any authentication or session logic
+
+════════════════════════════════════════════════
+TEST AFTER DEPLOYING
+════════════════════════════════════════════════
+
+Go to /ad-studio and confirm:
+
+1. Select Breakfast & Cafe from the industry dropdown
+   The tagline, 4 menu items, and coupon all populate automatically
+1. Switch to Mexican Restaurant
+   All fields update — tagline becomes Auténtico Mexican Cuisine,
+   menu changes to taco/margarita items, coupon changes to chips offer
+   This must work every time you switch, not just on first selection
+1. Select a photo from the grid
+   The food photo appears prominently on the RIGHT side of the ad,
+   large and clear — NOT faded into the background
+1. The business name shows two lines:
+   Line 1 in large bold Bebas Neue, slightly tilted left
+   Line 2 in larger Pacifico cursive script, more tilted, overlapping
+   the bottom of Line 1
+1. The tagline appears in Dancing Script cursive on the LEFT side
+   below the orange ribbon
+1. Menu items appear next to the 4 checkmark circles on the left,
+   with dotted lines between item name and price
+1. The coupon text appears centered inside the dashed border box
+1. Phone number appears large in the dark footer bar, right of the
+   phone icon
+1. All fields update the ad preview instantly as you type
