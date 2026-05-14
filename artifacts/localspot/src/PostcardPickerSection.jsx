@@ -689,6 +689,16 @@ return(<div style={{fontFamily:"sans-serif"}}>
           <div style={{fontWeight:800,fontSize:13,color:"#111",marginBottom:4}}>Ad Studio</div>
           <div style={{fontSize:11,color:"#6b7280",lineHeight:1.5}}>Parchment template with live HTML overlays — industry presets, photo blend, coupon box, 8 accent colors.</div>
         </button>
+        <button
+          onClick={()=>{window.location.href="/ad-gen";}}
+          onMouseEnter={e=>{e.currentTarget.style.borderColor="#C8541A";e.currentTarget.style.background="#fdf6ee";}}
+          onMouseLeave={e=>{e.currentTarget.style.borderColor="#e5e7eb";e.currentTarget.style.background="#fff";}}
+          style={{padding:"20px 14px",border:"2px solid #e5e7eb",borderRadius:12,background:"#fff",cursor:"pointer",textAlign:"left",transition:"border-color 0.15s, background 0.15s",position:"relative"}}>
+          <div style={{position:"absolute",top:8,right:8,background:"linear-gradient(135deg,#7B1418,#C8541A)",color:"#fff",fontSize:8,fontWeight:800,letterSpacing:"0.08em",padding:"2px 6px",borderRadius:99,textTransform:"uppercase"}}>✦ v7 AI</div>
+          <div style={{fontSize:30,marginBottom:8}}>🖼️</div>
+          <div style={{fontWeight:800,fontSize:13,color:"#111",marginBottom:4}}>AI Ad Studio (Beta)</div>
+          <div style={{fontSize:11,color:"#6b7280",lineHeight:1.5}}>Canvas-rendered ad with GPT-4o copy, AI hero photo, logo upload, QR code, and optional AI polish pass.</div>
+        </button>
       </div>
       <div style={{textAlign:"center"}}>
         <button onClick={()=>{setSel(null);setAdMethod(null);setReserveError(null);}} style={{background:"none",border:"none",color:"#9ca3af",fontSize:13,cursor:"pointer",padding:"4px 8px"}}>Cancel</button>

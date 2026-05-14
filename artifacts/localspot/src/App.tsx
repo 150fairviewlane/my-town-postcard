@@ -43,6 +43,8 @@ const DealerConfirmation = lazy(() => import("./pages/DealerConfirmation"));
 const AdminDealersPage = lazy(() => import("./pages/AdminDealersPage"));
 // @ts-expect-error JSX module without types
 const AdminAITestPage = lazy(() => import("./pages/AdminAITestPage"));
+// @ts-expect-error JSX module without types
+const AdGenV7Page = lazy(() => import("./pages/AdGenV7Page"));
 
 const queryClient = new QueryClient();
 
@@ -83,6 +85,7 @@ function Router() {
         <Route path="/admin/dealers" component={AdminDealersPage} />
         <Route path="/admin/ai-test" component={AdminAITestPage} />
         <Route path="/admin" component={AdminDashboard} />
+        <Route path="/ad-gen" component={AdGenV7Page} />
         {/* Dealer program routes — public landing + signup + confirmation */}
         <Route path="/dealers" component={DealerLanding} />
         <Route path="/dealers/signup" component={DealerSignup} />
