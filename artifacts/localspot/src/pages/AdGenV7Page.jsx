@@ -664,7 +664,7 @@ export default function AdGenV7Page() {
         }}>v7 · Canvas + Polish</div>
       </div>
 
-      <div style={{
+      <div className="adv7-layout" style={{
         display: "grid", gridTemplateColumns: "340px 1fr",
         gap: 0, maxWidth: 1080, margin: "0 auto", padding: "20px 16px",
         alignItems: "start",
@@ -918,14 +918,14 @@ export default function AdGenV7Page() {
                   color: "#fff", border: "none", borderRadius: 8,
                   fontWeight: 700, fontSize: 13, cursor: "pointer",
                 }}
-              >↓ Download 3×</button>
+              >↓ Download (3600×2700)</button>
             </div>
 
             <div style={{
               fontSize: 10, color: "rgba(255,255,255,0.28)", textAlign: "center", lineHeight: 1.6,
             }}>
               Polish blends all canvas layers into a seamless AI-rendered image.<br />
-              Download exports at 3× resolution (1440 × 1719 px).
+              Download exports at 3600×2700 px (12"×9" postcard, 300 DPI).
             </div>
 
             {/* Hero generation status */}
