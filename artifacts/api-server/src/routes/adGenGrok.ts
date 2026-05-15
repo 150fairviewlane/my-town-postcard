@@ -276,9 +276,11 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
 
   const adPrompt =
     "You are an expert print advertising art director creating a PRINT-READY postcard ad.\n\n" +
-    "REFERENCE COLLAGE: The attached image is a single horizontal strip containing " +
-    `${panelLines.length} side-by-side panels separated by white gaps. Each panel is a separate reference — ` +
-    "do NOT treat this as a finished design. Read each panel independently:\n" +
+    (panelLines.length > 1
+      ? "REFERENCE COLLAGE: The attached image is a single horizontal strip containing " +
+        `${panelLines.length} side-by-side panels separated by white gaps. Each panel is a separate reference — ` +
+        "do NOT treat this as a finished design. Read each panel independently:\n"
+      : "REFERENCE IMAGE: The attached image is the postcard template to reproduce exactly:\n") +
     panelLines.join("\n") + "\n\n" +
     "OUTPUT REQUIREMENTS:\n" +
     outputSteps.join("\n") + "\n\n" +
