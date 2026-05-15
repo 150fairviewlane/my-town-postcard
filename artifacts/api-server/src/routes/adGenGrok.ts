@@ -2,7 +2,6 @@ import { Router, type IRouter } from "express";
 import { z } from "zod/v4";
 import fs from "fs";
 import path from "path";
-import sharp from "sharp";
 
 function findWorkspaceRoot(): string {
   let dir = process.cwd();
@@ -102,60 +101,6 @@ function extractXaiImageUrl(body: Record<string, unknown>): string | null {
   return null;
 }
 
-/**
- * Composite photo and/or logo onto the template so all visual references fit in
- * the single image object xAI accepts.  Each input occupies its own panel so the
- * model can clearly distinguish them as separate references.
- *
- * xAI /images/edits accepts ONE image (`{ url: "data:..." }`); arrays are rejected.
- * A labeled side-by-side collage is the only reliable way to pass multiple visual
- * references in a single request without blending them together.
- */
-async function buildCollageImage(
-  tmplBuf: Buffer,
-  photoBuf?: Buffer,
-  logoBuf?: Buffer,
-): Promise<Buffer> {
-  if (!photoBuf && !logoBuf) return tmplBuf;
-
-  const TARGET_H = 800;
-  const GAP = 24;
-  const WHITE = { r: 255, g: 255, b: 255, alpha: 1 };
-
-  // Scale each panel to TARGET_H tall, maintaining aspect ratio
-  async function scaleToHeight(buf: Buffer): Promise<{ buf: Buffer; w: number }> {
-    const meta = await sharp(buf).metadata();
-    const aspect = (meta.width ?? 1) / (meta.height ?? 1);
-    const w = Math.round(TARGET_H * aspect);
-    const scaled = await sharp(buf)
-      .resize(w, TARGET_H, { fit: "fill" })
-      .flatten({ background: WHITE })
-      .png()
-      .toBuffer();
-    return { buf: scaled, w };
-  }
-
-  const panels: Array<{ buf: Buffer; w: number }> = [];
-  panels.push(await scaleToHeight(tmplBuf));
-  if (photoBuf) panels.push(await scaleToHeight(photoBuf));
-  if (logoBuf)  panels.push(await scaleToHeight(logoBuf));
-
-  const totalW = panels.reduce((s, p) => s + p.w, 0) + GAP * (panels.length - 1);
-
-  // Build the canvas (white background)
-  const canvas = sharp({
-    create: { width: totalW, height: TARGET_H, channels: 4, background: WHITE },
-  });
-
-  const composites: sharp.OverlayOptions[] = [];
-  let x = 0;
-  for (const panel of panels) {
-    composites.push({ input: panel.buf, top: 0, left: x });
-    x += panel.w + GAP;
-  }
-
-  return canvas.composite(composites).png().toBuffer();
-}
 
 /**
  * Fallback: call /v1/images/generations (text-to-image, JSON) when the model
@@ -233,36 +178,30 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     `Fine Print    : ${d.offerFine || "(none)"}`,
   ].join("\n");
 
-  // Build panel labels for the prompt based on which images are present
-  const panelLines: string[] = [
-    "  • PANEL 1 (LEFT) — POSTCARD TEMPLATE: the full ad layout with parchment texture, " +
-    "brush-stroke band, pennant ribbon, circular checkmark badge, dashed coupon box, and dark footer strip. " +
-    "This is the base design. Reproduce every zone, texture, and design element exactly.",
+  // Build image reference lines for the prompt — one per image in the `images` array order
+  const refLines: string[] = [
+    "  • IMAGE 1 (TEMPLATE) — the full postcard layout with parchment texture, brush-stroke band, " +
+    "pennant ribbon, circular checkmark badge, dashed coupon box, and dark footer strip. " +
+    "Reproduce every zone, texture, and design element exactly.",
   ];
-  // Panel position labels are strictly left-to-right for however many panels are present:
-  //   template-only      → no collage (returned early above)
-  //   template + photo   → LEFT, RIGHT
-  //   template + logo    → LEFT, RIGHT
-  //   template + photo + logo → LEFT, CENTER, RIGHT
-  let panelIdx = 2;
+  let imgIdx = 2;
   if (hasPhoto) {
-    const pos = hasLogo ? "CENTER" : "RIGHT";
-    panelLines.push(`  • PANEL ${panelIdx++} (${pos}) — HERO FOOD PHOTO: the actual food/product photograph to composite into the right-center image zone of the ad with professional lighting and realistic shadow blending.`);
+    refLines.push(`  • IMAGE ${imgIdx++} (HERO FOOD PHOTO) — the actual food/product photograph. Composite it into the right-center image zone of the ad with professional lighting and realistic shadow blending.`);
   }
   if (hasLogo) {
-    panelLines.push(`  • PANEL ${panelIdx} (RIGHT) — BUSINESS LOGO: the exact logo to place in the upper-left corner of the ad, preserving its colors and proportions with no stylization.`);
+    refLines.push(`  • IMAGE ${imgIdx} (BUSINESS LOGO) — the exact logo. Place it precisely in the upper-left corner, preserving its colors and proportions with no stylization.`);
   }
 
   const outputSteps: string[] = [
-    "  1. Base: reproduce the PANEL 1 template exactly — every zone, texture, band, badge, coupon box, and footer preserved.",
+    "  1. Base: reproduce the IMAGE 1 template exactly — every zone, texture, band, badge, coupon box, and footer preserved.",
     hasPhoto
-      ? "  2. Hero area: composite the PANEL 2 food photo into the right-center image zone with professional lighting."
+      ? "  2. Hero area: composite the IMAGE 2 food photo into the right-center image zone with professional lighting."
       : "  2. Hero area: generate a photorealistic, appetizing hero image appropriate for the business in the right-center zone.",
   ];
   let stepIdx = 3;
   if (hasLogo) {
-    const logoPanel = hasPhoto ? 3 : 2;
-    outputSteps.push(`  ${stepIdx++}. Logo: place the PANEL ${logoPanel} logo in the upper-left corner exactly as provided.`);
+    const logoImg = hasPhoto ? 3 : 2;
+    outputSteps.push(`  ${stepIdx++}. Logo: place IMAGE ${logoImg} in the upper-left corner exactly as provided.`);
   }
   outputSteps.push(
     `  ${stepIdx}. TEXT — place ALL of the following verbatim in the correct zones:\n` +
@@ -276,51 +215,49 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
 
   const adPrompt =
     "You are an expert print advertising art director creating a PRINT-READY postcard ad.\n\n" +
-    (panelLines.length > 1
-      ? "REFERENCE COLLAGE: The attached image is a single horizontal strip containing " +
-        `${panelLines.length} side-by-side panels separated by white gaps. Each panel is a separate reference — ` +
-        "do NOT treat this as a finished design. Read each panel independently:\n"
-      : "REFERENCE IMAGE: The attached image is the postcard template to reproduce exactly:\n") +
-    panelLines.join("\n") + "\n\n" +
+    `REFERENCE IMAGES: You are provided ${refLines.length} reference image${refLines.length > 1 ? "s" : ""}. ` +
+    "Treat each one as a distinct visual input — do NOT blend them or treat them as a finished design:\n" +
+    refLines.join("\n") + "\n\n" +
     "OUTPUT REQUIREMENTS:\n" +
     outputSteps.join("\n") + "\n\n" +
-    "OUTPUT FORMAT: The generated ad must be PORTRAIT orientation — taller than wide, " +
-    "aspect ratio 4:5. Do NOT produce a landscape or square image under any circumstances.\n\n" +
     "STYLE: professional commercial food photography, appetizing, high-end print ad quality, " +
     "vibrant yet premium colors, sharp focus, clean composition, legible text, postcard ad quality.\n\n" +
     "CRITICAL: Every piece of text must appear EXACTLY as specified. " +
     "Phone numbers, prices, business name — zero tolerance for errors.\n\n" +
     "BUSINESS DETAILS:\n" + businessBlock;
 
-  // ── Build collage reference image ────────────────────────────────────────────
-  // xAI /images/edits accepts exactly ONE image: { url: "data:mime;base64,..." }.
-  // Arrays (of objects or strings) are both rejected by the live API.
-  // Solution: arrange all present images as a horizontal side-by-side collage so
-  // the model can read each panel as a distinct visual reference.
+  // ── Build images array for xAI /images/edits ────────────────────────────────
+  // grok-imagine-image-quality accepts up to 3 reference images as separate
+  // `{ type: "image_url", url: "data:mime;base64,..." }` objects in an `images`
+  // array (plural). Template is always first; photo and logo follow when present.
   const toDataUrl = (buf: Buffer, mime = "image/png") =>
     `data:${mime};base64,${buf.toString("base64")}`;
 
-  let photoBuf: Buffer | undefined;
+  type XaiImageRef = { type: "image_url"; url: string };
+  const imageRefs: XaiImageRef[] = [
+    { type: "image_url", url: toDataUrl(tmplBuf) },
+  ];
+
   if (hasPhoto) {
     const blob = d.photoUrl.startsWith("data:")
       ? dataUrlToBlob(d.photoUrl)
       : await remoteUrlToBlob(d.photoUrl);
-    photoBuf = Buffer.from(await blob.arrayBuffer());
+    const photoBuf = Buffer.from(await blob.arrayBuffer());
+    imageRefs.push({ type: "image_url", url: toDataUrl(photoBuf) });
   }
 
-  let logoBuf: Buffer | undefined;
   if (hasLogo) {
-    logoBuf = Buffer.from(await dataUrlToBlob(d.logoData).arrayBuffer());
+    const logoBuf = Buffer.from(await dataUrlToBlob(d.logoData).arrayBuffer());
+    imageRefs.push({ type: "image_url", url: toDataUrl(logoBuf) });
   }
-
-  const refBuf = await buildCollageImage(tmplBuf, photoBuf, logoBuf);
 
   const editsBody: Record<string, unknown> = {
-    model:   "grok-imagine-image-quality",
-    prompt:  adPrompt,
-    n:       1,
-    image:   { url: toDataUrl(refBuf) },
-    size:    "1024x1280",
+    model:        "grok-imagine-image-quality",
+    prompt:       adPrompt,
+    n:            1,
+    images:       imageRefs,
+    aspect_ratio: "4:5",
+    resolution:   "2k",
   };
 
   try {
@@ -379,12 +316,14 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
          errLower.includes("field") || errLower.includes("schema"));
 
       if (isImageArrayIssue) {
-        req.log.warn({ errMsg, bizName: d.bizName }, "grok-imagine edits: image array rejected — retrying with template only");
+        req.log.warn({ errMsg, bizName: d.bizName }, "grok-imagine edits: multi-image rejected — retrying with template only");
         const retryBody: Record<string, unknown> = {
-          model:  "grok-imagine-image-quality",
-          prompt: adPrompt,
-          n:      1,
-          image:  { url: toDataUrl(tmplBuf) },
+          model:        "grok-imagine-image-quality",
+          prompt:       adPrompt,
+          n:            1,
+          images:       [{ type: "image_url", url: toDataUrl(tmplBuf) }],
+          aspect_ratio: "4:5",
+          resolution:   "2k",
         };
         const retryRes = await fetch("https://api.x.ai/v1/images/edits", {
           method: "POST",
