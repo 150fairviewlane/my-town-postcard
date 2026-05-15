@@ -284,6 +284,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     panelLines.join("\n") + "\n\n" +
     "OUTPUT REQUIREMENTS:\n" +
     outputSteps.join("\n") + "\n\n" +
+    "OUTPUT FORMAT: The generated ad must be PORTRAIT orientation — taller than wide, " +
+    "aspect ratio 4:5. Do NOT produce a landscape or square image under any circumstances.\n\n" +
     "STYLE: professional commercial food photography, appetizing, high-end print ad quality, " +
     "vibrant yet premium colors, sharp focus, clean composition, legible text, postcard ad quality.\n\n" +
     "CRITICAL: Every piece of text must appear EXACTLY as specified. " +
@@ -314,10 +316,11 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   const refBuf = await buildCollageImage(tmplBuf, photoBuf, logoBuf);
 
   const editsBody: Record<string, unknown> = {
-    model:  "grok-imagine-image-quality",
-    prompt: adPrompt,
-    n:      1,
-    image:  { url: toDataUrl(refBuf) },
+    model:   "grok-imagine-image-quality",
+    prompt:  adPrompt,
+    n:       1,
+    image:   { url: toDataUrl(refBuf) },
+    size:    "1024x1280",
   };
 
   try {
