@@ -20,6 +20,7 @@ import imageLibraryRouter from "./imageLibrary";
 import dealersRouter from "./dealers";
 import adGenV7Router from "./adGenV7";
 import aiAdCreatorRouter from "./aiAdCreator";
+import adGenGrokRouter from "./adGenGrok";
 
 const router: IRouter = Router();
 
@@ -44,5 +45,6 @@ router.use(imageLibraryRouter);
 router.use(dealersRouter);
 router.use(adGenV7Router);
 router.use(aiAdCreatorRouter);
+router.use(adGenGrokRouter);
 
 export default router;
