@@ -549,6 +549,7 @@ async function copyPrompt(){
     var btn = document.getElementById('copyBtn');
     btn.textContent = '\\u2713 Copied!';
     btn.classList.add('copied');
+    showToast('Prompt copied to clipboard!');
     setTimeout(function(){ btn.textContent='\\ud83d\\udccb Copy Prompt'; btn.classList.remove('copied'); }, 2500);
   } catch(e){
     var ta = document.createElement('textarea');
@@ -557,6 +558,7 @@ async function copyPrompt(){
     document.body.appendChild(ta);
     ta.select(); document.execCommand('copy');
     document.body.removeChild(ta);
+    showToast('Prompt copied!');
   }
 }
 
@@ -675,7 +677,11 @@ function resetResult(){
 }
 
 async function useAd(){
-  if(!resultImageUrl){ alert('Please drop your ad image first.'); return; }
+  if(!resultImageUrl){
+    document.getElementById('infoStatus').textContent = 'Please drop or paste your ad image first.';
+    document.getElementById('infoStatus').style.color = '#c0392b';
+    return;
+  }
   var d = getData();
   var useBtn = document.getElementById('useAdBtn');
   useBtn.disabled = true;
