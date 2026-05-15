@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { z } from "zod/v4";
 import fs from "fs";
 import path from "path";
+import sharp from "sharp";
 
 function findWorkspaceRoot(): string {
   let dir = process.cwd();
@@ -99,6 +100,65 @@ function extractXaiImageUrl(body: Record<string, unknown>): string | null {
   if (typeof item["b64_json"] === "string" && item["b64_json"])
     return `data:image/png;base64,${item["b64_json"]}`;
   return null;
+}
+
+/**
+ * Composite photo and/or logo onto the template so all visual references fit in
+ * the single image object xAI accepts.  Photo is placed in the right-center hero
+ * zone; logo in the upper-left corner.  Returns the original tmplBuf unchanged
+ * when neither photo nor logo is provided.
+ *
+ * xAI /images/edits only accepts ONE image input (`{ url: "data:..." }`).
+ * Arrays of any kind are rejected, so compositing server-side is the only way to
+ * pass multiple visual references to the model.
+ */
+async function compositeReferenceImage(
+  tmplBuf: Buffer,
+  photoBuf?: Buffer,
+  photoMime?: string,
+  logoBuf?: Buffer,
+  logoMime?: string,
+): Promise<Buffer> {
+  if (!photoBuf && !logoBuf) return tmplBuf;
+
+  const base = sharp(tmplBuf);
+  const { width: w = 1148, height: h = 1371 } = await base.metadata();
+
+  const overlays: sharp.OverlayOptions[] = [];
+
+  if (photoBuf) {
+    // Hero zone: right ~45% wide, upper ~45% tall, with small padding
+    const pw = Math.round(w * 0.45);
+    const ph = Math.round(h * 0.44);
+    const resized = await sharp(photoBuf)
+      .resize(pw, ph, { fit: "cover", position: "centre" })
+      .png()
+      .toBuffer();
+    overlays.push({
+      input: resized,
+      top:  Math.round(h * 0.08),
+      left: Math.round(w * 0.52),
+      blend: "over",
+    });
+  }
+
+  if (logoBuf) {
+    // Logo zone: upper-left corner, ~25% wide, contain (transparent background)
+    const lw = Math.round(w * 0.25);
+    const lh = Math.round(h * 0.18);
+    const resized = await sharp(logoBuf)
+      .resize(lw, lh, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .png()
+      .toBuffer();
+    overlays.push({
+      input: resized,
+      top:  Math.round(h * 0.04),
+      left: Math.round(w * 0.04),
+      blend: "over",
+    });
+  }
+
+  return base.composite(overlays).png().toBuffer();
 }
 
 /**
@@ -210,45 +270,40 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     "Phone numbers, prices, business name — zero tolerance for errors.\n\n" +
     "BUSINESS DETAILS:\n" + businessBlock;
 
-  // ── Build JSON body for /v1/images/edits ────────────────────────────────────
-  // xAI /images/edits requires Content-Type: application/json.
-  // Image field format differs by count (verified against live API):
-  //   single  → object:  { url: "data:mime;base64,..." }
-  //   multiple → array:  ["data:mime;base64,...", "data:mime;base64,..."]
-  // Raw base64 strings (no data: prefix) and arrays of {url} objects are both rejected.
+  // ── Composite reference image ────────────────────────────────────────────────
+  // xAI /images/edits accepts exactly ONE image: { url: "data:mime;base64,..." }.
+  // Arrays (of objects or strings) are both rejected by the live API.
+  // Solution: composite photo + logo onto the template server-side with sharp so
+  // the model sees all three visual references inside a single image object.
   const toDataUrl = (buf: Buffer, mime = "image/png") =>
     `data:${mime};base64,${buf.toString("base64")}`;
 
-  // xAI /images/edits image field format:
-  //   single image  → { url: "data:mime;base64,..." }   (object)
-  //   multi images  → ["data:mime;base64,...", ...]      (array of plain strings)
-  const imageDataUrls: string[] = [toDataUrl(tmplBuf)];
-
+  let photoBuf: Buffer | undefined;
+  let photoMime: string | undefined;
   if (hasPhoto) {
-    const photoBlob = d.photoUrl.startsWith("data:")
+    const blob = d.photoUrl.startsWith("data:")
       ? dataUrlToBlob(d.photoUrl)
       : await remoteUrlToBlob(d.photoUrl);
-    const photoBuf = Buffer.from(await photoBlob.arrayBuffer());
-    const photoMime = d.photoUrl.startsWith("data:")
+    photoBuf  = Buffer.from(await blob.arrayBuffer());
+    photoMime = d.photoUrl.startsWith("data:")
       ? (d.photoUrl.match(/data:([^;]+)/)?.[1] ?? "image/png")
       : "image/jpeg";
-    imageDataUrls.push(toDataUrl(photoBuf, photoMime));
   }
 
+  let logoBuf: Buffer | undefined;
+  let logoMime: string | undefined;
   if (hasLogo) {
-    const logoBuf = Buffer.from(await dataUrlToBlob(d.logoData).arrayBuffer());
-    const logoMime = d.logoData.match(/data:([^;]+)/)?.[1] ?? "image/png";
-    imageDataUrls.push(toDataUrl(logoBuf, logoMime));
+    logoBuf  = Buffer.from(await dataUrlToBlob(d.logoData).arrayBuffer());
+    logoMime = d.logoData.match(/data:([^;]+)/)?.[1] ?? "image/png";
   }
+
+  const refBuf = await compositeReferenceImage(tmplBuf, photoBuf, photoMime, logoBuf, logoMime);
 
   const editsBody: Record<string, unknown> = {
     model:  "grok-imagine-image-quality",
     prompt: adPrompt,
     n:      1,
-    // single → wrapped object; multiple → plain data-URL string array
-    image:  imageDataUrls.length === 1
-      ? { url: imageDataUrls[0] }
-      : imageDataUrls,
+    image:  { url: toDataUrl(refBuf) },
   };
 
   try {
@@ -268,8 +323,11 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     );
 
     if (!xaiRes.ok) {
+      // body.error may be a plain string (xAI style) or { message: string } (OpenAI style)
+      const errRaw = body["error"];
       const errMsg =
-        (body["error"] as Record<string, unknown> | undefined)?.["message"] as string
+        (typeof errRaw === "string" ? errRaw : undefined)
+        ?? ((errRaw as Record<string, unknown> | undefined)?.["message"] as string | undefined)
         ?? (typeof body["_raw"] === "string" ? body["_raw"] : undefined)
         ?? `xAI API error ${xaiRes.status}`;
       const errLower = errMsg.toLowerCase();

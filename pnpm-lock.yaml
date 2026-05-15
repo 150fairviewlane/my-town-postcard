@@ -208,6 +208,9 @@ importers:
       resend:
         specifier: ^6.12.2
         version: 6.12.2
+      sharp:
+        specifier: ^0.34.5
+        version: 0.34.5
       stripe:
         specifier: ^22.1.0
         version: 22.1.0(@types/node@25.3.5)
