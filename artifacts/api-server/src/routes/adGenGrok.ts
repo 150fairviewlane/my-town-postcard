@@ -742,11 +742,10 @@ var MENU_DEFAULTS = {
 function onIndustryChange(){
   if(_activeTab === 'lib') loadLibrary();
   var industry = document.getElementById('industry').value;
-  var defaults = MENU_DEFAULTS[industry];
-  if(!defaults) return;
   var list = document.getElementById('menuList');
   list.innerHTML = '';
-  defaults.forEach(function(v){ addMenuItem(v); });
+  var defaults = MENU_DEFAULTS[industry];
+  if(defaults) defaults.forEach(function(v){ addMenuItem(v); });
 }
 
 function switchTab(tab){
