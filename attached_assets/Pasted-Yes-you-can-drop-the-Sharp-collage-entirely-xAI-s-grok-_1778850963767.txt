@@ -1,0 +1,61 @@
+Yes — you can drop the Sharp collage entirely. xAI’s grok-imagine-image-quality supports up to 3 reference images via a clean JSON payload (no multipart needed).
+Correct API Format (from official xAI docs)
+Use the /v1/images/edits endpoint (or the equivalent in the SDK) with this structure:
+JSON{
+  "model": "grok-imagine-image-quality",
+  "prompt": "Your detailed prompt here. Use the first image as the exact template/layout. Place the food item from the second image prominently in the main photo area. Incorporate the logo from the third image exactly in the brand area with correct colors and proportions. Overlay this text verbatim: 'Headline Here' ...",
+  "images": [
+    {
+      "type": "image_url",
+      "url": "data:image/png;base64,BASE64_OF_TEMPLATE_HERE"
+    },
+    {
+      "type": "image_url",
+      "url": "data:image/jpeg;base64,BASE64_OF_FOOD_PHOTO"
+    },
+    {
+      "type": "image_url",
+      "url": "data:image/png;base64,BASE64_OF_LOGO"   // optional — omit or send empty if none
+    }
+  ],
+  "aspect_ratio": "2:3",     // or whatever matches your ad format (e.g. 1:1, 16:9)
+  "resolution": "2k",        // for print-ready
+  "n": 3                     // generate a few variations
+}
+Key points:
+
+Order matters — The first image in the array is treated as the primary reference (your template/layout).
+Use data URI base64 (data:image/...;base64,....) — this works reliably in-browser/Replit.
+The endpoint expects Content-Type: application/json (not multipart/form-data). That’s why your earlier array attempts may have failed — the exact object format with {"type": "image_url", "url": "..."} is required.
+
+In Node.js / Replit (using OpenAI-compatible client)
+JavaScriptconst { OpenAI } = require('openai');
+
+const client = new OpenAI({
+  baseURL: 'https://api.x.ai/v1',
+  apiKey: process.env.XAI_API_KEY,
+});
+
+async function generateAd(templateBase64, foodBase64, logoBase64 = null) {
+  const images = [
+    { type: "image_url", url: `data:image/png;base64,${templateBase64}` },
+    { type: "image_url", url: `data:image/jpeg;base64,${foodBase64}` }
+  ];
+  
+  if (logoBase64) {
+    images.push({ type: "image_url", url: `data:image/png;base64,${logoBase64}` });
+  }
+
+  const response = await client.images.generate({
+    model: "grok-imagine-image-quality",
+    prompt: `...your strong prompt...`,
+    images: images,           // ← this array
+    aspect_ratio: "2:3",
+    // resolution and n if supported in your SDK version
+  });
+
+  return response.data;  // array of generated images
+}
+Prompt Tips for Your Use Case
+Make the template role explicit:
+"Maintain the exact layout, composition, text placement zones, and framing from the first reference image (the template). Place the exact food dish from the second reference image into the main product photo area with appetizing styling. Overlay the logo from the third reference image precisely in the designated brand corner, preserving colors and proportions. Add this text verbatim in clean bold sans-serif font: '[full headline and details]'. Professional print-ready postcard ad, high-resolution food photography, vibrant yet premium colors, sharp focus, commercial quality."
