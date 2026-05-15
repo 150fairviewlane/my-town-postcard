@@ -357,6 +357,18 @@ function Dashboard({ token }) {
           >
             📷 Image Library
           </a>
+          <a
+            href="/api/grok-ad-generator"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              fontSize: 13, fontWeight: 700, color: "#92400e",
+              background: "#fffbeb", border: "1px solid #fde68a",
+              borderRadius: 8, padding: "7px 12px", textDecoration: "none",
+            }}
+          >
+            ✦ Grok Ad Generator
+          </a>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
