@@ -435,19 +435,18 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
           <div class="callout" id="callout" style="display:none">
             <strong>How this works:</strong>
             <ol>
-              <li id="callout-step1">Click <strong>Launch AI Console</strong> &mdash; Claude opens with your prompt pre-loaded</li>
-              <li>Before hitting send, <strong>attach these files</strong> to the conversation:
+              <li>Download the template using the button above</li>
+              <li id="callout-step1">Click <strong>Launch AI Console</strong> &mdash; Claude opens with the prompt pre-loaded &mdash; <strong>attach your images before sending</strong>:
                 <ul>
                   <li>The <strong>template</strong> you downloaded above</li>
                   <li>Your <strong>food / hero photo</strong></li>
                   <li id="callout-logo-li" style="display:none">Your <strong>company logo</strong></li>
                 </ul>
               </li>
-              <li>Hit send and wait ~30&ndash;60 seconds for your ad</li>
-              <li><strong>Proofread carefully</strong> &mdash; check every name, price, and phone number before saving</li>
-              <li>Right-click the result &rarr; <strong>Save image</strong>, then drag or paste it into the panel below</li>
+              <li>The prompt is pre-loaded with all your business details</li>
+              <li>Review the ad carefully &mdash; confirm every name, price, phone number, and address is <strong>exactly correct</strong> before saving</li>
+              <li>Right-click &rarr; <strong>Save image</strong>, then paste or drop it in the result panel below</li>
             </ol>
-            <div class="warn">&#9888; <strong>Accuracy reminder:</strong> The AI has been instructed to copy all text verbatim, but always verify phone numbers and prices yourself before the ad goes to print.</div>
           </div>
 
           <button class="launch-btn" id="launchBtn" onclick="launchAI()" disabled>
@@ -494,14 +493,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
 // ── STATE ──────────────────────────────────────────────────────
 var photoB64 = null;
 var resultImageUrl = null;
-var selectedTemplate = null;
+window._selectedTemplate = null;
 window._logoFileName = null;
 
 // ── TEMPLATE SELECTION ────────────────────────────────────────
 function onTemplateSelect(){
   var checked = document.querySelector('input[name="template"]:checked');
-  selectedTemplate = checked ? checked.value : null;
-  document.getElementById('tmplDlWrap').style.display = selectedTemplate ? 'block' : 'none';
+  window._selectedTemplate = checked ? checked.value : null;
+  document.getElementById('tmplDlWrap').style.display = window._selectedTemplate ? 'block' : 'none';
   buildPrompt();
 }
 
@@ -567,8 +566,8 @@ function handleUpload(input, previewId, zoneId, varName){
 function buildPrompt(){
   var d = getData();
 
-  if(!selectedTemplate || !d.bizName){
-    var msg = !selectedTemplate
+  if(!window._selectedTemplate || !d.bizName){
+    var msg = !window._selectedTemplate
       ? 'Select a background template above to get started...'
       : 'Fill in your business name to generate your prompt...';
     document.getElementById('promptBox').textContent = msg;
@@ -722,7 +721,7 @@ async function copyPrompt(){
 async function launchAI(){
   var d = getData();
   if(!d.bizName){ alert('Please enter your business name first.'); return; }
-  if(!selectedTemplate){ alert('Please select a background template first.'); return; }
+  if(!window._selectedTemplate){ alert('Please select a background template first.'); return; }
 
   var aiUrl, toastMsg;
   if(d.ai === 'claude'){
