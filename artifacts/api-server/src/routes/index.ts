@@ -19,6 +19,7 @@ import aiModelTestRouter from "./aiModelTest";
 import imageLibraryRouter from "./imageLibrary";
 import dealersRouter from "./dealers";
 import adGenV7Router from "./adGenV7";
+import aiAdCreatorRouter from "./aiAdCreator";
 
 const router: IRouter = Router();
 
@@ -42,5 +43,6 @@ router.use(aiModelTestRouter);
 router.use(imageLibraryRouter);
 router.use(dealersRouter);
 router.use(adGenV7Router);
+router.use(aiAdCreatorRouter);
 
 export default router;
