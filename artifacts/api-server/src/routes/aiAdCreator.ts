@@ -2,6 +2,9 @@ import { Router, type IRouter } from "express";
 import { z } from "zod/v4";
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const router: IRouter = Router();
 
@@ -34,10 +37,8 @@ router.post("/ai-ad-creator/save", async (req, res): Promise<void> => {
 
 router.get("/ai-ad-creator/templates/mr-biscuits", (req, res): void => {
   const filePath = path.resolve(
-    process.cwd(),
-    "../..",
-    "attached_assets",
-    "mr_biscuits_template_no_logo_1778806527327.png"
+    __dirname,
+    "../../../../attached_assets/mr_biscuits_template_no_logo_1778806527327.png"
   );
   if (!fs.existsSync(filePath)) {
     res.status(404).json({ error: "Template file not found" });
@@ -298,7 +299,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
       <!-- TEMPLATE SELECTOR -->
       <div class="card" style="margin-bottom:18px">
         <div class="card-hdr">
-          <div class="card-title">Background Template *</div>
+          <div class="card-title">Choose Background Template</div>
           <span style="font-size:10px;color:var(--ink-light)">Select one to continue</span>
         </div>
         <div class="card-body">
@@ -306,8 +307,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
             <div class="tmpl-opt">
               <input type="radio" name="template" id="tmpl-mr-biscuits" value="mr-biscuits" onchange="onTemplateSelect()">
               <label class="tmpl-card" for="tmpl-mr-biscuits">
-                <img class="tmpl-thumb" src="/api/ai-ad-creator/templates/mr-biscuits?view=1" alt="Warm &amp; Rustic template">
-                <div class="tmpl-label">Warm &amp; Rustic</div>
+                <img class="tmpl-thumb" src="/api/ai-ad-creator/templates/mr-biscuits?view=1" alt="Mr. Biscuit&apos;s Style template">
+                <div class="tmpl-label">Mr. Biscuit&apos;s Style</div>
               </label>
             </div>
             <div class="tmpl-opt tmpl-soon">
@@ -358,7 +359,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
             <div class="field">
               <label>Company Logo</label>
               <div class="upload-zone" id="logoZone">
-                <input type="file" accept="image/*" onchange="handleUpload(this,'logoPreview','logoZone','logoB64')">
+                <input type="file" accept="image/*" onchange="handleLogoUpload(this)">
                 <div style="font-size:22px">&#127991;&#65039;</div>
                 <div class="upload-label">Upload Logo</div>
                 <div class="upload-sub">PNG, JPG, SVG</div>
@@ -482,10 +483,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
 
 <script>
 // ── STATE ──────────────────────────────────────────────────────
-var logoB64 = null;
 var photoB64 = null;
 var resultImageUrl = null;
 var selectedTemplate = null;
+window._logoFileName = null;
 
 // ── TEMPLATE SELECTION ────────────────────────────────────────
 function onTemplateSelect(){
@@ -524,20 +525,30 @@ function getMenu(){
 }
 
 // ── UPLOAD ────────────────────────────────────────────────────
+function handleLogoUpload(input){
+  var file = input.files[0]; if(!file) return;
+  window._logoFileName = file.name;
+  var prev = document.getElementById('logoPreview');
+  if(prev._objUrl) URL.revokeObjectURL(prev._objUrl);
+  var objUrl = URL.createObjectURL(file);
+  prev._objUrl = objUrl;
+  prev.src = objUrl; prev.style.display='block';
+  document.getElementById('logoZone').classList.add('has-file');
+  document.getElementById('logoZone').querySelector('.upload-label').textContent = '\\u2713 Uploaded';
+  var li = document.getElementById('callout-logo-li');
+  if(li) li.style.display = 'list-item';
+  buildPrompt();
+}
+
 function handleUpload(input, previewId, zoneId, varName){
   var file = input.files[0]; if(!file) return;
   var reader = new FileReader();
   reader.onload = function(e){
-    if(varName==='logoB64') logoB64 = e.target.result;
     if(varName==='photoB64') photoB64 = e.target.result;
     var prev = document.getElementById(previewId);
     prev.src = e.target.result; prev.style.display='block';
     document.getElementById(zoneId).classList.add('has-file');
     document.getElementById(zoneId).querySelector('.upload-label').textContent = '\\u2713 Uploaded';
-    if(varName==='logoB64'){
-      var li = document.getElementById('callout-logo-li');
-      if(li) li.style.display = 'list-item';
-    }
     buildPrompt();
   };
   reader.readAsDataURL(file);
@@ -561,7 +572,7 @@ function buildPrompt(){
     ? d.menu.map(function(m,i){ return '  Item '+(i+1)+': '+m; }).join('\\n')
     : '  (none provided)';
 
-  var hasLogo  = !!logoB64;
+  var hasLogo  = !!window._logoFileName;
   var hasPhoto = !!photoB64;
   var sep = '\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550';
 
@@ -580,26 +591,20 @@ function buildPrompt(){
   + 'Menu Items / Services:\\n'+menuStr+'\\n\\n'
   + 'Special Offer: '+(d.offer||'(none)')+'\\n'
   + 'Offer Fine Print: '+(d.offerFine||'1 per visit \\u00b7 with this postcard')+'\\n\\n'
-  + sep+'\\n'
-  + '\\u26a0\\ufe0f  CRITICAL: TEXT ACCURACY \\u2014 ABSOLUTE RULES, NO EXCEPTIONS\\n'
-  + sep+'\\n\\n'
-  + 'Every character of text in this ad must be copied VERBATIM from the information\\n'
-  + 'above. These rules are non-negotiable. Violating any one of them makes the ad\\n'
-  + 'unusable and it cannot be mailed.\\n\\n'
-  + 'PHONE NUMBER: Must be EXACTLY "'+( d.phone||'(none)')+'"\\n'
-  + '  \\u2022 Do not change, add, or remove any digit\\n'
-  + '  \\u2022 Do not reformat, add dashes, or remove parentheses\\n\\n'
-  + 'BUSINESS NAME: Must be EXACTLY "'+d.bizName+'"\\n'
-  + '  \\u2022 Do not add words, remove words, change spelling, or alter punctuation\\n\\n'
-  + 'PRICES: Every price must match exactly as written:\\n'
-  + (d.menu.length ? d.menu.map(function(m){ return '  "'+m+'"'; }).join('\\n') : '  (none)')+'\\n'
-  + '  \\u2022 Do not round, estimate, or change any number\\n\\n'
-  + 'ADDRESS: Must be EXACTLY "'+(d.address||'')+(d.city ? ', '+d.city : '')+'"\\n\\n'
-  + 'SPECIAL OFFER: Must be EXACTLY "'+(d.offer||'(none)')+'"\\n\\n'
-  + 'NO INVENTED TEXT: Do not add any contact info, prices, or business names\\n'
-  + '  not provided above. Do not fill in blanks with plausible-sounding data.\\n\\n'
-  + 'FINAL VERIFICATION: Before generating, re-read every piece of text in your\\n'
-  + '  output and confirm it matches the information above character by character.\\n\\n'
+  + '\\u2500\\u2500 CRITICAL: TEXT ACCURACY \\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\n'
+  + 'Copy every word, name, price, phone number, and address VERBATIM\\n'
+  + 'from the information provided above. Do not correct spelling, do\\n'
+  + 'not paraphrase, do not round prices, do not guess missing digits.\\n'
+  + 'If you are uncertain about any character, reproduce it exactly as\\n'
+  + 'written. A single wrong digit in a phone number or price ruins the\\n'
+  + 'ad and it cannot be mailed.\\n'
+  + '\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\n\\n'
+  + 'Per-field verification:\\n'
+  + '  Phone: "'+( d.phone||'(none)')+'" \\u2014 every digit must match; no reformatting\\n'
+  + '  Business name: "'+d.bizName+'" \\u2014 exact spelling and punctuation\\n'
+  + '  Prices: '+(d.menu.length ? d.menu.map(function(m){ return '"'+m+'"'; }).join(', ') : '(none)')+' \\u2014 no rounding\\n'
+  + '  Address: "'+(d.address||'')+(d.city ? ', '+d.city : '')+'"\\n'
+  + '  Offer: "'+(d.offer||'(none)')+'"\\n\\n'
   + sep+'\\n'
   + 'IMAGE ATTACHMENTS \\u2014 HOW TO COMPOSITE THIS AD\\n'
   + sep+'\\n\\n'
