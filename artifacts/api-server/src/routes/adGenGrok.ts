@@ -204,7 +204,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
 
     (hasLogo
       ? `  ZONE 2 — LOGO${d.tagline ? " + TAGLINE" : ""} (orange pennant ribbon, top-left corner):\n` +
-        `    Logo: place IMAGE ${logoImg} centered ON the orange vertical pennant ribbon in the top-left corner — like a circular badge sitting on the pennant. Scale the logo so it fits within the pennant's width. The pennant is a tall vertical orange ribbon with a notched/pointed bottom; the logo circle should sit centered on it, overlapping the top edge slightly. Preserve exact logo colors and proportions.\n` +
+        `    PENNANT: Keep the orange vertical pennant ribbon EXACTLY where it is in IMAGE 1 (top-left corner, same position, same size) — do NOT move it, enlarge it, or reposition it in any way.\n` +
+        `    Logo: scale IMAGE ${logoImg} DOWN so it fits ENTIRELY INSIDE the pennant's boundaries — the logo must be small enough that it sits within the orange shape with a small margin on all sides. The logo must not overflow or extend beyond the pennant edges. Center it within the upper portion of the pennant. Preserve exact logo colors and proportions.\n` +
         (d.tagline ? `    Tagline: render "${d.tagline}" in a loose handwriting-style italic script at a slight upward angle (+5°–7°), large and confident, black — placed to the right of the pennant, below the headline.\n` : "") +
         "\n"
       : d.tagline
@@ -239,7 +240,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     "TYPOGRAPHIC RULES:\n" +
     "  • Headline: layered two-font treatment — bold condensed slab caps (horizontal) + flowing orange script for descriptors (angled ≈-8°)\n" +
     "  • Tagline: loose handwriting-style italic script, slight upward angle (+5°–7°), large, confident — never flat/horizontal\n" +
-    "  • Logo: always placed as a badge ON the orange pennant ribbon, not floating freely\n" +
+    "  • Logo: scaled small to fit ENTIRELY INSIDE the orange pennant ribbon; pennant stays fixed in top-left exactly as in the template\n" +
     "  • Footer phone/address: bold sans-serif, noticeably larger than fine print\n" +
     "  • Fine print / coupon terms: smallest text, still legible\n" +
     "  • NEVER render the website URL as visible text";
