@@ -204,8 +204,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
 
     (hasLogo
       ? `  ZONE 2 — LOGO${d.tagline ? " + TAGLINE" : ""} (orange pennant ribbon, top-left corner):\n` +
-        `    PENNANT: Keep the orange vertical pennant ribbon EXACTLY where it is in IMAGE 1 (top-left corner, same position, same size) — do NOT move it, enlarge it, or reposition it in any way.\n` +
-        `    Logo: scale IMAGE ${logoImg} DOWN so it fits ENTIRELY INSIDE the pennant's boundaries — the logo must be small enough that it sits within the orange shape with a small margin on all sides. The logo must not overflow or extend beyond the pennant edges. Center it within the upper portion of the pennant. Preserve exact logo colors and proportions.\n` +
+        `    PENNANT: Copy the orange pennant ribbon from IMAGE 1 with PIXEL-PERFECT fidelity — identical height, identical width, identical shape, anchored to the very top-left corner of the ad exactly as it appears in the template. Do NOT change its dimensions, elongate it, or alter its proportions in any way.\n` +
+        `    Logo: place IMAGE ${logoImg} at the very top of the ad, centered inside the pennant. Scale it DOWN until it fits comfortably within the pennant with a small margin on every side — the logo must not overflow or touch the pennant edges. Keep it small and tidy inside the flag shape. Preserve exact logo colors and proportions.\n` +
         (d.tagline ? `    Tagline: render "${d.tagline}" in a loose handwriting-style italic script at a slight upward angle (+5°–7°), large and confident, black — placed to the right of the pennant, below the headline.\n` : "") +
         "\n"
       : d.tagline
