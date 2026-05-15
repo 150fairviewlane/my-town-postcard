@@ -200,9 +200,10 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     `    Business name "${d.bizName}" in a bold, dynamic display font — the largest, most dominant text element on the entire ad. Make it feel like a premium magazine headline.\n\n` +
 
     (hasLogo
-      ? `  ZONE 2 — LOGO + TAGLINE (upper-left corner, below headline):\n` +
+      ? `  ZONE 2 — LOGO${d.tagline ? " + TAGLINE" : ""} (upper-left corner, below headline):\n` +
         `    Logo: place IMAGE ${logoImg} at compact size — no wider than 20% of the ad width. Preserve exact colors and proportions.\n` +
-        `    Tagline: render "${d.tagline || ""}" in a mid-weight font directly below the logo, clearly legible, noticeably larger than body copy.\n\n`
+        (d.tagline ? `    Tagline: render "${d.tagline}" in a mid-weight font directly below the logo, clearly legible, noticeably larger than body copy.\n` : "") +
+        "\n"
       : d.tagline
         ? `  ZONE 2 — TAGLINE (upper-left, below headline):\n` +
           `    "${d.tagline}" in a mid-weight italic or script font, clearly legible.\n\n`
