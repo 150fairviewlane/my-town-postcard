@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { useLocation, useSearch } from "wouter";
 import { useGetActiveCampaign, useReserveSpot, getGetActiveCampaignQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import AdGenerator, { AdTemplatePreview } from "./AdGenerator";
+import { AdTemplatePreview } from "./AdGenerator";
 import AdUploadModal from "./AdUploadModal";
 import { PositionedQR } from "./qrUtils";
 
@@ -410,8 +410,8 @@ if(liveSpot&&liveSpot.status==="paid"){
   return(<ScaledCell spot={spot} scale={scale}><div style={{width:spot.w,height:spot.h,background:"linear-gradient(135deg,#1a2744,#0f1729)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",pointerEvents:"none",padding:12,boxSizing:"border-box",gap:8}}><div style={{color:"rgba(255,255,255,0.35)",fontSize:7,fontWeight:700,letterSpacing:2,textTransform:"uppercase"}}>Community Ad</div><div style={{color:"#fff",fontWeight:900,fontSize:fz,fontFamily:"Georgia,serif",textAlign:"center",lineHeight:1.2}}>{biz}</div><div style={{width:32,height:2,background:"rgba(255,255,255,0.2)",borderRadius:1}}/><div style={{color:"rgba(255,255,255,0.4)",fontSize:8,fontFamily:"sans-serif"}}>mytownpostcard.com</div></div></ScaledCell>);
 }
 // Reserved spot → show as green/available; the 30-min hold is transient.
-// If the spot is still held when someone tries to reserve it, the error banner in
-// the AdGenerator will show "Sorry, that spot was just taken."
+// If the spot is still held when someone tries to reserve it, the reserve API will
+// return an error and the picker will show "Sorry, that spot was just taken."
 if(liveSpot&&liveSpot.status==="reserved"){
   return<ScaledCell spot={spot} scale={scale}><AvailableSpot spot={spot} hovered={hov===spot.id} onClick={()=>onSel(spot)} onEnter={()=>onHov(spot.id)} onLeave={onOut}/></ScaledCell>;
 }
@@ -523,7 +523,7 @@ const handleComplete=async(formData)=>{
         contactEmail:formData.email,
         contactPhone:formData.phone||undefined,
         website:formData.website||undefined,
-        // Save the full AdGenerator design state so the picker renders the real ad
+        // Save the full design state so the picker renders the real ad
         templateData:{
           template:formData.template,
           sizeKey:formData.sizeKey,
@@ -552,6 +552,23 @@ const handleComplete=async(formData)=>{
     setReserving(false);
   }
 };
+
+const grokListenerRef=useRef(null);
+const openGrokGenerator=()=>{
+  const url=`/api/grok-ad-generator?spotSize=${sel?.size||''}`;
+  window.open(url,'grok-ad-gen','width=1120,height=800,left=80,top=60');
+  setAdMethod("grok");
+  const handler=(e)=>{
+    if(!e.data||e.data.type!=='grok-ad-result')return;
+    window.removeEventListener('message',handler);
+    grokListenerRef.current=null;
+    handleComplete(e.data.formData);
+  };
+  if(grokListenerRef.current)window.removeEventListener('message',grokListenerRef.current);
+  grokListenerRef.current=handler;
+  window.addEventListener('message',handler);
+};
+useEffect(()=>()=>{if(grokListenerRef.current)window.removeEventListener('message',grokListenerRef.current);},[]);
 
 useEffect(()=>{
 function upd(){if(ref.current){setScale(ref.current.offsetWidth/W);}}
@@ -622,7 +639,7 @@ return(<div style={{fontFamily:"sans-serif"}}>
 {/* Choice modal — shown when a spot is selected but method not yet chosen */}
 {sel&&!adMethod&&(
   <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:16}}>
-    <div style={{background:"#fff",borderRadius:14,width:"100%",maxWidth:520,padding:"36px 32px",boxShadow:"0 24px 64px rgba(0,0,0,0.4)"}}>
+    <div style={{background:"#fff",borderRadius:14,width:"100%",maxWidth:440,padding:"36px 32px",boxShadow:"0 24px 64px rgba(0,0,0,0.4)"}}>
       <div style={{textAlign:"center",marginBottom:10}}>
         <span style={{display:"inline-block",background:"#991b1b",color:"#fff",borderRadius:99,padding:"5px 18px",fontSize:13,fontWeight:800}}>
           {sel.size} Spot — ${sel.price}
@@ -635,79 +652,20 @@ return(<div style={{fontFamily:"sans-serif"}}>
           onClick={()=>setAdMethod("upload")}
           onMouseEnter={e=>{e.currentTarget.style.borderColor="#991b1b";e.currentTarget.style.background="#fef2f2";}}
           onMouseLeave={e=>{e.currentTarget.style.borderColor="#e5e7eb";e.currentTarget.style.background="#fff";}}
-          style={{padding:"20px 14px",border:"2px solid #e5e7eb",borderRadius:12,background:"#fff",cursor:"pointer",textAlign:"left",transition:"border-color 0.15s, background 0.15s"}}>
-          <div style={{fontSize:30,marginBottom:8}}>📎</div>
-          <div style={{fontWeight:800,fontSize:13,color:"#111",marginBottom:4}}>Upload Finished Ad</div>
-          <div style={{fontSize:11,color:"#6b7280",lineHeight:1.5}}>I already have a completed ad. Upload it and we'll print it exactly as-is.</div>
+          style={{padding:"24px 16px",border:"2px solid #e5e7eb",borderRadius:12,background:"#fff",cursor:"pointer",textAlign:"left",transition:"border-color 0.15s, background 0.15s"}}>
+          <div style={{fontSize:32,marginBottom:10}}>📎</div>
+          <div style={{fontWeight:800,fontSize:14,color:"#111",marginBottom:5}}>Upload Finished Ad</div>
+          <div style={{fontSize:12,color:"#6b7280",lineHeight:1.5}}>I already have a completed ad. Upload it and we'll print it exactly as-is.</div>
         </button>
         <button
-          onClick={()=>setAdMethod("generator")}
-          onMouseEnter={e=>{e.currentTarget.style.borderColor="#991b1b";e.currentTarget.style.background="#fef2f2";}}
+          onClick={()=>openGrokGenerator()}
+          onMouseEnter={e=>{e.currentTarget.style.borderColor="#1a1a2e";e.currentTarget.style.background="#f5f0ff";}}
           onMouseLeave={e=>{e.currentTarget.style.borderColor="#e5e7eb";e.currentTarget.style.background="#fff";}}
-          style={{padding:"20px 14px",border:"2px solid #e5e7eb",borderRadius:12,background:"#fff",cursor:"pointer",textAlign:"left",transition:"border-color 0.15s, background 0.15s"}}>
-          <div style={{fontSize:30,marginBottom:8}}>🎨</div>
-          <div style={{fontWeight:800,fontSize:13,color:"#111",marginBottom:4}}>Ad Generator</div>
-          <div style={{fontSize:11,color:"#6b7280",lineHeight:1.5}}>Pick a template, add your info, and preview your ad live.</div>
-        </button>
-        <button
-          onClick={()=>window.open("/api/ad-generator-v4","_blank")}
-          onMouseEnter={e=>{e.currentTarget.style.borderColor="#7c1c2e";e.currentTarget.style.background="#f9eaed";}}
-          onMouseLeave={e=>{e.currentTarget.style.borderColor="#e5e7eb";e.currentTarget.style.background="#fff";}}
-          style={{padding:"20px 14px",border:"2px solid #e5e7eb",borderRadius:12,background:"#fff",cursor:"pointer",textAlign:"left",transition:"border-color 0.15s, background 0.15s",position:"relative"}}>
-          <div style={{position:"absolute",top:8,right:8,background:"#7c1c2e",color:"#fff",fontSize:8,fontWeight:800,letterSpacing:"0.08em",padding:"2px 6px",borderRadius:99,textTransform:"uppercase"}}>NEW</div>
-          <div style={{fontSize:30,marginBottom:8}}>✦</div>
-          <div style={{fontWeight:800,fontSize:13,color:"#111",marginBottom:4}}>Ad Generator v4</div>
-          <div style={{fontSize:11,color:"#6b7280",lineHeight:1.5}}>Pick a template, add your info, choose a library photo and preview your ad instantly.</div>
-        </button>
-        <button
-          onClick={()=>window.open("/api/ad-generator-v5","_blank")}
-          onMouseEnter={e=>{e.currentTarget.style.borderColor="#2d1b4e";e.currentTarget.style.background="#f5f0ff";}}
-          onMouseLeave={e=>{e.currentTarget.style.borderColor="#e5e7eb";e.currentTarget.style.background="#fff";}}
-          style={{padding:"20px 14px",border:"2px solid #e5e7eb",borderRadius:12,background:"#fff",cursor:"pointer",textAlign:"left",transition:"border-color 0.15s, background 0.15s",position:"relative"}}>
-          <div style={{position:"absolute",top:8,right:8,background:"linear-gradient(135deg,#1a1a2e,#2d1b4e)",color:"#fff",fontSize:8,fontWeight:800,letterSpacing:"0.08em",padding:"2px 6px",borderRadius:99,textTransform:"uppercase"}}>✨ AI v5</div>
-          <div style={{fontSize:30,marginBottom:8}}>✨</div>
-          <div style={{fontWeight:800,fontSize:13,color:"#111",marginBottom:4}}>Ad Generator v5 (Hybrid AI)</div>
-          <div style={{fontSize:11,color:"#6b7280",lineHeight:1.5}}>Instant template preview + AI-generated background atmosphere. Text is always crisp HTML.</div>
-        </button>
-        <button
-          onClick={()=>window.open("/api/ad-generator-v6","_blank")}
-          onMouseEnter={e=>{e.currentTarget.style.borderColor="#92611a";e.currentTarget.style.background="#fdf8ee";}}
-          onMouseLeave={e=>{e.currentTarget.style.borderColor="#e5e7eb";e.currentTarget.style.background="#fff";}}
-          style={{padding:"20px 14px",border:"2px solid #e5e7eb",borderRadius:12,background:"#fff",cursor:"pointer",textAlign:"left",transition:"border-color 0.15s, background 0.15s",position:"relative"}}>
-          <div style={{position:"absolute",top:8,right:8,background:"linear-gradient(135deg,#92611a,#D39A42)",color:"#fff",fontSize:8,fontWeight:800,letterSpacing:"0.08em",padding:"2px 6px",borderRadius:99,textTransform:"uppercase"}}>NEW v6</div>
-          <div style={{fontSize:30,marginBottom:8}}>🥐</div>
-          <div style={{fontWeight:800,fontSize:13,color:"#111",marginBottom:4}}>Ad Generator v6 (Mr. Biscuit's Style)</div>
-          <div style={{fontSize:11,color:"#6b7280",lineHeight:1.5}}>Photo + crisp HTML overlay in the Mr. Biscuit's design system — Bebas headlines, Pacifico script, gold palette.</div>
-        </button>
-        <button
-          onClick={()=>window.open("/api/ad-studio","_blank")}
-          onMouseEnter={e=>{e.currentTarget.style.borderColor="#7C1C2E";e.currentTarget.style.background="#f9eaed";}}
-          onMouseLeave={e=>{e.currentTarget.style.borderColor="#e5e7eb";e.currentTarget.style.background="#fff";}}
-          style={{padding:"20px 14px",border:"2px solid #e5e7eb",borderRadius:12,background:"#fff",cursor:"pointer",textAlign:"left",transition:"border-color 0.15s, background 0.15s",position:"relative"}}>
-          <div style={{position:"absolute",top:8,right:8,background:"linear-gradient(135deg,#7C1C2E,#C8541A)",color:"#fff",fontSize:8,fontWeight:800,letterSpacing:"0.08em",padding:"2px 6px",borderRadius:99,textTransform:"uppercase"}}>✦ NEW</div>
-          <div style={{fontSize:30,marginBottom:8}}>🎨</div>
-          <div style={{fontWeight:800,fontSize:13,color:"#111",marginBottom:4}}>Ad Studio</div>
-          <div style={{fontSize:11,color:"#6b7280",lineHeight:1.5}}>Parchment template with live HTML overlays — industry presets, photo blend, coupon box, 8 accent colors.</div>
-        </button>
-        <button
-          onClick={()=>{window.location.href="/ad-gen";}}
-          onMouseEnter={e=>{e.currentTarget.style.borderColor="#C8541A";e.currentTarget.style.background="#fdf6ee";}}
-          onMouseLeave={e=>{e.currentTarget.style.borderColor="#e5e7eb";e.currentTarget.style.background="#fff";}}
-          style={{padding:"20px 14px",border:"2px solid #e5e7eb",borderRadius:12,background:"#fff",cursor:"pointer",textAlign:"left",transition:"border-color 0.15s, background 0.15s",position:"relative"}}>
-          <div style={{position:"absolute",top:8,right:8,background:"linear-gradient(135deg,#7B1418,#C8541A)",color:"#fff",fontSize:8,fontWeight:800,letterSpacing:"0.08em",padding:"2px 6px",borderRadius:99,textTransform:"uppercase"}}>✦ v7 AI</div>
-          <div style={{fontSize:30,marginBottom:8}}>🖼️</div>
-          <div style={{fontWeight:800,fontSize:13,color:"#111",marginBottom:4}}>AI Ad Studio (Beta)</div>
-          <div style={{fontSize:11,color:"#6b7280",lineHeight:1.5}}>Canvas-rendered ad with GPT-4o copy, AI hero photo, logo upload, QR code, and optional AI polish pass.</div>
-        </button>
-        <button
-          onClick={()=>window.open("/api/ai-ad-creator","_blank")}
-          onMouseEnter={e=>{e.currentTarget.style.borderColor="#1a5c3a";e.currentTarget.style.background="#f0fdf4";}}
-          onMouseLeave={e=>{e.currentTarget.style.borderColor="#e5e7eb";e.currentTarget.style.background="#fff";}}
-          style={{padding:"20px 14px",border:"2px solid #e5e7eb",borderRadius:12,background:"#fff",cursor:"pointer",textAlign:"left",transition:"border-color 0.15s, background 0.15s",position:"relative"}}>
-          <div style={{position:"absolute",top:8,right:8,background:"linear-gradient(135deg,#1a5c3a,#2d9e5f)",color:"#fff",fontSize:8,fontWeight:800,letterSpacing:"0.08em",padding:"2px 6px",borderRadius:99,textTransform:"uppercase"}}>NEW</div>
-          <div style={{fontSize:30,marginBottom:8}}>🤖</div>
-          <div style={{fontWeight:800,fontSize:13,color:"#111",marginBottom:4}}>AI Ad Creator</div>
-          <div style={{fontSize:11,color:"#6b7280",lineHeight:1.5}}>Build a prompt, launch Claude or ChatGPT — prompt auto-delivered. Drop the result back to save your ad.</div>
+          style={{padding:"24px 16px",border:"2px solid #e5e7eb",borderRadius:12,background:"#fff",cursor:"pointer",textAlign:"left",transition:"border-color 0.15s, background 0.15s",position:"relative"}}>
+          <div style={{position:"absolute",top:8,right:8,background:"linear-gradient(135deg,#1a1a2e,#3D1A6B)",color:"#fff",fontSize:8,fontWeight:800,letterSpacing:"0.08em",padding:"2px 8px",borderRadius:99,textTransform:"uppercase"}}>AI</div>
+          <div style={{fontSize:32,marginBottom:10}}>⚡</div>
+          <div style={{fontWeight:800,fontSize:14,color:"#111",marginBottom:5}}>Design with Grok AI</div>
+          <div style={{fontSize:12,color:"#6b7280",lineHeight:1.5}}>Fill in your business details and let Grok AI generate a premium postcard ad in seconds.</div>
         </button>
       </div>
       <div style={{textAlign:"center"}}>
@@ -715,17 +673,6 @@ return(<div style={{fontFamily:"sans-serif"}}>
       </div>
     </div>
   </div>
-)}
-
-{/* Ad Generator */}
-{sel&&adMethod==="generator"&&(
-  <AdGenerator
-    initialSize={sel.size}
-    onComplete={handleComplete}
-    onClose={()=>{setSel(null);setAdMethod(null);setReserveError(null);}}
-    isReserving={reserving}
-    reserveError={reserveError}
-  />
 )}
 
 {/* Upload finished ad */}

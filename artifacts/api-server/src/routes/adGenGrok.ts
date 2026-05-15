@@ -27,6 +27,7 @@ const GenerateSchema = z.object({
   menu:      z.array(z.string()).optional().default([]),
   offer:     z.string().optional().default(""),
   offerFine: z.string().optional().default(""),
+  template:  z.string().optional().default("parchment-classic"),
   photoUrl:  z.string().optional().default(""),
   logoData:  z.string().optional().default(""),
 });
@@ -150,11 +151,12 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   const d = parsed.data;
 
   // Load template PNG as raw buffer (used as multipart binary)
-  const tmplPath = path.join(
-    WORKSPACE_ROOT,
-    "attached_assets",
-    "mr_biscuits_template_no_logo_1778806527327.png"
-  );
+  const templateKey = d.template || "parchment-classic";
+  const tmplFilename =
+    templateKey === "made-fresh"
+      ? "made_fresh_template.png"
+      : "mr_biscuits_template_no_logo_1778806527327.png";
+  const tmplPath = path.join(WORKSPACE_ROOT, "attached_assets", tmplFilename);
   if (!fs.existsSync(tmplPath)) {
     res.status(500).json({ error: "Template file not found on server." });
     return;
@@ -180,9 +182,13 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
 
   // Build image reference lines for the prompt — one per image in the `images` array order
   const refLines: string[] = [
-    "  • IMAGE 1 (TEMPLATE) — the full postcard layout with parchment texture, brush-stroke band, " +
-    "pennant ribbon, circular checkmark badge, dashed coupon box, and dark footer strip. " +
-    "Reproduce every zone, texture, and design element exactly.",
+    templateKey === "made-fresh"
+      ? "  • IMAGE 1 (TEMPLATE) — a bright, warm restaurant postcard layout featuring a natural wood table surface, " +
+        "a chalkboard-style 'Made Fresh For You' sign, gingham cloth accents, a golden ticket coupon stub, " +
+        "and a fresh white plate as the hero focal point. Preserve all zones, props, and warm editorial atmosphere exactly."
+      : "  • IMAGE 1 (TEMPLATE) — the full postcard layout with parchment texture, brush-stroke band, " +
+        "pennant ribbon, circular checkmark badge, dashed coupon box, and dark footer strip. " +
+        "Reproduce every zone, texture, and design element exactly.",
   ];
   let imgIdx = 2;
   if (hasPhoto) {
@@ -410,6 +416,22 @@ router.get("/grok-ad-generator", (_req, res) => {
   res.send(GROK_HTML);
 });
 
+// ── GET /api/grok-ad-generator/template-preview/:key — serve template thumbnails ──
+router.get("/grok-ad-generator/template-preview/:key", (req, res) => {
+  const key = req.params["key"];
+  const fileMap: Record<string, string> = {
+    "parchment-classic": "mr_biscuits_template_no_logo_1778806527327.png",
+    "made-fresh":        "made_fresh_template.png",
+  };
+  const filename = fileMap[key];
+  if (!filename) { res.status(404).send("Not found"); return; }
+  const p = path.join(WORKSPACE_ROOT, "attached_assets", filename);
+  if (!fs.existsSync(p)) { res.status(404).send("Not found"); return; }
+  res.setHeader("Content-Type", "image/png");
+  res.setHeader("Cache-Control", "public, max-age=86400");
+  fs.createReadStream(p).pipe(res);
+});
+
 export default router;
 
 // ── Inline HTML ───────────────────────────────────────────────────────────────
@@ -471,6 +493,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .tmpl-sub{font-size:11px;color:var(--ink-light);margin-top:2px}
 .tmpl-badge{display:inline-flex;align-items:center;gap:4px;background:#f0fdf4;border:1px solid var(--green);color:var(--green);font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;margin-top:5px}
 
+.tmpl-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tmpl-card{border:2px solid var(--border);border-radius:9px;overflow:hidden;cursor:pointer;transition:all .18s;background:#fff}
+.tmpl-card:hover:not(.disabled){border-color:var(--burg);box-shadow:0 2px 12px rgba(124,28,46,.15)}
+.tmpl-card.active{border-color:var(--green);box-shadow:0 0 0 1px var(--green)}
+.tmpl-card.disabled{cursor:default;opacity:.55}
+.tmpl-thumb{width:100%;height:72px;object-fit:cover;display:block;background:#f0ede8}
+.tmpl-card-name{font-size:10px;font-weight:700;color:var(--ink);padding:5px 7px 1px;line-height:1.2}
+.tmpl-card-sub{font-size:9px;color:var(--ink-light);padding:0 7px 4px;line-height:1.3}
+.tmpl-sel-badge{display:inline-flex;align-items:center;gap:3px;background:#f0fdf4;border:1px solid var(--green);color:var(--green);font-size:9px;font-weight:700;padding:2px 6px;border-radius:99px;margin:0 7px 6px}
+.cs-badge{display:inline-flex;align-items:center;background:#f3f4f6;border:1px solid #d1d5db;color:#9ca3af;font-size:9px;font-weight:700;padding:2px 6px;border-radius:99px;margin:0 7px 6px;letter-spacing:.04em;text-transform:uppercase}
+
 .tabs{display:flex;border-bottom:1.5px solid var(--border);margin-bottom:12px}
 .tab{flex:1;padding:8px;font-size:11px;font-weight:700;color:var(--ink-light);background:none;border:none;cursor:pointer;letter-spacing:.06em;text-transform:uppercase;border-bottom:2.5px solid transparent;margin-bottom:-1.5px;transition:all .2s;font-family:'DM Sans',sans-serif}
 .tab.active{color:var(--burg);border-bottom-color:var(--burg)}
@@ -488,16 +521,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .img-loading{grid-column:1/-1;padding:18px;text-align:center;font-size:12px;color:var(--ink-light)}
 .fnote{font-size:10px;color:var(--ink-light);margin-top:5px;line-height:1.4}
 
-.upload-zone{border:2px dashed var(--border);border-radius:8px;padding:14px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surface);position:relative;overflow:hidden}
+.upload-zone{border:2px dashed var(--border);border-radius:8px;padding:14px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surface);position:relative;overflow:hidden;min-height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .upload-zone:hover{border-color:var(--burg);background:var(--burg-pale)}
 .upload-zone.has-file{border-color:var(--green);background:#f0fdf4}
 .upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
 .upload-icon{font-size:20px;opacity:.5;margin-bottom:3px}
 .upload-label{font-size:12px;font-weight:600;color:var(--ink-mid)}
 .upload-sub{font-size:10px;color:var(--ink-light);margin-top:2px}
-.upload-preview{width:100%;max-height:80px;object-fit:cover;border-radius:5px;margin-top:8px;display:none}
+.upload-preview{width:100%;max-height:160px;object-fit:contain;border-radius:5px;margin-top:8px;display:none;background:#f5f5f5}
 
-.gen-btn{width:100%;padding:14px;background:linear-gradient(135deg,#1a1a2e,#3D1A6B);color:#fff;border:none;border-radius:10px;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.14em;cursor:pointer;transition:all .25s;display:flex;align-items:center;justify-content:center;gap:10px}
+.gen-btn{max-width:300px;margin:0 auto;padding:13px 28px;background:linear-gradient(135deg,#1a1a2e,#3D1A6B);color:#fff;border:none;border-radius:10px;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.14em;cursor:pointer;transition:all .25s;display:flex;align-items:center;justify-content:center;gap:10px}
 .gen-btn:hover:not(:disabled){background:linear-gradient(135deg,#2a2a4e,#5a2490);transform:translateY(-1px);box-shadow:0 6px 24px rgba(80,30,180,.35)}
 .gen-btn:disabled{background:#888;cursor:not-allowed;transform:none;box-shadow:none}
 .gen-spark{font-size:17px;animation:sp 2s ease-in-out infinite}
@@ -579,6 +612,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
       </div>
       <div class="field"><label>Street Address</label><input type="text" id="address" placeholder="596 W Louise St"></div>
       <div class="field"><label>Website / URL</label><input type="text" id="website" placeholder="mrbiscuitscafe.com"></div>
+      <div class="field"><label>Contact Email *</label><input type="email" id="email" placeholder="owner@mrbiscuitscafe.com" oninput="onFormChange()"></div>
     </div>
 
     <div>
@@ -600,13 +634,39 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
     <!-- Template -->
     <div class="card">
       <div class="card-hdr"><div class="card-title">Template</div></div>
-      <div class="card-body">
-        <div class="tmpl-preview">
-          <img class="tmpl-img" src="/api/ai-ad-creator/templates/mr-biscuits?view=1" alt="Mr. Biscuit's Style" onerror="this.style.background='#e8e3dc'">
-          <div class="tmpl-info">
-            <div class="tmpl-name">Mr. Biscuit&rsquo;s Style</div>
-            <div class="tmpl-sub">Parchment &middot; Brush stroke &middot; Rustic-modern</div>
-            <div class="tmpl-badge">&#10003; Selected</div>
+      <div class="card-body" style="padding:10px 12px">
+        <div class="tmpl-grid">
+          <div class="tmpl-card active" id="tmpl-parchment-classic" onclick="selectTemplate('parchment-classic')">
+            <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/parchment-classic" alt="Parchment Classic" onerror="this.style.background='#e8e3dc'">
+            <div class="tmpl-card-name">Parchment Classic</div>
+            <div class="tmpl-card-sub">Parchment &middot; Brush stroke &middot; Rustic charm</div>
+            <div class="tmpl-sel-badge" id="badge-parchment-classic">&#10003; Selected</div>
+          </div>
+          <div class="tmpl-card" id="tmpl-made-fresh" onclick="selectTemplate('made-fresh')">
+            <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/made-fresh" alt="Made Fresh" onerror="this.style.background='#f0f9f0'">
+            <div class="tmpl-card-name">Made Fresh</div>
+            <div class="tmpl-card-sub">Warm wood &middot; Chalkboard &middot; Fresh &amp; modern</div>
+            <div class="tmpl-sel-badge" id="badge-made-fresh" style="display:none">&#10003; Selected</div>
+          </div>
+          <div class="tmpl-card disabled">
+            <div class="tmpl-thumb" style="display:flex;align-items:center;justify-content:center;font-size:24px;background:#f5f5f5">&#128396;</div>
+            <div class="tmpl-card-name" style="color:#bbb">Bold &amp; Modern</div>
+            <div class="cs-badge">Coming Soon</div>
+          </div>
+          <div class="tmpl-card disabled">
+            <div class="tmpl-thumb" style="display:flex;align-items:center;justify-content:center;font-size:24px;background:#f0f4ff">&#127807;</div>
+            <div class="tmpl-card-name" style="color:#bbb">Clean &amp; Minimal</div>
+            <div class="cs-badge">Coming Soon</div>
+          </div>
+          <div class="tmpl-card disabled">
+            <div class="tmpl-thumb" style="display:flex;align-items:center;justify-content:center;font-size:24px;background:#1a1a2e">&#128293;</div>
+            <div class="tmpl-card-name" style="color:#bbb">Dark &amp; Bold</div>
+            <div class="cs-badge">Coming Soon</div>
+          </div>
+          <div class="tmpl-card disabled">
+            <div class="tmpl-thumb" style="display:flex;align-items:center;justify-content:center;font-size:24px;background:#f5fff5">&#127968;</div>
+            <div class="tmpl-card-name" style="color:#bbb">Neighborhood Pro</div>
+            <div class="cs-badge">Coming Soon</div>
           </div>
         </div>
       </div>
@@ -699,6 +759,19 @@ var _selectedPhotoUrl = '';
 var _logoData = '';
 var _resultUrl = '';
 var _activeTab = 'lib';
+var _activeTemplate = 'parchment-classic';
+var _spotSize = 'XL';
+
+function selectTemplate(key){
+  if(_activeTemplate === key) return;
+  _activeTemplate = key;
+  document.querySelectorAll('.tmpl-card').forEach(function(c){ c.classList.remove('active'); });
+  document.querySelectorAll('.tmpl-sel-badge').forEach(function(b){ b.style.display='none'; });
+  var card = document.getElementById('tmpl-' + key);
+  var badge = document.getElementById('badge-' + key);
+  if(card){ card.classList.add('active'); }
+  if(badge){ badge.style.display=''; }
+}
 
 function onFormChange(){
   var biz = document.getElementById('bizName').value.trim();
@@ -943,6 +1016,7 @@ async function generate(){
     offerFine: document.getElementById('offerFine').value.trim(),
     photoUrl:  _selectedPhotoUrl,
     logoData:  _logoData,
+    template:  _activeTemplate,
   };
 
   try{
@@ -1000,8 +1074,30 @@ function hideErr(){ document.getElementById('errBox').classList.remove('visible'
 
 function useThisAd(){
   if(!_resultUrl){ return; }
-  downloadAd();
-  showToast('Ad saved! Upload it from your spot\\u2019s upload page to complete your order.');
+  var formData = {
+    businessName:  document.getElementById('bizName').value.trim(),
+    industry:      document.getElementById('industry').value || 'Local Business',
+    email:         (document.getElementById('email') ? document.getElementById('email').value.trim() : ''),
+    phone:         document.getElementById('phone').value.trim(),
+    city:          document.getElementById('city').value.trim(),
+    address:       document.getElementById('address').value.trim(),
+    website:       document.getElementById('website').value.trim(),
+    tagline:       document.getElementById('tagline').value.trim(),
+    offer:         document.getElementById('offer').value.trim(),
+    offerFine:     document.getElementById('offerFine').value.trim(),
+    menuItems:     getMenu(),
+    finishedAdUrl: _resultUrl,
+    template:      _activeTemplate,
+    sizeKey:       _spotSize || 'XL',
+  };
+  if(window.opener && !window.opener.closed){
+    window.opener.postMessage({ type: 'grok-ad-result', formData: formData }, '*');
+    showToast('Ad sent! Completing your reservation\\u2026');
+    setTimeout(function(){ window.close(); }, 1400);
+  } else {
+    downloadAd();
+    showToast('Ad saved! Upload it from your spot\\u2019s upload page to complete your order.');
+  }
 }
 
 function downloadAd(){
@@ -1019,21 +1115,38 @@ function showToast(msg){
   setTimeout(function(){ t.classList.remove('show'); }, 3500);
 }
 
-// Prefill with Mr. Biscuit's Cafe
+// Prefill — use URL params if provided, otherwise load Mr. Biscuit's Cafe demo
 (function prefill(){
-  var f = {
-    bizName:"Mr. Biscuit's Cafe", tagline:"From-Scratch Biscuits & Boba!",
-    phone:"(706) 754-0105", city:"Clarkesville, GA", address:"596 W Louise St",
-    website:"mrbiscuitscafe.com", offer:"$1 OFF Any Biscuit",
-    offerFine:"1 per visit \\u00b7 with this postcard"
-  };
-  Object.keys(f).forEach(function(id){ var el=document.getElementById(id); if(el) el.value=f[id]; });
-  var sel = document.getElementById('industry');
-  for(var i=0;i<sel.options.length;i++){
-    if(sel.options[i].text === 'Breakfast & Cafe'){ sel.selectedIndex=i; break; }
+  var params = new URLSearchParams(window.location.search);
+  _spotSize = params.get('spotSize') || 'XL';
+  var urlBiz = params.get('bizName') || '';
+  var urlIndustry = params.get('industry') || '';
+  if(urlBiz){
+    // Opened from the spot picker — pre-fill with provided params
+    var el = document.getElementById('bizName'); if(el) el.value = urlBiz;
+    var selEl = document.getElementById('industry');
+    if(urlIndustry){
+      for(var i=0;i<selEl.options.length;i++){
+        if(selEl.options[i].text === urlIndustry){ selEl.selectedIndex=i; break; }
+      }
+    }
+    onIndustryChange();
+  } else {
+    // No params — load demo prefill
+    var f = {
+      bizName:"Mr. Biscuit's Cafe", tagline:"From-Scratch Biscuits & Boba!",
+      phone:"(706) 754-0105", city:"Clarkesville, GA", address:"596 W Louise St",
+      website:"mrbiscuitscafe.com", offer:"$1 OFF Any Biscuit",
+      offerFine:"1 per visit \\u00b7 with this postcard"
+    };
+    Object.keys(f).forEach(function(id){ var el=document.getElementById(id); if(el) el.value=f[id]; });
+    var sel = document.getElementById('industry');
+    for(var i=0;i<sel.options.length;i++){
+      if(sel.options[i].text === 'Breakfast & Cafe'){ sel.selectedIndex=i; break; }
+    }
+    ['Bacon Egg & Cheese Biscuit $5.99','Boba Tea (any flavor) $4.50','Gravy Biscuit $3.99','Breakfast Plate $7.99']
+      .forEach(function(v){ addMenuItem(v); });
   }
-  ['Bacon Egg & Cheese Biscuit $5.99','Boba Tea (any flavor) $4.50','Gravy Biscuit $3.99','Breakfast Plate $7.99']
-    .forEach(function(v){ addMenuItem(v); });
   onFormChange();
   loadLibrary();
 })();
