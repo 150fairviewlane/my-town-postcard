@@ -515,7 +515,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .result-hdr{padding:12px 16px;border-bottom:1px solid var(--border);background:#FAFAF8;display:flex;align-items:center;justify-content:space-between}
 .result-title{font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--green)}
 .result-img-wrap{padding:16px;display:flex;justify-content:center;background:#f5f3f0}
-.result-img{display:block;width:100%;max-width:280px;aspect-ratio:4/5;object-fit:contain;border-radius:6px;box-shadow:0 4px 20px rgba(0,0,0,.15)}
+.result-img{display:block;width:100%;max-width:320px;object-fit:contain;border-radius:6px;box-shadow:0 4px 20px rgba(0,0,0,.15)}
 .result-actions{padding:14px 16px;display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--border);align-items:center}
 .act-btn{padding:9px 18px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:var(--surface);color:var(--ink-mid);transition:all .2s;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px}
 .act-btn:hover:not(:disabled){border-color:var(--burg);color:var(--burg)}
@@ -556,13 +556,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
     <div>
       <div class="sec-label">Business Info</div>
       <div class="field"><label>Business Name *</label><input type="text" id="bizName" placeholder="Mr. Biscuit's Cafe" oninput="onFormChange()"></div>
-      <div class="field"><label>Tagline / Slogan</label><input type="text" id="tagline" placeholder="From-Scratch Biscuits &amp; Boba!"></div>
-      <div class="frow">
-        <div class="field"><label>Phone *</label><input type="text" id="phone" placeholder="(706) 754-0105"></div>
-        <div class="field"><label>City, State</label><input type="text" id="city" placeholder="Clarkesville, GA"></div>
-      </div>
-      <div class="field"><label>Street Address</label><input type="text" id="address" placeholder="596 W Louise St"></div>
-      <div class="field"><label>Website / URL</label><input type="text" id="website" placeholder="mrbiscuitscafe.com"></div>
       <div class="field"><label>Industry</label>
         <select id="industry" onchange="onIndustryChange()">
           <option value="">&mdash; Select &mdash;</option>
@@ -579,6 +572,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
           <option>Retail Shop</option><option>Other Service</option>
         </select>
       </div>
+      <div class="field"><label>Tagline / Slogan</label><input type="text" id="tagline" placeholder="From-Scratch Biscuits &amp; Boba!"></div>
+      <div class="frow">
+        <div class="field"><label>Phone *</label><input type="text" id="phone" placeholder="(706) 754-0105"></div>
+        <div class="field"><label>City, State</label><input type="text" id="city" placeholder="Clarkesville, GA"></div>
+      </div>
+      <div class="field"><label>Street Address</label><input type="text" id="address" placeholder="596 W Louise St"></div>
+      <div class="field"><label>Website / URL</label><input type="text" id="website" placeholder="mrbiscuitscafe.com"></div>
     </div>
 
     <div>
@@ -705,6 +705,74 @@ function onFormChange(){
   document.getElementById('genBtn').disabled = !biz;
 }
 
+var TAGLINE_DEFAULTS = {
+  'Pizza Restaurant':      'Fresh-Made Pizza, Fast & Hot!',
+  'Mexican Restaurant':    'Authentic Flavors, Made Fresh Daily',
+  'Chinese Restaurant':    'Traditional Recipes, Modern Taste',
+  'Breakfast & Cafe':      'Start Your Morning Right',
+  'Bar & Grill':           'Great Food, Cold Drinks, Good Times',
+  'Italian Restaurant':    'Authentic Italian — From Our Kitchen to Yours',
+  'Bakery':                'Baked Fresh Every Morning',
+  'Coffee Shop':           'Your Daily Dose of Delicious',
+  'Dentist':               'Healthy Smiles for the Whole Family',
+  'Medical & Healthcare':  'Caring for Our Community',
+  'Chiropractor':          'Pain Relief — Feel Better Fast',
+  'Veterinarian':          'Compassionate Care for Your Pets',
+  'HVAC':                  'Comfort Year-Round, Service You Trust',
+  'Plumber':               'Fast, Reliable Plumbing — 24/7',
+  'Electrician':           'Safe, Reliable Electrical Service',
+  'Lawn & Landscaping':    'Beautiful Lawns, Zero Hassle',
+  'Roofing':               'Protecting Your Home, Rain or Shine',
+  'Painting':              'Transform Your Space — Inside & Out',
+  'Cleaning Service':      'Spotless Results, Every Time',
+  'Pest Control':          'Protecting Homes & Families',
+  'Real Estate':           'Your Local Real Estate Expert',
+  'Insurance':             'Coverage You Can Count On',
+  'Auto Repair':           'Honest Service, Expert Repairs',
+  'Salon & Beauty':        'Look and Feel Your Best',
+  'Barbershop':            'Sharp Cuts, Great Service',
+  'Gym & Fitness':         'Get Fit, Feel Amazing',
+  'Pet Services':          'Treating Your Pets Like Family',
+  'Financial Services':    'Building Your Financial Future',
+  'Daycare':               'Safe, Nurturing Care for Your Child',
+  'Photography':           'Capturing Your Priceless Moments',
+  'Retail Shop':           'Something for Everyone — Shop Local',
+};
+
+var OFFER_DEFAULTS = {
+  'Pizza Restaurant':      ['BOGO Tuesday — Buy One, Get One 50% Off','One per order \u00b7 with this postcard'],
+  'Mexican Restaurant':    ['FREE Chips & Salsa with Any Entrée','One per table \u00b7 with this postcard'],
+  'Chinese Restaurant':    ['10% OFF Your First Order','With this postcard'],
+  'Breakfast & Cafe':      ['$1 OFF Any Breakfast Plate','One per visit \u00b7 with this postcard'],
+  'Bar & Grill':           ['Happy Hour 3\u20136pm \u2014 $3 Draft Beers','Dine-in only \u00b7 with this postcard'],
+  'Italian Restaurant':    ['FREE Dessert with Entrée Purchase','One per table \u00b7 with this postcard'],
+  'Bakery':                ['Buy a Dozen, Get 2 FREE','With this postcard'],
+  'Coffee Shop':           ['FREE Pastry with Any Latte','One per visit \u00b7 with this postcard'],
+  'Dentist':               ['New Patient Special — Exam + X-Rays $49','New patients only \u00b7 call to schedule'],
+  'Medical & Healthcare':  ['New Patient Visit — $99 Flat','New patients only \u00b7 call for details'],
+  'Chiropractor':          ['First Visit — Exam + Adjustment $49','New patients only \u00b7 call to schedule'],
+  'Veterinarian':          ['10% OFF First Wellness Visit','New clients only \u00b7 with this postcard'],
+  'HVAC':                  ['FREE System Check — $89 Value','Call today to schedule'],
+  'Plumber':               ['$25 OFF Any Service Call','With this postcard'],
+  'Electrician':           ['FREE Safety Inspection — No Obligation','Call to schedule \u00b7 with this postcard'],
+  'Lawn & Landscaping':    ['FREE First Mow with Monthly Service','New customers only \u00b7 call today'],
+  'Roofing':               ['FREE Roof Inspection — No Pressure','Call or text to schedule'],
+  'Painting':              ['10% OFF Any Interior Painting Job','With this postcard \u00b7 mention ad'],
+  'Cleaning Service':      ['$20 OFF First Home Cleaning','New customers only \u00b7 with this postcard'],
+  'Pest Control':          ['FREE Inspection + $20 OFF First Treatment','With this postcard'],
+  'Real Estate':           ['FREE Home Valuation — No Obligation','Call or text to schedule'],
+  'Insurance':             ['FREE Coverage Review — Could Save You 30%','No obligation \u00b7 call today'],
+  'Auto Repair':           ['FREE Multi-Point Inspection with Any Service','With this postcard'],
+  'Salon & Beauty':        ['$10 OFF First Visit','New clients only \u00b7 with this postcard'],
+  'Barbershop':            ['First Cut $15 — New Customers Only','With this postcard'],
+  'Gym & Fitness':         ['First Month FREE — No Contract','New members only \u00b7 call to enroll'],
+  'Pet Services':          ['10% OFF First Grooming Appointment','New clients only \u00b7 with this postcard'],
+  'Financial Services':    ['FREE 30-Minute Consultation','No obligation \u00b7 call to schedule'],
+  'Daycare':               ['First Week FREE — Schedule a Tour Today','New enrollments only \u00b7 call for details'],
+  'Photography':           ['$50 OFF Your First Session','With this postcard \u00b7 book in advance'],
+  'Retail Shop':           ['10% OFF Entire Purchase — Show This Card','In-store only \u00b7 one use per customer'],
+};
+
 var MENU_DEFAULTS = {
   'Pizza Restaurant':      ['Pepperoni Pizza $12.99','Margherita Pizza $10.99','Chicken Wings $8.99','Caesar Salad $7.99'],
   'Mexican Restaurant':    ['Tacos (3) $9.99','Burrito Bowl $10.99','Nachos Supreme $8.99','Guacamole & Chips $6.99'],
@@ -742,10 +810,18 @@ var MENU_DEFAULTS = {
 function onIndustryChange(){
   if(_activeTab === 'lib') loadLibrary();
   var industry = document.getElementById('industry').value;
+  // Menu items
   var list = document.getElementById('menuList');
   list.innerHTML = '';
-  var defaults = MENU_DEFAULTS[industry];
-  if(defaults) defaults.forEach(function(v){ addMenuItem(v); });
+  var menuDefaults = MENU_DEFAULTS[industry];
+  if(menuDefaults) menuDefaults.forEach(function(v){ addMenuItem(v); });
+  // Tagline
+  var taglineEl = document.getElementById('tagline');
+  taglineEl.value = TAGLINE_DEFAULTS[industry] || '';
+  // Offer + fine print
+  var offerPair = OFFER_DEFAULTS[industry];
+  document.getElementById('offer').value    = offerPair ? offerPair[0] : '';
+  document.getElementById('offerFine').value = offerPair ? offerPair[1] : '';
 }
 
 function switchTab(tab){
@@ -895,10 +971,14 @@ async function generate(){
 
 function showResult(url){
   var panel = document.getElementById('resultPanel');
-  document.getElementById('resultImg').src = url;
+  var img = document.getElementById('resultImg');
   panel.classList.add('visible');
   var rp = document.querySelector('.rpanel');
-  setTimeout(function(){ rp.scrollTop = rp.scrollHeight; }, 60);
+  function scrollDown(){ rp.scrollTop = rp.scrollHeight; }
+  img.onload = function(){ scrollDown(); };
+  img.src = url;
+  // Fallback: scroll immediately in case image is cached
+  setTimeout(scrollDown, 120);
 }
 
 function hideResult(){
