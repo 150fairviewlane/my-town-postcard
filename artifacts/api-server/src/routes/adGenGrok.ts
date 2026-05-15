@@ -214,8 +214,12 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
 
     "  ZONE 3 — HERO IMAGE (right-center, large feature area):\n" +
     (hasPhoto
-      ? `    Composite IMAGE 2 food photo here with cinematic lighting, sharp focus, and vibrant color. Fill the zone naturally — no letterboxing or borders.\n\n`
-      : `    Generate a photorealistic, appetizing hero image for this business — cinematic quality, appetizing styling, vibrant color.\n\n`) +
+      ? "    Take the food/dish from IMAGE 2 and SEAMLESSLY INTEGRATE it into the template's photo area as if it was professionally shot for this exact ad:\n" +
+        "    • Blend the food's edges naturally into the surrounding dark brush-stroke/painted background — NO hard rectangular border or frame.\n" +
+        "    • Match the lighting, shadows, perspective, and color grading to the warm, appetizing commercial food photography style of a high-end breakfast/cafe ad.\n" +
+        "    • The food should look like it BELONGS in the design — not pasted on top. Adjust edges, add subtle plate shadows or gradient fade as needed for realism.\n" +
+        "    • Preserve the dark painted brush-stroke swoosh behind and around the photo area exactly as in the template.\n\n"
+      : `    Generate a photorealistic, appetizing hero image for this business — cinematic quality, appetizing styling, vibrant color. Blend it naturally into the dark brush-stroke background with no hard rectangular border.\n\n`) +
 
     (menuStr !== "  (none)"
       ? "  ZONE 4 — MENU / SERVICES (left-center card area):\n" +
@@ -241,10 +245,12 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     "  • NEVER render the website URL as visible text";
 
   const adPrompt =
-    "You are a world-class print advertising art director. Create a PRINT-READY premium postcard ad " +
-    "that looks like it was designed by a top agency — not a template tool.\n\n" +
+    "You are a world-class print advertising art director and expert photo compositor. " +
+    "Create a PRINT-READY premium postcard ad by taking the template layout and seamlessly integrating " +
+    "the provided food photo into it — the result must look like a single cohesive ad designed by a top agency, " +
+    "not a template with a photo pasted on top.\n\n" +
     `REFERENCE IMAGES: You are provided ${refLines.length} reference image${refLines.length > 1 ? "s" : ""}. ` +
-    "Each is a distinct visual input — do NOT blend them or treat them as a finished design:\n" +
+    "Treat them as distinct inputs — do NOT merge their design styles or treat any of them as already finished:\n" +
     refLines.join("\n") + "\n\n" +
     outputRequirements + "\n" +
     "STYLE: high-end editorial advertising aesthetic. Cinematic food photography with rich, vibrant color and " +
