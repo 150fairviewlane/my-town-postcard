@@ -554,14 +554,19 @@ const handleComplete=async(formData)=>{
 };
 
 const grokListenerRef=useRef(null);
+const grokPopupRef=useRef(null);
 const openGrokGenerator=()=>{
   const url=`/api/grok-ad-generator?spotSize=${encodeURIComponent(sel?.size||'')}&bizName=&industry=`;
-  window.open(url,'grok-ad-gen','width=1120,height=800,left=80,top=60');
+  const popup=window.open(url,'grok-ad-gen','width=1120,height=800,left=80,top=60');
+  grokPopupRef.current=popup;
   setAdMethod("grok");
   const handler=(e)=>{
     if(!e.data||e.data.type!=='grok-ad-result')return;
+    if(e.origin!==window.location.origin)return;
+    if(popup&&e.source!==popup)return;
     window.removeEventListener('message',handler);
     grokListenerRef.current=null;
+    grokPopupRef.current=null;
     handleComplete(e.data.formData);
   };
   if(grokListenerRef.current)window.removeEventListener('message',grokListenerRef.current);

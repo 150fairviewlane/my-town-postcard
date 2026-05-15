@@ -1096,7 +1096,7 @@ function useThisAd(){
     sizeKey:       _spotSize || 'XL',
   };
   if(window.opener && !window.opener.closed){
-    window.opener.postMessage({ type: 'grok-ad-result', formData: formData }, '*');
+    window.opener.postMessage({ type: 'grok-ad-result', formData: formData }, window.location.origin);
     showToast('Ad sent! Completing your reservation\\u2026');
     setTimeout(function(){ window.close(); }, 1400);
   } else {
