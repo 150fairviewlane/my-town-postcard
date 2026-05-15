@@ -1,0 +1,50 @@
+Switch your model to grok-imagine-image-quality (or its alias grok-imagine-image-quality-latest). This is the current flagship model that powers the high-quality console results you're seeing.
+Your older grok-2-image-gen / Aurora setup (via grok-2-vision-1212) is outdated for this use case and explains the "ugly template" outputs.
+Why This Fixes Your Workflow
+
+Superior image-to-image / multi-reference editing — It excels at combining multiple references (template + food photo + logo) while preserving layouts, branding, text placement, and product fidelity.
+Stronger text rendering — Critical for business details, headlines, and print-ready ads.
+Better prompt adherence, realism, and composition — Reduces generic/template look and delivers commercial polish.
+Supports up to 3 reference images in one call — ideal for your exact flow (template as base, food photo as subject, logo as overlay/brand element).
+
+Updated API Call Structure (OpenAI-compatible)
+Keep your in-browser flow mostly the same, but change the endpoint/model and how you pass references:
+Pythonfrom openai import OpenAI
+
+client = OpenAI(
+    base_url="https://api.x.ai/v1",
+    api_key=os.getenv("XAI_API_KEY")
+)
+
+response = client.images.generate(  # or use /images/edits endpoint if available in your SDK
+    model="grok-imagine-image-quality",   # ← This is the key change
+    prompt="""
+    Create a professional, print-ready postcard-style food advertisement.
+    Use the provided template layout exactly.
+    Place the exact food item from the food photo prominently in the main image area.
+    Incorporate the logo precisely in the designated brand area with accurate colors and proportions.
+    Overlay this text verbatim: "YOUR HEADLINE HERE" in bold, clean sans-serif font.
+    Additional details: [business name, tagline, price, contact].
+    High-resolution commercial photography style, appetizing food presentation, vibrant yet premium colors, sharp focus, clean composition, legible text, postcard ad quality.
+    """,
+    # Pass multiple references (adjust parameter names based on exact SDK/docs)
+    image=[  # or images=[], reference_images=[], etc.
+        {"url": template_base64_or_url, "type": "image_url"},  # Template as primary layout guide
+        {"url": food_photo_base64_or_url},
+        {"url": logo_base64_or_url} if logo else None
+    ],
+    n=3,                    # Generate a few variations for user to choose
+    aspect_ratio="2:3",     # Or whatever matches your postcard/print needs (e.g. 1:1, 16:9)
+    resolution="2k"         # For print-ready sharpness
+)
+Important notes on parameters:
+
+The exact syntax for multi-image references varies slightly (some use images array, image_url, or a dedicated /edits endpoint). Check the latest docs or test in the xAI Console Playground first.
+Base64 works well for your in-browser setup.
+For best results, designate the template as the primary reference and instruct the model explicitly to "maintain the exact layout and composition of the first/reference template image."
+
+Prompting Tips for Better Ads
+
+Be explicit: "Maintain the exact layout, text placement zones, and framing from the template image."
+For text accuracy: "Overlay this exact text verbatim in clean, bold, highly legible font: '[full text]'."
+Style: "professional food photography, appetizing, high-end commercial ad, print-ready, sharp details."
