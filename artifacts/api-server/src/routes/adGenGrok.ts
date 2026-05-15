@@ -257,7 +257,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     prompt:       adPrompt,
     n:            1,
     images:       imageRefs,
-    aspect_ratio: "4:5",
+    aspect_ratio: "2:3",
     resolution:   "2k",
   };
 
@@ -323,7 +323,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           prompt:       adPrompt,
           n:            1,
           images:       [{ type: "image_url", url: toDataUrl(tmplBuf) }],
-          aspect_ratio: "4:5",
+          aspect_ratio: "2:3",
           resolution:   "2k",
         };
         const retryRes = await fetch("https://api.x.ai/v1/images/edits", {
