@@ -79,6 +79,17 @@ async function remoteUrlToBlob(url: string): Promise<Blob> {
   }
 }
 
+/**
+ * Safely parse a fetch Response as JSON. If the body is not valid JSON
+ * (e.g. xAI returns plain-text "Expected request…" on some errors),
+ * returns `{ _raw: <text> }` instead of throwing.
+ */
+async function safeJson(res: Response): Promise<Record<string, unknown>> {
+  const text = await res.text();
+  try { return JSON.parse(text) as Record<string, unknown>; }
+  catch { return { _raw: text }; }
+}
+
 /** Extract an image URL from an xAI images response body. Returns null if not found. */
 function extractXaiImageUrl(body: Record<string, unknown>): string | null {
   const dataArr = Array.isArray(body["data"]) ? (body["data"] as Record<string, unknown>[]) : [];
@@ -231,7 +242,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       body: form,
     });
 
-    const body = await xaiRes.json() as Record<string, unknown>;
+    const body = await safeJson(xaiRes);
     req.log.info(
       { status: xaiRes.status, body: JSON.stringify(body).slice(0, 500), bizName: d.bizName },
       "grok-imagine edits raw response"
@@ -240,6 +251,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     if (!xaiRes.ok) {
       const errMsg =
         (body["error"] as Record<string, unknown> | undefined)?.["message"] as string
+        ?? (typeof body["_raw"] === "string" ? body["_raw"] : undefined)
         ?? `xAI API error ${xaiRes.status}`;
       const errLower = errMsg.toLowerCase();
 
@@ -288,7 +300,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           headers: { "Authorization": `Bearer ${apiKey}` },
           body: retryForm,
         });
-        const retryBody = await retryRes.json() as Record<string, unknown>;
+        const retryBody = await safeJson(retryRes);
         req.log.info(
           { status: retryRes.status, body: JSON.stringify(retryBody).slice(0, 500), bizName: d.bizName },
           "grok-imagine edits retry (images[]) raw response"
