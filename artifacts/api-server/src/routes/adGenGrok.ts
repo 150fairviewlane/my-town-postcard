@@ -197,16 +197,19 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     "LAYOUT — render these zones in order from top to bottom:\n\n" +
 
     "  ZONE 1 — HEADLINE (top of ad, above everything else):\n" +
-    `    Business name "${d.bizName}" in a bold, dynamic display font — the largest, most dominant text element on the entire ad. Make it feel like a premium magazine headline.\n\n` +
+    `    Business name "${d.bizName}" uses a LAYERED TWO-FONT treatment:\n` +
+    `    • Main words: bold condensed all-caps slab/block serif — very large, dominant, horizontal (no angle). Deep black or dark color, maximum weight.\n` +
+    `    • If the name has a descriptor word (Cafe, Grill, Spa, etc.), render that word BELOW the main name in a flowing orange script/cursive at a slight downward angle (≈-8°), large size, warm orange color — like a signature flourish beneath a bold title.\n` +
+    `    Together these two styles create a premium editorial stacked headline — not a single flat font.\n\n` +
 
     (hasLogo
-      ? `  ZONE 2 — LOGO${d.tagline ? " + TAGLINE" : ""} (upper-left corner, below headline):\n` +
-        `    Logo: place IMAGE ${logoImg} at compact size — no wider than 20% of the ad width. Preserve exact colors and proportions.\n` +
-        (d.tagline ? `    Tagline: render "${d.tagline}" in a mid-weight font directly below the logo, clearly legible, noticeably larger than body copy.\n` : "") +
+      ? `  ZONE 2 — LOGO${d.tagline ? " + TAGLINE" : ""} (orange pennant ribbon, top-left corner):\n` +
+        `    Logo: place IMAGE ${logoImg} centered ON the orange vertical pennant ribbon in the top-left corner — like a circular badge sitting on the pennant. Scale the logo so it fits within the pennant's width. The pennant is a tall vertical orange ribbon with a notched/pointed bottom; the logo circle should sit centered on it, overlapping the top edge slightly. Preserve exact logo colors and proportions.\n` +
+        (d.tagline ? `    Tagline: render "${d.tagline}" in a loose handwriting-style italic script at a slight upward angle (+5°–7°), large and confident, black — placed to the right of the pennant, below the headline.\n` : "") +
         "\n"
       : d.tagline
         ? `  ZONE 2 — TAGLINE (upper-left, below headline):\n` +
-          `    "${d.tagline}" in a mid-weight italic or script font, clearly legible.\n\n`
+          `    "${d.tagline}" in a loose handwriting-style italic script at a slight upward angle (+5°–7°), large and confident, black.\n\n`
         : "") +
 
     "  ZONE 3 — HERO IMAGE (right-center, large feature area):\n" +
@@ -230,8 +233,9 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     "    QR code: place a clean, square QR code graphic in the lower-right of the footer. Do NOT render the website URL as text anywhere on the ad.\n\n" +
 
     "TYPOGRAPHIC RULES:\n" +
-    "  • Headline: display/slab font, maximum size, high contrast against background\n" +
-    "  • Tagline: complementary secondary font, mid-size, elegant\n" +
+    "  • Headline: layered two-font treatment — bold condensed slab caps (horizontal) + flowing orange script for descriptors (angled ≈-8°)\n" +
+    "  • Tagline: loose handwriting-style italic script, slight upward angle (+5°–7°), large, confident — never flat/horizontal\n" +
+    "  • Logo: always placed as a badge ON the orange pennant ribbon, not floating freely\n" +
     "  • Footer phone/address: bold sans-serif, noticeably larger than fine print\n" +
     "  • Fine print / coupon terms: smallest text, still legible\n" +
     "  • NEVER render the website URL as visible text";
