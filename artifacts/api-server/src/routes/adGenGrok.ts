@@ -212,7 +212,10 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
 
   // ── Build JSON body for /v1/images/edits ────────────────────────────────────
   // xAI /images/edits requires Content-Type: application/json.
-  // Images must be objects with a `url` field (data URL) — raw base64 is rejected.
+  // Image field format differs by count (verified against live API):
+  //   single  → object:  { url: "data:mime;base64,..." }
+  //   multiple → array:  ["data:mime;base64,...", "data:mime;base64,..."]
+  // Raw base64 strings (no data: prefix) and arrays of {url} objects are both rejected.
   const toDataUrl = (buf: Buffer, mime = "image/png") =>
     `data:${mime};base64,${buf.toString("base64")}`;
 
