@@ -521,7 +521,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .img-loading{grid-column:1/-1;padding:18px;text-align:center;font-size:12px;color:var(--ink-light)}
 .fnote{font-size:10px;color:var(--ink-light);margin-top:5px;line-height:1.4}
 
-.upload-zone{border:2px dashed var(--border);border-radius:8px;padding:14px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surface);position:relative;overflow:hidden;min-height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.upload-zone{border:2px dashed var(--border);border-radius:8px;padding:14px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surface);position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.upload-zone.photo-zone{min-height:120px}
+.upload-zone.logo-zone{min-height:100px}
 .upload-zone:hover{border-color:var(--burg);background:var(--burg-pale)}
 .upload-zone.has-file{border-color:var(--green);background:#f0fdf4}
 .upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
@@ -530,7 +532,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .upload-sub{font-size:10px;color:var(--ink-light);margin-top:2px}
 .upload-preview{width:100%;max-height:160px;object-fit:contain;border-radius:5px;margin-top:8px;display:none;background:#f5f5f5}
 
-.gen-btn{max-width:300px;margin:0 auto;padding:13px 28px;background:linear-gradient(135deg,#1a1a2e,#3D1A6B);color:#fff;border:none;border-radius:10px;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.14em;cursor:pointer;transition:all .25s;display:flex;align-items:center;justify-content:center;gap:10px}
+.gen-btn{max-width:280px;margin:0 auto;padding:13px 28px;background:linear-gradient(135deg,#1a1a2e,#3D1A6B);color:#fff;border:none;border-radius:10px;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.14em;cursor:pointer;transition:all .25s;display:flex;align-items:center;justify-content:center;gap:10px}
 .gen-btn:hover:not(:disabled){background:linear-gradient(135deg,#2a2a4e,#5a2490);transform:translateY(-1px);box-shadow:0 6px 24px rgba(80,30,180,.35)}
 .gen-btn:disabled{background:#888;cursor:not-allowed;transform:none;box-shadow:none}
 .gen-spark{font-size:17px;animation:sp 2s ease-in-out infinite}
@@ -548,7 +550,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .result-hdr{padding:12px 16px;border-bottom:1px solid var(--border);background:#FAFAF8;display:flex;align-items:center;justify-content:space-between}
 .result-title{font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--green)}
 .result-img-wrap{padding:16px;display:flex;justify-content:center;background:#f5f3f0}
-.result-img{display:block;width:100%;max-width:320px;object-fit:contain;border-radius:6px;box-shadow:0 4px 20px rgba(0,0,0,.15)}
+.result-img{display:block;width:100%;max-width:340px;object-fit:contain;border-radius:6px;box-shadow:0 4px 20px rgba(0,0,0,.15)}
 .result-actions{padding:14px 16px;display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--border);align-items:center}
 .act-btn{padding:9px 18px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:var(--surface);color:var(--ink-mid);transition:all .2s;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px}
 .act-btn:hover:not(:disabled){border-color:var(--burg);color:var(--burg)}
@@ -612,7 +614,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
       </div>
       <div class="field"><label>Street Address</label><input type="text" id="address" placeholder="596 W Louise St"></div>
       <div class="field"><label>Website / URL</label><input type="text" id="website" placeholder="mrbiscuitscafe.com"></div>
-      <div class="field"><label>Contact Email *</label><input type="email" id="email" placeholder="owner@mrbiscuitscafe.com" oninput="onFormChange()"></div>
+      <div class="field"><label>Contact Email <span style="font-weight:400;color:var(--ink-light)">(for reservation)</span></label><input type="email" id="email" placeholder="owner@mrbiscuitscafe.com"></div>
     </div>
 
     <div>
@@ -690,7 +692,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
           <p class="fnote" id="libNote" style="display:none">Click a photo to select it as the hero image.</p>
         </div>
         <div class="tab-panel" id="tabUpload">
-          <div class="upload-zone" id="photoZone">
+          <div class="upload-zone photo-zone" id="photoZone">
             <input type="file" accept="image/*" onchange="handlePhotoUpload(this)">
             <div class="upload-icon">&#128248;</div>
             <div class="upload-label">Upload a photo</div>
@@ -709,7 +711,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
         <span style="font-size:10px;color:var(--ink-light)" id="logoStatus">Not provided</span>
       </div>
       <div class="card-body">
-        <div class="upload-zone" id="logoZone">
+        <div class="upload-zone logo-zone" id="logoZone">
           <input type="file" accept="image/*" onchange="handleLogoUpload(this)">
           <div class="upload-icon">&#127991;&#65039;</div>
           <div class="upload-label">Upload logo</div>
@@ -1048,10 +1050,13 @@ function showResult(url){
   var img = document.getElementById('resultImg');
   panel.classList.add('visible');
   var rp = document.querySelector('.rpanel');
-  function scrollDown(){ rp.scrollTop = rp.scrollHeight; }
+  function scrollDown(){
+    img.scrollIntoView({ behavior:'smooth', block:'nearest' });
+    rp.scrollTop = rp.scrollHeight;
+  }
   img.onload = function(){ scrollDown(); };
   img.src = url;
-  // Fallback: scroll immediately in case image is cached
+  // Fallback: scroll immediately in case image is already cached
   setTimeout(scrollDown, 120);
 }
 

@@ -555,7 +555,7 @@ const handleComplete=async(formData)=>{
 
 const grokListenerRef=useRef(null);
 const openGrokGenerator=()=>{
-  const url=`/api/grok-ad-generator?spotSize=${sel?.size||''}`;
+  const url=`/api/grok-ad-generator?spotSize=${encodeURIComponent(sel?.size||'')}&bizName=&industry=`;
   window.open(url,'grok-ad-gen','width=1120,height=800,left=80,top=60');
   setAdMethod("grok");
   const handler=(e)=>{
