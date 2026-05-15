@@ -900,8 +900,38 @@ dropZoneEl.addEventListener('drop', function(e){
   }
 });
 
-// ── INIT ──────────────────────────────────────────────────────
-addMenuItem(''); addMenuItem(''); addMenuItem(''); addMenuItem('');
+// ── INIT / TEST PREFILL ───────────────────────────────────────
+(function prefill(){
+  var f = {
+    bizName:   "Mr. Biscuit's Cafe",
+    tagline:   "From-Scratch Biscuits & Boba!",
+    phone:     "(706) 754-0105",
+    city:      "Clarkesville, GA",
+    address:   "596 W Louise St",
+    website:   "mrbiscuitscafe.com",
+    offer:     "$1 OFF Any Biscuit",
+    offerFine: "1 per visit \\u00b7 with this postcard"
+  };
+  Object.keys(f).forEach(function(id){
+    var el = document.getElementById(id);
+    if(el) el.value = f[id];
+  });
+  var sel = document.getElementById('industry');
+  if(sel){
+    for(var i=0;i<sel.options.length;i++){
+      if(sel.options[i].text === 'Breakfast & Cafe'){ sel.selectedIndex = i; break; }
+    }
+  }
+  var items = [
+    "Bacon Egg & Cheese Biscuit $5.99",
+    "Boba Tea (any flavor) $4.50",
+    "Gravy Biscuit $3.99",
+    "Breakfast Plate $7.99"
+  ];
+  items.forEach(function(v){ addMenuItem(v); });
+  var radio = document.getElementById('tmpl-mr-biscuits');
+  if(radio){ radio.checked = true; onTemplateSelect(); }
+})();
 </script>
 
 </body>
