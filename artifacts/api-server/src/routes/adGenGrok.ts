@@ -104,61 +104,57 @@ function extractXaiImageUrl(body: Record<string, unknown>): string | null {
 
 /**
  * Composite photo and/or logo onto the template so all visual references fit in
- * the single image object xAI accepts.  Photo is placed in the right-center hero
- * zone; logo in the upper-left corner.  Returns the original tmplBuf unchanged
- * when neither photo nor logo is provided.
+ * the single image object xAI accepts.  Each input occupies its own panel so the
+ * model can clearly distinguish them as separate references.
  *
- * xAI /images/edits only accepts ONE image input (`{ url: "data:..." }`).
- * Arrays of any kind are rejected, so compositing server-side is the only way to
- * pass multiple visual references to the model.
+ * xAI /images/edits accepts ONE image (`{ url: "data:..." }`); arrays are rejected.
+ * A labeled side-by-side collage is the only reliable way to pass multiple visual
+ * references in a single request without blending them together.
  */
-async function compositeReferenceImage(
+async function buildCollageImage(
   tmplBuf: Buffer,
   photoBuf?: Buffer,
-  photoMime?: string,
   logoBuf?: Buffer,
-  logoMime?: string,
 ): Promise<Buffer> {
   if (!photoBuf && !logoBuf) return tmplBuf;
 
-  const base = sharp(tmplBuf);
-  const { width: w = 1148, height: h = 1371 } = await base.metadata();
+  const TARGET_H = 800;
+  const GAP = 24;
+  const WHITE = { r: 255, g: 255, b: 255, alpha: 1 };
 
-  const overlays: sharp.OverlayOptions[] = [];
-
-  if (photoBuf) {
-    // Hero zone: right ~45% wide, upper ~45% tall, with small padding
-    const pw = Math.round(w * 0.45);
-    const ph = Math.round(h * 0.44);
-    const resized = await sharp(photoBuf)
-      .resize(pw, ph, { fit: "cover", position: "centre" })
+  // Scale each panel to TARGET_H tall, maintaining aspect ratio
+  async function scaleToHeight(buf: Buffer): Promise<{ buf: Buffer; w: number }> {
+    const meta = await sharp(buf).metadata();
+    const aspect = (meta.width ?? 1) / (meta.height ?? 1);
+    const w = Math.round(TARGET_H * aspect);
+    const scaled = await sharp(buf)
+      .resize(w, TARGET_H, { fit: "fill" })
+      .flatten({ background: WHITE })
       .png()
       .toBuffer();
-    overlays.push({
-      input: resized,
-      top:  Math.round(h * 0.08),
-      left: Math.round(w * 0.52),
-      blend: "over",
-    });
+    return { buf: scaled, w };
   }
 
-  if (logoBuf) {
-    // Logo zone: upper-left corner, ~25% wide, contain (transparent background)
-    const lw = Math.round(w * 0.25);
-    const lh = Math.round(h * 0.18);
-    const resized = await sharp(logoBuf)
-      .resize(lw, lh, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
-      .png()
-      .toBuffer();
-    overlays.push({
-      input: resized,
-      top:  Math.round(h * 0.04),
-      left: Math.round(w * 0.04),
-      blend: "over",
-    });
+  const panels: Array<{ buf: Buffer; w: number }> = [];
+  panels.push(await scaleToHeight(tmplBuf));
+  if (photoBuf) panels.push(await scaleToHeight(photoBuf));
+  if (logoBuf)  panels.push(await scaleToHeight(logoBuf));
+
+  const totalW = panels.reduce((s, p) => s + p.w, 0) + GAP * (panels.length - 1);
+
+  // Build the canvas (white background)
+  const canvas = sharp({
+    create: { width: totalW, height: TARGET_H, channels: 4, background: WHITE },
+  });
+
+  const composites: sharp.OverlayOptions[] = [];
+  let x = 0;
+  for (const panel of panels) {
+    composites.push({ input: panel.buf, top: 0, left: x });
+    x += panel.w + GAP;
   }
 
-  return base.composite(overlays).png().toBuffer();
+  return canvas.composite(composites).png().toBuffer();
 }
 
 /**
@@ -237,33 +233,48 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     `Fine Print    : ${d.offerFine || "(none)"}`,
   ].join("\n");
 
-  const adPrompt =
-    "You are an expert print advertising art director creating a PRINT-READY postcard ad.\n\n" +
-    "REFERENCE IMAGES PROVIDED:\n" +
-    "  • IMAGE 1 (PRIMARY TEMPLATE) — postcard layout with parchment texture, brush-stroke band, " +
-    "pennant ribbon, circular checkmark badge, dashed coupon box, and dark footer strip. " +
-    "MAINTAIN this exact layout, every design element, texture, zone, and color palette.\n" +
-    (hasPhoto
-      ? "  • IMAGE 2 (HERO PHOTO) — composite this food/product photo into the right-center hero area with realistic shadow blending\n"
-      : "") +
-    (hasLogo
-      ? `  • IMAGE ${hasPhoto ? "3" : "2"} (BUSINESS LOGO) — place this logo precisely in the upper-left corner, exact colors and proportions, no stylization\n`
-      : "") +
-    "\nOUTPUT REQUIREMENTS:\n" +
-    "  1. Base layer: IMAGE 1 template exactly — preserve all zones, textures, design elements\n" +
-    (hasPhoto
-      ? "  2. Hero area: composite IMAGE 2 food photo into the right-center image zone with professional lighting\n"
-      : "  2. Hero area: generate a photorealistic, appetizing hero image appropriate for the business in the right-center zone\n") +
-    (hasLogo
-      ? `  ${hasPhoto ? "3" : "2"}. Logo: place IMAGE ${hasPhoto ? "3" : "2"} in the upper-left corner exactly as provided\n`
-      : "") +
-    `  ${hasLogo ? (hasPhoto ? "4" : "3") : hasPhoto ? "3" : "2"}. TEXT — place ALL of the following verbatim in the correct zones:\n` +
+  // Build panel labels for the prompt based on which images are present
+  const panelLines: string[] = [
+    "  • PANEL 1 (LEFT) — POSTCARD TEMPLATE: the full ad layout with parchment texture, " +
+    "brush-stroke band, pennant ribbon, circular checkmark badge, dashed coupon box, and dark footer strip. " +
+    "This is the base design. Reproduce every zone, texture, and design element exactly.",
+  ];
+  let panelIdx = 2;
+  if (hasPhoto) {
+    panelLines.push(`  • PANEL ${panelIdx++} (CENTER) — HERO FOOD PHOTO: the actual food/product photograph to composite into the right-center image zone of the ad with professional lighting and realistic shadow blending.`);
+  }
+  if (hasLogo) {
+    panelLines.push(`  • PANEL ${panelIdx} (RIGHT) — BUSINESS LOGO: the exact logo to place in the upper-left corner of the ad, preserving its colors and proportions with no stylization.`);
+  }
+
+  const outputSteps: string[] = [
+    "  1. Base: reproduce the PANEL 1 template exactly — every zone, texture, band, badge, coupon box, and footer preserved.",
+    hasPhoto
+      ? "  2. Hero area: composite the PANEL 2 food photo into the right-center image zone with professional lighting."
+      : "  2. Hero area: generate a photorealistic, appetizing hero image appropriate for the business in the right-center zone.",
+  ];
+  let stepIdx = 3;
+  if (hasLogo) {
+    outputSteps.push(`  ${hasPhoto ? stepIdx++ : stepIdx++}. Logo: place the PANEL ${hasPhoto ? "3" : "2"} logo in the upper-left corner exactly as provided.`);
+  }
+  outputSteps.push(
+    `  ${stepIdx}. TEXT — place ALL of the following verbatim in the correct zones:\n` +
     "     — Business name → title area (bold, prominent)\n" +
     "     — Tagline → subtitle below business name\n" +
     "     — Menu/services → menu card area\n" +
     "     — Special offer → dashed coupon box\n" +
     "     — Phone number → footer, EXACTLY as written, zero digit changes\n" +
-    "     — Address → footer\n\n" +
+    "     — Address → footer"
+  );
+
+  const adPrompt =
+    "You are an expert print advertising art director creating a PRINT-READY postcard ad.\n\n" +
+    "REFERENCE COLLAGE: The attached image is a single horizontal strip containing " +
+    `${panelLines.length} side-by-side panels separated by white gaps. Each panel is a separate reference — ` +
+    "do NOT treat this as a finished design. Read each panel independently:\n" +
+    panelLines.join("\n") + "\n\n" +
+    "OUTPUT REQUIREMENTS:\n" +
+    outputSteps.join("\n") + "\n\n" +
     "STYLE: professional commercial food photography, appetizing, high-end print ad quality, " +
     "vibrant yet premium colors, sharp focus, clean composition, legible text, postcard ad quality.\n\n" +
     "CRITICAL: Every piece of text must appear EXACTLY as specified. " +
@@ -279,25 +290,19 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     `data:${mime};base64,${buf.toString("base64")}`;
 
   let photoBuf: Buffer | undefined;
-  let photoMime: string | undefined;
   if (hasPhoto) {
     const blob = d.photoUrl.startsWith("data:")
       ? dataUrlToBlob(d.photoUrl)
       : await remoteUrlToBlob(d.photoUrl);
-    photoBuf  = Buffer.from(await blob.arrayBuffer());
-    photoMime = d.photoUrl.startsWith("data:")
-      ? (d.photoUrl.match(/data:([^;]+)/)?.[1] ?? "image/png")
-      : "image/jpeg";
+    photoBuf = Buffer.from(await blob.arrayBuffer());
   }
 
   let logoBuf: Buffer | undefined;
-  let logoMime: string | undefined;
   if (hasLogo) {
-    logoBuf  = Buffer.from(await dataUrlToBlob(d.logoData).arrayBuffer());
-    logoMime = d.logoData.match(/data:([^;]+)/)?.[1] ?? "image/png";
+    logoBuf = Buffer.from(await dataUrlToBlob(d.logoData).arrayBuffer());
   }
 
-  const refBuf = await compositeReferenceImage(tmplBuf, photoBuf, photoMime, logoBuf, logoMime);
+  const refBuf = await buildCollageImage(tmplBuf, photoBuf, logoBuf);
 
   const editsBody: Record<string, unknown> = {
     model:  "grok-imagine-image-quality",
