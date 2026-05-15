@@ -1,5 +1,4 @@
 import { Router, type IRouter } from "express";
-import OpenAI from "openai";
 import { z } from "zod/v4";
 import fs from "fs";
 import path from "path";
@@ -17,12 +16,6 @@ const WORKSPACE_ROOT = findWorkspaceRoot();
 
 const router: IRouter = Router();
 
-function getXAI(): OpenAI | null {
-  const apiKey = process.env.XAI_API_KEY;
-  if (!apiKey) return null;
-  return new OpenAI({ apiKey, baseURL: "https://api.x.ai/v1" });
-}
-
 const GenerateSchema = z.object({
   bizName:   z.string().min(1, "bizName is required"),
   tagline:   z.string().optional().default(""),
@@ -38,53 +31,6 @@ const GenerateSchema = z.object({
   logoData:  z.string().optional().default(""),
 });
 
-/**
- * Extract an image URL or data URL from a grok-2-image-gen response.
- * Handles multiple xAI response shapes:
- *   A) Standard chat completion: choices[0].message.content (string or content parts)
- *   B) xAI-specific extension: top-level `data[0].url` or `data[0].b64_json`
- *      (xAI may return the generated image outside the choices array)
- */
-function extractImageUrl(completion: OpenAI.Chat.ChatCompletion): string | null {
-  // Shape B — xAI may attach image data at the top-level `data` field
-  const raw = completion as unknown as Record<string, unknown>;
-  const dataArr = Array.isArray(raw["data"]) ? (raw["data"] as Record<string, unknown>[]) : [];
-  if (dataArr.length > 0) {
-    const first = dataArr[0];
-    if (typeof first["url"] === "string" && first["url"]) return first["url"] as string;
-    if (typeof first["b64_json"] === "string" && first["b64_json"])
-      return `data:image/png;base64,${first["b64_json"] as string}`;
-  }
-
-  // Shape A — standard chat completion choices
-  const msg = completion.choices[0]?.message;
-  if (!msg) return null;
-  const content = msg.content;
-
-  if (typeof content === "string" && content.trim()) {
-    if (content.trim().startsWith("data:image/")) return content.trim();
-    const urlMatch = content.match(/https?:\/\/\S+/);
-    if (urlMatch) return urlMatch[0].replace(/[.,;:!?'")\]>]+$/, "");
-  }
-
-  if (Array.isArray(content)) {
-    for (const part of content as OpenAI.Chat.ChatCompletionContentPart[]) {
-      if (part.type === "image_url")
-        return (part as OpenAI.Chat.ChatCompletionContentPartImage).image_url.url;
-    }
-    for (const part of content as OpenAI.Chat.ChatCompletionContentPart[]) {
-      if (part.type === "text") {
-        const t = (part as OpenAI.Chat.ChatCompletionContentPartText).text;
-        if (t.startsWith("data:image/")) return t.trim();
-        const m = t.match(/https?:\/\/\S+/);
-        if (m) return m[0].replace(/[.,;:!?'")\]>]+$/, "");
-      }
-    }
-  }
-
-  return null;
-}
-
 // ── POST /api/grok-ad-generator/generate ─────────────────────────────────────
 router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   const parsed = GenerateSchema.safeParse(req.body);
@@ -93,8 +39,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     return;
   }
 
-  const xai = getXAI();
-  if (!xai) {
+  const apiKey = process.env.XAI_API_KEY;
+  if (!apiKey) {
     res.status(503).json({ error: "XAI_API_KEY is not configured on this server." });
     return;
   }
@@ -132,79 +78,86 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   ].join("\n");
 
   const adPrompt =
-    "You are an expert print advertising art director.\n\n" +
-    "I am providing you with:\n" +
-    "  • IMAGE 1 — the postcard template (parchment texture, brush-stroke band, pennant ribbon, " +
-    "circular checkmark badge, dashed coupon box, dark footer strip)\n" +
+    "You are an expert print advertising art director creating a PRINT-READY postcard ad.\n\n" +
+    "REFERENCE IMAGES PROVIDED:\n" +
+    "  • IMAGE 1 (PRIMARY TEMPLATE) — postcard layout with parchment texture, brush-stroke band, " +
+    "pennant ribbon, circular checkmark badge, dashed coupon box, and dark footer strip. " +
+    "MAINTAIN this exact layout, every design element, texture, zone, and color palette.\n" +
     (hasPhoto
-      ? "  • IMAGE 2 — a food/hero photo to composite into the right-center hero area\n"
+      ? "  • IMAGE 2 (HERO PHOTO) — composite this food/product photo into the right-center hero area with realistic shadow blending\n"
       : "") +
     (hasLogo
-      ? `  • IMAGE ${hasPhoto ? "3" : "2"} — the business logo to place in the upper-left corner\n`
+      ? `  • IMAGE ${hasPhoto ? "3" : "2"} (BUSINESS LOGO) — place this logo precisely in the upper-left corner, exact colors and proportions, no stylization\n`
       : "") +
-    "\nGenerate a finished, PRINT-READY postcard advertisement by:\n" +
-    "  1. Using IMAGE 1 as the exact base layer — preserve every design element, texture, and color\n" +
+    "\nOUTPUT REQUIREMENTS:\n" +
+    "  1. Base layer: IMAGE 1 template exactly — preserve all zones, textures, design elements\n" +
     (hasPhoto
-      ? "  2. Compositing the food photo into the right-center hero area with realistic shadow blending\n"
-      : "  2. Generating a photorealistic hero photo appropriate for the industry in the right-center area\n") +
+      ? "  2. Hero area: composite IMAGE 2 food photo into the right-center image zone with professional lighting\n"
+      : "  2. Hero area: generate a photorealistic, appetizing hero image appropriate for the business in the right-center zone\n") +
     (hasLogo
-      ? `  ${hasPhoto ? "3" : "2"}. Placing the logo in the upper-left corner exactly as provided — no stylization\n`
+      ? `  ${hasPhoto ? "3" : "2"}. Logo: place IMAGE ${hasPhoto ? "3" : "2"} in the upper-left corner exactly as provided\n`
       : "") +
-    `  ${hasLogo ? (hasPhoto ? "4" : "3") : hasPhoto ? "3" : "2"}. Placing ALL text verbatim in the correct zones:\n` +
-    "     — Business name in the title area\n" +
-    "     — Tagline below the name\n" +
-    "     — Menu items in the menu card\n" +
-    "     — Special offer in the coupon box\n" +
-    "     — Phone number in the footer — EXACTLY as provided, no digit changes\n" +
-    "     — Address in the footer\n\n" +
-    "CRITICAL: Every piece of text must appear EXACTLY as specified below — " +
-    "phone numbers, prices, business name. Zero tolerance for text errors.\n\n" +
+    `  ${hasLogo ? (hasPhoto ? "4" : "3") : hasPhoto ? "3" : "2"}. TEXT — place ALL of the following verbatim in the correct zones:\n` +
+    "     — Business name → title area (bold, prominent)\n" +
+    "     — Tagline → subtitle below business name\n" +
+    "     — Menu/services → menu card area\n" +
+    "     — Special offer → dashed coupon box\n" +
+    "     — Phone number → footer, EXACTLY as written, zero digit changes\n" +
+    "     — Address → footer\n\n" +
+    "STYLE: professional commercial food photography, appetizing, high-end print ad quality, " +
+    "vibrant yet premium colors, sharp focus, clean composition, legible text, postcard ad quality.\n\n" +
+    "CRITICAL: Every piece of text must appear EXACTLY as specified. " +
+    "Phone numbers, prices, business name — zero tolerance for errors.\n\n" +
     "BUSINESS DETAILS:\n" + businessBlock;
 
-  // Build the messages array with image_url content parts plus the text prompt
-  const contentParts: OpenAI.Chat.ChatCompletionContentPart[] = [
-    {
-      type: "image_url",
-      image_url: { url: tmplDataUrl },
-    } as OpenAI.Chat.ChatCompletionContentPartImage,
-  ];
-  if (hasPhoto) {
-    contentParts.push({
-      type: "image_url",
-      image_url: { url: d.photoUrl },
-    } as OpenAI.Chat.ChatCompletionContentPartImage);
-  }
-  if (hasLogo) {
-    contentParts.push({
-      type: "image_url",
-      image_url: { url: d.logoData },
-    } as OpenAI.Chat.ChatCompletionContentPartImage);
-  }
-  contentParts.push({
-    type: "text",
-    text: adPrompt,
-  } as OpenAI.Chat.ChatCompletionContentPartText);
+  // Build reference image array: template first, then food photo, then logo
+  const imageRefs: { url: string }[] = [{ url: tmplDataUrl }];
+  if (hasPhoto) imageRefs.push({ url: d.photoUrl });
+  if (hasLogo)  imageRefs.push({ url: d.logoData });
 
   try {
-    const completion = await xai.chat.completions.create({
-      model: "grok-2-image-gen",
-      messages: [
-        { role: "user", content: contentParts },
-      ],
+    const xaiRes = await fetch("https://api.x.ai/v1/images/generations", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "grok-imagine-image-quality",
+        prompt: adPrompt,
+        image: imageRefs,
+        n: 1,
+        aspect_ratio: "2:3",
+        resolution: "2k",
+      }),
     });
 
-    req.log.info(
-      { bizName: d.bizName, finishReason: completion.choices[0]?.finish_reason },
-      "grok-2-image-gen response"
-    );
+    const body = await xaiRes.json() as Record<string, unknown>;
 
-    const imageUrl = extractImageUrl(completion);
+    if (!xaiRes.ok) {
+      const errMsg =
+        (body["error"] as Record<string, unknown> | undefined)?.["message"] as string
+        ?? `xAI API error ${xaiRes.status}`;
+      req.log.error({ status: xaiRes.status, errMsg, bizName: d.bizName }, "grok-imagine error");
+      res.status(502).json({ error: errMsg });
+      return;
+    }
+
+    req.log.info({ bizName: d.bizName }, "grok-imagine-image-quality response received");
+
+    const dataArr = Array.isArray(body["data"]) ? (body["data"] as Record<string, unknown>[]) : [];
+    const item    = dataArr[0];
+    let imageUrl: string | null = null;
+    if (item) {
+      if (typeof item["url"] === "string" && item["url"])           imageUrl = item["url"];
+      else if (typeof item["b64_json"] === "string" && item["b64_json"])
+        imageUrl = `data:image/png;base64,${item["b64_json"]}`;
+    }
+
     if (!imageUrl) {
-      const raw = JSON.stringify(completion.choices[0]?.message ?? {}).slice(0, 300);
-      req.log.warn({ raw }, "grok-2-image-gen: no image URL found in response");
+      req.log.warn({ body: JSON.stringify(body).slice(0, 300) }, "grok-imagine: no image in response");
       res.status(502).json({
-        error: "Grok returned a response but no image was found. " +
-               "The model may not have understood the request — try again or simplify your prompt.",
+        error: "Grok returned a response but no image was found — try again or simplify your prompt.",
       });
       return;
     }
@@ -212,7 +165,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     res.json({ imageUrl });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Grok API request failed";
-    req.log.error({ err: msg, bizName: d.bizName }, "grok-2-image-gen error");
+    req.log.error({ err: msg, bizName: d.bizName }, "grok-imagine error");
     res.status(502).json({ error: msg });
   }
 });
