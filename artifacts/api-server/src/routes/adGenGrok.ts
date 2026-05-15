@@ -705,8 +705,48 @@ function onFormChange(){
   document.getElementById('genBtn').disabled = !biz;
 }
 
+var MENU_DEFAULTS = {
+  'Pizza Restaurant':      ['Pepperoni Pizza $12.99','Margherita Pizza $10.99','Chicken Wings $8.99','Caesar Salad $7.99'],
+  'Mexican Restaurant':    ['Tacos (3) $9.99','Burrito Bowl $10.99','Nachos Supreme $8.99','Guacamole & Chips $6.99'],
+  'Chinese Restaurant':    ["General Tso's Chicken $11.99",'Fried Rice $8.99','Spring Rolls (3) $5.99','Wonton Soup $6.99'],
+  'Breakfast & Cafe':      ['Bacon Egg & Cheese $5.99','Pancake Stack $7.99','Breakfast Plate $8.99','Coffee & Muffin $4.99'],
+  'Bar & Grill':           ['Cheeseburger & Fries $12.99','BBQ Ribs Half Rack $16.99','Chicken Tenders $10.99','Loaded Nachos $9.99'],
+  'Italian Restaurant':    ['Fettuccine Alfredo $13.99','Chicken Parmigiana $14.99','Lasagna $12.99','Tiramisu $6.99'],
+  'Bakery':                ['Fresh Sourdough Loaf $7.99','Croissants (2) $4.99','Custom Cakes — Call for Pricing','Muffins 6-Pack $8.99'],
+  'Coffee Shop':           ['Latte $5.49','Cold Brew $4.99','Espresso $3.49','Pastry of the Day $3.99'],
+  'Dentist':               ['New Patient Exam $49','Teeth Whitening $199','Dental Cleaning $79','Emergency — Same Day'],
+  'Medical & Healthcare':  ['New Patient Visit $99','Annual Wellness Exam','Lab Work In-House','Telehealth Available'],
+  'Chiropractor':          ['Initial Exam & X-Rays $49','Spinal Adjustment $45','Massage Therapy $60/hr','Family Plans Available'],
+  'Veterinarian':          ['Wellness Exam $45','Vaccinations from $25','Dental Cleaning $150','Spay/Neuter Packages'],
+  'HVAC':                  ['AC Tune-Up $79','Heating Inspection $69','Emergency Service 24/7','Free Estimates'],
+  'Plumber':               ['Drain Clearing $99','Water Heater Install','Leak Detection & Repair','Free Estimates'],
+  'Electrician':           ['Panel Upgrade — Call','Outlet Installation $75','EV Charger Install','Free Safety Inspection'],
+  'Lawn & Landscaping':    ['Weekly Mowing from $35','Mulch & Bed Prep','Irrigation Install','Free Lawn Analysis'],
+  'Roofing':               ['Free Roof Inspection','Storm Damage Repair','New Roof Install','Gutter Cleaning'],
+  'Painting':              ['Interior Room from $250','Exterior Painting','Cabinet Refinishing','Free Color Consultation'],
+  'Cleaning Service':      ['Home Cleaning from $99','Deep Clean','Move-In/Out Clean','Commercial Services'],
+  'Pest Control':          ['General Pest Control $89','Free Termite Inspection','Mosquito Treatment','Annual Protection Plans'],
+  'Real Estate':           ['Free Home Valuation','Buyer Representation',"Seller's Market Experts",'Free Consultation'],
+  'Insurance':             ['Auto Insurance Quotes','Home & Renters Coverage','Life Insurance Plans','Free Policy Review'],
+  'Auto Repair':           ['Oil Change from $39','Brake Service','Free Diagnostics','Tires & Alignment'],
+  'Salon & Beauty':        ['Haircut & Style from $35','Color & Highlights','Blowout $45','Balayage from $85'],
+  'Barbershop':            ['Classic Cut $20','Fade & Design $25','Hot Towel Shave $30',"Kid's Cut $15"],
+  'Gym & Fitness':         ['Monthly Membership $39','Personal Training','Group Classes Included','Free Week Trial'],
+  'Pet Services':          ['Dog Grooming from $45','Boarding from $35/night','Doggy Daycare','Training Packages'],
+  'Financial Services':    ['Free Consultation','Retirement Planning','Tax Preparation','Investment Review'],
+  'Daycare':               ['Full-Time Enrollment','Part-Time Available','Ages 6 Weeks\u20135 Years','Hot Meals Provided'],
+  'Photography':           ['Family Portraits from $149','Event Photography','Headshots $99','Prints & Albums Available'],
+  'Retail Shop':           ['New Arrivals Weekly','Gift Cards Available','Layaway & Special Orders','Call for Hours'],
+};
+
 function onIndustryChange(){
   if(_activeTab === 'lib') loadLibrary();
+  var industry = document.getElementById('industry').value;
+  var defaults = MENU_DEFAULTS[industry];
+  if(!defaults) return;
+  var list = document.getElementById('menuList');
+  list.innerHTML = '';
+  defaults.forEach(function(v){ addMenuItem(v); });
 }
 
 function switchTab(tab){
