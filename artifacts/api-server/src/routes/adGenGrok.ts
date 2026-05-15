@@ -210,36 +210,38 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     "Phone numbers, prices, business name — zero tolerance for errors.\n\n" +
     "BUSINESS DETAILS:\n" + businessBlock;
 
-  // ── Build multipart FormData for /v1/images/edits ──────────────────────────
-  // The /edits endpoint passes images as binary multipart fields so the model
-  // actually sees them as visual references, unlike the JSON /generations body.
-  const form = new FormData();
-  form.append("model",  "grok-imagine-image-quality");
-  form.append("prompt", adPrompt);
-  form.append("n",      "1");
+  // ── Build JSON body for /v1/images/edits ────────────────────────────────────
+  // xAI /images/edits requires Content-Type: application/json with base64 images.
+  const images: string[] = [tmplBuf.toString("base64")];
 
-  // Primary reference: the postcard template (always included)
-  form.append("image", new Blob([tmplBuf], { type: "image/png" }), "template.png");
-
-  // Second reference: food/hero photo (if provided)
   if (hasPhoto) {
     const photoBlob = d.photoUrl.startsWith("data:")
       ? dataUrlToBlob(d.photoUrl)
       : await remoteUrlToBlob(d.photoUrl);
-    form.append("image", photoBlob, "photo.png");
+    const photoBuf = Buffer.from(await photoBlob.arrayBuffer());
+    images.push(photoBuf.toString("base64"));
   }
 
-  // Third reference: business logo (if provided)
   if (hasLogo) {
-    form.append("image", dataUrlToBlob(d.logoData), "logo.png");
+    const logoBuf = Buffer.from(await dataUrlToBlob(d.logoData).arrayBuffer());
+    images.push(logoBuf.toString("base64"));
   }
+
+  const editsBody: Record<string, unknown> = {
+    model:  "grok-imagine-image-quality",
+    prompt: adPrompt,
+    n:      1,
+    image:  images.length === 1 ? images[0] : images,
+  };
 
   try {
-    // Do NOT set Content-Type manually — fetch sets it with the multipart boundary
     const xaiRes = await fetch("https://api.x.ai/v1/images/edits", {
       method: "POST",
-      headers: { "Authorization": `Bearer ${apiKey}` },
-      body: form,
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type":  "application/json",
+      },
+      body: JSON.stringify(editsBody),
     });
 
     const body = await safeJson(xaiRes);
@@ -275,38 +277,35 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
         }
       }
 
-      // ── Case 2: possible field-name mismatch → retry with "images[]" for extra refs
-      const isFieldIssue =
+      // ── Case 2: image-array rejected → retry with template-only (no extra refs)
+      // Some API versions may reject multi-image arrays; fall back to template alone.
+      const isImageArrayIssue =
         (xaiRes.status === 400 || xaiRes.status === 422) &&
         (hasPhoto || hasLogo) &&
-        (errLower.includes("image") || errLower.includes("field") ||
-         errLower.includes("unexpected") || errLower.includes("invalid"));
+        (errLower.includes("image") || errLower.includes("array") ||
+         errLower.includes("unexpected") || errLower.includes("invalid") ||
+         errLower.includes("field") || errLower.includes("schema"));
 
-      if (isFieldIssue) {
-        req.log.warn({ errMsg, bizName: d.bizName }, "grok-imagine edits: field issue — retrying with images[] field name");
-        const retryForm = new FormData();
-        retryForm.append("model",  "grok-imagine-image-quality");
-        retryForm.append("prompt", adPrompt);
-        retryForm.append("n",      "1");
-        retryForm.append("image",  new Blob([tmplBuf], { type: "image/png" }), "template.png");
-        if (hasPhoto) {
-          const pb = d.photoUrl.startsWith("data:") ? dataUrlToBlob(d.photoUrl) : await remoteUrlToBlob(d.photoUrl);
-          retryForm.append("images[]", pb, "photo.png");
-        }
-        if (hasLogo) retryForm.append("images[]", dataUrlToBlob(d.logoData), "logo.png");
-
+      if (isImageArrayIssue) {
+        req.log.warn({ errMsg, bizName: d.bizName }, "grok-imagine edits: image array rejected — retrying with template only");
+        const retryBody: Record<string, unknown> = {
+          model:  "grok-imagine-image-quality",
+          prompt: adPrompt,
+          n:      1,
+          image:  tmplBuf.toString("base64"),
+        };
         const retryRes = await fetch("https://api.x.ai/v1/images/edits", {
           method: "POST",
-          headers: { "Authorization": `Bearer ${apiKey}` },
-          body: retryForm,
+          headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify(retryBody),
         });
-        const retryBody = await safeJson(retryRes);
+        const retryRespBody = await safeJson(retryRes);
         req.log.info(
-          { status: retryRes.status, body: JSON.stringify(retryBody).slice(0, 500), bizName: d.bizName },
-          "grok-imagine edits retry (images[]) raw response"
+          { status: retryRes.status, body: JSON.stringify(retryRespBody).slice(0, 500), bizName: d.bizName },
+          "grok-imagine edits retry (template-only) raw response"
         );
         if (retryRes.ok) {
-          const retryUrl = extractXaiImageUrl(retryBody);
+          const retryUrl = extractXaiImageUrl(retryRespBody);
           if (retryUrl) { res.json({ imageUrl: retryUrl }); return; }
         }
         req.log.warn({ retryStatus: retryRes.status, origErr: errMsg }, "grok-imagine edits retry also failed");
