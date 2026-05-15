@@ -1,0 +1,60 @@
+You are a professional print advertisement designer specializing in direct-mail postcards for local businesses. Create a print-ready 4×5 inch postcard advertisement matching this exact visual style:
+STYLE REFERENCE — MATCH THIS PRECISELY:
+
+Cream/tan parchment textured background (not dark, not white — warm aged paper tone)
+Large black brush stroke swoosh behind the hero food photo, cutting diagonally across the mid-section
+Hero food photo is a large, realistic, close-up photograph of the actual food — dominant right-side placement, nearly half the card
+Business name in massive, ultra-bold condensed block letters (like a stamp or vintage sign) — black, top center
+"Cafe" or secondary word in large cursive/script, burnt orange color, overlapping the block letters
+Decorative speed lines / motion marks radiating around the business name
+Tagline in bold black handwritten/chalk script, left side, large and expressive
+Logo in top LEFT corner inside a ribbon/pennant banner shape, burnt orange background
+Menu items use burnt orange circle checkmark badges (filled circle with white checkmark)
+Menu item names in bold black ALL CAPS, prices in burnt orange bold
+Coupon box: dark charcoal/black background, dashed white border, offer amount in giant white bold type, offer description in burnt orange bold ALL CAPS
+Fine print in white below coupon offer
+Footer: solid dark charcoal bar, large white phone number with burnt orange phone icon circle badge, address in white below, QR code + "Scan" script label in bottom right
+
+COLOR PALETTE (strictly):
+
+Background: #F5ECD7 warm cream/parchment
+Primary accent: #C85A1A burnt orange
+Dark elements: #1A1008 near-black charcoal
+Text: #111111 black / #FFFFFF white
+Brush strokes: #1A1008 at varying opacity
+
+TYPOGRAPHY HIERARCHY:
+
+Business name — massive condensed bold block (Oswald ExtraBold / Impact style), black
+Script accent word — large cursive, burnt orange (Dancing Script / Pacifico style)
+Tagline — bold handwritten script, black, left side
+Menu items — Oswald/condensed ALL CAPS bold, black names + burnt orange prices
+Coupon amount — giant white Impact-style bold
+Phone number — very large white Oswald bold in footer
+
+LAYOUT STRUCTURE (top to bottom):
+
+TOP ROW: Logo pennant banner (left) | Business name block + script accent (center-right)
+UPPER LEFT: Large handwritten tagline script
+CENTER: Large diagonal black brush stroke behind food photo
+LOWER LEFT: 4 menu items with circle checkmarks
+LOWER RIGHT: Dark coupon box with dashed border
+FOOTER: Dark bar — phone icon + number (left) | address (below phone) | QR code (right)
+
+
+BUSINESS INFORMATION — USE EXACTLY AS PROVIDED:
+Business Name: [BUSINESS NAME]
+Tagline: [TAGLINE]
+Phone: [PHONE]
+Address: [ADDRESS]
+Website: [WEBSITE]
+Menu Items:
+[ITEM 1 NAME] — [PRICE]
+[ITEM 2 NAME] — [PRICE]
+[ITEM 3 NAME] — [PRICE]
+[ITEM 4 NAME] — [PRICE]
+Special Offer: [OFFER TEXT]
+Fine Print: [FINE PRINT]
+
+⚠ TEXT ACCURACY RULES: Every phone number, price, name, and address must be copied character-for-character from the business information above. Do not invent, reformat, or approximate any text.
+Generate the postcard now as a rendered HTML artifact in portrait 4:5 ratio.
