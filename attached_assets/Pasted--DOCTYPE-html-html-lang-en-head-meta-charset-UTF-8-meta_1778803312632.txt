@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Town Postcard — AI Ad Creator</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300&family=Crimson+Pro:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --burg:#7C1C2E;--burg-dark:#5a1220;--burg-pale:#f9eaed;
+  --ink:#0f1117;--ink-mid:#374151;--ink-light:#6B7280;
+  --surface:#F4F1ED;--card:#fff;--border:#E2DDD6;
+  --gold:#C8952A;--green:#1a5c3a;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh;color:var(--ink)}
+
+.hdr{background:var(–ink);padding:0 32px;display:flex;align-items:center;justify-content:space-between;height:56px;border-bottom:3px solid var(–burg);position:sticky;top:0;z-index:100}
+.brand{font-family:‘Bebas Neue’,sans-serif;font-size:22px;color:#fff;letter-spacing:.08em}
+.brand span{color:#C8A882}
+.hdr-tag{background:var(–burg);color:#fff;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:4px 12px;border-radius:20px}
+
+.page{max-width:1060px;margin:0 auto;padding:32px 24px}
+.page-title{font-family:‘Bebas Neue’,sans-serif;font-size:34px;letter-spacing:.06em;color:var(–ink);margin-bottom:4px}
+.page-sub{font-family:‘Crimson Pro’,serif;font-style:italic;font-size:17px;color:var(–ink-light);margin-bottom:28px}
+
+/* PROGRESS */
+.steps{display:flex;gap:0;margin-bottom:32px}
+.step{flex:1;display:flex;align-items:center;gap:9px;padding:11px 14px;background:var(–card);border:1.5px solid var(–border);position:relative}
+.step:not(:last-child)::after{content:’›’;position:absolute;right:-10px;font-size:18px;color:var(–border);z-index:2;font-weight:300}
+.step:first-child{border-radius:10px 0 0 10px}
+.step:last-child{border-radius:0 10px 10px 0}
+.step.active{border-color:var(–burg);background:var(–burg-pale)}
+.step.done{border-color:var(–green);background:#f0fdf4}
+.step-num{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;background:#ccc;color:#fff;transition:background .3s}
+.step.active .step-num{background:var(–burg)}
+.step.done .step-num{background:var(–green)}
+.step-label{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(–ink-light)}
+.step.active .step-label{color:var(–burg)}
+.step.done .step-label{color:var(–green)}
+
+/* GRID */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+
+/* CARDS */
+.card{background:var(–card);border:1.5px solid var(–border);border-radius:12px;overflow:hidden}
+.card-hdr{padding:13px 18px;border-bottom:1px solid var(–border);background:#FAFAF8;display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(–burg)}
+.card-body{padding:18px}
+
+/* FIELDS */
+.field{margin-bottom:12px}
+.field:last-child{margin-bottom:0}
+.field label{display:block;font-size:11px;font-weight:600;color:var(–ink-mid);margin-bottom:3px;letter-spacing:.06em;text-transform:uppercase}
+.field input,.field select,.field textarea{width:100%;padding:8px 11px;border:1.5px solid var(–border);border-radius:7px;font-family:‘DM Sans’,sans-serif;font-size:13px;color:var(–ink);background:var(–surface);outline:none;transition:border-color .2s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(–burg);background:#fff}
+.field textarea{resize:vertical;min-height:65px;line-height:1.5}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fnote{font-size:10px;color:var(–ink-light);margin-top:3px;line-height:1.4}
+
+/* UPLOAD */
+.upload-zone{border:2px dashed var(–border);border-radius:8px;padding:14px;text-align:center;cursor:pointer;transition:all .2s;background:var(–surface);position:relative;overflow:hidden}
+.upload-zone:hover{border-color:var(–burg);background:var(–burg-pale)}
+.upload-zone.has-file{border-color:var(–green);background:#f0fdf4}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-preview{width:100%;max-height:80px;object-fit:cover;border-radius:5px;margin-top:6px;display:none}
+.upload-label{font-size:11px;font-weight:600;color:var(–ink-mid);margin-top:4px}
+.upload-sub{font-size:10px;color:var(–ink-light)}
+
+/* MENU */
+.menu-list{display:flex;flex-direction:column;gap:5px;margin-bottom:7px}
+.mrow{display:flex;gap:6px;align-items:center}
+.mrow input{flex:1;padding:7px 10px;border:1.5px solid var(–border);border-radius:6px;font-family:‘DM Sans’,sans-serif;font-size:12px;color:var(–ink);background:var(–surface);outline:none;transition:border-color .2s}
+.mrow input:focus{border-color:var(–burg);background:#fff}
+.rm-btn{width:26px;height:26px;border-radius:6px;border:1.5px solid var(–border);background:var(–surface);color:var(–ink-light);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;line-height:1}
+.rm-btn:hover{border-color:#c0392b;color:#c0392b;background:#fef2f2}
+.add-btn{font-size:11px;font-weight:600;color:var(–burg);background:none;border:1.5px dashed var(–burg);border-radius:6px;padding:5px 12px;cursor:pointer;width:100%;transition:all .2s;font-family:‘DM Sans’,sans-serif}
+.add-btn:hover{background:var(–burg-pale)}
+
+/* AI SELECTOR */
+.ai-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ai-opt{position:relative}
+.ai-opt input{position:absolute;opacity:0;width:0;height:0}
+.ai-opt label{display:flex;align-items:center;gap:12px;padding:13px 14px;border:2px solid var(–border);border-radius:9px;cursor:pointer;transition:all .2s;background:var(–surface)}
+.ai-opt label:hover{border-color:#bbb}
+.ai-opt input:checked+label{border-color:var(–burg);background:var(–burg-pale);box-shadow:0 0 0 1px var(–burg)}
+.ai-logo{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.ai-name{font-size:13px;font-weight:700;color:var(–ink)}
+.ai-desc{font-size:10px;color:var(–ink-light);margin-top:1px}
+
+/* PROMPT PREVIEW */
+.prompt-box{
+background:#0f1117;border-radius:10px;padding:16px;
+font-size:11px;line-height:1.7;color:rgba(255,255,255,.6);
+max-height:220px;overflow-y:auto;white-space:pre-wrap;word-break:break-word;
+border:1px solid rgba(255,255,255,.07);font-family:‘DM Sans’,sans-serif;
+}
+.prompt-box .s{color:rgba(255,255,255,.28);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;display:block;margin-top:8px;margin-bottom:1px}
+.prompt-box .v{color:#C8A882;font-weight:600}
+.prompt-box .w{color:#ef4444;font-weight:700}
+
+/* LAUNCH BUTTON */
+.launch-btn{
+width:100%;padding:15px;margin-top:14px;
+background:linear-gradient(135deg,#1C1B4B,#3D1A6B);
+color:#fff;border:none;border-radius:10px;
+font-family:‘Bebas Neue’,sans-serif;font-size:20px;letter-spacing:.12em;
+cursor:pointer;transition:all .25s;
+display:flex;align-items:center;justify-content:center;gap:10px;
+}
+.launch-btn:hover:not(:disabled){
+background:linear-gradient(135deg,#2a2870,#5a2490);
+transform:translateY(-1px);box-shadow:0 6px 24px rgba(80,30,180,.35);
+}
+.launch-btn:disabled{background:#555;cursor:not-allowed;transform:none}
+.spark{font-size:18px;animation:sp 2s ease-in-out infinite}
+@keyframes sp{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
+
+/* COPY BTN */
+.copy-btn{
+padding:8px 16px;background:var(–surface);border:1.5px solid var(–border);
+border-radius:7px;font-family:‘DM Sans’,sans-serif;font-size:12px;font-weight:600;
+color:var(–ink-mid);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px;
+}
+.copy-btn:hover{border-color:var(–burg);color:var(–burg);background:var(–burg-pale)}
+.copy-btn.copied{border-color:var(–green);color:var(–green);background:#f0fdf4}
+
+/* RESULT PANEL */
+.result-panel{grid-column:1/-1;background:var(–card);border:1.5px solid var(–border);border-radius:12px;overflow:hidden;display:none}
+.result-panel.visible{display:block}
+.result-hdr{padding:14px 20px;border-bottom:1px solid var(–border);background:#FAFAF8;display:flex;align-items:center;justify-content:space-between}
+.result-title{font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(–green)}
+.result-body{padding:24px;display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:start}
+
+/* DROP ZONE */
+.drop-zone{
+width:320px;min-height:380px;
+border:3px dashed var(–border);border-radius:12px;
+display:flex;flex-direction:column;align-items:center;justify-content:center;
+gap:10px;text-align:center;padding:24px;cursor:pointer;
+transition:all .3s;background:var(–surface);position:relative;
+}
+.drop-zone.dragover{border-color:var(–burg);background:var(–burg-pale);transform:scale(1.01)}
+.drop-zone.has-img{border-color:var(–green);background:#f0fdf4;padding:8px;justify-content:flex-start}
+.drop-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.drop-icon{font-size:40px;opacity:.3}
+.drop-title{font-size:14px;font-weight:700;color:var(–ink-mid)}
+.drop-sub{font-size:11.5px;color:var(–ink-light);line-height:1.5}
+.drop-result{width:100%;border-radius:8px;display:none}
+.drop-result.visible{display:block}
+
+/* AD INFO */
+.ad-info{flex:1}
+.info-title{font-family:‘Bebas Neue’,sans-serif;font-size:22px;letter-spacing:.06em;color:var(–ink);margin-bottom:12px}
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(–border);font-size:12.5px}
+.info-row:last-child{border-bottom:none}
+.info-label{color:var(–ink-light);font-weight:500}
+.info-val{color:var(–ink);font-weight:600;text-align:right;max-width:58%;word-break:break-word}
+.info-actions{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}
+.act-btn{padding:9px 18px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid var(–border);background:var(–surface);color:var(–ink-mid);transition:all .2s;font-family:‘DM Sans’,sans-serif;display:flex;align-items:center;gap:6px}
+.act-btn:hover{border-color:var(–burg);color:var(–burg)}
+.act-btn.primary{background:var(–green);border-color:var(–green);color:#fff}
+.act-btn.primary:hover{background:#144d30}
+
+/* INSTRUCTION CALLOUT */
+.callout{
+background:linear-gradient(135deg,#1C1B4B,#2d1b4e);
+border-radius:10px;padding:16px 18px;margin-top:14px;
+color:rgba(255,255,255,.85);font-size:12px;line-height:1.7;
+border:1px solid rgba(255,255,255,.08);
+}
+.callout strong{color:#C8A882}
+.callout ol{padding-left:18px;margin-top:6px}
+.callout li{margin-bottom:4px}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(–ink);color:#fff;padding:10px 22px;border-radius:30px;font-size:13px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,.3);transition:transform .3s cubic-bezier(.34,1.56,.64,1);z-index:999;pointer-events:none;display:flex;align-items:center;gap:8px}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+@media(max-width:760px){.grid,.result-body{grid-template-columns:1fr}.steps{flex-direction:column}.drop-zone{width:100%}}
+</style>
+
+</head>
+<body>
+
+<header class="hdr">
+  <div class="brand">My Town <span>Postcard</span></div>
+  <div class="hdr-tag">✦ AI Ad Creator</div>
+</header>
+
+<div class="toast" id="toast">✓ Prompt copied!</div>
+
+<div class="page">
+  <div class="page-title">AI Ad Creator</div>
+  <div class="page-sub">Fill in your details, launch your AI console, paste the result back — done.</div>
+
+  <!-- PROGRESS -->
+
+  <div class="steps">
+    <div class="step active" id="step1"><div class="step-num">1</div><div class="step-label">Your Details</div></div>
+    <div class="step" id="step2"><div class="step-num">2</div><div class="step-label">Launch AI</div></div>
+    <div class="step" id="step3"><div class="step-num">3</div><div class="step-label">Paste Result</div></div>
+    <div class="step" id="step4"><div class="step-num">4</div><div class="step-label">Use Your Ad</div></div>
+  </div>
+
+  <div class="grid">
+
+```
+<!-- ── LEFT: BUSINESS INFO ── -->
+<div>
+  <div class="card" style="margin-bottom:18px">
+    <div class="card-hdr"><div class="card-title">Business Info</div></div>
+    <div class="card-body">
+      <div class="field"><label>Business Name *</label><input type="text" id="bizName" placeholder="e.g. Mr. Biscuit's Cafe" oninput="buildPrompt()"></div>
+      <div class="field"><label>Tagline / Slogan</label><input type="text" id="tagline" placeholder="e.g. From-Scratch Biscuits & Boba!" oninput="buildPrompt()"></div>
+      <div class="frow">
+        <div class="field"><label>Phone *</label><input type="text" id="phone" placeholder="(706) 754-0105" oninput="buildPrompt()"></div>
+        <div class="field"><label>City, State</label><input type="text" id="city" placeholder="Clarkesville, GA" oninput="buildPrompt()"></div>
+      </div>
+      <div class="field"><label>Street Address</label><input type="text" id="address" placeholder="596 W Louise St" oninput="buildPrompt()"></div>
+      <div class="field"><label>Website / URL for QR Code</label><input type="text" id="website" placeholder="www.example.com" oninput="buildPrompt()"></div>
+      <div class="field"><label>Industry</label>
+        <select id="industry" onchange="buildPrompt()">
+          <option value="">— Select —</option>
+          <option>Pizza Restaurant</option><option>Mexican Restaurant</option><option>Chinese Restaurant</option>
+          <option>Breakfast & Cafe</option><option>Bar & Grill</option><option>Italian Restaurant</option>
+          <option>Bakery</option><option>Coffee Shop</option><option>Dentist</option>
+          <option>Medical & Healthcare</option><option>Chiropractor</option><option>Veterinarian</option>
+          <option>HVAC</option><option>Plumber</option><option>Electrician</option>
+          <option>Lawn & Landscaping</option><option>Roofing</option><option>Painting</option>
+          <option>Cleaning Service</option><option>Pest Control</option><option>Real Estate</option>
+          <option>Insurance</option><option>Auto Repair</option><option>Salon & Beauty</option>
+          <option>Barbershop</option><option>Gym & Fitness</option><option>Pet Services</option>
+          <option>Financial Services</option><option>Daycare</option><option>Photography</option>
+          <option>Retail Shop</option><option>Other Service</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:18px">
+    <div class="card-hdr"><div class="card-title">Menu Items / Services (up to 4)</div></div>
+    <div class="card-body">
+      <div class="fnote" style="margin-bottom:10px">Format: Item Name $Price — e.g. "Bacon Biscuit $4.99"</div>
+      <div class="menu-list" id="menuList"></div>
+      <button class="add-btn" onclick="addMenuItem()">+ Add Item</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-hdr"><div class="card-title">Special Offer / Coupon</div></div>
+    <div class="card-body">
+      <div class="field"><label>Offer (e.g. "$1 OFF Any Biscuit")</label><input type="text" id="offer" placeholder="$1 OFF Any Biscuit" oninput="buildPrompt()"></div>
+      <div class="field"><label>Fine Print</label><input type="text" id="offerFine" placeholder="1 per visit · with this postcard" oninput="buildPrompt()"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── RIGHT: IMAGES + AI + PROMPT ── -->
+<div>
+  <div class="card" style="margin-bottom:18px">
+    <div class="card-hdr"><div class="card-title">Your Images</div></div>
+    <div class="card-body">
+      <div class="frow">
+        <div class="field">
+          <label>Logo (optional)</label>
+          <div class="upload-zone" id="logoZone">
+            <input type="file" accept="image/*" onchange="handleUpload(this,'logoPreview','logoZone','logoB64')">
+            <div style="font-size:22px">🏷️</div>
+            <div class="upload-label">Upload Logo</div>
+            <div class="upload-sub">PNG, JPG, SVG</div>
+            <img class="upload-preview" id="logoPreview">
+          </div>
+        </div>
+        <div class="field">
+          <label>Hero Photo (optional)</label>
+          <div class="upload-zone" id="photoZone">
+            <input type="file" accept="image/*" onchange="handleUpload(this,'photoPreview','photoZone','photoB64')">
+            <div style="font-size:22px">📸</div>
+            <div class="upload-label">Upload Photo</div>
+            <div class="upload-sub">Food, store, product</div>
+            <img class="upload-preview" id="photoPreview">
+          </div>
+        </div>
+      </div>
+      <div class="fnote" style="margin-top:8px">If you have a logo or food photo, upload it here. You'll attach it to the AI conversation alongside the generated prompt.</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:18px">
+    <div class="card-hdr"><div class="card-title">Choose Your AI</div></div>
+    <div class="card-body">
+      <div class="ai-grid">
+        <div class="ai-opt">
+          <input type="radio" name="ai" id="ai-claude" value="claude" checked onchange="buildPrompt()">
+          <label for="ai-claude">
+            <div class="ai-logo" style="background:#D97757">🤖</div>
+            <div><div class="ai-name">Claude</div><div class="ai-desc">claude.ai · Excellent at design direction & creative output</div></div>
+          </label>
+        </div>
+        <div class="ai-opt">
+          <input type="radio" name="ai" id="ai-gpt" value="gpt" onchange="buildPrompt()">
+          <label for="ai-gpt">
+            <div class="ai-logo" style="background:#10a37f">💬</div>
+            <div><div class="ai-name">ChatGPT</div><div class="ai-desc">chatgpt.com · Great image generation results</div></div>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-hdr">
+      <div class="card-title">Generated Prompt</div>
+      <button class="copy-btn" id="copyBtn" onclick="copyPrompt()">📋 Copy Prompt</button>
+    </div>
+    <div class="card-body">
+      <div class="prompt-box" id="promptBox">Fill in your business details on the left to generate your prompt...</div>
+
+      <div class="callout" id="callout" style="display:none">
+        <strong>How this works:</strong>
+        <ol>
+          <li>Click <strong>Launch AI Console</strong> below — your AI opens in a new window</li>
+          <li>The prompt is <strong>auto-copied</strong> to your clipboard — just paste it</li>
+          <li>Attach your <strong>logo and/or food photo</strong> to the message if you uploaded them</li>
+          <li>Hit send and wait ~30 seconds for your professional ad</li>
+          <li>Right-click the result image → <strong>Save image</strong>, then paste it below</li>
+        </ol>
+      </div>
+
+      <button class="launch-btn" id="launchBtn" onclick="launchAI()" disabled>
+        <span class="spark">✨</span> Launch AI Console
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── RESULT PANEL ── -->
+<div class="result-panel" id="resultPanel">
+  <div class="result-hdr">
+    <div class="result-title">✓ Your AI-Generated Ad</div>
+    <button class="act-btn" onclick="resetResult()">↺ Start Over</button>
+  </div>
+  <div class="result-body">
+    <div class="drop-zone" id="dropZone">
+      <input type="file" accept="image/*" onchange="handleResultDrop(this)">
+      <div class="drop-icon">⬇</div>
+      <div class="drop-title">Paste or Drop Your Ad Here</div>
+      <div class="drop-sub">After the AI generates your ad image:<br>Right-click → Save Image<br>Then drag it here or click to upload</div>
+      <img class="drop-result" id="dropResult" alt="Your generated ad">
+    </div>
+    <div class="ad-info" id="adInfo">
+      <div class="info-title" id="infoName"></div>
+      <div class="info-row"><span class="info-label">Phone</span><span class="info-val" id="infoPhone"></span></div>
+      <div class="info-row"><span class="info-label">Address</span><span class="info-val" id="infoAddr"></span></div>
+      <div class="info-row"><span class="info-label">Offer</span><span class="info-val" id="infoOffer"></span></div>
+      <div class="info-row"><span class="info-label">AI Used</span><span class="info-val" id="infoAI"></span></div>
+      <div class="info-row"><span class="info-label">Status</span><span class="info-val" id="infoStatus" style="color:var(--ink-light)">Waiting for image...</span></div>
+      <div class="info-actions" id="infoActions" style="display:none">
+        <button class="act-btn" onclick="downloadAd()">⬇ Download</button>
+        <button class="act-btn" onclick="regenerate()">↺ Try Again</button>
+        <button class="act-btn primary" onclick="useAd()">✓ Use This Ad</button>
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+  </div>
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────
+let logoB64 = null;
+let photoB64 = null;
+let resultImageUrl = null;
+
+// ── MENU ──────────────────────────────────────────────────────
+function addMenuItem(val=''){
+  const list = document.getElementById('menuList');
+  if(list.children.length >= 4) return;
+  const row = document.createElement('div');
+  row.className = 'mrow';
+  row.innerHTML = `<input type="text" placeholder="Item Name $Price" value="${val}" oninput="buildPrompt()">
+    <button class="rm-btn" onclick="this.parentElement.remove();buildPrompt()" title="Remove">×</button>`;
+  list.appendChild(row);
+  buildPrompt();
+}
+
+function getMenu(){
+  return Array.from(document.querySelectorAll('.mrow input'))
+    .map(i=>i.value.trim()).filter(Boolean).slice(0,4);
+}
+
+// ── UPLOAD ────────────────────────────────────────────────────
+function handleUpload(input, previewId, zoneId, varName){
+  const file = input.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    if(varName==='logoB64') logoB64 = e.target.result;
+    if(varName==='photoB64') photoB64 = e.target.result;
+    const prev = document.getElementById(previewId);
+    prev.src = e.target.result; prev.style.display='block';
+    document.getElementById(zoneId).classList.add('has-file');
+    document.getElementById(zoneId).querySelector('.upload-label').textContent = '✓ Uploaded';
+    buildPrompt();
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── BUILD PROMPT ──────────────────────────────────────────────
+function buildPrompt(){
+  const d = getData();
+  if(!d.bizName){ 
+    document.getElementById('promptBox').textContent = 'Fill in your business name to generate your prompt...';
+    document.getElementById('launchBtn').disabled = true;
+    document.getElementById('callout').style.display = 'none';
+    return;
+  }
+
+  const menuStr = d.menu.length
+    ? d.menu.map((item,i) => `  Item ${i+1}: ${item}`).join('\n')
+    : '  (none provided)';
+
+  const hasLogo  = !!logoB64;
+  const hasPhoto = !!photoB64;
+  const aiName   = d.ai === 'claude' ? 'Claude' : 'ChatGPT';
+
+  // ── THE PROMPT ─────────────────────────────────────────────
+  const prompt = `You are a professional print advertisement designer specializing in direct-mail postcards for local businesses. I need you to create a stunning, print-ready 4×5 inch postcard advertisement.
+
+════════════════════════════════════════
+BUSINESS INFORMATION — USE EXACTLY AS PROVIDED
+════════════════════════════════════════
+
+Business Name: ${d.bizName}
+Tagline: ${d.tagline || '(none)'}
+Phone: ${d.phone || '(none)'}
+Address: ${d.address ? d.address + (d.city ? ', ' + d.city : '') : d.city || '(none)'}
+Website: ${d.website || '(none)'}
+Industry: ${d.industry || 'Local Business'}
+
+Menu Items / Services:
+${menuStr}
+
+Special Offer: ${d.offer || '(none)'}
+Offer Fine Print: ${d.offerFine || '1 per visit · with this postcard'}
+
+════════════════════════════════════════
+⚠ CRITICAL TEXT ACCURACY RULES — READ CAREFULLY
+════════════════════════════════════════
+
+These rules are ABSOLUTE. Violating any of them makes the ad unusable.
+
+RULE 1 — PHONE NUMBER: The phone number in the ad must be EXACTLY "${d.phone || '(none)'}". 
+  - Do not change any digit
+  - Do not add or remove digits
+  - Do not reformat it differently
+  - Copy it character by character: ${d.phone ? d.phone.split('').join(' · ') : 'N/A'}
+
+RULE 2 — BUSINESS NAME: The business name must be EXACTLY "${d.bizName}"
+  - Do not add words, remove words, or change spelling
+  - Do not substitute similar-looking letters
+
+RULE 3 — PRICES: Every price must match exactly as provided:
+${d.menu.length ? d.menu.map(m => `  "${m}"`).join('\n') : '  (none)'}
+  - Do not round, change, or approximate any price
+  - $4.99 must appear as $4.99, not $5.00 or $4.89
+
+RULE 4 — ADDRESS: The address must be EXACTLY "${d.address || ''}${d.city ? ', ' + d.city : ''}"
+  - Do not abbreviate, rearrange, or alter the street address
+
+RULE 5 — OFFER: The special offer must be EXACTLY "${d.offer || ''}"
+  - Do not paraphrase or change the wording
+
+RULE 6 — NO INVENTED TEXT: Do not add any phone numbers, prices, addresses, URLs, or business names that were not provided above. If a field says "(none)", leave that element out of the design entirely.
+
+RULE 7 — VERIFICATION: Before finalizing, re-read every piece of text in your design and verify it matches the information provided above character by character.
+
+════════════════════════════════════════
+DESIGN REQUIREMENTS
+════════════════════════════════════════
+
+Style: Premium local direct-mail postcard — warm, professional, eye-catching.
+Look: Professionally art-directed. NOT a template. NOT a generic AI graphic.
+Feel: The kind of ad a business would proudly display and customers would keep.
+
+Visual approach:
+- Warm, rich color palette appropriate for a ${d.industry || 'local business'}
+- Layered typography with dynamic composition — mix of bold display fonts and elegant script
+- The business name should have visual weight and personality — consider a large bold font for the main name with a flowing script accent word
+- Hero food/product photography should be the dominant visual element
+- Brush stroke textures, warm vignettes, and decorative elements add artisan quality
+- A dashed-border coupon box in the lower right for the special offer
+- Circular checkmark badges next to each menu item
+- A dark footer strip with the phone number prominently displayed in large type
+- A QR code placeholder in the bottom right corner
+
+Typography hierarchy (largest to smallest):
+1. Business name — largest, most prominent, slight angle or dynamic placement
+2. Special offer amount — second largest, inside coupon box
+3. Tagline — elegant script style, left side
+4. Menu items — clean, readable, uppercase
+5. Phone number — large Bebas Neue style in footer
+6. Address and fine print — smallest, footer area
+
+${hasLogo ? 'LOGO: I am attaching my logo image. Please incorporate it prominently in the top left area.' : 'LOGO AREA: Leave a clean space in the top left for a logo (add a decorative ribbon or badge element there instead).'}
+${hasPhoto ? 'HERO PHOTO: I am attaching my hero photo. Use this as the primary background/hero image — make it large, cinematic, and dominant. Do NOT use a generic AI-generated image when I have provided a real photo.' : 'HERO IMAGE: Generate a photorealistic, cinematic, professionally lit hero image appropriate for a ' + (d.industry || 'local business') + '. Make it look like a professional commercial photograph, not an illustration.'}
+
+Canvas: Portrait orientation, 4:5 ratio (suitable for a 4×5 inch postcard at 300 DPI)
+
+════════════════════════════════════════
+FINAL VERIFICATION CHECKLIST
+════════════════════════════════════════
+
+Before you generate the image, confirm:
+☐ Phone number matches "${d.phone || 'N/A'}" exactly
+☐ Business name matches "${d.bizName}" exactly  
+☐ All prices match the provided menu items exactly
+☐ Address matches "${d.address || ''}${d.city ? ', ' + d.city : ''}" exactly
+☐ Special offer matches "${d.offer || 'N/A'}" exactly
+☐ No text has been invented or hallucinated
+☐ The design looks premium, print-ready, and commercially professional
+
+Generate the ad now.`;
+
+  // Display formatted version
+  const box = document.getElementById('promptBox');
+  box.textContent = prompt;
+
+  // Store raw prompt for copying
+  window._rawPrompt = prompt;
+
+  document.getElementById('launchBtn').disabled = false;
+  document.getElementById('callout').style.display = 'block';
+
+  // Update progress
+  setStep(2);
+}
+
+function getData(){
+  return {
+    bizName:  document.getElementById('bizName').value.trim(),
+    tagline:  document.getElementById('tagline').value.trim(),
+    phone:    document.getElementById('phone').value.trim(),
+    city:     document.getElementById('city').value.trim(),
+    address:  document.getElementById('address').value.trim(),
+    website:  document.getElementById('website').value.trim(),
+    industry: document.getElementById('industry').value,
+    menu:     getMenu(),
+    offer:    document.getElementById('offer').value.trim(),
+    offerFine:document.getElementById('offerFine').value.trim(),
+    ai:       document.querySelector('input[name="ai"]:checked')?.value || 'claude',
+  };
+}
+
+// ── COPY PROMPT ───────────────────────────────────────────────
+async function copyPrompt(){
+  if(!window._rawPrompt) return;
+  try {
+    await navigator.clipboard.writeText(window._rawPrompt);
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = '✓ Copied!';
+    btn.classList.add('copied');
+    showToast('Prompt copied to clipboard!');
+    setTimeout(()=>{ btn.textContent='📋 Copy Prompt'; btn.classList.remove('copied'); }, 2500);
+  } catch(e){
+    // Fallback for browsers that block clipboard
+    const ta = document.createElement('textarea');
+    ta.value = window._rawPrompt;
+    ta.style.position='fixed';ta.style.opacity='0';
+    document.body.appendChild(ta);
+    ta.select();document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('Prompt copied!');
+  }
+}
+
+// ── LAUNCH AI ─────────────────────────────────────────────────
+async function launchAI(){
+  const d = getData();
+  if(!d.bizName){ alert('Please enter your business name first.'); return; }
+
+  // Copy prompt to clipboard first
+  await copyPrompt();
+
+  // Determine URL
+  // Claude supports a ?q= param that pre-fills the input
+  // ChatGPT supports a URL that opens a new chat (no pre-fill param available)
+  const aiUrl = d.ai === 'claude'
+    ? `https://claude.ai/new?q=${encodeURIComponent(window._rawPrompt.substring(0,2000))}`
+    : 'https://chatgpt.com/';
+
+  // Open popup sized to fit alongside the app
+  const pw = Math.min(820, screen.width * 0.55);
+  const ph = Math.min(900, screen.height * 0.9);
+  const pl = window.screen.width - pw - 20;
+  const pt = Math.max(0, (screen.height - ph) / 2);
+
+  const popup = window.open(
+    aiUrl,
+    'ai_console',
+    `width=${pw},height=${ph},left=${pl},top=${pt},resizable=yes,scrollbars=yes`
+  );
+
+  if(!popup){
+    // Popup blocked
+    alert('Popup blocked! Please allow popups for this site, then click Launch again.\n\nYour prompt has been copied to the clipboard.');
+    return;
+  }
+
+  // Show result panel and update steps
+  showResultPanel();
+  setStep(3);
+
+  // Show tip
+  showToast('AI console opened — paste your prompt and hit send!');
+}
+
+// ── RESULT HANDLING ───────────────────────────────────────────
+function showResultPanel(){
+  const panel = document.getElementById('resultPanel');
+  panel.classList.add('visible');
+  panel.scrollIntoView({behavior:'smooth', block:'start'});
+
+  const d = getData();
+  document.getElementById('infoName').textContent = d.bizName;
+  document.getElementById('infoPhone').textContent = d.phone || '—';
+  document.getElementById('infoAddr').textContent = [d.address,d.city].filter(Boolean).join(', ') || '—';
+  document.getElementById('infoOffer').textContent = d.offer || '—';
+  document.getElementById('infoAI').textContent = d.ai === 'claude' ? 'Claude (claude.ai)' : 'ChatGPT (chatgpt.com)';
+}
+
+function handleResultDrop(input){
+  const file = input.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    resultImageUrl = e.target.result;
+    const img = document.getElementById('dropResult');
+    const zone = document.getElementById('dropZone');
+    img.src = resultImageUrl;
+    img.classList.add('visible');
+    zone.classList.add('has-img');
+    zone.querySelector('.drop-icon').style.display='none';
+    zone.querySelector('.drop-title').style.display='none';
+    zone.querySelector('.drop-sub').style.display='none';
+    document.getElementById('infoStatus').textContent = '✓ Ad image received';
+    document.getElementById('infoStatus').style.color = 'var(--green)';
+    document.getElementById('infoActions').style.display='flex';
+    setStep(4);
+  };
+  reader.readAsDataURL(file);
+}
+
+// Support paste anywhere on the page
+document.addEventListener('paste', e => {
+  const items = e.clipboardData?.items;
+  if(!items) return;
+  for(const item of items){
+    if(item.type.startsWith('image/')){
+      const file = item.getAsFile();
+      const fakeInput = { files: [file] };
+      handleResultDrop(fakeInput);
+      break;
+    }
+  }
+});
+
+function downloadAd(){
+  if(!resultImageUrl) return;
+  const a = document.createElement('a');
+  a.href = resultImageUrl;
+  a.download = `ad-${document.getElementById('bizName').value.trim().replace(/\s+/g,'-')}-${Date.now()}.png`;
+  a.click();
+}
+
+function regenerate(){
+  // Reset result, re-copy prompt, reopen AI
+  document.getElementById('dropResult').classList.remove('visible');
+  document.getElementById('dropZone').classList.remove('has-img');
+  document.getElementById('dropZone').querySelector('.drop-icon').style.display='';
+  document.getElementById('dropZone').querySelector('.drop-title').style.display='';
+  document.getElementById('dropZone').querySelector('.drop-sub').style.display='';
+  document.getElementById('infoActions').style.display='none';
+  document.getElementById('infoStatus').textContent='Waiting for image...';
+  document.getElementById('infoStatus').style.color='var(--ink-light)';
+  resultImageUrl = null;
+  launchAI();
+}
+
+function resetResult(){
+  document.getElementById('resultPanel').classList.remove('visible');
+  resultImageUrl = null;
+  setStep(1);
+}
+
+function useAd(){
+  if(!resultImageUrl){ alert('Please drop your ad image first.'); return; }
+  // In Replit: POST { imageData: resultImageUrl, ...getData() } to your save endpoint
+  alert('✓ Ad saved!\n\nIn Replit, wire useAd() to POST the image and business data to your database.');
+}
+
+// ── STEP TRACKER ─────────────────────────────────────────────
+function setStep(n){
+  for(let i=1;i<=4;i++){
+    const el = document.getElementById(`step${i}`);
+    el.className = 'step' + (i<n?' done':i===n?' active':'');
+  }
+}
+
+// ── TOAST ─────────────────────────────────────────────────────
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.innerHTML = `✓ ${msg}`;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2800);
+}
+
+// ── DRAG AND DROP ─────────────────────────────────────────────
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover', e=>{ e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', ()=>dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e=>{
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if(file && file.type.startsWith('image/')){
+    const fakeInput = { files: [file] };
+    handleResultDrop(fakeInput);
+  }
+});
+
+// ── INIT ──────────────────────────────────────────────────────
+addMenuItem(''); addMenuItem(''); addMenuItem(''); addMenuItem('');
+</script>
+
+</body>
+</html>
