@@ -1,0 +1,101 @@
+Add a new page called AI Ad Creator to the project. Do not modify any existing files.
+
+════════════════════════════════════════════════
+CHANGE 1 — ADD THE FILE AND ROUTE
+════════════════════════════════════════════════
+
+Add the attached file ai-ad-creator.html to the project.
+
+Create a new route at /ai-ad-creator that serves this file.
+
+Add a link to this page from the main navigation or dealer dashboard,
+labeled “AI Ad Creator”.
+
+════════════════════════════════════════════════
+CHANGE 2 — WIRE THE SAVE BUTTON
+════════════════════════════════════════════════
+
+Find the useAd() function in ai-ad-creator.html.
+
+Replace the alert with a POST request to the same save endpoint used
+by the other ad generators. Send these fields:
+
+adVersion: “ai-creator-v1”
+source: “claude” or “chatgpt” (from the selected AI radio button)
+imageData: the base64 image URL stored in resultImageUrl
+bizName: from the bizName input
+tagline: from the tagline input
+phone: from the phone input
+address: from the address input
+city: from the city input
+website: from the website input
+industry: from the industry select
+menu: array of menu item strings
+offer: from the offer input
+offerFine: from the offerFine input
+
+After a successful save, show a success message and offer a link to
+view the saved ad or proceed to the next step in the dealer workflow.
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+Do not modify any of the following:
+
+The postcard composer or layout builder
+Payment pages or Stripe integration
+Dealer portal
+Image library admin tool
+Ad Studio or any previous ad generator versions
+Any existing API routes
+Any database tables other than writing a new ad record
+Any authentication or session logic
+
+════════════════════════════════════════════════
+HOW THIS TOOL WORKS
+════════════════════════════════════════════════
+
+This is a different architecture from the previous ad generators.
+It does NOT call the OpenAI API directly. Instead:
+
+1. The user fills in their business details on the left side
+1. The system builds a detailed prompt with strict text accuracy rules
+1. The user clicks Launch AI Console — this opens claude.ai or
+   chatgpt.com in a popup window sized to sit alongside the app
+1. The prompt is automatically copied to the clipboard
+1. The user pastes the prompt into the AI console and hits send
+1. The AI generates a professional ad image in the console
+1. The user right-clicks the result and saves it, then drops it
+   into the result panel on the right side of the page
+1. The user clicks Use This Ad to save it to the database
+
+The popup window opens at screen.width minus popup width minus 20px
+from the right edge, so it sits beside the main app window.
+
+No API keys are needed for this feature. No OpenAI costs are incurred
+by the platform. The user’s own Claude or ChatGPT account handles the
+image generation.
+
+════════════════════════════════════════════════
+TEST AFTER BUILDING
+════════════════════════════════════════════════
+
+Go to /ai-ad-creator and confirm:
+
+1. Fill in business name, phone, address, menu items, and offer.
+   The Generated Prompt section updates as you type.
+1. The prompt box shows a detailed multi-section prompt including
+   the business data and strict text accuracy rules.
+1. Click Copy Prompt — confirm the toast shows and the clipboard
+   contains the full prompt text.
+1. Select Claude and click Launch AI Console.
+   A popup window opens to claude.ai positioned to the right of
+   the main browser window. The toast confirms the prompt was copied.
+1. Select ChatGPT and click Launch AI Console.
+   The popup opens to chatgpt.com instead.
+1. The result panel appears below the form after clicking Launch.
+1. Drop or paste a PNG image into the drop zone.
+   The image appears, the status updates to show it was received,
+   and the Download, Try Again, and Use This Ad buttons appear.
+1. Click Use This Ad and confirm the data is saved correctly.
