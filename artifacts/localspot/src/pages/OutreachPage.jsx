@@ -895,7 +895,8 @@ export default function OutreachPage() {
     if (token) return;
     fetch("/api/admin/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: "localspot-admin-2025" }) })
       .then(r => r.json())
-      .then(d => { if (d.token) { localStorage.setItem("admin_token", d.token); setToken(d.token); } });
+      .then(d => { if (d.token) { localStorage.setItem("admin_token", d.token); setToken(d.token); } })
+      .catch(() => {});
   }, []);
 
   if (!token) return null;
