@@ -166,12 +166,12 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   const hasPhoto    = !!d.photoUrl;
   const hasLogo     = !!d.logoData;
 
+  // Website is intentionally excluded — a QR code graphic replaces it in the footer
   const businessBlock = [
     `Business Name : ${d.bizName}`,
     `Tagline       : ${d.tagline  || "(none)"}`,
     `Phone         : ${d.phone    || "(none)"}`,
     `Address       : ${fullAddress}`,
-    `Website       : ${d.website  || "(none)"}`,
     `Industry      : ${d.industry}`,
     `Menu/Services :\n${menuStr}`,
     `Special Offer : ${d.offer    || "(none)"}`,
@@ -186,44 +186,67 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   ];
   let imgIdx = 2;
   if (hasPhoto) {
-    refLines.push(`  • IMAGE ${imgIdx++} (HERO FOOD PHOTO) — the actual food/product photograph. Composite it into the right-center image zone of the ad with professional lighting and realistic shadow blending.`);
+    refLines.push(`  • IMAGE ${imgIdx++} (HERO FOOD PHOTO) — the actual food/product photograph. Composite it into the main hero image zone with professional lighting and realistic shadow blending.`);
   }
   if (hasLogo) {
-    refLines.push(`  • IMAGE ${imgIdx} (BUSINESS LOGO) — the exact logo. Place it precisely in the upper-left corner, preserving its colors and proportions with no stylization.`);
+    refLines.push(`  • IMAGE ${imgIdx} (BUSINESS LOGO) — the exact business logo. Reproduce it pixel-perfect with no stylization, color changes, or distortion.`);
   }
 
-  const outputSteps: string[] = [
-    "  1. Base: reproduce the IMAGE 1 template exactly — every zone, texture, band, badge, coupon box, and footer preserved.",
-    hasPhoto
-      ? "  2. Hero area: composite the IMAGE 2 food photo into the right-center image zone with professional lighting."
-      : "  2. Hero area: generate a photorealistic, appetizing hero image appropriate for the business in the right-center zone.",
-  ];
-  let stepIdx = 3;
-  if (hasLogo) {
-    const logoImg = hasPhoto ? 3 : 2;
-    outputSteps.push(`  ${stepIdx++}. Logo: place IMAGE ${logoImg} in the upper-left corner exactly as provided.`);
-  }
-  outputSteps.push(
-    `  ${stepIdx}. TEXT — place ALL of the following verbatim in the correct zones:\n` +
-    "     — Business name → title area (bold, prominent)\n" +
-    "     — Tagline → subtitle below business name\n" +
-    "     — Menu/services → menu card area\n" +
-    "     — Special offer → dashed coupon box\n" +
-    "     — Phone number → footer, EXACTLY as written, zero digit changes\n" +
-    "     — Address → footer"
-  );
+  const logoImg = hasPhoto ? 3 : 2;
+  const outputRequirements =
+    "LAYOUT — render these zones in order from top to bottom:\n\n" +
+
+    "  ZONE 1 — HEADLINE (top of ad, above everything else):\n" +
+    `    Business name "${d.bizName}" in a bold, dynamic display font — the largest, most dominant text element on the entire ad. Make it feel like a premium magazine headline.\n\n` +
+
+    (hasLogo
+      ? `  ZONE 2 — LOGO + TAGLINE (upper-left corner, below headline):\n` +
+        `    Logo: place IMAGE ${logoImg} at compact size — no wider than 20% of the ad width. Preserve exact colors and proportions.\n` +
+        `    Tagline: render "${d.tagline || ""}" in a mid-weight font directly below the logo, clearly legible, noticeably larger than body copy.\n\n`
+      : d.tagline
+        ? `  ZONE 2 — TAGLINE (upper-left, below headline):\n` +
+          `    "${d.tagline}" in a mid-weight italic or script font, clearly legible.\n\n`
+        : "") +
+
+    "  ZONE 3 — HERO IMAGE (right-center, large feature area):\n" +
+    (hasPhoto
+      ? `    Composite IMAGE 2 food photo here with cinematic lighting, sharp focus, and vibrant color. Fill the zone naturally — no letterboxing or borders.\n\n`
+      : `    Generate a photorealistic, appetizing hero image for this business — cinematic quality, appetizing styling, vibrant color.\n\n`) +
+
+    (menuStr !== "  (none)"
+      ? "  ZONE 4 — MENU / SERVICES (left-center card area):\n" +
+        "    List each item clearly. Use a clean, legible sans-serif. Prices right-aligned if present.\n\n"
+      : "") +
+
+    (d.offer
+      ? "  ZONE 5 — SPECIAL OFFER (dashed coupon box):\n" +
+        `    "${d.offer}" in bold inside the dashed coupon rectangle. If fine print exists, render it smaller below.\n\n`
+      : "") +
+
+    "  ZONE 6 — FOOTER (dark strip at very bottom):\n" +
+    `    Phone: "${d.phone || ""}" — BOLD, large, easy to read at a glance. Zero digit changes.\n` +
+    `    Address: "${fullAddress}" — bold, styled, not plain body text.\n` +
+    "    QR code: place a clean, square QR code graphic in the lower-right of the footer. Do NOT render the website URL as text anywhere on the ad.\n\n" +
+
+    "TYPOGRAPHIC RULES:\n" +
+    "  • Headline: display/slab font, maximum size, high contrast against background\n" +
+    "  • Tagline: complementary secondary font, mid-size, elegant\n" +
+    "  • Footer phone/address: bold sans-serif, noticeably larger than fine print\n" +
+    "  • Fine print / coupon terms: smallest text, still legible\n" +
+    "  • NEVER render the website URL as visible text";
 
   const adPrompt =
-    "You are an expert print advertising art director creating a PRINT-READY postcard ad.\n\n" +
+    "You are a world-class print advertising art director. Create a PRINT-READY premium postcard ad " +
+    "that looks like it was designed by a top agency — not a template tool.\n\n" +
     `REFERENCE IMAGES: You are provided ${refLines.length} reference image${refLines.length > 1 ? "s" : ""}. ` +
-    "Treat each one as a distinct visual input — do NOT blend them or treat them as a finished design:\n" +
+    "Each is a distinct visual input — do NOT blend them or treat them as a finished design:\n" +
     refLines.join("\n") + "\n\n" +
-    "OUTPUT REQUIREMENTS:\n" +
-    outputSteps.join("\n") + "\n\n" +
-    "STYLE: professional commercial food photography, appetizing, high-end print ad quality, " +
-    "vibrant yet premium colors, sharp focus, clean composition, legible text, postcard ad quality.\n\n" +
+    outputRequirements + "\n" +
+    "STYLE: high-end editorial advertising aesthetic. Cinematic food photography with rich, vibrant color and " +
+    "professional lighting. Bold confident typography hierarchy. Premium color palette — deep, saturated, controlled. " +
+    "Every element is intentionally placed; nothing looks accidental or generic. Print-ready sharpness throughout.\n\n" +
     "CRITICAL: Every piece of text must appear EXACTLY as specified. " +
-    "Phone numbers, prices, business name — zero tolerance for errors.\n\n" +
+    "Phone numbers, prices, business name — zero tolerance for errors. No website URL text anywhere.\n\n" +
     "BUSINESS DETAILS:\n" + businessBlock;
 
   // ── Build images array for xAI /images/edits ────────────────────────────────
