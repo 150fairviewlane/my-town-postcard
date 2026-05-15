@@ -235,7 +235,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
 
   type XaiImageRef = { type: "image_url"; url: string };
   const imageRefs: XaiImageRef[] = [
-    { type: "image_url", url: toDataUrl(tmplBuf) },
+    { type: "image_url", url: toDataUrl(tmplBuf, "image/png") },
   ];
 
   if (hasPhoto) {
@@ -243,12 +243,13 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       ? dataUrlToBlob(d.photoUrl)
       : await remoteUrlToBlob(d.photoUrl);
     const photoBuf = Buffer.from(await blob.arrayBuffer());
-    imageRefs.push({ type: "image_url", url: toDataUrl(photoBuf) });
+    imageRefs.push({ type: "image_url", url: toDataUrl(photoBuf, blob.type || "image/jpeg") });
   }
 
   if (hasLogo) {
-    const logoBuf = Buffer.from(await dataUrlToBlob(d.logoData).arrayBuffer());
-    imageRefs.push({ type: "image_url", url: toDataUrl(logoBuf) });
+    const logoBlob = dataUrlToBlob(d.logoData);
+    const logoBuf = Buffer.from(await logoBlob.arrayBuffer());
+    imageRefs.push({ type: "image_url", url: toDataUrl(logoBuf, logoBlob.type || "image/png") });
   }
 
   const editsBody: Record<string, unknown> = {
