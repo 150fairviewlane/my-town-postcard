@@ -261,35 +261,38 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   const toDataUrl = (buf: Buffer, mime = "image/png") =>
     `data:${mime};base64,${buf.toString("base64")}`;
 
-  type XaiImageRef = { type: "image_url"; url: string };
-  const imageRefs: XaiImageRef[] = [
-    { type: "image_url", url: toDataUrl(tmplBuf, "image/png") },
-  ];
-
-  if (hasPhoto) {
-    const blob = d.photoUrl.startsWith("data:")
-      ? dataUrlToBlob(d.photoUrl)
-      : await remoteUrlToBlob(d.photoUrl);
-    const photoBuf = Buffer.from(await blob.arrayBuffer());
-    imageRefs.push({ type: "image_url", url: toDataUrl(photoBuf, blob.type || "image/jpeg") });
-  }
-
-  if (hasLogo) {
-    const logoBlob = dataUrlToBlob(d.logoData);
-    const logoBuf = Buffer.from(await logoBlob.arrayBuffer());
-    imageRefs.push({ type: "image_url", url: toDataUrl(logoBuf, logoBlob.type || "image/png") });
-  }
-
-  const editsBody: Record<string, unknown> = {
-    model:        "grok-imagine-image-quality",
-    prompt:       adPrompt,
-    n:            1,
-    images:       imageRefs,
-    aspect_ratio: "2:3",
-    resolution:   "2k",
-  };
-
+  // NOTE: the try/catch starts here so that photo/logo fetch errors also return
+  // a clean JSON response instead of letting Express fall back to an HTML page
+  // (which causes JSON.parse to throw a cryptic "string did not match" error in
+  // Safari and "Unexpected token '<'" in Chrome).
   try {
+    type XaiImageRef = { type: "image_url"; url: string };
+    const imageRefs: XaiImageRef[] = [
+      { type: "image_url", url: toDataUrl(tmplBuf, "image/png") },
+    ];
+
+    if (hasPhoto) {
+      const blob = d.photoUrl.startsWith("data:")
+        ? dataUrlToBlob(d.photoUrl)
+        : await remoteUrlToBlob(d.photoUrl);
+      const photoBuf = Buffer.from(await blob.arrayBuffer());
+      imageRefs.push({ type: "image_url", url: toDataUrl(photoBuf, blob.type || "image/jpeg") });
+    }
+
+    if (hasLogo) {
+      const logoBlob = dataUrlToBlob(d.logoData);
+      const logoBuf = Buffer.from(await logoBlob.arrayBuffer());
+      imageRefs.push({ type: "image_url", url: toDataUrl(logoBuf, logoBlob.type || "image/png") });
+    }
+
+    const editsBody: Record<string, unknown> = {
+      model:        "grok-imagine-image-quality",
+      prompt:       adPrompt,
+      n:            1,
+      images:       imageRefs,
+      aspect_ratio: "2:3",
+      resolution:   "2k",
+    };
     const xaiRes = await fetch("https://api.x.ai/v1/images/edits", {
       method: "POST",
       headers: {
