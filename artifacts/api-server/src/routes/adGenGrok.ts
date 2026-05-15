@@ -216,7 +216,10 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   const toDataUrl = (buf: Buffer, mime = "image/png") =>
     `data:${mime};base64,${buf.toString("base64")}`;
 
-  const imageObjs: { url: string }[] = [{ url: toDataUrl(tmplBuf) }];
+  // xAI /images/edits image field format:
+  //   single image  → { url: "data:mime;base64,..." }   (object)
+  //   multi images  → ["data:mime;base64,...", ...]      (array of plain strings)
+  const imageDataUrls: string[] = [toDataUrl(tmplBuf)];
 
   if (hasPhoto) {
     const photoBlob = d.photoUrl.startsWith("data:")
@@ -226,20 +229,23 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     const photoMime = d.photoUrl.startsWith("data:")
       ? (d.photoUrl.match(/data:([^;]+)/)?.[1] ?? "image/png")
       : "image/jpeg";
-    imageObjs.push({ url: toDataUrl(photoBuf, photoMime) });
+    imageDataUrls.push(toDataUrl(photoBuf, photoMime));
   }
 
   if (hasLogo) {
     const logoBuf = Buffer.from(await dataUrlToBlob(d.logoData).arrayBuffer());
     const logoMime = d.logoData.match(/data:([^;]+)/)?.[1] ?? "image/png";
-    imageObjs.push({ url: toDataUrl(logoBuf, logoMime) });
+    imageDataUrls.push(toDataUrl(logoBuf, logoMime));
   }
 
   const editsBody: Record<string, unknown> = {
     model:  "grok-imagine-image-quality",
     prompt: adPrompt,
     n:      1,
-    image:  imageObjs.length === 1 ? imageObjs[0] : imageObjs,
+    // single → wrapped object; multiple → plain data-URL string array
+    image:  imageDataUrls.length === 1
+      ? { url: imageDataUrls[0] }
+      : imageDataUrls,
   };
 
   try {
