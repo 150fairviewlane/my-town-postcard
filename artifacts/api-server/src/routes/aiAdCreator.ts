@@ -2,9 +2,17 @@ import { Router, type IRouter } from "express";
 import { z } from "zod/v4";
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+function findWorkspaceRoot(): string {
+  let dir = process.cwd();
+  while (dir !== path.parse(dir).root) {
+    if (fs.existsSync(path.join(dir, "pnpm-workspace.yaml"))) return dir;
+    dir = path.dirname(dir);
+  }
+  return process.cwd();
+}
+
+const WORKSPACE_ROOT = findWorkspaceRoot();
 
 const router: IRouter = Router();
 
@@ -36,9 +44,10 @@ router.post("/ai-ad-creator/save", async (req, res): Promise<void> => {
 });
 
 router.get("/ai-ad-creator/templates/mr-biscuits", (req, res): void => {
-  const filePath = path.resolve(
-    __dirname,
-    "../../../../attached_assets/mr_biscuits_template_no_logo_1778806527327.png"
+  const filePath = path.join(
+    WORKSPACE_ROOT,
+    "attached_assets",
+    "mr_biscuits_template_no_logo_1778806527327.png"
   );
   if (!fs.existsSync(filePath)) {
     res.status(404).json({ error: "Template file not found" });
