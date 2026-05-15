@@ -211,27 +211,35 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     "BUSINESS DETAILS:\n" + businessBlock;
 
   // ── Build JSON body for /v1/images/edits ────────────────────────────────────
-  // xAI /images/edits requires Content-Type: application/json with base64 images.
-  const images: string[] = [tmplBuf.toString("base64")];
+  // xAI /images/edits requires Content-Type: application/json.
+  // Images must be objects with a `url` field (data URL) — raw base64 is rejected.
+  const toDataUrl = (buf: Buffer, mime = "image/png") =>
+    `data:${mime};base64,${buf.toString("base64")}`;
+
+  const imageObjs: { url: string }[] = [{ url: toDataUrl(tmplBuf) }];
 
   if (hasPhoto) {
     const photoBlob = d.photoUrl.startsWith("data:")
       ? dataUrlToBlob(d.photoUrl)
       : await remoteUrlToBlob(d.photoUrl);
     const photoBuf = Buffer.from(await photoBlob.arrayBuffer());
-    images.push(photoBuf.toString("base64"));
+    const photoMime = d.photoUrl.startsWith("data:")
+      ? (d.photoUrl.match(/data:([^;]+)/)?.[1] ?? "image/png")
+      : "image/jpeg";
+    imageObjs.push({ url: toDataUrl(photoBuf, photoMime) });
   }
 
   if (hasLogo) {
     const logoBuf = Buffer.from(await dataUrlToBlob(d.logoData).arrayBuffer());
-    images.push(logoBuf.toString("base64"));
+    const logoMime = d.logoData.match(/data:([^;]+)/)?.[1] ?? "image/png";
+    imageObjs.push({ url: toDataUrl(logoBuf, logoMime) });
   }
 
   const editsBody: Record<string, unknown> = {
     model:  "grok-imagine-image-quality",
     prompt: adPrompt,
     n:      1,
-    image:  images.length === 1 ? images[0] : images,
+    image:  imageObjs.length === 1 ? imageObjs[0] : imageObjs,
   };
 
   try {
@@ -292,7 +300,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           model:  "grok-imagine-image-quality",
           prompt: adPrompt,
           n:      1,
-          image:  tmplBuf.toString("base64"),
+          image:  { url: toDataUrl(tmplBuf) },
         };
         const retryRes = await fetch("https://api.x.ai/v1/images/edits", {
           method: "POST",
