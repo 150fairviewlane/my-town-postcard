@@ -199,12 +199,12 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     "  ZONE 1 — HEADLINE (top of ad, above everything else):\n" +
     `    Business name "${d.bizName}" uses a LAYERED TWO-FONT treatment:\n` +
     `    • Main words: bold condensed all-caps slab/block serif — very large, dominant, horizontal (no angle). Deep black or dark color, maximum weight.\n` +
-    `    • If the name has a descriptor word (Cafe, Grill, Spa, etc.), render that word BELOW the main name in a flowing orange script/cursive at a slight downward angle (≈-8°), large size, warm orange color — like a signature flourish beneath a bold title.\n` +
+    `    • ONLY IF the business name itself contains a second word that is a category/descriptor (e.g. "Cafe" in "Mr. Biscuit's Cafe", "Grill" in "Sam's Grill", "Spa" in "Lotus Spa") — render ONLY that word from the actual name in a flowing orange script/cursive at a slight downward angle (≈-8°), large size, warm orange color. Do NOT invent or add any word that is not literally part of the provided business name.\n` +
     `    Together these two styles create a premium editorial stacked headline — not a single flat font.\n\n` +
 
     (hasLogo
       ? `  ZONE 2 — LOGO${d.tagline ? " + TAGLINE" : ""} (orange pennant ribbon, top-left corner):\n` +
-        `    PENNANT: Copy the orange pennant ribbon from IMAGE 1 with PIXEL-PERFECT fidelity — identical height, identical width, identical shape, anchored to the very top-left corner of the ad exactly as it appears in the template. Do NOT change its dimensions, elongate it, or alter its proportions in any way.\n` +
+        `    PENNANT: Copy the orange pennant ribbon from IMAGE 1 exactly — same height, same width, same shape. Its TOP EDGE must be flush with the TOP EDGE of the entire ad (touching the very top of the canvas). It sits in the top-left column. Do NOT move it down, elongate it, float it, or detach it from the top of the ad in any way.\n` +
         `    Logo: place IMAGE ${logoImg} at the very top of the ad, centered inside the pennant. Scale it DOWN until it fits comfortably within the pennant with a small margin on every side — the logo must not overflow or touch the pennant edges. Keep it small and tidy inside the flag shape. Preserve exact logo colors and proportions.\n` +
         (d.tagline ? `    Tagline: render "${d.tagline}" in a loose handwriting-style italic script at a slight upward angle (+5°–7°), large and confident, black — placed to the right of the pennant, below the headline.\n` : "") +
         "\n"
@@ -217,7 +217,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     (hasPhoto
       ? "    Take the food/dish from IMAGE 2 and SEAMLESSLY INTEGRATE it into the template's photo area as if it was professionally shot for this exact ad:\n" +
         "    • Blend the food's edges naturally into the surrounding dark brush-stroke/painted background — NO hard rectangular border or frame.\n" +
-        "    • Match the lighting, shadows, perspective, and color grading to the warm, appetizing commercial food photography style of a high-end breakfast/cafe ad.\n" +
+        "    • Match the lighting, shadows, perspective, and color grading to the warm, appetizing commercial food photography style of a high-end restaurant ad.\n" +
         "    • The food should look like it BELONGS in the design — not pasted on top. Adjust edges, add subtle plate shadows or gradient fade as needed for realism.\n" +
         "    • Preserve the dark painted brush-stroke swoosh behind and around the photo area exactly as in the template.\n\n"
       : `    Generate a photorealistic, appetizing hero image for this business — cinematic quality, appetizing styling, vibrant color. Blend it naturally into the dark brush-stroke background with no hard rectangular border.\n\n`) +
