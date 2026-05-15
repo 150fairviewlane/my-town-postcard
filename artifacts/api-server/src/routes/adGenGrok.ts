@@ -239,9 +239,15 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     "brush-stroke band, pennant ribbon, circular checkmark badge, dashed coupon box, and dark footer strip. " +
     "This is the base design. Reproduce every zone, texture, and design element exactly.",
   ];
+  // Panel position labels are strictly left-to-right for however many panels are present:
+  //   template-only      → no collage (returned early above)
+  //   template + photo   → LEFT, RIGHT
+  //   template + logo    → LEFT, RIGHT
+  //   template + photo + logo → LEFT, CENTER, RIGHT
   let panelIdx = 2;
   if (hasPhoto) {
-    panelLines.push(`  • PANEL ${panelIdx++} (CENTER) — HERO FOOD PHOTO: the actual food/product photograph to composite into the right-center image zone of the ad with professional lighting and realistic shadow blending.`);
+    const pos = hasLogo ? "CENTER" : "RIGHT";
+    panelLines.push(`  • PANEL ${panelIdx++} (${pos}) — HERO FOOD PHOTO: the actual food/product photograph to composite into the right-center image zone of the ad with professional lighting and realistic shadow blending.`);
   }
   if (hasLogo) {
     panelLines.push(`  • PANEL ${panelIdx} (RIGHT) — BUSINESS LOGO: the exact logo to place in the upper-left corner of the ad, preserving its colors and proportions with no stylization.`);
@@ -255,7 +261,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   ];
   let stepIdx = 3;
   if (hasLogo) {
-    outputSteps.push(`  ${hasPhoto ? stepIdx++ : stepIdx++}. Logo: place the PANEL ${hasPhoto ? "3" : "2"} logo in the upper-left corner exactly as provided.`);
+    const logoPanel = hasPhoto ? 3 : 2;
+    outputSteps.push(`  ${stepIdx++}. Logo: place the PANEL ${logoPanel} logo in the upper-left corner exactly as provided.`);
   }
   outputSteps.push(
     `  ${stepIdx}. TEXT — place ALL of the following verbatim in the correct zones:\n` +
@@ -281,11 +288,11 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     "Phone numbers, prices, business name — zero tolerance for errors.\n\n" +
     "BUSINESS DETAILS:\n" + businessBlock;
 
-  // ── Composite reference image ────────────────────────────────────────────────
+  // ── Build collage reference image ────────────────────────────────────────────
   // xAI /images/edits accepts exactly ONE image: { url: "data:mime;base64,..." }.
   // Arrays (of objects or strings) are both rejected by the live API.
-  // Solution: composite photo + logo onto the template server-side with sharp so
-  // the model sees all three visual references inside a single image object.
+  // Solution: arrange all present images as a horizontal side-by-side collage so
+  // the model can read each panel as a distinct visual reference.
   const toDataUrl = (buf: Buffer, mime = "image/png") =>
     `data:${mime};base64,${buf.toString("base64")}`;
 
