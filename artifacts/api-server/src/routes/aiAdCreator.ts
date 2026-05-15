@@ -567,16 +567,15 @@ async function launchAI(){
   var d = getData();
   if(!d.bizName){ alert('Please enter your business name first.'); return; }
 
-  // Always copy prompt to clipboard
-  await copyPrompt();
-
   var aiUrl, toastMsg;
   if(d.ai === 'claude'){
     // Claude supports ?q= to pre-fill and send the prompt automatically (full length, no truncation)
+    // No clipboard copy needed — the prompt travels via URL
     aiUrl = 'https://claude.ai/new?q=' + encodeURIComponent(window._rawPrompt);
     toastMsg = 'Claude opened \\u2014 prompt pre-loaded automatically!';
   } else {
-    // ChatGPT has no URL param \\u2014 prompt is in the clipboard
+    // ChatGPT has no URL param \\u2014 copy prompt to clipboard first so user can paste
+    await copyPrompt();
     aiUrl = 'https://chatgpt.com/';
     toastMsg = 'Prompt copied \\u2014 press Ctrl+V to paste in ChatGPT';
   }
