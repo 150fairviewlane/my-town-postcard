@@ -280,7 +280,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .result-panel.visible{display:block}
 .result-hdr{padding:12px 16px;border-bottom:1px solid var(--border);background:#FAFAF8;display:flex;align-items:center;justify-content:space-between}
 .result-title{font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--green)}
-.result-img{width:100%;display:block}
+.result-img-wrap{padding:16px;display:flex;justify-content:center;background:#f5f3f0}
+.result-img{display:block;width:100%;max-width:280px;aspect-ratio:4/5;object-fit:contain;border-radius:6px;box-shadow:0 4px 20px rgba(0,0,0,.15)}
 .result-actions{padding:14px 16px;display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--border);align-items:center}
 .act-btn{padding:9px 18px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:var(--surface);color:var(--ink-mid);transition:all .2s;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px}
 .act-btn:hover:not(:disabled){border-color:var(--burg);color:var(--burg)}
@@ -447,7 +448,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
         <div class="result-title">&#10003; Your Grok-Generated Ad</div>
         <button class="act-btn" onclick="resetResult()" style="padding:5px 12px;font-size:11px">&#8634; Start Over</button>
       </div>
-      <img class="result-img" id="resultImg" alt="Generated ad">
+      <div class="result-img-wrap"><img class="result-img" id="resultImg" alt="Generated ad"></div>
       <div class="result-actions">
         <button class="act-btn primary" onclick="useThisAd()">&#10003; Use This Ad</button>
         <button class="act-btn" onclick="downloadAd()">&#8595; Download</button>
@@ -623,7 +624,8 @@ function showResult(url){
   var panel = document.getElementById('resultPanel');
   document.getElementById('resultImg').src = url;
   panel.classList.add('visible');
-  panel.scrollIntoView({ behavior:'smooth', block:'start' });
+  var rp = document.querySelector('.rpanel');
+  setTimeout(function(){ rp.scrollTop = rp.scrollHeight; }, 60);
 }
 
 function hideResult(){
