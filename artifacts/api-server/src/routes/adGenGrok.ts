@@ -40,11 +40,43 @@ function dataUrlToBlob(dataUrl: string, defaultMime = "image/png"): Blob {
   return new Blob([Buffer.from(b64, "base64")], { type: mime });
 }
 
-/** Fetch a remote image URL and return it as a Blob. */
+/**
+ * Trusted image CDN hostnames that library photos may come from.
+ * Only HTTPS URLs from these hosts are allowed as remote reference images.
+ */
+const ALLOWED_IMAGE_HOSTS = new Set([
+  "images.unsplash.com",
+  "images.pexels.com",
+  "cdn.pixabay.com",
+]);
+
+const MAX_REMOTE_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB safety cap
+
+/**
+ * Fetch a remote image URL and return it as a Blob.
+ * SSRF protection: only HTTPS URLs from the trusted CDN allowlist are fetched.
+ * Enforces a 10 MB response size cap.
+ */
 async function remoteUrlToBlob(url: string): Promise<Blob> {
-  const r = await fetch(url);
-  if (!r.ok) throw new Error(`Failed to fetch reference image (${r.status}): ${url}`);
-  return r.blob();
+  let parsed: URL;
+  try { parsed = new URL(url); } catch { throw new Error("Invalid photo URL"); }
+
+  if (parsed.protocol !== "https:") throw new Error("Photo URL must use HTTPS");
+  if (!ALLOWED_IMAGE_HOSTS.has(parsed.hostname))
+    throw new Error(`Photo URL hostname '${parsed.hostname}' is not on the trusted image host list`);
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15_000);
+  try {
+    const r = await fetch(url, { signal: controller.signal, redirect: "error" });
+    if (!r.ok) throw new Error(`Failed to fetch reference image (${r.status})`);
+    const buf = await r.arrayBuffer();
+    if (buf.byteLength > MAX_REMOTE_IMAGE_BYTES)
+      throw new Error(`Reference image exceeds ${MAX_REMOTE_IMAGE_BYTES / 1024 / 1024} MB limit`);
+    return new Blob([buf], { type: r.headers.get("content-type") ?? "image/jpeg" });
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /** Extract an image URL from an xAI images response body. Returns null if not found. */
