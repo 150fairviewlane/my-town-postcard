@@ -123,15 +123,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .fnote{font-size:10px;color:var(--ink-light);margin-top:3px;line-height:1.4}
 
-/* UPLOAD */
-.upload-zone{border:2px dashed var(--border);border-radius:8px;padding:14px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surface);position:relative;overflow:hidden}
-.upload-zone:hover{border-color:var(--burg);background:var(--burg-pale)}
-.upload-zone.has-file{border-color:var(--green);background:#f0fdf4}
-.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
-.upload-preview{width:100%;max-height:80px;object-fit:cover;border-radius:5px;margin-top:6px;display:none}
-.upload-label{font-size:11px;font-weight:600;color:var(--ink-mid);margin-top:4px}
-.upload-sub{font-size:10px;color:var(--ink-light)}
-
 /* MENU */
 .menu-list{display:flex;flex-direction:column;gap:5px;margin-bottom:7px}
 .mrow{display:flex;gap:6px;align-items:center}
@@ -153,20 +144,18 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
 .tmpl-label{padding:6px 8px;font-size:10px;font-weight:700;text-align:center;color:var(--ink-mid);letter-spacing:.05em;text-transform:uppercase;border-top:1px solid var(--border)}
 .tmpl-soon .tmpl-card{opacity:.48;cursor:not-allowed}
 .tmpl-soon .tmpl-label{color:var(--ink-light)}
-.tmpl-dl-wrap{text-align:center;margin-top:12px}
-.tmpl-dl{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:var(--burg-pale);border:1.5px solid var(--burg);border-radius:7px;color:var(--burg);font-size:11px;font-weight:700;text-decoration:none;letter-spacing:.04em;transition:all .2s}
-.tmpl-dl:hover{background:var(--burg);color:#fff}
 
-/* AI SELECTOR */
-.ai-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.ai-opt{position:relative}
-.ai-opt input{position:absolute;opacity:0;width:0;height:0}
-.ai-opt label{display:flex;align-items:center;gap:12px;padding:13px 14px;border:2px solid var(--border);border-radius:9px;cursor:pointer;transition:all .2s;background:var(--surface)}
-.ai-opt label:hover{border-color:#bbb}
-.ai-opt input:checked+label{border-color:var(--burg);background:var(--burg-pale);box-shadow:0 0 0 1px var(--burg)}
-.ai-logo{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
-.ai-name{font-size:13px;font-weight:700;color:var(--ink)}
-.ai-desc{font-size:10px;color:var(--ink-light);margin-top:1px}
+/* IMAGE CHECKLIST */
+.img-check-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1.5px solid var(--border);border-radius:9px;cursor:pointer;transition:all .2s;margin-bottom:8px;background:var(--surface)}
+.img-check-row:last-of-type{margin-bottom:0}
+.img-check-row:hover{border-color:#bbb;background:#fafaf8}
+.img-check-row input[type=checkbox]{width:18px;height:18px;accent-color:var(--burg);flex-shrink:0;cursor:pointer}
+.img-check-row input[type=checkbox]:checked~.img-check-info .img-check-label{color:var(--burg)}
+.img-check-icon{font-size:22px;flex-shrink:0;width:32px;text-align:center}
+.img-check-info{flex:1}
+.img-check-label{font-size:13px;font-weight:600;color:var(--ink);line-height:1.2}
+.img-check-sub{font-size:10.5px;color:var(--ink-light);margin-top:2px}
+.img-check-note{font-size:11px;color:#7a6220;background:#fffbf0;border:1px solid #e8d99a;border-radius:7px;padding:9px 12px;margin-top:12px;line-height:1.5}
 
 /* PROMPT PREVIEW */
 .prompt-box{background:#0f1117;border-radius:10px;padding:16px;font-size:11px;line-height:1.7;color:rgba(255,255,255,.6);max-height:220px;overflow-y:auto;white-space:pre-wrap;word-break:break-word;border:1px solid rgba(255,255,255,.07);font-family:'DM Sans',sans-serif}
@@ -182,6 +171,22 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
 .copy-btn{padding:8px 16px;background:var(--surface);border:1.5px solid var(--border);border-radius:7px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;color:var(--ink-mid);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px}
 .copy-btn:hover{border-color:var(--burg);color:var(--burg);background:var(--burg-pale)}
 .copy-btn.copied{border-color:var(--green);color:var(--green);background:#f0fdf4}
+
+/* ATTACH GUIDE */
+.attach-guide{background:linear-gradient(135deg,#1C1B4B,#2d1b4e);border-radius:12px;padding:20px 22px;margin-top:16px;color:rgba(255,255,255,.9);border:1px solid rgba(255,255,255,.08);display:none}
+.attach-guide.visible{display:block}
+.guide-title{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:.1em;color:#C8A882;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.guide-steps{display:flex;flex-direction:column;gap:14px}
+.guide-step{display:flex;gap:14px;align-items:flex-start}
+.guide-step-num{width:28px;height:28px;border-radius:50%;background:var(--burg);color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.guide-step-body{flex:1}
+.guide-step-head{font-size:13px;font-weight:700;color:#fff;margin-bottom:4px}
+.guide-step-sub{font-size:11.5px;color:rgba(255,255,255,.6);line-height:1.55}
+.guide-files{margin-top:6px;display:flex;flex-direction:column;gap:4px}
+.guide-file{display:flex;align-items:center;gap:7px;font-size:12px;color:rgba(255,255,255,.8);background:rgba(255,255,255,.07);border-radius:6px;padding:5px 10px}
+.guide-file svg{flex-shrink:0;opacity:.7}
+.guide-file strong{color:#fff}
+.guide-clip-hint{display:flex;align-items:center;gap:8px;margin-top:8px;padding:8px 12px;background:rgba(200,168,130,.12);border:1px solid rgba(200,168,130,.25);border-radius:8px;font-size:11.5px;color:rgba(255,255,255,.7)}
 
 /* RESULT PANEL */
 .result-panel{grid-column:1/-1;background:var(--card);border:1.5px solid var(--border);border-radius:12px;overflow:hidden;display:none}
@@ -215,14 +220,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
 .act-btn.primary{background:var(--green);border-color:var(--green);color:#fff}
 .act-btn.primary:hover:not(:disabled){background:#144d30}
 
-/* CALLOUT */
-.callout{background:linear-gradient(135deg,#1C1B4B,#2d1b4e);border-radius:10px;padding:16px 18px;margin-top:14px;color:rgba(255,255,255,.85);font-size:12px;line-height:1.7;border:1px solid rgba(255,255,255,.08)}
-.callout strong{color:#C8A882}
-.callout ol{padding-left:18px;margin-top:6px}
-.callout li{margin-bottom:5px}
-.callout ul{padding-left:16px;margin-top:3px;list-style:disc}
-.callout .warn{background:rgba(200,149,42,.15);border:1px solid rgba(200,149,42,.4);border-radius:6px;padding:8px 11px;margin-top:10px;font-size:11px;color:#e8c97a;line-height:1.5}
-
 /* TOAST */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:#fff;padding:10px 22px;border-radius:30px;font-size:13px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,.3);transition:transform .3s cubic-bezier(.34,1.56,.64,1);z-index:999;pointer-events:none;display:flex;align-items:center;gap:8px}
 .toast.show{transform:translateX(-50%) translateY(0)}
@@ -241,11 +238,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
 
 <div class="page">
   <div class="page-title">AI Ad Creator</div>
-  <div class="page-sub">Choose your template, fill in your details, attach your images &mdash; the AI does the rest.</div>
+  <div class="page-sub">Fill in your business details, pick a template, and click the button &mdash; Claude creates your ad in about 60 seconds.</div>
 
   <div class="steps">
     <div class="step active" id="step1"><div class="step-num">1</div><div class="step-label">Your Details</div></div>
-    <div class="step" id="step2"><div class="step-num">2</div><div class="step-label">Launch AI</div></div>
+    <div class="step" id="step2"><div class="step-num">2</div><div class="step-label">Launch Claude</div></div>
     <div class="step" id="step3"><div class="step-num">3</div><div class="step-label">Drop Result</div></div>
     <div class="step" id="step4"><div class="step-num">4</div><div class="step-label">Use Your Ad</div></div>
   </div>
@@ -302,7 +299,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
       </div>
     </div>
 
-    <!-- ── RIGHT: TEMPLATE + IMAGES + AI + PROMPT ── -->
+    <!-- ── RIGHT: TEMPLATE + IMAGES + PROMPT ── -->
     <div>
 
       <!-- TEMPLATE SELECTOR -->
@@ -351,74 +348,34 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
               </div>
             </div>
           </div>
-          <div id="tmplDlWrap" class="tmpl-dl-wrap" style="display:none">
-            <a class="tmpl-dl" href="/api/ai-ad-creator/templates/mr-biscuits" download="mr-biscuits-template.png">
-              &#8659; Download Template &mdash; attach this to your AI conversation
-            </a>
-            <div class="fnote" style="margin-top:5px;text-align:center">Download this file so you can attach it when the AI console opens</div>
-          </div>
         </div>
       </div>
 
-      <!-- YOUR IMAGES -->
+      <!-- YOUR IMAGES (ready-check, no upload) -->
       <div class="card" style="margin-bottom:18px">
-        <div class="card-hdr"><div class="card-title">Your Images</div></div>
-        <div class="card-body">
-          <div class="frow">
-            <div class="field">
-              <label>Company Logo</label>
-              <div class="upload-zone" id="logoZone">
-                <input type="file" accept="image/*" onchange="handleLogoUpload(this)">
-                <div style="font-size:22px">&#127991;&#65039;</div>
-                <div class="upload-label">Upload Logo</div>
-                <div class="upload-sub">PNG, JPG, SVG</div>
-                <img class="upload-preview" id="logoPreview">
-              </div>
-              <div class="fnote">Goes in the <strong>upper-left corner</strong> exactly as provided</div>
-            </div>
-            <div class="field">
-              <label>Food / Hero Photo</label>
-              <div class="upload-zone" id="photoZone">
-                <input type="file" accept="image/*" onchange="handleUpload(this,'photoPreview','photoZone','photoB64')">
-                <div style="font-size:22px">&#128248;</div>
-                <div class="upload-label">Upload Photo</div>
-                <div class="upload-sub">Food, store, product</div>
-                <img class="upload-preview" id="photoPreview">
-              </div>
-              <div class="fnote">Composited into the <strong>hero area</strong> of the template</div>
-            </div>
-          </div>
-          <div class="fnote" style="margin-top:10px;padding:8px 10px;background:#fffbf0;border:1px solid #e8d99a;border-radius:6px;color:#7a6220">
-            &#9888; Upload here as a reminder, then <strong>attach the same files</strong> to your Claude or ChatGPT conversation along with the downloaded template.
-          </div>
+        <div class="card-hdr">
+          <div class="card-title">Your Images</div>
+          <span style="font-size:10px;color:var(--ink-light)">Have these ready to attach in Claude</span>
         </div>
-      </div>
-
-      <!-- CHOOSE YOUR AI -->
-      <div class="card" style="margin-bottom:18px">
-        <div class="card-hdr"><div class="card-title">Choose Your AI</div></div>
         <div class="card-body">
-          <div class="ai-grid">
-            <div class="ai-opt">
-              <input type="radio" name="ai" id="ai-claude" value="claude" checked onchange="buildPrompt()">
-              <label for="ai-claude">
-                <div class="ai-logo" style="background:#D97757">&#129302;</div>
-                <div>
-                  <div class="ai-name">Claude</div>
-                  <div class="ai-desc">claude.ai &middot; Prompt sent automatically via URL</div>
-                </div>
-              </label>
+          <label class="img-check-row">
+            <input type="checkbox" id="chkPhoto" onchange="buildPrompt()">
+            <div class="img-check-icon">&#128248;</div>
+            <div class="img-check-info">
+              <div class="img-check-label">Food / Hero Photo</div>
+              <div class="img-check-sub">Your product, food, or storefront photo &mdash; check this if you have one</div>
             </div>
-            <div class="ai-opt">
-              <input type="radio" name="ai" id="ai-gpt" value="gpt" onchange="buildPrompt()">
-              <label for="ai-gpt">
-                <div class="ai-logo" style="background:#10a37f">&#128172;</div>
-                <div>
-                  <div class="ai-name">ChatGPT</div>
-                  <div class="ai-desc">chatgpt.com &middot; Prompt auto-copied, press Ctrl+V</div>
-                </div>
-              </label>
+          </label>
+          <label class="img-check-row">
+            <input type="checkbox" id="chkLogo" onchange="buildPrompt()">
+            <div class="img-check-icon">&#127991;&#65039;</div>
+            <div class="img-check-info">
+              <div class="img-check-label">Company Logo <span style="color:var(--ink-light);font-weight:400">(optional)</span></div>
+              <div class="img-check-sub">Placed in the upper-left corner exactly as provided</div>
             </div>
+          </label>
+          <div class="img-check-note">
+            You&rsquo;ll attach these files <strong>directly in Claude</strong> &mdash; no upload needed here. When you click the button below, the template downloads automatically and Claude opens ready for your images.
           </div>
         </div>
       </div>
@@ -432,25 +389,43 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
         <div class="card-body">
           <div class="prompt-box" id="promptBox">Select a background template and fill in your business name to generate your prompt...</div>
 
-          <div class="callout" id="callout" style="display:none">
-            <strong>How this works:</strong>
-            <ol>
-              <li>Download the template using the button above</li>
-              <li id="callout-step1">Click <strong>Launch AI Console</strong> &mdash; Claude opens with the prompt pre-loaded &mdash; <strong>attach your images before sending</strong>:
-                <ul>
-                  <li>The <strong>template</strong> you downloaded above</li>
-                  <li>Your <strong>food / hero photo</strong></li>
-                  <li id="callout-logo-li" style="display:none">Your <strong>company logo</strong></li>
-                </ul>
-              </li>
-              <li>The prompt is pre-loaded with all your business details</li>
-              <li>Review the ad carefully &mdash; confirm every name, price, phone number, and address is <strong>exactly correct</strong> before saving</li>
-              <li>Right-click &rarr; <strong>Save image</strong>, then paste or drop it in the result panel below</li>
-            </ol>
+          <!-- ATTACH GUIDE — shown after launch -->
+          <div class="attach-guide" id="attachGuide">
+            <div class="guide-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C8A882" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+              Now attach your files in Claude
+            </div>
+            <div class="guide-steps">
+              <div class="guide-step">
+                <div class="guide-step-num">1</div>
+                <div class="guide-step-body">
+                  <div class="guide-step-head">Click the paperclip icon in Claude</div>
+                  <div class="guide-step-sub">It&rsquo;s at the bottom-left of the message box &mdash; the same area where you type your message.</div>
+                  <div class="guide-clip-hint">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                    You can also drag files directly onto the Claude window
+                  </div>
+                </div>
+              </div>
+              <div class="guide-step">
+                <div class="guide-step-num">2</div>
+                <div class="guide-step-body">
+                  <div class="guide-step-head">Attach your files</div>
+                  <div class="guide-files" id="guideFileList"></div>
+                </div>
+              </div>
+              <div class="guide-step">
+                <div class="guide-step-num">3</div>
+                <div class="guide-step-body">
+                  <div class="guide-step-head">Hit Send &mdash; your ad appears in ~60 seconds</div>
+                  <div class="guide-step-sub">Right-click the ad image Claude generates &rarr; <strong style="color:#fff">Save image</strong> &rarr; drag or paste it into the panel below.</div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <button class="launch-btn" id="launchBtn" onclick="launchAI()" disabled>
-            <span class="spark">&#10024;</span> <span id="launchLabel">Launch AI Console</span>
+            <span class="spark">&#10024;</span> <span id="launchLabel">Generate My Ad in Claude</span>
           </button>
         </div>
       </div>
@@ -467,7 +442,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
           <input type="file" accept="image/*" onchange="handleResultDrop(this)">
           <div class="drop-icon">&#8681;</div>
           <div class="drop-title">Paste or Drop Your Ad Here</div>
-          <div class="drop-sub">After the AI generates your ad image:<br>Right-click &rarr; Save Image<br>Then drag it here, click to upload, or press Ctrl+V</div>
+          <div class="drop-sub">After Claude generates your ad image:<br>Right-click &rarr; Save Image<br>Then drag it here, click to upload, or press Ctrl+V</div>
           <img class="drop-result" id="dropResult" alt="Your generated ad">
         </div>
         <div class="ad-info" id="adInfo">
@@ -475,7 +450,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
           <div class="info-row"><span class="info-label">Phone</span><span class="info-val" id="infoPhone"></span></div>
           <div class="info-row"><span class="info-label">Address</span><span class="info-val" id="infoAddr"></span></div>
           <div class="info-row"><span class="info-label">Offer</span><span class="info-val" id="infoOffer"></span></div>
-          <div class="info-row"><span class="info-label">AI Used</span><span class="info-val" id="infoAI"></span></div>
           <div class="info-row"><span class="info-label">Status</span><span class="info-val" id="infoStatus" style="color:var(--ink-light)">Waiting for image...</span></div>
           <div class="info-actions" id="infoActions" style="display:none">
             <button class="act-btn" onclick="downloadAd()">&#8595; Download</button>
@@ -491,16 +465,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
 
 <script>
 // ── STATE ──────────────────────────────────────────────────────
-var photoB64 = null;
 var resultImageUrl = null;
 window._selectedTemplate = null;
-window._logoFileName = null;
 
 // ── TEMPLATE SELECTION ────────────────────────────────────────
 function onTemplateSelect(){
   var checked = document.querySelector('input[name="template"]:checked');
   window._selectedTemplate = checked ? checked.value : null;
-  document.getElementById('tmplDlWrap').style.display = window._selectedTemplate ? 'block' : 'none';
   buildPrompt();
 }
 
@@ -532,36 +503,6 @@ function getMenu(){
     .map(function(i){ return i.value.trim(); }).filter(Boolean).slice(0,4);
 }
 
-// ── UPLOAD ────────────────────────────────────────────────────
-function handleLogoUpload(input){
-  var file = input.files[0]; if(!file) return;
-  window._logoFileName = file.name;
-  var prev = document.getElementById('logoPreview');
-  if(prev._objUrl) URL.revokeObjectURL(prev._objUrl);
-  var objUrl = URL.createObjectURL(file);
-  prev._objUrl = objUrl;
-  prev.src = objUrl; prev.style.display='block';
-  document.getElementById('logoZone').classList.add('has-file');
-  document.getElementById('logoZone').querySelector('.upload-label').textContent = '\\u2713 Uploaded';
-  var li = document.getElementById('callout-logo-li');
-  if(li) li.style.display = 'list-item';
-  buildPrompt();
-}
-
-function handleUpload(input, previewId, zoneId, varName){
-  var file = input.files[0]; if(!file) return;
-  var reader = new FileReader();
-  reader.onload = function(e){
-    if(varName==='photoB64') photoB64 = e.target.result;
-    var prev = document.getElementById(previewId);
-    prev.src = e.target.result; prev.style.display='block';
-    document.getElementById(zoneId).classList.add('has-file');
-    document.getElementById(zoneId).querySelector('.upload-label').textContent = '\\u2713 Uploaded';
-    buildPrompt();
-  };
-  reader.readAsDataURL(file);
-}
-
 // ── BUILD PROMPT ──────────────────────────────────────────────
 function buildPrompt(){
   var d = getData();
@@ -572,7 +513,6 @@ function buildPrompt(){
       : 'Fill in your business name to generate your prompt...';
     document.getElementById('promptBox').textContent = msg;
     document.getElementById('launchBtn').disabled = true;
-    document.getElementById('callout').style.display = 'none';
     return;
   }
 
@@ -580,8 +520,8 @@ function buildPrompt(){
     ? d.menu.map(function(m,i){ return '  Item '+(i+1)+': '+m; }).join('\\n')
     : '  (none provided)';
 
-  var hasLogo  = !!window._logoFileName;
-  var hasPhoto = !!photoB64;
+  var hasLogo  = !!document.getElementById('chkLogo').checked;
+  var hasPhoto = !!document.getElementById('chkPhoto').checked;
   var sep = '\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550\\u2550';
 
   var prompt =
@@ -666,17 +606,9 @@ function buildPrompt(){
 
   document.getElementById('promptBox').textContent = prompt;
   window._rawPrompt = prompt;
+  window._hasLogo = hasLogo;
+  window._hasPhoto = hasPhoto;
   document.getElementById('launchBtn').disabled = false;
-  document.getElementById('callout').style.display = 'block';
-
-  var isClaudeSelected = (d.ai === 'claude');
-  var step1 = document.getElementById('callout-step1');
-  if(step1){
-    step1.innerHTML = isClaudeSelected
-      ? 'Click <strong>Launch AI Console</strong> &mdash; Claude opens with your prompt pre-loaded automatically'
-      : 'Click <strong>Launch AI Console</strong> &mdash; ChatGPT opens and your prompt is auto-copied &mdash; press <strong>Ctrl+V</strong> (or &#8984;V) to paste';
-  }
-
   setStep(2);
 }
 
@@ -692,7 +624,6 @@ function getData(){
     menu:     getMenu(),
     offer:    document.getElementById('offer').value.trim(),
     offerFine:document.getElementById('offerFine').value.trim(),
-    ai:       (document.querySelector('input[name="ai"]:checked') || {}).value || 'claude',
   };
 }
 
@@ -718,21 +649,21 @@ async function copyPrompt(){
 }
 
 // ── LAUNCH AI ─────────────────────────────────────────────────
-async function launchAI(){
+function launchAI(){
   var d = getData();
   if(!d.bizName){ alert('Please enter your business name first.'); return; }
   if(!window._selectedTemplate){ alert('Please select a background template first.'); return; }
 
-  var aiUrl, toastMsg;
-  if(d.ai === 'claude'){
-    aiUrl = 'https://claude.ai/new?q=' + encodeURIComponent(window._rawPrompt);
-    toastMsg = 'Claude opened \\u2014 attach your images then send!';
-  } else {
-    await copyPrompt();
-    aiUrl = 'https://chatgpt.com/';
-    toastMsg = 'Prompt copied \\u2014 paste in ChatGPT, then attach your images';
-  }
+  // Auto-download the template so it lands in Downloads before Claude opens
+  var dl = document.createElement('a');
+  dl.href = '/api/ai-ad-creator/templates/mr-biscuits';
+  dl.download = 'mr-biscuits-template.png';
+  dl.style.display = 'none';
+  document.body.appendChild(dl);
+  dl.click();
+  setTimeout(function(){ document.body.removeChild(dl); }, 1500);
 
+  var aiUrl = 'https://claude.ai/new?q=' + encodeURIComponent(window._rawPrompt);
   var pw = Math.min(820, screen.width * 0.55);
   var ph = Math.min(900, screen.height * 0.9);
   var pl = window.screen.width - pw - 20;
@@ -745,13 +676,35 @@ async function launchAI(){
   );
 
   if(!popup){
-    alert('Popup blocked! Please allow popups for this site, then click Launch again.\\n\\nYour prompt has been copied to the clipboard.');
+    copyPrompt();
+    alert('Popup blocked! Please allow popups for this site, then click Launch again.\\n\\nYour prompt has been copied to the clipboard — paste it in Claude manually.');
     return;
   }
 
+  showAttachGuide();
   showResultPanel();
   setStep(3);
-  showToast(toastMsg);
+  showToast('Claude opened \\u2014 attach your images then send!');
+}
+
+// ── ATTACH GUIDE ──────────────────────────────────────────────
+function showAttachGuide(){
+  var guide = document.getElementById('attachGuide');
+  guide.classList.add('visible');
+
+  var hasLogo  = !!window._hasLogo;
+  var hasPhoto = !!window._hasPhoto;
+
+  var icon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+  var files = [];
+  files.push(icon + ' <strong>mr-biscuits-template.png</strong> &mdash; just downloaded to your Downloads folder');
+  if(hasPhoto) files.push(icon + ' <strong>Your food / hero photo</strong>');
+  if(hasLogo)  files.push(icon + ' <strong>Your company logo</strong>');
+
+  var list = document.getElementById('guideFileList');
+  list.innerHTML = files.map(function(f){
+    return '<div class="guide-file">'+f+'</div>';
+  }).join('');
 }
 
 // ── RESULT HANDLING ───────────────────────────────────────────
@@ -764,7 +717,6 @@ function showResultPanel(){
   document.getElementById('infoPhone').textContent = d.phone || '\\u2014';
   document.getElementById('infoAddr').textContent = [d.address,d.city].filter(Boolean).join(', ') || '\\u2014';
   document.getElementById('infoOffer').textContent = d.offer || '\\u2014';
-  document.getElementById('infoAI').textContent = d.ai === 'claude' ? 'Claude (claude.ai)' : 'ChatGPT (chatgpt.com)';
 }
 
 function handleResultDrop(input){
@@ -823,6 +775,7 @@ function regenerate(){
 
 function resetResult(){
   document.getElementById('resultPanel').classList.remove('visible');
+  document.getElementById('attachGuide').classList.remove('visible');
   resultImageUrl = null;
   setStep(1);
 }
@@ -843,7 +796,7 @@ async function useAd(){
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         adVersion: 'ai-creator-v1',
-        source: d.ai === 'claude' ? 'claude' : 'chatgpt',
+        source: 'claude',
         imageData: resultImageUrl,
         bizName: d.bizName,
         tagline: d.tagline,
@@ -922,6 +875,8 @@ dropZoneEl.addEventListener('drop', function(e){
       if(sel.options[i].text === 'Breakfast & Cafe'){ sel.selectedIndex = i; break; }
     }
   }
+  document.getElementById('chkPhoto').checked = true;
+  document.getElementById('chkLogo').checked = true;
   var items = [
     "Bacon Egg & Cheese Biscuit $5.99",
     "Boba Tea (any flavor) $4.50",
