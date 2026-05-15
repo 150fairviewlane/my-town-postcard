@@ -31,6 +31,53 @@ const GenerateSchema = z.object({
   logoData:  z.string().optional().default(""),
 });
 
+/** Convert a base64 data URL (data:image/png;base64,...) to a Blob. */
+function dataUrlToBlob(dataUrl: string, defaultMime = "image/png"): Blob {
+  const commaIdx = dataUrl.indexOf(",");
+  const header   = commaIdx > 0 ? dataUrl.slice(0, commaIdx) : "";
+  const mime     = header.match(/data:([^;]+)/)?.[1] ?? defaultMime;
+  const b64      = commaIdx > 0 ? dataUrl.slice(commaIdx + 1) : dataUrl;
+  return new Blob([Buffer.from(b64, "base64")], { type: mime });
+}
+
+/** Fetch a remote image URL and return it as a Blob. */
+async function remoteUrlToBlob(url: string): Promise<Blob> {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`Failed to fetch reference image (${r.status}): ${url}`);
+  return r.blob();
+}
+
+/**
+ * Fallback: call /v1/images/generations (text-to-image, JSON) when the model
+ * doesn't support the /edits endpoint.  Returns the imageUrl or throws on error.
+ */
+async function callGenerationsJson(
+  apiKey: string,
+  prompt: string,
+  bizName: string,
+  log: { info: (obj: object, msg: string) => void; warn: (obj: object, msg: string) => void; error: (obj: object, msg: string) => void },
+): Promise<string> {
+  log.warn({ bizName }, "grok-imagine edits not supported — falling back to /generations");
+  const r = await fetch("https://api.x.ai/v1/images/generations", {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model: "grok-imagine-image-quality", prompt, n: 1 }),
+  });
+  const body = await r.json() as Record<string, unknown>;
+  log.info({ status: r.status, body: JSON.stringify(body).slice(0, 500), bizName }, "grok-imagine generations fallback response");
+  if (!r.ok) {
+    const msg = (body["error"] as Record<string, unknown> | undefined)?.["message"] as string
+      ?? `xAI /generations error ${r.status}`;
+    throw new Error(msg);
+  }
+  const dataArr = Array.isArray(body["data"]) ? (body["data"] as Record<string, unknown>[]) : [];
+  const item = dataArr[0];
+  if (item && typeof item["url"] === "string" && item["url"]) return item["url"];
+  if (item && typeof item["b64_json"] === "string" && item["b64_json"])
+    return `data:image/png;base64,${item["b64_json"]}`;
+  throw new Error("No image returned from /generations fallback");
+}
+
 // ── POST /api/grok-ad-generator/generate ─────────────────────────────────────
 router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   const parsed = GenerateSchema.safeParse(req.body);
@@ -47,7 +94,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
 
   const d = parsed.data;
 
-  // Load template PNG and encode as base64 data URL
+  // Load template PNG as raw buffer (used as multipart binary)
   const tmplPath = path.join(
     WORKSPACE_ROOT,
     "attached_assets",
@@ -57,8 +104,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     res.status(500).json({ error: "Template file not found on server." });
     return;
   }
-  const tmplB64     = fs.readFileSync(tmplPath).toString("base64");
-  const tmplDataUrl = `data:image/png;base64,${tmplB64}`;
+  const tmplBuf = fs.readFileSync(tmplPath);
 
   const menuStr     = d.menu.filter(Boolean).map((m, i) => `  ${i + 1}. ${m}`).join("\n") || "  (none)";
   const fullAddress = [d.address, d.city].filter(Boolean).join(", ") || "(none)";
@@ -110,46 +156,72 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     "Phone numbers, prices, business name — zero tolerance for errors.\n\n" +
     "BUSINESS DETAILS:\n" + businessBlock;
 
-  // Build reference image array: template first, then food photo, then logo
-  const imageRefs: { url: string }[] = [{ url: tmplDataUrl }];
-  if (hasPhoto) imageRefs.push({ url: d.photoUrl });
-  if (hasLogo)  imageRefs.push({ url: d.logoData });
+  // ── Build multipart FormData for /v1/images/edits ──────────────────────────
+  // The /edits endpoint passes images as binary multipart fields so the model
+  // actually sees them as visual references, unlike the JSON /generations body.
+  const form = new FormData();
+  form.append("model",  "grok-imagine-image-quality");
+  form.append("prompt", adPrompt);
+  form.append("n",      "1");
+
+  // Primary reference: the postcard template (always included)
+  form.append("image", new Blob([tmplBuf], { type: "image/png" }), "template.png");
+
+  // Second reference: food/hero photo (if provided)
+  if (hasPhoto) {
+    const photoBlob = d.photoUrl.startsWith("data:")
+      ? dataUrlToBlob(d.photoUrl)
+      : await remoteUrlToBlob(d.photoUrl);
+    form.append("image", photoBlob, "photo.png");
+  }
+
+  // Third reference: business logo (if provided)
+  if (hasLogo) {
+    form.append("image", dataUrlToBlob(d.logoData), "logo.png");
+  }
 
   try {
-    const xaiRes = await fetch("https://api.x.ai/v1/images/generations", {
+    // Do NOT set Content-Type manually — fetch sets it with the multipart boundary
+    const xaiRes = await fetch("https://api.x.ai/v1/images/edits", {
       method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "grok-imagine-image-quality",
-        prompt: adPrompt,
-        image: imageRefs,
-        n: 1,
-        aspect_ratio: "2:3",
-        resolution: "2k",
-      }),
+      headers: { "Authorization": `Bearer ${apiKey}` },
+      body: form,
     });
 
     const body = await xaiRes.json() as Record<string, unknown>;
+    req.log.info(
+      { status: xaiRes.status, body: JSON.stringify(body).slice(0, 500), bizName: d.bizName },
+      "grok-imagine edits raw response"
+    );
+
+    // If the model doesn't support /edits, fall back to text-to-image /generations
+    if (!xaiRes.ok && (xaiRes.status === 400 || xaiRes.status === 422)) {
+      const editsErrMsg = (body["error"] as Record<string, unknown> | undefined)?.["message"] as string ?? "";
+      try {
+        const fallbackUrl = await callGenerationsJson(apiKey, adPrompt, d.bizName, req.log);
+        res.json({ imageUrl: fallbackUrl, fallback: true });
+        return;
+      } catch (fbErr) {
+        req.log.error({ editsErr: editsErrMsg, fbErr }, "grok-imagine both edits and generations failed");
+        res.status(502).json({ error: editsErrMsg || "Grok API request failed" });
+        return;
+      }
+    }
 
     if (!xaiRes.ok) {
       const errMsg =
         (body["error"] as Record<string, unknown> | undefined)?.["message"] as string
         ?? `xAI API error ${xaiRes.status}`;
-      req.log.error({ status: xaiRes.status, errMsg, bizName: d.bizName }, "grok-imagine error");
+      req.log.error({ status: xaiRes.status, errMsg, bizName: d.bizName }, "grok-imagine edits error");
       res.status(502).json({ error: errMsg });
       return;
     }
-
-    req.log.info({ bizName: d.bizName }, "grok-imagine-image-quality response received");
 
     const dataArr = Array.isArray(body["data"]) ? (body["data"] as Record<string, unknown>[]) : [];
     const item    = dataArr[0];
     let imageUrl: string | null = null;
     if (item) {
-      if (typeof item["url"] === "string" && item["url"])           imageUrl = item["url"];
+      if (typeof item["url"] === "string" && item["url"])         imageUrl = item["url"];
       else if (typeof item["b64_json"] === "string" && item["b64_json"])
         imageUrl = `data:image/png;base64,${item["b64_json"]}`;
     }
