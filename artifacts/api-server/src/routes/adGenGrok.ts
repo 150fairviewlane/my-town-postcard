@@ -39,32 +39,39 @@ const GenerateSchema = z.object({
 });
 
 /**
- * Extract an image URL or data URL from a grok-2-image-gen chat completion response.
- * The model may return the URL bare, inside markdown, or in content parts.
+ * Extract an image URL or data URL from a grok-2-image-gen response.
+ * Handles multiple xAI response shapes:
+ *   A) Standard chat completion: choices[0].message.content (string or content parts)
+ *   B) xAI-specific extension: top-level `data[0].url` or `data[0].b64_json`
+ *      (xAI may return the generated image outside the choices array)
  */
-function extractImageUrl(
-  choices: OpenAI.Chat.ChatCompletion["choices"]
-): string | null {
-  const msg = choices[0]?.message;
-  if (!msg) return null;
+function extractImageUrl(completion: OpenAI.Chat.ChatCompletion): string | null {
+  // Shape B — xAI may attach image data at the top-level `data` field
+  const raw = completion as unknown as Record<string, unknown>;
+  const dataArr = Array.isArray(raw["data"]) ? (raw["data"] as Record<string, unknown>[]) : [];
+  if (dataArr.length > 0) {
+    const first = dataArr[0];
+    if (typeof first["url"] === "string" && first["url"]) return first["url"] as string;
+    if (typeof first["b64_json"] === "string" && first["b64_json"])
+      return `data:image/png;base64,${first["b64_json"] as string}`;
+  }
 
+  // Shape A — standard chat completion choices
+  const msg = completion.choices[0]?.message;
+  if (!msg) return null;
   const content = msg.content;
 
-  // Case 1: content is a plain string — look for a URL or data URI
   if (typeof content === "string" && content.trim()) {
     if (content.trim().startsWith("data:image/")) return content.trim();
     const urlMatch = content.match(/https?:\/\/\S+/);
     if (urlMatch) return urlMatch[0].replace(/[.,;:!?'")\]>]+$/, "");
   }
 
-  // Case 2: content is an array of content parts (vision-style response)
   if (Array.isArray(content)) {
     for (const part of content as OpenAI.Chat.ChatCompletionContentPart[]) {
-      if (part.type === "image_url") {
+      if (part.type === "image_url")
         return (part as OpenAI.Chat.ChatCompletionContentPartImage).image_url.url;
-      }
     }
-    // Also scan text parts for embedded URL
     for (const part of content as OpenAI.Chat.ChatCompletionContentPart[]) {
       if (part.type === "text") {
         const t = (part as OpenAI.Chat.ChatCompletionContentPartText).text;
@@ -191,7 +198,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "grok-2-image-gen response"
     );
 
-    const imageUrl = extractImageUrl(completion.choices);
+    const imageUrl = extractImageUrl(completion);
     if (!imageUrl) {
       const raw = JSON.stringify(completion.choices[0]?.message ?? {}).slice(0, 300);
       req.log.warn({ raw }, "grok-2-image-gen: no image URL found in response");
@@ -499,6 +506,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 </div>
 
 <script>
+function esc(str){ var d=document.createElement('div');d.textContent=String(str||'');return d.innerHTML; }
 var _selectedPhotoUrl = '';
 var _logoData = '';
 var _resultUrl = '';
@@ -560,10 +568,10 @@ async function loadLibrary(){
       return;
     }
     grid.innerHTML = imgs.map(function(img,i){
-      return '<div class="img-thumb" id="lthumb-'+i+'" onclick="selectLibPhoto('+i+',this)" title="'+img.photographer_credit+'">'
-        + '<img src="'+img.thumb_url+'" loading="lazy" alt="">'
+      return '<div class="img-thumb" id="lthumb-'+i+'" onclick="selectLibPhoto('+i+',this)" title="'+esc(img.photographer_credit)+'">'
+        + '<img src="'+esc(img.thumb_url)+'" loading="lazy" alt="">'
         + '<div class="chk">\\u2713</div>'
-        + '<input type="hidden" id="lurl-'+i+'" value="'+img.image_url+'">'
+        + '<input type="hidden" id="lurl-'+i+'" value="'+esc(img.image_url)+'">'
         + '</div>';
     }).join('');
     note.style.display = 'block';
