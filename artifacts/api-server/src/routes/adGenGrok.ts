@@ -47,6 +47,17 @@ async function remoteUrlToBlob(url: string): Promise<Blob> {
   return r.blob();
 }
 
+/** Extract an image URL from an xAI images response body. Returns null if not found. */
+function extractXaiImageUrl(body: Record<string, unknown>): string | null {
+  const dataArr = Array.isArray(body["data"]) ? (body["data"] as Record<string, unknown>[]) : [];
+  const item = dataArr[0];
+  if (!item) return null;
+  if (typeof item["url"] === "string" && item["url"])           return item["url"];
+  if (typeof item["b64_json"] === "string" && item["b64_json"])
+    return `data:image/png;base64,${item["b64_json"]}`;
+  return null;
+}
+
 /**
  * Fallback: call /v1/images/generations (text-to-image, JSON) when the model
  * doesn't support the /edits endpoint.  Returns the imageUrl or throws on error.
@@ -194,38 +205,76 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "grok-imagine edits raw response"
     );
 
-    // If the model doesn't support /edits, fall back to text-to-image /generations
-    if (!xaiRes.ok && (xaiRes.status === 400 || xaiRes.status === 422)) {
-      const editsErrMsg = (body["error"] as Record<string, unknown> | undefined)?.["message"] as string ?? "";
-      try {
-        const fallbackUrl = await callGenerationsJson(apiKey, adPrompt, d.bizName, req.log);
-        res.json({ imageUrl: fallbackUrl, fallback: true });
-        return;
-      } catch (fbErr) {
-        req.log.error({ editsErr: editsErrMsg, fbErr }, "grok-imagine both edits and generations failed");
-        res.status(502).json({ error: editsErrMsg || "Grok API request failed" });
-        return;
-      }
-    }
-
     if (!xaiRes.ok) {
       const errMsg =
         (body["error"] as Record<string, unknown> | undefined)?.["message"] as string
         ?? `xAI API error ${xaiRes.status}`;
+      const errLower = errMsg.toLowerCase();
+
+      // ── Case 1: explicit model-not-supported → fall back to text-only /generations
+      const isModelNotSupported =
+        errLower.includes("not support") ||
+        errLower.includes("does not support") ||
+        (errLower.includes("model") && errLower.includes("edit")) ||
+        xaiRes.status === 404;
+
+      if (isModelNotSupported) {
+        req.log.warn({ errMsg, bizName: d.bizName }, "grok-imagine edits: model not supported — falling back to /generations");
+        try {
+          const fallbackUrl = await callGenerationsJson(apiKey, adPrompt, d.bizName, req.log);
+          res.json({ imageUrl: fallbackUrl, fallback: true });
+          return;
+        } catch (fbErr) {
+          req.log.error({ editsErr: errMsg, fbErr }, "grok-imagine both edits and generations failed");
+          res.status(502).json({ error: errMsg || "Grok API request failed" });
+          return;
+        }
+      }
+
+      // ── Case 2: possible field-name mismatch → retry with "images[]" for extra refs
+      const isFieldIssue =
+        (xaiRes.status === 400 || xaiRes.status === 422) &&
+        (hasPhoto || hasLogo) &&
+        (errLower.includes("image") || errLower.includes("field") ||
+         errLower.includes("unexpected") || errLower.includes("invalid"));
+
+      if (isFieldIssue) {
+        req.log.warn({ errMsg, bizName: d.bizName }, "grok-imagine edits: field issue — retrying with images[] field name");
+        const retryForm = new FormData();
+        retryForm.append("model",  "grok-imagine-image-quality");
+        retryForm.append("prompt", adPrompt);
+        retryForm.append("n",      "1");
+        retryForm.append("image",  new Blob([tmplBuf], { type: "image/png" }), "template.png");
+        if (hasPhoto) {
+          const pb = d.photoUrl.startsWith("data:") ? dataUrlToBlob(d.photoUrl) : await remoteUrlToBlob(d.photoUrl);
+          retryForm.append("images[]", pb, "photo.png");
+        }
+        if (hasLogo) retryForm.append("images[]", dataUrlToBlob(d.logoData), "logo.png");
+
+        const retryRes = await fetch("https://api.x.ai/v1/images/edits", {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${apiKey}` },
+          body: retryForm,
+        });
+        const retryBody = await retryRes.json() as Record<string, unknown>;
+        req.log.info(
+          { status: retryRes.status, body: JSON.stringify(retryBody).slice(0, 500), bizName: d.bizName },
+          "grok-imagine edits retry (images[]) raw response"
+        );
+        if (retryRes.ok) {
+          const retryUrl = extractXaiImageUrl(retryBody);
+          if (retryUrl) { res.json({ imageUrl: retryUrl }); return; }
+        }
+        req.log.warn({ retryStatus: retryRes.status, origErr: errMsg }, "grok-imagine edits retry also failed");
+      }
+
+      // ── Case 3: all other errors → 502 with xAI message
       req.log.error({ status: xaiRes.status, errMsg, bizName: d.bizName }, "grok-imagine edits error");
       res.status(502).json({ error: errMsg });
       return;
     }
 
-    const dataArr = Array.isArray(body["data"]) ? (body["data"] as Record<string, unknown>[]) : [];
-    const item    = dataArr[0];
-    let imageUrl: string | null = null;
-    if (item) {
-      if (typeof item["url"] === "string" && item["url"])         imageUrl = item["url"];
-      else if (typeof item["b64_json"] === "string" && item["b64_json"])
-        imageUrl = `data:image/png;base64,${item["b64_json"]}`;
-    }
-
+    const imageUrl = extractXaiImageUrl(body);
     if (!imageUrl) {
       req.log.warn({ body: JSON.stringify(body).slice(0, 300) }, "grok-imagine: no image in response");
       res.status(502).json({
