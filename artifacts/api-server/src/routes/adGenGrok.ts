@@ -480,6 +480,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .add-btn:hover{background:var(--burg-pale)}
 
 .rpanel{background:#ECEAE6;padding:18px 22px 22px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+.rpanel>*{flex-shrink:0}
 
 .card{background:var(--card);border:1.5px solid var(--border);border-radius:11px;overflow:hidden}
 .card-hdr{padding:11px 16px;border-bottom:1px solid var(--border);background:#FAFAF8;display:flex;align-items:center;justify-content:space-between}
