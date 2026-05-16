@@ -516,7 +516,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .tmpl-landscape-ph-sub{font-size:11px;color:var(--ink-light);line-height:1.5}
 
 /* ── Photo library ───────────────────────────────────────── */
-.img-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.img-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
 .img-thumb{position:relative;aspect-ratio:4/3;border-radius:6px;overflow:hidden;cursor:pointer;border:2.5px solid transparent;transition:all .2s}
 .img-thumb:hover{transform:scale(1.03)}
 .img-thumb.selected{border-color:var(--burg);box-shadow:0 0 0 1.5px var(--burg)}
@@ -539,6 +539,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .upload-zone.logo-zone{min-height:80px}
 .upload-zone:hover:not(.has-file){border-color:var(--burg);background:var(--burg-pale)}
 .upload-zone.has-file{border-color:var(--green);background:#f0fdf4;padding:6px;justify-content:flex-start;align-items:stretch;min-height:0}
+/* Logo zone keeps its fixed height when a file is loaded — thumbnail only */
+.logo-zone.has-file{min-height:80px;justify-content:center;align-items:center;padding:6px}
 .upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;z-index:2}
 /* Placeholder content (icon + text) */
 .upload-placeholder{display:flex;flex-direction:column;align-items:center;gap:2px;pointer-events:none}
@@ -549,6 +551,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .upload-zone.has-file .upload-placeholder{display:none}
 .upload-preview{display:none;width:100%;height:auto;object-fit:contain;border-radius:5px}
 .upload-zone.has-file .upload-preview{display:block}
+/* Logo thumbnail — constrained to zone height, centered */
+.logo-zone.has-file .upload-preview{width:auto;max-height:64px;margin:0 auto}
 /* Clear-upload button */
 .upload-clear{position:absolute;top:5px;right:5px;z-index:3;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.45);color:#fff;border:none;cursor:pointer;font-size:11px;display:none;align-items:center;justify-content:center;line-height:1}
 .upload-zone.has-file .upload-clear{display:flex}
@@ -559,20 +563,20 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .gen-spark{font-size:17px;animation:sp 2s ease-in-out infinite}
 @keyframes sp{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
 
-.loading-panel{background:var(--card);border:1.5px solid var(--border);border-radius:11px;padding:32px;text-align:center;display:none}
+.loading-panel{background:var(--card);border:1.5px solid var(--border);border-radius:11px;padding:18px 14px;text-align:center;display:none}
 .loading-panel.visible{display:block}
-.spinner{width:44px;height:44px;border:4px solid var(--border);border-top-color:var(--burg);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 16px}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--burg);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 10px}
 @keyframes spin{to{transform:rotate(360deg)}}
-.loading-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.08em;color:var(--ink);margin-bottom:6px}
-.loading-sub{font-size:12px;color:var(--ink-light);line-height:1.5}
+.loading-title{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:.08em;color:var(--ink);margin-bottom:4px}
+.loading-sub{font-size:10px;color:var(--ink-light);line-height:1.4}
 
 .result-panel{background:var(--card);border:1.5px solid var(--border);border-radius:11px;overflow:hidden;display:none}
 .result-panel.visible{display:block}
-.result-hdr{padding:12px 16px;border-bottom:1px solid var(--border);background:#FAFAF8;display:flex;align-items:center;justify-content:space-between}
+.result-hdr{padding:8px 12px;border-bottom:1px solid var(--border);background:#FAFAF8;display:flex;align-items:center;justify-content:space-between}
 .result-title{font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--green)}
-.result-img-wrap{padding:16px;display:flex;justify-content:center;background:#f5f3f0}
-.result-img{display:block;width:100%;max-width:100%;object-fit:contain;border-radius:6px;box-shadow:0 4px 20px rgba(0,0,0,.15)}
-.result-actions{padding:14px 16px;display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--border);align-items:center}
+.result-img-wrap{display:flex;justify-content:center;background:#f5f3f0}
+.result-img{display:block;width:100%;aspect-ratio:2/3;object-fit:contain;border-radius:0}
+.result-actions{padding:8px 10px;display:flex;gap:6px;flex-wrap:wrap;border-top:1px solid var(--border);align-items:center}
 .act-btn{padding:9px 18px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:var(--surface);color:var(--ink-mid);transition:all .2s;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px}
 .act-btn:hover:not(:disabled){border-color:var(--burg);color:var(--burg)}
 .act-btn.primary{background:var(--green);border-color:var(--green);color:#fff;font-size:13px;font-weight:700}
@@ -763,32 +767,33 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
           <span class="gen-spark">&#9889;</span>
           <span id="genLabel">Generate My Ad</span>
         </button>
+
+        <!-- Loading -->
+        <div class="loading-panel" id="loadingPanel">
+          <div class="spinner"></div>
+          <div class="loading-title">Grok is designing your ad&hellip;</div>
+          <div class="loading-sub">Usually 20&ndash;45 seconds. Grok is compositing your images and placing your business text.</div>
+        </div>
+
+        <!-- Error -->
+        <div class="err-box" id="errBox"></div>
+
+        <!-- Result -->
+        <div class="result-panel" id="resultPanel">
+          <div class="result-hdr">
+            <div class="result-title">&#10003; Your Ad</div>
+            <button class="act-btn" onclick="resetResult()" style="padding:4px 10px;font-size:10px">&#8634; Start Over</button>
+          </div>
+          <div class="result-img-wrap"><img class="result-img" id="resultImg" alt="Generated ad"></div>
+          <div class="result-actions">
+            <button class="act-btn primary" onclick="useThisAd()">&#10003; Use This Ad</button>
+            <button class="act-btn" onclick="downloadAd()">&#8595; Download</button>
+            <button class="act-btn" onclick="generate()">&#8634; Regenerate</button>
+          </div>
+        </div>
+
       </div>
 
-    </div>
-
-    <!-- Loading -->
-    <div class="loading-panel" id="loadingPanel">
-      <div class="spinner"></div>
-      <div class="loading-title">Grok is designing your ad&hellip;</div>
-      <div class="loading-sub">Usually 20&ndash;45 seconds &mdash; Grok is analyzing your template, compositing your images, and placing your business text.</div>
-    </div>
-
-    <!-- Error -->
-    <div class="err-box" id="errBox"></div>
-
-    <!-- Result -->
-    <div class="result-panel" id="resultPanel">
-      <div class="result-hdr">
-        <div class="result-title">&#10003; Your Grok-Generated Ad</div>
-        <button class="act-btn" onclick="resetResult()" style="padding:5px 12px;font-size:11px">&#8634; Start Over</button>
-      </div>
-      <div class="result-img-wrap"><img class="result-img" id="resultImg" alt="Generated ad"></div>
-      <div class="result-actions">
-        <button class="act-btn primary" onclick="useThisAd()">&#10003; Use This Ad</button>
-        <button class="act-btn" onclick="downloadAd()">&#8595; Download</button>
-        <button class="act-btn" onclick="generate()">&#8634; Regenerate</button>
-      </div>
     </div>
 
   </div>
