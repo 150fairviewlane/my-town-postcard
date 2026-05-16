@@ -494,9 +494,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .tmpl-badge{display:inline-flex;align-items:center;gap:4px;background:#f0fdf4;border:1px solid var(--green);color:var(--green);font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;margin-top:5px}
 
 /* ── Template grid ───────────────────────────────────────── */
-.tmpl-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.tmpl-card{border:2px solid var(--border);border-radius:9px;overflow:hidden;cursor:pointer;transition:all .18s;background:#fff;display:flex;flex-direction:column}
-.tmpl-card:hover:not(.disabled){border-color:var(--burg);box-shadow:0 2px 12px rgba(124,28,46,.15)}
+.tmpl-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
+.tmpl-card{border:2px solid var(--border);border-radius:7px;overflow:hidden;cursor:pointer;transition:all .18s;background:#fff;display:flex;flex-direction:column}
+.tmpl-card:hover:not(.disabled){border-color:var(--burg);box-shadow:0 2px 8px rgba(124,28,46,.15)}
 .tmpl-card.active{border-color:var(--green);box-shadow:0 0 0 1px var(--green)}
 .tmpl-card.disabled{cursor:default;opacity:.55}
 /* Orientation-aware thumbnail — aspect-ratio set via orientation class on .tmpl-grid */
@@ -504,10 +504,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .tmpl-grid.portrait  .tmpl-thumb{aspect-ratio:4/5}
 .tmpl-grid.landscape .tmpl-thumb{aspect-ratio:5/4}
 .tmpl-grid.square    .tmpl-thumb{aspect-ratio:1/1}
-.tmpl-card-name{font-size:10px;font-weight:700;color:var(--ink);padding:5px 7px 1px;line-height:1.2}
-.tmpl-card-sub{font-size:9px;color:var(--ink-light);padding:0 7px 4px;line-height:1.3}
-.tmpl-sel-badge{display:inline-flex;align-items:center;gap:3px;background:#f0fdf4;border:1px solid var(--green);color:var(--green);font-size:9px;font-weight:700;padding:2px 6px;border-radius:99px;margin:0 7px 6px}
-.cs-badge{display:inline-flex;align-items:center;background:#f3f4f6;border:1px solid #d1d5db;color:#9ca3af;font-size:9px;font-weight:700;padding:2px 6px;border-radius:99px;margin:0 7px 6px;letter-spacing:.04em;text-transform:uppercase}
+.tmpl-card-name{font-size:9px;font-weight:700;color:var(--ink);padding:3px 5px 1px;line-height:1.2}
+.tmpl-card-sub{display:none}
+.tmpl-sel-badge{display:inline-flex;align-items:center;gap:2px;background:#f0fdf4;border:1px solid var(--green);color:var(--green);font-size:8px;font-weight:700;padding:1px 5px;border-radius:99px;margin:0 5px 4px}
+.cs-badge{display:inline-flex;align-items:center;background:#f3f4f6;border:1px solid #d1d5db;color:#9ca3af;font-size:8px;font-weight:700;padding:1px 5px;border-radius:99px;margin:0 5px 4px;letter-spacing:.04em;text-transform:uppercase}
 /* Landscape placeholder — shown when spot is landscape and no landscape templates exist */
 .tmpl-landscape-ph{display:none;padding:22px 16px;text-align:center;background:#f8f7f5;border-radius:9px;border:2px dashed var(--border)}
 .tmpl-landscape-ph.visible{display:block}
@@ -529,13 +529,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 
 /* ── Side-by-side photo + logo ────────────────────────────── */
 .photo-logo-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
+.logo-col{display:flex;flex-direction:column;gap:8px}
 .lib-section{margin-top:10px}
 .lib-label{font-size:9.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-light);margin-bottom:6px}
 
 /* ── Upload zones ─────────────────────────────────────────── */
 .upload-zone{border:2px dashed var(--border);border-radius:8px;padding:14px 10px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;background:var(--surface);position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:110px}
 .upload-zone.photo-zone{min-height:130px}
-.upload-zone.logo-zone{min-height:110px}
+.upload-zone.logo-zone{min-height:80px}
 .upload-zone:hover:not(.has-file){border-color:var(--burg);background:var(--burg-pale)}
 .upload-zone.has-file{border-color:var(--green);background:#f0fdf4;padding:6px;justify-content:flex-start;align-items:stretch;min-height:0}
 .upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;z-index:2}
@@ -552,7 +553,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .upload-clear{position:absolute;top:5px;right:5px;z-index:3;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.45);color:#fff;border:none;cursor:pointer;font-size:11px;display:none;align-items:center;justify-content:center;line-height:1}
 .upload-zone.has-file .upload-clear{display:flex}
 
-.gen-btn{max-width:280px;margin:0 auto;padding:13px 28px;background:linear-gradient(135deg,#1a1a2e,#3D1A6B);color:#fff;border:none;border-radius:10px;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.14em;cursor:pointer;transition:all .25s;display:flex;align-items:center;justify-content:center;gap:10px}
+.gen-btn{width:100%;padding:13px 16px;background:linear-gradient(135deg,#1a1a2e,#3D1A6B);color:#fff;border:none;border-radius:10px;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.14em;cursor:pointer;transition:all .25s;display:flex;align-items:center;justify-content:center;gap:8px}
 .gen-btn:hover:not(:disabled){background:linear-gradient(135deg,#2a2a4e,#5a2490);transform:translateY(-1px);box-shadow:0 6px 24px rgba(80,30,180,.35)}
 .gen-btn:disabled{background:#888;cursor:not-allowed;transform:none;box-shadow:none}
 .gen-spark{font-size:17px;animation:sp 2s ease-in-out infinite}
@@ -735,34 +736,36 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
         </div>
       </div>
 
-      <!-- Right: Logo -->
-      <div class="card">
-        <div class="card-hdr">
-          <div class="card-title">Company Logo</div>
-          <span style="font-size:10px;color:var(--ink-light)" id="logoStatus">Optional</span>
-        </div>
-        <div class="card-body">
-          <div class="upload-zone logo-zone" id="logoZone">
-            <input type="file" accept="image/*" onchange="handleLogoUpload(this)">
-            <div class="upload-placeholder">
-              <div class="upload-icon">&#127991;&#65039;</div>
-              <div class="upload-label">Upload logo</div>
-              <div class="upload-sub">PNG with transparency preferred</div>
-            </div>
-            <img class="upload-preview" id="logoPreview" alt="Logo preview">
-            <button class="upload-clear" title="Remove logo" onclick="clearLogo(event)">&#10005;</button>
+      <!-- Right: Logo + Generate -->
+      <div class="logo-col">
+        <div class="card">
+          <div class="card-hdr">
+            <div class="card-title">Company Logo</div>
+            <span style="font-size:10px;color:var(--ink-light)" id="logoStatus">Optional</span>
           </div>
-          <p class="fnote" style="margin-top:8px">Placed in the upper-left corner exactly as provided.</p>
+          <div class="card-body">
+            <div class="upload-zone logo-zone" id="logoZone">
+              <input type="file" accept="image/*" onchange="handleLogoUpload(this)">
+              <div class="upload-placeholder">
+                <div class="upload-icon">&#127991;&#65039;</div>
+                <div class="upload-label">Upload logo</div>
+                <div class="upload-sub">PNG with transparency preferred</div>
+              </div>
+              <img class="upload-preview" id="logoPreview" alt="Logo preview">
+              <button class="upload-clear" title="Remove logo" onclick="clearLogo(event)">&#10005;</button>
+            </div>
+            <p class="fnote" style="margin-top:8px">Placed in the upper-left corner exactly as provided.</p>
+          </div>
         </div>
+
+        <!-- Generate button -->
+        <button class="gen-btn" id="genBtn" onclick="generate()" disabled>
+          <span class="gen-spark">&#9889;</span>
+          <span id="genLabel">Generate My Ad</span>
+        </button>
       </div>
 
     </div>
-
-    <!-- Generate button -->
-    <button class="gen-btn" id="genBtn" onclick="generate()" disabled>
-      <span class="gen-spark">&#9889;</span>
-      <span id="genLabel">Generate My Ad with Grok</span>
-    </button>
 
     <!-- Loading -->
     <div class="loading-panel" id="loadingPanel">
