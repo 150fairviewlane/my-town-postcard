@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useGetActiveCampaign, useReserveSpot } from "@workspace/api-client-react";
+import { GRID_AREAS } from "./postcardCore";
 
 const SIZES = {
   large:  { label: "Large",  price: 399, dim: '4" × 5"',  desc: "Prime placement, maximum impact" },
@@ -13,27 +14,13 @@ function formatPrice(price) {
 }
 
 // Grid: 12 cols × 9 rows — each unit = 1 inch, matches the 12"×9" printed postcard
-// Top half (rows 1-5): three large ads side by side
-// Bottom half (rows 6-9): two medium paid + small/medium slots + 1 house ad (hs)
-// Note: "hs" is the permanent house ad occupying rows 6-7, cols 9-10 (center-right).
-//       a1 occupies rows 8-9, cols 9-10 (visual small in preview; database size unchanged).
-const GRID_AREAS = [
-  "mb mb mb mb dn dn dn dn re re re re",
-  "mb mb mb mb dn dn dn dn re re re re",
-  "mb mb mb mb dn dn dn dn re re re re",
-  "mb mb mb mb dn dn dn dn re re re re",
-  "mb mb mb mb dn dn dn dn re re re re",
-  "hv hv hv ins ins ins pz pz hs hs a2 a2",
-  "hv hv hv ins ins ins pz pz hs hs a2 a2",
-  "hv hv hv ins ins ins lw lw a1 a1 a3 a3",
-  "hv hv hv ins ins ins lw lw a1 a1 a3 a3",
-].map(r => `"${r}"`).join(" ");
+// Top 5 rows: mb / dn / re — XL (4 cols × 5 rows each)
+// Bottom 4 rows: l1 / l2 / l3 / l4 — Large (3 cols × 4 rows each, no house ad)
+// GRID_AREAS imported from postcardCore (shared with print page)
 
 // Cell sizes at ~1200px container width:
-// large  (4/12 cols × 5/9 rows):   ~387px × ~483px
-// medium (3/12 cols × 4/9 rows):   ~290px × ~387px  (hv, ins)
-// medSm  (2/12 cols × 4/9 rows):   ~193px × ~387px  (a1 — narrower)
-// small  (2/12 cols × 2/9 rows):   ~193px × ~193px
+// xl    (4/12 cols × 5/9 rows):   ~387px × ~483px
+// large (3/12 cols × 4/9 rows):   ~290px × ~387px  (l1–l4)
 
 const FONT = {
   large:  { name: 21, cat: 13, tagline: 19, sub: 14, detail: 12, coupon: 19, couponSub: 12.5, addr: 12, phone: 12.5 },
@@ -535,11 +522,6 @@ export default function PostcardSpotPicker() {
                 )}
               </div>
             ))}
-            {/* Permanent house ad — not a sellable spot, no click, not counted */}
-            <div style={{ gridArea: "hs", overflow: "hidden", borderRadius: 3,
-              minWidth: 0, minHeight: 0, cursor: "default", pointerEvents: "none" }}>
-              <HouseAd />
-            </div>
           </div>
 
           {/* EDDM footer strip */}
