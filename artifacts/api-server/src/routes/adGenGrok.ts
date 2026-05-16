@@ -939,7 +939,7 @@ var MENU_DEFAULTS = {
 };
 
 function onIndustryChange(){
-  if(_activeTab === 'lib') loadLibrary();
+  loadLibrary();
   var industry = document.getElementById('industry').value;
   // Menu items
   var list = document.getElementById('menuList');
@@ -977,20 +977,17 @@ function getMenu(){
 async function loadLibrary(){
   var industry = document.getElementById('industry').value;
   var grid = document.getElementById('libGrid');
-  var note = document.getElementById('libNote');
   if(!industry){
-    grid.innerHTML = '<div class="img-empty">Select an industry above to load photos from the library.</div>';
-    note.style.display = 'none';
+    grid.innerHTML = '<div class="img-empty">Select an industry above to load photos.</div>';
     return;
   }
   grid.innerHTML = '<div class="img-loading">Loading library photos&hellip;</div>';
-  note.style.display = 'none';
   try{
     var r = await fetch('/api/image-library?industry=' + encodeURIComponent(industry));
     var data = await r.json();
     var imgs = data.images || [];
     if(!imgs.length){
-      grid.innerHTML = '<div class="img-empty">No approved photos for this industry yet.<br>Switch to the &ldquo;Upload&rdquo; tab to use your own photo.</div>';
+      grid.innerHTML = '<div class="img-empty">No approved photos for this industry yet. Upload your own photo above.</div>';
       return;
     }
     grid.innerHTML = imgs.map(function(img,i){
@@ -1000,7 +997,6 @@ async function loadLibrary(){
         + '<input type="hidden" id="lurl-'+i+'" value="'+esc(img.image_url)+'">'
         + '</div>';
     }).join('');
-    note.style.display = 'block';
   }catch(e){
     grid.innerHTML = '<div class="img-empty">Error loading library: ' + e.message + '</div>';
   }
