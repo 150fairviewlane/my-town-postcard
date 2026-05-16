@@ -155,7 +155,9 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   const tmplFilename =
     templateKey === "made-fresh"
       ? "made_fresh_template.png"
-      : "mr_biscuits_template_no_logo_1778806527327.png";
+      : templateKey === "neighborhood-pro"
+        ? "6300F2D5-6BF1-403E-A40B-7203E4E26402_1778900616429.png"
+        : "mr_biscuits_template_no_logo_1778806527327.png";
   const tmplPath = path.join(WORKSPACE_ROOT, "attached_assets", tmplFilename);
   if (!fs.existsSync(tmplPath)) {
     res.status(500).json({ error: "Template file not found on server." });
@@ -186,9 +188,17 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       ? "  • IMAGE 1 (TEMPLATE) — a bright, warm restaurant postcard layout featuring a natural wood table surface, " +
         "a chalkboard-style 'Made Fresh For You' sign, gingham cloth accents, a golden ticket coupon stub, " +
         "and a fresh white plate as the hero focal point. Preserve all zones, props, and warm editorial atmosphere exactly."
-      : "  • IMAGE 1 (TEMPLATE) — the full postcard layout with parchment texture, brush-stroke band, " +
-        "pennant ribbon, circular checkmark badge, dashed coupon box, and dark footer strip. " +
-        "Reproduce every zone, texture, and design element exactly.",
+      : templateKey === "neighborhood-pro"
+        ? "  • IMAGE 1 (TEMPLATE) — a bold outdoor-service postcard layout on a deep forest-green background. " +
+          "Upper-left: two overlapping white paint-brush splash shapes that form a bright organic panel for the headline text. " +
+          "Upper-right: large full-bleed hero photo zone (outdoor/service scene). " +
+          "Middle band: a horizontal row of four diagonal-cut service photo panels, each topped by a circular green icon badge and a short white brush-stroke label beneath it. " +
+          "Lower section: a wide white brush-stroke area for the special offer / coupon text. " +
+          "Footer strip: dark green bar with a bold phone number on the left, a clean QR code box on the right, and small circular trust-badge icons (shield, star, leaf) between them. " +
+          "Reproduce every zone, the forest-green background, all brush-stroke shapes, and the footer layout exactly."
+        : "  • IMAGE 1 (TEMPLATE) — the full postcard layout with parchment texture, brush-stroke band, " +
+          "pennant ribbon, circular checkmark badge, dashed coupon box, and dark footer strip. " +
+          "Reproduce every zone, texture, and design element exactly.",
   ];
   let imgIdx = 2;
   if (hasPhoto) {
@@ -199,68 +209,126 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   }
 
   const logoImg = hasPhoto ? 3 : 2;
-  const outputRequirements =
-    "LAYOUT — render these zones in order from top to bottom:\n\n" +
+  const outputRequirements = templateKey === "neighborhood-pro"
+    ? (
+      "LAYOUT — reproduce the Neighborhood Pro template zones exactly as described:\n\n" +
 
-    "  ZONE 1 — HEADLINE (top of ad, above everything else):\n" +
-    `    Business name "${d.bizName}" uses a LAYERED TWO-FONT treatment:\n` +
-    `    • Main words: bold condensed all-caps slab/block serif — very large, dominant, horizontal (no angle). Deep black or dark color, maximum weight.\n` +
-    `    • ONLY IF the business name contains a common English category/industry word (e.g. "Cafe", "Grill", "Spa", "Pizza", "Bar", "Salon", "Dental", "Kitchen", "Bakery", "Bistro", "Diner") — render ONLY that one common-noun word in a flowing orange script/cursive at a slight downward angle (≈-8°), large size, warm orange color. Do NOT apply this treatment to proper nouns, brand names, foreign-language words, or any word that is not a widely-recognised English business-category noun. If no such common category word exists in the name, render the entire business name in the bold condensed all-caps treatment only — do NOT split or duplicate any word.\n` +
-    `    Together these two styles create a premium editorial stacked headline — not a single flat font. NEVER render the same word twice in the headline.\n\n` +
+      "  ZONE 1 — HEADLINE (upper-left, inside the white brush-stroke splash panel):\n" +
+      `    Business name "${d.bizName}" rendered in bold condensed all-caps slab serif — very large, dark green or near-black, maximum weight, horizontal (no angle). ` +
+      `    The text sits INSIDE the white paint-brush splash area; the white shape is the background for this headline.\n` +
+      `    ONLY IF the business name contains a widely-recognised English business-category word (e.g. "Lawn", "Care", "Cleaning", "Roofing", "Plumbing", "Dental", "Grill", "Pizza") — render ONLY that one word in a flowing bright-green or lime-green script/cursive at a slight angle, large size. Do NOT apply to proper nouns or brand names. If no such word exists, use all-caps treatment only. NEVER repeat any word.\n\n` +
 
-    (hasLogo
-      ? `  ZONE 2 — LOGO${d.tagline ? " + TAGLINE" : ""} (orange pennant ribbon, top-left corner):\n` +
-        `    PENNANT: Copy the orange pennant ribbon from IMAGE 1 exactly — same height, same width, same shape. Its TOP EDGE must be flush with the TOP EDGE of the entire ad (touching the very top of the canvas). It sits in the top-left column. Do NOT move it down, elongate it, float it, or detach it from the top of the ad in any way.\n` +
-        `    Logo: place IMAGE ${logoImg} at the very top of the ad, centered inside the pennant. Scale it DOWN until it fits comfortably within the pennant with a small margin on every side — the logo must not overflow or touch the pennant edges. Keep it small and tidy inside the flag shape. Preserve exact logo colors and proportions.\n` +
-        (d.tagline ? `    Tagline: render "${d.tagline}" in a loose handwriting-style italic script at a slight upward angle (+5°–7°), large and confident, black — placed to the right of the pennant, below the headline.\n` : "") +
-        "\n"
-      : d.tagline
-        ? `  ZONE 2 — TAGLINE (upper-left, below headline):\n` +
-          `    "${d.tagline}" in a loose handwriting-style italic script at a slight upward angle (+5°–7°), large and confident, black.\n\n`
+      (hasLogo
+        ? `  ZONE 2 — LOGO${d.tagline ? " + TAGLINE" : ""} (inside the white brush-stroke panel, upper-left):\n` +
+          `    Place IMAGE ${logoImg} inside the white brush-stroke splash area, above or beside the headline. Scale it to fit with clear margin — do not let it overflow the white shape. Preserve exact logo colors and proportions.\n` +
+          (d.tagline ? `    Tagline: render "${d.tagline}" in a clean italic script, dark green, below the logo inside the white splash area.\n` : "") +
+          "\n"
+        : d.tagline
+          ? `  ZONE 2 — TAGLINE (inside the white brush-stroke panel, below headline):\n` +
+            `    "${d.tagline}" in a clean italic script, dark green, confident — placed inside the white splash area.\n\n`
+          : "") +
+
+      "  ZONE 3 — HERO IMAGE (upper-right, large full-bleed photo zone):\n" +
+      (hasPhoto
+        ? `    Take IMAGE 2 and SEAMLESSLY INTEGRATE it into the upper-right hero photo area:\n` +
+          "    • Fill the entire upper-right zone with the photo — no rectangular frame or border.\n" +
+          "    • Left edge: a clean diagonal or curved cut where photo meets the green background (match template exactly).\n" +
+          "    • Professional outdoor lighting, vibrant color, cinematic quality. The photo must look native to the design.\n\n"
+        : `    Generate a photorealistic outdoor service scene appropriate for this business — bright daylight, vibrant green tones, professional composition. Fill the entire upper-right zone with no rectangular border.\n\n`) +
+
+      (menuStr !== "  (none)"
+        ? "  ZONE 4 — SERVICES PANELS (middle horizontal row):\n" +
+          "    Reproduce the four diagonal-cut panel row from the template. Each panel shows a relevant service photo behind a diagonal-cut edge.\n" +
+          "    Above each panel: a circular dark-green badge with a white icon inside representing the service.\n" +
+          "    Below each panel: a short white brush-stroke label with the service name in dark bold text.\n" +
+          `    Use the following services from the business details: ${menuStr}\n\n`
+        : "  ZONE 4 — SERVICES PANELS (middle horizontal row):\n" +
+          "    Reproduce the four diagonal-cut service photo panels from the template with relevant service imagery for this business type.\n" +
+          "    Each panel has a circular green icon badge on top and a white brush-stroke label below.\n\n") +
+
+      (d.offer
+        ? "  ZONE 5 — SPECIAL OFFER (wide white brush-stroke area, lower section):\n" +
+          `    Inside the large white brush-stroke shape: render "${d.offer}" in bold dark-green text, large and prominent.\n` +
+          (d.offerFine ? `    Fine print: "${d.offerFine}" in smaller text below.\n` : "") +
+          "\n"
         : "") +
 
-    "  ZONE 3 — HERO IMAGE (right-center, large feature area):\n" +
-    (hasPhoto
-      ? "    Take the food/dish from IMAGE 2 and SEAMLESSLY INTEGRATE it into the template's photo area as if it was professionally shot for this exact ad:\n" +
-        "    • Blend the food's edges naturally into the surrounding dark brush-stroke/painted background — NO hard rectangular border or frame.\n" +
-        "    • Match the lighting, shadows, perspective, and color grading to the warm, appetizing commercial food photography style of a high-end restaurant ad.\n" +
-        "    • The food should look like it BELONGS in the design — not pasted on top. Adjust edges, add subtle plate shadows or gradient fade as needed for realism.\n" +
-        "    • Preserve the dark painted brush-stroke swoosh behind and around the photo area exactly as in the template.\n\n"
-      : `    Generate a photorealistic, appetizing hero image for this business — cinematic quality, appetizing styling, vibrant color. Blend it naturally into the dark brush-stroke background with no hard rectangular border.\n\n`) +
+      "  ZONE 6 — FOOTER (dark green bar at very bottom):\n" +
+      `    Left: phone number "${d.phone || ""}" in very BOLD white sans-serif — large, instantly readable. Zero digit changes.\n` +
+      `    Center: three small circular trust-badge icons (shield, star, leaf) as in the template.\n` +
+      "    Right: a clean square QR code box. Do NOT render the website URL as text.\n\n" +
 
-    (menuStr !== "  (none)"
-      ? "  ZONE 4 — MENU / SERVICES (left-center card area):\n" +
-        "    List each item clearly. Use a clean, legible sans-serif. Prices right-aligned if present.\n\n"
-      : "") +
+      "TYPOGRAPHIC RULES:\n" +
+      "  • Headline: bold condensed all-caps slab serif, very large, dark green or near-black\n" +
+      "  • Script accent: bright-green cursive ONLY for a single common English service-category noun in the business name — never for proper nouns or brand names; never duplicate any word\n" +
+      "  • All text inside white brush-stroke areas: dark green or near-black for contrast\n" +
+      "  • Footer text: white, bold sans-serif\n" +
+      "  • Fine print: smallest text, still legible\n" +
+      "  • NEVER render the website URL as visible text"
+    )
+    : (
+      "LAYOUT — render these zones in order from top to bottom:\n\n" +
 
-    (d.offer
-      ? "  ZONE 5 — SPECIAL OFFER (dashed coupon box):\n" +
-        `    "${d.offer}" in bold inside the dashed coupon rectangle. If fine print exists, render it smaller below.\n\n`
-      : "") +
+      "  ZONE 1 — HEADLINE (top of ad, above everything else):\n" +
+      `    Business name "${d.bizName}" uses a LAYERED TWO-FONT treatment:\n` +
+      `    • Main words: bold condensed all-caps slab/block serif — very large, dominant, horizontal (no angle). Deep black or dark color, maximum weight.\n` +
+      `    • ONLY IF the business name contains a common English category/industry word (e.g. "Cafe", "Grill", "Spa", "Pizza", "Bar", "Salon", "Dental", "Kitchen", "Bakery", "Bistro", "Diner") — render ONLY that one common-noun word in a flowing orange script/cursive at a slight downward angle (≈-8°), large size, warm orange color. Do NOT apply this treatment to proper nouns, brand names, foreign-language words, or any word that is not a widely-recognised English business-category noun. If no such common category word exists in the name, render the entire business name in the bold condensed all-caps treatment only — do NOT split or duplicate any word.\n` +
+      `    Together these two styles create a premium editorial stacked headline — not a single flat font. NEVER render the same word twice in the headline.\n\n` +
 
-    "  ZONE 6 — FOOTER (dark strip at very bottom):\n" +
-    `    Phone: "${d.phone || ""}" — BOLD, large, easy to read at a glance. Zero digit changes.\n` +
-    `    Address: "${fullAddress}" — bold, styled, not plain body text.\n` +
-    "    QR code: place a clean, square QR code graphic in the lower-right of the footer. Do NOT render the website URL as text anywhere on the ad.\n\n" +
+      (hasLogo
+        ? `  ZONE 2 — LOGO${d.tagline ? " + TAGLINE" : ""} (orange pennant ribbon, top-left corner):\n` +
+          `    PENNANT: Copy the orange pennant ribbon from IMAGE 1 exactly — same height, same width, same shape. Its TOP EDGE must be flush with the TOP EDGE of the entire ad (touching the very top of the canvas). It sits in the top-left column. Do NOT move it down, elongate it, float it, or detach it from the top of the ad in any way.\n` +
+          `    Logo: place IMAGE ${logoImg} at the very top of the ad, centered inside the pennant. Scale it DOWN until it fits comfortably within the pennant with a small margin on every side — the logo must not overflow or touch the pennant edges. Keep it small and tidy inside the flag shape. Preserve exact logo colors and proportions.\n` +
+          (d.tagline ? `    Tagline: render "${d.tagline}" in a loose handwriting-style italic script at a slight upward angle (+5°–7°), large and confident, black — placed to the right of the pennant, below the headline.\n` : "") +
+          "\n"
+        : d.tagline
+          ? `  ZONE 2 — TAGLINE (upper-left, below headline):\n` +
+            `    "${d.tagline}" in a loose handwriting-style italic script at a slight upward angle (+5°–7°), large and confident, black.\n\n`
+          : "") +
 
-    "TYPOGRAPHIC RULES:\n" +
-    "  • Headline: bold condensed all-caps slab/block serif for the full business name. Apply the flowing orange script (angled ≈-8°) ONLY to a common English category noun within the name (e.g. Cafe, Grill, Spa, Pizza, Bar). NEVER split a proper noun, foreign word, or brand name into a second-line script — and NEVER render any word from the business name more than once.\n" +
-    "  • Tagline: loose handwriting-style italic script, slight upward angle (+5°–7°), large, confident — never flat/horizontal\n" +
-    "  • Logo: scaled small to fit ENTIRELY INSIDE the orange pennant ribbon; pennant stays fixed in top-left exactly as in the template\n" +
-    "  • Footer phone/address: bold sans-serif, noticeably larger than fine print\n" +
-    "  • Fine print / coupon terms: smallest text, still legible\n" +
-    "  • NEVER render the website URL as visible text";
+      "  ZONE 3 — HERO IMAGE (right-center, large feature area):\n" +
+      (hasPhoto
+        ? "    Take the food/dish from IMAGE 2 and SEAMLESSLY INTEGRATE it into the template's photo area as if it was professionally shot for this exact ad:\n" +
+          "    • Blend the food's edges naturally into the surrounding dark brush-stroke/painted background — NO hard rectangular border or frame.\n" +
+          "    • Match the lighting, shadows, perspective, and color grading to the warm, appetizing commercial food photography style of a high-end restaurant ad.\n" +
+          "    • The food should look like it BELONGS in the design — not pasted on top. Adjust edges, add subtle plate shadows or gradient fade as needed for realism.\n" +
+          "    • Preserve the dark painted brush-stroke swoosh behind and around the photo area exactly as in the template.\n\n"
+        : `    Generate a photorealistic, appetizing hero image for this business — cinematic quality, appetizing styling, vibrant color. Blend it naturally into the dark brush-stroke background with no hard rectangular border.\n\n`) +
+
+      (menuStr !== "  (none)"
+        ? "  ZONE 4 — MENU / SERVICES (left-center card area):\n" +
+          "    List each item clearly. Use a clean, legible sans-serif. Prices right-aligned if present.\n\n"
+        : "") +
+
+      (d.offer
+        ? "  ZONE 5 — SPECIAL OFFER (dashed coupon box):\n" +
+          `    "${d.offer}" in bold inside the dashed coupon rectangle. If fine print exists, render it smaller below.\n\n`
+        : "") +
+
+      "  ZONE 6 — FOOTER (dark strip at very bottom):\n" +
+      `    Phone: "${d.phone || ""}" — BOLD, large, easy to read at a glance. Zero digit changes.\n` +
+      `    Address: "${fullAddress}" — bold, styled, not plain body text.\n` +
+      "    QR code: place a clean, square QR code graphic in the lower-right of the footer. Do NOT render the website URL as text anywhere on the ad.\n\n" +
+
+      "TYPOGRAPHIC RULES:\n" +
+      "  • Headline: bold condensed all-caps slab/block serif for the full business name. Apply the flowing orange script (angled ≈-8°) ONLY to a common English category noun within the name (e.g. Cafe, Grill, Spa, Pizza, Bar). NEVER split a proper noun, foreign word, or brand name into a second-line script — and NEVER render any word from the business name more than once.\n" +
+      "  • Tagline: loose handwriting-style italic script, slight upward angle (+5°–7°), large, confident — never flat/horizontal\n" +
+      "  • Logo: scaled small to fit ENTIRELY INSIDE the orange pennant ribbon; pennant stays fixed in top-left exactly as in the template\n" +
+      "  • Footer phone/address: bold sans-serif, noticeably larger than fine print\n" +
+      "  • Fine print / coupon terms: smallest text, still legible\n" +
+      "  • NEVER render the website URL as visible text"
+    );
 
   const adPrompt =
     "You are a world-class print advertising art director and expert photo compositor. " +
     "Create a PRINT-READY premium postcard ad by taking the template layout and seamlessly integrating " +
-    "the provided food photo into it — the result must look like a single cohesive ad designed by a top agency, " +
-    "not a template with a photo pasted on top.\n\n" +
+    "the business details and any provided reference photos into it — the result must look like a single cohesive ad designed by a top agency, " +
+    "not a template with content pasted on top.\n\n" +
     `REFERENCE IMAGES: You are provided ${refLines.length} reference image${refLines.length > 1 ? "s" : ""}. ` +
     "Treat them as distinct inputs — do NOT merge their design styles or treat any of them as already finished:\n" +
     refLines.join("\n") + "\n\n" +
     outputRequirements + "\n" +
-    "STYLE: high-end editorial advertising aesthetic. Cinematic food photography with rich, vibrant color and " +
+    "STYLE: high-end editorial advertising aesthetic. Cinematic photography with rich, vibrant color and " +
     "professional lighting. Bold confident typography hierarchy. Premium color palette — deep, saturated, controlled. " +
     "Every element is intentionally placed; nothing looks accidental or generic. Print-ready sharpness throughout.\n\n" +
     "CRITICAL: Every piece of text must appear EXACTLY as specified. " +
