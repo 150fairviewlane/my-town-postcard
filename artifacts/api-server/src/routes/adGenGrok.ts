@@ -420,8 +420,9 @@ router.get("/grok-ad-generator", (_req, res) => {
 router.get("/grok-ad-generator/template-preview/:key", (req, res) => {
   const key = req.params["key"];
   const fileMap: Record<string, string> = {
-    "parchment-classic": "mr_biscuits_template_no_logo_1778806527327.png",
-    "made-fresh":        "made_fresh_template.png",
+    "parchment-classic":   "mr_biscuits_template_no_logo_1778806527327.png",
+    "made-fresh":          "made_fresh_template.png",
+    "neighborhood-pro":    "6300F2D5-6BF1-403E-A40B-7203E4E26402_1778900616429.png",
   };
   const filename = fileMap[key];
   if (!filename) { res.status(404).send("Not found"); return; }
@@ -695,10 +696,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
             <div class="tmpl-card-name" style="color:#bbb">Dark &amp; Bold</div>
             <div class="cs-badge">Coming Soon</div>
           </div>
-          <div class="tmpl-card disabled">
-            <div class="tmpl-thumb" style="display:flex;align-items:center;justify-content:center;font-size:22px;background:#f5fff5">&#127968;</div>
-            <div class="tmpl-card-name" style="color:#bbb">Neighborhood Pro</div>
-            <div class="cs-badge">Coming Soon</div>
+          <div class="tmpl-card" id="tmpl-neighborhood-pro" onclick="selectTemplate('neighborhood-pro')">
+            <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/neighborhood-pro" alt="Neighborhood Pro" onerror="this.style.background='#e8f5e9'">
+            <div class="tmpl-card-name">Neighborhood Pro</div>
+            <div class="tmpl-sel-badge" id="badge-neighborhood-pro" style="display:none">&#10003; Selected</div>
           </div>
         </div>
         <!-- Landscape placeholder (shown only when spot is landscape) -->
