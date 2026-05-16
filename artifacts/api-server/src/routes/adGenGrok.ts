@@ -205,8 +205,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     "  ZONE 1 — HEADLINE (top of ad, above everything else):\n" +
     `    Business name "${d.bizName}" uses a LAYERED TWO-FONT treatment:\n` +
     `    • Main words: bold condensed all-caps slab/block serif — very large, dominant, horizontal (no angle). Deep black or dark color, maximum weight.\n` +
-    `    • ONLY IF the business name itself contains a second word that is a category/descriptor (e.g. "Cafe" in "Mr. Biscuit's Cafe", "Grill" in "Sam's Grill", "Spa" in "Lotus Spa") — render ONLY that word from the actual name in a flowing orange script/cursive at a slight downward angle (≈-8°), large size, warm orange color. Do NOT invent or add any word that is not literally part of the provided business name.\n` +
-    `    Together these two styles create a premium editorial stacked headline — not a single flat font.\n\n` +
+    `    • ONLY IF the business name contains a common English category/industry word (e.g. "Cafe", "Grill", "Spa", "Pizza", "Bar", "Salon", "Dental", "Kitchen", "Bakery", "Bistro", "Diner") — render ONLY that one common-noun word in a flowing orange script/cursive at a slight downward angle (≈-8°), large size, warm orange color. Do NOT apply this treatment to proper nouns, brand names, foreign-language words, or any word that is not a widely-recognised English business-category noun. If no such common category word exists in the name, render the entire business name in the bold condensed all-caps treatment only — do NOT split or duplicate any word.\n` +
+    `    Together these two styles create a premium editorial stacked headline — not a single flat font. NEVER render the same word twice in the headline.\n\n` +
 
     (hasLogo
       ? `  ZONE 2 — LOGO${d.tagline ? " + TAGLINE" : ""} (orange pennant ribbon, top-left corner):\n` +
@@ -244,7 +244,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     "    QR code: place a clean, square QR code graphic in the lower-right of the footer. Do NOT render the website URL as text anywhere on the ad.\n\n" +
 
     "TYPOGRAPHIC RULES:\n" +
-    "  • Headline: layered two-font treatment — bold condensed slab caps (horizontal) + flowing orange script for descriptors (angled ≈-8°)\n" +
+    "  • Headline: bold condensed all-caps slab/block serif for the full business name. Apply the flowing orange script (angled ≈-8°) ONLY to a common English category noun within the name (e.g. Cafe, Grill, Spa, Pizza, Bar). NEVER split a proper noun, foreign word, or brand name into a second-line script — and NEVER render any word from the business name more than once.\n" +
     "  • Tagline: loose handwriting-style italic script, slight upward angle (+5°–7°), large, confident — never flat/horizontal\n" +
     "  • Logo: scaled small to fit ENTIRELY INSIDE the orange pennant ribbon; pennant stays fixed in top-left exactly as in the template\n" +
     "  • Footer phone/address: bold sans-serif, noticeably larger than fine print\n" +
