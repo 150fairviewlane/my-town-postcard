@@ -493,44 +493,64 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .tmpl-sub{font-size:11px;color:var(--ink-light);margin-top:2px}
 .tmpl-badge{display:inline-flex;align-items:center;gap:4px;background:#f0fdf4;border:1px solid var(--green);color:var(--green);font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;margin-top:5px}
 
+/* ── Template grid ───────────────────────────────────────── */
 .tmpl-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.tmpl-card{border:2px solid var(--border);border-radius:9px;overflow:hidden;cursor:pointer;transition:all .18s;background:#fff}
+.tmpl-card{border:2px solid var(--border);border-radius:9px;overflow:hidden;cursor:pointer;transition:all .18s;background:#fff;display:flex;flex-direction:column}
 .tmpl-card:hover:not(.disabled){border-color:var(--burg);box-shadow:0 2px 12px rgba(124,28,46,.15)}
 .tmpl-card.active{border-color:var(--green);box-shadow:0 0 0 1px var(--green)}
 .tmpl-card.disabled{cursor:default;opacity:.55}
-.tmpl-thumb{width:100%;height:72px;object-fit:cover;display:block;background:#f0ede8}
+/* Orientation-aware thumbnail — aspect-ratio set via orientation class on .tmpl-grid */
+.tmpl-thumb{width:100%;object-fit:cover;display:block;background:#f0ede8;flex-shrink:0}
+.tmpl-grid.portrait  .tmpl-thumb{aspect-ratio:4/5}
+.tmpl-grid.landscape .tmpl-thumb{aspect-ratio:5/4}
+.tmpl-grid.square    .tmpl-thumb{aspect-ratio:1/1}
 .tmpl-card-name{font-size:10px;font-weight:700;color:var(--ink);padding:5px 7px 1px;line-height:1.2}
 .tmpl-card-sub{font-size:9px;color:var(--ink-light);padding:0 7px 4px;line-height:1.3}
 .tmpl-sel-badge{display:inline-flex;align-items:center;gap:3px;background:#f0fdf4;border:1px solid var(--green);color:var(--green);font-size:9px;font-weight:700;padding:2px 6px;border-radius:99px;margin:0 7px 6px}
 .cs-badge{display:inline-flex;align-items:center;background:#f3f4f6;border:1px solid #d1d5db;color:#9ca3af;font-size:9px;font-weight:700;padding:2px 6px;border-radius:99px;margin:0 7px 6px;letter-spacing:.04em;text-transform:uppercase}
+/* Landscape placeholder — shown when spot is landscape and no landscape templates exist */
+.tmpl-landscape-ph{display:none;padding:22px 16px;text-align:center;background:#f8f7f5;border-radius:9px;border:2px dashed var(--border)}
+.tmpl-landscape-ph.visible{display:block}
+.tmpl-landscape-ph-icon{font-size:30px;margin-bottom:8px}
+.tmpl-landscape-ph-title{font-size:12px;font-weight:700;color:var(--ink-mid);margin-bottom:4px}
+.tmpl-landscape-ph-sub{font-size:11px;color:var(--ink-light);line-height:1.5}
 
-.tabs{display:flex;border-bottom:1.5px solid var(--border);margin-bottom:12px}
-.tab{flex:1;padding:8px;font-size:11px;font-weight:700;color:var(--ink-light);background:none;border:none;cursor:pointer;letter-spacing:.06em;text-transform:uppercase;border-bottom:2.5px solid transparent;margin-bottom:-1.5px;transition:all .2s;font-family:'DM Sans',sans-serif}
-.tab.active{color:var(--burg);border-bottom-color:var(--burg)}
-.tab-panel{display:none}
-.tab-panel.active{display:block}
-
-.img-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+/* ── Photo library ───────────────────────────────────────── */
+.img-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .img-thumb{position:relative;aspect-ratio:4/3;border-radius:6px;overflow:hidden;cursor:pointer;border:2.5px solid transparent;transition:all .2s}
-.img-thumb:hover{transform:scale(1.04)}
+.img-thumb:hover{transform:scale(1.03)}
 .img-thumb.selected{border-color:var(--burg);box-shadow:0 0 0 1.5px var(--burg)}
 .img-thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .img-thumb .chk{display:none;position:absolute;top:3px;right:3px;background:var(--burg);color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:900;align-items:center;justify-content:center}
 .img-thumb.selected .chk{display:flex}
-.img-empty{grid-column:1/-1;padding:18px;text-align:center;font-size:12px;color:var(--ink-light);line-height:1.5}
-.img-loading{grid-column:1/-1;padding:18px;text-align:center;font-size:12px;color:var(--ink-light)}
+.img-empty{grid-column:1/-1;padding:14px 8px;text-align:center;font-size:11px;color:var(--ink-light);line-height:1.5}
+.img-loading{grid-column:1/-1;padding:14px 8px;text-align:center;font-size:11px;color:var(--ink-light)}
 .fnote{font-size:10px;color:var(--ink-light);margin-top:5px;line-height:1.4}
 
-.upload-zone{border:2px dashed var(--border);border-radius:8px;padding:14px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surface);position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.upload-zone.photo-zone{min-height:120px}
-.upload-zone.logo-zone{min-height:100px}
-.upload-zone:hover{border-color:var(--burg);background:var(--burg-pale)}
-.upload-zone.has-file{border-color:var(--green);background:#f0fdf4}
-.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
-.upload-icon{font-size:20px;opacity:.5;margin-bottom:3px}
-.upload-label{font-size:12px;font-weight:600;color:var(--ink-mid)}
-.upload-sub{font-size:10px;color:var(--ink-light);margin-top:2px}
-.upload-preview{width:100%;max-height:160px;object-fit:contain;border-radius:5px;margin-top:8px;display:none;background:#f5f5f5}
+/* ── Side-by-side photo + logo ────────────────────────────── */
+.photo-logo-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
+.lib-section{margin-top:10px}
+.lib-label{font-size:9.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-light);margin-bottom:6px}
+
+/* ── Upload zones ─────────────────────────────────────────── */
+.upload-zone{border:2px dashed var(--border);border-radius:8px;padding:14px 10px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;background:var(--surface);position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:110px}
+.upload-zone.photo-zone{min-height:130px}
+.upload-zone.logo-zone{min-height:110px}
+.upload-zone:hover:not(.has-file){border-color:var(--burg);background:var(--burg-pale)}
+.upload-zone.has-file{border-color:var(--green);background:#f0fdf4;padding:6px;justify-content:flex-start;align-items:stretch;min-height:0}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;z-index:2}
+/* Placeholder content (icon + text) */
+.upload-placeholder{display:flex;flex-direction:column;align-items:center;gap:2px;pointer-events:none}
+.upload-icon{font-size:22px;opacity:.45}
+.upload-label{font-size:11.5px;font-weight:600;color:var(--ink-mid);margin-top:2px}
+.upload-sub{font-size:10px;color:var(--ink-light);margin-top:1px;line-height:1.3;max-width:120px}
+/* Hide placeholder and show full image when file is loaded */
+.upload-zone.has-file .upload-placeholder{display:none}
+.upload-preview{display:none;width:100%;height:auto;object-fit:contain;border-radius:5px}
+.upload-zone.has-file .upload-preview{display:block}
+/* Clear-upload button */
+.upload-clear{position:absolute;top:5px;right:5px;z-index:3;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.45);color:#fff;border:none;cursor:pointer;font-size:11px;display:none;align-items:center;justify-content:center;line-height:1}
+.upload-zone.has-file .upload-clear{display:flex}
 
 .gen-btn{max-width:280px;margin:0 auto;padding:13px 28px;background:linear-gradient(135deg,#1a1a2e,#3D1A6B);color:#fff;border:none;border-radius:10px;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.14em;cursor:pointer;transition:all .25s;display:flex;align-items:center;justify-content:center;gap:10px}
 .gen-btn:hover:not(:disabled){background:linear-gradient(135deg,#2a2a4e,#5a2490);transform:translateY(-1px);box-shadow:0 6px 24px rgba(80,30,180,.35)}
@@ -550,7 +570,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .result-hdr{padding:12px 16px;border-bottom:1px solid var(--border);background:#FAFAF8;display:flex;align-items:center;justify-content:space-between}
 .result-title{font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--green)}
 .result-img-wrap{padding:16px;display:flex;justify-content:center;background:#f5f3f0}
-.result-img{display:block;width:100%;max-width:340px;object-fit:contain;border-radius:6px;box-shadow:0 4px 20px rgba(0,0,0,.15)}
+.result-img{display:block;width:100%;max-width:100%;object-fit:contain;border-radius:6px;box-shadow:0 4px 20px rgba(0,0,0,.15)}
 .result-actions{padding:14px 16px;display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--border);align-items:center}
 .act-btn{padding:9px 18px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:var(--surface);color:var(--ink-mid);transition:all .2s;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px}
 .act-btn:hover:not(:disabled){border-color:var(--burg);color:var(--burg)}
@@ -564,7 +584,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:#fff;padding:10px 22px;border-radius:30px;font-size:13px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,.3);transition:transform .3s cubic-bezier(.34,1.56,.64,1);z-index:999;pointer-events:none}
 .toast.show{transform:translateX(-50%) translateY(0)}
 
-@media(max-width:860px){.layout{grid-template-columns:1fr;overflow:auto}html,body{height:auto;overflow:auto}.fpanel,.rpanel{overflow:visible}}
+@media(max-width:860px){.layout{grid-template-columns:1fr;overflow:auto}html,body{height:auto;overflow:auto}.fpanel,.rpanel{overflow:visible}.photo-logo-row{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -635,9 +655,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 
     <!-- Template -->
     <div class="card">
-      <div class="card-hdr"><div class="card-title">Template</div></div>
+      <div class="card-hdr">
+        <div class="card-title">Template</div>
+        <span id="tmplOrientationLabel" style="font-size:10px;color:var(--ink-light)"></span>
+      </div>
       <div class="card-body" style="padding:10px 12px">
-        <div class="tmpl-grid">
+        <!-- Grid shown for portrait & square; hidden for landscape -->
+        <div class="tmpl-grid portrait" id="tmplGrid">
           <div class="tmpl-card active" id="tmpl-parchment-classic" onclick="selectTemplate('parchment-classic')">
             <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/parchment-classic" alt="Parchment Classic" onerror="this.style.background='#e8e3dc'">
             <div class="tmpl-card-name">Parchment Classic</div>
@@ -651,75 +675,87 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
             <div class="tmpl-sel-badge" id="badge-made-fresh" style="display:none">&#10003; Selected</div>
           </div>
           <div class="tmpl-card disabled">
-            <div class="tmpl-thumb" style="display:flex;align-items:center;justify-content:center;font-size:24px;background:#f5f5f5">&#128396;</div>
+            <div class="tmpl-thumb" style="display:flex;align-items:center;justify-content:center;font-size:22px;background:#f5f5f5">&#128396;</div>
             <div class="tmpl-card-name" style="color:#bbb">Bold &amp; Modern</div>
             <div class="cs-badge">Coming Soon</div>
           </div>
           <div class="tmpl-card disabled">
-            <div class="tmpl-thumb" style="display:flex;align-items:center;justify-content:center;font-size:24px;background:#f0f4ff">&#127807;</div>
+            <div class="tmpl-thumb" style="display:flex;align-items:center;justify-content:center;font-size:22px;background:#f0f4ff">&#127807;</div>
             <div class="tmpl-card-name" style="color:#bbb">Clean &amp; Minimal</div>
             <div class="cs-badge">Coming Soon</div>
           </div>
           <div class="tmpl-card disabled">
-            <div class="tmpl-thumb" style="display:flex;align-items:center;justify-content:center;font-size:24px;background:#1a1a2e">&#128293;</div>
+            <div class="tmpl-thumb" style="display:flex;align-items:center;justify-content:center;font-size:22px;background:#1a1a2e">&#128293;</div>
             <div class="tmpl-card-name" style="color:#bbb">Dark &amp; Bold</div>
             <div class="cs-badge">Coming Soon</div>
           </div>
           <div class="tmpl-card disabled">
-            <div class="tmpl-thumb" style="display:flex;align-items:center;justify-content:center;font-size:24px;background:#f5fff5">&#127968;</div>
+            <div class="tmpl-thumb" style="display:flex;align-items:center;justify-content:center;font-size:22px;background:#f5fff5">&#127968;</div>
             <div class="tmpl-card-name" style="color:#bbb">Neighborhood Pro</div>
             <div class="cs-badge">Coming Soon</div>
           </div>
         </div>
+        <!-- Landscape placeholder (shown only when spot is landscape) -->
+        <div class="tmpl-landscape-ph" id="tmplLandscapePh">
+          <div class="tmpl-landscape-ph-icon">&#128444;&#65039;</div>
+          <div class="tmpl-landscape-ph-title">Landscape templates coming soon</div>
+          <div class="tmpl-landscape-ph-sub">Your ad will still be generated &mdash; Grok will fill the landscape canvas with your business info and photo.</div>
+        </div>
       </div>
     </div>
 
-    <!-- Food Photo -->
-    <div class="card">
-      <div class="card-hdr">
-        <div class="card-title">Food / Hero Photo</div>
-        <span style="font-size:10px;color:var(--ink-light)" id="photoStatus">None selected</span>
-      </div>
-      <div class="card-body">
-        <div class="tabs">
-          <button class="tab active" onclick="switchTab('lib')">&#128247; From Library</button>
-          <button class="tab" onclick="switchTab('upload')">&#8679; Upload Your Own</button>
+    <!-- Hero Photo + Logo — side by side -->
+    <div class="photo-logo-row">
+
+      <!-- Left: Hero Photo -->
+      <div class="card">
+        <div class="card-hdr">
+          <div class="card-title">Hero Photo</div>
+          <span style="font-size:10px;color:var(--ink-light)" id="photoStatus">None selected</span>
         </div>
-        <div class="tab-panel active" id="tabLib">
-          <div id="libGrid" class="img-grid">
-            <div class="img-empty">Select an industry above to load photos from the library.</div>
-          </div>
-          <p class="fnote" id="libNote" style="display:none">Click a photo to select it as the hero image.</p>
-        </div>
-        <div class="tab-panel" id="tabUpload">
+        <div class="card-body">
+          <!-- Upload zone -->
           <div class="upload-zone photo-zone" id="photoZone">
             <input type="file" accept="image/*" onchange="handlePhotoUpload(this)">
-            <div class="upload-icon">&#128248;</div>
-            <div class="upload-label">Upload a photo</div>
-            <div class="upload-sub">Food, product, or storefront &mdash; JPG, PNG, WebP</div>
-            <img class="upload-preview" id="photoPreview">
+            <div class="upload-placeholder">
+              <div class="upload-icon">&#128248;</div>
+              <div class="upload-label">Upload a photo</div>
+              <div class="upload-sub">Food, product, or storefront &mdash; JPG, PNG, WebP</div>
+            </div>
+            <img class="upload-preview" id="photoPreview" alt="Photo preview">
+            <button class="upload-clear" title="Remove photo" onclick="clearPhoto(event)">&#10005;</button>
           </div>
-          <p class="fnote">Grok will composite this into the hero area of the template.</p>
+          <!-- Library grid always visible below -->
+          <div class="lib-section">
+            <div class="lib-label">Or pick from library</div>
+            <div id="libGrid" class="img-grid">
+              <div class="img-empty">Select an industry above to load photos.</div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Logo -->
-    <div class="card">
-      <div class="card-hdr">
-        <div class="card-title">Company Logo <span style="color:var(--ink-light);font-weight:400;letter-spacing:0;text-transform:none;font-size:10px">(optional)</span></div>
-        <span style="font-size:10px;color:var(--ink-light)" id="logoStatus">Not provided</span>
-      </div>
-      <div class="card-body">
-        <div class="upload-zone logo-zone" id="logoZone">
-          <input type="file" accept="image/*" onchange="handleLogoUpload(this)">
-          <div class="upload-icon">&#127991;&#65039;</div>
-          <div class="upload-label">Upload logo</div>
-          <div class="upload-sub">PNG with transparency preferred</div>
-          <img class="upload-preview" id="logoPreview">
+      <!-- Right: Logo -->
+      <div class="card">
+        <div class="card-hdr">
+          <div class="card-title">Company Logo</div>
+          <span style="font-size:10px;color:var(--ink-light)" id="logoStatus">Optional</span>
         </div>
-        <p class="fnote">Placed in the upper-left corner exactly as provided.</p>
+        <div class="card-body">
+          <div class="upload-zone logo-zone" id="logoZone">
+            <input type="file" accept="image/*" onchange="handleLogoUpload(this)">
+            <div class="upload-placeholder">
+              <div class="upload-icon">&#127991;&#65039;</div>
+              <div class="upload-label">Upload logo</div>
+              <div class="upload-sub">PNG with transparency preferred</div>
+            </div>
+            <img class="upload-preview" id="logoPreview" alt="Logo preview">
+            <button class="upload-clear" title="Remove logo" onclick="clearLogo(event)">&#10005;</button>
+          </div>
+          <p class="fnote" style="margin-top:8px">Placed in the upper-left corner exactly as provided.</p>
+        </div>
       </div>
+
     </div>
 
     <!-- Generate button -->
@@ -760,9 +796,29 @@ function esc(str){ var d=document.createElement('div');d.textContent=String(str|
 var _selectedPhotoUrl = '';
 var _logoData = '';
 var _resultUrl = '';
-var _activeTab = 'lib';
 var _activeTemplate = 'parchment-classic';
 var _spotSize = 'XL';
+
+// ── Orientation-aware template grid ────────────────────────────────────────
+var SIZE_DIMS = { XL:{w:400,h:500}, L:{w:300,h:400}, M:{w:200,h:200}, S:{w:200,h:200} };
+function getOrientation(sizeKey){
+  var d = SIZE_DIMS[sizeKey] || SIZE_DIMS.XL;
+  return d.h > d.w ? 'portrait' : d.w > d.h ? 'landscape' : 'square';
+}
+function applyTemplateOrientation(){
+  var orientation = getOrientation(_spotSize);
+  var grid = document.getElementById('tmplGrid');
+  var ph   = document.getElementById('tmplLandscapePh');
+  var lbl  = document.getElementById('tmplOrientationLabel');
+  var d = SIZE_DIMS[_spotSize] || SIZE_DIMS.XL;
+  if(lbl) lbl.textContent = orientation.charAt(0).toUpperCase()+orientation.slice(1)+' \u00b7 '+d.w/100+'\u2033\u00d7'+d.h/100+'\u2033';
+  if(!grid) return;
+  grid.classList.remove('portrait','landscape','square');
+  grid.classList.add(orientation);
+  var isLandscape = orientation === 'landscape';
+  grid.style.display = isLandscape ? 'none' : 'grid';
+  if(ph) ph.classList.toggle('visible', isLandscape);
+}
 
 function selectTemplate(key){
   if(_activeTemplate === key) return;
@@ -899,15 +955,7 @@ function onIndustryChange(){
   document.getElementById('offerFine').value = offerPair ? offerPair[1] : '';
 }
 
-function switchTab(tab){
-  _activeTab = tab;
-  document.querySelectorAll('.tab').forEach(function(t,i){
-    t.classList.toggle('active', (tab==='lib' && i===0)||(tab==='upload' && i===1));
-  });
-  document.getElementById('tabLib').classList.toggle('active', tab==='lib');
-  document.getElementById('tabUpload').classList.toggle('active', tab==='upload');
-  if(tab==='lib') loadLibrary();
-}
+// (tab system removed — library is always visible below the upload zone)
 
 function addMenuItem(val){
   val = val || '';
@@ -971,14 +1019,26 @@ function handlePhotoUpload(input){
   var reader = new FileReader();
   reader.onload = function(e){
     _selectedPhotoUrl = e.target.result;
+    // Deselect any library photo
+    document.querySelectorAll('.img-thumb').forEach(function(t){ t.classList.remove('selected'); });
     var prev = document.getElementById('photoPreview');
-    prev.src = e.target.result; prev.style.display = 'block';
+    prev.src = e.target.result;
     document.getElementById('photoZone').classList.add('has-file');
-    document.getElementById('photoZone').querySelector('.upload-label').textContent = '\\u2713 Photo ready';
     document.getElementById('photoStatus').textContent = '\\u2713 Uploaded';
     document.getElementById('photoStatus').style.color = 'var(--green)';
   };
   reader.readAsDataURL(file);
+}
+
+function clearPhoto(evt){
+  evt.preventDefault(); evt.stopPropagation();
+  _selectedPhotoUrl = '';
+  var zone = document.getElementById('photoZone');
+  zone.classList.remove('has-file');
+  var prev = document.getElementById('photoPreview'); prev.src = '';
+  var inp = zone.querySelector('input[type=file]'); if(inp) inp.value = '';
+  document.getElementById('photoStatus').textContent = 'None selected';
+  document.getElementById('photoStatus').style.color = '';
 }
 
 function handleLogoUpload(input){
@@ -987,13 +1047,23 @@ function handleLogoUpload(input){
   reader.onload = function(e){
     _logoData = e.target.result;
     var prev = document.getElementById('logoPreview');
-    prev.src = e.target.result; prev.style.display = 'block';
+    prev.src = e.target.result;
     document.getElementById('logoZone').classList.add('has-file');
-    document.getElementById('logoZone').querySelector('.upload-label').textContent = '\\u2713 Logo ready';
     document.getElementById('logoStatus').textContent = '\\u2713 Uploaded';
     document.getElementById('logoStatus').style.color = 'var(--green)';
   };
   reader.readAsDataURL(file);
+}
+
+function clearLogo(evt){
+  evt.preventDefault(); evt.stopPropagation();
+  _logoData = '';
+  var zone = document.getElementById('logoZone');
+  zone.classList.remove('has-file');
+  var prev = document.getElementById('logoPreview'); prev.src = '';
+  var inp = zone.querySelector('input[type=file]'); if(inp) inp.value = '';
+  document.getElementById('logoStatus').textContent = 'Optional';
+  document.getElementById('logoStatus').style.color = '';
 }
 
 async function generate(){
@@ -1124,6 +1194,7 @@ function showToast(msg){
 (function prefill(){
   var params = new URLSearchParams(window.location.search);
   _spotSize = params.get('spotSize') || 'XL';
+  applyTemplateOrientation();
   var urlBiz = params.get('bizName') || '';
   var urlIndustry = params.get('industry') || '';
   if(urlBiz){
