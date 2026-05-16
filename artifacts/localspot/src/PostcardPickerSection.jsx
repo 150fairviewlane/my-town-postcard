@@ -562,8 +562,9 @@ const openGrokGenerator=()=>{
   setAdMethod("grok");
   const handler=(e)=>{
     if(!e.data||e.data.type!=='grok-ad-result')return;
-    if(e.origin!==window.location.origin)return;
-    if(popup&&e.source!==popup)return;
+    // Accept same origin OR '*' — the source===popup check is unreliable in
+    // Replit's proxied iframe environment, so we only guard by message type.
+    if(e.origin!==window.location.origin&&e.origin!=='null')return;
     window.removeEventListener('message',handler);
     grokListenerRef.current=null;
     grokPopupRef.current=null;
@@ -689,6 +690,33 @@ return(<div style={{fontFamily:"sans-serif"}}>
     isReserving={reserving}
     reserveError={reserveError}
   />
+)}
+
+{/* Grok flow — reserving spinner */}
+{sel&&adMethod==="grok"&&reserving&&!reserveError&&(
+  <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1999}}>
+    <div style={{background:"#fff",borderRadius:14,padding:"36px 48px",textAlign:"center",boxShadow:"0 24px 64px rgba(0,0,0,0.35)"}}>
+      <div style={{fontSize:36,marginBottom:14}}>⏳</div>
+      <div style={{fontWeight:800,fontSize:17,color:"#111"}}>Reserving your spot…</div>
+      <div style={{color:"#6b7280",fontSize:13,marginTop:6}}>Hang tight, this only takes a second.</div>
+    </div>
+  </div>
+)}
+
+{/* Grok flow — reserve error */}
+{sel&&adMethod==="grok"&&!reserving&&reserveError&&(
+  <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1999,padding:16}}>
+    <div style={{background:"#fff",borderRadius:14,padding:"36px 32px",textAlign:"center",boxShadow:"0 24px 64px rgba(0,0,0,0.35)",maxWidth:420,width:"100%"}}>
+      <div style={{fontSize:36,marginBottom:14}}>⚠️</div>
+      <div style={{fontWeight:800,fontSize:17,color:"#991b1b",marginBottom:8}}>Reservation failed</div>
+      <div style={{color:"#374151",fontSize:14,marginBottom:24,lineHeight:1.6}}>{reserveError}</div>
+      <button
+        onClick={()=>{setAdMethod(null);setReserveError(null);}}
+        style={{background:"#991b1b",color:"#fff",border:"none",borderRadius:8,padding:"10px 28px",cursor:"pointer",fontWeight:700,fontSize:14}}>
+        Choose another spot
+      </button>
+    </div>
+  </div>
 )}
 </div>
 );
