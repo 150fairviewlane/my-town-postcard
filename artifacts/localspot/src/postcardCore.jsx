@@ -593,6 +593,14 @@ function GreenAcresAd({ size }) {
 
 // ─── Fallback Ad ──────────────────────────────────────────────────────────────
 function DefaultAd({ spot }) {
+  if (spot.adFileUrl) {
+    return (
+      <div style={{ width: "100%", height: "100%", background: "#000", overflow: "hidden" }}>
+        <img src={spot.adFileUrl} alt={spot.businessName}
+          style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
+      </div>
+    );
+  }
   return (
     <div style={{ width: "100%", height: "100%", background: "#f9fafb",
       border: "1px solid #e5e7eb", display: "flex", flexDirection: "column",

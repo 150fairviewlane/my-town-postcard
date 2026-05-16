@@ -502,7 +502,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .tmpl-card.active{border-color:var(--green);box-shadow:0 0 0 1px var(--green)}
 .tmpl-card.disabled{cursor:default;opacity:.55}
 /* Orientation-aware thumbnail — aspect-ratio set via orientation class on .tmpl-grid */
-.tmpl-thumb{width:100%;object-fit:cover;display:block;background:#f0ede8;flex-shrink:0}
+.tmpl-thumb{width:100%;object-fit:contain;display:block;background:#f0ede8;flex-shrink:0}
 .tmpl-grid.portrait  .tmpl-thumb{aspect-ratio:4/5}
 .tmpl-grid.landscape .tmpl-thumb{aspect-ratio:5/4}
 .tmpl-grid.square    .tmpl-thumb{aspect-ratio:1/1}
