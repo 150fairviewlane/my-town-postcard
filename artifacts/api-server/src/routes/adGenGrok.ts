@@ -28,6 +28,7 @@ const GenerateSchema = z.object({
   offer:     z.string().optional().default(""),
   offerFine: z.string().optional().default(""),
   template:  z.string().optional().default("parchment-classic"),
+  sizeKey:   z.string().optional().default("xl"),
   photoUrl:  z.string().optional().default(""),
   logoData:  z.string().optional().default(""),
 });
@@ -164,6 +165,15 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     return;
   }
   const tmplBuf = fs.readFileSync(tmplPath);
+  // Derive correct MIME type from actual file extension
+  const tmplMime = /\.(jpe?g)$/i.test(tmplFilename) ? "image/jpeg" : "image/png";
+
+  // Map spot size → correct aspect ratio so generated image matches the print cell exactly
+  // XL=4"×5" → 4:5 | Large=3"×4" → 3:4 | Medium/Small=2"×2" → 1:1
+  const aspectRatioMap: Record<string, string> = {
+    xl: "4:5", large: "3:4", l: "3:4", medium: "1:1", small: "1:1", m: "1:1", s: "1:1",
+  };
+  const spotAspectRatio = aspectRatioMap[d.sizeKey.toLowerCase()] ?? "4:5";
 
   const menuStr     = d.menu.filter(Boolean).map((m, i) => `  ${i + 1}. ${m}`).join("\n") || "  (none)";
   const fullAddress = [d.address, d.city].filter(Boolean).join(", ") || "(none)";
@@ -349,7 +359,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   try {
     type XaiImageRef = { type: "image_url"; url: string };
     const imageRefs: XaiImageRef[] = [
-      { type: "image_url", url: toDataUrl(tmplBuf, "image/png") },
+      { type: "image_url", url: toDataUrl(tmplBuf, tmplMime) },
     ];
 
     if (hasPhoto) {
@@ -371,7 +381,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       prompt:       adPrompt,
       n:            1,
       images:       imageRefs,
-      aspect_ratio: "2:3",
+      aspect_ratio: spotAspectRatio,
       resolution:   "2k",
     };
     const xaiRes = await fetch("https://api.x.ai/v1/images/edits", {
@@ -434,8 +444,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           model:        "grok-imagine-image-quality",
           prompt:       adPrompt,
           n:            1,
-          images:       [{ type: "image_url", url: toDataUrl(tmplBuf) }],
-          aspect_ratio: "2:3",
+          images:       [{ type: "image_url", url: toDataUrl(tmplBuf, tmplMime) }],
+          aspect_ratio: spotAspectRatio,
           resolution:   "2k",
         };
         const retryRes = await fetch("https://api.x.ai/v1/images/edits", {
