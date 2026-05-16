@@ -156,7 +156,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     templateKey === "made-fresh"
       ? "made_fresh_template.png"
       : templateKey === "neighborhood-pro"
-        ? "6300F2D5-6BF1-403E-A40B-7203E4E26402_1778900616429.png"
+        ? "6300F2D5-6BF1-403E-A40B-7203E4E26402_1778948283280.jpeg"
         : "mr_biscuits_template_no_logo_1778806527327.png";
   const tmplPath = path.join(WORKSPACE_ROOT, "attached_assets", tmplFilename);
   if (!fs.existsSync(tmplPath)) {
@@ -490,7 +490,7 @@ router.get("/grok-ad-generator/template-preview/:key", (req, res) => {
   const fileMap: Record<string, string> = {
     "parchment-classic":   "mr_biscuits_template_no_logo_1778806527327.png",
     "made-fresh":          "made_fresh_template.png",
-    "neighborhood-pro":    "6300F2D5-6BF1-403E-A40B-7203E4E26402_1778900616429.png",
+    "neighborhood-pro":    "6300F2D5-6BF1-403E-A40B-7203E4E26402_1778948283280.jpeg",
   };
   const filename = fileMap[key];
   if (!filename) { res.status(404).send("Not found"); return; }
