@@ -10,6 +10,7 @@ const inputStyle = {
 const OPTIONS_LIST = [
   { id: "adjacent-town", label: "An adjacent town or territory" },
   { id: "later-date", label: "A later mailing date" },
+  { id: "other", label: "Other" },
 ];
 
 export default function RequestOptionsPage() {
@@ -24,6 +25,7 @@ export default function RequestOptionsPage() {
     category: initialCategory,
     email: "",
     phone: "",
+    otherComment: "",
     options: [],
   });
   const [errors, setErrors] = useState({});
@@ -58,7 +60,7 @@ export default function RequestOptionsPage() {
           email: form.email.trim(),
           phone: form.phone.trim() || undefined,
           industry: form.category.trim(),
-          options: form.options,
+          options: form.options.map(option => option === "other" ? `other: ${form.otherComment.trim() || "No comment provided"}` : option),
         }),
       });
       if (!res.ok) throw new Error("failed");
@@ -124,6 +126,21 @@ export default function RequestOptionsPage() {
                 style={inputStyle}
               />
             </div>
+
+            {form.options.includes("other") && (
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 4 }}>
+                  Other <span style={{ fontWeight: 400, color: "#9ca3af" }}>(tell us more)</span>
+                </label>
+                <textarea
+                  value={form.otherComment}
+                  onChange={e => setForm(f => ({ ...f, otherComment: e.target.value }))}
+                  placeholder="Tell us what you're looking for"
+                  rows={4}
+                  style={{ ...inputStyle, resize: "vertical", minHeight: 96 }}
+                />
+              </div>
+            )}
 
             <div>
               <label style={{ fontSize: 12, fontWeight: 700, color: errors.businessName ? "#dc2626" : "#374151", display: "block", marginBottom: 4 }}>
