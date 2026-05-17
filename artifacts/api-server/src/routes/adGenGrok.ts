@@ -183,12 +183,12 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   };
   const spotAspectRatio = aspectRatioMap[d.sizeKey.toLowerCase()] ?? "3:4";
 
-  // Exact print dimensions (px at 100 dpi) — sharp crops Grok output to these
+  // Print dimensions at 300 DPI — sharp crops Grok output to these for screen-sharp quality
   const CROP_DIMS: Record<string, { w: number; h: number }> = {
-    xl:     { w: 400, h: 500 },
-    large:  { w: 300, h: 400 }, l: { w: 300, h: 400 },
-    medium: { w: 300, h: 200 }, m: { w: 300, h: 200 },
-    small:  { w: 200, h: 200 }, s: { w: 200, h: 200 },
+    xl:     { w: 1200, h: 1500 },
+    large:  { w: 900,  h: 1200 }, l: { w: 900,  h: 1200 },
+    medium: { w: 900,  h: 600  }, m: { w: 900,  h: 600  },
+    small:  { w: 600,  h: 600  }, s: { w: 600,  h: 600  },
   };
   const cropDim = CROP_DIMS[d.sizeKey.toLowerCase()] ?? { w: 400, h: 500 };
 
@@ -330,7 +330,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
 
       "  ZONE 6 — FOOTER (dark green bar at very bottom):\n" +
       `    Left: phone number "${d.phone || ""}" in very BOLD white sans-serif — large, instantly readable. Zero digit changes.\n` +
-      (fullAddress !== "(none)" ? `    Below or beside phone: address "${fullAddress}" in smaller white sans-serif. Must appear verbatim — no changes.\n` : "") +
+      (fullAddress !== "(none)" ? `    Below or beside phone: address "${fullAddress}" in white sans-serif, readable size — at least half the height of the phone number. Must appear verbatim — no changes.\n` : "") +
       `    Center: three small circular trust-badge icons (shield, star, leaf) as in the template.\n` +
       "    Right: a clean square QR code box. Do NOT render the website URL as text.\n\n" +
 
@@ -383,7 +383,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
 
       "  ZONE 6 — FOOTER (dark strip at very bottom):\n" +
       `    Phone: "${d.phone || ""}" — BOLD, large, easy to read at a glance. Zero digit changes.\n` +
-      (fullAddress !== "(none)" ? `    Address: "${fullAddress}" — must appear verbatim in the footer, bold styled text. Do not omit, abbreviate, or change.\n` : "") +
+      (fullAddress !== "(none)" ? `    Address: "${fullAddress}" — must appear verbatim in the footer in clearly legible bold text, noticeably larger than fine print. Do not omit, abbreviate, or change.\n` : "") +
       "    QR code: place a clean, square QR code graphic in the lower-right of the footer. Do NOT render the website URL as text anywhere on the ad.\n\n" +
 
       "TYPOGRAPHIC RULES:\n" +
@@ -439,8 +439,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
         buf = Buffer.from(await resp.arrayBuffer());
       }
       const out = await sharp(buf)
-        .resize(w, h, { fit: "cover", position: "centre" })
-        .jpeg({ quality: 95 })
+        .resize(w, h, { fit: "cover", position: "centre", kernel: "lanczos3" })
+        .jpeg({ quality: 98, chromaSubsampling: "4:4:4" })
         .toBuffer();
       return `data:image/jpeg;base64,${out.toString("base64")}`;
     } catch {
