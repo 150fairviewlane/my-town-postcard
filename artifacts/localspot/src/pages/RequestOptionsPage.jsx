@@ -110,7 +110,7 @@ export default function RequestOptionsPage() {
               </div>
             )}
             <p style={{ color: "#6b7280", fontSize: 14, lineHeight: 1.65, margin: 0 }}>
-              Leave your info and we'll reach out as soon as something works for your business.
+              Leave your info and we'll reach out to you ASAP!
             </p>
           </div>
 
@@ -126,21 +126,6 @@ export default function RequestOptionsPage() {
                 style={inputStyle}
               />
             </div>
-
-            {form.options.includes("other") && (
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 4 }}>
-                  Other <span style={{ fontWeight: 400, color: "#9ca3af" }}>(tell us more)</span>
-                </label>
-                <textarea
-                  value={form.otherComment}
-                  onChange={e => setForm(f => ({ ...f, otherComment: e.target.value }))}
-                  placeholder="Tell us what you're looking for"
-                  rows={4}
-                  style={{ ...inputStyle, resize: "vertical", minHeight: 96 }}
-                />
-              </div>
-            )}
 
             <div>
               <label style={{ fontSize: 12, fontWeight: 700, color: errors.businessName ? "#dc2626" : "#374151", display: "block", marginBottom: 4 }}>
@@ -200,25 +185,44 @@ export default function RequestOptionsPage() {
               </label>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {OPTIONS_LIST.map(opt => (
-                  <label
-                    key={opt.id}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 10, cursor: "pointer",
-                      padding: "10px 14px", borderRadius: 8,
-                      border: `1.5px solid ${form.options.includes(opt.id) ? "#991b1b" : "#e5e7eb"}`,
-                      background: form.options.includes(opt.id) ? "#fef2f2" : "#fff",
-                      transition: "all 0.15s",
-                    }}>
-                    <input
-                      type="checkbox"
-                      checked={form.options.includes(opt.id)}
-                      onChange={() => toggleOption(opt.id)}
-                      style={{ width: 16, height: 16, accentColor: "#991b1b", flexShrink: 0 }}
-                    />
-                    <span style={{ fontSize: 14, color: "#111", fontWeight: form.options.includes(opt.id) ? 600 : 400 }}>
-                      {opt.label}
-                    </span>
-                  </label>
+                  <div key={opt.id}>
+                    <label
+                      style={{
+                        display: "flex", alignItems: "center", gap: 10, cursor: "pointer",
+                        padding: "10px 14px", borderRadius: form.options.includes(opt.id) && opt.id === "other" ? "8px 8px 0 0" : 8,
+                        border: `1.5px solid ${form.options.includes(opt.id) ? "#991b1b" : "#e5e7eb"}`,
+                        borderBottom: form.options.includes(opt.id) && opt.id === "other" ? "1.5px solid #fecaca" : undefined,
+                        background: form.options.includes(opt.id) ? "#fef2f2" : "#fff",
+                        transition: "all 0.15s",
+                      }}>
+                      <input
+                        type="checkbox"
+                        checked={form.options.includes(opt.id)}
+                        onChange={() => toggleOption(opt.id)}
+                        style={{ width: 16, height: 16, accentColor: "#991b1b", flexShrink: 0 }}
+                      />
+                      <span style={{ fontSize: 14, color: "#111", fontWeight: form.options.includes(opt.id) ? 600 : 400 }}>
+                        {opt.label}
+                      </span>
+                    </label>
+                    {opt.id === "other" && form.options.includes("other") && (
+                      <div style={{
+                        border: "1.5px solid #991b1b", borderTop: "none",
+                        borderRadius: "0 0 8px 8px", background: "#fef2f2", padding: "10px 14px",
+                      }}>
+                        <textarea
+                          value={form.otherComment}
+                          onChange={e => setForm(f => ({ ...f, otherComment: e.target.value }))}
+                          placeholder="Tell us what you're looking for…"
+                          rows={3}
+                          style={{
+                            ...inputStyle, resize: "vertical", minHeight: 72,
+                            background: "#fff", border: "1.5px solid #e5e7eb",
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
