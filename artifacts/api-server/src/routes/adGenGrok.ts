@@ -763,6 +763,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 
 .err-box{padding:14px 16px;background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;font-size:12.5px;color:#991b1b;line-height:1.5;display:none}
 .err-box.visible{display:block}
+.field-error{border-color:#ef4444 !important;box-shadow:0 0 0 3px rgba(239,68,68,.25) !important;animation:field-shake .35s ease}
+@keyframes field-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:#fff;padding:10px 22px;border-radius:30px;font-size:13px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,.3);transition:transform .3s cubic-bezier(.34,1.56,.64,1);z-index:999;pointer-events:none}
 .toast.show{transform:translateX(-50%) translateY(0)}
@@ -1374,18 +1376,29 @@ function showErr(msg){
 
 function hideErr(){ document.getElementById('errBox').classList.remove('visible'); }
 
+function fieldHighlight(id){
+  var el = document.getElementById(id);
+  if(!el) return;
+  // Remove then re-add so animation replays if triggered again
+  el.classList.remove('field-error');
+  void el.offsetWidth; // force reflow
+  el.classList.add('field-error');
+  el.scrollIntoView({ behavior:'smooth', block:'center' });
+  el.addEventListener('input', function clear(){ el.classList.remove('field-error'); el.removeEventListener('input', clear); });
+}
+
 function useThisAd(){
   if(!_resultUrl){ return; }
   var bizName = document.getElementById('bizName').value.trim();
   var email   = document.getElementById('email') ? document.getElementById('email').value.trim() : '';
   if(!bizName){
-    showErr('Please enter your business name before continuing.');
-    document.getElementById('bizName').focus();
+    showErr('Please enter your business name (scroll up) before continuing.');
+    fieldHighlight('bizName');
     return;
   }
   if(!email){
-    showErr('Please enter a contact email so we can send your order confirmation.');
-    document.getElementById('email').focus();
+    showErr('Please enter a contact email (scroll up) so we can send your order confirmation.');
+    fieldHighlight('email');
     return;
   }
   hideErr();
