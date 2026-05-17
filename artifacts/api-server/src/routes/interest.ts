@@ -21,9 +21,15 @@ router.post("/interest", async (req, res): Promise<void> => {
   }
   const { name, businessName, email, phone, industry, options } = parsed.data;
 
+  const OPTION_LABELS: Record<string, string> = {
+    "adjacent-town": "Adjacent town",
+    "later-date": "Later mailing date",
+  };
+  const optionLabels = options.map(id => OPTION_LABELS[id] ?? id);
+
   const notesParts = [
     `Interest lead — category: ${industry}`,
-    options.length ? `Options requested: ${options.join(", ")}` : null,
+    optionLabels.length ? `Options requested: ${optionLabels.join(", ")}` : null,
   ].filter(Boolean);
 
   const [row] = await db

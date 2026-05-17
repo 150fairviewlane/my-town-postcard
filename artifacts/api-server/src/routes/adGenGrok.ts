@@ -1423,6 +1423,17 @@ function showToast(msg){
   _spotSize = params.get('spotSize') || 'XL';
   var takenParam = params.get('taken') || '';
   _takenCategories = takenParam ? takenParam.split(',').map(function(s){ return s.trim(); }).filter(Boolean) : [];
+  // Also fetch taken categories from the API so standalone use is accurate
+  fetch('/api/campaigns/active/taken-categories')
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(data){
+      if(data && Array.isArray(data.takenCategories)){
+        var merged = data.takenCategories.slice();
+        _takenCategories.forEach(function(c){ if(merged.indexOf(c)===-1) merged.push(c); });
+        _takenCategories = merged;
+      }
+    })
+    .catch(function(){});
   applyTemplateOrientation();
   var urlBiz = params.get('bizName') || '';
   var urlIndustry = params.get('industry') || '';

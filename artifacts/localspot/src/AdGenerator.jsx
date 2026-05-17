@@ -1495,7 +1495,7 @@ boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
   <IndustryConflictDialog
     industry={conflictIndustry}
     businessName={formData.businessName}
-    onChooseDifferent={() => setConflictIndustry(null)}
+    onChooseDifferent={() => { setConflictIndustry(null); setFormData(d => ({ ...d, industry: "" })); }}
     onDismiss={() => setConflictIndustry(null)}
   />
 )}
