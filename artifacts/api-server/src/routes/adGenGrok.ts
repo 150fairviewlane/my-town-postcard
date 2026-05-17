@@ -330,6 +330,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
 
       "  ZONE 6 — FOOTER (dark green bar at very bottom):\n" +
       `    Left: phone number "${d.phone || ""}" in very BOLD white sans-serif — large, instantly readable. Zero digit changes.\n` +
+      (fullAddress !== "(none)" ? `    Below or beside phone: address "${fullAddress}" in smaller white sans-serif. Must appear verbatim — no changes.\n` : "") +
       `    Center: three small circular trust-badge icons (shield, star, leaf) as in the template.\n` +
       "    Right: a clean square QR code box. Do NOT render the website URL as text.\n\n" +
 
@@ -382,7 +383,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
 
       "  ZONE 6 — FOOTER (dark strip at very bottom):\n" +
       `    Phone: "${d.phone || ""}" — BOLD, large, easy to read at a glance. Zero digit changes.\n` +
-      `    Address: "${fullAddress}" — bold, styled, not plain body text.\n` +
+      (fullAddress !== "(none)" ? `    Address: "${fullAddress}" — must appear verbatim in the footer, bold styled text. Do not omit, abbreviate, or change.\n` : "") +
       "    QR code: place a clean, square QR code graphic in the lower-right of the footer. Do NOT render the website URL as text anywhere on the ad.\n\n" +
 
       "TYPOGRAPHIC RULES:\n" +
@@ -413,7 +414,9 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     "professional lighting. Bold confident typography hierarchy. Premium color palette — deep, saturated, controlled. " +
     "Every element is intentionally placed; nothing looks accidental or generic. Print-ready sharpness throughout.\n\n" +
     "CRITICAL: Every piece of text must appear EXACTLY as specified. " +
-    "Phone numbers, prices, business name — zero tolerance for errors. No website URL text anywhere.\n\n" +
+    "Phone numbers, prices, business name, and address — zero tolerance for errors or omissions. " +
+    (fullAddress !== "(none)" ? `The address "${fullAddress}" MUST be visible in the footer — do not skip it. ` : "") +
+    "No website URL text anywhere.\n\n" +
     "BUSINESS DETAILS:\n" + businessBlock;
 
   // ── Build images array for xAI /images/edits ────────────────────────────────
