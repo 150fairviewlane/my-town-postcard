@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { z } from "zod/v4";
 import fs from "fs";
 import path from "path";
+import sharp from "sharp";
 
 function findWorkspaceRoot(): string {
   let dir = process.cwd();
@@ -151,29 +152,45 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
 
   const d = parsed.data;
 
-  // Load template PNG as raw buffer (used as multipart binary)
-  const templateKey = d.template || "parchment-classic";
-  const tmplFilename =
-    templateKey === "made-fresh"
-      ? "made_fresh_template.png"
-      : templateKey === "neighborhood-pro"
-        ? "6300F2D5-6BF1-403E-A40B-7203E4E26402_1778948283280.jpeg"
-        : "mr_biscuits_template_no_logo_1778806527327.png";
-  const tmplPath = path.join(WORKSPACE_ROOT, "attached_assets", tmplFilename);
-  if (!fs.existsSync(tmplPath)) {
-    res.status(500).json({ error: "Template file not found on server." });
-    return;
-  }
-  const tmplBuf = fs.readFileSync(tmplPath);
-  // Derive correct MIME type from actual file extension
-  const tmplMime = /\.(jpe?g)$/i.test(tmplFilename) ? "image/jpeg" : "image/png";
+  // Medium (3"×2") is the only landscape spot size
+  const isLandscape = ["medium", "m"].includes(d.sizeKey.toLowerCase());
 
-  // Map spot size → correct aspect ratio so generated image matches the print cell exactly
-  // XL=4"×5" → 4:5 | Large=3"×4" → 3:4 | Medium/Small=2"×2" → 1:1
+  // Load template PNG as raw buffer — skipped for landscape (no portrait template applies)
+  const templateKey = d.template || "parchment-classic";
+  let tmplBuf: Buffer | null = null;
+  let tmplMime = "image/png";
+  if (!isLandscape) {
+    const tmplFilename =
+      templateKey === "made-fresh"
+        ? "made_fresh_template.png"
+        : templateKey === "neighborhood-pro"
+          ? "6300F2D5-6BF1-403E-A40B-7203E4E26402_1778948283280.jpeg"
+          : "mr_biscuits_template_no_logo_1778806527327.png";
+    const tmplPath = path.join(WORKSPACE_ROOT, "attached_assets", tmplFilename);
+    if (!fs.existsSync(tmplPath)) {
+      res.status(500).json({ error: "Template file not found on server." });
+      return;
+    }
+    tmplBuf = fs.readFileSync(tmplPath);
+    tmplMime = /\.(jpe?g)$/i.test(tmplFilename) ? "image/jpeg" : "image/png";
+  }
+
+  // Map spot size → closest supported Grok aspect ratio
+  // XL=4"×5" → 3:4 (4:5 unsupported; sharp crops to exact) | Large=3"×4" → 3:4
+  // Medium=3"×2" → 3:2 (landscape) | Small=2"×2" → 1:1
   const aspectRatioMap: Record<string, string> = {
-    xl: "4:5", large: "3:4", l: "3:4", medium: "1:1", small: "1:1", m: "1:1", s: "1:1",
+    xl: "3:4", large: "3:4", l: "3:4", medium: "3:2", small: "1:1", m: "3:2", s: "1:1",
   };
-  const spotAspectRatio = aspectRatioMap[d.sizeKey.toLowerCase()] ?? "4:5";
+  const spotAspectRatio = aspectRatioMap[d.sizeKey.toLowerCase()] ?? "3:4";
+
+  // Exact print dimensions (px at 100 dpi) — sharp crops Grok output to these
+  const CROP_DIMS: Record<string, { w: number; h: number }> = {
+    xl:     { w: 400, h: 500 },
+    large:  { w: 300, h: 400 }, l: { w: 300, h: 400 },
+    medium: { w: 300, h: 200 }, m: { w: 300, h: 200 },
+    small:  { w: 200, h: 200 }, s: { w: 200, h: 200 },
+  };
+  const cropDim = CROP_DIMS[d.sizeKey.toLowerCase()] ?? { w: 400, h: 500 };
 
   const menuStr     = d.menu.filter(Boolean).map((m, i) => `  ${i + 1}. ${m}`).join("\n") || "  (none)";
   const fullAddress = [d.address, d.city].filter(Boolean).join(", ") || "(none)";
@@ -193,33 +210,81 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   ].join("\n");
 
   // Build image reference lines for the prompt — one per image in the `images` array order
-  const refLines: string[] = [
-    templateKey === "made-fresh"
-      ? "  • IMAGE 1 (TEMPLATE) — a bright, warm restaurant postcard layout featuring a natural wood table surface, " +
-        "a chalkboard-style 'Made Fresh For You' sign, gingham cloth accents, a golden ticket coupon stub, " +
-        "and a fresh white plate as the hero focal point. Preserve all zones, props, and warm editorial atmosphere exactly."
-      : templateKey === "neighborhood-pro"
-        ? "  • IMAGE 1 (TEMPLATE) — a bold outdoor-service postcard layout on a deep forest-green background. " +
-          "Upper-left: two overlapping white paint-brush splash shapes that form a bright organic panel for the headline text. " +
-          "Upper-right: large full-bleed hero photo zone (outdoor/service scene). " +
-          "Middle band: a horizontal row of four diagonal-cut service photo panels, each topped by a circular green icon badge and a short white brush-stroke label beneath it. " +
-          "Lower section: a wide white brush-stroke area for the special offer / coupon text. " +
-          "Footer strip: dark green bar with a bold phone number on the left, a clean QR code box on the right, and small circular trust-badge icons (shield, star, leaf) between them. " +
-          "Reproduce every zone, the forest-green background, all brush-stroke shapes, and the footer layout exactly."
-        : "  • IMAGE 1 (TEMPLATE) — the full postcard layout with parchment texture, brush-stroke band, " +
-          "pennant ribbon, circular checkmark badge, dashed coupon box, and dark footer strip. " +
-          "Reproduce every zone, texture, and design element exactly.",
-  ];
-  let imgIdx = 2;
-  if (hasPhoto) {
-    refLines.push(`  • IMAGE ${imgIdx++} (HERO FOOD PHOTO) — the actual food/product photograph. Composite it into the main hero image zone with professional lighting and realistic shadow blending.`);
-  }
-  if (hasLogo) {
-    refLines.push(`  • IMAGE ${imgIdx} (BUSINESS LOGO) — the exact business logo. Reproduce it pixel-perfect with no stylization, color changes, or distortion.`);
-  }
+  // For landscape (medium) there is no portrait template, so indices start at 1.
+  const refLines: string[] = [];
+  let imgIdx: number;
+  let logoImg: number;
 
-  const logoImg = hasPhoto ? 3 : 2;
-  const outputRequirements = templateKey === "neighborhood-pro"
+  if (isLandscape) {
+    imgIdx = 1;
+    if (hasPhoto) {
+      refLines.push(`  • IMAGE ${imgIdx++} (HERO PHOTO) — the product/service photograph. Use as the dominant hero visual filling the right portion of the ad.`);
+    }
+    if (hasLogo) {
+      refLines.push(`  • IMAGE ${imgIdx} (BUSINESS LOGO) — the exact business logo. Reproduce it pixel-perfect with no stylization, color changes, or distortion.`);
+    }
+    logoImg = hasPhoto ? 2 : 1;
+  } else {
+    refLines.push(
+      templateKey === "made-fresh"
+        ? "  • IMAGE 1 (TEMPLATE) — a bright, warm restaurant postcard layout featuring a natural wood table surface, " +
+          "a chalkboard-style 'Made Fresh For You' sign, gingham cloth accents, a golden ticket coupon stub, " +
+          "and a fresh white plate as the hero focal point. Preserve all zones, props, and warm editorial atmosphere exactly."
+        : templateKey === "neighborhood-pro"
+          ? "  • IMAGE 1 (TEMPLATE) — a bold outdoor-service postcard layout on a deep forest-green background. " +
+            "Upper-left: two overlapping white paint-brush splash shapes that form a bright organic panel for the headline text. " +
+            "Upper-right: large full-bleed hero photo zone (outdoor/service scene). " +
+            "Middle band: a horizontal row of four diagonal-cut service photo panels, each topped by a circular green icon badge and a short white brush-stroke label beneath it. " +
+            "Lower section: a wide white brush-stroke area for the special offer / coupon text. " +
+            "Footer strip: dark green bar with a bold phone number on the left, a clean QR code box on the right, and small circular trust-badge icons (shield, star, leaf) between them. " +
+            "Reproduce every zone, the forest-green background, all brush-stroke shapes, and the footer layout exactly."
+          : "  • IMAGE 1 (TEMPLATE) — the full postcard layout with parchment texture, brush-stroke band, " +
+            "pennant ribbon, circular checkmark badge, dashed coupon box, and dark footer strip. " +
+            "Reproduce every zone, texture, and design element exactly.",
+    );
+    imgIdx = 2;
+    if (hasPhoto) {
+      refLines.push(`  • IMAGE ${imgIdx++} (HERO FOOD PHOTO) — the actual food/product photograph. Composite it into the main hero image zone with professional lighting and realistic shadow blending.`);
+    }
+    if (hasLogo) {
+      refLines.push(`  • IMAGE ${imgIdx} (BUSINESS LOGO) — the exact business logo. Reproduce it pixel-perfect with no stylization, color changes, or distortion.`);
+    }
+    logoImg = hasPhoto ? 3 : 2;
+  }
+  const outputRequirements = isLandscape
+    ? (
+      "LAYOUT — this is a LANDSCAPE (3\"×2\") ad, wider than tall. Arrange all elements left-to-right:\n\n" +
+
+      "  LEFT COLUMN (≈40% of width) — BRAND BLOCK:\n" +
+      (hasLogo
+        ? `    • Logo (IMAGE ${logoImg}): place in the upper-left, large and prominent. Preserve exact colors and proportions. Clear margin on all sides.\n`
+        : "") +
+      `    • Business name "${d.bizName}" in bold condensed all-caps slab serif — large, very high contrast against the background. Maximum weight.\n` +
+      (d.tagline ? `    • Tagline "${d.tagline}" in italic script, slightly smaller, directly below the business name.\n` : "") +
+      (d.offer
+        ? `    • Special offer "${d.offer}" displayed prominently — bold, high contrast, clearly readable.\n` +
+          (d.offerFine ? `      Fine print: "${d.offerFine}" in small text below the offer.\n` : "")
+        : "") +
+      `    • Phone "${d.phone || ""}" in bold sans-serif, large enough to read at a glance.\n\n` +
+
+      "  RIGHT SIDE (≈60% of width) — HERO VISUAL:\n" +
+      (hasPhoto
+        ? `    • Hero image: use IMAGE 1 as a full-bleed cinematic fill for the entire right portion. No hard rectangular border — blend edges naturally into the background. Professional lighting, vibrant color.\n\n`
+        : `    • Hero image: generate a photorealistic cinematic scene relevant to this business. Vibrant color, professional commercial photography quality, full-bleed into the right zone.\n\n`) +
+
+      "  FOOTER STRIP (full width, bottom edge):\n" +
+      `    • Address "${fullAddress}" in small bold text, left side.\n` +
+      "    • QR code graphic (small, square) in the bottom-right corner.\n" +
+      "    • Thin dark bar background for footer contrast.\n\n" +
+
+      "TYPOGRAPHIC RULES:\n" +
+      "  • Business name: bold condensed all-caps slab serif, maximum weight, very high contrast\n" +
+      "  • Phone: bold sans-serif, large and instantly readable\n" +
+      "  • All text crisp and legible — no thin strokes on busy backgrounds\n" +
+      "  • NEVER render the website URL as visible text\n" +
+      "  • No dead space — every area filled with purposeful content"
+    )
+    : templateKey === "neighborhood-pro"
     ? (
       "LAYOUT — reproduce the Neighborhood Pro template zones exactly as described:\n\n" +
 
@@ -330,13 +395,19 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     );
 
   const adPrompt =
-    "You are a world-class print advertising art director and expert photo compositor. " +
-    "Create a PRINT-READY premium postcard ad by taking the template layout and seamlessly integrating " +
-    "the business details and any provided reference photos into it — the result must look like a single cohesive ad designed by a top agency, " +
-    "not a template with content pasted on top.\n\n" +
-    `REFERENCE IMAGES: You are provided ${refLines.length} reference image${refLines.length > 1 ? "s" : ""}. ` +
-    "Treat them as distinct inputs — do NOT merge their design styles or treat any of them as already finished:\n" +
-    refLines.join("\n") + "\n\n" +
+    (isLandscape
+      ? "You are a world-class print advertising art director. " +
+        "Create a PRINT-READY premium LANDSCAPE postcard ad for a local business — " +
+        "the result must look like a single cohesive ad designed by a top agency.\n\n"
+      : "You are a world-class print advertising art director and expert photo compositor. " +
+        "Create a PRINT-READY premium postcard ad by taking the template layout and seamlessly integrating " +
+        "the business details and any provided reference photos into it — the result must look like a single cohesive ad designed by a top agency, " +
+        "not a template with content pasted on top.\n\n") +
+    (refLines.length > 0
+      ? `REFERENCE IMAGES: You are provided ${refLines.length} reference image${refLines.length > 1 ? "s" : ""}. ` +
+        "Treat them as distinct inputs — do NOT merge their design styles or treat any of them as already finished:\n" +
+        refLines.join("\n") + "\n\n"
+      : "") +
     outputRequirements + "\n" +
     "STYLE: high-end editorial advertising aesthetic. Cinematic photography with rich, vibrant color and " +
     "professional lighting. Bold confident typography hierarchy. Premium color palette — deep, saturated, controlled. " +
@@ -352,15 +423,39 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   const toDataUrl = (buf: Buffer, mime = "image/png") =>
     `data:${mime};base64,${buf.toString("base64")}`;
 
+  // Post-process: resize + centre-crop Grok output to exact print pixel dimensions
+  async function cropToSpotDims(url: string, w: number, h: number): Promise<string> {
+    try {
+      let buf: Buffer;
+      if (url.startsWith("data:")) {
+        const b64 = url.split(",")[1] ?? "";
+        buf = Buffer.from(b64, "base64");
+      } else {
+        const resp = await fetch(url);
+        if (!resp.ok) return url;
+        buf = Buffer.from(await resp.arrayBuffer());
+      }
+      const out = await sharp(buf)
+        .resize(w, h, { fit: "cover", position: "centre" })
+        .jpeg({ quality: 95 })
+        .toBuffer();
+      return `data:image/jpeg;base64,${out.toString("base64")}`;
+    } catch {
+      return url; // graceful degradation — return original on any sharp error
+    }
+  }
+
   // NOTE: the try/catch starts here so that photo/logo fetch errors also return
   // a clean JSON response instead of letting Express fall back to an HTML page
   // (which causes JSON.parse to throw a cryptic "string did not match" error in
   // Safari and "Unexpected token '<'" in Chrome).
   try {
     type XaiImageRef = { type: "image_url"; url: string };
-    const imageRefs: XaiImageRef[] = [
-      { type: "image_url", url: toDataUrl(tmplBuf, tmplMime) },
-    ];
+    // Template is skipped for landscape spots (no portrait template applies)
+    const imageRefs: XaiImageRef[] = [];
+    if (tmplBuf) {
+      imageRefs.push({ type: "image_url", url: toDataUrl(tmplBuf, tmplMime) });
+    }
 
     if (hasPhoto) {
       const blob = d.photoUrl.startsWith("data:")
@@ -420,7 +515,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
         req.log.warn({ errMsg, bizName: d.bizName }, "grok-imagine edits: model not supported — falling back to /generations");
         try {
           const fallbackUrl = await callGenerationsJson(apiKey, adPrompt, d.bizName, req.log);
-          res.json({ imageUrl: fallbackUrl, fallback: true });
+          res.json({ imageUrl: await cropToSpotDims(fallbackUrl, cropDim.w, cropDim.h), fallback: true });
           return;
         } catch (fbErr) {
           req.log.error({ editsErr: errMsg, fbErr }, "grok-imagine both edits and generations failed");
@@ -438,7 +533,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
          errLower.includes("unexpected") || errLower.includes("invalid") ||
          errLower.includes("field") || errLower.includes("schema"));
 
-      if (isImageArrayIssue) {
+      if (isImageArrayIssue && tmplBuf) {
         req.log.warn({ errMsg, bizName: d.bizName }, "grok-imagine edits: multi-image rejected — retrying with template only");
         const retryBody: Record<string, unknown> = {
           model:        "grok-imagine-image-quality",
@@ -460,7 +555,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
         );
         if (retryRes.ok) {
           const retryUrl = extractXaiImageUrl(retryRespBody);
-          if (retryUrl) { res.json({ imageUrl: retryUrl }); return; }
+          if (retryUrl) { res.json({ imageUrl: await cropToSpotDims(retryUrl, cropDim.w, cropDim.h) }); return; }
         }
         req.log.warn({ retryStatus: retryRes.status, origErr: errMsg }, "grok-imagine edits retry also failed");
       }
@@ -480,7 +575,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       return;
     }
 
-    res.json({ imageUrl });
+    res.json({ imageUrl: await cropToSpotDims(imageUrl, cropDim.w, cropDim.h) });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Grok API request failed";
     req.log.error({ err: msg, bizName: d.bizName }, "grok-imagine error");
@@ -888,7 +983,7 @@ var _activeTemplate = 'parchment-classic';
 var _spotSize = 'XL';
 
 // ── Orientation-aware template grid ────────────────────────────────────────
-var SIZE_DIMS = { XL:{w:400,h:500}, L:{w:300,h:400}, M:{w:200,h:200}, S:{w:200,h:200} };
+var SIZE_DIMS = { XL:{w:400,h:500}, L:{w:300,h:400}, M:{w:300,h:200}, S:{w:200,h:200} };
 function getOrientation(sizeKey){
   var d = SIZE_DIMS[sizeKey] || SIZE_DIMS.XL;
   return d.h > d.w ? 'portrait' : d.w > d.h ? 'landscape' : 'square';
