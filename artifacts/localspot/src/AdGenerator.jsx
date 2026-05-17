@@ -304,6 +304,10 @@ return (
           <EditableText value={data.address} onChange={edit("address")} {...ef("address")}
             style={{ color: "rgba(255,255,255,0.85)", fontSize: 9*fScale, fontFamily: "sans-serif", whiteSpace: "normal", wordBreak: "break-word" }} />
         )}
+        {data.city && (
+          <EditableText value={data.city} onChange={edit("city")} {...ef("city")}
+            style={{ color: "rgba(255,255,255,0.75)", fontSize: 9*fScale, fontFamily: "sans-serif", whiteSpace: "normal" }} />
+        )}
         {data.phone && (
           <EditableText value={data.phone} onChange={edit("phone")} {...ef("phone")}
             style={{ color: "rgba(255,255,255,0.85)", fontSize: 9*fScale, fontWeight: 800, fontFamily: "sans-serif", whiteSpace: "normal" }} />
@@ -401,6 +405,10 @@ size={36 * fScale} bg={ind.colors.primary} color="#fff" border={`2px solid #fff`
           {data.address && (
             <EditableText value={data.address} onChange={edit("address")} {...ef("address")}
               style={{ fontSize: Math.max(11, 10*fScale), color: "#555", whiteSpace: "normal", wordBreak: "break-word" }} />
+          )}
+          {data.city && (
+            <EditableText value={data.city} onChange={edit("city")} {...ef("city")}
+              style={{ fontSize: Math.max(10, 9*fScale), color: "#777", whiteSpace: "normal" }} />
           )}
           {data.phone && (
             <EditableText value={data.phone} onChange={edit("phone")} {...ef("phone")}
@@ -513,6 +521,10 @@ borderRadius: 4, fontFamily: "sans-serif", whiteSpace: "nowrap",
             <EditableText value={data.address} onChange={edit("address")} {...ef("address")}
               style={{ fontSize: Math.max(11, 10*fScale), color: "#555", fontFamily: "sans-serif", whiteSpace: "normal", wordBreak: "break-word" }} />
           )}
+          {data.city && (
+            <EditableText value={data.city} onChange={edit("city")} {...ef("city")}
+              style={{ fontSize: Math.max(10, 9*fScale), color: "#777", fontFamily: "sans-serif", whiteSpace: "normal" }} />
+          )}
           {data.phone && (
             <EditableText value={data.phone} onChange={edit("phone")} {...ef("phone")}
               style={{ fontSize: 12*fScale, color: ind.colors.primary, fontWeight: 900, fontFamily: "sans-serif", whiteSpace: "nowrap" }} />
@@ -620,6 +632,7 @@ background: `linear-gradient(180deg, ${ind.colors.dark}50 0%, ${ind.colors.dark}
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontFamily: "sans-serif" }}>
       <div>
         {data.address && <EditableText value={data.address} onChange={edit("address")} {...ef("address")} style={{ color: "rgba(255,255,255,0.85)", fontSize: Math.max(10, 9*fScale), display: "block", whiteSpace: "normal", wordBreak: "break-word" }} />}
+        {data.city && <EditableText value={data.city} onChange={edit("city")} {...ef("city")} style={{ color: "rgba(255,255,255,0.7)", fontSize: Math.max(9, 8*fScale), display: "block", whiteSpace: "normal" }} />}
         {isS && data.phone && <EditableText value={data.phone} onChange={edit("phone")} {...ef("phone")} style={{ color: "rgba(255,255,255,0.95)", fontSize: Math.max(11, 10*fScale), fontWeight: 700, display: "block", whiteSpace: "nowrap" }} />}
       </div>
     </div>
@@ -790,6 +803,16 @@ background: leftBg, fontFamily: "sans-serif",
             }}
           />
         )}
+        {data.city && (
+          <EditableText
+            value={data.city}
+            onChange={edit("city")} {...ef("city")}
+            style={{
+              color: "rgba(255,255,255,0.7)", fontSize: Math.max(10, 8*fScale),
+              fontFamily: "sans-serif", lineHeight: 1.3,
+            }}
+          />
+        )}
       </div>
     )}
 
@@ -807,6 +830,10 @@ background: leftBg, fontFamily: "sans-serif",
         {data.address && (
           <EditableText value={data.address} onChange={edit("address")} {...ef("address")}
             style={{ color: "rgba(255,255,255,0.8)", fontSize: Math.max(10, 9*fScale), fontFamily:"sans-serif" }}/>
+        )}
+        {data.city && (
+          <EditableText value={data.city} onChange={edit("city")} {...ef("city")}
+            style={{ color: "rgba(255,255,255,0.65)", fontSize: Math.max(9, 8*fScale), fontFamily:"sans-serif" }}/>
         )}
       </div>
     )}
@@ -960,6 +987,7 @@ tagline: "",
 offer: "",
 offerFine: "",
 address: "",
+city: "",
 phone: "",
 website: "",
 logo: null,
@@ -1130,16 +1158,29 @@ boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
             />
           </div>
 
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>
-              Address
-            </label>
-            <input
-              value={formData.address}
-              onChange={e => setFormData(d => ({ ...d, address: e.target.value }))}
-              placeholder="123 Main St, Your Town — or service area (e.g. Habersham, White & Hall Counties)"
-              style={inputStyle}
-            />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>
+                Street Address
+              </label>
+              <input
+                value={formData.address}
+                onChange={e => setFormData(d => ({ ...d, address: e.target.value }))}
+                placeholder="596 W Louise St"
+                style={inputStyle}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>
+                City, State
+              </label>
+              <input
+                value={formData.city}
+                onChange={e => setFormData(d => ({ ...d, city: e.target.value }))}
+                placeholder="Clarkesville, GA"
+                style={inputStyle}
+              />
+            </div>
           </div>
 
           <div>

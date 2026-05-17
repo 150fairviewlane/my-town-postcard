@@ -1268,6 +1268,7 @@ async function generate(){
     photoUrl:  _selectedPhotoUrl,
     logoData:  _logoData,
     template:  _activeTemplate,
+    sizeKey:   _spotSize || 'XL',
   };
 
   try{
