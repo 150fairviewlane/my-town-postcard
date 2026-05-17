@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { INDUSTRIES, INDUSTRY_LIST } from "./industryAssets";
+import IndustryConflictDialog from "./components/IndustryConflictDialog";
 import { AdQRCode, InlineQRCode, hasQR, normalizeWebsite, generateSpotCode, PositionedQR } from "./qrUtils";
 import AdAssistant from "./AdAssistant";
 
@@ -976,7 +977,7 @@ Uploaded<br />
 //
 //   MAIN COMPONENT – Full UI with form, template picker, preview
 //
-export default function AdGenerator({ initialSize = "L", onComplete, onClose, isReserving = false, reserveError = null }) {
+export default function AdGenerator({ initialSize = "L", onComplete, onClose, isReserving = false, reserveError = null, takenCategories = [] }) {
 const [sizeKey, setSizeKey] = useState(initialSize);
 const [step, setStep] = useState(1);
 const [formData, setFormData] = useState({
@@ -999,10 +1000,15 @@ fieldWidths: {},
 const [selectedTemplate, setSelectedTemplate] = useState("photo-bold");
 const [emailError, setEmailError] = useState(false);
 const emailRef = useRef(null);
+const [conflictIndustry, setConflictIndustry] = useState(null);
 
 // Auto-suggest template + populate menuItems when industry changes
 const handleIndustryChange = (e) => {
 const industry = e.target.value;
+if (industry && takenCategories.includes(industry)) {
+  setConflictIndustry(industry);
+  return;
+}
 const defaultMenu = INDUSTRIES[industry]?.menu || [];
 // Convert to {text, enabled} objects immediately for consistent format
 const normalizedMenu = defaultMenu.map(item =>
@@ -1036,7 +1042,7 @@ const sizeInfo = AD_SIZES[sizeKey];
 const Tpl = TEMPLATES[selectedTemplate].Component;
 const formValid = formData.businessName.trim() && formData.industry && formData.email.trim();
 
-return (
+return (<>
 <div style={{
 position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)",
 display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16,
@@ -1485,6 +1491,15 @@ boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
     </div>
   </div>
 </div>
+{conflictIndustry && (
+  <IndustryConflictDialog
+    industry={conflictIndustry}
+    businessName={formData.businessName}
+    onChooseDifferent={() => setConflictIndustry(null)}
+    onDismiss={() => setConflictIndustry(null)}
+  />
+)}
+</>
 );
 }
 

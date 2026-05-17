@@ -1,11 +1,13 @@
 import { useLocation } from "wouter";
 
-export default function IndustryConflictDialog({ industry, onChooseDifferent, onDismiss }) {
+export default function IndustryConflictDialog({ industry, businessName = "", onChooseDifferent, onDismiss }) {
   const [, navigate] = useLocation();
 
   const handleRequestOptions = () => {
     onDismiss?.();
-    navigate(`/request-options?industry=${encodeURIComponent(industry)}`);
+    let url = `/request-options?category=${encodeURIComponent(industry)}`;
+    if (businessName.trim()) url += `&bizName=${encodeURIComponent(businessName.trim())}`;
+    navigate(url);
   };
 
   return (
@@ -48,6 +50,14 @@ export default function IndustryConflictDialog({ industry, onChooseDifferent, on
             Request More Options →
           </button>
         </div>
+        <button
+          onClick={onDismiss}
+          style={{
+            marginTop: 18, background: "none", border: "none", cursor: "pointer",
+            color: "#9ca3af", fontSize: 13, textDecoration: "underline",
+          }}>
+          Dismiss
+        </button>
       </div>
     </div>
   );

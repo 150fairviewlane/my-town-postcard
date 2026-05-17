@@ -10,15 +10,22 @@ const inputStyle = {
 const OPTIONS_LIST = [
   { id: "adjacent-town", label: "An adjacent town or territory" },
   { id: "later-date", label: "A later mailing date" },
-  { id: "similar-category", label: "Notify me if this category opens up" },
 ];
 
 export default function RequestOptionsPage() {
   const search = useSearch();
   const params = new URLSearchParams(search);
-  const industry = params.get("industry") || "";
+  const initialCategory = params.get("category") || "";
+  const initialBizName = params.get("bizName") || "";
 
-  const [form, setForm] = useState({ businessName: "", email: "", phone: "", options: [] });
+  const [form, setForm] = useState({
+    ownerName: "",
+    businessName: initialBizName,
+    category: initialCategory,
+    email: "",
+    phone: "",
+    options: [],
+  });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -36,6 +43,7 @@ export default function RequestOptionsPage() {
     const errs = {};
     if (!form.businessName.trim()) errs.businessName = true;
     if (!form.email.trim()) errs.email = true;
+    if (!form.category.trim()) errs.category = true;
     if (Object.keys(errs).length) { setErrors(errs); return; }
 
     setSubmitting(true);
@@ -45,10 +53,11 @@ export default function RequestOptionsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          name: form.ownerName.trim() || undefined,
           businessName: form.businessName.trim(),
           email: form.email.trim(),
           phone: form.phone.trim() || undefined,
-          industry,
+          industry: form.category.trim(),
           options: form.options,
         }),
       });
@@ -71,7 +80,7 @@ export default function RequestOptionsPage() {
           </h1>
           <p style={{ color: "#6b7280", fontSize: 15, lineHeight: 1.65, margin: "0 0 32px" }}>
             We'll reach out when a spot becomes available for{" "}
-            <strong style={{ color: "#111" }}>{industry || "your industry"}</strong>.
+            <strong style={{ color: "#111" }}>{form.category || "your industry"}</strong>.
           </p>
           <a href="/" style={{ display: "inline-block", padding: "13px 32px", background: "#991b1b", color: "#fff", borderRadius: 10, fontWeight: 700, fontSize: 14, textDecoration: "none", letterSpacing: 0.2 }}>
             Back to Postcard
@@ -93,9 +102,9 @@ export default function RequestOptionsPage() {
             <h1 style={{ fontWeight: 900, fontSize: 26, color: "#111", margin: "0 0 12px", fontFamily: "Georgia, serif" }}>
               Request More Options
             </h1>
-            {industry && (
+            {initialCategory && (
               <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 99, padding: "4px 14px", fontSize: 13, color: "#991b1b", fontWeight: 600, marginBottom: 12 }}>
-                {industry} is currently taken
+                {initialCategory} is currently taken
               </div>
             )}
             <p style={{ color: "#6b7280", fontSize: 14, lineHeight: 1.65, margin: 0 }}>
@@ -104,6 +113,18 @@ export default function RequestOptionsPage() {
           </div>
 
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 4 }}>
+                Your Name <span style={{ fontWeight: 400, color: "#9ca3af" }}>(optional)</span>
+              </label>
+              <input
+                value={form.ownerName}
+                onChange={e => setForm(f => ({ ...f, ownerName: e.target.value }))}
+                placeholder="Jane Smith"
+                style={inputStyle}
+              />
+            </div>
+
             <div>
               <label style={{ fontSize: 12, fontWeight: 700, color: errors.businessName ? "#dc2626" : "#374151", display: "block", marginBottom: 4 }}>
                 Business Name *
@@ -117,16 +138,18 @@ export default function RequestOptionsPage() {
               />
             </div>
 
-            {industry && (
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 4 }}>
-                  Requested Category
-                </label>
-                <div style={{ ...inputStyle, background: "#f9fafb", color: "#6b7280", display: "flex", alignItems: "center", border: "1.5px solid #e5e7eb" }}>
-                  {industry}
-                </div>
-              </div>
-            )}
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 700, color: errors.category ? "#dc2626" : "#374151", display: "block", marginBottom: 4 }}>
+                Requested Category *
+                {errors.category && <span style={{ fontWeight: 400, marginLeft: 6, color: "#dc2626" }}>Required</span>}
+              </label>
+              <input
+                value={form.category}
+                onChange={e => { setForm(f => ({ ...f, category: e.target.value })); if (e.target.value.trim()) setErrors(err => ({ ...err, category: false })); }}
+                placeholder="e.g. Auto Repair"
+                style={{ ...inputStyle, borderColor: errors.category ? "#dc2626" : "#e5e7eb", background: errors.category ? "#fef2f2" : "#fff" }}
+              />
+            </div>
 
             <div>
               <label style={{ fontSize: 12, fontWeight: 700, color: errors.email ? "#dc2626" : "#374151", display: "block", marginBottom: 4 }}>

@@ -50,4 +50,28 @@ router.get("/campaigns/active", async (req, res): Promise<void> => {
   res.json(GetActiveCampaignResponse.parse(response));
 });
 
+router.get("/campaigns/active/taken-categories", async (req, res): Promise<void> => {
+  const [campaign] = await db
+    .select({ id: campaignsTable.id })
+    .from(campaignsTable)
+    .where(eq(campaignsTable.status, "active"))
+    .limit(1);
+
+  if (!campaign) {
+    res.json({ takenCategories: [] });
+    return;
+  }
+
+  const spots = await db
+    .select({ businessCategory: spotsTable.businessCategory, status: spotsTable.status })
+    .from(spotsTable)
+    .where(eq(spotsTable.campaignId, campaign.id));
+
+  const takenCategories = spots
+    .filter(s => s.status !== "available" && s.businessCategory)
+    .map(s => s.businessCategory as string);
+
+  res.json({ takenCategories });
+});
+
 export default router;

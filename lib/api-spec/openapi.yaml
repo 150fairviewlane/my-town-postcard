@@ -51,6 +51,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /campaigns/active/taken-categories:
+    get:
+      operationId: getActiveCampaignTakenCategories
+      tags: [campaigns]
+      summary: Get taken business categories for the active campaign
+      responses:
+        "200":
+          description: List of taken categories
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TakenCategoriesResponse"
+
   /spots/{id}:
     get:
       operationId: getSpot
@@ -1043,6 +1056,8 @@ components:
     SubmitInterestBody:
       type: object
       properties:
+        name:
+          type: string
         businessName:
           type: string
         email:
@@ -1059,6 +1074,16 @@ components:
         - businessName
         - email
         - industry
+
+    TakenCategoriesResponse:
+      type: object
+      properties:
+        takenCategories:
+          type: array
+          items:
+            type: string
+      required:
+        - takenCategories
 
     SubmitInterestResponse:
       type: object

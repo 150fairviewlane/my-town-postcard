@@ -321,6 +321,7 @@ export default function AdUploadModal({ initialSize = "L", onComplete, onBack, i
     {conflictIndustry && (
       <IndustryConflictDialog
         industry={conflictIndustry}
+        businessName={form.businessName}
         onChooseDifferent={() => setConflictIndustry(null)}
         onDismiss={() => setConflictIndustry(null)}
       />

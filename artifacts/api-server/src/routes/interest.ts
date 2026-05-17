@@ -5,6 +5,7 @@ import { db, outreachLeadsTable } from "@workspace/db";
 const router: IRouter = Router();
 
 const SubmitInterestBody = z.object({
+  name: z.string().optional(),
   businessName: z.string().min(1),
   email: z.string().email(),
   phone: z.string().optional(),
@@ -18,7 +19,7 @@ router.post("/interest", async (req, res): Promise<void> => {
     res.status(400).json({ error: "Invalid request" });
     return;
   }
-  const { businessName, email, phone, industry, options } = parsed.data;
+  const { name, businessName, email, phone, industry, options } = parsed.data;
 
   const notesParts = [
     `Interest lead — category: ${industry}`,
@@ -29,6 +30,7 @@ router.post("/interest", async (req, res): Promise<void> => {
     .insert(outreachLeadsTable)
     .values({
       businessName: businessName.trim(),
+      ownerName: name?.trim() || null,
       email: email.trim(),
       phone: phone?.trim() || null,
       industry: industry || null,

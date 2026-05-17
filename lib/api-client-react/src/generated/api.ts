@@ -41,6 +41,7 @@ import type {
   Spot,
   SubmitInterestBody,
   SubmitInterestResponse,
+  TakenCategoriesResponse,
   UploadAdBody,
 } from "./api.schemas";
 
@@ -195,6 +196,86 @@ export function useGetActiveCampaign<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetActiveCampaignQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get taken business categories for the active campaign
+ */
+export const getGetActiveCampaignTakenCategoriesUrl = () => {
+  return `/api/campaigns/active/taken-categories`;
+};
+
+export const getActiveCampaignTakenCategories = async (
+  options?: RequestInit,
+): Promise<TakenCategoriesResponse> => {
+  return customFetch<TakenCategoriesResponse>(
+    getGetActiveCampaignTakenCategoriesUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetActiveCampaignTakenCategoriesQueryKey = () => {
+  return [`/api/campaigns/active/taken-categories`] as const;
+};
+
+export const getGetActiveCampaignTakenCategoriesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getActiveCampaignTakenCategories>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getActiveCampaignTakenCategories>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetActiveCampaignTakenCategoriesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getActiveCampaignTakenCategories>>
+  > = ({ signal }) =>
+    getActiveCampaignTakenCategories({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getActiveCampaignTakenCategories>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetActiveCampaignTakenCategoriesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getActiveCampaignTakenCategories>>
+>;
+export type GetActiveCampaignTakenCategoriesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get taken business categories for the active campaign
+ */
+
+export function useGetActiveCampaignTakenCategories<
+  TData = Awaited<ReturnType<typeof getActiveCampaignTakenCategories>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getActiveCampaignTakenCategories>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetActiveCampaignTakenCategoriesQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

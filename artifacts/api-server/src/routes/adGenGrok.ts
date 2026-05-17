@@ -1016,7 +1016,10 @@ function goRequestOptions(){
   var overlay = document.getElementById('takenOverlay');
   if(overlay) overlay.classList.remove('visible');
   var industry = document.getElementById('takenIndustryName').textContent || '';
-  window.open('/request-options?industry=' + encodeURIComponent(industry), '_blank');
+  var bizName = (document.getElementById('bizName') || {}).value || '';
+  var url = '/request-options?category=' + encodeURIComponent(industry);
+  if(bizName.trim()) url += '&bizName=' + encodeURIComponent(bizName.trim());
+  window.open(url, '_blank');
   // Reset select too
   var sel = document.getElementById('industry');
   if(sel) sel.value = '';

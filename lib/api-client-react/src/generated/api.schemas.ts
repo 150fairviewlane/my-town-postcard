@@ -383,12 +383,17 @@ export interface DeleteOutreachLeadResponse {
 }
 
 export interface SubmitInterestBody {
+  name?: string;
   businessName: string;
   email: string;
   /** @nullable */
   phone?: string | null;
   industry: string;
   options?: string[];
+}
+
+export interface TakenCategoriesResponse {
+  takenCategories: string[];
 }
 
 export interface SubmitInterestResponse {

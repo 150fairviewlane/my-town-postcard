@@ -58,6 +58,13 @@ export const GetActiveCampaignResponse = zod
   );
 
 /**
+ * @summary Get taken business categories for the active campaign
+ */
+export const GetActiveCampaignTakenCategoriesResponse = zod.object({
+  takenCategories: zod.array(zod.string()),
+});
+
+/**
  * @summary Get a single spot by id
  */
 export const GetSpotParams = zod.object({
@@ -749,6 +756,7 @@ export const ApproveAdResponse = zod.object({
  * @summary Submit an interest lead for a taken industry
  */
 export const SubmitInterestBody = zod.object({
+  name: zod.string().optional(),
   businessName: zod.string(),
   email: zod.string(),
   phone: zod.string().nullish(),
