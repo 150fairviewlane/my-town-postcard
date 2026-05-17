@@ -1376,10 +1376,23 @@ function hideErr(){ document.getElementById('errBox').classList.remove('visible'
 
 function useThisAd(){
   if(!_resultUrl){ return; }
+  var bizName = document.getElementById('bizName').value.trim();
+  var email   = document.getElementById('email') ? document.getElementById('email').value.trim() : '';
+  if(!bizName){
+    showErr('Please enter your business name before continuing.');
+    document.getElementById('bizName').focus();
+    return;
+  }
+  if(!email){
+    showErr('Please enter a contact email so we can send your order confirmation.');
+    document.getElementById('email').focus();
+    return;
+  }
+  hideErr();
   var formData = {
-    businessName:  document.getElementById('bizName').value.trim(),
+    businessName:  bizName,
     industry:      document.getElementById('industry').value || 'Local Business',
-    email:         (document.getElementById('email') ? document.getElementById('email').value.trim() : ''),
+    email:         email,
     phone:         document.getElementById('phone').value.trim(),
     city:          document.getElementById('city').value.trim(),
     address:       document.getElementById('address').value.trim(),
@@ -1393,7 +1406,7 @@ function useThisAd(){
     sizeKey:       _spotSize || 'XL',
   };
   if(window.opener && !window.opener.closed){
-    window.opener.postMessage({ type: 'grok-ad-result', formData: formData }, window.location.origin);
+    window.opener.postMessage({ type: 'grok-ad-result', formData: formData }, '*');
     showToast('Ad sent! Completing your reservation\\u2026');
     setTimeout(function(){ window.close(); }, 1400);
   } else {

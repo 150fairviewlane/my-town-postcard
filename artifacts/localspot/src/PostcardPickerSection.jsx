@@ -568,9 +568,9 @@ const openGrokGenerator=()=>{
   setAdMethod("grok");
   const handler=(e)=>{
     if(!e.data||e.data.type!=='grok-ad-result')return;
-    // Accept same origin OR '*' — the source===popup check is unreliable in
-    // Replit's proxied iframe environment, so we only guard by message type.
-    if(e.origin!==window.location.origin&&e.origin!=='null')return;
+    // Guard only on message type — origin checks are unreliable in Replit's
+    // proxied iframe environment where the popup and the parent window can
+    // resolve to different effective origins even though they share a domain.
     window.removeEventListener('message',handler);
     grokListenerRef.current=null;
     grokPopupRef.current=null;
