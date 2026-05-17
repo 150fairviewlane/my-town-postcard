@@ -39,6 +39,8 @@ import type {
   PaymentIntentResponse,
   ReserveSpotBody,
   Spot,
+  SubmitInterestBody,
+  SubmitInterestResponse,
   UploadAdBody,
 } from "./api.schemas";
 
@@ -1713,4 +1715,90 @@ export const useApproveAd = <
   TContext
 > => {
   return useMutation(getApproveAdMutationOptions(options));
+};
+
+/**
+ * @summary Submit an interest lead for a taken industry
+ */
+export const getSubmitInterestUrl = () => {
+  return `/api/interest`;
+};
+
+export const submitInterest = async (
+  submitInterestBody: SubmitInterestBody,
+  options?: RequestInit,
+): Promise<SubmitInterestResponse> => {
+  return customFetch<SubmitInterestResponse>(getSubmitInterestUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(submitInterestBody),
+  });
+};
+
+export const getSubmitInterestMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitInterest>>,
+    TError,
+    { data: BodyType<SubmitInterestBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof submitInterest>>,
+  TError,
+  { data: BodyType<SubmitInterestBody> },
+  TContext
+> => {
+  const mutationKey = ["submitInterest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof submitInterest>>,
+    { data: BodyType<SubmitInterestBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return submitInterest(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SubmitInterestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof submitInterest>>
+>;
+export type SubmitInterestMutationBody = BodyType<SubmitInterestBody>;
+export type SubmitInterestMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Submit an interest lead for a taken industry
+ */
+export const useSubmitInterest = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitInterest>>,
+    TError,
+    { data: BodyType<SubmitInterestBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof submitInterest>>,
+  TError,
+  { data: BodyType<SubmitInterestBody> },
+  TContext
+> => {
+  return useMutation(getSubmitInterestMutationOptions(options));
 };

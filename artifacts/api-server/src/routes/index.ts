@@ -21,6 +21,7 @@ import dealersRouter from "./dealers";
 import adGenV7Router from "./adGenV7";
 import aiAdCreatorRouter from "./aiAdCreator";
 import adGenGrokRouter from "./adGenGrok";
+import interestRouter from "./interest";
 
 const router: IRouter = Router();
 
@@ -46,5 +47,6 @@ router.use(dealersRouter);
 router.use(adGenV7Router);
 router.use(aiAdCreatorRouter);
 router.use(adGenGrokRouter);
+router.use(interestRouter);
 
 export default router;

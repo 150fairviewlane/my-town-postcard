@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { AD_SIZES } from "./AdGenerator";
 import { INDUSTRY_LIST } from "./industryAssets";
+import IndustryConflictDialog from "./components/IndustryConflictDialog";
 
 const inputStyle = {
   width: "100%", padding: "9px 12px", borderRadius: 7,
@@ -20,7 +21,7 @@ async function uploadToCloudinary(file) {
   return data.secure_url || null;
 }
 
-export default function AdUploadModal({ initialSize = "L", onComplete, onBack, isReserving = false, reserveError = null }) {
+export default function AdUploadModal({ initialSize = "L", onComplete, onBack, isReserving = false, reserveError = null, takenCategories = [] }) {
   const sizeInfo = AD_SIZES[initialSize] || AD_SIZES["L"];
   const previewDims = { XL: { w: 320, h: 400 }, L: { w: 240, h: 320 }, M: { w: 300, h: 200 }, S: { w: 200, h: 200 } };
   const { w: pw, h: ph } = previewDims[initialSize] || { w: 320, h: 400 };
@@ -33,6 +34,7 @@ export default function AdUploadModal({ initialSize = "L", onComplete, onBack, i
   const [nameError, setNameError] = useState(false);
   const [industryError, setIndustryError] = useState(false);
   const [emailError, setEmailError] = useState(false);
+  const [conflictIndustry, setConflictIndustry] = useState(null);
   const [adError, setAdError] = useState(false);
 
   const fileRef = useRef();
@@ -117,6 +119,7 @@ export default function AdUploadModal({ initialSize = "L", onComplete, onBack, i
   const busy = isReserving || uploading;
 
   return (
+    <>
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16 }}>
       <div style={{ background: "#fff", borderRadius: 14, width: "100%", maxWidth: 820, maxHeight: "92vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.45)" }}>
 
@@ -170,7 +173,16 @@ export default function AdUploadModal({ initialSize = "L", onComplete, onBack, i
                 <select
                   ref={industryRef}
                   value={form.industry}
-                  onChange={e => { setForm(d => ({ ...d, industry: e.target.value })); if (e.target.value) setIndustryError(false); }}
+                  onChange={e => {
+                    const val = e.target.value;
+                    if (val && takenCategories.includes(val)) {
+                      setConflictIndustry(val);
+                      e.target.value = form.industry;
+                      return;
+                    }
+                    setForm(d => ({ ...d, industry: val }));
+                    if (val) setIndustryError(false);
+                  }}
                   style={{ ...inputStyle, borderColor: industryError ? "#dc2626" : undefined, background: industryError ? "#fef2f2" : undefined, outline: industryError ? "2px solid #fca5a5" : undefined, color: form.industry ? "#111" : "#9ca3af" }}
                 >
                   <option value="">Select your business type…</option>
@@ -305,5 +317,15 @@ export default function AdUploadModal({ initialSize = "L", onComplete, onBack, i
         </div>
       </div>
     </div>
+
+    {conflictIndustry && (
+      <IndustryConflictDialog
+        industry={conflictIndustry}
+        onChooseDifferent={() => setConflictIndustry(null)}
+        onDismiss={() => setConflictIndustry(null)}
+      />
+    )}
+    </>
   );
 }
+

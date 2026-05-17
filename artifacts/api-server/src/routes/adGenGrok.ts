@@ -768,6 +768,19 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .toast.show{transform:translateX(-50%) translateY(0)}
 
 @media(max-width:860px){.layout{grid-template-columns:1fr;overflow:auto}html,body{height:auto;overflow:auto}.fpanel,.rpanel{overflow:visible}.photo-logo-row{grid-template-columns:1fr}}
+
+/* ── Industry conflict dialog ──────────────────────────────── */
+#takenOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:9999;align-items:center;justify-content:center;padding:16px}
+#takenOverlay.visible{display:flex}
+#takenCard{background:#fff;border-radius:14px;max-width:400px;width:100%;padding:32px 28px;box-shadow:0 24px 64px rgba(0,0,0,0.45);text-align:center;font-family:'DM Sans',sans-serif}
+#takenCard .tc-icon{font-size:42px;margin-bottom:12px;line-height:1}
+#takenCard .tc-title{font-weight:900;font-size:20px;color:#0f1117;margin:0 0 10px;font-family:'Bebas Neue',sans-serif;letter-spacing:.05em}
+#takenCard .tc-body{color:#6B7280;font-size:13px;line-height:1.65;margin:0 0 24px}
+#takenCard .tc-industry{color:#0f1117;font-weight:700}
+.tc-btn{display:block;width:100%;padding:12px 0;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.03em;transition:opacity .15s;border:none;margin-bottom:8px}
+.tc-btn:last-child{margin-bottom:0}
+.tc-btn.primary{background:#0f1117;color:#fff}
+.tc-btn.secondary{background:#fff;color:#7C1C2E;border:2px solid #7C1C2E}
 </style>
 </head>
 <body>
@@ -984,6 +997,30 @@ var _logoData = '';
 var _resultUrl = '';
 var _activeTemplate = 'parchment-classic';
 var _spotSize = 'XL';
+var _takenCategories = [];
+
+function showTakenDialog(industry){
+  var overlay = document.getElementById('takenOverlay');
+  var nameEl  = document.getElementById('takenIndustryName');
+  if(nameEl) nameEl.textContent = industry;
+  if(overlay) overlay.classList.add('visible');
+}
+function closeTakenDialog(){
+  var overlay = document.getElementById('takenOverlay');
+  if(overlay) overlay.classList.remove('visible');
+  // Reset select back to empty
+  var sel = document.getElementById('industry');
+  if(sel) sel.value = '';
+}
+function goRequestOptions(){
+  var overlay = document.getElementById('takenOverlay');
+  if(overlay) overlay.classList.remove('visible');
+  var industry = document.getElementById('takenIndustryName').textContent || '';
+  window.open('/request-options?industry=' + encodeURIComponent(industry), '_blank');
+  // Reset select too
+  var sel = document.getElementById('industry');
+  if(sel) sel.value = '';
+}
 
 // ── Orientation-aware template grid ────────────────────────────────────────
 var SIZE_DIMS = { XL:{w:400,h:500}, L:{w:300,h:400}, M:{w:300,h:200}, S:{w:200,h:200} };
@@ -1125,8 +1162,12 @@ var MENU_DEFAULTS = {
 };
 
 function onIndustryChange(){
-  loadLibrary();
   var industry = document.getElementById('industry').value;
+  if(industry && _takenCategories.indexOf(industry) !== -1){
+    showTakenDialog(industry);
+    return;
+  }
+  loadLibrary();
   // Menu items
   var list = document.getElementById('menuList');
   list.innerHTML = '';
@@ -1377,6 +1418,8 @@ function showToast(msg){
 (function prefill(){
   var params = new URLSearchParams(window.location.search);
   _spotSize = params.get('spotSize') || 'XL';
+  var takenParam = params.get('taken') || '';
+  _takenCategories = takenParam ? takenParam.split(',').map(function(s){ return s.trim(); }).filter(Boolean) : [];
   applyTemplateOrientation();
   var urlBiz = params.get('bizName') || '';
   var urlIndustry = params.get('industry') || '';
@@ -1410,5 +1453,16 @@ function showToast(msg){
   loadLibrary();
 })();
 </script>
+
+<!-- Industry conflict dialog -->
+<div id="takenOverlay">
+  <div id="takenCard">
+    <div class="tc-icon">&#9888;&#65039;</div>
+    <div class="tc-title">That Category is Taken</div>
+    <p class="tc-body"><span class="tc-industry" id="takenIndustryName"></span> is already reserved on this postcard. Each category is exclusive — one business per industry per mailing.</p>
+    <button class="tc-btn primary" onclick="closeTakenDialog()">Choose a Different Category</button>
+    <button class="tc-btn secondary" onclick="goRequestOptions()">Request More Options &rarr;</button>
+  </div>
+</div>
 </body>
 </html>`;

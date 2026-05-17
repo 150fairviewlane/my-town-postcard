@@ -560,6 +560,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /interest:
+    post:
+      operationId: submitInterest
+      tags: [spots]
+      summary: Submit an interest lead for a taken industry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitInterestBody"
+      responses:
+        "200":
+          description: Interest recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmitInterestResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -1014,6 +1039,37 @@ components:
           type: boolean
       required:
         - success
+
+    SubmitInterestBody:
+      type: object
+      properties:
+        businessName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: ["string", "null"]
+        industry:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+      required:
+        - businessName
+        - email
+        - industry
+
+    SubmitInterestResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        id:
+          type: integer
+      required:
+        - success
+        - id
 
     AdminCampaignDetailResponse:
       allOf:

@@ -744,3 +744,19 @@ export const ApproveAdResponse = zod.object({
   expiresAt: zod.string().nullish(),
   createdAt: zod.string(),
 });
+
+/**
+ * @summary Submit an interest lead for a taken industry
+ */
+export const SubmitInterestBody = zod.object({
+  businessName: zod.string(),
+  email: zod.string(),
+  phone: zod.string().nullish(),
+  industry: zod.string(),
+  options: zod.array(zod.string()).optional(),
+});
+
+export const SubmitInterestResponse = zod.object({
+  success: zod.boolean(),
+  id: zod.number(),
+});

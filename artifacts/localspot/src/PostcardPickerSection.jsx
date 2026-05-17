@@ -444,7 +444,7 @@ const [adMethod,setAdMethod]=useState(null);
 const [reserving,setReserving]=useState(false);
 const [reserveError,setReserveError]=useState(null);
 
-const handleSpotSelect=(spot)=>{setSel(spot);setAdMethod(null);};
+const handleSpotSelect=(spot)=>{setSel(spot);setAdMethod(null);setReserveError(null);};
 const [highlighted,setHighlighted]=useState(highlightArea);
 const ref=useRef(null);
 const [,navigate]=useLocation();
@@ -466,6 +466,12 @@ const spotByGridArea=useMemo(()=>{
   const m={};
   (campaign?.spots||[]).forEach(s=>{m[s.gridArea]=s;});
   return m;
+},[campaign]);
+
+const takenCategories=useMemo(()=>{
+  return(campaign?.spots||[])
+    .filter(s=>s.status!=="available"&&s.businessCategory)
+    .map(s=>s.businessCategory);
 },[campaign]);
 
 const handleComplete=async(formData)=>{
@@ -556,7 +562,7 @@ const handleComplete=async(formData)=>{
 const grokListenerRef=useRef(null);
 const grokPopupRef=useRef(null);
 const openGrokGenerator=()=>{
-  const url=`/api/grok-ad-generator?spotSize=${encodeURIComponent(sel?.size||'')}&bizName=&industry=`;
+  const url=`/api/grok-ad-generator?spotSize=${encodeURIComponent(sel?.size||'')}&bizName=&industry=&taken=${encodeURIComponent(takenCategories.join(','))}`;
   const popup=window.open(url,'grok-ad-gen','width=1120,height=800,left=80,top=60');
   grokPopupRef.current=popup;
   setAdMethod("grok");
@@ -689,6 +695,7 @@ return(<div style={{fontFamily:"sans-serif"}}>
     onBack={()=>setAdMethod(null)}
     isReserving={reserving}
     reserveError={reserveError}
+    takenCategories={takenCategories}
   />
 )}
 

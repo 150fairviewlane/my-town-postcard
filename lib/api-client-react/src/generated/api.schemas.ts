@@ -382,6 +382,20 @@ export interface DeleteOutreachLeadResponse {
   success: boolean;
 }
 
+export interface SubmitInterestBody {
+  businessName: string;
+  email: string;
+  /** @nullable */
+  phone?: string | null;
+  industry: string;
+  options?: string[];
+}
+
+export interface SubmitInterestResponse {
+  success: boolean;
+  id: number;
+}
+
 export type AdminCampaignDetailResponse = AdminCampaignResponse & {
   availableSpots: number;
 };
