@@ -167,7 +167,9 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           ? "6300F2D5-6BF1-403E-A40B-7203E4E26402_1778948283280.jpeg"
           : templateKey === "at-your-service"
             ? "IMG_0728_1779065210873.jpeg"
-            : "mr_biscuits_template_no_logo_1778806527327.png";
+            : templateKey === "health-wellness"
+              ? "healthcare_generic_template_1779141099043.png"
+              : "mr_biscuits_template_no_logo_1778806527327.png";
     const tmplPath = path.join(WORKSPACE_ROOT, "attached_assets", tmplFilename);
     if (!fs.existsSync(tmplPath)) {
       res.status(500).json({ error: "Template file not found on server." });
@@ -250,9 +252,19 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
               "Lower-right: a gold/yellow dashed-border coupon box. Lower-left: small gold/yellow triangle accent. " +
               "Footer: dark strip with a circular phone icon on the left and a QR code square on the right. " +
               "Reproduce every zone, the navy/gold color scheme, all geometric and brush-stroke shapes, and the footer layout exactly."
-            : "  • IMAGE 1 (TEMPLATE) — the full postcard layout with parchment texture, brush-stroke band, " +
-              "pennant ribbon, circular checkmark badge, dashed coupon box, and dark footer strip. " +
-              "Reproduce every zone, texture, and design element exactly.",
+            : templateKey === "health-wellness"
+              ? "  • IMAGE 1 (TEMPLATE) — a health and wellness postcard on a soft cream/off-white background with teal and sage green accents. " +
+                "Upper section: two overlapping clinic/office photos arranged inside organic curved teal blob shapes that bleed off the top and right edges. " +
+                "Center: a large wide rounded-rectangle white panel — this is the headline/business-name zone. " +
+                "Below the headline panel: a narrow teal pill-shaped bar for the tagline or sub-headline. " +
+                "Middle section: four equal-width service panels side by side, each with a circular teal badge icon on top and a white rounded-rectangle text box beneath it. " +
+                "Lower section: a reception/waiting-room photo in an organic curved blob shape on the left, and a teal stethoscope on a dark teal circular blob on the right. " +
+                "Lower-right corner: a small white rounded square — this is the QR/contact box. " +
+                "Footer: a dark teal horizontal bar spanning the full width. Left side has a circular phone icon badge + phone number field; right side has a circular location pin icon badge + address field. " +
+                "Color palette: teal (#3d8b9c), sage green, cream/off-white. Reproduce every zone, blob shape, icon badge style, and footer layout exactly."
+              : "  • IMAGE 1 (TEMPLATE) — the full postcard layout with parchment texture, brush-stroke band, " +
+                "pennant ribbon, circular checkmark badge, dashed coupon box, and dark footer strip. " +
+                "Reproduce every zone, texture, and design element exactly.",
     );
     imgIdx = 2;
     if (hasPhoto) {
@@ -407,6 +419,62 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "  • Fine print: smallest text, still legible\n" +
       "  • NEVER render the website URL as visible text"
     )
+    : templateKey === "health-wellness"
+    ? (
+      "LAYOUT — reproduce the Health & Wellness template zones exactly as described:\n\n" +
+
+      "  ZONE 1 — HERO PHOTOS (upper section, inside organic teal blob shapes):\n" +
+      (hasPhoto
+        ? `    Seamlessly composite IMAGE 2 into the upper-right organic teal blob photo zone — no hard rectangular border, natural edges blending into the teal shape.\n` +
+          "    Generate a second complementary wellness/clinic image for the upper-left blob zone.\n\n"
+        : "    Generate two photorealistic clinic or wellness imagery photos — one for each upper blob zone (bright reception or treatment room; calming nature or lifestyle detail). No rectangular borders — blend naturally into the teal blob shapes.\n\n") +
+
+      "  ZONE 2 — HEADLINE (center, inside the large rounded-rectangle white panel):\n" +
+      `    Business name: "${d.bizName}" in bold condensed all-caps sans-serif — very large, dark teal or near-black, maximum weight.\n` +
+      `    CRITICAL: Render the business name EXACTLY as given — "${d.bizName}". ` +
+      `    Each word must appear EXACTLY ONCE. NEVER repeat any individual word. If the name already contains a category word (e.g. "Chiropractic", "Wellness", "Health", "Dental"), do NOT add it again elsewhere.\n\n` +
+
+      (d.tagline
+        ? `  ZONE 3 — TAGLINE (teal pill-shaped bar below the white panel):\n` +
+          `    Render "${d.tagline}" in clean white sans-serif, centered inside the teal pill bar.\n\n`
+        : "") +
+
+      (menuStr !== "  (none)"
+        ? "  ZONE 4 — SERVICE PANELS (four equal-width panels, middle section):\n" +
+          "    Reproduce the four-panel row from the template. Each panel has:\n" +
+          "    • A circular teal badge with a white wellness/medical icon on top\n" +
+          "    • A white rounded-rectangle text box below showing one service\n" +
+          `    Use these services: ${menuStr}\n` +
+          "    Each service must appear exactly once — never repeat.\n\n"
+        : "  ZONE 4 — SERVICE PANELS (four equal-width panels, middle section):\n" +
+          "    Reproduce the four-panel row with circular teal icon badges (spine, massage, leaf/wellness, doctor) and white rounded-rectangle text boxes relevant to this practice type.\n\n") +
+
+      "  ZONE 5 — LOWER PHOTOS (organic blob shapes):\n" +
+      "    Left: generate a photorealistic reception or waiting-room scene inside an organic curved blob shape.\n" +
+      "    Right: place a teal stethoscope or relevant medical prop on a dark teal circular blob shape.\n" +
+      "    Lower-right corner: small white rounded square for QR code.\n\n" +
+
+      (d.offer
+        ? "  ZONE 5B — SPECIAL OFFER:\n" +
+          `    Render "${d.offer}" prominently in teal or dark text in an available white space area.\n` +
+          (d.offerFine ? `    Fine print: "${d.offerFine}" in smaller text below.\n` : "") +
+          "\n"
+        : "") +
+
+      "  ZONE 6 — FOOTER (dark teal bar, full width):\n" +
+      `    Left: circular phone icon badge + phone number "${d.phone || ""}" in bold white sans-serif — large and instantly readable. Zero digit changes.\n` +
+      (fullAddress !== "(none)" ? `    Right: circular location pin icon badge + address "${fullAddress}" in bold white sans-serif — must appear verbatim.\n` : "") +
+      "    Do NOT render the website URL as text.\n\n" +
+
+      "TYPOGRAPHIC RULES:\n" +
+      "  • Business name: bold condensed all-caps sans-serif, very large, dark teal or near-black\n" +
+      "  • NEVER repeat any word from the business name — each word appears exactly once across the entire ad\n" +
+      "  • Tagline: clean white sans-serif inside the teal pill bar, centered\n" +
+      "  • Service labels: clean dark sans-serif inside white rounded-rectangle boxes\n" +
+      "  • Footer text: bold white sans-serif\n" +
+      "  • Fine print: smallest text, still legible\n" +
+      "  • NEVER render the website URL as visible text"
+    )
     : (
       "LAYOUT — render these zones in order from top to bottom:\n\n" +
 
@@ -482,6 +550,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     "Phone numbers, prices, business name, and address — zero tolerance for errors or omissions. " +
     (fullAddress !== "(none)" ? `The address "${fullAddress}" MUST be visible in the footer — do not skip it. ` : "") +
     "No website URL text anywhere. " +
+    `BUSINESS NAME INTEGRITY: The business name is "${d.bizName}". Render it EXACTLY as given — every word appears EXACTLY ONCE across the entire ad. ` +
+    "NEVER split the name and repeat any single word (e.g. if the name is 'Smith Chiropractic', do NOT write 'Chiropractic' a second time anywhere on the ad as a headline, label, icon badge, or decorative element). " +
     "NO DUPLICATE SERVICES OR MENU ITEMS: each service or menu item from the list must appear exactly once in the ad — never repeat the same item or a near-synonym of it in two different zones or icon badges.\n\n" +
     "BUSINESS DETAILS:\n" + businessBlock;
 
