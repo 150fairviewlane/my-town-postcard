@@ -7,55 +7,47 @@
 // Layout (each letter is one 1-inch cell):
 //
 //   1  2  3  4  5  6  7  8  9  10 11 12
-//   bxl bxl bxl bxl bl1 bl1 bl1 bl2 bl2 bl2 bhs bhs   row 1
-//   bxl bxl bxl bxl bl1 bl1 bl1 bl2 bl2 bl2 bhs bhs   row 2
-//   bxl bxl bxl bxl bl1 bl1 bl1 bl2 bl2 bl2 bhs bhs   row 3
-//   bxl bxl bxl bxl bl1 bl1 bl1 bl2 bl2 bl2 bhs bhs   row 4
-//   bxl bxl bxl bxl bm1 bm1 bm1 bm2 bm2 bm2 bhs bhs   row 5
-//   bs1 bs1 bs2 bs2 bm1 bm1 bm1 bm2 bm2 bm2 bhs bhs   row 6
-//   bs1 bs1 bs2 bs2 bhr bhr bhr bhr bhr bhr bhs bhs   row 7
-//   bhn bhn bhn bhn bhn bhn bhn bhn ed  ed  ed  ed    row 8
-//   bhn bhn bhn bhn bhn bhn bhn bhn ed  ed  ed  ed    row 9
+//   bxl bxl bxl bxl bxl2 bxl2 bxl2 bxl2 bxl3 bxl3 bxl3 bxl3  rows 1-5
+//   bm1 bm1 bm1 bm2 bm2  bm2  bm3  bm3  bm3  bm4  bm4  bm4   rows 6-7
+//   bs1 bs1 bhs bhs bhs  bhs  bhs  bhs  bed  bed  bed  bed    rows 8-9
 //
-// Sellable spots: bxl (1×XL), bl1+bl2 (2×Large), bm1+bm2 (2×Medium),
-// bs1+bs2 (2×Small). Total: 7 spots.
+// Sellable spots: bxl+bxl2+bxl3 (3×XL), bm1+bm2+bm3+bm4 (4×Medium),
+// bs1 (1×Small). Total: 8 spots.
 //
 // Non-sellable areas:
-//   • ed  — USPS EDDM block (4"×2"). Required for Every Door Direct Mail.
+//   • bed — USPS EDDM block (4"×2"). Required for Every Door Direct Mail.
 //           The bottom-right corner of any USPS mailer is reserved for the
 //           indicia, address line, and barcode. Not a paid ad slot.
-//   • bhs, bhr, bhn — house ads / brand promo. Filled by us, not for sale.
+//   • bhs  — house ad strip (6"×2", rows 8-9 cols 3-8). Brand promo.
 
 // Back-side grid: 12 cols × 9 rows. 1 column = 1 inch.
-// Sizes: XL=4×5, Large=4×3, Medium=3×2, Small=2×2, EDDM=4×4.
-// House ads fill remaining cells: bhs (2×2 top-right corner of middle band),
-// bhr (4×4 left strip rows 6-9), bhn (4×2 bottom-center banner).
+// Sizes: XL=4"×5", Medium=3"×2", Small=2"×2", EDDM=4"×2".
 // Layout tiles all 108 cells with no gaps or overlaps.
 //
-//   cols: 1  2  3  4  5  6  7  8  9  10 11 12
-//  row 1: bxl bxl bxl bxl bl1 bl1 bl1 bl1 bl2 bl2 bl2 bl2
-//  row 2: bxl bxl bxl bxl bl1 bl1 bl1 bl1 bl2 bl2 bl2 bl2
-//  row 3: bxl bxl bxl bxl bl1 bl1 bl1 bl1 bl2 bl2 bl2 bl2
-//  row 4: bxl bxl bxl bxl bm1 bm1 bm1 bm2 bm2 bm2 bhs bhs
-//  row 5: bxl bxl bxl bxl bm1 bm1 bm1 bm2 bm2 bm2 bhs bhs
-//  row 6: bhr bhr bhr bhr bs1 bs1 bs2 bs2 ed  ed  ed  ed
-//  row 7: bhr bhr bhr bhr bs1 bs1 bs2 bs2 ed  ed  ed  ed
-//  row 8: bhr bhr bhr bhr bhn bhn bhn bhn ed  ed  ed  ed
-//  row 9: bhr bhr bhr bhr bhn bhn bhn bhn ed  ed  ed  ed
+//   cols: 1   2   3   4   5   6   7   8   9   10  11  12
+//  row 1: bxl bxl bxl bxl bxl2 bxl2 bxl2 bxl2 bxl3 bxl3 bxl3 bxl3
+//  row 2: bxl bxl bxl bxl bxl2 bxl2 bxl2 bxl2 bxl3 bxl3 bxl3 bxl3
+//  row 3: bxl bxl bxl bxl bxl2 bxl2 bxl2 bxl2 bxl3 bxl3 bxl3 bxl3
+//  row 4: bxl bxl bxl bxl bxl2 bxl2 bxl2 bxl2 bxl3 bxl3 bxl3 bxl3
+//  row 5: bxl bxl bxl bxl bxl2 bxl2 bxl2 bxl2 bxl3 bxl3 bxl3 bxl3
+//  row 6: bm1 bm1 bm1 bm2 bm2 bm2 bm3 bm3 bm3 bm4 bm4 bm4
+//  row 7: bm1 bm1 bm1 bm2 bm2 bm2 bm3 bm3 bm3 bm4 bm4 bm4
+//  row 8: bs1 bs1 bhs bhs bhs bhs bhs bhs bed bed bed bed
+//  row 9: bs1 bs1 bhs bhs bhs bhs bhs bhs bed bed bed bed
 export const BACK_GRID_AREAS = [
-  "bxl bxl bxl bxl bl1 bl1 bl1 bl1 bl2 bl2 bl2 bl2",
-  "bxl bxl bxl bxl bl1 bl1 bl1 bl1 bl2 bl2 bl2 bl2",
-  "bxl bxl bxl bxl bl1 bl1 bl1 bl1 bl2 bl2 bl2 bl2",
-  "bxl bxl bxl bxl bm1 bm1 bm1 bm2 bm2 bm2 bhs bhs",
-  "bxl bxl bxl bxl bm1 bm1 bm1 bm2 bm2 bm2 bhs bhs",
-  "bhr bhr bhr bhr bs1 bs1 bs2 bs2 ed  ed  ed  ed ",
-  "bhr bhr bhr bhr bs1 bs1 bs2 bs2 ed  ed  ed  ed ",
-  "bhr bhr bhr bhr bhn bhn bhn bhn ed  ed  ed  ed ",
-  "bhr bhr bhr bhr bhn bhn bhn bhn ed  ed  ed  ed ",
+  "bxl bxl bxl bxl bxl2 bxl2 bxl2 bxl2 bxl3 bxl3 bxl3 bxl3",
+  "bxl bxl bxl bxl bxl2 bxl2 bxl2 bxl2 bxl3 bxl3 bxl3 bxl3",
+  "bxl bxl bxl bxl bxl2 bxl2 bxl2 bxl2 bxl3 bxl3 bxl3 bxl3",
+  "bxl bxl bxl bxl bxl2 bxl2 bxl2 bxl2 bxl3 bxl3 bxl3 bxl3",
+  "bxl bxl bxl bxl bxl2 bxl2 bxl2 bxl2 bxl3 bxl3 bxl3 bxl3",
+  "bm1 bm1 bm1 bm2 bm2 bm2 bm3 bm3 bm3 bm4 bm4 bm4",
+  "bm1 bm1 bm1 bm2 bm2 bm2 bm3 bm3 bm3 bm4 bm4 bm4",
+  "bs1 bs1 bhs bhs bhs bhs bhs bhs bed bed bed bed",
+  "bs1 bs1 bhs bhs bhs bhs bhs bhs bed bed bed bed",
 ].map((r) => `"${r}"`).join(" ");
 
 // Render order for sellable back-side spots (used by sort helpers in callers).
-export const BACK_GRID_ORDER = ["bxl", "bl1", "bl2", "bm1", "bm2", "bs1", "bs2"];
+export const BACK_GRID_ORDER = ["bxl", "bxl2", "bxl3", "bm1", "bm2", "bm3", "bm4", "bs1"];
 
 // ─── House ads (back side) ───────────────────────────────────────────────────
 // Three different cell shapes need three different house-ad layouts. They all

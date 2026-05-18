@@ -96,7 +96,7 @@ The postcard is 12"×9" landscape and has TWO sides, both sellable through the s
 - Bottom row: `l1` `l2` `l3` `l4` — Large portrait (3"×4", 300×400 natural px), each 3 cols × 4 rows.
 - Grid: rows 1-5 = XL, rows 6-9 = Large portrait. All 108 cells covered (no house ad strip).
 
-**Back side** — 7 spots: `bxl` (xl, $499), `bl1` `bl2` (large, $399), `bm1` `bs1` `bm2` `bs2` (each 2"×2", 200×200px natural, arranged in a row at rows 4-5), plus one house-ad cell `bhr` (cols 1-8, rows 6-9 = 800×400) and the non-sellable `ed` USPS EDDM block (4"×4"). Layout in `artifacts/localspot/src/postcardBack.jsx`.
+**Back side** — 8 spots: `bxl` `bxl2` `bxl3` (xl, $499 each — 3 columns of 4"×5", rows 1-5), `bm1` `bm2` `bm3` `bm4` (medium, $299 each — 4 columns of 3"×2", rows 6-7), `bs1` (small, $199, 2"×2", rows 8-9 cols 1-2). House-ad strip `bhs` (6"×2", rows 8-9 cols 3-8) and USPS EDDM block `bed` (4"×2", rows 8-9 cols 9-12) are non-sellable. Layout in `artifacts/localspot/src/postcardBack.jsx`.
 
 **Medium and Small spots** are both 2"×2" (200×200 natural px). They differ only in price ($299 vs $199) and content density in the sample ads.
 
@@ -104,7 +104,7 @@ The print page (`/admin/campaign/:id/print`) renders both sides as separate prin
 
 ## Seed Data
 
-Campaign 1 (Spring 2025) has 14 active spots: 7 front-side + 7 back-side. Front: `mb` `re` paid + `dn` `l1` `l2` `l3` `l4` available. Back: all 7 available. (Old spots `lw`/`a2` are orphaned DB rows — grid skips them via GRID_POSITIONS lookup.)
+Campaign 1 (Spring 2025) has 15 spots: 7 front + 8 back. Front: `mb` `re` paid; `dn` `l1` `l2` `l3` `l4` available. Back: `bxl` paid; `bxl2` `bxl3` `bm1` `bm2` `bm3` `bm4` `bs1` available. (Old spots `lw`/`a2` are orphaned DB rows — grid skips them via GRID_POSITIONS lookup.)
 
 ## Reservation Expiration
 

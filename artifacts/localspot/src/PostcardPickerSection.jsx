@@ -21,16 +21,16 @@ const FRONT = [
 ];
 
 // BACK: visual layout (3 XL columns + 4 M row + S/house/EDDM bottom row).
-// dbGridArea links each visual cell to its DB row. Cells with dbGridArea:null
-// are visual-only filler or house ads with no dedicated DB spot.
+// Every sellable cell has a 1:1 DB row via dbGridArea.
+// House/EDDM cells have dbGridArea:null — no DB row, rendered statically.
 const BACK = [
-{ id:"bxl1", dbGridArea:"bxl", size:"XL", price:499, x:0,   y:0,   w:400, h:500, sample:null },
-{ id:"bxl2", dbGridArea:null,  size:"XL", price:499, x:400, y:0,   w:400, h:500, sample:null },
-{ id:"bxl3", dbGridArea:null,  size:"XL", price:499, x:800, y:0,   w:400, h:500, sample:null },
-{ id:"bm1",  dbGridArea:"bm1", size:"M",  price:299, x:0,   y:500, w:300, h:200, sample:null },
-{ id:"bm2",  dbGridArea:null,  size:"M",  price:299, x:300, y:500, w:300, h:200, sample:null },
-{ id:"bm3",  dbGridArea:"bm2", size:"M",  price:299, x:600, y:500, w:300, h:200, sample:null },
-{ id:"bm4",  dbGridArea:null,  size:"M",  price:299, x:900, y:500, w:300, h:200, sample:null },
+{ id:"bxl1", dbGridArea:"bxl",  size:"XL", price:499, x:0,   y:0,   w:400, h:500, sample:null },
+{ id:"bxl2", dbGridArea:"bxl2", size:"XL", price:499, x:400, y:0,   w:400, h:500, sample:null },
+{ id:"bxl3", dbGridArea:"bxl3", size:"XL", price:499, x:800, y:0,   w:400, h:500, sample:null },
+{ id:"bm1",  dbGridArea:"bm1",  size:"M",  price:299, x:0,   y:500, w:300, h:200, sample:null },
+{ id:"bm2",  dbGridArea:"bm2",  size:"M",  price:299, x:300, y:500, w:300, h:200, sample:null },
+{ id:"bm3",  dbGridArea:"bm3",  size:"M",  price:299, x:600, y:500, w:300, h:200, sample:null },
+{ id:"bm4",  dbGridArea:"bm4",  size:"M",  price:299, x:900, y:500, w:300, h:200, sample:null },
 { id:"bs1",  dbGridArea:"bs1", size:"S",  price:199, x:0,   y:700, w:200, h:200, sample:null                   },
 { id:"bhs",  dbGridArea:null,  size:"house", price:0, x:200, y:700, w:600, h:200, sample:"house"               },
 { id:"bed",  dbGridArea:null,  size:"eddm",  price:0, x:800, y:700, w:400, h:200, sample:"eddm"                },
@@ -429,7 +429,7 @@ return(<ScaledCell spot={spot} scale={scale}>{spot.size==="XL"&&<AdXL d={d} tmpl
 // Back: only some visual cells have a dedicated DB row (dbGridArea set); the rest
 // are visual-only filler that fall back to size-priority reservation.
 const FRONT_GRID_MAP = { xl1:"mb", xl2:"dn", xl3:"re", l1:"l1", l2:"l2", l3:"l3", l4:"l4" };
-const BACK_GRID_MAP  = { bxl1:"bxl", bm1:"bm1", bm3:"bm2", bs1:"bs1" };
+const BACK_GRID_MAP  = { bxl1:"bxl", bxl2:"bxl2", bxl3:"bxl3", bm1:"bm1", bm2:"bm2", bm3:"bm3", bm4:"bm4", bs1:"bs1" };
 
 export default function PostcardPicker(){
 const search=useSearch();

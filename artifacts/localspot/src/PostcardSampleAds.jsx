@@ -828,8 +828,8 @@ export function getSampleAd(configKey, sizeKeyOverride) {
 //
 // Front filled (sample): mb (XL), dn (XL), ins (L), lw (M), a1 (S) — 5 spots
 // Front available:        re (XL), hv (L), pz (M), a2 (S)           — 4 spots
-// Back  filled (sample):  bxl (XL), bl1 (L), bm1 (M), bs1 (S)       — 4 spots
-// Back  available:        bl2 (L), bm2 (M), bs2 (S)
+// Back  filled (sample):  bxl (XL, paid)                              — 1 spot
+// Back  available:        bxl2+bxl3 (XL), bm1-bm4 (M), bs1 (S)      — 7 spots
 //
 // At least one sample ad per size per side. Everything else is a clearly
 // inviting "Your ad here" cell so the postcard reads as a real co-op
