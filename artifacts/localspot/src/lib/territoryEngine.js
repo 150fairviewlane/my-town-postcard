@@ -209,20 +209,22 @@ function estimateHouseholds(zips) {
  *
  * Each territory is named after a real, recognisable community — not an
  * anonymous radius blob. The algorithm:
- *   1. Finds all distinct named cities within the search radius.
- *   2. Runs K-means on those city centroids (one point per city).
- *   3. Labels each cluster by whichever city in it has the most ZIP codes.
+ *   1. Collects all distinct named cities within the adaptive search radius.
+ *   2. Runs K-means on those city centroids (one point per city), using only
+ *      "anchor" cities (≥ 2 ZIPs) to avoid tiny hamlets distorting clusters.
+ *   3. Absorbs single-ZIP satellite towns into the nearest anchor cluster.
+ *   4. Labels each cluster by whichever city in it has the most ZIP codes.
  *
- * The search radius adapts: starts at `minRadiusMiles` and expands in
- * 5-mile steps until at least `minCities` distinct cities are in range,
- * or `maxRadiusMiles` is reached. Dense areas stop early (tight local
- * clusters); rural areas widen as needed.
+ * The search radius adapts: starts at `minRadiusMiles` and expands in 5-mile
+ * steps until the nearby ZIP count reaches `targetZips` AND k anchor cities
+ * are available — or `maxRadiusMiles` is reached. Dense areas stop early;
+ * rural areas widen as needed.
  *
  * @param {string} homeZip
  * @param {object} [opts]
- * @param {number} [opts.minRadiusMiles=15]
- * @param {number} [opts.maxRadiusMiles=40]
- * @param {number} [opts.minCities]   Defaults to k*3
+ * @param {number} [opts.minRadiusMiles=10]
+ * @param {number} [opts.maxRadiusMiles=50]
+ * @param {number} [opts.targetZips]   Target nearby ZIP count. Defaults to k*6.
  * @param {number} [opts.k=4]
  * @param {number} [opts.seed=1]
  * @returns {Promise<Array<{
@@ -237,12 +239,12 @@ function estimateHouseholds(zips) {
  */
 export async function buildTerritories(homeZip, opts = {}) {
   const {
-    minRadiusMiles = 15,
-    maxRadiusMiles = 40,
+    minRadiusMiles = 10,
+    maxRadiusMiles = 50,
     k = 4,
     seed = 1,
   } = opts;
-  const minCities = opts.minCities ?? k * 3;
+  const targetZips = opts.targetZips ?? k * 6;
 
   const data = await loadZips();
   const home = data.byZip.get(homeZip);
@@ -252,21 +254,23 @@ export async function buildTerritories(homeZip, opts = {}) {
     throw err;
   }
 
-  // Expand radius until we have enough distinct named cities AND enough anchor
-  // cities (≥ 2 ZIPs each) to fill k clusters with meaningful variety.
-  // Anchors are cities that represent real community presence; single-ZIP
-  // towns (hamlets, P.O. box villages) are satellites that join the nearest
-  // anchor cluster. Requiring k anchors before stopping prevents tiny isolated
-  // hamlets from becoming their own underpopulated territories.
+  // Expand radius in 5-mile steps until:
+  //   - the total ZIP count within radius reaches targetZips, AND
+  //   - at least k "anchor" cities (≥ 2 ZIPs each) are in range.
+  // Anchors are cities with real community presence; single-ZIP hamlets are
+  // "satellites" that join the nearest anchor cluster after K-means so they
+  // don't form underpopulated standalone territories.
   let radius = minRadiusMiles;
   let cities = nearbyCities(home, data.all, radius);
+  let nearbyZipCount = cities.reduce((s, c) => s + c.zips.length, 0);
   let anchors = cities.filter((c) => c.zips.length >= 2);
   while (
-    (cities.length < minCities || anchors.length < k) &&
+    (nearbyZipCount < targetZips || anchors.length < k) &&
     radius < maxRadiusMiles
   ) {
     radius = Math.min(radius + 5, maxRadiusMiles);
     cities = nearbyCities(home, data.all, radius);
+    nearbyZipCount = cities.reduce((s, c) => s + c.zips.length, 0);
     anchors = cities.filter((c) => c.zips.length >= 2);
   }
 
