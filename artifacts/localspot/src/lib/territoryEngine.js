@@ -213,16 +213,16 @@ function pickLabel(cluster) {
 // distance between each ZIP and its nearest neighbor in the same cluster
 // as a geographic density signal.
 //
-// Base rate of 800 households/ZIP (deliberately conservative so that
-// suburban and dense clusters produce distinct values below the 5,000 cap):
-//   Dense  (medianDist < 2 mi)  → ×0.7 → ~800×0.7 = 560/ZIP → ~3,360 for 6 ZIPs
-//   Medium (medianDist 2–5 mi)  → ×1.0 → ~800/ZIP           → ~4,800 for 6 ZIPs
-//   Rural  (medianDist > 5 mi)  → ×1.8 → ~1,440/ZIP         → capped at 5,000
+// Base rate of 1,500 households/ZIP scaled by a geographic density factor
+// derived from the median nearest-neighbour distance in the cluster:
+//   Dense  (medianDist < 2 mi)  → ×0.7 → ~1,050/ZIP
+//   Medium (medianDist 2–5 mi)  → ×1.0 → ~1,500/ZIP  (baseline)
+//   Rural  (medianDist > 5 mi)  → ×1.8 → ~2,700/ZIP
 //
 // Result is capped at 5,000 — one full EDDM mailing run per territory.
 function estimateHouseholds(points) {
   if (points.length === 0) return 0;
-  if (points.length === 1) return Math.min(5000, 800);
+  if (points.length === 1) return Math.min(5000, 1500);
 
   // Median nearest-neighbor distance within the cluster
   const dists = points.map((p) => {
@@ -246,7 +246,7 @@ function estimateHouseholds(points) {
     scaleFactor = 1.8;   // rural / sparse
   }
 
-  return Math.min(5000, Math.round(points.length * 800 * scaleFactor));
+  return Math.min(5000, Math.round(points.length * 1500 * scaleFactor));
 }
 
 /**
@@ -277,10 +277,9 @@ function estimateHouseholds(points) {
  */
 export async function buildTerritories(homeZip, opts = {}) {
   const { minRadiusMiles = 10, maxRadiusMiles = 50, k = 4, seed = 1 } = opts;
-  // ~6 ZIPs per territory gives K-means enough granularity for meaningful
-  // geographic clusters while still stopping early in dense suburbs.
-  // Keeping it relative to k means a 2-territory run also stops early.
+  // ~6 ZIPs per territory gives K-means enough granularity for meaningful clusters.
   const targetZips = opts.targetZips ?? k * 6;
+
   const data = await loadZips();
   const home = data.byZip.get(homeZip);
   if (!home) {
@@ -289,18 +288,43 @@ export async function buildTerritories(homeZip, opts = {}) {
     throw err;
   }
 
-  // Adaptive radius: expand in 2-mile steps until we have enough ZIPs to form
-  // meaningful clusters, or until we hit the cap.  Fine steps (2 mi) prevent
-  // the coarse overshooting that would pull in distant metro ZIPs for dense
-  // suburbs — e.g. a 5-mile jump from 10→15 mi around Woodstock GA picks up
-  // Marietta/Roswell; a 2-mile step stops at ~12 mi instead.
+  // ── Step 1: Dense / metro case ──────────────────────────────────────────
+  // If minRadius already yields targetZips or more, we're in a dense area
+  // (e.g. inner NYC, Atlanta suburbs). Use the tight local pool directly —
+  // no expansion needed and no risk of metro bleed.
+  const atMinRadius = data.all.filter((z) => haversineMiles(home, z) <= minRadiusMiles);
+  if (atMinRadius.length >= targetZips) {
+    return finalize(kmeans(atMinRadius, k, seed), home);
+  }
+
+  // ── Step 2: ZIP-prefix group ─────────────────────────────────────────────
+  // USPS assigns ZIP prefixes (first 3 digits) by geographic region, so
+  // same-prefix ZIPs are typically in the same county cluster or rural
+  // corridor — even when adjacent county ZIPs are geometrically closer.
+  //
+  // Example: Woodstock GA (30188, prefix "301") sits on the Cherokee /
+  // Cobb County boundary. Adjacent Marietta and Roswell ZIPs begin with
+  // "300" and are excluded here, while the intended Cherokee County targets
+  // (Canton 30114, Ball Ground 30107, Holly Springs 30142) share the "301"
+  // prefix and are included automatically — regardless of whether their
+  // straight-line distance is larger than the excluded metro ZIPs.
+  const homePrefix = homeZip.slice(0, 3);
+  const sameGroup = data.all.filter(
+    (z) => z.zip.startsWith(homePrefix) && haversineMiles(home, z) <= maxRadiusMiles
+  );
+  if (sameGroup.length >= k) {
+    return finalize(kmeans(sameGroup, k, seed), home);
+  }
+
+  // ── Step 3: Adaptive radius fallback ────────────────────────────────────
+  // The prefix group is too sparse (very remote area where even the regional
+  // ZIP group has fewer than k entries). Expand radius in 2-mile steps.
   let radius = minRadiusMiles;
-  let nearby = data.all.filter((z) => haversineMiles(home, z) <= radius);
-  while (nearby.length < targetZips && radius < maxRadiusMiles) {
+  let nearby = atMinRadius;
+  while (nearby.length < k && radius < maxRadiusMiles) {
     radius = Math.min(radius + 2, maxRadiusMiles);
     nearby = data.all.filter((z) => haversineMiles(home, z) <= radius);
   }
-
   if (nearby.length < k) {
     const err = new Error(`Not enough nearby ZIP codes around ${homeZip} to build territories.`);
     err.code = "NOT_ENOUGH_ZIPS";
