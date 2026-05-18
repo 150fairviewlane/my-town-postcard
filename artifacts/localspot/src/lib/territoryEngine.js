@@ -7,8 +7,8 @@
 //   2. buildTerritories() — adaptive radius expansion until targetZips reached,
 //      then K-means on ZIP centroids → k territory objects
 //
-// The radius adapts: starts at minRadiusMiles, expands in 2-mile steps until
-// at least targetZips (default k*4) nearby ZIPs are found. Dense areas stop
+// The radius adapts: starts at minRadiusMiles, expands in 5-mile steps until
+// at least targetZips (default 24) nearby ZIPs are found. Dense areas stop
 // early; rural areas widen as needed. Each territory is labelled by the most
 // common city name among its ZIP codes.
 //
@@ -162,7 +162,10 @@ export function kmeans(points, k, seed = 1) {
 //   < 2 mi  → dense/urban    → ×0.7  (~1,050 HH/ZIP)
 //   2–5 mi  → suburban       → ×1.0  (~1,500 HH/ZIP)
 //   > 5 mi  → rural/sparse   → ×1.8  (~2,700 HH/ZIP)
-// Cap at 5,000 (one EDDM run).
+// Cap at 15,000 — this is the territory's total addressable household pool.
+// Dealers select 5,000 EDDM-mailed addresses from within the territory pool.
+// The higher cap lets dense (~6–9k) vs rural (~13–15k) territories be visibly
+// different in the UI so buyers understand the coverage area they are buying into.
 export function estimateHouseholds(zips) {
   if (zips.length === 0) return 0;
   if (zips.length === 1) return 1500;
@@ -178,7 +181,7 @@ export function estimateHouseholds(zips) {
   dists.sort((a, b) => a - b);
   const median = dists[Math.floor(dists.length / 2)];
   const scale = median < 2 ? 0.7 : median <= 5 ? 1.0 : 1.8;
-  return Math.min(5000, Math.round(zips.length * 1500 * scale));
+  return Math.min(15000, Math.round(zips.length * 1500 * scale));
 }
 
 /**
