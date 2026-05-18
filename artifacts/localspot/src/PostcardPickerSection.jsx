@@ -24,13 +24,13 @@ const FRONT = [
 // dbGridArea links each visual cell to its DB row. Cells with dbGridArea:null
 // are visual-only filler or house ads with no dedicated DB spot.
 const BACK = [
-{ id:"bxl1", dbGridArea:"bxl", size:"XL", price:499, x:0,   y:0,   w:400, h:500, sample:"realty", tmpl:"clean" },
-{ id:"bxl2", dbGridArea:null,  size:"XL", price:499, x:400, y:0,   w:400, h:500, sample:null                   },
-{ id:"bxl3", dbGridArea:null,  size:"XL", price:499, x:800, y:0,   w:400, h:500, sample:"auto",   tmpl:"photo" },
-{ id:"bm1",  dbGridArea:"bm1", size:"M",  price:299, x:0,   y:500, w:300, h:200, sample:"salon",  tmpl:"banner" },
-{ id:"bm2",  dbGridArea:null,  size:"M",  price:299, x:300, y:500, w:300, h:200, sample:null                   },
-{ id:"bm3",  dbGridArea:"bm2", size:"M",  price:299, x:600, y:500, w:300, h:200, sample:"pizza",  tmpl:"slate"  },
-{ id:"bm4",  dbGridArea:null,  size:"M",  price:299, x:900, y:500, w:300, h:200, sample:null                   },
+{ id:"bxl1", dbGridArea:"bxl", size:"XL", price:499, x:0,   y:0,   w:400, h:500, sample:null },
+{ id:"bxl2", dbGridArea:null,  size:"XL", price:499, x:400, y:0,   w:400, h:500, sample:null },
+{ id:"bxl3", dbGridArea:null,  size:"XL", price:499, x:800, y:0,   w:400, h:500, sample:null },
+{ id:"bm1",  dbGridArea:"bm1", size:"M",  price:299, x:0,   y:500, w:300, h:200, sample:null },
+{ id:"bm2",  dbGridArea:null,  size:"M",  price:299, x:300, y:500, w:300, h:200, sample:null },
+{ id:"bm3",  dbGridArea:"bm2", size:"M",  price:299, x:600, y:500, w:300, h:200, sample:null },
+{ id:"bm4",  dbGridArea:null,  size:"M",  price:299, x:900, y:500, w:300, h:200, sample:null },
 { id:"bs1",  dbGridArea:"bs1", size:"S",  price:199, x:0,   y:700, w:200, h:200, sample:null                   },
 { id:"bhs",  dbGridArea:null,  size:"house", price:0, x:200, y:700, w:600, h:200, sample:"house"               },
 { id:"bed",  dbGridArea:null,  size:"eddm",  price:0, x:800, y:700, w:400, h:200, sample:"eddm"                },

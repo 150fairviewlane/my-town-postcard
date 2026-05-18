@@ -842,9 +842,5 @@ export const SPOT_SAMPLE_MAP = {
   "l1": "ref-hvac",       // L portrait   — Climate Comfort HVAC
   "l3": "ref-lawn",       // L portrait   — GreenScapes Lawn Care
   // dn, l2, l4 → not listed → render as green AvailableSpot (purchase prompt)
-  // Back side
-  "bxl": "ref-roofing",  // XL — Pine Ridge Roofing
-  "bl1": "ref-auto",     // L  — Pit Stop Auto Repair
-  "bm1": "ref-vet",      // M  — Paws & Claws Vet Clinic
-  "bs1": "ref-salon",    // S  — The Cut Above Salon
+  // Back side: all spots available — no samples shown
 };
