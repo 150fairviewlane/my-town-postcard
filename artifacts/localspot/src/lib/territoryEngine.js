@@ -1,24 +1,18 @@
-// Territory engine — clusters US ZIP codes near a dealer's home ZIP into
-// k distinct postcard zones. Pure browser JS, no external dependencies.
-// Backed by /data/zips.json (compact array-of-arrays format) which is
-// served from the localspot public folder and lazy-fetched the first
-// time loadZips() is called.
+// Territory engine — clusters nearby ZIP codes into k distinct postcard zones.
+// Pure browser JS, no external dependencies.
+// Backed by /data/zips.json (compact array-of-arrays) lazy-fetched on first call.
 //
 // Pipeline:
-//   1. loadZips(): fetch + index ~41k US ZIPs by zip, lat/lng, city, state
-//   2. nearbyCities(): collect all distinct named cities within the search
-//      radius, computing a centroid and ZIP list for each
-//   3. kmeans(cities, k): cluster city centroids into k groups
-//   4. buildTerritories(): glue — expands radius until enough cities are
-//      found, runs the cluster, returns territory objects
+//   1. loadZips() — fetch + index ~41k US ZIPs by zip, lat/lng, city, state
+//   2. buildTerritories() — adaptive radius expansion until targetZips reached,
+//      then K-means on ZIP centroids → k territory objects
 //
-// Each territory corresponds to one or two neighbouring towns, labelled by
-// whichever city in the cluster has the most ZIP codes. This gives clean,
-// recognisable community names ("Canton, GA", "Roswell, GA") rather than
-// arbitrary geographic blobs.
+// The radius adapts: starts at minRadiusMiles, expands in 2-mile steps until
+// at least targetZips (default k*4) nearby ZIPs are found. Dense areas stop
+// early; rural areas widen as needed. Each territory is labelled by the most
+// common city name among its ZIP codes.
 //
-// Deterministic when given a seed so the "Re-shuffle" button produces a
-// different but reproducible layout each click.
+// Deterministic when given a seed (Mulberry32 PRNG + K-means++ init).
 
 const EARTH_RADIUS_MILES = 3958.8;
 
@@ -73,7 +67,8 @@ export function haversineMiles(a, b) {
   return 2 * EARTH_RADIUS_MILES * Math.asin(Math.sqrt(h));
 }
 
-// Mulberry32 — deterministic 32-bit PRNG used to make K-means reproducible.
+// Mulberry32 — deterministic 32-bit PRNG. Makes K-means reproducible across
+// calls with the same seed (important for the "Re-shuffle" UX).
 function mulberry32(seed) {
   let t = seed >>> 0;
   return function () {
@@ -84,7 +79,8 @@ function mulberry32(seed) {
   };
 }
 
-// K-means++ init: spread starting centroids so clusters don't collapse.
+// K-means++ initialisation: spread starting centroids probabilistically by
+// squared distance so they are unlikely to collapse into one region.
 function kmeansPlusPlus(points, k, rand) {
   const centroids = [{ ...points[Math.floor(rand() * points.length)] }];
   while (centroids.length < k) {
@@ -112,7 +108,7 @@ function kmeansPlusPlus(points, k, rand) {
   return centroids;
 }
 
-// K-means clustering over any array of { lat, lng, ... } objects.
+// K-means clustering over an array of { lat, lng, ... } points.
 export function kmeans(points, k, seed = 1) {
   if (points.length <= k) {
     return points.map((p, i) => ({
@@ -159,36 +155,17 @@ export function kmeans(points, k, seed = 1) {
   return buckets.filter((b) => b.points.length > 0).map((b, i) => ({ ...b, index: i }));
 }
 
-// Collect all distinct named cities within `radius` miles of `home`.
-// Returns array of city objects sorted nearest-first, each with:
-//   { name, zips, lat, lng }  where lat/lng is the city's centroid.
-function nearbyCities(home, all, radius) {
-  const cityMap = new Map();
-  for (const z of all) {
-    if (haversineMiles(home, z) > radius) continue;
-    const key = `${z.city}, ${z.state}`;
-    if (!cityMap.has(key)) cityMap.set(key, { name: key, zips: [] });
-    cityMap.get(key).zips.push(z);
-  }
-  return [...cityMap.values()]
-    .map((c) => {
-      const lat = c.zips.reduce((s, z) => s + z.lat, 0) / c.zips.length;
-      const lng = c.zips.reduce((s, z) => s + z.lng, 0) / c.zips.length;
-      return { name: c.name, zips: c.zips, lat, lng };
-    })
-    .sort((a, b) => haversineMiles(home, a) - haversineMiles(home, b));
-}
-
 // Estimate households in a territory.
-// 1,500 households/ZIP × density scale factor, capped at 5,000.
-// Density is approximated by the median nearest-neighbour distance
-// between ZIP centroids in the territory:
-//   < 2 mi  → dense/urban    → ×0.7
-//   2–5 mi  → suburban       → ×1.0
-//   > 5 mi  → rural/sparse   → ×1.8
-function estimateHouseholds(zips) {
+// Baseline: 1,500 households per ZIP code, scaled by geographic density.
+// Density is approximated by the median nearest-neighbour distance between
+// the territory's ZIP centroids:
+//   < 2 mi  → dense/urban    → ×0.7  (~1,050 HH/ZIP)
+//   2–5 mi  → suburban       → ×1.0  (~1,500 HH/ZIP)
+//   > 5 mi  → rural/sparse   → ×1.8  (~2,700 HH/ZIP)
+// Cap at 5,000 (one EDDM run).
+export function estimateHouseholds(zips) {
   if (zips.length === 0) return 0;
-  if (zips.length === 1) return Math.min(5000, 1500);
+  if (zips.length === 1) return 1500;
   const dists = zips.map((p) => {
     let best = Infinity;
     for (const q of zips) {
@@ -207,24 +184,19 @@ function estimateHouseholds(zips) {
 /**
  * Build k postcard territories around the dealer's home ZIP.
  *
- * Each territory is named after a real, recognisable community — not an
- * anonymous radius blob. The algorithm:
- *   1. Collects all distinct named cities within the adaptive search radius.
- *   2. Runs K-means on those city centroids (one point per city), using only
- *      "anchor" cities (≥ 2 ZIPs) to avoid tiny hamlets distorting clusters.
- *   3. Absorbs single-ZIP satellite towns into the nearest anchor cluster.
- *   4. Labels each cluster by whichever city in it has the most ZIP codes.
- *
- * The search radius adapts: starts at `minRadiusMiles` and expands in 5-mile
- * steps until the nearby ZIP count reaches `targetZips` AND k anchor cities
- * are available — or `maxRadiusMiles` is reached. Dense areas stop early;
- * rural areas widen as needed.
+ * The radius adapts: starts at `minRadiusMiles` and expands in **2-mile
+ * steps** until at least `targetZips` (default k×4) ZIP codes are within
+ * range, or `maxRadiusMiles` is reached. Dense areas stop early; sparse
+ * rural areas widen as needed. K-means then clusters the nearby ZIP centroids
+ * into k groups and labels each group by the most common city name.
  *
  * @param {string} homeZip
  * @param {object} [opts]
  * @param {number} [opts.minRadiusMiles=10]
  * @param {number} [opts.maxRadiusMiles=50]
- * @param {number} [opts.targetZips]   Target nearby ZIP count. Defaults to k*6.
+ * @param {number} [opts.targetZips]   Stop expanding once this many ZIPs are in
+ *   range. Defaults to k×4 (= 16 for k=4). Dense suburbs hit the target at a
+ *   tighter radius; rural areas expand until the target or maxRadius is reached.
  * @param {number} [opts.k=4]
  * @param {number} [opts.seed=1]
  * @returns {Promise<Array<{
@@ -244,7 +216,7 @@ export async function buildTerritories(homeZip, opts = {}) {
     k = 4,
     seed = 1,
   } = opts;
-  const targetZips = opts.targetZips ?? k * 6;
+  const targetZips = opts.targetZips ?? k * 4;
 
   const data = await loadZips();
   const home = data.byZip.get(homeZip);
@@ -254,80 +226,55 @@ export async function buildTerritories(homeZip, opts = {}) {
     throw err;
   }
 
-  // Expand radius in 5-mile steps until:
-  //   - the total ZIP count within radius reaches targetZips, AND
-  //   - at least k "anchor" cities (≥ 2 ZIPs each) are in range.
-  // Anchors are cities with real community presence; single-ZIP hamlets are
-  // "satellites" that join the nearest anchor cluster after K-means so they
-  // don't form underpopulated standalone territories.
-  let radius = minRadiusMiles;
-  let cities = nearbyCities(home, data.all, radius);
-  let nearbyZipCount = cities.reduce((s, c) => s + c.zips.length, 0);
-  let anchors = cities.filter((c) => c.zips.length >= 2);
-  while (
-    (nearbyZipCount < targetZips || anchors.length < k) &&
-    radius < maxRadiusMiles
-  ) {
-    radius = Math.min(radius + 5, maxRadiusMiles);
-    cities = nearbyCities(home, data.all, radius);
-    nearbyZipCount = cities.reduce((s, c) => s + c.zips.length, 0);
-    anchors = cities.filter((c) => c.zips.length >= 2);
+  // Collect all ZIPs within radius of home.
+  function nearbyZips(radius) {
+    return data.all.filter((z) => haversineMiles(home, z) <= radius);
   }
 
-  if (cities.length < k) {
+  // Adaptive radius: 2-mile steps from minRadiusMiles.
+  // Stops as soon as targetZips ZIPs are in range (or maxRadiusMiles reached).
+  let radius = minRadiusMiles;
+  let nearby = nearbyZips(radius);
+  while (nearby.length < targetZips && radius < maxRadiusMiles) {
+    radius = Math.min(radius + 2, maxRadiusMiles);
+    nearby = nearbyZips(radius);
+  }
+
+  if (nearby.length < k) {
     const err = new Error(
-      `Not enough nearby communities around ${homeZip} to build ${k} territories.`
+      `Not enough ZIP codes near ${homeZip} to build ${k} territories.`
     );
     err.code = "NOT_ENOUGH_ZIPS";
     throw err;
   }
 
-  // Prefer same-state communities. Cross-state cities are included only when
-  // in-state supply is insufficient for k territories (border rural areas).
-  const homeState = home.state;
-  const sameState = cities.filter((c) => c.zips.some((z) => z.state === homeState));
-  if (sameState.length >= k) {
-    cities = sameState;
-    anchors = anchors.filter((c) => c.zips.some((z) => z.state === homeState));
-  }
-
-  // K-means runs on anchor cities only (when we have enough of them).
-  // Satellites are absorbed into the nearest anchor cluster afterward.
-  const satellites = cities.filter((c) => c.zips.length < 2);
-  const clusterInput = anchors.length >= k ? anchors : cities;
-
-  // Cluster city centroids into k groups.
-  const clusters = kmeans(clusterInput, k, seed);
-
-  // Absorb satellite cities into the nearest cluster.
-  for (const sat of anchors.length >= k ? satellites : []) {
-    let best = 0;
-    let bestDist = Infinity;
-    for (let i = 0; i < clusters.length; i++) {
-      const d = haversineMiles(sat, clusters[i].center);
-      if (d < bestDist) { bestDist = d; best = i; }
-    }
-    clusters[best].points.push(sat);
-  }
+  // K-means on ZIP centroids.
+  const clusters = kmeans(nearby, k, seed);
 
   return clusters.map((c, i) => {
-    // Gather all ZIP records from every city assigned to this cluster.
-    const allZips = c.points.flatMap((city) => city.zips);
-
-    // Label: city with the most ZIP codes in this cluster.
-    let label = c.points[0]?.name ?? homeZip;
+    // Label by the most common city name in the cluster.
+    const cityCounts = new Map();
+    for (const z of c.points) {
+      cityCounts.set(z.city, (cityCounts.get(z.city) ?? 0) + 1);
+    }
+    let label = c.points[0]?.city ?? homeZip;
+    let labelState = c.points[0]?.state ?? "";
     let best = 0;
-    for (const city of c.points) {
-      if (city.zips.length > best) { best = city.zips.length; label = city.name; }
+    for (const [city, count] of cityCounts) {
+      if (count > best) {
+        best = count;
+        label = city;
+        labelState = c.points.find((z) => z.city === city)?.state ?? "";
+      }
     }
 
     return {
       territoryIndex: i,
       centerLat: Number(c.center.lat.toFixed(4)),
       centerLng: Number(c.center.lng.toFixed(4)),
-      zipCodes: allZips.map((z) => z.zip),
-      cityLabel: label,
-      estimatedHouseholds: estimateHouseholds(allZips),
+      zipCodes: c.points.map((z) => z.zip),
+      cityLabel: `${label}, ${labelState}`,
+      estimatedHouseholds: estimateHouseholds(c.points),
       distanceFromHomeMiles: Number(haversineMiles(home, c.center).toFixed(1)),
     };
   });
