@@ -184,8 +184,8 @@ export function estimateHouseholds(zips) {
 /**
  * Build k postcard territories around the dealer's home ZIP.
  *
- * The radius adapts: starts at `minRadiusMiles` and expands in **2-mile
- * steps** until at least `targetZips` (default k×4) ZIP codes are within
+ * The radius adapts: starts at `minRadiusMiles` and expands in **5-mile
+ * steps** until at least `targetZips` (default 24) ZIP codes are within
  * range, or `maxRadiusMiles` is reached. Dense areas stop early; sparse
  * rural areas widen as needed. K-means then clusters the nearby ZIP centroids
  * into k groups and labels each group by the most common city name.
@@ -194,9 +194,9 @@ export function estimateHouseholds(zips) {
  * @param {object} [opts]
  * @param {number} [opts.minRadiusMiles=10]
  * @param {number} [opts.maxRadiusMiles=50]
- * @param {number} [opts.targetZips]   Stop expanding once this many ZIPs are in
- *   range. Defaults to k×4 (= 16 for k=4). Dense suburbs hit the target at a
- *   tighter radius; rural areas expand until the target or maxRadius is reached.
+ * @param {number} [opts.targetZips=24]  Stop expanding once this many ZIPs are
+ *   in range. Dense suburbs hit the target at a tighter radius; rural areas
+ *   expand until the target or maxRadius is reached.
  * @param {number} [opts.k=4]
  * @param {number} [opts.seed=1]
  * @returns {Promise<Array<{
@@ -216,7 +216,7 @@ export async function buildTerritories(homeZip, opts = {}) {
     k = 4,
     seed = 1,
   } = opts;
-  const targetZips = opts.targetZips ?? k * 4;
+  const targetZips = opts.targetZips ?? 24;
 
   const data = await loadZips();
   const home = data.byZip.get(homeZip);
@@ -231,12 +231,12 @@ export async function buildTerritories(homeZip, opts = {}) {
     return data.all.filter((z) => haversineMiles(home, z) <= radius);
   }
 
-  // Adaptive radius: 2-mile steps from minRadiusMiles.
+  // Adaptive radius: 5-mile steps from minRadiusMiles.
   // Stops as soon as targetZips ZIPs are in range (or maxRadiusMiles reached).
   let radius = minRadiusMiles;
   let nearby = nearbyZips(radius);
   while (nearby.length < targetZips && radius < maxRadiusMiles) {
-    radius = Math.min(radius + 2, maxRadiusMiles);
+    radius = Math.min(radius + 5, maxRadiusMiles);
     nearby = nearbyZips(radius);
   }
 
