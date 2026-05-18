@@ -5,6 +5,7 @@ import path from "path";
 import sharp from "sharp";
 import { and, eq, ne, or } from "drizzle-orm";
 import { db, spotsTable } from "@workspace/db";
+import { logger } from "../lib/logger";
 
 function findWorkspaceRoot(): string {
   let dir = process.cwd();
@@ -257,8 +258,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           }
         }).length;
       }
-    } catch {
-      // Non-fatal — fall back to adIndex 0
+    } catch (err) {
+      logger.warn({ spotId: d.spotId, err }, "adIndex lookup failed — falling back to variant 0");
     }
   }
 
