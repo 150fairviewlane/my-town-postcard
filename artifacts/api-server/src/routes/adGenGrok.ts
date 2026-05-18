@@ -3,6 +3,8 @@ import { z } from "zod/v4";
 import fs from "fs";
 import path from "path";
 import sharp from "sharp";
+import { and, eq, ne, or } from "drizzle-orm";
+import { db, spotsTable } from "@workspace/db";
 
 function findWorkspaceRoot(): string {
   let dir = process.cwd();
@@ -32,7 +34,74 @@ const GenerateSchema = z.object({
   sizeKey:   z.string().optional().default("xl"),
   photoUrl:  z.string().optional().default(""),
   logoData:  z.string().optional().default(""),
+  spotId:    z.number().int().optional(),
 });
+
+// ── Variant rotation lookup tables ────────────────────────────────────────────
+// Three independent dimensions rotate across ads in the same campaign that
+// share the same template, ensuring each buyer sees a distinct visual treatment.
+
+const FONT_VARIANTS: Record<string, string[]> = {
+  "parchment-classic": [
+    "Typography variant A — Headline: bold condensed slab serif (Rockwell Extra Bold / Clarendon style). Script accent: warm orange flowing script (Pacifico / Lobster style) applied only to a single English category noun in the business name. Together they create a layered editorial premium headline.",
+    "Typography variant B — Headline: strong display serif (Playfair Display Black / Bodoni 72 Bold style), all-caps, maximum weight, rich contrast. Script accent: refined italic serif at a slight angle for a single category noun — no rounded script/cursive. Elegant editorial weight contrast.",
+    "Typography variant C — Headline: geometric sans-serif (Futura ExtraBold / Raleway ExtraBold style), all-caps, ultra-clean. No script accent — the entire business name in solid bold geometric caps. Modern minimalist label aesthetic, zero ornamentation.",
+  ],
+  "made-fresh": [
+    "Typography variant A — Headline: bold condensed slab serif (Rockwell / Clarendon Bold style). Script accent: warm chalk-style handwriting script (Pacifico style) for a single English category noun. Warm bistro editorial feel.",
+    "Typography variant B — Headline: rounded display sans-serif (Nunito ExtraBold / Poppins Black style). Script accent: bouncy marker-style script (Satisfy style) for a single category noun. Casual approachable cafe energy.",
+    "Typography variant C — Headline: vintage wood-type display (Alfa Slab One / Zilla Slab Highlight style). No script accent — full blocky vintage poster lettering, all caps. Old-fashioned diner charm.",
+  ],
+  "neighborhood-pro": [
+    "Typography variant A — Headline: bold condensed slab serif (Impact / Anton style), all-caps, dominant. Script accent: bright lime-green flowing script for a single English service-category noun in the business name. Outdoorsy contractor authority.",
+    "Typography variant B — Headline: extra-bold industrial sans (Barlow Condensed ExtraBold / Oswald Bold style), all-caps. Script accent: dark forest-green casual script for a single service noun. Modern trades feel.",
+    "Typography variant C — Headline: heavy display grotesque (Teko Bold / Black Han Sans style), all-caps full-width. No script accent — monochromatic display type only. Clean bold utility aesthetic.",
+  ],
+  "at-your-service": [
+    "Typography variant A — Headline: bold condensed slab serif (Rockwell Extra Bold / Josefin Slab Bold style), all-caps. Script accent: gold/yellow flowing script for a single English service-category noun. Premium home-services look.",
+    "Typography variant B — Headline: strong military-style condensed (Bebas Neue / Oswald ExtraBold style), all-caps. Script accent: copper-toned elegant italic for a single category noun. Established trades authority.",
+    "Typography variant C — Headline: geometric block sans (Exo 2 ExtraBold / Furore style), all-caps. No script accent — monochromatic all-caps geometric headline only. Technical precision aesthetic.",
+  ],
+  "health-wellness": [
+    "Typography variant A — Headline: bold condensed sans-serif (Montserrat ExtraBold / Source Sans Pro Black style), all-caps. No script accent — clean clinical authority. Professional medical trust.",
+    "Typography variant B — Headline: refined humanist sans-serif (Lato Bold / Raleway SemiBold style), mixed-case or small-caps. Script accent: soft sage-green cursive for a single wellness noun only. Calm, nurturing feel.",
+    "Typography variant C — Headline: elegant display serif (Cormorant Garamond Bold / Libre Baskerville Bold style), all-caps. No script accent — sophisticated serif confidence. Upscale boutique wellness look.",
+  ],
+};
+
+const COUPON_VARIANTS: string[] = [
+  "Coupon box style: CLASSIC PERFORATION STRIP — dashed rectangular border with a scissor ✂ icon on the left edge and a small 'CUT HERE' label. Clean, universally recognized coupon strip format.",
+  "Coupon box style: MOVIE-TICKET STUB — vertical dotted tear-line running along the left edge of the coupon box, subtle diagonal micro-stripe background pattern inside the box, and 'ADMIT ONE OFFER' or a stub number in a corner serif font. Festive, collectible feel.",
+  "Coupon box style: RUBBER-STAMP SEAL — a circular ink-ring border centered around the offer text with a slight distressed texture, 'SPECIAL OFFER' arced along the top of the ring border in small caps. Authentic artisan-stamp aesthetic.",
+];
+
+const COLOR_VARIANTS: Record<string, string[]> = {
+  "parchment-classic": [
+    "Color palette A — Primary: deep burgundy (#7B1418). Background: warm ivory (#EDD9AB). Accent/script: warm orange-gold (#C8541A). Footer: near-black (#1C0F0A). Rich, warm, appetite-driving.",
+    "Color palette B — Primary: rich chocolate brown (#4A2010). Background: parchment beige (#F0DEB4). Accent/script: copper-amber (#B87333). Footer: dark espresso (#1A0E08). Warm artisan depth.",
+    "Color palette C — Primary: forest-ink dark green (#1C3520). Background: cream (#F5EDCD). Accent/script: warm amber (#D4882A). Footer: near-black with green tint (#0F1C12). Natural, premium, farm-to-table.",
+  ],
+  "made-fresh": [
+    "Color palette A — Primary: warm charcoal (#2C2C2C). Chalkboard: near-black (#1A1A1A). Accent: golden yellow (#F4C430). Highlight: fresh white. Classic bistro chalk-art palette.",
+    "Color palette B — Primary: tomato red (#C0392B). Background: rustic cream (#FAF0DC). Accent: basil green (#27AE60). Warm highlight: honey tan (#F39C12). Italian trattoria energy.",
+    "Color palette C — Primary: navy blue (#1B3A5C). Background: warm white. Accent: bright coral (#E74C3C). Footer: deep navy (#0D1F33). Modern casual-dining freshness.",
+  ],
+  "neighborhood-pro": [
+    "Color palette A — Background: forest green (#1A4D2E). Panels and text: clean white. Accent/script: lime green (#39D353). Footer: dark forest (#0D2918). Energetic outdoor contractor look.",
+    "Color palette B — Background: deep navy (#152C4A). Panels and text: white. Accent/script: electric blue (#2E86DE). Footer: near-black navy (#0A1828). Trustworthy professional trades.",
+    "Color palette C — Background: charcoal (#2D2D2D). Panels and text: white. Accent/script: bold orange (#E85D04). Footer: near-black (#1A1A1A). High-visibility construction aesthetic.",
+  ],
+  "at-your-service": [
+    "Color palette A — Primary: dark navy (#1B2A4A). Background: light gray (#F0F0F0). Accent: gold/yellow (#F0B429). Footer: near-black navy (#0E1829). Premium home-services authority.",
+    "Color palette B — Primary: deep slate (#2D3748). Background: off-white (#FAFAFA). Accent: copper (#B87333). Footer: darkest slate (#1A202C). Established artisan trades feel.",
+    "Color palette C — Primary: charcoal (#2C2C2C). Background: white. Accent: steel blue (#4A90D9). Footer: near-black (#111111). Clean technical precision.",
+  ],
+  "health-wellness": [
+    "Color palette A — Primary: teal (#3D8B9C). Background: cream/off-white (#F8F4EE). Accent: sage green (#7CB99A). Footer: dark teal (#1F4E5F). Calm, trustworthy clinical warmth.",
+    "Color palette B — Primary: deep teal (#2A7080). Background: warm white (#FDFAF6). Accent: soft coral (#E8927C). Footer: darkest teal (#163844). Nurturing boutique wellness feel.",
+    "Color palette C — Primary: forest teal (#1F5C5A). Background: light mint (#E8F5F0). Accent: warm gold (#D4A843). Footer: deep forest teal (#0E3330). Upscale spa and wellness luxury.",
+  ],
+};
 
 /** Convert a base64 data URL (data:image/png;base64,...) to a Blob. */
 function dataUrlToBlob(dataUrl: string, defaultMime = "image/png"): Blob {
@@ -154,6 +223,55 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
 
   // Medium (3"×2") is the only landscape spot size
   const isLandscape = ["medium", "m"].includes(d.sizeKey.toLowerCase());
+
+  // ── Compute adIndex for variant rotation ─────────────────────────────────────
+  // adIndex = number of other spots in the same campaign already using this template
+  // (status reserved or paid). Landscape spots skip rotation (no template reference).
+  let adIndex = 0;
+  if (d.spotId !== undefined && !isLandscape) {
+    try {
+      const thisSpot = await db
+        .select({ campaignId: spotsTable.campaignId })
+        .from(spotsTable)
+        .where(eq(spotsTable.id, d.spotId))
+        .limit(1);
+      if (thisSpot.length > 0) {
+        const campaignId = thisSpot[0].campaignId;
+        const siblings = await db
+          .select({ templateData: spotsTable.templateData })
+          .from(spotsTable)
+          .where(
+            and(
+              eq(spotsTable.campaignId, campaignId),
+              ne(spotsTable.id, d.spotId),
+              or(eq(spotsTable.status, "reserved"), eq(spotsTable.status, "paid")),
+            ),
+          );
+        const tmpl = d.template || "parchment-classic";
+        adIndex = siblings.filter((row) => {
+          if (!row.templateData) return false;
+          try {
+            return (JSON.parse(row.templateData) as { template?: string }).template === tmpl;
+          } catch {
+            return false;
+          }
+        }).length;
+      }
+    } catch {
+      // Non-fatal — fall back to adIndex 0
+    }
+  }
+
+  const fontVariant   = adIndex % 3;
+  const couponVariant = (adIndex + 1) % 3;
+  const colorVariant  = (adIndex + 2) % 3;
+  const tmplFonts  = FONT_VARIANTS[d.template || "parchment-classic"]  ?? FONT_VARIANTS["parchment-classic"]!;
+  const tmplColors = COLOR_VARIANTS[d.template || "parchment-classic"] ?? COLOR_VARIANTS["parchment-classic"]!;
+  const variantBlock = isLandscape ? "" :
+    "VARIANT DIRECTIVES — follow these exactly, they override any defaults:\n" +
+    `  TYPOGRAPHY: ${tmplFonts[fontVariant]}\n` +
+    `  COUPON: ${COUPON_VARIANTS[couponVariant]}\n` +
+    `  COLORS: ${tmplColors[colorVariant]}\n`;
 
   // Load template PNG as raw buffer — skipped for landscape (no portrait template applies)
   const templateKey = d.template || "parchment-classic";
@@ -542,6 +660,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
         "Treat them as distinct inputs — do NOT merge their design styles or treat any of them as already finished:\n" +
         refLines.join("\n") + "\n\n"
       : "") +
+    (variantBlock ? variantBlock + "\n" : "") +
     outputRequirements + "\n" +
     "STYLE: high-end editorial advertising aesthetic. Cinematic photography with rich, vibrant color and " +
     "professional lighting. Bold confident typography hierarchy. Premium color palette — deep, saturated, controlled. " +
@@ -1139,6 +1258,7 @@ var _logoData = '';
 var _resultUrl = '';
 var _activeTemplate = 'parchment-classic';
 var _spotSize = 'XL';
+var _spotId = 0;
 var _takenCategories = [];
 
 function showTakenDialog(industry){
@@ -1458,6 +1578,7 @@ async function generate(){
     logoData:  _logoData,
     template:  _activeTemplate,
     sizeKey:   _spotSize || 'XL',
+    spotId:    _spotId || undefined,
   };
 
   try{
@@ -1587,6 +1708,7 @@ function showToast(msg){
 (function prefill(){
   var params = new URLSearchParams(window.location.search);
   _spotSize = params.get('spotSize') || 'XL';
+  _spotId = parseInt(params.get('spotId') || '0', 10) || 0;
   var takenParam = params.get('taken') || '';
   _takenCategories = takenParam ? takenParam.split(',').map(function(s){ return s.trim(); }).filter(Boolean) : [];
   // Also fetch taken categories from the API so standalone use is accurate

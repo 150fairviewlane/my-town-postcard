@@ -562,7 +562,7 @@ const handleComplete=async(formData)=>{
 const grokListenerRef=useRef(null);
 const grokPopupRef=useRef(null);
 const openGrokGenerator=()=>{
-  const url=`/api/grok-ad-generator?spotSize=${encodeURIComponent(sel?.size||'')}&bizName=&industry=&taken=${encodeURIComponent(takenCategories.join(','))}`;
+  const url=`/api/grok-ad-generator?spotSize=${encodeURIComponent(sel?.size||'')}&spotId=${encodeURIComponent(sel?.id||'')}&bizName=&industry=&taken=${encodeURIComponent(takenCategories.join(','))}`;
   const popup=window.open(url,'grok-ad-gen','width=1120,height=800,left=80,top=60');
   grokPopupRef.current=popup;
   setAdMethod("grok");
