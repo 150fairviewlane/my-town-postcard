@@ -255,28 +255,36 @@ export async function buildTerritories(homeZip, opts = {}) {
   const clusters = kmeans(nearby, k, seed);
 
   return clusters.map((c, i) => {
-    // Label by the most common city name in the cluster.
+    // Label by the most common non-empty city name in the cluster.
+    // Falls back to the first ZIP code string so the label is never blank.
     const cityCounts = new Map();
     for (const z of c.points) {
-      cityCounts.set(z.city, (cityCounts.get(z.city) ?? 0) + 1);
+      const city = z.city?.trim();
+      if (city) cityCounts.set(city, (cityCounts.get(city) ?? 0) + 1);
     }
-    let label = c.points[0]?.city ?? homeZip;
-    let labelState = c.points[0]?.state ?? "";
+    const firstZip = c.points[0]?.zip ?? homeZip;
+    let label = firstZip;
+    let labelState = c.points[0]?.state?.trim() ?? "";
     let best = 0;
     for (const [city, count] of cityCounts) {
       if (count > best) {
         best = count;
         label = city;
-        labelState = c.points.find((z) => z.city === city)?.state ?? "";
+        labelState = c.points.find((z) => z.city?.trim() === city)?.state?.trim() ?? "";
       }
     }
+    // Format: "Canton, GA" or just the ZIP if no city data is present.
+    const cityLabel = labelState ? `${label}, ${labelState}` : label;
 
+    // Center coordinates rounded to 4 decimal places (~11 m precision),
+    // sufficient for territory display and map pins. This is intentional;
+    // downstream code should not expect more than 4 dp.
     return {
       territoryIndex: i,
       centerLat: Number(c.center.lat.toFixed(4)),
       centerLng: Number(c.center.lng.toFixed(4)),
       zipCodes: c.points.map((z) => z.zip),
-      cityLabel: `${label}, ${labelState}`,
+      cityLabel,
       estimatedHouseholds: estimateHouseholds(c.points),
       distanceFromHomeMiles: Number(haversineMiles(home, c.center).toFixed(1)),
     };
