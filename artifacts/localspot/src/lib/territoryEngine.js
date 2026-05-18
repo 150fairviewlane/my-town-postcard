@@ -197,23 +197,63 @@ function pickLabel(cluster) {
   return `${best.zip}${cluster.points.length > 1 ? ` +${cluster.points.length - 1}` : ""}`;
 }
 
-// Estimate households in a cluster. We don't have per-ZIP population in the
-// bundled dataset, so we use a rough US average of ~1,500 households per
-// ZIP and cap each cluster at the EDDM target of 5,000 (the practical
-// mailing volume per postcard run).
-function estimateHouseholds(zipCount) {
-  return Math.min(5000, zipCount * 1500);
+// Estimate households in a cluster using a density-aware scale factor.
+// We don't have per-ZIP population counts, but we can use the median
+// distance between each ZIP and its nearest neighbor in the same cluster
+// as a geographic density signal:
+//
+//   Dense  (medianDist < 2 mi)  → ~1,050 households/ZIP  (small urban ZIPs)
+//   Medium (medianDist 2–5 mi)  → ~1,500 households/ZIP  (suburban baseline)
+//   Rural  (medianDist > 5 mi)  → ~2,700 households/ZIP  (large rural ZIPs)
+//
+// Result is capped at 5,000 — the practical EDDM target per postcard run.
+function estimateHouseholds(points) {
+  if (points.length === 0) return 0;
+  if (points.length === 1) return Math.min(5000, 1500);
+
+  // Median nearest-neighbor distance within the cluster
+  const dists = points.map((p) => {
+    let best = Infinity;
+    for (const q of points) {
+      if (q === p) continue;
+      const d = haversineMiles(p, q);
+      if (d < best) best = d;
+    }
+    return best;
+  });
+  dists.sort((a, b) => a - b);
+  const median = dists[Math.floor(dists.length / 2)];
+
+  let scaleFactor;
+  if (median < 2) {
+    scaleFactor = 0.7;   // dense / urban
+  } else if (median <= 5) {
+    scaleFactor = 1.0;   // suburban baseline
+  } else {
+    scaleFactor = 1.8;   // rural / sparse
+  }
+
+  return Math.min(5000, Math.round(points.length * 1500 * scaleFactor));
 }
 
 /**
  * Build 4 (or `k`) postcard territories around the dealer's home ZIP.
  *
+ * The search radius is **adaptive**: it starts at `minRadiusMiles` and expands
+ * in 5-mile increments until at least `targetZips` nearby ZIPs are found or
+ * `maxRadiusMiles` is reached. This naturally keeps territories tight in dense
+ * suburbs (where many ZIPs are packed close together) and widens them in rural
+ * areas (where ZIPs are spread out).
+ *
  * @param {string} homeZip   5-digit ZIP code
  * @param {object} [opts]
- * @param {number} [opts.radiusMiles=30]  Search radius around home ZIP
- * @param {number} [opts.k=4]              Number of territories to produce
- * @param {number} [opts.seed]             PRNG seed for K-means init.
- *                                         Vary to "re-shuffle" the layout.
+ * @param {number} [opts.minRadiusMiles=10]  Minimum search radius (miles)
+ * @param {number} [opts.maxRadiusMiles=50]  Maximum search radius cap (miles)
+ * @param {number} [opts.targetZips=24]      Expand radius until this many ZIPs
+ *                                           are found (~6 per territory × k=4)
+ * @param {number} [opts.k=4]               Number of territories to produce
+ * @param {number} [opts.seed=1]            PRNG seed for K-means init.
+ *                                          Vary to "re-shuffle" the layout.
  * @returns {Promise<Array<{
  *   territoryIndex: number,
  *   centerLat: number, centerLng: number,
@@ -223,7 +263,7 @@ function estimateHouseholds(zipCount) {
  * }>>}
  */
 export async function buildTerritories(homeZip, opts = {}) {
-  const { radiusMiles = 30, k = 4, seed = 1 } = opts;
+  const { minRadiusMiles = 10, maxRadiusMiles = 50, targetZips = 24, k = 4, seed = 1 } = opts;
   const data = await loadZips();
   const home = data.byZip.get(homeZip);
   if (!home) {
@@ -231,17 +271,20 @@ export async function buildTerritories(homeZip, opts = {}) {
     err.code = "ZIP_NOT_FOUND";
     throw err;
   }
-  const nearby = data.all.filter((z) => haversineMiles(home, z) <= radiusMiles);
+
+  // Adaptive radius: expand in 5-mile steps until we have enough ZIPs to form
+  // meaningful clusters, or until we hit the cap.
+  let radius = minRadiusMiles;
+  let nearby = data.all.filter((z) => haversineMiles(home, z) <= radius);
+  while (nearby.length < targetZips && radius < maxRadiusMiles) {
+    radius = Math.min(radius + 5, maxRadiusMiles);
+    nearby = data.all.filter((z) => haversineMiles(home, z) <= radius);
+  }
+
   if (nearby.length < k) {
-    // Widen search if we couldn't find enough — mostly relevant in very
-    // rural areas where 30 miles isn't enough.
-    const widerNearby = data.all.filter((z) => haversineMiles(home, z) <= radiusMiles * 2);
-    if (widerNearby.length < k) {
-      const err = new Error(`Not enough nearby ZIP codes around ${homeZip} to build territories.`);
-      err.code = "NOT_ENOUGH_ZIPS";
-      throw err;
-    }
-    return finalize(kmeans(widerNearby, k, seed), home);
+    const err = new Error(`Not enough nearby ZIP codes around ${homeZip} to build territories.`);
+    err.code = "NOT_ENOUGH_ZIPS";
+    throw err;
   }
   return finalize(kmeans(nearby, k, seed), home);
 }
@@ -253,7 +296,7 @@ function finalize(clusters, home) {
     centerLng: c.center.lng,
     zipCodes: c.points.map((p) => p.zip),
     cityLabel: pickLabel(c),
-    estimatedHouseholds: estimateHouseholds(c.points.length),
+    estimatedHouseholds: estimateHouseholds(c.points),
     distanceFromHomeMiles: Number(haversineMiles(home, c.center).toFixed(1)),
   }));
 }
