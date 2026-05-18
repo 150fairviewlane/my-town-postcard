@@ -179,38 +179,50 @@ export function kmeans(points, k, seed = 1) {
     .map((b, i) => ({ ...b, index: i }));
 }
 
-// Pick a friendly label for a cluster: the city closest to the centroid,
-// plus the state. Falls back to "ZIP <first> + N more" if the cluster is
-// somehow nameless.
+// Pick a friendly label for a cluster: the city that appears most frequently
+// among the cluster's ZIPs, plus the state. Using "most common" rather than
+// "closest to centroid" prevents a single edge ZIP from labeling the whole
+// cluster with a city that isn't representative of the majority of the area
+// (e.g. one Marietta ZIP in a mostly-Woodstock cluster stays "Woodstock").
+// Falls back to ZIP + count if the cluster somehow has no city names.
 function pickLabel(cluster) {
   if (cluster.points.length === 0) return "Empty";
-  let best = cluster.points[0];
-  let bestDist = haversineMiles(best, cluster.center);
+  const counts = new Map();
   for (const p of cluster.points) {
-    const d = haversineMiles(p, cluster.center);
-    if (d < bestDist) {
-      bestDist = d;
-      best = p;
-    }
+    if (!p.city) continue;
+    const key = `${p.city}, ${p.state}`;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
   }
-  if (best.city) return `${best.city}, ${best.state}`;
-  return `${best.zip}${cluster.points.length > 1 ? ` +${cluster.points.length - 1}` : ""}`;
+  if (counts.size > 0) {
+    let best = "";
+    let bestCount = 0;
+    for (const [label, count] of counts) {
+      if (count > bestCount) {
+        bestCount = count;
+        best = label;
+      }
+    }
+    return best;
+  }
+  const p = cluster.points[0];
+  return `${p.zip}${cluster.points.length > 1 ? ` +${cluster.points.length - 1}` : ""}`;
 }
 
 // Estimate households in a cluster using a density-aware scale factor.
 // We don't have per-ZIP population counts, but we can use the median
 // distance between each ZIP and its nearest neighbor in the same cluster
-// as a geographic density signal:
+// as a geographic density signal.
 //
-//   Dense  (medianDist < 2 mi)  → ~1,050 households/ZIP  (small urban ZIPs)
-//   Medium (medianDist 2–5 mi)  → ~1,500 households/ZIP  (suburban baseline)
-//   Rural  (medianDist > 5 mi)  → ~2,700 households/ZIP  (large rural ZIPs)
+// Base rate of 800 households/ZIP (deliberately conservative so that
+// suburban and dense clusters produce distinct values below the 5,000 cap):
+//   Dense  (medianDist < 2 mi)  → ×0.7 → ~800×0.7 = 560/ZIP → ~3,360 for 6 ZIPs
+//   Medium (medianDist 2–5 mi)  → ×1.0 → ~800/ZIP           → ~4,800 for 6 ZIPs
+//   Rural  (medianDist > 5 mi)  → ×1.8 → ~1,440/ZIP         → capped at 5,000
 //
-// Result is capped at 15,000 — the territory's total addressable household
-// count. Dealers still mail to 5,000 addresses per EDDM run from this pool.
+// Result is capped at 5,000 — one full EDDM mailing run per territory.
 function estimateHouseholds(points) {
   if (points.length === 0) return 0;
-  if (points.length === 1) return Math.min(5000, 1500);
+  if (points.length === 1) return Math.min(5000, 800);
 
   // Median nearest-neighbor distance within the cluster
   const dists = points.map((p) => {
@@ -234,10 +246,7 @@ function estimateHouseholds(points) {
     scaleFactor = 1.8;   // rural / sparse
   }
 
-  // Cap at 15,000 (a full rural ZIP cluster can exceed 10,000 addressable
-  // homes). This is the territory's total household count — the dealer still
-  // mails to 5,000 addresses per EDDM run from within that pool.
-  return Math.min(15000, Math.round(points.length * 1500 * scaleFactor));
+  return Math.min(5000, Math.round(points.length * 800 * scaleFactor));
 }
 
 /**
@@ -253,8 +262,8 @@ function estimateHouseholds(points) {
  * @param {object} [opts]
  * @param {number} [opts.minRadiusMiles=10]  Minimum search radius (miles)
  * @param {number} [opts.maxRadiusMiles=50]  Maximum search radius cap (miles)
- * @param {number} [opts.targetZips=k*4]     Expand radius until this many ZIPs
- *                                           are found (4 per territory × k=4 by default)
+ * @param {number} [opts.targetZips=k*6]     Expand radius until this many ZIPs
+ *                                           are found (~6 per territory × k=4 by default)
  * @param {number} [opts.k=4]               Number of territories to produce
  * @param {number} [opts.seed=1]            PRNG seed for K-means init.
  *                                          Vary to "re-shuffle" the layout.
@@ -268,10 +277,10 @@ function estimateHouseholds(points) {
  */
 export async function buildTerritories(homeZip, opts = {}) {
   const { minRadiusMiles = 10, maxRadiusMiles = 50, k = 4, seed = 1 } = opts;
-  // Target at least 4 ZIPs per territory before running K-means.  Keeping
-  // this relative to k (rather than a fixed constant) means a 2-territory
-  // run still stops early in dense areas instead of over-expanding.
-  const targetZips = opts.targetZips ?? k * 4;
+  // ~6 ZIPs per territory gives K-means enough granularity for meaningful
+  // geographic clusters while still stopping early in dense suburbs.
+  // Keeping it relative to k means a 2-territory run also stops early.
+  const targetZips = opts.targetZips ?? k * 6;
   const data = await loadZips();
   const home = data.byZip.get(homeZip);
   if (!home) {
