@@ -459,7 +459,7 @@ useEffect(()=>{
   return()=>{clearTimeout(scrollT);clearTimeout(clearT);};
 },[highlighted]);
 const queryClient=useQueryClient();
-const {data:campaign}=useGetActiveCampaign();
+const {data:campaign,isFetching:campaignFetching}=useGetActiveCampaign();
 const reserveMutation=useReserveSpot();
 // Build gridArea → live spot lookup so each picker cell can check the DB status
 const spotByGridArea=useMemo(()=>{
@@ -638,6 +638,16 @@ return(<div style={{fontFamily:"sans-serif"}}>
             const isHighlighted=highlighted&&spot.dbGridArea===highlighted;
             return<SpotCell key={spot.id} spot={spot} scale={scale} hov={hov} onHov={setHov} onOut={()=>setHov(null)} onSel={handleSpotSelect} liveSpot={liveSpot} isHighlighted={isHighlighted}/>;
           })}
+          {campaignFetching&&!reserving&&(
+            <div style={{position:"absolute",inset:0,pointerEvents:"none",zIndex:10,display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <style>{`@keyframes lsShimmer{0%{opacity:0.55}50%{opacity:0.85}100%{opacity:0.55}}@keyframes lsSpin{to{transform:rotate(360deg)}}`}</style>
+              <div style={{position:"absolute",inset:0,background:"rgba(15,23,42,0.45)",animation:"lsShimmer 1.6s ease-in-out infinite"}}/>
+              <div style={{position:"relative",zIndex:2,display:"flex",flexDirection:"column",alignItems:"center",gap:10}}>
+                <div style={{width:36,height:36,border:"4px solid rgba(255,255,255,0.25)",borderTopColor:"#fff",borderRadius:"50%",animation:"lsSpin 0.85s linear infinite"}}/>
+                <div style={{color:"#fff",fontWeight:700,fontSize:13,letterSpacing:0.3,textShadow:"0 1px 4px rgba(0,0,0,0.5)"}}>Updating postcard…</div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -701,11 +711,23 @@ return(<div style={{fontFamily:"sans-serif"}}>
 
 {/* Grok flow — reserving spinner */}
 {sel&&adMethod==="grok"&&reserving&&!reserveError&&(
-  <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1999}}>
-    <div style={{background:"#fff",borderRadius:14,padding:"36px 48px",textAlign:"center",boxShadow:"0 24px 64px rgba(0,0,0,0.35)"}}>
-      <div style={{fontSize:36,marginBottom:14}}>⏳</div>
-      <div style={{fontWeight:800,fontSize:17,color:"#111"}}>Reserving your spot…</div>
-      <div style={{color:"#6b7280",fontSize:13,marginTop:6}}>Hang tight, this only takes a second.</div>
+  <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.65)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1999}}>
+    <style>{`@keyframes lsSpinModal{to{transform:rotate(360deg)}}@keyframes lsDotPulse{0%,80%,100%{opacity:0.25;transform:scale(0.7)}40%{opacity:1;transform:scale(1)}}`}</style>
+    <div style={{background:"#fff",borderRadius:16,padding:"40px 52px",textAlign:"center",boxShadow:"0 24px 64px rgba(0,0,0,0.4)",minWidth:260}}>
+      <div style={{display:"flex",justifyContent:"center",marginBottom:20}}>
+        <div style={{position:"relative",width:56,height:56}}>
+          <div style={{position:"absolute",inset:0,borderRadius:"50%",border:"5px solid #f1f5f9"}}/>
+          <div style={{position:"absolute",inset:0,borderRadius:"50%",border:"5px solid transparent",borderTopColor:"#991b1b",animation:"lsSpinModal 0.9s linear infinite"}}/>
+          <div style={{position:"absolute",inset:"14px",borderRadius:"50%",background:"#fef2f2",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>📬</div>
+        </div>
+      </div>
+      <div style={{fontWeight:900,fontSize:18,color:"#111",marginBottom:6}}>Reserving your spot…</div>
+      <div style={{color:"#6b7280",fontSize:13,lineHeight:1.5}}>Locking in your ad placement.<br/>Just a moment.</div>
+      <div style={{display:"flex",justifyContent:"center",gap:6,marginTop:18}}>
+        {[0,150,300].map(d=>(
+          <div key={d} style={{width:7,height:7,borderRadius:"50%",background:"#991b1b",animation:`lsDotPulse 1.2s ${d}ms ease-in-out infinite`}}/>
+        ))}
+      </div>
     </div>
   </div>
 )}
