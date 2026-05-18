@@ -503,7 +503,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
         buf = Buffer.from(await resp.arrayBuffer());
       }
       const out = await sharp(buf)
-        .resize(w, h, { fit: "cover", position: "centre", kernel: "lanczos3" })
+        .resize(w, h, { fit: "fill", kernel: "lanczos3" })
         .jpeg({ quality: 98, chromaSubsampling: "4:4:4" })
         .toBuffer();
       return `data:image/jpeg;base64,${out.toString("base64")}`;
