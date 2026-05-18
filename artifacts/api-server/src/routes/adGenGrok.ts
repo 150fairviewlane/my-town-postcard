@@ -328,7 +328,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           "    Reproduce the four diagonal-cut panel row from the template. Each panel shows a relevant service photo behind a diagonal-cut edge.\n" +
           "    Above each panel: a circular dark-green badge with a white icon inside representing the service.\n" +
           "    Below each panel: a short white brush-stroke label with the service name in dark bold text.\n" +
-          `    Use the following services from the business details: ${menuStr}\n\n`
+          `    Use the following services from the business details: ${menuStr}\n` +
+          "    IMPORTANT: each service name must appear exactly once across the entire ad — do not repeat any item.\n\n"
         : "  ZONE 4 — SERVICES PANELS (middle horizontal row):\n" +
           "    Reproduce the four diagonal-cut service photo panels from the template with relevant service imagery for this business type.\n" +
           "    Each panel has a circular green icon badge on top and a white brush-stroke label below.\n\n") +
@@ -383,7 +384,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "  ZONE 4 — SERVICE ICONS (on the navy horizontal band, center):\n" +
       "    Reproduce the wide dark navy blue horizontal band spanning the full card width.\n" +
       (menuStr !== "  (none)"
-        ? `    On the band: a horizontal row of circular white icon badges, one per key service. Use icons representing: ${menuStr}. Keep the circular white badge style from the template.\n\n`
+        ? `    On the band: a horizontal row of circular white icon badges, one per key service. Use icons representing: ${menuStr}. Keep the circular white badge style from the template. Each service must appear exactly once — no repeated labels or icons.\n\n`
         : "    On the band: a horizontal row of six circular white icon badges with home-service icons (house, paint roller, lightbulb, faucet, door, wrench/tools) as in the template.\n\n") +
 
       (d.offer
@@ -480,7 +481,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     "CRITICAL: Every piece of text must appear EXACTLY as specified. " +
     "Phone numbers, prices, business name, and address — zero tolerance for errors or omissions. " +
     (fullAddress !== "(none)" ? `The address "${fullAddress}" MUST be visible in the footer — do not skip it. ` : "") +
-    "No website URL text anywhere.\n\n" +
+    "No website URL text anywhere. " +
+    "NO DUPLICATE SERVICES OR MENU ITEMS: each service or menu item from the list must appear exactly once in the ad — never repeat the same item or a near-synonym of it in two different zones or icon badges.\n\n" +
     "BUSINESS DETAILS:\n" + businessBlock;
 
   // ── Build images array for xAI /images/edits ────────────────────────────────
