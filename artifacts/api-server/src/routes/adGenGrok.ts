@@ -165,7 +165,9 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
         ? "made_fresh_template.png"
         : templateKey === "neighborhood-pro"
           ? "6300F2D5-6BF1-403E-A40B-7203E4E26402_1778948283280.jpeg"
-          : "mr_biscuits_template_no_logo_1778806527327.png";
+          : templateKey === "at-your-service"
+            ? "IMG_0728_1779065210873.jpeg"
+            : "mr_biscuits_template_no_logo_1778806527327.png";
     const tmplPath = path.join(WORKSPACE_ROOT, "attached_assets", tmplFilename);
     if (!fs.existsSync(tmplPath)) {
       res.status(500).json({ error: "Template file not found on server." });
@@ -238,9 +240,19 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
             "Lower section: a wide white brush-stroke area for the special offer / coupon text. " +
             "Footer strip: dark green bar with a bold phone number on the left, a clean QR code box on the right, and small circular trust-badge icons (shield, star, leaf) between them. " +
             "Reproduce every zone, the forest-green background, all brush-stroke shapes, and the footer layout exactly."
-          : "  • IMAGE 1 (TEMPLATE) — the full postcard layout with parchment texture, brush-stroke band, " +
-            "pennant ribbon, circular checkmark badge, dashed coupon box, and dark footer strip. " +
-            "Reproduce every zone, texture, and design element exactly.",
+          : templateKey === "at-your-service"
+            ? "  • IMAGE 1 (TEMPLATE) — a home-services postcard on a light gray/off-white textured background with a navy blue and gold/yellow color scheme. " +
+              "Upper-left: a large dark navy hexagonal badge emblem with a gold/yellow interior accent — this is the logo zone. " +
+              "A bold horizontal gold/yellow paint-brush stroke sweeps across the upper third of the layout connecting the logo badge to the photo zone. " +
+              "Upper-right: large hero photo zone (tool belt packed with tools) blending naturally into the background without a hard border. " +
+              "Center: a wide dark navy blue horizontal band spanning the full width. " +
+              "On the navy band: a horizontal row of six circular white icon badges showing home-service icons (house, paint roller, lightbulb, faucet, door, wrench/tools). " +
+              "Lower-right: a gold/yellow dashed-border coupon box. Lower-left: small gold/yellow triangle accent. " +
+              "Footer: dark strip with a circular phone icon on the left and a QR code square on the right. " +
+              "Reproduce every zone, the navy/gold color scheme, all geometric and brush-stroke shapes, and the footer layout exactly."
+            : "  • IMAGE 1 (TEMPLATE) — the full postcard layout with parchment texture, brush-stroke band, " +
+              "pennant ribbon, circular checkmark badge, dashed coupon box, and dark footer strip. " +
+              "Reproduce every zone, texture, and design element exactly.",
     );
     imgIdx = 2;
     if (hasPhoto) {
@@ -338,6 +350,58 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "  • Headline: bold condensed all-caps slab serif, very large, dark green or near-black\n" +
       "  • Script accent: bright-green cursive ONLY for a single common English service-category noun in the business name — never for proper nouns or brand names; never duplicate any word\n" +
       "  • All text inside white brush-stroke areas: dark green or near-black for contrast\n" +
+      "  • Footer text: white, bold sans-serif\n" +
+      "  • Fine print: smallest text, still legible\n" +
+      "  • NEVER render the website URL as visible text"
+    )
+    : templateKey === "at-your-service"
+    ? (
+      "LAYOUT — reproduce the At Your Service template zones exactly as described:\n\n" +
+
+      "  ZONE 1 — HEADLINE (upper-left, beside the hexagonal badge):\n" +
+      `    Business name "${d.bizName}" in bold condensed all-caps slab serif — very large, dark navy blue, maximum weight, horizontal (no angle).\n` +
+      `    ONLY IF the business name contains a widely-recognised English service-category word (e.g. "Plumbing", "Electric", "Roofing", "Painting", "Services", "Heating", "Cooling", "Lawn") — render ONLY that single word in a flowing gold/yellow script at a slight angle. Do NOT apply to proper nouns or brand names. If no such word exists, use all-caps only. NEVER repeat any word.\n\n` +
+
+      (hasLogo
+        ? `  ZONE 2 — LOGO (inside the navy hexagonal badge, upper-left):\n` +
+          `    Place IMAGE ${logoImg} centered inside the dark navy hexagonal badge emblem. Scale it to fit with clear margin — it must not overflow the hexagon. Preserve exact logo colors and proportions. The hexagonal badge retains its dark navy border and gold/yellow accent fill.\n` +
+          (d.tagline ? `    Tagline: render "${d.tagline}" in a clean italic script, navy blue, below the headline.\n` : "") +
+          "\n"
+        : d.tagline
+          ? `  ZONE 2 — TAGLINE (below headline, upper-left):\n` +
+            `    "${d.tagline}" in a clean italic script, dark navy blue, below the headline.\n\n`
+          : "") +
+
+      "  ZONE 3 — HERO IMAGE (upper-right, large photo zone):\n" +
+      (hasPhoto
+        ? `    Take IMAGE 2 and SEAMLESSLY INTEGRATE it into the upper-right hero photo zone:\n` +
+          "    • Fill the entire upper-right area with the photo — blend the left edge naturally into the background; no hard rectangular border.\n" +
+          "    • The gold/yellow brush stroke in the upper portion overlaps the photo zone — keep it visible overlapping the image.\n" +
+          "    • Professional lighting, vibrant color, cinematic quality. Photo must look native to the design.\n\n"
+        : `    Generate a photorealistic hero image of tools, equipment, or a professional at work — appropriate for this home-services business. Fill the upper-right zone with no rectangular border, blending naturally into the off-white background.\n\n`) +
+
+      "  ZONE 4 — SERVICE ICONS (on the navy horizontal band, center):\n" +
+      "    Reproduce the wide dark navy blue horizontal band spanning the full card width.\n" +
+      (menuStr !== "  (none)"
+        ? `    On the band: a horizontal row of circular white icon badges, one per key service. Use icons representing: ${menuStr}. Keep the circular white badge style from the template.\n\n`
+        : "    On the band: a horizontal row of six circular white icon badges with home-service icons (house, paint roller, lightbulb, faucet, door, wrench/tools) as in the template.\n\n") +
+
+      (d.offer
+        ? "  ZONE 5 — SPECIAL OFFER (gold/yellow dashed-border coupon box, lower-right):\n" +
+          `    Inside the gold/yellow dashed coupon rectangle: render "${d.offer}" in bold dark navy text, large and prominent.\n` +
+          (d.offerFine ? `    Fine print: "${d.offerFine}" in smaller text below the offer.\n` : "") +
+          "\n"
+        : "") +
+
+      "  ZONE 6 — FOOTER (dark strip at very bottom):\n" +
+      `    Left: a circular phone icon badge followed by the phone number "${d.phone || ""}" in very BOLD white sans-serif — large, instantly readable. Zero digit changes.\n` +
+      (fullAddress !== "(none)" ? `    Below phone: address "${fullAddress}" in white sans-serif — must appear verbatim.\n` : "") +
+      "    Right: a clean square QR code graphic. Do NOT render the website URL as text.\n\n" +
+
+      "TYPOGRAPHIC RULES:\n" +
+      "  • Headline: bold condensed all-caps slab serif, very large, dark navy blue\n" +
+      "  • Script accent: gold/yellow cursive ONLY for a single common English service-category noun — never for proper nouns or brand names; never duplicate any word\n" +
+      "  • Gold/yellow brush stroke: must remain visible in the upper portion, overlapping the hero image zone\n" +
       "  • Footer text: white, bold sans-serif\n" +
       "  • Fine print: smallest text, still legible\n" +
       "  • NEVER render the website URL as visible text"
@@ -599,6 +663,7 @@ router.get("/grok-ad-generator/template-preview/:key", (req, res) => {
     "parchment-classic":   "mr_biscuits_template_no_logo_1778806527327.png",
     "made-fresh":          "made_fresh_template.png",
     "neighborhood-pro":    "6300F2D5-6BF1-403E-A40B-7203E4E26402_1778948283280.jpeg",
+    "at-your-service":     "IMG_0728_1779065210873.jpeg",
   };
   const filename = fileMap[key];
   if (!filename) { res.status(404).send("Not found"); return; }
@@ -882,10 +947,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
             <div class="tmpl-card-name" style="color:#bbb">Clean &amp; Minimal</div>
             <div class="cs-badge">Coming Soon</div>
           </div>
-          <div class="tmpl-card disabled">
-            <div class="tmpl-thumb" style="display:flex;align-items:center;justify-content:center;font-size:22px;background:#1a1a2e">&#128293;</div>
-            <div class="tmpl-card-name" style="color:#bbb">Dark &amp; Bold</div>
-            <div class="cs-badge">Coming Soon</div>
+          <div class="tmpl-card" id="tmpl-at-your-service" onclick="selectTemplate('at-your-service')">
+            <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/at-your-service" alt="At Your Service" onerror="this.style.background='#1a2744'">
+            <div class="tmpl-card-name">At Your Service</div>
+            <div class="tmpl-card-sub">Navy &amp; gold &middot; Home services &middot; Professional</div>
+            <div class="tmpl-sel-badge" id="badge-at-your-service" style="display:none">&#10003; Selected</div>
           </div>
           <div class="tmpl-card" id="tmpl-neighborhood-pro" onclick="selectTemplate('neighborhood-pro')">
             <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/neighborhood-pro" alt="Neighborhood Pro" onerror="this.style.background='#e8f5e9'">
