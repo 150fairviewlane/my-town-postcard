@@ -255,8 +255,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
           <div class="selbadge">✓</div>
         </div>
         <div class="scard">
-          <input type="radio" name="style" id="s-clean" value="clean minimal professional with generous white space, thin black rule accents, restrained palette, clear typographic hierarchy">
-          <label for="s-clean"><div class="swatch sw-clean">Aa</div><div class="sinfo"><div class="sname">Clean &amp; Minimal</div><div class="sdesc">Simple, professional, trustworthy</div></div></label>
+          <input type="radio" name="style" id="s-health" value="health and wellness design, calming teal and sage green tones, clean modern medical aesthetic, trustworthy professional healthcare advertisement">
+          <label for="s-health"><div class="swatch" style="background:linear-gradient(135deg,#e8f5f5,#3d8b9c)"></div><div class="sinfo"><div class="sname">Health &amp; Wellness</div><div class="sdesc">Calming, clean, medical</div></div></label>
           <div class="selbadge">✓</div>
         </div>
       </div>

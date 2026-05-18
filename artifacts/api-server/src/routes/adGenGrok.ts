@@ -666,6 +666,7 @@ router.get("/grok-ad-generator/template-preview/:key", (req, res) => {
     "made-fresh":          "made_fresh_template.png",
     "neighborhood-pro":    "6300F2D5-6BF1-403E-A40B-7203E4E26402_1778948283280.jpeg",
     "at-your-service":     "IMG_0728_1779065210873.jpeg",
+    "health-wellness":     "healthcare_generic_template_1779141099043.png",
   };
   const filename = fileMap[key];
   if (!filename) { res.status(404).send("Not found"); return; }
@@ -944,10 +945,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
             <div class="tmpl-card-name" style="color:#bbb">Bold &amp; Modern</div>
             <div class="cs-badge">Coming Soon</div>
           </div>
-          <div class="tmpl-card disabled">
-            <div class="tmpl-thumb" style="display:flex;align-items:center;justify-content:center;font-size:22px;background:#f0f4ff">&#127807;</div>
-            <div class="tmpl-card-name" style="color:#bbb">Clean &amp; Minimal</div>
-            <div class="cs-badge">Coming Soon</div>
+          <div class="tmpl-card" id="tmpl-health-wellness" onclick="selectTemplate('health-wellness')">
+            <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/health-wellness" alt="Health &amp; Wellness" onerror="this.style.background='#e8f5f5'">
+            <div class="tmpl-card-name">Health &amp; Wellness</div>
+            <div class="tmpl-card-sub">Teal &amp; sage &middot; Medical &amp; wellness &middot; Calming</div>
+            <div class="tmpl-sel-badge" id="badge-health-wellness" style="display:none">&#10003; Selected</div>
           </div>
           <div class="tmpl-card" id="tmpl-at-your-service" onclick="selectTemplate('at-your-service')">
             <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/at-your-service" alt="At Your Service" onerror="this.style.background='#1a2744'">

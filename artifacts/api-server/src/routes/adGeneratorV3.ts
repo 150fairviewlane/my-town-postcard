@@ -407,8 +407,8 @@ gap:12px;
       <div class="selbadge">✓</div>
     </div>
     <div class="scard">
-      <input type="radio" name="style" id="s-clean" value="clean minimal professional design, white space, clear typography, trustworthy business advertisement">
-      <label for="s-clean"><div class="swatch" style="background:#fff;border:1.5px solid #ddd"></div><div class="sinfo"><div class="sname">Clean &amp; Minimal</div><div class="sdesc">Simple, professional</div></div></label>
+      <input type="radio" name="style" id="s-health" value="health and wellness design, calming teal and sage green tones, clean modern medical aesthetic, trustworthy professional healthcare advertisement">
+      <label for="s-health"><div class="swatch" style="background:linear-gradient(135deg,#e8f5f5,#3d8b9c)"></div><div class="sinfo"><div class="sname">Health &amp; Wellness</div><div class="sdesc">Calming, clean, medical</div></div></label>
       <div class="selbadge">✓</div>
     </div>
   </div>
