@@ -206,7 +206,8 @@ function pickLabel(cluster) {
 //   Medium (medianDist 2–5 mi)  → ~1,500 households/ZIP  (suburban baseline)
 //   Rural  (medianDist > 5 mi)  → ~2,700 households/ZIP  (large rural ZIPs)
 //
-// Result is capped at 5,000 — the practical EDDM target per postcard run.
+// Result is capped at 15,000 — the territory's total addressable household
+// count. Dealers still mail to 5,000 addresses per EDDM run from this pool.
 function estimateHouseholds(points) {
   if (points.length === 0) return 0;
   if (points.length === 1) return Math.min(5000, 1500);
@@ -233,14 +234,17 @@ function estimateHouseholds(points) {
     scaleFactor = 1.8;   // rural / sparse
   }
 
-  return Math.min(5000, Math.round(points.length * 1500 * scaleFactor));
+  // Cap at 15,000 (a full rural ZIP cluster can exceed 10,000 addressable
+  // homes). This is the territory's total household count — the dealer still
+  // mails to 5,000 addresses per EDDM run from within that pool.
+  return Math.min(15000, Math.round(points.length * 1500 * scaleFactor));
 }
 
 /**
  * Build 4 (or `k`) postcard territories around the dealer's home ZIP.
  *
  * The search radius is **adaptive**: it starts at `minRadiusMiles` and expands
- * in 5-mile increments until at least `targetZips` nearby ZIPs are found or
+ * in 2-mile increments until at least `targetZips` nearby ZIPs are found or
  * `maxRadiusMiles` is reached. This naturally keeps territories tight in dense
  * suburbs (where many ZIPs are packed close together) and widens them in rural
  * areas (where ZIPs are spread out).
@@ -249,8 +253,8 @@ function estimateHouseholds(points) {
  * @param {object} [opts]
  * @param {number} [opts.minRadiusMiles=10]  Minimum search radius (miles)
  * @param {number} [opts.maxRadiusMiles=50]  Maximum search radius cap (miles)
- * @param {number} [opts.targetZips=24]      Expand radius until this many ZIPs
- *                                           are found (~6 per territory × k=4)
+ * @param {number} [opts.targetZips=k*4]     Expand radius until this many ZIPs
+ *                                           are found (4 per territory × k=4 by default)
  * @param {number} [opts.k=4]               Number of territories to produce
  * @param {number} [opts.seed=1]            PRNG seed for K-means init.
  *                                          Vary to "re-shuffle" the layout.
@@ -263,7 +267,11 @@ function estimateHouseholds(points) {
  * }>>}
  */
 export async function buildTerritories(homeZip, opts = {}) {
-  const { minRadiusMiles = 10, maxRadiusMiles = 50, targetZips = 24, k = 4, seed = 1 } = opts;
+  const { minRadiusMiles = 10, maxRadiusMiles = 50, k = 4, seed = 1 } = opts;
+  // Target at least 4 ZIPs per territory before running K-means.  Keeping
+  // this relative to k (rather than a fixed constant) means a 2-territory
+  // run still stops early in dense areas instead of over-expanding.
+  const targetZips = opts.targetZips ?? k * 4;
   const data = await loadZips();
   const home = data.byZip.get(homeZip);
   if (!home) {
@@ -272,12 +280,15 @@ export async function buildTerritories(homeZip, opts = {}) {
     throw err;
   }
 
-  // Adaptive radius: expand in 5-mile steps until we have enough ZIPs to form
-  // meaningful clusters, or until we hit the cap.
+  // Adaptive radius: expand in 2-mile steps until we have enough ZIPs to form
+  // meaningful clusters, or until we hit the cap.  Fine steps (2 mi) prevent
+  // the coarse overshooting that would pull in distant metro ZIPs for dense
+  // suburbs — e.g. a 5-mile jump from 10→15 mi around Woodstock GA picks up
+  // Marietta/Roswell; a 2-mile step stops at ~12 mi instead.
   let radius = minRadiusMiles;
   let nearby = data.all.filter((z) => haversineMiles(home, z) <= radius);
   while (nearby.length < targetZips && radius < maxRadiusMiles) {
-    radius = Math.min(radius + 5, maxRadiusMiles);
+    radius = Math.min(radius + 2, maxRadiusMiles);
     nearby = data.all.filter((z) => haversineMiles(home, z) <= radius);
   }
 
