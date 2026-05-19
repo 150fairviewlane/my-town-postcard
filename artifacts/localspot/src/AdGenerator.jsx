@@ -1,8 +1,9 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { INDUSTRIES, INDUSTRY_LIST } from "./industryAssets";
 import IndustryConflictDialog from "./components/IndustryConflictDialog";
 import { AdQRCode, InlineQRCode, hasQR, normalizeWebsite, generateSpotCode, PositionedQR } from "./qrUtils";
 import AdAssistant from "./AdAssistant";
+import { useRefineGrokAd } from "@workspace/api-client-react";
 
 //
 //   EDITABLE TEXT – click any text in the preview to edit it inline
@@ -1002,6 +1003,47 @@ const [emailError, setEmailError] = useState(false);
 const emailRef = useRef(null);
 const [conflictIndustry, setConflictIndustry] = useState(null);
 
+// Grok-generated ad state (populated via postMessage from the Grok popup)
+const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
+const [originalGrokImageUrl, setOriginalGrokImageUrl] = useState(null);
+const [refineInstruction, setRefineInstruction] = useState("");
+const [refineError, setRefineError] = useState("");
+const { mutateAsync: refineGrokAd, isPending: isRefining } = useRefineGrokAd();
+
+// Listen for Grok popup returning a finished ad via postMessage
+useEffect(() => {
+  const handleMessage = (event) => {
+    if (event.data?.type === "grok-ad-result" && event.data.formData?.finishedAdUrl) {
+      const url = event.data.formData.finishedAdUrl;
+      setGeneratedImageUrl(url);
+      setOriginalGrokImageUrl(url);
+      setRefineInstruction("");
+      setRefineError("");
+    }
+  };
+  window.addEventListener("message", handleMessage);
+  return () => window.removeEventListener("message", handleMessage);
+}, []);
+
+const handleRefine = useCallback(async () => {
+  if (!generatedImageUrl || !refineInstruction.trim()) {
+    setRefineError("Please describe the change you want (e.g. \"Remove the word Shield\").");
+    return;
+  }
+  setRefineError("");
+  try {
+    const result = await refineGrokAd({
+      imageDataUrl: generatedImageUrl,
+      instruction: refineInstruction.trim(),
+      sizeKey: sizeKey || "XL",
+    });
+    setGeneratedImageUrl(result.imageUrl);
+    setRefineInstruction("");
+  } catch (err) {
+    setRefineError(err?.message ?? "Refinement failed — please try again.");
+  }
+}, [generatedImageUrl, refineInstruction, sizeKey, refineGrokAd]);
+
 // Auto-suggest template + populate menuItems when industry changes
 const handleIndustryChange = (e) => {
 const industry = e.target.value;
@@ -1438,6 +1480,79 @@ boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
               Style: <strong style={{ color: "#fff" }}>{TEMPLATES[selectedTemplate].name}</strong>
               {!formData.photo && formData.industry && <> - Using stock photo for {formData.industry}</>}
             </div>
+
+            {/* Grok-generated ad + refine panel */}
+            {generatedImageUrl && (
+              <div style={{
+                marginTop: 16, background: "rgba(255,255,255,0.06)", border: "1.5px solid rgba(255,255,255,0.15)",
+                borderRadius: 12, overflow: "hidden", width: "100%", maxWidth: 400,
+              }}>
+                <div style={{
+                  padding: "8px 14px", background: "rgba(0,0,0,0.3)", borderBottom: "1px solid rgba(255,255,255,0.1)",
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "#86efac" }}>
+                    ✓ Grok-Generated Ad
+                  </span>
+                  {generatedImageUrl !== originalGrokImageUrl && (
+                    <button
+                      onClick={() => { setGeneratedImageUrl(originalGrokImageUrl); setRefineError(""); }}
+                      style={{ background: "none", border: "none", color: "#fbbf24", fontSize: 11, cursor: "pointer", textDecoration: "underline", fontFamily: "inherit" }}>
+                      ↩ Revert to original
+                    </button>
+                  )}
+                </div>
+                <img
+                  src={generatedImageUrl}
+                  alt="Grok-generated ad"
+                  style={{ display: "block", width: "100%", maxHeight: 360, objectFit: "contain", background: "#000" }}
+                />
+                <div style={{ padding: "10px 12px", background: "rgba(0,0,0,0.25)" }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", color: "rgba(255,255,255,0.6)", marginBottom: 7 }}>
+                    ✏ Refine this ad
+                  </div>
+                  <div style={{ display: "flex", gap: 7 }}>
+                    <input
+                      value={refineInstruction}
+                      onChange={e => { setRefineInstruction(e.target.value); setRefineError(""); }}
+                      onKeyDown={e => e.key === "Enter" && handleRefine()}
+                      placeholder='e.g. "Remove the word Shield"'
+                      disabled={isRefining}
+                      maxLength={300}
+                      style={{
+                        flex: 1, padding: "8px 10px", borderRadius: 7,
+                        border: "1.5px solid rgba(255,255,255,0.2)", background: "rgba(255,255,255,0.1)",
+                        color: "#fff", fontSize: 13, outline: "none", fontFamily: "system-ui, sans-serif",
+                        opacity: isRefining ? 0.6 : 1,
+                      }}
+                    />
+                    <button
+                      onClick={handleRefine}
+                      disabled={isRefining || !refineInstruction.trim()}
+                      style={{
+                        padding: "8px 16px", background: isRefining ? "#6b7280" : "#991b1b",
+                        color: "#fff", border: "none", borderRadius: 7, fontSize: 12, fontWeight: 700,
+                        cursor: isRefining || !refineInstruction.trim() ? "not-allowed" : "pointer",
+                        whiteSpace: "nowrap", fontFamily: "system-ui, sans-serif", flexShrink: 0,
+                        opacity: !refineInstruction.trim() && !isRefining ? 0.55 : 1,
+                      }}>
+                      {isRefining ? "Applying…" : "Apply"}
+                    </button>
+                  </div>
+                  {isRefining && (
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", marginTop: 6 }}>
+                      ⏳ Grok is applying your change… (20–40 seconds)
+                    </div>
+                  )}
+                  {refineError && (
+                    <div style={{ fontSize: 11, color: "#fca5a5", marginTop: 6 }}>{refineError}</div>
+                  )}
+                  <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", marginTop: 6, lineHeight: 1.4 }}>
+                    Type a correction and press Apply. Grok updates only what you describe — everything else stays the same.
+                  </div>
+                </div>
+              </div>
+            )}
 
             {reserveError && (
               <div style={{ marginTop: 14, background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8, padding: "10px 16px", color: "#991b1b", fontSize: 13, fontWeight: 600, textAlign: "center" }}>

@@ -396,6 +396,23 @@ export interface TakenCategoriesResponse {
   takenCategories: string[];
 }
 
+export interface RefineAdRequest {
+  /** Base64 data URL of the currently generated ad image */
+  imageDataUrl: string;
+  /**
+   * Plain-English description of the change to apply
+   * @maxLength 500
+   */
+  instruction: string;
+  /** Spot size key (XL, L, M, S) */
+  sizeKey?: string;
+}
+
+export interface RefineAdResponse {
+  /** Base64 data URL of the refined ad image */
+  imageUrl: string;
+}
+
 export interface SubmitInterestResponse {
   success: boolean;
   id: number;

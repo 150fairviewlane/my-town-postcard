@@ -184,6 +184,27 @@ function extractXaiImageUrl(body: Record<string, unknown>): string | null {
   return null;
 }
 
+/** Resize and centre-crop a Grok-returned image URL to exact print pixel dimensions. */
+async function cropToSpotDims(url: string, w: number, h: number): Promise<string> {
+  try {
+    let buf: Buffer;
+    if (url.startsWith("data:")) {
+      buf = Buffer.from(url.split(",")[1] ?? "", "base64");
+    } else {
+      const resp = await fetch(url);
+      if (!resp.ok) return url;
+      buf = Buffer.from(await resp.arrayBuffer());
+    }
+    const out = await sharp(buf)
+      .resize(w, h, { fit: "fill", kernel: "lanczos3" })
+      .jpeg({ quality: 98, chromaSubsampling: "4:4:4" })
+      .toBuffer();
+    return `data:image/jpeg;base64,${out.toString("base64")}`;
+  } catch {
+    return url;
+  }
+}
+
 
 /**
  * Fallback: call /v1/images/generations (text-to-image, JSON) when the model
@@ -974,8 +995,9 @@ router.post("/grok-ad-generator/refine", async (req, res) => {
   const mime = match[1] as string;
   const imageBuf = Buffer.from(match[2]!, "base64");
 
+  // Use the same aspect ratios as the generate endpoint (4:5 is unsupported; sharp crops to exact dims)
   const SIZE_MAP: Record<string, { w: number; h: number; aspect: string }> = {
-    XL: { w: 400, h: 500, aspect: "4:5" },
+    XL: { w: 400, h: 500, aspect: "3:4" },
     L:  { w: 300, h: 400, aspect: "3:4" },
     M:  { w: 300, h: 200, aspect: "3:2" },
     S:  { w: 200, h: 200, aspect: "1:1" },
@@ -1031,23 +1053,7 @@ router.post("/grok-ad-generator/refine", async (req, res) => {
       return;
     }
 
-    // Resize + crop to exact print pixel dimensions
-    try {
-      let srcBuf: Buffer;
-      if (imageUrl.startsWith("data:")) {
-        srcBuf = Buffer.from(imageUrl.split(",")[1] ?? "", "base64");
-      } else {
-        const r = await fetch(imageUrl);
-        srcBuf = Buffer.from(await r.arrayBuffer());
-      }
-      const out = await sharp(srcBuf)
-        .resize(dim.w, dim.h, { fit: "fill", kernel: "lanczos3" })
-        .jpeg({ quality: 98, chromaSubsampling: "4:4:4" })
-        .toBuffer();
-      res.json({ imageUrl: `data:image/jpeg;base64,${out.toString("base64")}` });
-    } catch {
-      res.json({ imageUrl });
-    }
+    res.json({ imageUrl: await cropToSpotDims(imageUrl, dim.w, dim.h) });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Grok API request failed";
     req.log.error({ err: msg }, "grok-refine error");

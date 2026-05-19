@@ -768,3 +768,28 @@ export const SubmitInterestResponse = zod.object({
   success: zod.boolean(),
   id: zod.number(),
 });
+
+/**
+ * @summary Refine a Grok-generated ad image with a plain-English instruction
+ */
+export const refineGrokAdBodyInstructionMax = 500;
+
+export const refineGrokAdBodySizeKeyDefault = `XL`;
+
+export const RefineGrokAdBody = zod.object({
+  imageDataUrl: zod
+    .string()
+    .describe("Base64 data URL of the currently generated ad image"),
+  instruction: zod
+    .string()
+    .max(refineGrokAdBodyInstructionMax)
+    .describe("Plain-English description of the change to apply"),
+  sizeKey: zod
+    .string()
+    .default(refineGrokAdBodySizeKeyDefault)
+    .describe("Spot size key (XL, L, M, S)"),
+});
+
+export const RefineGrokAdResponse = zod.object({
+  imageUrl: zod.string().describe("Base64 data URL of the refined ad image"),
+});

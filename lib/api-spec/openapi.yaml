@@ -18,6 +18,8 @@ tags:
     description: Payment operations
   - name: admin
     description: Admin operations
+  - name: adgen
+    description: AI ad generation operations
 paths:
   /healthz:
     get:
@@ -598,6 +600,37 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /grok-ad-generator/refine:
+    post:
+      operationId: refineGrokAd
+      tags: [adgen]
+      summary: Refine a Grok-generated ad image with a plain-English instruction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefineAdRequest"
+      responses:
+        "200":
+          description: Refined ad image
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RefineAdResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: xAI API error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -1084,6 +1117,33 @@ components:
             type: string
       required:
         - takenCategories
+
+    RefineAdRequest:
+      type: object
+      properties:
+        imageDataUrl:
+          type: string
+          description: Base64 data URL of the currently generated ad image
+        instruction:
+          type: string
+          description: Plain-English description of the change to apply
+          maxLength: 500
+        sizeKey:
+          type: string
+          description: Spot size key (XL, L, M, S)
+          default: XL
+      required:
+        - imageDataUrl
+        - instruction
+
+    RefineAdResponse:
+      type: object
+      properties:
+        imageUrl:
+          type: string
+          description: Base64 data URL of the refined ad image
+      required:
+        - imageUrl
 
     SubmitInterestResponse:
       type: object

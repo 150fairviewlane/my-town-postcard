@@ -37,6 +37,8 @@ import type {
   OutreachLeadUpdate,
   OutreachLeadsListResponse,
   PaymentIntentResponse,
+  RefineAdRequest,
+  RefineAdResponse,
   ReserveSpotBody,
   Spot,
   SubmitInterestBody,
@@ -1882,4 +1884,90 @@ export const useSubmitInterest = <
   TContext
 > => {
   return useMutation(getSubmitInterestMutationOptions(options));
+};
+
+/**
+ * @summary Refine a Grok-generated ad image with a plain-English instruction
+ */
+export const getRefineGrokAdUrl = () => {
+  return `/api/grok-ad-generator/refine`;
+};
+
+export const refineGrokAd = async (
+  refineAdRequest: RefineAdRequest,
+  options?: RequestInit,
+): Promise<RefineAdResponse> => {
+  return customFetch<RefineAdResponse>(getRefineGrokAdUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(refineAdRequest),
+  });
+};
+
+export const getRefineGrokAdMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof refineGrokAd>>,
+    TError,
+    { data: BodyType<RefineAdRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof refineGrokAd>>,
+  TError,
+  { data: BodyType<RefineAdRequest> },
+  TContext
+> => {
+  const mutationKey = ["refineGrokAd"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof refineGrokAd>>,
+    { data: BodyType<RefineAdRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return refineGrokAd(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RefineGrokAdMutationResult = NonNullable<
+  Awaited<ReturnType<typeof refineGrokAd>>
+>;
+export type RefineGrokAdMutationBody = BodyType<RefineAdRequest>;
+export type RefineGrokAdMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Refine a Grok-generated ad image with a plain-English instruction
+ */
+export const useRefineGrokAd = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof refineGrokAd>>,
+    TError,
+    { data: BodyType<RefineAdRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof refineGrokAd>>,
+  TError,
+  { data: BodyType<RefineAdRequest> },
+  TContext
+> => {
+  return useMutation(getRefineGrokAdMutationOptions(options));
 };
