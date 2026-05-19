@@ -385,7 +385,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
             "Upper-right: large full-bleed hero photo zone (outdoor/service scene). " +
             "Middle band: a horizontal row of four diagonal-cut service photo panels, each topped by a circular green icon badge and a short white brush-stroke label beneath it. " +
             "Lower section: a wide white brush-stroke area for the special offer / coupon text. " +
-            "Footer strip: dark green bar with a bold phone number on the left, a clean QR code box on the right, and three small circular graphical badge icons between them (rendered as pure graphic symbols — a heraldic shield shape, a 5-pointed star shape, a leaf shape — NO text labels of any kind). " +
+            "Footer strip: dark green bar with a bold phone number on the left, a clean QR code box on the right, and three small circular decorative icon graphics between them. " +
             "Reproduce every zone, the forest-green background, all brush-stroke shapes, and the footer layout exactly."
           : templateKey === "at-your-service"
             ? "  • IMAGE 1 (TEMPLATE) — a home-services postcard on a light gray/off-white textured background with a navy blue and gold/yellow color scheme. " +
@@ -501,7 +501,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "  ZONE 6 — FOOTER (dark green bar at very bottom):\n" +
       `    Left: phone number "${d.phone || ""}" in very BOLD white sans-serif — large, instantly readable. Zero digit changes.\n` +
       (fullAddress !== "(none)" ? `    Below or beside phone: address "${fullAddress}" in white sans-serif, readable size — at least half the height of the phone number. Must appear verbatim — no changes.\n` : "") +
-      `    Center: three small circular GRAPHICAL BADGE ICONS as in the template — a heraldic shield graphic, a 5-pointed star graphic, a leaf graphic. Render them as PURE ICON GRAPHICS with absolutely NO text labels. The words "Shield", "Star", and "Leaf" must NOT appear as readable text anywhere on the ad.\n` +
+      `    Center: three small circular decorative icon graphics as in the template. No text labels — icons only.\n` +
       "    Right: a clean square QR code box. Do NOT render the website URL as text.\n\n" +
 
       "TYPOGRAPHIC RULES:\n" +
