@@ -626,7 +626,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "    ✗ NO text floating on bare flat color — every text element needs shadow, glow, knockout, or dark-field anchor\n" +
       "    ✓ THREE visual depth planes minimum (texture → graphic mid-layer → foreground text)\n" +
       "    ✓ Hero photo composited with cinematic lighting and edge blending\n" +
-      "    ✓ Print-ready sharpness throughout — no generic clip-art, no thin strokes on busy backgrounds\n\n" +
+      "    ✓ Print-ready 300 DPI sharpness throughout — no generic clip-art, no thin strokes on busy backgrounds\n\n" +
 
       "TYPOGRAPHIC RULES:\n" +
       "  • Headline: very large, maximum weight — instantly legible\n" +
