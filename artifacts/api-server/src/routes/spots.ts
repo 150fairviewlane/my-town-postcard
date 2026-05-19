@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
-import { db, spotsTable, campaignsTable } from "@workspace/db";
+import { db, spotsTable, campaignsTable, ordersTable } from "@workspace/db";
 import {
   GetSpotParams,
   GetSpotResponse,
@@ -85,6 +85,19 @@ router.post("/spots/:id/reserve", async (req, res): Promise<void> => {
 
   if (spot.status !== "available") {
     res.status(400).json({ error: "This spot is no longer available" });
+    return;
+  }
+
+  // Defense in depth: if a paid order exists for this spot — even if the spot
+  // status slipped back to 'available' due to a data inconsistency — refuse the
+  // reservation so the customer doesn't get stranded at checkout.
+  const [existingPaidOrder] = await db
+    .select({ id: ordersTable.id })
+    .from(ordersTable)
+    .where(and(eq(ordersTable.spotId, spot.id), eq(ordersTable.status, "paid")))
+    .limit(1);
+  if (existingPaidOrder) {
+    res.status(409).json({ error: "This spot has already been purchased." });
     return;
   }
 

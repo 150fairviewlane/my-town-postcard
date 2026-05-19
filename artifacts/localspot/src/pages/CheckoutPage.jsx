@@ -226,7 +226,7 @@ function CheckoutShell({ children }) {
   );
 }
 
-function ErrorPanel({ title, message }) {
+function ErrorPanel({ title, message, actionLabel = null, onAction = null }) {
   return (
     <div
       style={{
@@ -240,6 +240,17 @@ function ErrorPanel({ title, message }) {
     >
       <div style={{ fontWeight: 800, marginBottom: 6, fontSize: 15 }}>{title}</div>
       <div style={{ fontSize: 13, lineHeight: 1.5, color: "#7f1d1d" }}>{message}</div>
+      {actionLabel && onAction && (
+        <button
+          onClick={onAction}
+          style={{
+            marginTop: 14, padding: "8px 16px", borderRadius: 8, border: "none",
+            background: "#991b1b", color: "#fff", fontSize: 13, fontWeight: 700,
+            cursor: "pointer",
+          }}>
+          {actionLabel}
+        </button>
+      )}
     </div>
   );
 }
@@ -291,7 +302,9 @@ export default function CheckoutPage() {
         if (!cancelled) {
           const status = err?.status;
           let msg = err?.data?.error || err?.message;
-          if (status === 503) {
+          if (status === 409) {
+            msg = "This spot has already been booked by another customer. Please go back and choose a different spot.";
+          } else if (status === 503) {
             msg =
               msg ||
               "Payments aren't turned on yet on this site. Please contact the site owner.";
@@ -299,7 +312,7 @@ export default function CheckoutPage() {
           if (!msg) {
             msg = "Could not start payment. Please go back and try again.";
           }
-          setLoadError(msg);
+          setLoadError({ message: msg, isPaid: status === 409 });
         }
       }
     })();
@@ -337,7 +350,14 @@ export default function CheckoutPage() {
         </div>
       )}
 
-      {loadError && <ErrorPanel title="Could not load payment" message={loadError} />}
+      {loadError && (
+        <ErrorPanel
+          title={loadError.isPaid ? "Spot already booked" : "Could not load payment"}
+          message={loadError.message}
+          actionLabel={loadError.isPaid ? "Browse available spots" : null}
+          onAction={loadError.isPaid ? () => window.location.replace("/") : null}
+        />
+      )}
 
       {intentData && (
         <Elements stripe={stripePromise} options={{ clientSecret: intentData.clientSecret }}>
