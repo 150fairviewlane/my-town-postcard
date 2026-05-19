@@ -361,7 +361,13 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     // No template reference image — Grok invents freely; photo and logo get IMAGE 1/2
     imgIdx = 1;
     if (hasPhoto) {
-      refLines.push(`  • IMAGE ${imgIdx++} (HERO PHOTO) — the product/service photograph. Integrate it as the dominant hero visual in whatever layout you design.`);
+      refLines.push(
+        `  • IMAGE ${imgIdx++} (HERO PHOTO) — the product/service photograph. ` +
+        "Composite it as the dominant hero visual with NO hard rectangular border — " +
+        "blend its edges using an organic mask, gradient fade, diagonal cut, color-band overlay, or brushstroke shape. " +
+        "Apply cinematic lighting with realistic shadow and soft-light blending into the background layer. " +
+        "The photo must feel fully embedded in the composition, not dropped on top like a placed sticker.",
+      );
     }
     if (hasLogo) {
       refLines.push(`  • IMAGE ${imgIdx} (BUSINESS LOGO) — the exact business logo. Reproduce it pixel-perfect with no stylization, color changes, or distortion.`);
@@ -579,11 +585,30 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "    • Teal/sage wellness (teal blob shapes, teal pill bar, cream background, teal footer)\n" +
       "    Invent something genuinely distinct.\n\n" +
 
+      "  VISUAL CONSTRUCTION — these rules are MANDATORY, not optional:\n" +
+      "    (a) NO hard rectangular photo borders. Every photo must be masked or blended into the background " +
+      "using an organic shape (blob, brush-stroke, diagonal cut, arch, vignette, or color-band overlay). " +
+      "Edges of the photo must dissolve or fade into the surrounding layer — never sit inside a visible frame or box.\n" +
+      "    (b) Background must have material depth. Use a rich multi-stop gradient, a brushstroke-wash overlay, " +
+      "a paper/fabric/concrete/wood texture, or an environmental surface tone — NEVER a flat solid color.\n" +
+      "    (c) Compose three distinct depth planes:\n" +
+      "        PLANE 1 (deepest) — textured or gradient background fill\n" +
+      "        PLANE 2 (mid) — graphic elements (color bands, geometric shapes, organic swooshes, brushstroke blocks) " +
+      "that frame zones and divide the layout\n" +
+      "        PLANE 3 (front) — headline text, logo, and offer copy rendered on top with depth treatment\n" +
+      "    (d) Hero photo must appear cinematically lit with soft-light or rim-light, and its shadow/edge must " +
+      "blend realistically into the mid-layer (Plane 2), not float above it.\n" +
+      "    (e) Every text element must sit ON the composition with drop shadows, glows, light knockouts, or dark-field " +
+      "backlighting — NEVER floating on bare flat color.\n\n" +
+
       "  REQUIRED CONTENT ZONES (place and style these however fits your design):\n" +
       `    HEADLINE: Business name "${d.bizName}" — very large, dominant, instantly readable at a glance. Maximum typographic impact.\n` +
       (hasPhoto
-        ? `    HERO PHOTO: IMAGE ${imgIdx > 1 ? imgIdx - 1 : 1} — integrate the provided photo as the dominant visual centerpiece of the ad. Professional lighting, cinematic quality. No hard rectangular border.\n`
-        : `    HERO IMAGE: Generate a stunning, business-appropriate hero image — cinematic quality, professional photography aesthetic.\n`) +
+        ? `    HERO PHOTO: IMAGE ${imgIdx > 1 ? imgIdx - 1 : 1} — composite the provided photo as the dominant visual. ` +
+          "Mask or blend its edges (organic shape / gradient fade / diagonal cut / brushstroke overlay) — NO hard rectangular frame. " +
+          "Cinematic lighting, realistic shadow blending into Plane 2.\n"
+        : `    HERO IMAGE: Generate a photorealistic, business-appropriate hero image at cinematic quality — ` +
+          "professional studio or location lighting, shallow depth of field. Blend it into the background using an organic mask or gradient fade — no hard rectangular frame.\n") +
       (hasLogo ? `    LOGO: IMAGE ${logoImg} — place exactly as provided, no stylization or color changes.\n` : "") +
       (d.tagline ? `    TAGLINE: "${d.tagline}" — supporting, secondary to headline.\n` : "") +
       (menuStr !== "  (none)" ? `    SERVICES/MENU: ${menuStr} — displayed clearly, not crowded. Each item exactly once.\n` : "") +
@@ -595,10 +620,13 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       (fullAddress !== "(none)" ? `    Address "${fullAddress}" — must appear verbatim in footer.\n` : "") +
       "    QR CODE: clean square graphic in footer lower-right corner. Do NOT render the website URL as visible text.\n\n" +
 
-      "  QUALITY STANDARD:\n" +
-      "    The result must look like it was designed by a top print advertising agency — premium photography, " +
-      "    confident typography hierarchy, rich color treatment, print-ready sharpness. " +
-      "    No generic clip-art, no crowded layouts, no thin strokes on busy backgrounds.\n\n" +
+      "  QUALITY STANDARD — all of the following are required, no exceptions:\n" +
+      "    ✗ NO flat solid-color backgrounds — must have gradient, texture, or layered depth\n" +
+      "    ✗ NO rectangular photo frames or visible borders around any image\n" +
+      "    ✗ NO text floating on bare flat color — every text element needs shadow, glow, knockout, or dark-field anchor\n" +
+      "    ✓ THREE visual depth planes minimum (texture → graphic mid-layer → foreground text)\n" +
+      "    ✓ Hero photo composited with cinematic lighting and edge blending\n" +
+      "    ✓ Print-ready sharpness throughout — no generic clip-art, no thin strokes on busy backgrounds\n\n" +
 
       "TYPOGRAPHIC RULES:\n" +
       "  • Headline: very large, maximum weight — instantly legible\n" +
