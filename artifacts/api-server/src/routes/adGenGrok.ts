@@ -258,9 +258,9 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
 
   // ── Compute adIndex for variant rotation ─────────────────────────────────────
   // adIndex = number of other spots in the same campaign already using this template
-  // (status reserved or paid). Landscape spots skip rotation (no template reference).
+  // (status reserved or paid). Applies to both portrait and landscape templates.
   let adIndex = 0;
-  if (d.spotId !== undefined && !isLandscape) {
+  if (d.spotId !== undefined) {
     try {
       const thisSpot = await db
         .select({ campaignId: spotsTable.campaignId })
@@ -299,27 +299,33 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   const colorVariant  = (adIndex + 2) % 3;
   const tmplFonts  = FONT_VARIANTS[d.template || "parchment-classic"]  ?? FONT_VARIANTS["parchment-classic"]!;
   const tmplColors = COLOR_VARIANTS[d.template || "parchment-classic"] ?? COLOR_VARIANTS["parchment-classic"]!;
-  const variantBlock = isLandscape ? "" :
+  const variantBlock =
     "VARIANT DIRECTIVES — follow these exactly, they override any defaults:\n" +
     `  TYPOGRAPHY: ${tmplFonts[fontVariant]}\n` +
     `  COUPON: ${COUPON_VARIANTS[couponVariant]}\n` +
     `  COLORS: ${tmplColors[colorVariant]}\n`;
 
-  // Load template PNG as raw buffer — skipped for landscape (no portrait template applies)
+  // Load template PNG as raw buffer — portrait and landscape each have their own template images
   const templateKey = d.template || "parchment-classic";
   let tmplBuf: Buffer | null = null;
   let tmplMime = "image/png";
-  if (!isLandscape && templateKey !== "surprise-me") {
-    const tmplFilename =
-      templateKey === "made-fresh"
-        ? "made_fresh_template.png"
-        : templateKey === "neighborhood-pro"
-          ? "6300F2D5-6BF1-403E-A40B-7203E4E26402_1778948283280.jpeg"
-          : templateKey === "at-your-service"
-            ? "IMG_0728_1779065210873.jpeg"
-            : templateKey === "health-wellness"
-              ? "healthcare_generic_template_1779141099043.png"
-              : "mr_biscuits_template_no_logo_1778806527327.png";
+  if (templateKey !== "surprise-me") {
+    const portraitFiles: Record<string, string> = {
+      "parchment-classic": "mr_biscuits_template_no_logo_1778806527327.png",
+      "made-fresh":        "made_fresh_template.png",
+      "neighborhood-pro":  "6300F2D5-6BF1-403E-A40B-7203E4E26402_1778948283280.jpeg",
+      "at-your-service":   "IMG_0728_1779065210873.jpeg",
+      "health-wellness":   "healthcare_generic_template_1779141099043.png",
+    };
+    const landscapeFiles: Record<string, string> = {
+      "parchment-classic": "parchment_classic_landscape_1779162178190.png",
+      "made-fresh":        "made_fresh_landscape_1779162178190.png",
+      "neighborhood-pro":  "IMG_0747_1779162178190.png",
+      "at-your-service":   "IMG_0746_1779162178190.png",
+      "health-wellness":   "healthcare_wellness_landscape_1779162178190.png",
+    };
+    const fileMap = isLandscape ? landscapeFiles : portraitFiles;
+    const tmplFilename = fileMap[templateKey] ?? fileMap["parchment-classic"]!;
     const tmplPath = path.join(WORKSPACE_ROOT, "attached_assets", tmplFilename);
     if (!fs.existsSync(tmplPath)) {
       res.status(500).json({ error: "Template file not found on server." });
@@ -364,20 +370,33 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   ].join("\n");
 
   // Build image reference lines for the prompt — one per image in the `images` array order
-  // For landscape (medium) there is no portrait template, so indices start at 1.
+  // Landscape spots now use their own template reference images (same indexing scheme as portrait).
   const refLines: string[] = [];
   let imgIdx: number;
   let logoImg: number;
 
   if (isLandscape) {
     imgIdx = 1;
-    if (hasPhoto) {
-      refLines.push(`  • IMAGE ${imgIdx++} (HERO PHOTO) — the product/service photograph. Use as the dominant hero visual filling the right portion of the ad.`);
+    if (templateKey !== "surprise-me") {
+      const lsTmplDesc =
+        templateKey === "parchment-classic"
+          ? "the full landscape postcard layout with warm parchment texture, orange bookmark-ribbon pennant at top-left, a sweeping horizontal dark brush-stroke band for the headline, orange circular checkmark service badges on the left column, a dashed dark rectangular coupon box, and a dark footer strip with phone icon + QR code. Reproduce every zone, texture, and design element exactly."
+          : templateKey === "made-fresh"
+            ? "the full landscape postcard layout with a warm wood-table background. A white ceramic plate and gingham cloth prop sit on the left; a chalkboard 'Made Fresh For You' A-frame sign sits upper-right. A white paint-stroke panel provides the business info zone; a golden ticket-stub coupon shape sits on the right. Reproduce all textures, props, zones, and atmospheric lighting exactly."
+            : templateKey === "neighborhood-pro"
+              ? "the full landscape postcard layout on a deep forest-green background. Upper-left: large white brush-stroke splash panel (headline zone). Upper-right: full-bleed hero photo area. Middle: horizontal row of four diagonal-cut service photo panels each topped by a circular lime-green icon badge and a white brush-stroke label below. Lower-center: wide white brush-stroke area (offer/coupon zone). Footer: dark green bar with phone icon left, location pin center-left, and QR code lower-right. Reproduce every zone and shape exactly."
+              : templateKey === "at-your-service"
+                ? "the full landscape postcard layout on a light gray/cream textured background. Upper-left: large dark navy hexagonal badge (logo zone). Gold/yellow horizontal brush-stroke sweeping across the upper area. Upper-right: large hero photo zone blending naturally into the background. Center: wide dark navy band spanning full width with four circular white icon service badges. Lower-right: gold/yellow dashed-border coupon box. Footer: location-pin icon + address left; phone icon + phone center; QR code right. Reproduce every zone, shape, and color exactly."
+                : "the full landscape postcard layout on a soft cream/off-white background. Upper-left: clinic/office photo inside an organic curved teal blob shape. Upper-center: large wide rounded-rectangle white headline panel; below it a teal pill-shaped tagline bar. Middle: four equal-width service panels with circular teal icon badges on top and white rounded-rectangle text boxes below. Lower-left: reception photo in an organic teal blob. Lower-right: stethoscope on a dark teal circular blob, plus a small white rounded QR box. Right edge: anatomical spine model prop. Footer: dark teal bar — circular phone icon badge + phone left; circular location pin icon badge + address right. Reproduce every zone, blob shape, and layout exactly.";
+      refLines.push(`  • IMAGE ${imgIdx++} (LANDSCAPE TEMPLATE) — ${lsTmplDesc}`);
     }
+    if (hasPhoto) {
+      refLines.push(`  • IMAGE ${imgIdx++} (HERO PHOTO) — the product/service photograph. Seamlessly composite it into the hero photo zone with professional lighting and natural edge blending — no hard rectangular border.`);
+    }
+    logoImg = imgIdx;
     if (hasLogo) {
       refLines.push(`  • IMAGE ${imgIdx} (BUSINESS LOGO) — the exact business logo. Reproduce it pixel-perfect with no stylization, color changes, or distortion.`);
     }
-    logoImg = hasPhoto ? 2 : 1;
   } else if (templateKey === "surprise-me") {
     // No template reference image — Grok invents freely; photo and logo get IMAGE 1/2
     imgIdx = 1;
@@ -441,38 +460,183 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     }
     logoImg = hasPhoto ? 3 : 2;
   }
-  const outputRequirements = isLandscape
+  const outputRequirements = isLandscape && templateKey === "parchment-classic"
     ? (
-      "LAYOUT — this is a LANDSCAPE (3\"×2\") ad, wider than tall. Arrange all elements left-to-right:\n\n" +
-
-      "  LEFT COLUMN (≈40% of width) — BRAND BLOCK:\n" +
+      "LAYOUT — reproduce the Parchment Classic LANDSCAPE template zones exactly:\n\n" +
+      "  ZONE 1 — HEADLINE (dark horizontal brush-stroke band, upper area):\n" +
+      `    Business name "${d.bizName}" in bold condensed all-caps slab serif, white or cream, rendered inside the dark brush-stroke sweep.\n` +
+      `    ONLY IF the name has a common English category noun (Cafe, Grill, Pizza, Bar, etc.) — render ONLY that word in a flowing warm orange script. NEVER repeat any word.\n\n` +
       (hasLogo
-        ? `    • Logo (IMAGE ${logoImg}): place in the upper-left, large and prominent. Preserve exact colors and proportions. Clear margin on all sides.\n`
-        : "") +
-      `    • Business name "${d.bizName}" in bold condensed all-caps slab serif — large, very high contrast against the background. Maximum weight.\n` +
-      (d.tagline ? `    • Tagline "${d.tagline}" in italic script, slightly smaller, directly below the business name.\n` : "") +
-      (d.offer
-        ? `    • Special offer "${d.offer}" displayed prominently — bold, high contrast, clearly readable.\n` +
-          (d.offerFine ? `      Fine print: "${d.offerFine}" in small text below the offer.\n` : "")
-        : "") +
-      `    • Phone "${d.phone || ""}" in bold sans-serif, large enough to read at a glance.\n\n` +
-
-      "  RIGHT SIDE (≈60% of width) — HERO VISUAL:\n" +
+        ? `  ZONE 2 — LOGO (orange bookmark-ribbon pennant, top-left corner):\n` +
+          `    IMAGE ${logoImg} centered inside the orange pennant. Scale to fit with clear margin; preserve exact logo colors.\n` +
+          (d.tagline ? `    Tagline: "${d.tagline}" in italic script beside the pennant.\n` : "") + "\n"
+        : (d.tagline ? `  ZONE 2 — TAGLINE: "${d.tagline}" in italic script beside the pennant.\n\n` : "")) +
+      "  ZONE 3 — SERVICE LIST (left column, parchment area):\n" +
+      (menuStr !== "  (none)"
+        ? `    Orange circular checkmark badges listing: ${menuStr}\n    Each item exactly once.\n\n`
+        : "    Four orange circular checkmark badge items with relevant services for this business type.\n\n") +
       (hasPhoto
-        ? `    • Hero image: use IMAGE 1 as a full-bleed cinematic fill for the entire right portion. No hard rectangular border — blend edges naturally into the background. Professional lighting, vibrant color.\n\n`
-        : `    • Hero image: generate a photorealistic cinematic scene relevant to this business. Vibrant color, professional commercial photography quality, full-bleed into the right zone.\n\n`) +
-
-      "  FOOTER STRIP (full width, bottom edge):\n" +
-      `    • Address "${fullAddress}" in small bold text, left side.\n` +
-      "    • QR code graphic (small, square) in the bottom-right corner.\n" +
-      "    • Thin dark bar background for footer contrast.\n\n" +
-
+        ? `  ZONE 4 — HERO PHOTO (right-center area):\n    Composite IMAGE 2 into the right portion — blend edges into the parchment texture, no hard rectangular border. Cinematic lighting.\n\n`
+        : "") +
+      (d.offer
+        ? `  ZONE 5 — COUPON (dashed dark rectangular box, lower-right):\n` +
+          `    Inside: "${d.offer}" in bold white or cream text, large and prominent.\n` +
+          (d.offerFine ? `    Fine print: "${d.offerFine}" smaller below.\n` : "") + "\n"
+        : "") +
+      "  ZONE 6 — FOOTER (dark strip, full width):\n" +
+      `    Left: phone icon + "${d.phone || ""}" in bold white — large, instantly readable. Zero digit changes.\n` +
+      (fullAddress !== "(none)" ? `    Center: address "${fullAddress}" in white — verbatim.\n` : "") +
+      "    Right: clean QR code graphic. Do NOT render website URL as text.\n\n" +
       "TYPOGRAPHIC RULES:\n" +
-      "  • Business name: bold condensed all-caps slab serif, maximum weight, very high contrast\n" +
-      "  • Phone: bold sans-serif, large and instantly readable\n" +
-      "  • All text crisp and legible — no thin strokes on busy backgrounds\n" +
-      "  • NEVER render the website URL as visible text\n" +
-      "  • No dead space — every area filled with purposeful content"
+      "  • Headline: bold condensed all-caps slab serif, white on dark brush-stroke\n" +
+      "  • Script: warm orange, single English category noun only; never proper nouns\n" +
+      "  • NEVER render website URL as text"
+    )
+    : isLandscape && templateKey === "made-fresh"
+    ? (
+      "LAYOUT — reproduce the Made Fresh LANDSCAPE template zones exactly:\n\n" +
+      "  BACKGROUND: the warm wood-table scene — gingham cloth, white plate, chalkboard 'Made Fresh For You' A-frame sign, and plant props — all exactly as in the template.\n\n" +
+      (hasPhoto
+        ? "  HERO FOOD PHOTO: Composite IMAGE 2 as the featured dish — place it on or near the white plate as the hero food item. Match warm editorial lighting.\n\n"
+        : "") +
+      `  ZONE A — WHITE PAINT-STROKE PANEL (lower-left, over the table):\n` +
+      `    Business name "${d.bizName}" in bold condensed all-caps slab serif — large, dark, prominent.\n` +
+      (d.tagline ? `    Tagline: "${d.tagline}" in handwriting-style italic script below the business name.\n` : "") +
+      `    Phone: "${d.phone || ""}" bold sans-serif — large, instantly readable. Zero digit changes.\n` +
+      (fullAddress !== "(none)" ? `    Address: "${fullAddress}" in smaller sans-serif — verbatim.\n` : "") +
+      (hasLogo ? `    Logo (IMAGE ${logoImg}): upper corner of the white panel; preserve exact colors.\n` : "") + "\n" +
+      (d.offer
+        ? `  ZONE B — GOLDEN TICKET-STUB COUPON (lower-right):\n` +
+          `    Inside: "${d.offer}" in bold dark text, large and prominent.\n` +
+          (d.offerFine ? `    Fine print: "${d.offerFine}" smaller below.\n` : "") + "\n"
+        : "") +
+      "  QR CODE: small clean square QR graphic in a visible lower area. Do NOT render website URL as text.\n\n" +
+      "TYPOGRAPHIC RULES:\n" +
+      "  • Business name: bold condensed all-caps slab serif, dark on white panel\n" +
+      "  • Tagline: handwriting-style italic, slightly smaller\n" +
+      "  • NEVER render website URL as text"
+    )
+    : isLandscape && templateKey === "neighborhood-pro"
+    ? (
+      "LAYOUT — reproduce the Neighborhood Pro LANDSCAPE template zones exactly:\n\n" +
+      "  ZONE 1 — HEADLINE (upper-left, white brush-stroke splash panel):\n" +
+      `    Business name "${d.bizName}" in bold condensed all-caps slab serif — very large, dark green or near-black.\n` +
+      `    ONLY IF the name has a common English service-category word (Lawn, Cleaning, Roofing, etc.) — render ONLY that word in bright lime-green script at a slight angle. NEVER repeat any word.\n\n` +
+      (hasLogo
+        ? `  ZONE 1B — LOGO (IMAGE ${logoImg} inside the white brush-stroke panel). Scale to fit; preserve exact colors.\n` +
+          (d.tagline ? `    Tagline: "${d.tagline}" in italic script, dark green, inside the white area.\n` : "") + "\n"
+        : (d.tagline ? `  ZONE 1B — TAGLINE: "${d.tagline}" in italic script, dark green, inside the white splash area.\n\n` : "")) +
+      "  ZONE 2 — HERO PHOTO (upper-right, full-bleed):\n" +
+      (hasPhoto
+        ? `    Seamlessly composite IMAGE 2 into the upper-right zone. Clean diagonal/curved cut where photo meets the green background. No rectangular border.\n\n`
+        : "    Generate a photorealistic outdoor service scene — bright daylight, vibrant. Full bleed into upper-right zone; no rectangular border.\n\n") +
+      "  ZONE 3 — SERVICE PANELS (middle horizontal row):\n" +
+      "    Four diagonal-cut photo panels, each with a circular lime-green icon badge on top and a white brush-stroke label below.\n" +
+      (menuStr !== "  (none)"
+        ? `    Services: ${menuStr}\n    Each item exactly once.\n\n`
+        : "    Relevant service types for this business. Each item exactly once.\n\n") +
+      (d.offer
+        ? `  ZONE 4 — OFFER (wide white brush-stroke area, lower section):\n` +
+          `    "${d.offer}" in bold dark-green text, large and prominent.\n` +
+          (d.offerFine ? `    Fine print: "${d.offerFine}" smaller below.\n` : "") + "\n"
+        : "") +
+      "  ZONE 5 — FOOTER (dark green bar, full width):\n" +
+      `    Left: phone icon + "${d.phone || ""}" in bold white — large. Zero digit changes.\n` +
+      (fullAddress !== "(none)" ? `    Center: location pin + address "${fullAddress}" in white — verbatim.\n` : "") +
+      "    Right: clean QR code graphic. Do NOT render website URL as text.\n\n" +
+      "TYPOGRAPHIC RULES:\n" +
+      "  • Headline: bold condensed all-caps slab serif, dark green or near-black\n" +
+      "  • Script: bright lime-green, single English service-category noun only\n" +
+      "  • NEVER render website URL as text"
+    )
+    : isLandscape && templateKey === "at-your-service"
+    ? (
+      "LAYOUT — reproduce the At Your Service LANDSCAPE template zones exactly:\n\n" +
+      (hasLogo
+        ? `  ZONE 1 — LOGO (IMAGE ${logoImg} centered inside the dark navy hexagonal badge, upper-left). Scale to fit; preserve exact colors.\n\n`
+        : "") +
+      `  ZONE 2 — HEADLINE (beside the hexagonal badge, upper-left):\n` +
+      `    Business name "${d.bizName}" in bold condensed all-caps slab serif — very large, dark navy blue.\n` +
+      `    ONLY IF the name has a common English service-category noun — render ONLY that word in gold/yellow script. NEVER repeat any word.\n` +
+      (d.tagline ? `    Tagline: "${d.tagline}" in clean italic script, dark navy, below the headline.\n` : "") + "\n" +
+      "  ZONE 3 — HERO PHOTO (upper-right, large photo zone):\n" +
+      (hasPhoto
+        ? `    Composite IMAGE 2 — blend left edge into the background; gold brush-stroke overlaps the photo at top. No hard border.\n\n`
+        : "    Generate professional tools/equipment or home-service scene. Fill upper-right zone, left edge blends naturally.\n\n") +
+      "  ZONE 4 — SERVICE BADGES (wide dark navy band, center full width):\n" +
+      "    Four circular white icon service badges on the navy band.\n" +
+      (menuStr !== "  (none)"
+        ? `    Use icons for: ${menuStr}\n    Each service once only.\n\n`
+        : "    Use home-service icons (house, paint roller, wrench, lightbulb). Each once only.\n\n") +
+      (d.offer
+        ? `  ZONE 5 — COUPON (gold/yellow dashed-border box, lower-right):\n` +
+          `    "${d.offer}" in bold dark navy text, prominent.\n` +
+          (d.offerFine ? `    Fine print: "${d.offerFine}" smaller below.\n` : "") + "\n"
+        : "") +
+      "  ZONE 6 — FOOTER (full width, bottom edge):\n" +
+      `    Left: location-pin icon badge + address "${fullAddress !== "(none)" ? fullAddress : ""}" in white — verbatim.\n` +
+      `    Center: phone icon badge + "${d.phone || ""}" in bold white — large. Zero digit changes.\n` +
+      "    Right: clean QR code graphic. Do NOT render website URL as text.\n\n" +
+      "TYPOGRAPHIC RULES:\n" +
+      "  • Headline: bold condensed all-caps slab serif, dark navy blue\n" +
+      "  • Script: gold/yellow, single English service-category noun only\n" +
+      "  • Gold/yellow brush stroke must remain visible in the upper area\n" +
+      "  • NEVER render website URL as text"
+    )
+    : isLandscape && templateKey === "health-wellness"
+    ? (
+      "LAYOUT — reproduce the Health & Wellness LANDSCAPE template zones exactly:\n\n" +
+      "  ZONE 1 — PHOTOS (upper area, inside organic teal blob shapes):\n" +
+      (hasPhoto
+        ? `    Composite IMAGE 2 into the upper-left organic teal blob zone — edges blend naturally into the teal shape. Professional wellness lighting.\n` +
+          "    Generate a complementary second clinic or wellness image for any remaining blob zone.\n\n"
+        : "    Generate two photorealistic clinic or wellness images for the teal blob zones. Edges blend naturally — no rectangular borders.\n\n") +
+      `  ZONE 2 — HEADLINE (large rounded-rectangle white panel, upper-center):\n` +
+      `    "${d.bizName}" in bold condensed all-caps sans-serif — very large, dark teal or near-black. Each word EXACTLY ONCE — NEVER repeat.\n\n` +
+      (d.tagline ? `  ZONE 3 — TAGLINE (teal pill-shaped bar below the white panel):\n    "${d.tagline}" in clean white sans-serif, centered inside the teal pill bar.\n\n` : "") +
+      "  ZONE 4 — SERVICE PANELS (four equal-width, middle section):\n" +
+      "    Circular teal icon badge on top + white rounded-rectangle text box below per panel.\n" +
+      (menuStr !== "  (none)"
+        ? `    Services: ${menuStr}\n    Each service exactly once.\n\n`
+        : "    Relevant wellness/medical services for this practice. Each once only.\n\n") +
+      (hasLogo ? `  LOGO: IMAGE ${logoImg} in an upper corner or within the headline panel. Preserve exact colors.\n\n` : "") +
+      (d.offer
+        ? `  ZONE 5 — OFFER:\n    "${d.offer}" prominently in an available white area.\n` +
+          (d.offerFine ? `    Fine print: "${d.offerFine}" smaller below.\n` : "") + "\n"
+        : "") +
+      "  QR CODE: small white rounded square in the lower-right area. Do NOT render website URL as text.\n\n" +
+      "  ZONE 6 — FOOTER (dark teal bar, full width):\n" +
+      `    Left: circular phone icon badge + "${d.phone || ""}" in bold white — large. Zero digit changes.\n` +
+      (fullAddress !== "(none)" ? `    Right: circular location pin badge + address "${fullAddress}" in bold white — verbatim.\n` : "") + "\n" +
+      "TYPOGRAPHIC RULES:\n" +
+      "  • Headline: bold condensed all-caps sans-serif, dark teal or near-black\n" +
+      "  • NEVER repeat any word from the business name\n" +
+      "  • NEVER render website URL as text"
+    )
+    : isLandscape
+    ? (
+      // Surprise Me landscape — full creative freedom in a horizontal format
+      "DESIGN BRIEF — create a completely ORIGINAL LANDSCAPE (3\"×2\", wider than tall) postcard ad for this business. You have full creative freedom:\n\n" +
+      `  Look at the INDUSTRY ("${d.industry}") and BUSINESS NAME ("${d.bizName}") and let them drive the design.\n\n` +
+      "  FORBIDDEN — do NOT recreate any of these existing styles:\n" +
+      "    • Parchment/rustic (ivory, orange pennant, dark brush-stroke, checkmarks)\n" +
+      "    • Chalkboard/bistro (dark chalkboard, wood table, golden ticket)\n" +
+      "    • Forest-green contractor (green bg, white brush splashes, lime script)\n" +
+      "    • Navy/gold home services (navy hexagon, gold brush-stroke, icon band)\n" +
+      "    • Teal/sage wellness (teal blobs, pill bar, cream background)\n\n" +
+      "  REQUIRED ZONES (place however fits a landscape layout):\n" +
+      `    HEADLINE: "${d.bizName}" — very large, dominant, instantly readable.\n` +
+      (hasPhoto ? `    HERO PHOTO: IMAGE 1 — dominant visual, organic-masked edges, cinematic lighting.\n` : "    HERO IMAGE: generate a photorealistic business-appropriate hero image.\n") +
+      (hasLogo ? `    LOGO: IMAGE ${logoImg} — placed exactly as provided, no stylization.\n` : "") +
+      (d.tagline ? `    TAGLINE: "${d.tagline}" — supporting, below headline.\n` : "") +
+      (menuStr !== "  (none)" ? `    SERVICES: ${menuStr} — each item once only.\n` : "") +
+      (d.offer ? `    SPECIAL OFFER: "${d.offer}" — prominent.\n` + (d.offerFine ? `    Fine print: "${d.offerFine}".\n` : "") : "") +
+      `    FOOTER: Phone "${d.phone || ""}" — bold, large. Zero digit changes.\n` +
+      (fullAddress !== "(none)" ? `    Address "${fullAddress}" — verbatim in footer.\n` : "") +
+      "    QR CODE: clean square graphic in footer. Do NOT render website URL as text.\n\n" +
+      "TYPOGRAPHIC RULES:\n" +
+      "  • NEVER repeat any word; each appears exactly once\n" +
+      "  • NEVER render website URL as text"
     )
     : templateKey === "neighborhood-pro"
     ? (
@@ -766,11 +930,17 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     );
 
   const adPrompt =
-    (isLandscape
-      ? "You are a world-class print advertising art director. " +
-        "Create a PRINT-READY premium LANDSCAPE postcard ad for a local business — " +
-        "the result must look like a single cohesive ad designed by a top agency.\n\n"
-      : templateKey === "surprise-me"
+    (isLandscape && templateKey === "surprise-me"
+      ? "You are a world-class print advertising art director with complete creative freedom. " +
+        "Invent a PRINT-READY premium LANDSCAPE (3\"×2\") postcard ad from scratch — original layout, original color scheme, original typography — " +
+        "tailored specifically to this business's industry and personality. " +
+        "The result must look like a bespoke ad designed by a top agency for this exact business, not a generic template.\n\n"
+      : isLandscape
+        ? "You are a world-class print advertising art director and expert photo compositor. " +
+          "Create a PRINT-READY premium LANDSCAPE (3\"×2\") postcard ad by taking the template layout and seamlessly integrating " +
+          "the business details and any provided reference photos into it — the result must look like a single cohesive ad designed by a top agency, " +
+          "not a template with content pasted on top.\n\n"
+        : templateKey === "surprise-me"
         ? "You are a world-class print advertising art director with complete creative freedom. " +
           "Invent a PRINT-READY premium postcard ad from scratch — original layout, original color scheme, original typography — " +
           "tailored specifically to this business's industry and personality. " +
@@ -1108,12 +1278,18 @@ router.get("/grok-ad-generator", (_req, res) => {
 router.get("/grok-ad-generator/template-preview/:key", (req, res) => {
   const key = req.params["key"];
   const fileMap: Record<string, string> = {
-    "parchment-classic":   "mr_biscuits_template_no_logo_1778806527327.png",
-    "made-fresh":          "made_fresh_template.png",
-    "neighborhood-pro":    "6300F2D5-6BF1-403E-A40B-7203E4E26402_1778948283280.jpeg",
-    "at-your-service":     "IMG_0728_1779065210873.jpeg",
-    "health-wellness":     "healthcare_generic_template_1779141099043.png",
-    "surprise-me":         "surprise_me_template.png",
+    "parchment-classic":             "mr_biscuits_template_no_logo_1778806527327.png",
+    "made-fresh":                    "made_fresh_template.png",
+    "neighborhood-pro":              "6300F2D5-6BF1-403E-A40B-7203E4E26402_1778948283280.jpeg",
+    "at-your-service":               "IMG_0728_1779065210873.jpeg",
+    "health-wellness":               "healthcare_generic_template_1779141099043.png",
+    "surprise-me":                   "surprise_me_template.png",
+    // landscape variants
+    "parchment-classic-landscape":   "parchment_classic_landscape_1779162178190.png",
+    "made-fresh-landscape":          "made_fresh_landscape_1779162178190.png",
+    "neighborhood-pro-landscape":    "IMG_0747_1779162178190.png",
+    "at-your-service-landscape":     "IMG_0746_1779162178190.png",
+    "health-wellness-landscape":     "healthcare_wellness_landscape_1779162178190.png",
   };
   const filename = fileMap[key];
   if (!filename) { res.status(404).send("Not found"); return; }
@@ -1431,11 +1607,44 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
             <div class="tmpl-sel-badge" id="badge-surprise-me" style="display:none">&#10003; Selected</div>
           </div>
         </div>
-        <!-- Landscape placeholder (shown only when spot is landscape) -->
-        <div class="tmpl-landscape-ph" id="tmplLandscapePh">
-          <div class="tmpl-landscape-ph-icon">&#128444;&#65039;</div>
-          <div class="tmpl-landscape-ph-title">Landscape templates coming soon</div>
-          <div class="tmpl-landscape-ph-sub">Your ad will still be generated &mdash; Grok will fill the landscape canvas with your business info and photo.</div>
+        <!-- Landscape template grid (shown only when spot is landscape) -->
+        <div class="tmpl-grid landscape" id="tmplLandscapeGrid" style="display:none">
+          <div class="tmpl-card active" id="tmpl-ls-parchment-classic" onclick="selectTemplate('parchment-classic')">
+            <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/parchment-classic-landscape" alt="Parchment Classic" onerror="this.style.background='#e8e3dc'">
+            <div class="tmpl-card-name">Parchment Classic</div>
+            <div class="tmpl-card-sub">Parchment &middot; Brush stroke &middot; Rustic charm</div>
+            <div class="tmpl-sel-badge" id="badge-ls-parchment-classic">&#10003; Selected</div>
+          </div>
+          <div class="tmpl-card" id="tmpl-ls-made-fresh" onclick="selectTemplate('made-fresh')">
+            <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/made-fresh-landscape" alt="Made Fresh" onerror="this.style.background='#f0f9f0'">
+            <div class="tmpl-card-name">Made Fresh</div>
+            <div class="tmpl-card-sub">Warm wood &middot; Chalkboard &middot; Fresh &amp; modern</div>
+            <div class="tmpl-sel-badge" id="badge-ls-made-fresh" style="display:none">&#10003; Selected</div>
+          </div>
+          <div class="tmpl-card" id="tmpl-ls-health-wellness" onclick="selectTemplate('health-wellness')">
+            <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/health-wellness-landscape" alt="Health &amp; Wellness" onerror="this.style.background='#e8f5f5'">
+            <div class="tmpl-card-name">Health &amp; Wellness</div>
+            <div class="tmpl-card-sub">Teal &amp; sage &middot; Medical &amp; wellness &middot; Calming</div>
+            <div class="tmpl-sel-badge" id="badge-ls-health-wellness" style="display:none">&#10003; Selected</div>
+          </div>
+          <div class="tmpl-card" id="tmpl-ls-at-your-service" onclick="selectTemplate('at-your-service')">
+            <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/at-your-service-landscape" alt="At Your Service" onerror="this.style.background='#1a2744'">
+            <div class="tmpl-card-name">At Your Service</div>
+            <div class="tmpl-card-sub">Navy &amp; gold &middot; Home services &middot; Professional</div>
+            <div class="tmpl-sel-badge" id="badge-ls-at-your-service" style="display:none">&#10003; Selected</div>
+          </div>
+          <div class="tmpl-card" id="tmpl-ls-neighborhood-pro" onclick="selectTemplate('neighborhood-pro')">
+            <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/neighborhood-pro-landscape" alt="Neighborhood Pro" onerror="this.style.background='#e8f5e9'">
+            <div class="tmpl-card-name">Neighborhood Pro</div>
+            <div class="tmpl-card-sub">Forest green &middot; Outdoor &middot; Service panels</div>
+            <div class="tmpl-sel-badge" id="badge-ls-neighborhood-pro" style="display:none">&#10003; Selected</div>
+          </div>
+          <div class="tmpl-card" id="tmpl-ls-surprise-me" onclick="selectTemplate('surprise-me')">
+            <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/surprise-me" alt="Surprise Me" onerror="this.style.background='linear-gradient(135deg,#7b1418,#1b2a4a,#1c3a1c)';this.style.display='flex';this.style.alignItems='center';this.style.justifyContent='center';this.innerHTML='<span style=font-size:2em>&#10067;</span>'">
+            <div class="tmpl-card-name">Surprise Me</div>
+            <div class="tmpl-card-sub">Grok invents &middot; Industry-driven &middot; Fully original</div>
+            <div class="tmpl-sel-badge" id="badge-ls-surprise-me" style="display:none">&#10003; Selected</div>
+          </div>
         </div>
       </div>
     </div>
@@ -1590,28 +1799,32 @@ function getOrientation(sizeKey){
 }
 function applyTemplateOrientation(){
   var orientation = getOrientation(_spotSize);
-  var grid = document.getElementById('tmplGrid');
-  var ph   = document.getElementById('tmplLandscapePh');
-  var lbl  = document.getElementById('tmplOrientationLabel');
+  var pgrid = document.getElementById('tmplGrid');
+  var lgrid = document.getElementById('tmplLandscapeGrid');
+  var lbl   = document.getElementById('tmplOrientationLabel');
   var d = SIZE_DIMS[_spotSize] || SIZE_DIMS.XL;
   if(lbl) lbl.textContent = orientation.charAt(0).toUpperCase()+orientation.slice(1)+' \u00b7 '+d.w/100+'\u2033\u00d7'+d.h/100+'\u2033';
-  if(!grid) return;
-  grid.classList.remove('portrait','landscape','square');
-  grid.classList.add(orientation);
   var isLandscape = orientation === 'landscape';
-  grid.style.display = isLandscape ? 'none' : 'grid';
-  if(ph) ph.classList.toggle('visible', isLandscape);
+  if(pgrid){ pgrid.classList.remove('portrait','landscape','square'); pgrid.classList.add(orientation); pgrid.style.display = isLandscape ? 'none' : 'grid'; }
+  if(lgrid){ lgrid.style.display = isLandscape ? 'grid' : 'none'; }
+  // Refresh the active-card state in whichever grid is now visible
+  selectTemplate(_activeTemplate);
 }
 
 function selectTemplate(key){
-  if(_activeTemplate === key) return;
   _activeTemplate = key;
   document.querySelectorAll('.tmpl-card').forEach(function(c){ c.classList.remove('active'); });
   document.querySelectorAll('.tmpl-sel-badge').forEach(function(b){ b.style.display='none'; });
+  // Portrait grid
   var card = document.getElementById('tmpl-' + key);
-  var badge = document.getElementById('badge-' + key);
   if(card){ card.classList.add('active'); }
+  var badge = document.getElementById('badge-' + key);
   if(badge){ badge.style.display=''; }
+  // Landscape grid
+  var lcard = document.getElementById('tmpl-ls-' + key);
+  if(lcard){ lcard.classList.add('active'); }
+  var lbadge = document.getElementById('badge-ls-' + key);
+  if(lbadge){ lbadge.style.display=''; }
 }
 
 function onFormChange(){
