@@ -1033,14 +1033,17 @@ const handleRefine = useCallback(async () => {
   setRefineError("");
   try {
     const result = await refineGrokAd({
-      imageDataUrl: generatedImageUrl,
-      instruction: refineInstruction.trim(),
-      sizeKey: sizeKey || "XL",
+      data: {
+        imageDataUrl: generatedImageUrl,
+        instruction: refineInstruction.trim(),
+        sizeKey: sizeKey || "XL",
+      },
     });
     setGeneratedImageUrl(result.imageUrl);
     setRefineInstruction("");
   } catch (err) {
-    setRefineError(err?.message ?? "Refinement failed — please try again.");
+    const serverMsg = err?.response?.data?.error ?? err?.message;
+    setRefineError(serverMsg ?? "Refinement failed — please try again.");
   }
 }, [generatedImageUrl, refineInstruction, sizeKey, refineGrokAd]);
 
