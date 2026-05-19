@@ -6,6 +6,12 @@ uri = "file://artifacts/localspot/public/postcard-hero.png"
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "AcXmr-2i4C1D_lAfAtXHn"
+uri = "file://attached_assets/surprise_me_template.png"
+type = "image"
+title = "surprise me template"
+
 [[outputs]]
 id = "PFielsSQtDhpuVmd1ITB4"
 uri = "file://postcard_picker_code_dump.txt"

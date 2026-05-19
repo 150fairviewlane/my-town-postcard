@@ -68,6 +68,11 @@ const FONT_VARIANTS: Record<string, string[]> = {
     "Typography variant B — Headline: refined humanist sans-serif (Lato Bold / Raleway SemiBold style), mixed-case or small-caps. Script accent: soft sage-green cursive for a single wellness noun only. Calm, nurturing feel.",
     "Typography variant C — Headline: elegant display serif (Cormorant Garamond Bold / Libre Baskerville Bold style), all-caps. No script accent — sophisticated serif confidence. Upscale boutique wellness look.",
   ],
+  "surprise-me": [
+    "Typography variant A — Bold editorial display: strong condensed serif headline (Playfair Display Black / Rockwell Extra Bold style), all-caps, dominant weight. Script accent: flowing warm-toned script for a single English category noun only. Premium layered editorial headline.",
+    "Typography variant B — Modern geometric: ultra-clean bold sans-serif headline (Futura ExtraBold / Bebas Neue style), all-caps, zero ornamentation. No script accent. Confident, minimal, high-contrast.",
+    "Typography variant C — Vintage artisan: expressive wood-type display or slab (Alfa Slab One / Zilla Slab Highlight style), all-caps, textured feel. No script accent. Handcrafted, collectible, character-driven.",
+  ],
 };
 
 const COUPON_VARIANTS: string[] = [
@@ -101,6 +106,11 @@ const COLOR_VARIANTS: Record<string, string[]> = {
     "Color palette A — Primary: teal (#3D8B9C). Background: cream/off-white (#F8F4EE). Accent: sage green (#7CB99A). Footer: dark teal (#1F4E5F). Calm, trustworthy clinical warmth.",
     "Color palette B — Primary: deep teal (#2A7080). Background: warm white (#FDFAF6). Accent: soft coral (#E8927C). Footer: darkest teal (#163844). Nurturing boutique wellness feel.",
     "Color palette C — Primary: forest teal (#1F5C5A). Background: light mint (#E8F5F0). Accent: warm gold (#D4A843). Footer: deep forest teal (#0E3330). Upscale spa and wellness luxury.",
+  ],
+  "surprise-me": [
+    "Color palette A — Warm and rich: dominant deep burgundy/crimson (#7B1418) paired with warm ivory (#FAF3E0) and antique gold (#C8A33A) accents. Footer: near-black (#1A0A0A). Appetite-driving, premium editorial warmth.",
+    "Color palette B — Cool and bold: dominant deep navy/charcoal (#1B2A4A) paired with crisp white (#FFFFFF) and electric blue or vivid coral (#2E86DE or #E84545) as the hero accent. Footer: near-black navy (#0D1829). High-contrast, authoritative, modern.",
+    "Color palette C — Natural and fresh: dominant deep forest green (#1C3A1C) paired with warm cream (#F5EDD0) and warm amber (#D4882A) accents. Footer: near-black with green undertone (#0F1C10). Earthy, premium, inviting.",
   ],
 };
 
@@ -278,7 +288,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   const templateKey = d.template || "parchment-classic";
   let tmplBuf: Buffer | null = null;
   let tmplMime = "image/png";
-  if (!isLandscape) {
+  if (!isLandscape && templateKey !== "surprise-me") {
     const tmplFilename =
       templateKey === "made-fresh"
         ? "made_fresh_template.png"
@@ -342,6 +352,16 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     imgIdx = 1;
     if (hasPhoto) {
       refLines.push(`  • IMAGE ${imgIdx++} (HERO PHOTO) — the product/service photograph. Use as the dominant hero visual filling the right portion of the ad.`);
+    }
+    if (hasLogo) {
+      refLines.push(`  • IMAGE ${imgIdx} (BUSINESS LOGO) — the exact business logo. Reproduce it pixel-perfect with no stylization, color changes, or distortion.`);
+    }
+    logoImg = hasPhoto ? 2 : 1;
+  } else if (templateKey === "surprise-me") {
+    // No template reference image — Grok invents freely; photo and logo get IMAGE 1/2
+    imgIdx = 1;
+    if (hasPhoto) {
+      refLines.push(`  • IMAGE ${imgIdx++} (HERO PHOTO) — the product/service photograph. Integrate it as the dominant hero visual in whatever layout you design.`);
     }
     if (hasLogo) {
       refLines.push(`  • IMAGE ${imgIdx} (BUSINESS LOGO) — the exact business logo. Reproduce it pixel-perfect with no stylization, color changes, or distortion.`);
@@ -538,6 +558,55 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "  • Fine print: smallest text, still legible\n" +
       "  • NEVER render the website URL as visible text"
     )
+    : templateKey === "surprise-me"
+    ? (
+      "DESIGN BRIEF — create a completely ORIGINAL postcard ad for this business. You have full creative freedom:\n\n" +
+
+      "  CREATIVE DIRECTION:\n" +
+      `    Look at the INDUSTRY ("${d.industry}") and BUSINESS NAME ("${d.bizName}") and let them drive your entire design aesthetic.\n` +
+      "    • Food / restaurant / cafe / bakery → warm cinematic food photography, menu panels, rich appetizing color, editorial script accents\n" +
+      "    • Contractor / outdoor / trades / lawn / roofing / cleaning → bold action scenes, high-contrast colors, strong authority layout\n" +
+      "    • Health / wellness / medical / chiropractic / dental → calming organic shapes, clean clinical photography, soft palette\n" +
+      "    • Retail / boutique / beauty / salon / spa → lifestyle photography, editorial typography, mood-driven color\n" +
+      "    • Professional services / finance / legal / real estate → structured authority layout, trust signals, refined palette\n" +
+      "    • Any other industry → infer the best premium advertising aesthetic from the business name and details\n\n" +
+
+      "  FORBIDDEN — do NOT recreate any of these five existing ad styles:\n" +
+      "    • Parchment/rustic (warm ivory background, orange pennant ribbon, brush-stroke swoosh, burgundy)\n" +
+      "    • Chalkboard/bistro (dark chalkboard, wood table, golden ticket, gingham)\n" +
+      "    • Forest-green contractor (deep green background, white paint-brush splashes, lime-green script accent)\n" +
+      "    • Navy/gold home services (navy hexagonal badge, gold brush-stroke, circular icon band)\n" +
+      "    • Teal/sage wellness (teal blob shapes, teal pill bar, cream background, teal footer)\n" +
+      "    Invent something genuinely distinct.\n\n" +
+
+      "  REQUIRED CONTENT ZONES (place and style these however fits your design):\n" +
+      `    HEADLINE: Business name "${d.bizName}" — very large, dominant, instantly readable at a glance. Maximum typographic impact.\n` +
+      (hasPhoto
+        ? `    HERO PHOTO: IMAGE ${imgIdx > 1 ? imgIdx - 1 : 1} — integrate the provided photo as the dominant visual centerpiece of the ad. Professional lighting, cinematic quality. No hard rectangular border.\n`
+        : `    HERO IMAGE: Generate a stunning, business-appropriate hero image — cinematic quality, professional photography aesthetic.\n`) +
+      (hasLogo ? `    LOGO: IMAGE ${logoImg} — place exactly as provided, no stylization or color changes.\n` : "") +
+      (d.tagline ? `    TAGLINE: "${d.tagline}" — supporting, secondary to headline.\n` : "") +
+      (menuStr !== "  (none)" ? `    SERVICES/MENU: ${menuStr} — displayed clearly, not crowded. Each item exactly once.\n` : "") +
+      (d.offer
+        ? `    SPECIAL OFFER: "${d.offer}" — given prominent visual emphasis.\n` +
+          (d.offerFine ? `    Fine print: "${d.offerFine}" — smaller but legible.\n` : "")
+        : "") +
+      `    FOOTER: Phone "${d.phone || ""}" — BOLD, large, instantly readable. Zero digit changes.\n` +
+      (fullAddress !== "(none)" ? `    Address "${fullAddress}" — must appear verbatim in footer.\n` : "") +
+      "    QR CODE: clean square graphic in footer lower-right corner. Do NOT render the website URL as visible text.\n\n" +
+
+      "  QUALITY STANDARD:\n" +
+      "    The result must look like it was designed by a top print advertising agency — premium photography, " +
+      "    confident typography hierarchy, rich color treatment, print-ready sharpness. " +
+      "    No generic clip-art, no crowded layouts, no thin strokes on busy backgrounds.\n\n" +
+
+      "TYPOGRAPHIC RULES:\n" +
+      "  • Headline: very large, maximum weight — instantly legible\n" +
+      "  • NEVER repeat any word from the business name — each word appears exactly once across the entire ad\n" +
+      "  • Footer text: bold, easily readable at arm's length\n" +
+      "  • Fine print: smallest text, still legible\n" +
+      "  • NEVER render the website URL as visible text"
+    )
     : templateKey === "health-wellness"
     ? (
       "LAYOUT — reproduce the Health & Wellness template zones exactly as described:\n\n" +
@@ -652,10 +721,15 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       ? "You are a world-class print advertising art director. " +
         "Create a PRINT-READY premium LANDSCAPE postcard ad for a local business — " +
         "the result must look like a single cohesive ad designed by a top agency.\n\n"
-      : "You are a world-class print advertising art director and expert photo compositor. " +
-        "Create a PRINT-READY premium postcard ad by taking the template layout and seamlessly integrating " +
-        "the business details and any provided reference photos into it — the result must look like a single cohesive ad designed by a top agency, " +
-        "not a template with content pasted on top.\n\n") +
+      : templateKey === "surprise-me"
+        ? "You are a world-class print advertising art director with complete creative freedom. " +
+          "Invent a PRINT-READY premium postcard ad from scratch — original layout, original color scheme, original typography — " +
+          "tailored specifically to this business's industry and personality. " +
+          "The result must look like a bespoke ad designed by a top agency for this exact business, not a generic template.\n\n"
+        : "You are a world-class print advertising art director and expert photo compositor. " +
+          "Create a PRINT-READY premium postcard ad by taking the template layout and seamlessly integrating " +
+          "the business details and any provided reference photos into it — the result must look like a single cohesive ad designed by a top agency, " +
+          "not a template with content pasted on top.\n\n") +
     (refLines.length > 0
       ? `REFERENCE IMAGES: You are provided ${refLines.length} reference image${refLines.length > 1 ? "s" : ""}. ` +
         "Treat them as distinct inputs — do NOT merge their design styles or treat any of them as already finished:\n" +
@@ -857,6 +931,7 @@ router.get("/grok-ad-generator/template-preview/:key", (req, res) => {
     "neighborhood-pro":    "6300F2D5-6BF1-403E-A40B-7203E4E26402_1778948283280.jpeg",
     "at-your-service":     "IMG_0728_1779065210873.jpeg",
     "health-wellness":     "healthcare_generic_template_1779141099043.png",
+    "surprise-me":         "surprise_me_template.png",
   };
   const filename = fileMap[key];
   if (!filename) { res.status(404).send("Not found"); return; }
@@ -1130,11 +1205,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
             <div class="tmpl-card-sub">Warm wood &middot; Chalkboard &middot; Fresh &amp; modern</div>
             <div class="tmpl-sel-badge" id="badge-made-fresh" style="display:none">&#10003; Selected</div>
           </div>
-          <div class="tmpl-card disabled">
-            <div class="tmpl-thumb" style="display:flex;align-items:center;justify-content:center;font-size:22px;background:#f5f5f5">&#128396;</div>
-            <div class="tmpl-card-name" style="color:#bbb">Bold &amp; Modern</div>
-            <div class="cs-badge">Coming Soon</div>
-          </div>
           <div class="tmpl-card" id="tmpl-health-wellness" onclick="selectTemplate('health-wellness')">
             <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/health-wellness" alt="Health &amp; Wellness" onerror="this.style.background='#e8f5f5'">
             <div class="tmpl-card-name">Health &amp; Wellness</div>
@@ -1151,6 +1221,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
             <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/neighborhood-pro" alt="Neighborhood Pro" onerror="this.style.background='#e8f5e9'">
             <div class="tmpl-card-name">Neighborhood Pro</div>
             <div class="tmpl-sel-badge" id="badge-neighborhood-pro" style="display:none">&#10003; Selected</div>
+          </div>
+          <div class="tmpl-card" id="tmpl-surprise-me" onclick="selectTemplate('surprise-me')">
+            <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/surprise-me" alt="Surprise Me" onerror="this.style.background='linear-gradient(135deg,#7b1418,#1b2a4a,#1c3a1c)';this.style.display='flex';this.style.alignItems='center';this.style.justifyContent='center';this.innerHTML='<span style=font-size:2em>&#10067;</span>'">
+            <div class="tmpl-card-name">Surprise Me</div>
+            <div class="tmpl-card-sub">Grok invents &middot; Industry-driven &middot; Fully original</div>
+            <div class="tmpl-sel-badge" id="badge-surprise-me" style="display:none">&#10003; Selected</div>
           </div>
         </div>
         <!-- Landscape placeholder (shown only when spot is landscape) -->
