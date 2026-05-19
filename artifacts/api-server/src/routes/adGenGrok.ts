@@ -995,12 +995,13 @@ router.post("/grok-ad-generator/refine", async (req, res) => {
   const mime = match[1] as string;
   const imageBuf = Buffer.from(match[2]!, "base64");
 
-  // Use the same aspect ratios as the generate endpoint (4:5 is unsupported; sharp crops to exact dims)
+  // Same aspect ratios + print-quality crop dims as the generate endpoint
+  // (4:5 is unsupported by xAI; 3:4 is the closest; sharp crops to exact pixel dims)
   const SIZE_MAP: Record<string, { w: number; h: number; aspect: string }> = {
-    XL: { w: 400, h: 500, aspect: "3:4" },
-    L:  { w: 300, h: 400, aspect: "3:4" },
-    M:  { w: 300, h: 200, aspect: "3:2" },
-    S:  { w: 200, h: 200, aspect: "1:1" },
+    XL: { w: 1200, h: 1500, aspect: "3:4" },
+    L:  { w: 900,  h: 1200, aspect: "3:4" },
+    M:  { w: 900,  h: 600,  aspect: "3:2" },
+    S:  { w: 600,  h: 600,  aspect: "1:1" },
   };
   const dim = SIZE_MAP[sizeKey.toUpperCase()] ?? SIZE_MAP["XL"]!;
 
@@ -1040,6 +1041,7 @@ router.post("/grok-ad-generator/refine", async (req, res) => {
       const errMsg =
         (typeof errRaw === "string" ? errRaw : undefined)
         ?? ((errRaw as Record<string, unknown> | undefined)?.["message"] as string | undefined)
+        ?? (typeof body["_raw"] === "string" ? body["_raw"] : undefined)
         ?? `xAI API error ${xaiRes.status}`;
       req.log.error({ status: xaiRes.status, errMsg }, "grok-refine error");
       res.status(502).json({ error: errMsg });
