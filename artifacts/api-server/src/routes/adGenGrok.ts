@@ -798,6 +798,41 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     "NO DUPLICATE SERVICES OR MENU ITEMS: each service or menu item from the list must appear exactly once in the ad — never repeat the same item or a near-synonym of it in two different zones or icon badges.\n\n" +
     "BUSINESS DETAILS:\n" + businessBlock;
 
+  // ── Enforce xAI 8000-char prompt limit ───────────────────────────────────────
+  // The structural/template sections are fixed; the menu list is the main variable.
+  // Progressively trim menu items until we're under the limit; hard-truncate as a
+  // final safety net so xAI never rejects the request.
+  const MAX_PROMPT_CHARS = 7900;
+  let finalAdPrompt = adPrompt;
+  if (finalAdPrompt.length > MAX_PROMPT_CHARS) {
+    const allItems = d.menu.filter(Boolean);
+    for (const limit of [8, 5, 3, 1, 0]) {
+      if (finalAdPrompt.length <= MAX_PROMPT_CHARS) break;
+      const kept = allItems.slice(0, limit);
+      const menuReplacement =
+        kept.length > 0
+          ? kept.map((m, i) => `  ${i + 1}. ${m}`).join("\n") +
+            (allItems.length > kept.length ? `\n  (+ ${allItems.length - kept.length} more)` : "")
+          : "  (none)";
+      finalAdPrompt = finalAdPrompt.replace(
+        /Menu\/Services :\n[\s\S]*?(?=\nSpecial Offer )/,
+        `Menu/Services :\n${menuReplacement}`,
+      );
+    }
+    if (finalAdPrompt.length > MAX_PROMPT_CHARS) {
+      req.log.warn(
+        { origLen: adPrompt.length, trimmedLen: finalAdPrompt.length },
+        "grok-imagine: prompt still over limit after menu trim — hard-truncating",
+      );
+      finalAdPrompt = finalAdPrompt.slice(0, MAX_PROMPT_CHARS);
+    } else {
+      req.log.info(
+        { origLen: adPrompt.length, trimmedLen: finalAdPrompt.length },
+        "grok-imagine: prompt trimmed to fit xAI 8000-char limit",
+      );
+    }
+  }
+
   // ── Build images array for xAI /images/edits ────────────────────────────────
   // grok-imagine-image-quality accepts up to 3 reference images as separate
   // `{ type: "image_url", url: "data:mime;base64,..." }` objects in an `images`
@@ -855,7 +890,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
 
     const editsBody: Record<string, unknown> = {
       model:        "grok-imagine-image-quality",
-      prompt:       adPrompt,
+      prompt:       finalAdPrompt,
       n:            1,
       images:       imageRefs,
       aspect_ratio: spotAspectRatio,
