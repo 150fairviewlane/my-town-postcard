@@ -937,7 +937,8 @@ router.get("/grok-ad-generator/template-preview/:key", (req, res) => {
   if (!filename) { res.status(404).send("Not found"); return; }
   const p = path.join(WORKSPACE_ROOT, "attached_assets", filename);
   if (!fs.existsSync(p)) { res.status(404).send("Not found"); return; }
-  res.setHeader("Content-Type", "image/png");
+  const mime = /\.(jpe?g)$/i.test(filename) ? "image/jpeg" : "image/png";
+  res.setHeader("Content-Type", mime);
   res.setHeader("Cache-Control", "public, max-age=86400");
   fs.createReadStream(p).pipe(res);
 });
