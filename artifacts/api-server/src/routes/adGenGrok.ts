@@ -944,6 +944,117 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   }
 });
 
+// ── POST /api/grok-ad-generator/refine ───────────────────────────────────────
+const RefineSchema = z.object({
+  imageDataUrl: z.string().min(1, "imageDataUrl is required"),
+  instruction:  z.string().min(1, "instruction is required").max(500),
+  sizeKey:      z.string().optional().default("XL"),
+});
+
+router.post("/grok-ad-generator/refine", async (req, res) => {
+  const parsed = RefineSchema.safeParse(req.body);
+  if (!parsed.success) {
+    const msgs = parsed.error.issues.map((i) => i.message).join(", ");
+    res.status(400).json({ error: msgs });
+    return;
+  }
+  const { imageDataUrl, instruction, sizeKey } = parsed.data;
+
+  const apiKey = process.env["XAI_API_KEY"];
+  if (!apiKey) {
+    res.status(503).json({ error: "XAI_API_KEY is not configured." });
+    return;
+  }
+
+  const match = imageDataUrl.match(/^data:(image\/[\w+.-]+);base64,(.+)$/s);
+  if (!match) {
+    res.status(400).json({ error: "imageDataUrl must be a valid base64 data URL." });
+    return;
+  }
+  const mime = match[1] as string;
+  const imageBuf = Buffer.from(match[2]!, "base64");
+
+  const SIZE_MAP: Record<string, { w: number; h: number; aspect: string }> = {
+    XL: { w: 400, h: 500, aspect: "4:5" },
+    L:  { w: 300, h: 400, aspect: "3:4" },
+    M:  { w: 300, h: 200, aspect: "3:2" },
+    S:  { w: 200, h: 200, aspect: "1:1" },
+  };
+  const dim = SIZE_MAP[sizeKey.toUpperCase()] ?? SIZE_MAP["XL"]!;
+
+  const refinePrompt =
+    `You are editing a finished print-ready postcard advertisement image. ` +
+    `Apply ONLY this specific change: "${instruction}". ` +
+    `Keep every other element exactly as it appears — layout, colors, fonts, ` +
+    `business name, phone number, address, coupon offer, photos, background, ` +
+    `logo, and all remaining text. Do not add or remove anything beyond what ` +
+    `the instruction explicitly requests. Output a complete finished ad at the ` +
+    `same dimensions and print quality as the input.`;
+
+  const xaiBody = {
+    model:        "grok-imagine-image-quality",
+    prompt:       refinePrompt,
+    n:            1,
+    images:       [{ type: "image_url", url: `data:${mime};base64,${imageBuf.toString("base64")}` }],
+    aspect_ratio: dim.aspect,
+    resolution:   "2k",
+  };
+
+  try {
+    req.log.info({ instruction, sizeKey }, "grok-refine: calling xAI /images/edits");
+    const xaiRes = await fetch("https://api.x.ai/v1/images/edits", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify(xaiBody),
+    });
+    const body = await safeJson(xaiRes);
+    req.log.info(
+      { status: xaiRes.status, body: JSON.stringify(body).slice(0, 400) },
+      "grok-refine raw response",
+    );
+
+    if (!xaiRes.ok) {
+      const errRaw = body["error"];
+      const errMsg =
+        (typeof errRaw === "string" ? errRaw : undefined)
+        ?? ((errRaw as Record<string, unknown> | undefined)?.["message"] as string | undefined)
+        ?? `xAI API error ${xaiRes.status}`;
+      req.log.error({ status: xaiRes.status, errMsg }, "grok-refine error");
+      res.status(502).json({ error: errMsg });
+      return;
+    }
+
+    const imageUrl = extractXaiImageUrl(body);
+    if (!imageUrl) {
+      req.log.warn({ body: JSON.stringify(body).slice(0, 300) }, "grok-refine: no image in response");
+      res.status(502).json({ error: "Grok returned a response but no image was found — please try again." });
+      return;
+    }
+
+    // Resize + crop to exact print pixel dimensions
+    try {
+      let srcBuf: Buffer;
+      if (imageUrl.startsWith("data:")) {
+        srcBuf = Buffer.from(imageUrl.split(",")[1] ?? "", "base64");
+      } else {
+        const r = await fetch(imageUrl);
+        srcBuf = Buffer.from(await r.arrayBuffer());
+      }
+      const out = await sharp(srcBuf)
+        .resize(dim.w, dim.h, { fit: "fill", kernel: "lanczos3" })
+        .jpeg({ quality: 98, chromaSubsampling: "4:4:4" })
+        .toBuffer();
+      res.json({ imageUrl: `data:image/jpeg;base64,${out.toString("base64")}` });
+    } catch {
+      res.json({ imageUrl });
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Grok API request failed";
+    req.log.error({ err: msg }, "grok-refine error");
+    res.status(502).json({ error: msg });
+  }
+});
+
 // ── GET /api/grok-ad-generator — serve the HTML tool ─────────────────────────
 router.get("/grok-ad-generator", (_req, res) => {
   res.setHeader("Content-Type", "text/html; charset=utf-8");
@@ -1145,6 +1256,25 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .tc-btn:last-child{margin-bottom:0}
 .tc-btn.primary{background:#0f1117;color:#fff}
 .tc-btn.secondary{background:#fff;color:#7C1C2E;border:2px solid #7C1C2E}
+
+/* ── Refine panel ─────────────────────────────────────────── */
+.refine-panel{padding:11px 12px 10px;border-top:1.5px solid var(--border);background:#f8f7f4}
+.refine-label{font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-mid);margin-bottom:7px}
+.refine-row{display:flex;gap:7px}
+.refine-input{flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);background:#fff;outline:none;transition:border-color .2s}
+.refine-input:focus{border-color:var(--burg)}
+.refine-input::placeholder{color:#b0aaa4}
+.refine-btn{padding:8px 16px;background:var(--burg);color:#fff;border:none;border-radius:7px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;transition:background .2s;flex-shrink:0}
+.refine-btn:hover:not(:disabled){background:var(--burg-dark)}
+.refine-btn:disabled{background:#aaa;cursor:not-allowed}
+.refine-err{font-size:11px;color:#991b1b;margin-top:6px;display:none;line-height:1.4}
+.refine-err.visible{display:block}
+.refine-loading{font-size:11px;color:var(--ink-light);margin-top:6px;display:none;line-height:1.4}
+.refine-loading.visible{display:block}
+.refine-footer{display:flex;align-items:center;justify-content:space-between;margin-top:5px}
+.refine-hint{font-size:10px;color:var(--ink-light);line-height:1.4}
+.refine-revert-btn{background:none;border:none;font-size:11px;color:var(--burg);cursor:pointer;padding:0;font-family:'DM Sans',sans-serif;text-decoration:underline;text-underline-offset:2px;transition:color .2s;white-space:nowrap}
+.refine-revert-btn:hover{color:var(--burg-dark)}
 </style>
 </head>
 <body>
@@ -1348,6 +1478,21 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
             <button class="act-btn" onclick="downloadAd()">&#8595; Download</button>
             <button class="act-btn" onclick="generate()">&#8634; Regenerate</button>
           </div>
+          <div class="refine-panel" id="refinePanel">
+            <div class="refine-label">&#9998; Refine this ad</div>
+            <div class="refine-row">
+              <input type="text" id="refineInput" class="refine-input"
+                placeholder='e.g. "Remove the word Shield" or "Change the phone number to 706-555-1234"'
+                maxlength="300" onkeydown="if(event.key==='Enter')refineAd()">
+              <button class="refine-btn" id="refineBtn" onclick="refineAd()">Apply</button>
+            </div>
+            <div class="refine-loading" id="refineLoading">&#8987; Grok is applying your change&hellip; (20&ndash;40 seconds)</div>
+            <div class="refine-err" id="refineErr"></div>
+            <div class="refine-footer">
+              <div class="refine-hint">Type any correction and hit Apply. Grok will update the ad without regenerating from scratch.</div>
+              <button class="refine-revert-btn" id="refineRevertBtn" style="display:none" onclick="revertAd()">&#8617; Revert to original</button>
+            </div>
+          </div>
         </div>
 
       </div>
@@ -1362,6 +1507,7 @@ function esc(str){ var d=document.createElement('div');d.textContent=String(str|
 var _selectedPhotoUrl = '';
 var _logoData = '';
 var _resultUrl = '';
+var _originalResultUrl = '';
 var _activeTemplate = 'parchment-classic';
 var _spotSize = 'XL';
 var _spotId = 0;
@@ -1711,7 +1857,7 @@ async function generate(){
   document.getElementById('genLabel').textContent = 'Generate My Ad with Grok';
 }
 
-function showResult(url){
+function showResult(url, keepOriginal){
   var panel = document.getElementById('resultPanel');
   var img = document.getElementById('resultImg');
   panel.classList.add('visible');
@@ -1724,6 +1870,74 @@ function showResult(url){
   img.src = url;
   // Fallback: scroll immediately in case image is already cached
   setTimeout(scrollDown, 120);
+  // Reset refine state on fresh generation (not on refine updates)
+  if(!keepOriginal){
+    _originalResultUrl = url;
+    document.getElementById('refineInput').value = '';
+    document.getElementById('refineErr').classList.remove('visible');
+    document.getElementById('refineLoading').classList.remove('visible');
+    var revertBtn = document.getElementById('refineRevertBtn');
+    if(revertBtn) revertBtn.style.display = 'none';
+    var refineBtn = document.getElementById('refineBtn');
+    if(refineBtn){ refineBtn.disabled = false; refineBtn.textContent = 'Apply'; }
+  }
+}
+
+async function refineAd(){
+  var instruction = document.getElementById('refineInput').value.trim();
+  var errEl = document.getElementById('refineErr');
+  var loadingEl = document.getElementById('refineLoading');
+  errEl.textContent = ''; errEl.classList.remove('visible');
+  if(!instruction){
+    errEl.textContent = 'Please describe the change you want (e.g. "Remove the word Shield").';
+    errEl.classList.add('visible');
+    return;
+  }
+  if(!_resultUrl){ return; }
+  var btn = document.getElementById('refineBtn');
+  btn.disabled = true; btn.textContent = 'Applying\u2026';
+  loadingEl.classList.add('visible');
+  try{
+    var resp = await fetch('/api/grok-ad-generator/refine', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        imageDataUrl: _resultUrl,
+        instruction:  instruction,
+        sizeKey:      _spotSize || 'XL',
+      }),
+    });
+    var data = await resp.json();
+    loadingEl.classList.remove('visible');
+    if(!resp.ok || data.error){
+      errEl.textContent = '\u26a0\ufe0f ' + (data.error || 'Refinement failed \u2014 please try again.');
+      errEl.classList.add('visible');
+    } else {
+      _resultUrl = data.imageUrl;
+      document.getElementById('resultImg').src = data.imageUrl;
+      document.getElementById('refineInput').value = '';
+      if(data.imageUrl !== _originalResultUrl){
+        var revertBtn = document.getElementById('refineRevertBtn');
+        if(revertBtn) revertBtn.style.display = '';
+      }
+      showToast('Ad refined! Review the changes below.');
+    }
+  } catch(err){
+    loadingEl.classList.remove('visible');
+    errEl.textContent = '\u26a0\ufe0f Network error: ' + (err instanceof Error ? err.message : String(err));
+    errEl.classList.add('visible');
+  }
+  btn.disabled = false; btn.textContent = 'Apply';
+}
+
+function revertAd(){
+  if(!_originalResultUrl) return;
+  _resultUrl = _originalResultUrl;
+  document.getElementById('resultImg').src = _originalResultUrl;
+  var revertBtn = document.getElementById('refineRevertBtn');
+  if(revertBtn) revertBtn.style.display = 'none';
+  document.getElementById('refineErr').classList.remove('visible');
+  showToast('Reverted to original.');
 }
 
 function hideResult(){
