@@ -402,8 +402,9 @@ if(liveSpot&&liveSpot.status==="paid"&&liveSpot.templateData){
     </div>
   </ScaledCell>);
 }
-// Paid spot without template data → show sample ad or business-name placeholder, never "SOLD"
+// Paid spot without template data → show adFileUrl image, sample ad, or business-name placeholder, never "SOLD"
 if(liveSpot&&liveSpot.status==="paid"){
+  if(liveSpot.adFileUrl){return(<ScaledCell spot={spot} scale={scale}><div style={{width:spot.w,height:spot.h,pointerEvents:"none",background:"#000",overflow:"hidden"}}><img src={liveSpot.adFileUrl} alt={liveSpot.businessName||""} style={{width:"100%",height:"100%",objectFit:"contain",display:"block"}}/></div></ScaledCell>);}
   if(k&&ADS[k]){const d=ADS[k];return(<ScaledCell spot={spot} scale={scale}><div style={{width:spot.w,height:spot.h,pointerEvents:"none"}}>{spot.size==="XL"&&<AdXL d={d} tmpl={t}/>}{spot.size==="L"&&<AdL d={d} tmpl={t}/>}{spot.size==="M"&&<AdM d={d} w={spot.w} h={spot.h} tmpl={t}/>}{spot.size==="S"&&<AdS d={d}/>}</div></ScaledCell>);}
   const biz=liveSpot.businessName||"Local Business";
   const fz=spot.size==="XL"?22:spot.size==="L"?18:13;
