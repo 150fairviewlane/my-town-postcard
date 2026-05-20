@@ -14,8 +14,8 @@ const FRONT = [
 { id:"xl1", dbGridArea:"mb", size:"XL", price:499, x:0,   y:0,   w:400, h:500, sample:"biscuits", tmpl:"photo" },
 { id:"xl2", dbGridArea:"dn", size:"XL", price:499, x:400, y:0,   w:400, h:500, sample:null       },
 { id:"xl3", dbGridArea:"re", size:"XL", price:499, x:800, y:0,   w:400, h:500, sample:"dental",   tmpl:"clean" },
-{ id:"l1",  dbGridArea:"l1", size:"L",  price:399, x:0,   y:500, w:300, h:400, sample:"hvac",    tmpl:"stamp"  },
-{ id:"l2",  dbGridArea:"l2", size:"L",  price:399, x:300, y:500, w:300, h:400, sample:null       },
+{ id:"l1",  dbGridArea:"l1", size:"L",  price:399, x:0,   y:500, w:300, h:400, sample:"hvac",    tmpl:"stamp",  imgSrc:"/retro_game_city.png"  },
+{ id:"l2",  dbGridArea:"l2", size:"L",  price:399, x:300, y:500, w:300, h:400, sample:null,                      imgSrc:"/hometown_roofing.jpeg" },
 { id:"l3",  dbGridArea:"l3", size:"L",  price:399, x:600, y:500, w:300, h:400, sample:"lawn",    tmpl:"split"  },
 { id:"l4",  dbGridArea:"l4", size:"L",  price:399, x:900, y:500, w:300, h:400, sample:null       },
 ];
@@ -420,6 +420,7 @@ if(liveSpot&&liveSpot.status==="reserved"){
 if(liveSpot&&liveSpot.status==="available"){
   return<ScaledCell spot={spot} scale={scale}><AvailableSpot spot={spot} hovered={hov===spot.id} onClick={()=>onSel(spot)} onEnter={()=>onHov(spot.id)} onLeave={onOut}/></ScaledCell>;
 }
+if(spot.imgSrc)return(<ScaledCell spot={spot} scale={scale}><div style={{width:spot.w,height:spot.h,pointerEvents:"none",overflow:"hidden"}}><img src={spot.imgSrc} alt="" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/></div></ScaledCell>);
 if(k===null)   return<ScaledCell spot={spot} scale={scale}><AvailableSpot spot={spot} hovered={hov===spot.id} onClick={()=>onSel(spot)} onEnter={()=>onHov(spot.id)} onLeave={onOut}/></ScaledCell>;
 const d=ADS[k]; if(!d)return null;
 return(<ScaledCell spot={spot} scale={scale}>{spot.size==="XL"&&<AdXL d={d} tmpl={t}/>}{spot.size==="L"&&<AdL d={d} tmpl={t}/>}{spot.size==="M"&&<AdM d={d} w={spot.w} h={spot.h} tmpl={t}/>}{spot.size==="S"&&<AdS d={d}/>}</ScaledCell>);
