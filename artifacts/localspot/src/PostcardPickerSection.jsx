@@ -378,7 +378,10 @@ return(
 );
 }
 
-function ScaledCell({spot,scale,children}){return(<div style={{position:"absolute",left:spot.x*scale+3.5,top:spot.y*scale+3.5,width:spot.w*scale-7,height:spot.h*scale-7,overflow:"hidden",borderRadius:3}}><div style={{width:spot.w,height:spot.h,transform:"scale("+scale+")",transformOrigin:"top left"}}>{children}</div></div>);}
+function ScaledCell({spot,scale,children}){
+const cw=spot.w*scale-7,ch=spot.h*scale-7;
+return(<div style={{position:"absolute",left:spot.x*scale+3.5,top:spot.y*scale+3.5,width:cw,height:ch,overflow:"hidden",borderRadius:3}}><div style={{width:spot.w,height:spot.h,transform:`scale(${cw/spot.w},${ch/spot.h})`,transformOrigin:"top left"}}>{children}</div></div>);
+}
 
 function SpotCell({spot,scale,hov,onHov,onOut,onSel,liveSpot,isHighlighted}){
 const k=spot.sample;
