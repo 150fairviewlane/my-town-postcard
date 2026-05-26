@@ -616,77 +616,46 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     : isLandscape
     ? (
       // Surprise Me landscape — full creative freedom in a horizontal format
-      "DESIGN BRIEF — create a completely ORIGINAL LANDSCAPE (3\"×2\", wider than tall) postcard ad for this business. You have full creative freedom:\n\n" +
+      `DESIGN BRIEF — original LANDSCAPE (3"x2") postcard ad for this business. Full creative freedom.\n\n` +
 
-      "  CREATIVE DIRECTION:\n" +
-      `    Look at the INDUSTRY ("${d.industry}") and BUSINESS NAME ("${d.bizName}") and let them drive your entire design aesthetic.\n` +
-      "    • Food / restaurant / cafe / bakery → warm cinematic food photography, menu panels, rich appetizing color, editorial typography\n" +
-      "    • Contractor / outdoor / trades / lawn / roofing / cleaning → bold action scenes, high-contrast colors, strong authority layout\n" +
-      "    • Health / wellness / medical / chiropractic / dental → calming organic shapes, clean clinical photography, soft palette\n" +
-      "    • Retail / boutique / beauty / salon / spa → lifestyle photography, editorial typography, mood-driven color\n" +
-      "    • Professional services / finance / legal / real estate → structured authority layout, trust signals, refined palette\n" +
-      "    • Any other industry → infer the best premium advertising aesthetic from the business name and details\n\n" +
+      `CREATIVE DIRECTION: Let the INDUSTRY ("${d.industry}") and BUSINESS NAME ("${d.bizName}") drive the aesthetic.\n` +
+      "  Food/cafe/bakery: warm cinematic food photography, rich color, editorial type.\n" +
+      "  Trades/contractor/lawn/roofing: bold action, high-contrast, authority layout.\n" +
+      "  Health/wellness/dental: organic shapes, clean clinical photography, soft palette.\n" +
+      "  Retail/salon/spa: lifestyle photography, mood-driven editorial color.\n" +
+      "  Professional/legal/real estate: structured authority, trust signals, refined palette.\n\n" +
 
-      "  FORBIDDEN — do NOT recreate any of these existing styles:\n" +
-      "    • Parchment/rustic (ivory, orange pennant, dark brush-stroke, checkmarks)\n" +
-      "    • Chalkboard/bistro (dark chalkboard, wood table, golden ticket)\n" +
-      "    • Forest-green contractor (green bg, white brush splashes, lime script)\n" +
-      "    • Navy/gold home services (navy hexagon, gold brush-stroke, icon band)\n" +
-      "    • Teal/sage wellness (teal blobs, pill bar, cream background)\n" +
-      "    Invent something genuinely distinct.\n\n" +
+      "FORBIDDEN styles — invent something genuinely distinct from all of these:\n" +
+      "  Parchment/rustic | Chalkboard/bistro | Forest-green contractor | Navy/gold home services | Teal/sage wellness\n\n" +
 
-      "  VISUAL CONSTRUCTION — these rules are MANDATORY, not optional:\n" +
-      "    (a) NO hard rectangular photo borders. Every photo must be masked or blended into the background " +
-      "using an organic shape (blob, brush-stroke, diagonal cut, arch, vignette, or color-band overlay). " +
-      "Edges of the photo must dissolve or fade into the surrounding layer — never sit inside a visible frame or box.\n" +
-      "    (b) Background must have material depth. Use a rich multi-stop gradient, a brushstroke-wash overlay, " +
-      "a paper/fabric/concrete/wood texture, or an environmental surface tone — NEVER a flat solid color.\n" +
-      "    (c) Compose three distinct depth planes:\n" +
-      "        PLANE 1 (deepest) — textured or gradient background fill\n" +
-      "        PLANE 2 (mid) — graphic elements (color bands, geometric shapes, organic swooshes, brushstroke blocks) " +
-      "that frame zones and divide the layout\n" +
-      "        PLANE 3 (front) — headline text, logo, and offer copy rendered on top with depth treatment\n" +
-      "    (d) Hero photo must appear cinematically lit with soft-light or rim-light, and its shadow/edge must " +
-      "blend realistically into the mid-layer (Plane 2), not float above it.\n" +
-      "    (e) Every text element must sit ON the composition with drop shadows, glows, light knockouts, or dark-field " +
-      "backlighting — NEVER floating on bare flat color.\n\n" +
+      "MANDATORY VISUAL RULES:\n" +
+      "  - No hard rectangular photo borders — mask/blend edges with organic shapes, gradients, or diagonal cuts.\n" +
+      "  - Background must have depth: gradient, texture, or layered wash — NEVER flat solid color.\n" +
+      "  - Three depth planes: (1) textured bg, (2) graphic mid-layer shapes, (3) foreground text with shadows/glows.\n" +
+      "  - Hero photo: cinematic rim/soft lighting, edges blend into mid-layer — never floating above it.\n" +
+      "  - All text sits ON the composition with drop shadows, glows, or dark-field backlighting.\n\n" +
 
-      "  REQUIRED CONTENT ZONES (place and style these however fits the landscape layout):\n" +
-      `    HEADLINE: Business name "${d.bizName}" — very large, dominant, instantly readable at a glance. Maximum typographic impact.\n` +
+      "REQUIRED CONTENT ZONES:\n" +
+      `  HEADLINE: "${d.bizName}" — very large, dominant, instantly readable.\n` +
       (hasPhoto
-        ? `    HERO PHOTO: IMAGE 1 — composite the provided photo as the dominant visual. ` +
-          "Mask or blend its edges (organic shape / gradient fade / diagonal cut / brushstroke overlay) — NO hard rectangular frame. " +
-          "Cinematic lighting, realistic shadow blending into Plane 2.\n"
-        : `    HERO IMAGE: Generate a photorealistic, business-appropriate hero image at cinematic quality — ` +
-          "professional studio or location lighting, shallow depth of field. Blend it into the background using an organic mask or gradient fade — no hard rectangular frame.\n") +
-      (hasLogo ? `    LOGO: IMAGE ${logoImg} — place exactly as provided, no stylization or color changes.\n` : "") +
-      (d.tagline ? `    TAGLINE: "${d.tagline}" — supporting, secondary to headline.\n` : "") +
-      (menuStr !== "  (none)" ? `    SERVICES/MENU: ${menuStr} — displayed clearly, not crowded. Each item exactly once.\n` : "") +
+        ? `  HERO PHOTO: IMAGE 1 — composite as dominant visual, organic-masked edges, cinematic lighting, no rectangular frame.\n`
+        : `  HERO IMAGE: photorealistic business-appropriate image, cinematic quality, blended into bg — no rectangular frame.\n`) +
+      (hasLogo ? `  LOGO: IMAGE ${logoImg} — exact placement, no stylization.\n` : "") +
+      (d.tagline ? `  TAGLINE: "${d.tagline}" — supporting, secondary to headline.\n` : "") +
+      (menuStr !== "  (none)" ? `  SERVICES/MENU: ${menuStr} — each item exactly once.\n` : "") +
       (d.offer
-        ? `    SPECIAL OFFER: "${d.offer}" — given prominent visual emphasis. ` +
-          "The coupon area contains ONLY this offer text and the fine print below — NEVER add decorative filler phrases like 'Admit One Offer', 'Admit Offer', 'Stub No.', or any text not provided here.\n" +
-          (d.offerFine ? `    Fine print: "${d.offerFine}" — smaller but legible.\n` : "")
+        ? `  SPECIAL OFFER: "${d.offer}" — prominent. Coupon zone: ONLY this offer text and fine print — NEVER add filler phrases like 'Admit One Offer' or 'Stub No.'.\n` +
+          (d.offerFine ? `  Fine print: "${d.offerFine}".\n` : "")
         : "") +
-      `    FOOTER: Phone "${d.phone || ""}" — BOLD, large, instantly readable. Zero digit changes.\n` +
-      (fullAddress !== "(none)" ? `    Address "${fullAddress}" — must appear verbatim in footer.\n` : "") +
-      "    QR CODE: clean square graphic in footer. Do NOT render the website URL as visible text.\n\n" +
-
-      "  QUALITY STANDARD — all of the following are required, no exceptions:\n" +
-      "    ✗ NO flat solid-color backgrounds — must have gradient, texture, or layered depth\n" +
-      "    ✗ NO rectangular photo frames or visible borders around any image\n" +
-      "    ✗ NO text floating on bare flat color — every text element needs shadow, glow, knockout, or dark-field anchor\n" +
-      "    ✗ NO decorative filler text in the coupon area that was not provided ('Admit One Offer', 'Stub No.', etc.)\n" +
-      "    ✓ THREE visual depth planes minimum (texture → graphic mid-layer → foreground text)\n" +
-      "    ✓ Hero photo composited with cinematic lighting and edge blending\n" +
-      "    ✓ Print-ready 300 DPI sharpness throughout — no generic clip-art, no thin strokes on busy backgrounds\n\n" +
+      `  FOOTER: Phone "${d.phone || ""}" — BOLD, instantly readable. Zero digit changes.\n` +
+      (fullAddress !== "(none)" ? `  Address "${fullAddress}" — verbatim in footer.\n` : "") +
+      "  QR CODE: clean square graphic in footer. Do NOT render website URL as text.\n\n" +
 
       "TYPOGRAPHIC RULES:\n" +
-      "  • Headline: very large, maximum weight — instantly legible\n" +
-      "  • NEVER repeat any word from the business name — each word appears exactly once across the entire ad\n" +
-      "  • NEVER add script accent words or decorative category nouns not present in the business name\n" +
-      "  • Footer text: bold, easily readable at arm's length\n" +
-      "  • Fine print: smallest text, still legible\n" +
-      "  • NEVER render the website URL as visible text"
+      "  - NEVER repeat any word from the business name — each appears exactly once.\n" +
+      "  - NEVER add script accent words or category nouns not present in the business name.\n" +
+      "  - Headline: maximum weight, instantly legible. Footer: bold, arm's-length readable.\n" +
+      "  - NEVER render the website URL as visible text."
     )
     : templateKey === "neighborhood-pro"
     ? (
