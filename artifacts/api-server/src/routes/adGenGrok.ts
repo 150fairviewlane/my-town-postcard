@@ -69,7 +69,7 @@ const FONT_VARIANTS: Record<string, string[]> = {
     "Typography variant C — Headline: elegant display serif (Cormorant Garamond Bold / Libre Baskerville Bold style), all-caps. No script accent — sophisticated serif confidence. Upscale boutique wellness look.",
   ],
   "surprise-me": [
-    "Typography variant A — Bold editorial display: strong condensed serif headline (Playfair Display Black / Rockwell Extra Bold style), all-caps, dominant weight. Script accent: flowing warm-toned script for a single English category noun only. Premium layered editorial headline.",
+    "Typography variant A — Bold editorial display: strong condensed serif headline (Playfair Display Black / Rockwell Extra Bold style), all-caps, dominant weight. No script accent — render the business name only, never add decorative category words not present in the name. Premium layered editorial headline.",
     "Typography variant B — Modern geometric: ultra-clean bold sans-serif headline (Futura ExtraBold / Bebas Neue style), all-caps, zero ornamentation. No script accent. Confident, minimal, high-contrast.",
     "Typography variant C — Vintage artisan: expressive wood-type display or slab (Alfa Slab One / Zilla Slab Highlight style), all-caps, textured feel. No script accent. Handcrafted, collectible, character-driven.",
   ],
@@ -77,7 +77,7 @@ const FONT_VARIANTS: Record<string, string[]> = {
 
 const COUPON_VARIANTS: string[] = [
   "Coupon box style: CLASSIC PERFORATION STRIP — dashed rectangular border with a scissor ✂ icon on the left edge and a small 'CUT HERE' label. Clean, universally recognized coupon strip format.",
-  "Coupon box style: MOVIE-TICKET STUB — vertical dotted tear-line running along the left edge of the coupon box, subtle diagonal micro-stripe background pattern inside the box, and 'ADMIT ONE OFFER' or a stub number in a corner serif font. Festive, collectible feel.",
+  "Coupon box style: MOVIE-TICKET STUB — vertical dotted tear-line running along the left edge of the coupon box, subtle diagonal micro-stripe background pattern inside the box, and a small decorative stub serial number (e.g. #0042) in a corner serif font — NEVER write 'Admit One Offer', 'Admit Offer', or any promotional phrase not supplied by the business. Festive, collectible feel.",
   "Coupon box style: RUBBER-STAMP SEAL — a circular ink-ring border centered around the offer text with a slight distressed texture, 'SPECIAL OFFER' arced along the top of the ring border in small caps. Authentic artisan-stamp aesthetic.",
 ];
 
@@ -617,26 +617,76 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     ? (
       // Surprise Me landscape — full creative freedom in a horizontal format
       "DESIGN BRIEF — create a completely ORIGINAL LANDSCAPE (3\"×2\", wider than tall) postcard ad for this business. You have full creative freedom:\n\n" +
-      `  Look at the INDUSTRY ("${d.industry}") and BUSINESS NAME ("${d.bizName}") and let them drive the design.\n\n` +
+
+      "  CREATIVE DIRECTION:\n" +
+      `    Look at the INDUSTRY ("${d.industry}") and BUSINESS NAME ("${d.bizName}") and let them drive your entire design aesthetic.\n` +
+      "    • Food / restaurant / cafe / bakery → warm cinematic food photography, menu panels, rich appetizing color, editorial typography\n" +
+      "    • Contractor / outdoor / trades / lawn / roofing / cleaning → bold action scenes, high-contrast colors, strong authority layout\n" +
+      "    • Health / wellness / medical / chiropractic / dental → calming organic shapes, clean clinical photography, soft palette\n" +
+      "    • Retail / boutique / beauty / salon / spa → lifestyle photography, editorial typography, mood-driven color\n" +
+      "    • Professional services / finance / legal / real estate → structured authority layout, trust signals, refined palette\n" +
+      "    • Any other industry → infer the best premium advertising aesthetic from the business name and details\n\n" +
+
       "  FORBIDDEN — do NOT recreate any of these existing styles:\n" +
       "    • Parchment/rustic (ivory, orange pennant, dark brush-stroke, checkmarks)\n" +
       "    • Chalkboard/bistro (dark chalkboard, wood table, golden ticket)\n" +
       "    • Forest-green contractor (green bg, white brush splashes, lime script)\n" +
       "    • Navy/gold home services (navy hexagon, gold brush-stroke, icon band)\n" +
-      "    • Teal/sage wellness (teal blobs, pill bar, cream background)\n\n" +
-      "  REQUIRED ZONES (place however fits a landscape layout):\n" +
-      `    HEADLINE: "${d.bizName}" — very large, dominant, instantly readable.\n` +
-      (hasPhoto ? `    HERO PHOTO: IMAGE 1 — dominant visual, organic-masked edges, cinematic lighting.\n` : "    HERO IMAGE: generate a photorealistic business-appropriate hero image.\n") +
-      (hasLogo ? `    LOGO: IMAGE ${logoImg} — placed exactly as provided, no stylization.\n` : "") +
-      (d.tagline ? `    TAGLINE: "${d.tagline}" — supporting, below headline.\n` : "") +
-      (menuStr !== "  (none)" ? `    SERVICES: ${menuStr} — each item once only.\n` : "") +
-      (d.offer ? `    SPECIAL OFFER: "${d.offer}" — prominent.\n` + (d.offerFine ? `    Fine print: "${d.offerFine}".\n` : "") : "") +
-      `    FOOTER: Phone "${d.phone || ""}" — bold, large. Zero digit changes.\n` +
-      (fullAddress !== "(none)" ? `    Address "${fullAddress}" — verbatim in footer.\n` : "") +
-      "    QR CODE: clean square graphic in footer. Do NOT render website URL as text.\n\n" +
+      "    • Teal/sage wellness (teal blobs, pill bar, cream background)\n" +
+      "    Invent something genuinely distinct.\n\n" +
+
+      "  VISUAL CONSTRUCTION — these rules are MANDATORY, not optional:\n" +
+      "    (a) NO hard rectangular photo borders. Every photo must be masked or blended into the background " +
+      "using an organic shape (blob, brush-stroke, diagonal cut, arch, vignette, or color-band overlay). " +
+      "Edges of the photo must dissolve or fade into the surrounding layer — never sit inside a visible frame or box.\n" +
+      "    (b) Background must have material depth. Use a rich multi-stop gradient, a brushstroke-wash overlay, " +
+      "a paper/fabric/concrete/wood texture, or an environmental surface tone — NEVER a flat solid color.\n" +
+      "    (c) Compose three distinct depth planes:\n" +
+      "        PLANE 1 (deepest) — textured or gradient background fill\n" +
+      "        PLANE 2 (mid) — graphic elements (color bands, geometric shapes, organic swooshes, brushstroke blocks) " +
+      "that frame zones and divide the layout\n" +
+      "        PLANE 3 (front) — headline text, logo, and offer copy rendered on top with depth treatment\n" +
+      "    (d) Hero photo must appear cinematically lit with soft-light or rim-light, and its shadow/edge must " +
+      "blend realistically into the mid-layer (Plane 2), not float above it.\n" +
+      "    (e) Every text element must sit ON the composition with drop shadows, glows, light knockouts, or dark-field " +
+      "backlighting — NEVER floating on bare flat color.\n\n" +
+
+      "  REQUIRED CONTENT ZONES (place and style these however fits the landscape layout):\n" +
+      `    HEADLINE: Business name "${d.bizName}" — very large, dominant, instantly readable at a glance. Maximum typographic impact.\n` +
+      (hasPhoto
+        ? `    HERO PHOTO: IMAGE 1 — composite the provided photo as the dominant visual. ` +
+          "Mask or blend its edges (organic shape / gradient fade / diagonal cut / brushstroke overlay) — NO hard rectangular frame. " +
+          "Cinematic lighting, realistic shadow blending into Plane 2.\n"
+        : `    HERO IMAGE: Generate a photorealistic, business-appropriate hero image at cinematic quality — ` +
+          "professional studio or location lighting, shallow depth of field. Blend it into the background using an organic mask or gradient fade — no hard rectangular frame.\n") +
+      (hasLogo ? `    LOGO: IMAGE ${logoImg} — place exactly as provided, no stylization or color changes.\n` : "") +
+      (d.tagline ? `    TAGLINE: "${d.tagline}" — supporting, secondary to headline.\n` : "") +
+      (menuStr !== "  (none)" ? `    SERVICES/MENU: ${menuStr} — displayed clearly, not crowded. Each item exactly once.\n` : "") +
+      (d.offer
+        ? `    SPECIAL OFFER: "${d.offer}" — given prominent visual emphasis. ` +
+          "The coupon area contains ONLY this offer text and the fine print below — NEVER add decorative filler phrases like 'Admit One Offer', 'Admit Offer', 'Stub No.', or any text not provided here.\n" +
+          (d.offerFine ? `    Fine print: "${d.offerFine}" — smaller but legible.\n` : "")
+        : "") +
+      `    FOOTER: Phone "${d.phone || ""}" — BOLD, large, instantly readable. Zero digit changes.\n` +
+      (fullAddress !== "(none)" ? `    Address "${fullAddress}" — must appear verbatim in footer.\n` : "") +
+      "    QR CODE: clean square graphic in footer. Do NOT render the website URL as visible text.\n\n" +
+
+      "  QUALITY STANDARD — all of the following are required, no exceptions:\n" +
+      "    ✗ NO flat solid-color backgrounds — must have gradient, texture, or layered depth\n" +
+      "    ✗ NO rectangular photo frames or visible borders around any image\n" +
+      "    ✗ NO text floating on bare flat color — every text element needs shadow, glow, knockout, or dark-field anchor\n" +
+      "    ✗ NO decorative filler text in the coupon area that was not provided ('Admit One Offer', 'Stub No.', etc.)\n" +
+      "    ✓ THREE visual depth planes minimum (texture → graphic mid-layer → foreground text)\n" +
+      "    ✓ Hero photo composited with cinematic lighting and edge blending\n" +
+      "    ✓ Print-ready 300 DPI sharpness throughout — no generic clip-art, no thin strokes on busy backgrounds\n\n" +
+
       "TYPOGRAPHIC RULES:\n" +
-      "  • NEVER repeat any word; each appears exactly once\n" +
-      "  • NEVER render website URL as text"
+      "  • Headline: very large, maximum weight — instantly legible\n" +
+      "  • NEVER repeat any word from the business name — each word appears exactly once across the entire ad\n" +
+      "  • NEVER add script accent words or decorative category nouns not present in the business name\n" +
+      "  • Footer text: bold, easily readable at arm's length\n" +
+      "  • Fine print: smallest text, still legible\n" +
+      "  • NEVER render the website URL as visible text"
     )
     : templateKey === "neighborhood-pro"
     ? (
@@ -798,7 +848,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       (d.tagline ? `    TAGLINE: "${d.tagline}" — supporting, secondary to headline.\n` : "") +
       (menuStr !== "  (none)" ? `    SERVICES/MENU: ${menuStr} — displayed clearly, not crowded. Each item exactly once.\n` : "") +
       (d.offer
-        ? `    SPECIAL OFFER: "${d.offer}" — given prominent visual emphasis.\n` +
+        ? `    SPECIAL OFFER: "${d.offer}" — given prominent visual emphasis. ` +
+          "The coupon area contains ONLY this offer text and the fine print below — NEVER add decorative filler phrases like 'Admit One Offer', 'Admit Offer', 'Stub No.', or any text not provided here.\n" +
           (d.offerFine ? `    Fine print: "${d.offerFine}" — smaller but legible.\n` : "")
         : "") +
       `    FOOTER: Phone "${d.phone || ""}" — BOLD, large, instantly readable. Zero digit changes.\n` +
@@ -809,6 +860,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "    ✗ NO flat solid-color backgrounds — must have gradient, texture, or layered depth\n" +
       "    ✗ NO rectangular photo frames or visible borders around any image\n" +
       "    ✗ NO text floating on bare flat color — every text element needs shadow, glow, knockout, or dark-field anchor\n" +
+      "    ✗ NO decorative filler text in the coupon area that was not provided ('Admit One Offer', 'Stub No.', etc.)\n" +
       "    ✓ THREE visual depth planes minimum (texture → graphic mid-layer → foreground text)\n" +
       "    ✓ Hero photo composited with cinematic lighting and edge blending\n" +
       "    ✓ Print-ready 300 DPI sharpness throughout — no generic clip-art, no thin strokes on busy backgrounds\n\n" +
@@ -816,6 +868,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "TYPOGRAPHIC RULES:\n" +
       "  • Headline: very large, maximum weight — instantly legible\n" +
       "  • NEVER repeat any word from the business name — each word appears exactly once across the entire ad\n" +
+      "  • NEVER add script accent words or decorative category nouns not present in the business name\n" +
       "  • Footer text: bold, easily readable at arm's length\n" +
       "  • Fine print: smallest text, still legible\n" +
       "  • NEVER render the website URL as visible text"
