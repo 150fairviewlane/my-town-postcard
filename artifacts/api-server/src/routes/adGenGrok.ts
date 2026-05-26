@@ -1088,20 +1088,49 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       aspect_ratio: spotAspectRatio,
       resolution:   "2k",
     };
-    const xaiRes = await fetch("https://api.x.ai/v1/images/edits", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type":  "application/json",
-      },
-      body: JSON.stringify(editsBody),
-    });
 
-    const body = await safeJson(xaiRes);
-    req.log.info(
-      { status: xaiRes.status, body: JSON.stringify(body).slice(0, 500), bizName: d.bizName },
-      "grok-imagine edits raw response"
-    );
+    // ── Retry loop for transient overload errors ────────────────────────────
+    let xaiRes!: Response;
+    let body: Record<string, unknown> = {};
+    for (let attempt = 0; attempt <= XAI_RETRY_DELAYS_MS.length; attempt++) {
+      if (attempt > 0) {
+        const delay = XAI_RETRY_DELAYS_MS[attempt - 1]!;
+        req.log.warn(
+          { attempt, delayMs: delay, bizName: d.bizName },
+          "grok-imagine: overload — waiting before retry",
+        );
+        await sleep(delay);
+      }
+      xaiRes = await fetch("https://api.x.ai/v1/images/edits", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify(editsBody),
+      });
+      body = await safeJson(xaiRes);
+      req.log.info(
+        { attempt, status: xaiRes.status, body: JSON.stringify(body).slice(0, 500), bizName: d.bizName },
+        "grok-imagine edits raw response",
+      );
+      if (xaiRes.ok) break;
+      // Peek at the error to decide whether to retry
+      const errPeekRaw = body["error"];
+      const errPeekMsg =
+        (typeof errPeekRaw === "string" ? errPeekRaw : undefined)
+        ?? ((errPeekRaw as Record<string, unknown> | undefined)?.["message"] as string | undefined)
+        ?? (typeof body["_raw"] === "string" ? body["_raw"] : undefined)
+        ?? `xAI API error ${xaiRes.status}`;
+      if (!isXaiOverload(xaiRes.status, errPeekMsg)) break; // non-overload: exit loop, handle below
+      if (attempt === XAI_RETRY_DELAYS_MS.length) {
+        // All retries exhausted — still overloaded
+        req.log.error({ bizName: d.bizName }, "grok-imagine: overload persists after all retries");
+        res.status(503).json({ error: "overloaded" });
+        return;
+      }
+      req.log.warn(
+        { attempt, errMsg: errPeekMsg, bizName: d.bizName },
+        "grok-imagine: overload detected — will retry",
+      );
+    }
 
     if (!xaiRes.ok) {
       // body.error may be a plain string (xAI style) or { message: string } (OpenAI style)
@@ -1251,17 +1280,41 @@ router.post("/grok-ad-generator/refine", async (req, res) => {
   };
 
   try {
-    req.log.info({ instruction, sizeKey }, "grok-refine: calling xAI /images/edits");
-    const xaiRes = await fetch("https://api.x.ai/v1/images/edits", {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify(xaiBody),
-    });
-    const body = await safeJson(xaiRes);
-    req.log.info(
-      { status: xaiRes.status, body: JSON.stringify(body).slice(0, 400) },
-      "grok-refine raw response",
-    );
+    // ── Retry loop for transient overload errors ────────────────────────────
+    let xaiRes!: Response;
+    let body: Record<string, unknown> = {};
+    for (let attempt = 0; attempt <= XAI_RETRY_DELAYS_MS.length; attempt++) {
+      if (attempt > 0) {
+        const delay = XAI_RETRY_DELAYS_MS[attempt - 1]!;
+        req.log.warn({ attempt, delayMs: delay }, "grok-refine: overload — waiting before retry");
+        await sleep(delay);
+      }
+      req.log.info({ attempt, instruction, sizeKey }, "grok-refine: calling xAI /images/edits");
+      xaiRes = await fetch("https://api.x.ai/v1/images/edits", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify(xaiBody),
+      });
+      body = await safeJson(xaiRes);
+      req.log.info(
+        { attempt, status: xaiRes.status, body: JSON.stringify(body).slice(0, 400) },
+        "grok-refine raw response",
+      );
+      if (xaiRes.ok) break;
+      const errPeekRaw = body["error"];
+      const errPeekMsg =
+        (typeof errPeekRaw === "string" ? errPeekRaw : undefined)
+        ?? ((errPeekRaw as Record<string, unknown> | undefined)?.["message"] as string | undefined)
+        ?? (typeof body["_raw"] === "string" ? body["_raw"] : undefined)
+        ?? `xAI API error ${xaiRes.status}`;
+      if (!isXaiOverload(xaiRes.status, errPeekMsg)) break;
+      if (attempt === XAI_RETRY_DELAYS_MS.length) {
+        req.log.error("grok-refine: overload persists after all retries");
+        res.status(503).json({ error: "overloaded" });
+        return;
+      }
+      req.log.warn({ attempt, errMsg: errPeekMsg }, "grok-refine: overload detected — will retry");
+    }
 
     if (!xaiRes.ok) {
       const errRaw = body["error"];
@@ -1326,6 +1379,21 @@ router.get("/grok-ad-generator/template-preview/:key", (req, res) => {
 export default router;
 
 // ── Inline HTML ───────────────────────────────────────────────────────────────
+// ── xAI overload-retry helpers ────────────────────────────────────────────────
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function isXaiOverload(status: number, errMsg: string): boolean {
+  const lower = errMsg.toLowerCase();
+  return status === 503 || status === 429 ||
+    lower.includes("overload") ||
+    lower.includes("temporarily");
+}
+
+// 3 retries at 3 s / 6 s / 12 s → up to ~21 s of silent back-off before giving up
+const XAI_RETRY_DELAYS_MS = [3000, 6000, 12000] as const;
+
 const GROK_HTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2120,7 +2188,10 @@ async function generate(){
     document.getElementById('loadingPanel').classList.remove('visible');
     var data = await resp.json();
     if(!resp.ok || data.error){
-      showErr(data.error || 'Generation failed \\u2014 please try again.');
+      var grokErr = data.error || 'Generation failed \\u2014 please try again.';
+      showErr(grokErr === 'overloaded'
+        ? 'The image generator is busy right now \\u2014 please try again in a moment.'
+        : grokErr);
     } else {
       _resultUrl = data.imageUrl;
       showResult(data.imageUrl);
@@ -2188,7 +2259,10 @@ async function refineAd(){
     var data = await resp.json();
     loadingEl.classList.remove('visible');
     if(!resp.ok || data.error){
-      errEl.textContent = '\u26a0\ufe0f ' + (data.error || 'Refinement failed \u2014 please try again.');
+      var refErr = data.error || 'Refinement failed \u2014 please try again.';
+      errEl.textContent = '\u26a0\ufe0f ' + (refErr === 'overloaded'
+        ? 'The image generator is busy right now \u2014 please try again in a moment.'
+        : refErr);
       errEl.classList.add('visible');
     } else {
       _resultUrl = data.imageUrl;

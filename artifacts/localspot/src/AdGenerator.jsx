@@ -1052,7 +1052,11 @@ const handleRefine = useCallback(async () => {
     setRefineInstruction("");
   } catch (err) {
     const serverMsg = err?.response?.data?.error ?? err?.message;
-    setRefineError(serverMsg ?? "Refinement failed — please try again.");
+    setRefineError(
+      serverMsg === "overloaded"
+        ? "The image generator is busy right now — please try again in a moment."
+        : (serverMsg ?? "Refinement failed — please try again.")
+    );
   }
 }, [generatedImageUrl, refineInstruction, sizeKey, refineGrokAd]);
 
