@@ -47,6 +47,10 @@ const AdminAITestPage = lazy(() => import("./pages/AdminAITestPage"));
 const AdGenV7Page = lazy(() => import("./pages/AdGenV7Page"));
 // @ts-expect-error JSX module without types
 const RequestOptionsPage = lazy(() => import("./pages/RequestOptionsPage"));
+// @ts-expect-error JSX module without types
+const SubscriptionConfirmationPage = lazy(() => import("./pages/SubscriptionConfirmationPage"));
+// @ts-expect-error JSX module without types
+const AdminSubscriptionsPage = lazy(() => import("./pages/AdminSubscriptionsPage"));
 
 const queryClient = new QueryClient();
 
@@ -85,8 +89,10 @@ function Router() {
         <Route path="/admin/outreach" component={OutreachPage} />
         <Route path="/admin/scans" component={ScanAnalyticsPage} />
         <Route path="/admin/dealers" component={AdminDealersPage} />
+        <Route path="/admin/subscriptions" component={AdminSubscriptionsPage} />
         <Route path="/admin/ai-test" component={AdminAITestPage} />
         <Route path="/admin" component={AdminDashboard} />
+        <Route path="/subscription-confirmation" component={SubscriptionConfirmationPage} />
         <Route path="/ad-gen" component={AdGenV7Page} />
         <Route path="/request-options" component={RequestOptionsPage} />
         {/* Dealer program routes — public landing + signup + confirmation */}

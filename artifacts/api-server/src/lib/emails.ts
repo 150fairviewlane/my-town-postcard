@@ -237,6 +237,213 @@ export async function sendCampaignCompletedAdminEmail(
   }
 }
 
+// =============================================================================
+// Multi-issue subscription emails (Growth Plan / Premium Visibility Plan).
+// These are NEW templates — the single-issue email path (sendAdProofEmail
+// above) is unchanged so the one-time PaymentIntent flow has zero
+// regression risk.
+// =============================================================================
+
+interface SubscriptionConfirmInfo {
+  businessName: string;
+  contactEmail: string;
+  spotSize: string;
+  spotId: number;
+  orderId: number;
+  commitmentType: "single" | "6_issue" | "12_issue";
+  totalIssues: number;
+  monthlyCents: number;
+  totalCents: number;
+  commitmentEndDate: Date;
+  campaignName: string | null;
+  mailDate: string | null;
+}
+
+const PLAN_LABEL: Record<string, string> = {
+  "6_issue": "Growth Plan",
+  "12_issue": "Premium Visibility Plan",
+  single: "One-Time Placement",
+};
+
+export async function sendSubscriptionConfirmationEmail(
+  info: SubscriptionConfirmInfo,
+): Promise<void> {
+  const resend = getResendClient();
+  if (!resend || !info.contactEmail) return;
+  const planLabel = PLAN_LABEL[info.commitmentType] ?? "Subscription";
+  const monthly = `$${(info.monthlyCents / 100).toFixed(2)}`;
+  const total = `$${(info.totalCents / 100).toFixed(2)}`;
+  const endStr = info.commitmentEndDate.toLocaleDateString("en-US", {
+    weekday: "long", year: "numeric", month: "long", day: "numeric",
+  });
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: info.contactEmail,
+      subject: `Welcome to the ${planLabel} — ${info.totalIssues} issues locked in`,
+      html: `
+        <div style="font-family: Georgia, serif; max-width: 620px; margin: 0 auto; padding: 32px; background: #f9fafb;">
+          <div style="background: #991b1b; padding: 18px 24px; border-radius: 8px 8px 0 0;">
+            <h1 style="color: #fff; margin: 0; font-size: 20px;">📮 LocalSpot Mailer</h1>
+          </div>
+          <div style="background: #fff; border: 1px solid #e5e7eb; padding: 32px; border-radius: 0 0 8px 8px;">
+            <h2 style="color: #111; font-size: 22px; margin-top: 0;">You're locked in for ${info.totalIssues} consecutive issues 🎉</h2>
+            <p style="color: #374151; font-size: 15px; line-height: 1.55;">
+              Hi <strong>${escapeHtml(info.businessName)}</strong>, thanks for committing to the
+              <strong>${planLabel}</strong>. Your first issue is already on the next campaign, and
+              we'll automatically place your ad in the following ${info.totalIssues - 1} issues — no
+              re-purchase needed each time.
+            </p>
+            <table style="width: 100%; border-collapse: collapse; background: #f8fafc; border-radius: 8px; overflow: hidden; margin-top: 16px;">
+              <tr><td style="padding: 10px 12px; color: #6b7280; font-size: 13px; width: 40%;">Plan</td><td style="padding: 10px 12px; color: #111; font-size: 14px; font-weight: 600;">${planLabel}</td></tr>
+              <tr><td style="padding: 10px 12px; color: #6b7280; font-size: 13px; border-top: 1px solid #e5e7eb;">Issues Included</td><td style="padding: 10px 12px; color: #111; font-size: 14px; border-top: 1px solid #e5e7eb;">${info.totalIssues}</td></tr>
+              <tr><td style="padding: 10px 12px; color: #6b7280; font-size: 13px; border-top: 1px solid #e5e7eb;">Ad Size</td><td style="padding: 10px 12px; color: #111; font-size: 14px; border-top: 1px solid #e5e7eb;">${escapeHtml(info.spotSize.toUpperCase())}</td></tr>
+              <tr><td style="padding: 10px 12px; color: #6b7280; font-size: 13px; border-top: 1px solid #e5e7eb;">Billing</td><td style="padding: 10px 12px; color: #111; font-size: 14px; border-top: 1px solid #e5e7eb;">${monthly} / month</td></tr>
+              <tr><td style="padding: 10px 12px; color: #6b7280; font-size: 13px; border-top: 1px solid #e5e7eb;">Total Commitment</td><td style="padding: 10px 12px; color: #111; font-size: 14px; border-top: 1px solid #e5e7eb; font-weight: 600;">${total}</td></tr>
+              <tr><td style="padding: 10px 12px; color: #6b7280; font-size: 13px; border-top: 1px solid #e5e7eb;">Final Issue Ships</td><td style="padding: 10px 12px; color: #111; font-size: 14px; border-top: 1px solid #e5e7eb;">${endStr}</td></tr>
+            </table>
+            <div style="background: #f0fdf4; border-left: 4px solid #15803d; border-radius: 6px; padding: 14px 16px; margin: 24px 0;">
+              <p style="margin: 0; color: #14532d; font-size: 14px; line-height: 1.5;">
+                ✓ <strong>No auto-renewal.</strong> Your billing stops automatically after ${info.totalIssues} issues. We'll email you 30 days and 7 days before your term ends if you'd like to renew.
+              </p>
+            </div>
+            <p style="text-align: center; margin: 28px 0;">
+              <a href="${APP_URL}/confirmation/${info.spotId}" style="display: inline-block; background: #991b1b; color: #fff; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: bold; font-size: 15px;">View Your Ad Details →</a>
+            </p>
+            <p style="color: #9ca3af; font-size: 12px; margin-top: 32px; text-align: center;">LocalSpot Mailer · Reply to this email any time.</p>
+          </div>
+        </div>
+      `,
+    });
+    logger.info({ orderId: info.orderId, spotId: info.spotId, commitmentType: info.commitmentType }, "Subscription confirmation email sent");
+  } catch (err) {
+    logger.error({ err, orderId: info.orderId }, "Failed to send subscription confirmation email");
+  }
+}
+
+interface AdminSubscriptionInfo {
+  businessName: string;
+  contactEmail: string;
+  spotSize: string;
+  commitmentType: "single" | "6_issue" | "12_issue";
+  totalIssues: number;
+  monthlyCents: number;
+  totalCents: number;
+  subscriptionRecordId: number;
+}
+
+export async function sendAdminNewSubscriptionEmail(info: AdminSubscriptionInfo): Promise<void> {
+  const resend = getResendClient();
+  if (!resend) return;
+  const planLabel = PLAN_LABEL[info.commitmentType] ?? info.commitmentType;
+  const monthly = `$${(info.monthlyCents / 100).toFixed(2)}`;
+  const total = `$${(info.totalCents / 100).toFixed(2)}`;
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: ADMIN_EMAIL,
+      subject: `🎉 New ${planLabel}: ${info.businessName} (${total} committed)`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
+          <h2>New Subscription Commitment</h2>
+          <table style="border-collapse: collapse; width: 100%;">
+            <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Business</strong></td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(info.businessName)} (${escapeHtml(info.contactEmail)})</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Plan</strong></td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${planLabel} — ${info.totalIssues} issues</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Ad Size</strong></td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(info.spotSize.toUpperCase())}</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Monthly</strong></td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${monthly}</td></tr>
+            <tr><td style="padding: 8px;"><strong>Total Committed</strong></td><td style="padding: 8px;"><strong>${total}</strong></td></tr>
+          </table>
+          <p style="margin-top: 16px;"><a href="${APP_URL}/admin">Open Admin Dashboard →</a></p>
+        </div>
+      `,
+    });
+    logger.info({ subscriptionRecordId: info.subscriptionRecordId }, "Admin new subscription email sent");
+  } catch (err) {
+    logger.error({ err, subscriptionRecordId: info.subscriptionRecordId }, "Failed to send admin new subscription email");
+  }
+}
+
+interface RenewalEmailInfo {
+  businessName: string;
+  contactEmail: string;
+  commitmentEndDate: Date;
+  appUrl?: string;
+}
+
+export async function sendRenewalT30Email(info: RenewalEmailInfo): Promise<void> {
+  const resend = getResendClient();
+  if (!resend || !info.contactEmail) return;
+  const endStr = info.commitmentEndDate.toLocaleDateString("en-US", {
+    weekday: "long", year: "numeric", month: "long", day: "numeric",
+  });
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: info.contactEmail,
+      subject: `Your LocalSpot subscription ends ${endStr} — keep your spot?`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
+          <h2>30 days left on your subscription</h2>
+          <p>Hi ${escapeHtml(info.businessName)}, your committed run of issues ends on <strong>${endStr}</strong>.</p>
+          <p>Renew now to keep the same spot, locked-in pricing, and uninterrupted coverage. Replying to this email is the fastest way to renew.</p>
+          <p><a href="${APP_URL}/">Renew or browse the next issue →</a></p>
+        </div>
+      `,
+    });
+    logger.info({ contactEmail: info.contactEmail }, "Renewal T-30 email sent");
+  } catch (err) {
+    logger.error({ err }, "Failed to send T-30 renewal email");
+  }
+}
+
+export async function sendRenewalT7Email(info: RenewalEmailInfo): Promise<void> {
+  const resend = getResendClient();
+  if (!resend || !info.contactEmail) return;
+  const endStr = info.commitmentEndDate.toLocaleDateString("en-US", {
+    weekday: "long", year: "numeric", month: "long", day: "numeric",
+  });
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: info.contactEmail,
+      subject: `1 week left — renew before your spot opens up`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
+          <h2>1 week left on your subscription</h2>
+          <p>Hi ${escapeHtml(info.businessName)}, just a heads-up — your run ends on <strong>${endStr}</strong>. After that, your spot opens back up to new advertisers.</p>
+          <p>Reply to this email or visit your dashboard to renew at the same plan and price.</p>
+          <p><a href="${APP_URL}/">Renew now →</a></p>
+        </div>
+      `,
+    });
+    logger.info({ contactEmail: info.contactEmail }, "Renewal T-7 email sent");
+  } catch (err) {
+    logger.error({ err }, "Failed to send T-7 renewal email");
+  }
+}
+
+export async function sendRenewalPostEmail(info: RenewalEmailInfo): Promise<void> {
+  const resend = getResendClient();
+  if (!resend || !info.contactEmail) return;
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: info.contactEmail,
+      subject: `Thanks for running with LocalSpot — ready for round two?`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
+          <h2>Your committed run is complete</h2>
+          <p>Hi ${escapeHtml(info.businessName)}, thanks for running with us through your full commitment. Many of our best results show up between issues 6 and 12 — would you like to keep going?</p>
+          <p><a href="${APP_URL}/">Pick your next plan →</a></p>
+        </div>
+      `,
+    });
+    logger.info({ contactEmail: info.contactEmail }, "Renewal post email sent");
+  } catch (err) {
+    logger.error({ err }, "Failed to send post-end renewal email");
+  }
+}
+
 export async function sendAdminNewOrder(order: OrderInfo): Promise<void> {
   const resend = getResendClient();
   if (!resend) return;

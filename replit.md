@@ -80,6 +80,47 @@ See `.env.example` for full documentation. Summary:
 - **Resend**: Use Replit Resend integration, or manually add `RESEND_API_KEY`, `ADMIN_EMAIL`, `FROM_EMAIL` as secrets.
 - Both gracefully degrade — the app works without them but payments and emails won't function.
 
+## Multi-issue subscription commitments
+
+Added in May 2026 (project task #84). Two new commitment tiers sit alongside the existing one-time PaymentIntent flow:
+
+- **Growth Plan** — 6 consecutive issues, 10% discount, billed monthly.
+- **Premium Visibility Plan** — 12 consecutive issues, 20% discount, billed monthly.
+
+Customer flow:
+
+1. Pick a spot, reserve as usual.
+2. On `/checkout/:spotId` choose between **One-Time Placement** (existing embedded card form) and the two new plans.
+3. Subscription picks redirect to Stripe Checkout (hosted), then to `/subscription-confirmation`.
+4. Stripe `cancel_at` is set to `now() + N months`, so customers are NEVER auto-renewed. They get T-30, T-7, and post-end reminder emails to renew opt-in.
+
+Backend:
+
+- New tables: `spot_subscriptions`, `subscription_issue_assignments`, `stripe_webhook_events` (global webhook dedup keyed on `event_id`).
+- New routes in `artifacts/api-server/src/routes/subscriptions.ts` — public `/checkout/create-subscription-session` + `/checkout/subscription-confirm`, plus admin `/admin/subscriptions*` + `/admin/webhook-events` + `/admin/campaigns/:id/preCommitted`.
+- Webhook handlers in `routes/webhooks.ts` now route on `metadata.kind=spot_subscription`. Single-issue path unchanged.
+- Renewal scheduler in `lib/renewalScheduler.ts` runs every hour (immediately on boot) and fires Resend emails at the T-30, T-7, and post-end milestones.
+- Issues are counted as fulfilled ONLY when the admin completes the campaign (single GROUP BY on assignments; never stored on the subscription row).
+
+Admin:
+
+- `/admin/subscriptions` — list, MRR widget, reconcile-with-Stripe button, cancel button, last 50 webhook events.
+- Dashboard link: **🔁 Subscriptions**.
+
+Optional Stripe setup (for prettier Dashboard reporting only — runtime uses inline `price_data`):
+
+```bash
+pnpm --filter @workspace/scripts run provision-stripe-prices
+```
+
+Test plan: see `artifacts/api-server/docs/SUBSCRIPTIONS_TEST_PLAN.md`.
+
+### Deploy checklist additions
+
+- Confirm `STRIPE_WEBHOOK_SECRET` is set so the webhook dedup table actually receives events.
+- Confirm `APP_URL` (or `PUBLIC_APP_URL`) is set so Stripe Checkout `success_url` resolves to your real domain.
+- After first deploy, hit `/admin/subscriptions` once to verify MRR card and webhook events are populating.
+
 ## Database Schema
 
 - `campaigns` — id, name, territory, zip_code, mail_date, homes_count, status

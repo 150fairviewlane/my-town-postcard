@@ -22,6 +22,7 @@ import adGenV7Router from "./adGenV7";
 import aiAdCreatorRouter from "./aiAdCreator";
 import adGenGrokRouter from "./adGenGrok";
 import interestRouter from "./interest";
+import subscriptionsRouter from "./subscriptions";
 
 const router: IRouter = Router();
 
@@ -48,5 +49,6 @@ router.use(adGenV7Router);
 router.use(aiAdCreatorRouter);
 router.use(adGenGrokRouter);
 router.use(interestRouter);
+router.use(subscriptionsRouter);
 
 export default router;

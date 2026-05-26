@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { startExpirationSweeper } from "./lib/expirationCleanup";
+import { startRenewalScheduler } from "./lib/renewalScheduler";
 
 const rawPort = process.env["PORT"];
 
@@ -28,4 +29,10 @@ app.listen(port, (err) => {
   // and the immediate first tick runs in the background — no app.listen
   // ordering concern, just a fire-and-forget background worker.
   startExpirationSweeper(5 * 60 * 1000);
+
+  // Renewal email scheduler — scans spot_subscriptions every hour for
+  // accounts hitting the T-30, T-7, and post-end milestones and fires the
+  // appropriate Resend email. Idempotent: each milestone has its own
+  // _at column and we only mark it after a successful send.
+  startRenewalScheduler(60 * 60 * 1000);
 });

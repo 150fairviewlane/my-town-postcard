@@ -1,6 +1,6 @@
 import { type Request, type Response } from "express";
 import { eq, and } from "drizzle-orm";
-import { db, spotsTable, ordersTable, campaignsTable } from "@workspace/db";
+import { db, spotsTable, ordersTable, campaignsTable, spotSubscriptionsTable } from "@workspace/db";
 import { sendAdProofEmail, sendAdminNewOrder } from "../lib/emails";
 import { ensureTrackingCode } from "../lib/trackingCode";
 import { releaseReservedSpot } from "../lib/expirationCleanup";
@@ -10,6 +10,13 @@ import {
   activateDealerFromCheckoutSession,
   cancelDealerFromSubscription,
 } from "./dealers";
+import {
+  recordWebhookEvent,
+  markWebhookEventProcessed,
+  markWebhookEventFailed,
+  updateSubscriptionStatusByStripeId,
+} from "../lib/subscriptions";
+import { markSubscriptionAndSpotPaid } from "./subscriptions";
 
 /**
  * Stripe webhook handler. Mounted at POST /api/webhooks/stripe via
@@ -83,29 +90,105 @@ export async function stripeWebhookHandler(
     "Stripe webhook verified",
   );
 
+  // Global dedup. Three outcomes:
+  //   - "fresh"     never seen this event id — process it
+  //   - "retry"     prior attempt errored / crashed; Stripe is retrying —
+  //                 RE-process it so we don't drop a real event
+  //   - "processed" already fully handled — 2xx so Stripe stops retrying
+  const claim = await recordWebhookEvent(event.id, event.type, event);
+  if (claim === "processed") {
+    req.log.info({ eventId: event.id, eventType: event.type }, "Stripe webhook already processed — idempotent no-op");
+    res.json({ received: true, deduped: true });
+    return;
+  }
+  if (claim === "retry") {
+    req.log.warn(
+      { eventId: event.id, eventType: event.type },
+      "Stripe webhook is a retry after a prior failure — reprocessing",
+    );
+  }
+
   try {
     switch (event.type) {
       case "checkout.session.completed": {
-        // Dealer signup sessions carry kind=dealer in metadata. Route them
-        // to the dealer activation path; everything else is a spot order.
+        // Route by metadata.kind: dealer signups go through the dealer
+        // activation path; spot_subscription sessions activate the new
+        // subscription row; everything else is a one-time spot order.
         const meta = (event.data.object?.metadata ?? {}) as Record<string, string>;
         if (meta.kind === "dealer") {
           const dealerId = await activateDealerFromCheckoutSession(event.data.object);
           req.log.info({ dealerId, sessionId: event.data.object?.id }, "Dealer activated via webhook");
+        } else if (meta.kind === "spot_subscription") {
+          await handleSpotSubscriptionCheckoutCompleted(event.data.object, req);
         } else {
           await handleCheckoutSessionCompleted(event.data.object, req);
         }
         break;
       }
+      case "customer.subscription.created":
+      case "customer.subscription.updated": {
+        // Defensive backfill — if /subscription-confirm wasn't hit yet
+        // (customer closed the tab), keep the local row in sync. We
+        // identify our own subscriptions via metadata.kind.
+        await handleSubscriptionUpserted(event.data.object, event.created, req);
+        break;
+      }
       case "customer.subscription.deleted": {
-        // Stripe fires this when a dealer's recurring subscription is
-        // cancelled (by the customer, by us, or after dunning failures).
-        // Mark the dealer cancelled so they no longer appear active.
-        const dealerId = await cancelDealerFromSubscription(event.data.object);
-        req.log.info(
-          { dealerId, subscriptionId: event.data.object?.id },
-          "Dealer subscription cancelled via webhook",
-        );
+        const meta = (event.data.object?.metadata ?? {}) as Record<string, string>;
+        if (meta.kind === "spot_subscription") {
+          await updateSubscriptionStatusByStripeId({
+            stripeSubscriptionId: String(event.data.object?.id),
+            newStatus: "canceled",
+            eventCreatedAt: new Date(event.created * 1000),
+          });
+          req.log.info({ subscriptionId: event.data.object?.id }, "Spot subscription cancelled via webhook");
+        } else {
+          // Legacy dealer cancellation path.
+          const dealerId = await cancelDealerFromSubscription(event.data.object);
+          req.log.info(
+            { dealerId, subscriptionId: event.data.object?.id },
+            "Dealer subscription cancelled via webhook",
+          );
+        }
+        break;
+      }
+      case "invoice.payment_failed": {
+        // Mark the subscription past_due so the lineup builder excludes it
+        // from the next issue. Stripe keeps retrying — when it succeeds,
+        // we'll flip back to active via subscription.updated.
+        const invoiceSub = event.data.object?.subscription;
+        if (invoiceSub) {
+          await updateSubscriptionStatusByStripeId({
+            stripeSubscriptionId: String(invoiceSub),
+            newStatus: "past_due",
+            eventCreatedAt: new Date(event.created * 1000),
+          });
+          req.log.info({ subscriptionId: invoiceSub }, "Subscription marked past_due via invoice.payment_failed");
+        }
+        break;
+      }
+      case "invoice.payment_succeeded": {
+        // Recurring invoice paid. We DO NOT mark any issue fulfilled
+        // here — fulfillment is recorded only when the admin marks the
+        // campaign mailed. We do, however, log the payment in the
+        // webhook events log (already done by recordWebhookEvent) and
+        // flip back to active if we were past_due.
+        const invoiceSub = event.data.object?.subscription;
+        if (invoiceSub) {
+          await updateSubscriptionStatusByStripeId({
+            stripeSubscriptionId: String(invoiceSub),
+            newStatus: "active",
+            eventCreatedAt: new Date(event.created * 1000),
+          });
+        }
+        break;
+      }
+      case "invoice.upcoming":
+      case "charge.refunded": {
+        // Logged in the events table for the admin's debug view; no DB
+        // side effects beyond that for now. Stripe Dashboard remains the
+        // canonical source for refund records.
+        req.log.info({ eventType: event.type }, "Logged subscription-related event (no state change)");
         break;
       }
       case "payment_intent.succeeded": {
@@ -128,17 +211,100 @@ export async function stripeWebhookHandler(
           "Unhandled Stripe event type — acknowledging without action",
         );
     }
+    await markWebhookEventProcessed(event.id);
     // Always 2xx after we've safely handled (or chosen to ignore) the event,
     // so Stripe doesn't retry forever.
     res.json({ received: true });
-  } catch (err) {
+  } catch (err: any) {
     req.log.error(
       { err, eventType: event.type, eventId: event.id },
       "Failed to process Stripe webhook — Stripe will retry",
     );
+    await markWebhookEventFailed(event.id, err?.message ?? String(err));
     // 500 tells Stripe to retry with backoff.
     res.status(500).json({ error: "Webhook handler failed" });
   }
+}
+
+async function handleSpotSubscriptionCheckoutCompleted(
+  session: any,
+  req: Request,
+): Promise<void> {
+  const recordIdStr = session?.metadata?.subscriptionRecordId;
+  const subscriptionRecordId = recordIdStr ? parseInt(String(recordIdStr), 10) : NaN;
+  const spotIdStr = session?.metadata?.spotId;
+  const spotId = spotIdStr ? parseInt(String(spotIdStr), 10) : NaN;
+  if (!Number.isFinite(subscriptionRecordId) || !Number.isFinite(spotId)) {
+    req.log.warn(
+      { sessionId: session?.id },
+      "spot_subscription checkout.session.completed missing subscriptionRecordId/spotId — skipping",
+    );
+    return;
+  }
+
+  const stripe = await getStripeClient();
+  const stripeSubscription = typeof session.subscription === "string"
+    ? await stripe.subscriptions.retrieve(session.subscription)
+    : session.subscription;
+  if (!stripeSubscription?.id) {
+    req.log.warn({ sessionId: session.id }, "checkout.session.completed for spot_subscription missing subscription");
+    return;
+  }
+  const stripeCustomerId = typeof session.customer === "string" ? session.customer : session.customer?.id ?? null;
+  if (!stripeCustomerId) {
+    req.log.warn({ sessionId: session.id }, "Spot subscription checkout missing customer id");
+    return;
+  }
+
+  const [pending] = await db
+    .select()
+    .from(spotSubscriptionsTable)
+    .where(eq(spotSubscriptionsTable.id, subscriptionRecordId));
+  if (!pending) {
+    req.log.warn({ subscriptionRecordId }, "spot_subscription webhook references unknown record");
+    return;
+  }
+
+  await markSubscriptionAndSpotPaid({
+    pendingRecordId: subscriptionRecordId,
+    spotId,
+    stripeSubscriptionId: stripeSubscription.id,
+    stripeCustomerId,
+    cancelAtSeconds: stripeSubscription.cancel_at ?? null,
+    paymentRef: stripeSubscription.id,
+    monthlyCents: pending.monthlyPriceCents,
+    req,
+  });
+}
+
+async function handleSubscriptionUpserted(
+  subscription: any,
+  eventCreatedSeconds: number,
+  req: Request,
+): Promise<void> {
+  const meta = (subscription?.metadata ?? {}) as Record<string, string>;
+  if (meta.kind !== "spot_subscription") return; // dealer or unrelated sub
+  const stripeSubId = subscription?.id;
+  if (!stripeSubId) return;
+
+  const mapStatus = (s: string): "active" | "past_due" | "canceled" | "ended" | null => {
+    if (s === "active" || s === "trialing") return "active";
+    if (s === "past_due" || s === "unpaid") return "past_due";
+    if (s === "canceled" || s === "incomplete_expired") return "canceled";
+    return null;
+  };
+  const mapped = mapStatus(subscription.status);
+  if (!mapped) {
+    req.log.info({ stripeSubId, stripeStatus: subscription.status }, "Untracked Stripe subscription status — skipping");
+    return;
+  }
+
+  await updateSubscriptionStatusByStripeId({
+    stripeSubscriptionId: stripeSubId,
+    newStatus: mapped,
+    eventCreatedAt: new Date(eventCreatedSeconds * 1000),
+    endedAt: subscription.ended_at ? new Date(subscription.ended_at * 1000) : undefined,
+  });
 }
 
 async function handleCheckoutSessionCompleted(

@@ -20,6 +20,7 @@ import {
 import jwt from "jsonwebtoken";
 import { fetchScanCountsForSpotIds } from "../lib/scanCounts";
 import { sendCampaignCompletedAdminEmail } from "../lib/emails";
+import { markCampaignAssignmentsMailed } from "../lib/subscriptions";
 
 const router: IRouter = Router();
 
@@ -343,6 +344,24 @@ router.post("/admin/campaigns/:id/complete", requireAdmin, async (req, res): Pro
     .update(campaignsTable)
     .set({ status: "completed" })
     .where(eq(campaignsTable.id, params.data.id));
+
+  // Flip every approved subscription-issue assignment for this campaign
+  // to included_in_print=true. This is the ONLY place issues are counted
+  // as fulfilled toward a subscriber's commitment total. Failure here is
+  // logged but does not block the campaign-complete response — we'll
+  // surface a retry path from the admin subscriptions screen later.
+  try {
+    const mailedCount = await markCampaignAssignmentsMailed(params.data.id);
+    req.log.info(
+      { campaignId: params.data.id, mailedAssignments: mailedCount },
+      "Marked subscription assignments mailed",
+    );
+  } catch (err) {
+    req.log.error(
+      { err, campaignId: params.data.id },
+      "Failed to mark subscription assignments mailed — admin can retry from Subscriptions page",
+    );
+  }
 
   req.log.info({ campaignId: params.data.id }, "Campaign completed");
 

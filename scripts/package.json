@@ -7,6 +7,7 @@
     "hello": "tsx ./src/hello.ts",
     "gen-restaurant-assets": "tsx ./src/generate-restaurant-assets.ts",
     "gen:template": "tsx ./src/generateAdTemplate.ts",
+    "provision-stripe-prices": "tsx ./src/provisionStripePrices.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
@@ -15,6 +16,7 @@
   },
   "dependencies": {
     "openai": "^6.34.0",
-    "sharp": "^0.34.5"
+    "sharp": "^0.34.5",
+    "stripe": "^22.1.0"
   }
 }

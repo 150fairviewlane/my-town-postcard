@@ -12,6 +12,7 @@ import {
   loadReservation,
   clearReservation,
 } from "../lib/reservationStorage";
+import { PLANS, monthlyCents, totalCents, formatUsd, formatUsdCents } from "../lib/subscriptionPlans";
 
 // The publishable key is served by the API (so a single Replit Stripe
 // integration drives both server-side payments and Stripe.js on the
@@ -255,11 +256,141 @@ function ErrorPanel({ title, message, actionLabel = null, onAction = null }) {
   );
 }
 
+function PlanSelector({ size, value, onChange }) {
+  return (
+    <div style={{ display: "grid", gap: 10, marginBottom: 20 }}>
+      <div style={{ fontSize: 13, fontWeight: 800, color: "#374151", textTransform: "uppercase", letterSpacing: 0.5 }}>
+        Choose your commitment
+      </div>
+      {PLANS.map((p) => {
+        const monthly = monthlyCents(size, p.key);
+        const total = totalCents(size, p.key);
+        const cph = monthly / 5000; // cost per household per issue
+        const selected = value === p.key;
+        return (
+          <button
+            type="button"
+            key={p.key}
+            onClick={() => onChange(p.key)}
+            style={{
+              textAlign: "left",
+              border: selected ? "2px solid #991b1b" : "1.5px solid #e5e7eb",
+              background: selected ? "#fef2f2" : p.highlight ? "#fffbeb" : "#fff",
+              padding: "14px 16px",
+              borderRadius: 12,
+              cursor: "pointer",
+              position: "relative",
+              transition: "all 0.15s",
+            }}
+          >
+            {p.highlight && (
+              <span style={{
+                position: "absolute", top: -10, right: 12,
+                background: "#d97706", color: "#fff", fontSize: 10,
+                fontWeight: 800, padding: "2px 8px", borderRadius: 999,
+                textTransform: "uppercase", letterSpacing: 0.5,
+              }}>
+                Best Value
+              </span>
+            )}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 15, color: "#111" }}>{p.label}</div>
+                <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>{p.subtitle}</div>
+              </div>
+              <div style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                <div style={{ fontWeight: 800, fontSize: 16, color: "#111" }}>
+                  {formatUsd(monthly)}
+                  <span style={{ color: "#6b7280", fontWeight: 600, fontSize: 12 }}>
+                    {p.totalIssues > 1 ? "/mo" : ""}
+                  </span>
+                </div>
+                {p.totalIssues > 1 && (
+                  <div style={{ fontSize: 11, color: "#6b7280" }}>
+                    {formatUsd(total)} total · ≈ {formatUsdCents(cph)} / home
+                  </div>
+                )}
+                {p.totalIssues === 1 && (
+                  <div style={{ fontSize: 11, color: "#6b7280" }}>
+                    ≈ {formatUsdCents(cph)} / home
+                  </div>
+                )}
+              </div>
+            </div>
+          </button>
+        );
+      })}
+      <div style={{ fontSize: 11, color: "#9ca3af", lineHeight: 1.4 }}>
+        Subscriptions auto-cancel at the end of their committed term — no surprise renewals. We'll email you 30 and 7 days before your run ends.
+      </div>
+    </div>
+  );
+}
+
+function SubscriptionRedirect({ spotId, size, planKey, onError }) {
+  const [busy, setBusy] = useState(false);
+  const monthly = monthlyCents(size, planKey);
+  const total = totalCents(size, planKey);
+  const plan = PLANS.find((p) => p.key === planKey);
+  const handleClick = async () => {
+    setBusy(true);
+    try {
+      const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+      const res = await fetch(`${base}/api/checkout/create-subscription-session`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ spotId: parseInt(spotId, 10), commitmentType: planKey }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.error || `Server returned ${res.status}`);
+      if (!body?.checkoutUrl) throw new Error("Stripe did not return a Checkout URL.");
+      window.location.href = body.checkoutUrl;
+    } catch (err) {
+      setBusy(false);
+      onError(err?.message || "Could not start subscription checkout.");
+    }
+  };
+  return (
+    <div>
+      <div style={{
+        background: "#f8fafc", border: "1px solid #e5e7eb", borderRadius: 10,
+        padding: 16, marginBottom: 16,
+      }}>
+        <div style={{ fontSize: 12, color: "#6b7280", textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 700, marginBottom: 6 }}>
+          Order Summary
+        </div>
+        <div style={{ fontSize: 14, color: "#111", marginBottom: 4 }}>
+          <strong>{plan?.label}</strong> · {plan?.totalIssues} issues · {SIZE_LABELS[size] ?? size.toUpperCase()}
+        </div>
+        <div style={{ fontSize: 14, color: "#111" }}>
+          {formatUsd(monthly)}/mo · <strong>{formatUsd(total)} total committed</strong>
+        </div>
+      </div>
+      <button
+        onClick={handleClick}
+        disabled={busy}
+        style={{
+          width: "100%", padding: 14, borderRadius: 10, border: "none",
+          background: busy ? "#9ca3af" : "#991b1b", color: "#fff",
+          fontSize: 15, fontWeight: 800, cursor: busy ? "wait" : "pointer",
+        }}
+      >
+        {busy ? "Redirecting to Stripe…" : `Continue to Stripe Checkout →`}
+      </button>
+      <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 10, textAlign: "center" }}>
+        Secured by Stripe · Your card is charged monthly for {plan?.totalIssues} months, then stops automatically.
+      </div>
+    </div>
+  );
+}
+
 export default function CheckoutPage() {
   const { spotId } = useParams();
   const [intentData, setIntentData] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [stripeLoadError, setStripeLoadError] = useState(null);
+  const [selectedPlan, setSelectedPlan] = useState("single");
+  const [subError, setSubError] = useState(null);
   const createIntentMutation = useCreatePaymentIntent();
 
   // Pull the spot record so we have the authoritative expires_at to drive
@@ -360,16 +491,37 @@ export default function CheckoutPage() {
       )}
 
       {intentData && (
-        <Elements stripe={stripePromise} options={{ clientSecret: intentData.clientSecret }}>
-          <CheckoutForm
-            spotId={spotId}
-            clientSecret={intentData.clientSecret}
-            amount={intentData.amount}
+        <>
+          <PlanSelector
             size={intentData.size}
-            businessName={intentData.businessName || "Your Business"}
-            expiresAt={expiresAt}
+            value={selectedPlan}
+            onChange={(p) => { setSelectedPlan(p); setSubError(null); }}
           />
-        </Elements>
+          {subError && (
+            <div style={{ marginBottom: 14 }}>
+              <ErrorPanel title="Could not start subscription" message={subError} />
+            </div>
+          )}
+          {selectedPlan === "single" ? (
+            <Elements stripe={stripePromise} options={{ clientSecret: intentData.clientSecret }}>
+              <CheckoutForm
+                spotId={spotId}
+                clientSecret={intentData.clientSecret}
+                amount={intentData.amount}
+                size={intentData.size}
+                businessName={intentData.businessName || "Your Business"}
+                expiresAt={expiresAt}
+              />
+            </Elements>
+          ) : (
+            <SubscriptionRedirect
+              spotId={spotId}
+              size={intentData.size}
+              planKey={selectedPlan}
+              onError={(m) => setSubError(m)}
+            />
+          )}
+        </>
       )}
     </CheckoutShell>
   );
