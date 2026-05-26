@@ -289,7 +289,8 @@ export default function AdGenV7Page() {
       if (!layoutResp.ok) throw new Error(layoutData.error ?? "Layout generation failed");
       const L = layoutData.layout;
       if (L.headline1)    setBizLine1(L.headline1);
-      if (L.headline2)    setBizLine2(L.headline2);
+      // headline2 is NOT applied — no random words should appear below the
+      // business name. The tagline field is the only thing that goes there.
       if (L.tagline)      setTagline(L.tagline);
       if (L.menu?.length) setMenuItems(L.menu.map((m) => m.name + (m.price ? " " + m.price : "")));
       if (L.offer?.amount) setOfferAmount(L.offer.amount);

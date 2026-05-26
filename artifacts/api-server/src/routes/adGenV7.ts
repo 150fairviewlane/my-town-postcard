@@ -101,8 +101,7 @@ router.post("/ad-gen/layout", async (req, res): Promise<void> => {
     "Return this exact JSON structure:\n" +
     "{\n" +
     '  "headline1": "BUSINESS NAME in ALL CAPS, max 20 chars per word",\n' +
-    '  "headline2": "memorable 1-3 word script accent, title case, max 14 chars",\n' +
-    '  "tagline": "compelling tagline under 35 chars",\n' +
+    '  "tagline": "compelling tagline under 35 chars — this is the ONLY line that appears below the business name",\n' +
     '  "menu": [\n' +
     '    {"name": "Item or Service", "price": "$X.XX"},\n' +
     '    {"name": "Item or Service", "price": "$X.XX"},\n' +

@@ -284,8 +284,17 @@ return (
     </div>
   )}
 
-  {/* Menu / services list — 2 items on S, 4 on all larger sizes */}
-  <div style={{ position: "absolute", top: "44%", left: 12*fScale, right: 12*fScale, display: "flex", flexDirection: "column", gap: 3*fScale }}>
+  {/* Menu / services list — 2 items on S, 4 on all larger sizes.
+      For XL/L: anchor from top at 44% so items sit in the mid-section.
+      For M/S: anchor from the bottom (above the contact footer) so items
+      don't pile under the company name in the limited vertical space. */}
+  <div style={{
+    position: "absolute",
+    ...(isM || isS
+      ? { bottom: Math.round(36 * fScale), left: 12*fScale, right: 12*fScale }
+      : { top: "44%",                       left: 12*fScale, right: 12*fScale }),
+    display: "flex", flexDirection: "column", gap: 3*fScale,
+  }}>
     {getActiveItems(data.menuItems, ind.menu).slice(0, isS ? 2 : 4).map((item, i) => (
       <div key={i} style={{ display: "flex", alignItems: "center", gap: 6*fScale }}>
         <div style={{ width: 12*fScale, height: 12*fScale, borderRadius: "50%", background: ind.colors.primary, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
