@@ -1,0 +1,119 @@
+BIGGEST STRATEGIC ISSUE
+Your pricing language may unintentionally suppress conversions.
+Right now you emphasize:
+“6-Issue Commitment”
+“12-Issue Commitment”
+That psychologically feels:
+contractual
+restrictive
+risky
+Especially for small local businesses.
+✅ Better framing (HIGHLY recommended)
+Instead of:
+6-Issue Commitment
+12-Issue Commitment
+Use:
+Current	Better
+Single Issue	One-Time Placement
+6-Issue Commitment	Growth Plan
+12-Issue Commitment	Premium Visibility Plan
+Then explain:
+“Runs for 6 consecutive issues”
+“Runs for 12 consecutive issues”
+This feels MUCH less intimidating.
+🔥 HUGE MISSING PIECE
+You need auto-renewal OFF (good)
+BUT:
+you ALSO need renewal upsell automation.
+Currently:
+subscription ends
+customer disappears
+That’s dangerous.
+✅ Add this explicitly
+Add:
+renewal email sequence
+in-app renewal prompts
+30-day early renewal incentive
+Example:
+“Renew before your final issue and lock in current pricing.”
+This becomes a MAJOR revenue driver later.
+🔥 MOST IMPORTANT TECHNICAL HOLE
+Your “issues_remaining” logic is dangerous.
+Right now:
+decrement on successful payment
+But issues and payments are NOT the same thing.
+Example:
+payment succeeds
+issue delayed
+customer skips issue
+production changes
+Now your accounting drifts.
+✅ Better approach
+Instead of:
+issues_remaining
+Use:
+commitment_total_issues
+issues_fulfilled
+Then:
+remaining = total - fulfilled
+And ONLY increment fulfilled when:
+issue is actually finalized/mailed
+NOT when payment succeeds.
+This is VERY important operationally.
+🔥 CRITICAL MISSING CONCEPT
+You need “issue participation records”
+Right now there’s no proper linkage between:
+subscription
+specific issue
+proof approval
+actual print inclusion
+You need something like:
+subscription_issue_assignments
+Fields:
+subscription_id
+issue_id
+ad_version_id
+proof_status
+included_in_print
+mailed_at
+skipped_reason
+Otherwise:
+auditing becomes impossible
+fulfillment disputes become painful
+reprints become messy
+This is a VERY important omission.
+🔥 BIG BUSINESS RECOMMENDATION
+Add “Pause Subscription”
+This will save MANY cancellations.
+Example:
+seasonal businesses
+temporary closures
+cash flow issues
+Allow:
+pause for 1–2 issues
+then resume
+That dramatically improves retention.
+🔥 MISSING SALES FEATURE
+You should show “Cost Per Household”
+This will MASSIVELY improve conversion.
+Example:
+Instead of:
+“$269/month”
+Say:
+“Reach 5,000 homeowners for about 5¢ per home.”
+That’s a powerful framing device.
+This is probably one of the highest-converting additions you could make.
+🔥 HUGE UX RECOMMENDATION
+DO NOT default to the 6-month plan.
+I’d actually recommend:
+Default:
+12-month selected visually
+BUT:
+no radio selected initially
+Why:
+anchoring psychology
+makes 6-month feel safer
+increases average order value
+If you pre-select:
+users may distrust it
+may feel manipulative

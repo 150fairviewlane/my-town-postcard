@@ -1,0 +1,170 @@
+I need to add multi-issue subscription commitments to my shared mailer ad platform. Currently, advertisers buy a single ad placement for one issue via Stripe one-time payment. I want to offer three commitment options at checkout, with discounts that incentivize longer commitments.
+
+Before writing any code, please plan out the implementation in phases and confirm the plan with me. Then build phase by phase, confirming each works before moving to the next.
+
+## Commitment Tiers
+
+For every ad size (XL $499, Large $399, Medium $299, Small $199), offer three options:
+
+1. Single Issue — Full price, one-time Stripe payment (current behavior, keep working)
+1. 6-Issue Commitment — 10% discount per issue, billed monthly via Stripe Subscription
+1. 12-Issue Commitment — 20% discount per issue, billed monthly via Stripe Subscription
+
+Example pricing displayed to customer for a Medium ad ($299/issue):
+
+- Single Issue: $299 (one-time)
+- 6 Issues: $269.10/month × 6 = $1,614.60 total (save $179.40)
+- 12 Issues: $239.20/month × 12 = $2,870.40 total (save $717.60)
+
+Show the total savings prominently — this is the main sales lever.
+
+## Customer-Facing App Changes
+
+On the ad reservation/checkout page, after the customer selects their ad size and previews their proof:
+
+1. Add a “Commitment Length” selector with three radio button or card-style options showing:
+- Plan name (Single / 6 Issues / 12 Issues)
+- Monthly price (or one-time price for single)
+- Total cost over the commitment
+- Savings amount (highlight in green for 6 and 12)
+- A “Best Value” badge on the 12-issue option
+1. Default the selection to the 6-issue option (this nudges toward commitment without forcing it).
+1. Add a short explainer below the selector: “Your ad runs in every issue during your commitment. Your design can be updated between issues at no charge. Cancel anytime after your commitment ends.”
+1. Update the Stripe Checkout flow:
+- If single issue selected → existing one-time payment flow (no change)
+- If 6 or 12 selected → Stripe Checkout in subscription mode with the appropriate price ID
+1. After successful subscription checkout, the confirmation page should clearly state:
+- “You’re locked in for [6 or 12] issues at [discounted price]/month”
+- Next billing date
+- Total commitment value
+- That they’ll receive a proof preview before each issue mails
+
+## Stripe Configuration
+
+Create the following Stripe Products and Prices via the Stripe API or dashboard:
+
+For each ad size (XL, Large, Medium, Small), create:
+
+- 1 one-time price (existing — verify it’s still there)
+- 1 recurring monthly price at 10% discount for 6-month commitment
+- 1 recurring monthly price at 20% discount for 12-month commitment
+
+Store the Stripe Price IDs in a config file or database table mapping:
+{ad_size, commitment_length} → stripe_price_id
+
+For 6-month and 12-month subscriptions, set the subscription to cancel automatically after the committed number of billing cycles using Stripe’s cancel_at parameter on subscription creation, set to (now + 6 months) or (now + 12 months). The customer should NOT auto-renew without explicit consent — they get an email 30 days before commitment ends asking if they want to renew.
+
+## Stripe Webhooks (Critical Infrastructure — Build This Carefully)
+
+Webhooks are the source of truth for subscription state. Without them, the local database will drift out of sync with Stripe and lead to billing errors, missed cancellations, or printed ads for customers who didn’t actually pay. Build this as core infrastructure, not as an afterthought.
+
+### Check existing webhook setup first
+
+Before building new webhook handlers, check whether the current app already has a Stripe webhook endpoint. If it does, confirm whether it verifies the Stripe signature (look for stripe.webhooks.constructEvent or equivalent). If signature verification is missing, add it before doing anything else — an unverified webhook endpoint is a security hole that lets anyone send fake events to corrupt the database.
+
+### Required webhook endpoint
+
+Create or update a single webhook endpoint (e.g., POST /api/webhooks/stripe) that:
+
+1. Verifies the Stripe signature using the STRIPE_WEBHOOK_SECRET environment variable (store this in Replit Secrets — one for test mode, one for live mode). Reject any request that fails signature verification with HTTP 400. Use stripe.webhooks.constructEvent with the raw request body, the stripe-signature header, and the webhook secret.
+1. Returns 200 OK to Stripe within 5 seconds, even on processing errors. If processing takes longer or fails, log the event for retry but still acknowledge receipt to Stripe.
+1. Is idempotent — Stripe retries webhooks on failure, sometimes delivering the same event multiple times. Create a stripe_webhook_events table (event_id primary key, processed_at timestamp) and check if the event ID has already been processed before acting on it.
+
+### Events that must be handled
+
+For each of the following, update the local database accordingly:
+
+- customer.subscription.created — Confirm subscription exists in local DB, mark active, set commitment_start_date and commitment_end_date from Stripe data.
+- customer.subscription.updated — Update local subscription record. Pay special attention to status changes (active → past_due, active → canceled, etc.) and cancel_at changes.
+- customer.subscription.deleted — Mark subscription as ended in local DB. Stop including this advertiser in future issues. Send me an admin notification.
+- invoice.payment_succeeded — Record successful payment, decrement issues_remaining if appropriate, ensure advertiser stays active for next issue.
+- invoice.payment_failed — Mark subscription as past_due in local DB. Send advertiser a payment retry email (Stripe handles dunning automatically, but log the event). After Stripe’s final retry fails and subscription transitions to canceled or unpaid, the subscription.updated or subscription.deleted webhook will fire — handle removal from issue lineup there.
+- invoice.upcoming — Fires ~7 days before next invoice. Use this to send the advertiser a heads-up email, especially before final invoice of their commitment so they can renew.
+- charge.refunded — If a payment is refunded, update payment status in local DB and flag for admin review.
+
+### Failure modes to handle
+
+1. Webhook arrives before the checkout success redirect. Don’t assume the local DB record exists when the webhook arrives — use upsert logic (create if missing, update if present) keyed on Stripe customer ID and subscription ID.
+1. Webhook never arrives. Build an admin “Sync with Stripe” button that pulls current subscription state from Stripe API and reconciles with local DB. Useful for debugging and as a manual recovery option.
+1. Out-of-order delivery. Use the event’s created timestamp to detect stale updates — if an incoming event is older than the last update on that subscription, log it but don’t overwrite newer data.
+
+### Webhook logging and monitoring
+
+Every webhook event should be logged with: event ID, event type, timestamp received, processing status (success/failed/skipped), and any error message. Build a simple admin view showing the last 100 webhook events so I can debug issues without diving into Stripe’s dashboard.
+
+### Webhook testing
+
+Use the Stripe CLI to forward webhook events to localhost during development: stripe listen –forward-to localhost:PORT/api/webhooks/stripe. Test each event type using stripe trigger <event_name> before deploying.
+
+### Production webhook registration
+
+After deploying, register the production webhook endpoint in the Stripe Dashboard under Developers → Webhooks. Subscribe only to the events listed above (not all events) to reduce noise. Confirm the webhook secret is set as an environment variable in production.
+
+## Database Schema Changes
+
+Add fields to the existing advertiser/ad record (or create a new “subscriptions” table if appropriate):
+
+- commitment_type: enum(‘single’, ‘6_issue’, ‘12_issue’)
+- stripe_subscription_id: string (nullable for single-issue)
+- stripe_customer_id: string
+- commitment_start_date: timestamp
+- commitment_end_date: timestamp
+- issues_remaining: integer (decrements each issue)
+- monthly_price_paid: decimal (the discounted amount)
+- total_commitment_value: decimal
+- subscription_status: enum(‘active’, ‘past_due’, ‘canceled’, ‘ended’)
+
+Also create the stripe_webhook_events table mentioned above (event_id, event_type, processed_at, status, error_message).
+
+For each issue that gets generated, query active subscriptions where commitment_end_date > now and issues_remaining > 0, and automatically include those ads in the next issue’s lineup (pending proof approval).
+
+## Admin/Operator Changes
+
+In the admin view (the part I use to manage issues), add:
+
+1. A “Subscriptions” tab showing all active commitments with:
+- Advertiser name
+- Ad size and slot
+- Commitment type
+- Issues remaining
+- Monthly revenue
+- Renewal date
+- Subscription status (active / past_due / etc.)
+- Cancel/refund button (with confirmation dialog)
+1. When building a new issue, show a “Pre-Committed Advertisers” section that auto-populates from active subscriptions. I should be able to confirm or swap them per issue.
+1. A revenue forecast widget showing committed monthly recurring revenue (MRR) from active subscriptions, separate from one-time issue revenue.
+1. A “Webhook Events Log” view showing the last 100 webhook events (event ID, type, status, timestamp) for debugging.
+1. A “Sync with Stripe” button that reconciles local subscription data with Stripe’s current state, for recovery when webhooks fail.
+
+## Edge Cases to Handle
+
+- What happens if an advertiser’s payment fails mid-commitment? Use Stripe’s smart retries and dunning emails. The invoice.payment_failed webhook marks them past_due. During the retry window (typically 2 weeks), do NOT include their ad in the next issue if their status is past_due. If they recover, status returns to active and they resume in the next issue. If they fail permanently, the subscription.deleted webhook removes them.
+- What if I need to refund or cancel early? Build an admin “cancel subscription” action that uses Stripe’s cancel_at_period_end or immediate cancellation with prorated refund.
+- What if an advertiser wants to change their ad design between issues? They should be able to log back into their account, edit the ad (regenerate via Grok or upload new content), and the new version applies to the next unprinted issue.
+
+## Testing Checklist (Verify Before Deploying)
+
+- Test single-issue purchase still works (no regression)
+- Test 6-issue subscription creates, charges immediately, and shows correct end date
+- Test 12-issue subscription creates and auto-cancels at correct end date
+- Test webhook signature verification rejects unsigned/spoofed requests
+- Test webhook idempotency (same event ID processed twice doesn’t double-decrement issues)
+- Test failed payment flow: payment fails → subscription marked past_due → advertiser excluded from next issue → payment recovers → advertiser re-included
+- Test admin can view, cancel, and refund subscriptions
+- Test “Sync with Stripe” button correctly reconciles state
+- Verify all webhook events listed above update local DB correctly using stripe trigger
+
+## Build Order
+
+Please build in this order, confirming each phase with me before proceeding:
+
+1. Database schema changes (subscription fields + webhook events table)
+1. Stripe Product/Price creation for all size × commitment combinations
+1. Webhook endpoint with signature verification and all required event handlers
+1. Customer-facing commitment selector UI
+1. Subscription checkout flow integration
+1. Admin views (subscriptions tab, webhook log, sync button)
+1. End-to-end testing with Stripe CLI in test mode
+1. Production deployment checklist (register webhook URL, set live mode secrets)
+
+Start by reviewing the existing codebase, confirming the current Stripe integration approach, and reporting back with your phase-by-phase implementation plan before writing any code.

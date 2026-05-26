@@ -6,3 +6,6 @@ export * from "./outreachLeads";
 export * from "./dealers";
 export * from "./imageLibrary";
 export * from "./generatedAds";
+export * from "./spotSubscriptions";
+export * from "./subscriptionIssueAssignments";
+export * from "./stripeWebhookEvents";
