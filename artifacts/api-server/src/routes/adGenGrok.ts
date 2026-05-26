@@ -1054,6 +1054,14 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     }
   }
 
+  // Set up keepalive before the try so the catch block can always clear it.
+  res.setHeader("Content-Type", "application/json");
+  let keepAliveTimer: ReturnType<typeof setInterval> | undefined;
+  const endJson = (data: object) => {
+    if (keepAliveTimer) { clearInterval(keepAliveTimer); keepAliveTimer = undefined; }
+    res.end(JSON.stringify(data));
+  };
+
   // NOTE: the try/catch starts here so that photo/logo fetch errors also return
   // a clean JSON response instead of letting Express fall back to an HTML page
   // (which causes JSON.parse to throw a cryptic "string did not match" error in
@@ -1089,6 +1097,9 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       resolution:   "2k",
     };
 
+    // Start keepalive right before the xAI call (declared outside try so catch can clear it).
+    keepAliveTimer = setInterval(() => { res.write("\n"); }, 5000);
+
     // ── Retry loop for transient overload errors ────────────────────────────
     let xaiRes!: Response;
     let body: Record<string, unknown> = {};
@@ -1123,7 +1134,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       if (attempt === XAI_RETRY_DELAYS_MS.length) {
         // All retries exhausted — still overloaded
         req.log.error({ bizName: d.bizName }, "grok-imagine: overload persists after all retries");
-        res.status(503).json({ error: "overloaded" });
+        endJson({ error: "overloaded" });
         return;
       }
       req.log.warn(
@@ -1153,11 +1164,11 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
         req.log.warn({ errMsg, bizName: d.bizName }, "grok-imagine edits: model not supported — falling back to /generations");
         try {
           const fallbackUrl = await callGenerationsJson(apiKey, adPrompt, d.bizName, req.log);
-          res.json({ imageUrl: await cropToSpotDims(fallbackUrl, cropDim.w, cropDim.h), fallback: true });
+          endJson({ imageUrl: await cropToSpotDims(fallbackUrl, cropDim.w, cropDim.h), fallback: true });
           return;
         } catch (fbErr) {
           req.log.error({ editsErr: errMsg, fbErr }, "grok-imagine both edits and generations failed");
-          res.status(502).json({ error: errMsg || "Grok API request failed" });
+          endJson({ error: errMsg || "Grok API request failed" });
           return;
         }
       }
@@ -1193,31 +1204,34 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
         );
         if (retryRes.ok) {
           const retryUrl = extractXaiImageUrl(retryRespBody);
-          if (retryUrl) { res.json({ imageUrl: await cropToSpotDims(retryUrl, cropDim.w, cropDim.h) }); return; }
+          if (retryUrl) { endJson({ imageUrl: await cropToSpotDims(retryUrl, cropDim.w, cropDim.h) }); return; }
         }
         req.log.warn({ retryStatus: retryRes.status, origErr: errMsg }, "grok-imagine edits retry also failed");
       }
 
-      // ── Case 3: all other errors → 502 with xAI message
+      // ── Case 3: all other errors → error in JSON body
       req.log.error({ status: xaiRes.status, errMsg, bizName: d.bizName }, "grok-imagine edits error");
-      res.status(502).json({ error: errMsg });
+      endJson({ error: errMsg });
       return;
     }
 
     const imageUrl = extractXaiImageUrl(body);
     if (!imageUrl) {
       req.log.warn({ body: JSON.stringify(body).slice(0, 300) }, "grok-imagine: no image in response");
-      res.status(502).json({
-        error: "Grok returned a response but no image was found — try again or simplify your prompt.",
-      });
+      endJson({ error: "Grok returned a response but no image was found — try again or simplify your prompt." });
       return;
     }
 
-    res.json({ imageUrl: await cropToSpotDims(imageUrl, cropDim.w, cropDim.h) });
+    endJson({ imageUrl: await cropToSpotDims(imageUrl, cropDim.w, cropDim.h) });
   } catch (err) {
+    clearInterval(keepAliveTimer);
     const msg = err instanceof Error ? err.message : "Grok API request failed";
     req.log.error({ err: msg, bizName: d.bizName }, "grok-imagine error");
-    res.status(502).json({ error: msg });
+    if (!res.headersSent) {
+      res.status(502).json({ error: msg });
+    } else {
+      res.end(JSON.stringify({ error: msg }));
+    }
   }
 });
 
@@ -1279,6 +1293,14 @@ router.post("/grok-ad-generator/refine", async (req, res) => {
     resolution:   "2k",
   };
 
+  // Keep the connection alive while xAI processes (proxy timeout ~10 s).
+  res.setHeader("Content-Type", "application/json");
+  const refineKeepAliveTimer = setInterval(() => { res.write("\n"); }, 5000);
+  const refineEndJson = (data: object) => {
+    clearInterval(refineKeepAliveTimer);
+    res.end(JSON.stringify(data));
+  };
+
   try {
     // ── Retry loop for transient overload errors ────────────────────────────
     let xaiRes!: Response;
@@ -1310,7 +1332,7 @@ router.post("/grok-ad-generator/refine", async (req, res) => {
       if (!isXaiOverload(xaiRes.status, errPeekMsg)) break;
       if (attempt === XAI_RETRY_DELAYS_MS.length) {
         req.log.error("grok-refine: overload persists after all retries");
-        res.status(503).json({ error: "overloaded" });
+        refineEndJson({ error: "overloaded" });
         return;
       }
       req.log.warn({ attempt, errMsg: errPeekMsg }, "grok-refine: overload detected — will retry");
@@ -1324,22 +1346,27 @@ router.post("/grok-ad-generator/refine", async (req, res) => {
         ?? (typeof body["_raw"] === "string" ? body["_raw"] : undefined)
         ?? `xAI API error ${xaiRes.status}`;
       req.log.error({ status: xaiRes.status, errMsg }, "grok-refine error");
-      res.status(502).json({ error: errMsg });
+      refineEndJson({ error: errMsg });
       return;
     }
 
     const imageUrl = extractXaiImageUrl(body);
     if (!imageUrl) {
       req.log.warn({ body: JSON.stringify(body).slice(0, 300) }, "grok-refine: no image in response");
-      res.status(502).json({ error: "Grok returned a response but no image was found — please try again." });
+      refineEndJson({ error: "Grok returned a response but no image was found — please try again." });
       return;
     }
 
-    res.json({ imageUrl: await cropToSpotDims(imageUrl, dim.w, dim.h) });
+    refineEndJson({ imageUrl: await cropToSpotDims(imageUrl, dim.w, dim.h) });
   } catch (err) {
+    clearInterval(refineKeepAliveTimer);
     const msg = err instanceof Error ? err.message : "Grok API request failed";
     req.log.error({ err: msg }, "grok-refine error");
-    res.status(502).json({ error: msg });
+    if (!res.headersSent) {
+      res.status(502).json({ error: msg });
+    } else {
+      res.end(JSON.stringify({ error: msg }));
+    }
   }
 });
 
