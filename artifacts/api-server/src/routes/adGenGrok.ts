@@ -776,7 +776,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       `    Look at the INDUSTRY ("${d.industry}") and BUSINESS NAME ("${d.bizName}") and let them drive your entire design aesthetic.\n` +
       "    • Food / restaurant / cafe / bakery → warm cinematic food photography, menu panels, rich appetizing color, editorial script accents\n" +
       "    • Contractor / outdoor / trades / lawn / roofing / cleaning → bold action scenes, high-contrast colors, strong authority layout\n" +
-      "    • Health / wellness / medical / chiropractic / dental → calming organic shapes, clean clinical photography, soft palette\n" +
+      "    • Health / wellness / medical / chiropractic / dental → calming organic shapes, bright welcoming office photography, soft professional palette\n" +
       "    • Retail / boutique / beauty / salon / spa → lifestyle photography, editorial typography, mood-driven color\n" +
       "    • Professional services / finance / legal / real estate → structured authority layout, trust signals, refined palette\n" +
       "    • Any other industry → infer the best premium advertising aesthetic from the business name and details\n\n" +
@@ -1088,6 +1088,87 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       imageRefs.push({ type: "image_url", url: toDataUrl(logoBuf, logoBlob.type || "image/png") });
     }
 
+    // ── No reference images → /generations is the correct endpoint ────────────
+    // /images/edits requires at least one reference image. When none are provided
+    // (e.g. Surprise Me with no uploaded photo or logo), route straight to the
+    // text-to-image generations endpoint to avoid an empty-array rejection and
+    // to get a more lenient moderation path for commercial advertising prompts.
+    if (imageRefs.length === 0) {
+      keepAliveTimer = setInterval(() => { res.write("\n"); }, 5000);
+      const genRes = await fetch("https://api.x.ai/v1/images/generations", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model:        "grok-imagine-image-quality",
+          prompt:       finalAdPrompt,
+          n:            1,
+          aspect_ratio: spotAspectRatio,
+          resolution:   "2k",
+        }),
+      });
+      const genBody = await safeJson(genRes);
+      req.log.info(
+        { status: genRes.status, body: JSON.stringify(genBody).slice(0, 500), bizName: d.bizName },
+        "grok-imagine generations (text-only) raw response",
+      );
+      if (genRes.ok) {
+        const genUrl = extractXaiImageUrl(genBody);
+        if (genUrl) { endJson({ imageUrl: await cropToSpotDims(genUrl, cropDim.w, cropDim.h) }); return; }
+      }
+      // Extract error and check for content moderation
+      const genErrRaw = genBody["error"];
+      const genErrMsg =
+        (typeof genErrRaw === "string" ? genErrRaw : undefined)
+        ?? ((genErrRaw as Record<string, unknown> | undefined)?.["message"] as string | undefined)
+        ?? (typeof genBody["_raw"] === "string" ? genBody["_raw"] : undefined)
+        ?? `xAI API error ${genRes.status}`;
+      const genErrLower = genErrMsg.toLowerCase();
+      const isGenModerated =
+        genErrLower.includes("content policy") || genErrLower.includes("content_policy") ||
+        genErrLower.includes("moderat") || genErrLower.includes("safety") ||
+        genErrLower.includes("violat") || genErrLower.includes("inappropriat") ||
+        genErrLower.includes("rejected") || genErrLower.includes("blocked") ||
+        genErrLower.includes("harmful");
+      if (isGenModerated) {
+        req.log.warn({ genErrMsg, bizName: d.bizName }, "grok-imagine generations: content moderation — retrying with safe prompt");
+        const safeAdPrompt =
+          `Professional direct-mail postcard advertisement for ${d.bizName}. ` +
+          `Attractive, print-ready layout for a residential neighbourhood mailing. ` +
+          `Business name large and prominent at the top. ` +
+          (d.phone ? `Phone number: ${d.phone}. ` : "") +
+          (fullAddress !== "(none)" ? `Address: ${fullAddress}. ` : "") +
+          (d.offer ? `Feature this special offer: ${d.offer}. ` : "") +
+          `Include a small QR code placeholder in the footer. ` +
+          `Clean, warm, welcoming design with professional typography and a soft colour palette.`;
+        const safeRes = await fetch("https://api.x.ai/v1/images/generations", {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model:        "grok-imagine-image-quality",
+            prompt:       safeAdPrompt,
+            n:            1,
+            aspect_ratio: spotAspectRatio,
+            resolution:   "2k",
+          }),
+        });
+        const safeBody = await safeJson(safeRes);
+        req.log.info(
+          { status: safeRes.status, body: JSON.stringify(safeBody).slice(0, 500), bizName: d.bizName },
+          "grok-imagine generations safe-prompt retry raw response",
+        );
+        if (safeRes.ok) {
+          const safeUrl = extractXaiImageUrl(safeBody);
+          if (safeUrl) { endJson({ imageUrl: await cropToSpotDims(safeUrl, cropDim.w, cropDim.h) }); return; }
+        }
+        req.log.error({ genErrMsg, bizName: d.bizName }, "grok-imagine generations: moderation persists after safe-prompt retry");
+        endJson({ error: "moderated" });
+        return;
+      }
+      req.log.error({ status: genRes.status, genErrMsg: genErrMsg, bizName: d.bizName }, "grok-imagine generations error");
+      endJson({ error: genErrMsg });
+      return;
+    }
+
     const editsBody: Record<string, unknown> = {
       model:        "grok-imagine-image-quality",
       prompt:       finalAdPrompt,
@@ -1209,7 +1290,39 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
         req.log.warn({ retryStatus: retryRes.status, origErr: errMsg }, "grok-imagine edits retry also failed");
       }
 
-      // ── Case 3: all other errors → error in JSON body
+      // ── Case 3: content moderation → retry on /generations with stripped prompt
+      const isContentModeration =
+        (xaiRes.status === 400 || xaiRes.status === 422) &&
+        (errLower.includes("content policy") || errLower.includes("content_policy") ||
+         errLower.includes("moderat") || errLower.includes("safety") ||
+         errLower.includes("violat") || errLower.includes("inappropriat") ||
+         errLower.includes("rejected") || errLower.includes("blocked") ||
+         errLower.includes("harmful"));
+
+      if (isContentModeration) {
+        req.log.warn({ errMsg, bizName: d.bizName }, "grok-imagine edits: content moderation — retrying on /generations with safe prompt");
+        const safeAdPrompt =
+          `Professional direct-mail postcard advertisement for ${d.bizName}. ` +
+          `Attractive, print-ready layout for a residential neighbourhood mailing. ` +
+          `Business name large and prominent at the top. ` +
+          (d.phone ? `Phone number: ${d.phone}. ` : "") +
+          (fullAddress !== "(none)" ? `Address: ${fullAddress}. ` : "") +
+          (d.offer ? `Feature this special offer: ${d.offer}. ` : "") +
+          `Include a small QR code placeholder in the footer. ` +
+          `Clean, warm, welcoming design with professional typography and a soft colour palette.`;
+        try {
+          const safeUrl = await callGenerationsJson(apiKey, safeAdPrompt, d.bizName, req.log);
+          endJson({ imageUrl: await cropToSpotDims(safeUrl, cropDim.w, cropDim.h) });
+          return;
+        } catch (safeErr) {
+          const safeErrMsg = safeErr instanceof Error ? safeErr.message : String(safeErr);
+          req.log.error({ origErr: errMsg, safeErr: safeErrMsg, bizName: d.bizName }, "grok-imagine moderation retry also failed");
+          endJson({ error: "moderated" });
+          return;
+        }
+      }
+
+      // ── Case 4: all other errors → error in JSON body
       req.log.error({ status: xaiRes.status, errMsg, bizName: d.bizName }, "grok-imagine edits error");
       endJson({ error: errMsg });
       return;
@@ -2218,6 +2331,8 @@ async function generate(){
       var grokErr = data.error || 'Generation failed \\u2014 please try again.';
       showErr(grokErr === 'overloaded'
         ? 'The image generator is busy right now \\u2014 please try again in a moment.'
+        : grokErr === 'moderated'
+        ? 'Grok\\u2019s content filter blocked this ad. Try rephrasing your services list to avoid clinical or procedure-specific terms, then click Generate again.'
         : grokErr);
     } else {
       _resultUrl = data.imageUrl;
@@ -2289,6 +2404,8 @@ async function refineAd(){
       var refErr = data.error || 'Refinement failed \u2014 please try again.';
       errEl.textContent = '\u26a0\ufe0f ' + (refErr === 'overloaded'
         ? 'The image generator is busy right now \u2014 please try again in a moment.'
+        : refErr === 'moderated'
+        ? 'Grok\u2019s content filter blocked this adjustment. Try rewording your instruction and click Refine again.'
         : refErr);
       errEl.classList.add('visible');
     } else {
