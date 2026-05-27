@@ -77,7 +77,7 @@ const FONT_VARIANTS: Record<string, string[]> = {
 
 const COUPON_VARIANTS: string[] = [
   "Coupon box style: CLASSIC PERFORATION STRIP — dashed rectangular border with a scissor ✂ icon on the left edge and a small 'CUT HERE' label. Clean, universally recognized coupon strip format.",
-  "Coupon box style: MOVIE-TICKET STUB — vertical dotted tear-line running along the left edge of the coupon box, subtle diagonal micro-stripe background pattern inside the box, and a small decorative stub serial number (e.g. #0042) in a corner serif font — NEVER write 'Admit One Offer', 'Admit Offer', or any promotional phrase not supplied by the business. Festive, collectible feel.",
+  "Coupon box style: MOVIE-TICKET STUB — vertical dotted tear-line running along the left edge of the coupon box, subtle diagonal micro-stripe background pattern inside the box — NEVER write 'Admit One Offer', 'Admit Offer', any serial numbers, or any promotional phrase not supplied by the business. Festive, collectible feel.",
   "Coupon box style: RUBBER-STAMP SEAL — a circular ink-ring border centered around the offer text with a slight distressed texture, 'SPECIAL OFFER' arced along the top of the ring border in small caps. Authentic artisan-stamp aesthetic.",
 ];
 
