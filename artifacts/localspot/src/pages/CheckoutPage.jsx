@@ -85,14 +85,14 @@ function CheckoutForm({ spotId, clientSecret, amount, size, businessName, expire
   const [holdExpired, setHoldExpired] = useState(false);
   const confirmMutation = useConfirmPayment();
 
-  // When the 30-min hold lapses, drop the local storage entry and bounce
-  // the customer back to the picker so they can grab another spot. The
-  // server-side cleanup sweeper has already (or will momentarily) freed
-  // the row, so re-attempting payment here would just fail.
+  // When the 30-min hold lapses the server has already (or will shortly)
+  // free the row. Mark the form disabled and show the expired banner so the
+  // customer sees what happened — but do NOT auto-redirect. They can click
+  // "Choose a different spot" themselves when ready; force-navigating after a
+  // timeout loses any work they had in progress on this page.
   const handleHoldExpired = () => {
     setHoldExpired(true);
     clearReservation(spotId);
-    setTimeout(() => navigate("/"), 2500);
   };
 
   const handleSubmit = async (e) => {
@@ -182,20 +182,36 @@ function CheckoutForm({ spotId, clientSecret, amount, size, businessName, expire
         )}
       </div>
 
-      <button
-        type="submit"
-        disabled={processing || !stripe || holdExpired}
-        style={{
-          width: "100%", padding: 15, borderRadius: 12, border: "none",
-          background: processing || holdExpired ? "#d1d5db" : "#991b1b",
-          color: "#fff", fontSize: 16, fontWeight: 800,
-          cursor: processing || holdExpired ? "not-allowed" : "pointer",
-        }}>
-        {processing ? "Processing..." : holdExpired ? "Hold expired" : `Pay $${(amount / 100).toFixed(2)}`}
-      </button>
-      <p style={{ textAlign: "center", fontSize: 11, color: "#9ca3af", marginTop: 10 }}>
-        Secured by Stripe · Your card is charged now
-      </p>
+      {holdExpired ? (
+        <div style={{ textAlign: "center" }}>
+          <div style={{ background: "#fef3c7", border: "1px solid #fcd34d", borderRadius: 10, padding: "14px 18px", marginBottom: 14, color: "#92400e", fontSize: 13, lineHeight: 1.5 }}>
+            <strong>Your 30-minute hold has expired.</strong> This spot has been released back to the pool.
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate("/")}
+            style={{ width: "100%", padding: 14, borderRadius: 12, border: "none", background: "#111", color: "#fff", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>
+            ← Choose a different spot
+          </button>
+        </div>
+      ) : (
+        <>
+          <button
+            type="submit"
+            disabled={processing || !stripe}
+            style={{
+              width: "100%", padding: 15, borderRadius: 12, border: "none",
+              background: processing ? "#d1d5db" : "#991b1b",
+              color: "#fff", fontSize: 16, fontWeight: 800,
+              cursor: processing ? "not-allowed" : "pointer",
+            }}>
+            {processing ? "Processing..." : `Pay $${(amount / 100).toFixed(2)}`}
+          </button>
+          <p style={{ textAlign: "center", fontSize: 11, color: "#9ca3af", marginTop: 10 }}>
+            Secured by Stripe · Your card is charged now
+          </p>
+        </>
+      )}
     </form>
   );
 }
@@ -386,6 +402,7 @@ function SubscriptionRedirect({ spotId, size, planKey, onError }) {
 
 export default function CheckoutPage() {
   const { spotId } = useParams();
+  const [, navigate] = useLocation();
   const [intentData, setIntentData] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [stripeLoadError, setStripeLoadError] = useState(null);
@@ -486,7 +503,7 @@ export default function CheckoutPage() {
           title={loadError.isPaid ? "Spot already booked" : "Could not load payment"}
           message={loadError.message}
           actionLabel={loadError.isPaid ? "Browse available spots" : null}
-          onAction={loadError.isPaid ? () => window.location.replace("/") : null}
+          onAction={loadError.isPaid ? () => navigate("/") : null}
         />
       )}
 

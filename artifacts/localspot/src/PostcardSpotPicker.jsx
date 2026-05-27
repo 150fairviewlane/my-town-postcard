@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useGetActiveCampaign, useReserveSpot } from "@workspace/api-client-react";
+import { saveReservation } from "./lib/reservationStorage";
 import { GRID_AREAS } from "./postcardCore";
 
 const SIZES = {
@@ -404,6 +405,7 @@ export default function PostcardSpotPicker() {
           contactPhone: form.phone || undefined,
         },
       });
+      saveReservation(result.id, result.expiresAt, result.businessName);
       setModal(null);
       setSelected(null);
       navigate(`/checkout/${result.id}`);
