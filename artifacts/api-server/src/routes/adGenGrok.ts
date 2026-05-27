@@ -264,8 +264,8 @@ function buildFooterZone(
     "  Legibility required: drop shadows or dark-field wash on all text.\n" +
     `  LEFT — ${iconPrefix}phone "${phone}" bold, ad font. Zero digit changes.\n` +
     (hasAddr ? `  BESIDE/BELOW phone — address: ${addrRule}\n` : "") +
-    "  RIGHT — plain QR code graphic. No coupon box, no dashed frame, no decorative border of any kind.\n" +
-    "  QR QUIET ZONE: 4-unit clear white border ALL sides, no overlaps allowed.\n" +
+    "  RIGHT — small QR code graphic (max 0.5\"×0.5\" at print size). No coupon box, dashed frame, or decorative border.\n" +
+    "  QR QUIET ZONE: 4-unit clear white border on all sides, no overlaps.\n" +
     "  TYPOGRAPHY: phone + address IDENTICAL size (~9–10pt at print), bold. No website URL text.\n\n"
   );
 }
@@ -386,6 +386,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   const cropDim = CROP_DIMS[d.sizeKey.toLowerCase()] ?? { w: 400, h: 500 };
 
   const menuStr     = d.menu.filter(Boolean).map((m, i) => `  ${i + 1}. ${m}`).join("\n") || "  (none)";
+  const menuCount   = d.menu.filter(Boolean).length;
   const fullAddress = [d.address, d.city].filter(Boolean).join(", ") || "(none)";
   const hasPhoto    = !!d.photoUrl;
   const hasLogo     = !!d.logoData;
@@ -559,10 +560,12 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
         ? `    Seamlessly composite IMAGE 2 into the upper-right zone. Clean diagonal/curved cut where photo meets the green background. No rectangular border.\n\n`
         : "    Generate a photorealistic outdoor service scene — bright daylight, vibrant. Full bleed into upper-right zone; no rectangular border.\n\n") +
       "  ZONE 3 — SERVICE PANELS (middle horizontal row):\n" +
-      "    Four diagonal-cut photo panels, each with a circular lime-green icon badge on top and a white brush-stroke label below.\n" +
       (menuStr !== "  (none)"
-        ? `    Services: ${menuStr}\n    Each item exactly once.\n\n`
-        : "    Relevant service types for this business. Each item exactly once.\n\n") +
+        ? `    Render EXACTLY ${menuCount} diagonal-cut photo panel${menuCount !== 1 ? "s" : ""} — one per service listed. ` +
+          "Do NOT add extra panels to fill unused slots, and do NOT place the Special Offer in any panel.\n" +
+          "    Each panel: circular lime-green icon badge on top, white brush-stroke label below.\n" +
+          `    Services: ${menuStr}\n    Each item exactly once.\n\n`
+        : "    Four diagonal-cut photo panels, each with a circular lime-green icon badge on top and a white brush-stroke label below. Relevant service types for this business.\n\n") +
       (d.offer
         ? `  ZONE 4 — OFFER (wide white brush-stroke area, lower section):\n` +
           `    "${d.offer}" in bold dark-green text, large and prominent.\n` +
@@ -616,11 +619,14 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       `  ZONE 2 — HEADLINE (large rounded-rectangle white panel, upper-center):\n` +
       `    "${d.bizName}" in bold condensed all-caps sans-serif — very large, dark teal or near-black. Each word EXACTLY ONCE — NEVER repeat.\n\n` +
       (d.tagline ? `  ZONE 3 — TAGLINE (teal pill-shaped bar below the white panel):\n    "${d.tagline}" in clean white sans-serif, centered inside the teal pill bar.\n\n` : "") +
-      "  ZONE 4 — SERVICE PANELS (four equal-width, middle section):\n" +
-      "    Circular teal icon badge on top + white rounded-rectangle text box below per panel.\n" +
       (menuStr !== "  (none)"
-        ? `    Services: ${menuStr}\n    Each service exactly once.\n\n`
-        : "    Relevant wellness/medical services for this practice. Each once only.\n\n") +
+        ? `  ZONE 4 — SERVICE PANELS (EXACTLY ${menuCount} equal-width panel${menuCount !== 1 ? "s" : ""}, middle section):\n` +
+          `    Render EXACTLY ${menuCount} panel${menuCount !== 1 ? "s" : ""} — do NOT add extras to fill unused slots, and do NOT place the Special Offer in any panel.\n` +
+          "    Circular teal icon badge on top + white rounded-rectangle text box below per panel.\n" +
+          `    Services: ${menuStr}\n    Each service exactly once.\n\n`
+        : "  ZONE 4 — SERVICE PANELS (four equal-width, middle section):\n" +
+          "    Circular teal icon badge on top + white rounded-rectangle text box below per panel.\n" +
+          "    Relevant wellness/medical services for this practice. Each once only.\n\n") +
       (hasLogo ? `  LOGO: IMAGE ${logoImg} in an upper corner or within the headline panel. Preserve exact colors.\n\n` : "") +
       (d.offer
         ? `  ZONE 5 — OFFER:\n    "${d.offer}" prominently in an available white area.\n` +
@@ -701,12 +707,12 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
         : `    Generate a photorealistic outdoor service scene appropriate for this business — bright daylight, vibrant green tones, professional composition. Fill the entire upper-right zone with no rectangular border.\n\n`) +
 
       (menuStr !== "  (none)"
-        ? "  ZONE 4 — SERVICES PANELS (middle horizontal row):\n" +
-          "    Reproduce the four diagonal-cut panel row from the template. Each panel shows a relevant service photo behind a diagonal-cut edge.\n" +
-          "    Above each panel: a circular dark-green badge with a white icon inside representing the service.\n" +
-          "    Below each panel: a short white brush-stroke label with the service name in dark bold text.\n" +
-          `    Use the following services from the business details: ${menuStr}\n` +
-          "    IMPORTANT: each service name must appear exactly once across the entire ad — do not repeat any item.\n\n"
+        ? `  ZONE 4 — SERVICES PANELS (EXACTLY ${menuCount} panel${menuCount !== 1 ? "s" : ""}, middle horizontal row):\n` +
+          `    Render EXACTLY ${menuCount} diagonal-cut panel${menuCount !== 1 ? "s" : ""} — one per service listed. ` +
+          "Do NOT add extra panels to fill unused template slots. Do NOT place the Special Offer in any service panel.\n" +
+          "    Each panel: service photo behind diagonal-cut edge; circular dark-green badge with white icon above; short white brush-stroke label below.\n" +
+          `    Services: ${menuStr}\n` +
+          "    Each service name must appear exactly once across the entire ad.\n\n"
         : "  ZONE 4 — SERVICES PANELS (middle horizontal row):\n" +
           "    Reproduce the four diagonal-cut service photo panels from the template with relevant service imagery for this business type.\n" +
           "    Each panel has a circular green icon badge on top and a white brush-stroke label below.\n\n") +
@@ -864,8 +870,9 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
         : "") +
 
       (menuStr !== "  (none)"
-        ? "  ZONE 4 — SERVICE PANELS (four equal-width panels, middle section):\n" +
-          "    Reproduce the four-panel row from the template. Each panel has:\n" +
+        ? `  ZONE 4 — SERVICE PANELS (EXACTLY ${menuCount} equal-width panel${menuCount !== 1 ? "s" : ""}, middle section):\n` +
+          `    Render EXACTLY ${menuCount} panel${menuCount !== 1 ? "s" : ""}. Do NOT add more panels to fill unused slots. Do NOT place the Special Offer in any service panel.\n` +
+          "    Each panel has:\n" +
           "    • A circular teal badge with a white wellness/medical icon on top\n" +
           "    • A white rounded-rectangle text box below showing one service\n" +
           `    Use these services: ${menuStr}\n` +
