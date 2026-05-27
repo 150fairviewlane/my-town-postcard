@@ -592,6 +592,9 @@ const handleComplete=async(formData,selOverride,sideOverride)=>{
 
 const grokListenerRef=useRef(null);
 const grokPopupRef=useRef(null);
+// Saved Grok context lets the user retry after a reserve failure without
+// re-opening the popup and recreating their ad from scratch.
+const savedGrokContextRef=useRef(null);
 const openGrokGenerator=()=>{
   if(!sel){console.error('[openGrokGenerator] called with null sel — aborting');return;}
   // Capture sel and side at popup-open time so the message handler always
@@ -611,6 +614,9 @@ const openGrokGenerator=()=>{
     window.removeEventListener('message',handler);
     grokListenerRef.current=null;
     grokPopupRef.current=null;
+    // Save the complete context so the user can retry if the reserve fails,
+    // without losing the ad they just created.
+    savedGrokContextRef.current={formData:e.data.formData,sel:capturedSel,side:capturedSide};
     // Pass the captured spot so handleComplete never uses a stale closure value
     handleComplete(e.data.formData,capturedSel,capturedSide);
   };
@@ -777,11 +783,24 @@ return(<div style={{fontFamily:"sans-serif"}}>
       <div style={{fontSize:36,marginBottom:14}}>⚠️</div>
       <div style={{fontWeight:800,fontSize:17,color:"#991b1b",marginBottom:8}}>Reservation failed</div>
       <div style={{color:"#374151",fontSize:14,marginBottom:24,lineHeight:1.6}}>{reserveError}</div>
-      <button
-        onClick={()=>{setAdMethod(null);setReserveError(null);}}
-        style={{background:"#991b1b",color:"#fff",border:"none",borderRadius:8,padding:"10px 28px",cursor:"pointer",fontWeight:700,fontSize:14}}>
-        Choose another spot
-      </button>
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        {savedGrokContextRef.current&&(
+          <button
+            onClick={()=>{
+              setReserveError(null);
+              const ctx=savedGrokContextRef.current;
+              handleComplete(ctx.formData,ctx.sel,ctx.side);
+            }}
+            style={{background:"#991b1b",color:"#fff",border:"none",borderRadius:8,padding:"11px 0",cursor:"pointer",fontWeight:700,fontSize:14,width:"100%"}}>
+            Try again with my ad
+          </button>
+        )}
+        <button
+          onClick={()=>{setAdMethod(null);setReserveError(null);}}
+          style={{background:"#fff",color:"#374151",border:"1.5px solid #d1d5db",borderRadius:8,padding:"11px 0",cursor:"pointer",fontWeight:600,fontSize:14,width:"100%"}}>
+          Choose a different spot
+        </button>
+      </div>
     </div>
   </div>
 )}

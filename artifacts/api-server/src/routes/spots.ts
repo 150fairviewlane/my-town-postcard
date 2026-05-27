@@ -88,19 +88,6 @@ router.post("/spots/:id/reserve", async (req, res): Promise<void> => {
     return;
   }
 
-  // Defense in depth: if a paid order exists for this spot — even if the spot
-  // status slipped back to 'available' due to a data inconsistency — refuse the
-  // reservation so the customer doesn't get stranded at checkout.
-  const [existingPaidOrder] = await db
-    .select({ id: ordersTable.id })
-    .from(ordersTable)
-    .where(and(eq(ordersTable.spotId, spot.id), eq(ordersTable.status, "paid")))
-    .limit(1);
-  if (existingPaidOrder) {
-    res.status(409).json({ error: "This spot has already been purchased." });
-    return;
-  }
-
   // Defense in depth: refuse to reserve any spot whose campaign has been
   // marked completed. The picker only renders the active campaign so this
   // shouldn't happen via the UI, but we keep the API honest if a stale
