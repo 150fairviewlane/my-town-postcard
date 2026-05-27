@@ -252,8 +252,9 @@ function buildFooterZone(
     ? ""
     : address.length <= 28
       ? `"${address}" on a SINGLE line, same font size as the phone number.`
-      : `"${address}" — wrap to TWO lines at the natural comma or space break; ` +
-        `maintain the SAME font size as the phone number (never shrink text to force a single line).`;
+      : `"${address}" — split into TWO lines at the natural comma or space; ` +
+        `if splitting at a comma, the first line must NOT end with a comma. ` +
+        `Same font size as phone number (never shrink text to force a single line).`;
   const iconPrefix =
     phoneIconStyle === "circular-badge" ? "a circular phone-icon badge + " :
     phoneIconStyle === "inline-icon"    ? "a small phone icon + "           : "";
@@ -263,7 +264,8 @@ function buildFooterZone(
     "  Legibility required: drop shadows or dark-field wash on all text.\n" +
     `  LEFT — ${iconPrefix}phone "${phone}" bold, ad font. Zero digit changes.\n` +
     (hasAddr ? `  BESIDE/BELOW phone — address: ${addrRule}\n` : "") +
-    "  RIGHT — clean square QR. QUIET ZONE: 4-unit white border ALL sides, no overlaps allowed.\n" +
+    "  RIGHT — plain QR code graphic. No coupon box, no dashed frame, no decorative border of any kind.\n" +
+    "  QR QUIET ZONE: 4-unit clear white border ALL sides, no overlaps allowed.\n" +
     "  TYPOGRAPHY: phone + address IDENTICAL size (~9–10pt at print), bold. No website URL text.\n\n"
   );
 }
@@ -978,7 +980,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     "(approx. 9–10pt at print size, bold); QR code must have a clear 4-unit white quiet zone on all four sides. " +
     `BUSINESS NAME INTEGRITY: The business name is "${d.bizName}". Render it EXACTLY as given — every word appears EXACTLY ONCE across the entire ad. ` +
     "NEVER split the name and repeat any single word (e.g. if the name is 'Smith Chiropractic', do NOT write 'Chiropractic' a second time anywhere on the ad as a headline, label, icon badge, or decorative element). " +
-    "NO DUPLICATE SERVICES OR MENU ITEMS: each service or menu item from the list must appear exactly once in the ad — never repeat the same item or a near-synonym of it in two different zones or icon badges.\n\n" +
+    "NO DUPLICATE SERVICES OR MENU ITEMS: each service or menu item from the list must appear exactly once in the ad — never repeat the same item or a near-synonym of it in two different zones or icon badges. " +
+    "OFFER IS NOT A MENU ITEM: the Special Offer must appear in its own distinct zone (coupon box, stamp, or highlighted panel) — it must NEVER be listed alongside or treated as one of the menu/service items.\n\n" +
     "BUSINESS DETAILS:\n" + businessBlock;
 
   // ── Enforce xAI 8000-char prompt limit ───────────────────────────────────────
