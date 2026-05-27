@@ -259,22 +259,12 @@ function buildFooterZone(
     phoneIconStyle === "inline-icon"    ? "a small phone icon + "           : "";
 
   return (
-    "FOOTER REGION — bottom band of the ad (approximately the lower 15–20% of the card height):\n" +
-    "  Phone, address, and QR code are anchored here and may sit directly on top of the composited\n" +
-    "  imagery — no background bar or separator line is required. Every element MUST be legible:\n" +
-    "  apply bold type plus drop shadows, light knockouts, or a subtle dark-field wash behind text\n" +
-    "  so all items read clearly over any background.\n\n" +
-    `  LEFT — ${iconPrefix}phone number "${phone}" in bold, matching the ad font family. Zero digit changes.\n` +
-    (hasAddr ? `  BESIDE or BELOW phone — address: ${addrRule}\n` : "") +
-    "  RIGHT — clean square QR code graphic.\n" +
-    "  QR QUIET ZONE: the QR square MUST have a minimum clear white border of at least 4 units on\n" +
-    "  ALL four sides — mandatory for smartphone camera detection. No other design element may\n" +
-    "  overlap or touch this white border.\n\n" +
-    "  FOOTER TYPOGRAPHY STANDARD (overrides any other size instruction for this region):\n" +
-    "  • Phone number and address: IDENTICAL font size — approximately 9–10pt equivalent at final\n" +
-    "    print size. Bold weight.\n" +
-    "  • Font style may match the ad's typographic personality, but size must be identical for both.\n" +
-    "  • Do NOT render the website URL as text anywhere on the ad.\n\n"
+    "FOOTER REGION (bottom ~15–20% of card): elements float over imagery — no background bar needed.\n" +
+    "  Legibility required: drop shadows or dark-field wash on all text.\n" +
+    `  LEFT — ${iconPrefix}phone "${phone}" bold, ad font. Zero digit changes.\n` +
+    (hasAddr ? `  BESIDE/BELOW phone — address: ${addrRule}\n` : "") +
+    "  RIGHT — clean square QR. QUIET ZONE: 4-unit white border ALL sides, no overlaps allowed.\n" +
+    "  TYPOGRAPHY: phone + address IDENTICAL size (~9–10pt at print), bold. No website URL text.\n\n"
   );
 }
 
@@ -1245,7 +1235,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       if (isModelNotSupported) {
         req.log.warn({ errMsg, bizName: d.bizName }, "grok-imagine edits: model not supported — falling back to /generations");
         try {
-          const fallbackUrl = await callGenerationsJson(apiKey, adPrompt, d.bizName, req.log);
+          const fallbackUrl = await callGenerationsJson(apiKey, finalAdPrompt, d.bizName, req.log);
           endJson({ imageUrl: await cropToSpotDims(fallbackUrl, cropDim.w, cropDim.h), fallback: true });
           return;
         } catch (fbErr) {
@@ -1268,7 +1258,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
         req.log.warn({ errMsg, bizName: d.bizName }, "grok-imagine edits: multi-image rejected — retrying with template only");
         const retryBody: Record<string, unknown> = {
           model:        "grok-imagine-image-quality",
-          prompt:       adPrompt,
+          prompt:       finalAdPrompt,
           n:            1,
           images:       [{ type: "image_url", url: toDataUrl(tmplBuf, tmplMime) }],
           aspect_ratio: spotAspectRatio,
