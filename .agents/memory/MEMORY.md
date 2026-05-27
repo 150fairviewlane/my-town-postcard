@@ -1,0 +1,1 @@
+- [Grok popup stale-closure pattern](grok-popup-closure.md) — Grok postMessage handler must capture sel/side explicitly at popup-open time; never rely on handleComplete's render-cycle closure after long popup sessions.

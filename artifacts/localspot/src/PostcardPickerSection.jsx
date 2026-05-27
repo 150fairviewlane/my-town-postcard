@@ -479,47 +479,72 @@ const takenCategories=useMemo(()=>{
     .map(s=>s.businessCategory);
 },[campaign]);
 
-const handleComplete=async(formData)=>{
-  if(!campaign){setReserveError("Campaign not found. Please refresh and try again.");return;}
+// selOverride / sideOverride let the Grok popup handler pass the spot that
+// was selected at popup-open time, avoiding stale-closure bugs when the
+// component has re-rendered many times (e.g. due to campaign polling) while
+// the user was working inside the popup.
+const handleComplete=async(formData,selOverride,sideOverride)=>{
+  const currentSel=selOverride!==undefined?selOverride:sel;
+  const currentSide=sideOverride!==undefined?sideOverride:side;
+  if(!campaign){
+    console.error('[handleComplete] campaign is null');
+    setReserveError("Campaign not found. Please refresh and try again.");
+    return;
+  }
   setReserving(true);
   setReserveError(null);
   try{
     // Refresh campaign data so we don't pick a spot that was just taken
     const fresh=await queryClient.fetchQuery({queryKey:getGetActiveCampaignQueryKey(),staleTime:0});
     const spots=fresh?.spots||[];
+    const sizeMap={XL:"xl",L:"large",M:"medium",S:"small"};
+    const dbSize=sizeMap[currentSel?.size];
 
     let realSpot=null;
-    if(side==="front"){
+    if(currentSide==="front"){
       // Use direct positional mapping — each demo spot corresponds to an exact DB grid_area
-      const gridArea=FRONT_GRID_MAP[sel?.id];
-      if(!gridArea){setReserveError("Unknown spot position. Please close and try again.");setReserving(false);return;}
+      const gridArea=FRONT_GRID_MAP[currentSel?.id];
+      if(!gridArea){
+        console.error('[handleComplete] unknown front gridArea for sel.id:',currentSel?.id);
+        setReserveError("Unknown spot position. Please close and try again.");
+        setReserving(false);return;
+      }
       realSpot=spots.find(s=>s.gridArea===gridArea);
+      // If the preferred spot is taken, fall back to any available front spot of the same size
       if(!realSpot||realSpot.status!=="available"){
-        setReserveError("Sorry, that spot was just taken. Please close and choose another.");
+        console.error('[handleComplete] front spot not available:',gridArea,realSpot?.status,'— trying same-size fallback');
+        realSpot=spots.find(s=>s.size===dbSize&&s.side==="front"&&s.status==="available");
+      }
+      if(!realSpot){
+        setReserveError("Sorry, that spot was just taken and no similar spots are available. Please choose another.");
         setReserving(false);return;
       }
     }else{
       // Back: prefer exact DB match for cells that have one; fall back to
       // size-priority for the visual-only filler cells (dbGridArea:null).
-      const gridArea=BACK_GRID_MAP[sel?.id];
+      const gridArea=BACK_GRID_MAP[currentSel?.id];
       if(gridArea){
         realSpot=spots.find(s=>s.gridArea===gridArea);
+        // If the preferred spot is taken, fall back to any available back spot of the same size
         if(!realSpot||realSpot.status!=="available"){
-          setReserveError("Sorry, that spot was just taken. Please close and choose another.");
+          console.error('[handleComplete] back spot not available:',gridArea,realSpot?.status,'— trying same-size fallback');
+          realSpot=spots.find(s=>s.size===dbSize&&s.side==="back"&&s.status==="available");
+        }
+        if(!realSpot){
+          setReserveError("Sorry, that spot was just taken and no similar spots are available. Please choose another.");
           setReserving(false);return;
         }
       }else{
         // Visual filler cell — claim any available back spot of the same size
         // that isn't already covered by a mapped visual cell.
         const mappedAreas=new Set(Object.values(BACK_GRID_MAP));
-        const sizeMap={XL:"xl",L:"large",M:"medium",S:"small"};
-        const dbSize=sizeMap[sel?.size];
         realSpot=spots.find(s=>s.size===dbSize&&s.side==="back"&&s.status==="available"&&!mappedAreas.has(s.gridArea));
         if(!realSpot){
           // All unmapped spots of this size taken — claim any available of this size
           realSpot=spots.find(s=>s.size===dbSize&&s.side==="back"&&s.status==="available");
         }
         if(!realSpot){
+          console.error('[handleComplete] no back spot available for size:',dbSize);
           setReserveError("Sorry, no spots of that size are currently available.");
           setReserving(false);return;
         }
@@ -558,6 +583,7 @@ const handleComplete=async(formData)=>{
     setSel(null);
     navigate(`/checkout/${result.id}`);
   }catch(err){
+    console.error('[handleComplete] caught error:',err);
     setReserveError(err?.data?.error||err?.message||"Something went wrong. Please try again.");
   }finally{
     setReserving(false);
@@ -567,7 +593,13 @@ const handleComplete=async(formData)=>{
 const grokListenerRef=useRef(null);
 const grokPopupRef=useRef(null);
 const openGrokGenerator=()=>{
-  const url=`/api/grok-ad-generator?spotSize=${encodeURIComponent(sel?.size||'')}&spotId=${encodeURIComponent(sel?.id||'')}&bizName=&industry=&taken=${encodeURIComponent(takenCategories.join(','))}`;
+  if(!sel){console.error('[openGrokGenerator] called with null sel — aborting');return;}
+  // Capture sel and side at popup-open time so the message handler always
+  // uses the correct spot, regardless of how many re-renders (e.g. campaign
+  // polling) happen while the user is working in the popup.
+  const capturedSel=sel;
+  const capturedSide=side;
+  const url=`/api/grok-ad-generator?spotSize=${encodeURIComponent(sel.size||'')}&spotId=${encodeURIComponent(sel.id||'')}&bizName=&industry=&taken=${encodeURIComponent(takenCategories.join(','))}`;
   const popup=window.open(url,'grok-ad-gen','width=1120,height=800,left=80,top=60');
   grokPopupRef.current=popup;
   setAdMethod("grok");
@@ -579,7 +611,8 @@ const openGrokGenerator=()=>{
     window.removeEventListener('message',handler);
     grokListenerRef.current=null;
     grokPopupRef.current=null;
-    handleComplete(e.data.formData);
+    // Pass the captured spot so handleComplete never uses a stale closure value
+    handleComplete(e.data.formData,capturedSel,capturedSide);
   };
   if(grokListenerRef.current)window.removeEventListener('message',grokListenerRef.current);
   grokListenerRef.current=handler;
