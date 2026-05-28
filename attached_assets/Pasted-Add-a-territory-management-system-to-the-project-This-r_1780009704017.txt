@@ -1,0 +1,207 @@
+Add a territory management system to the project. This replaces the existing zip-code-based territory system. Follow these instructions carefully.
+
+
+════════════════════════════════════════════════
+OVERVIEW
+════════════════════════════════════════════════
+
+The new system assigns dealer territories based on counties rather than
+zip codes. Each territory is a named group of one or more contiguous
+counties. Territories are non-overlapping by definition since every
+county belongs to exactly one territory.
+
+The system has two parts:
+  1. Admin Territory Manager — Dave defines and manages territories
+  2. Dealer Signup — dealers browse available territories and claim one
+
+The system is designed to support multiple states. Georgia is the only
+active state for now. Adding new states requires only adding county data
+and territory definitions for that state — no structural changes needed.
+
+
+════════════════════════════════════════════════
+CHANGE 1 — DATABASE TABLES
+════════════════════════════════════════════════
+
+Create two new database tables:
+
+TABLE: territories
+  id              — string, primary key (e.g. "GA-001")
+  name            — string (e.g. "White / Habersham Counties")
+  state           — string, 2-letter code (e.g. "GA")
+  counties        — JSON array of county name strings
+  households      — integer, estimated total households
+  zones           — integer, always 4
+  status          — string: "available", "pending", or "taken"
+  dealer_id       — integer or null, foreign key to dealers table
+  created_at      — timestamp
+
+TABLE: dealer_territory_claims
+  id              — integer, primary key
+  dealer_id       — integer, foreign key to dealers table
+  territory_id    — string, foreign key to territories table
+  claimed_at      — timestamp
+  status          — string: "pending", "active", "cancelled"
+
+Seed the territories table with the Georgia territories defined in the
+TERRITORY_DB object inside territory-manager.html. There are 12 starter
+territories defined there — insert all of them on first run.
+
+
+════════════════════════════════════════════════
+CHANGE 2 — API ROUTES
+════════════════════════════════════════════════
+
+Create these new API routes:
+
+GET /api/territories?state=GA
+  Returns all territories for a given state as JSON array
+  Each territory object includes: id, name, state, counties,
+  households, zones, status, dealer_id
+
+POST /api/territories
+  Creates a new territory (admin only, requires auth)
+  Body: { name, state, counties, households }
+  Returns the created territory object
+
+PUT /api/territories/:id
+  Updates a territory (admin only, requires auth)
+  Body: any subset of { name, counties, households, status, dealer_id }
+  Returns the updated territory object
+
+DELETE /api/territories/:id
+  Deletes a territory (admin only, requires auth)
+  Only allowed if status is "available"
+
+POST /api/territory-claims
+  Creates a dealer territory claim
+  Body: { dealer_id, territory_id, dealer_name, dealer_email, dealer_phone }
+  Sets territory status to "pending"
+  Returns the claim object
+  In production: trigger Stripe checkout for $99/month subscription
+
+GET /api/territories/:id/counties
+  Returns the list of counties in a territory
+  Used for EDDM zone planning by admin
+
+
+════════════════════════════════════════════════
+CHANGE 3 — ADD THE HTML FILE AND ROUTES
+════════════════════════════════════════════════
+
+Add the attached file territory-manager.html to the project.
+
+Create two routes:
+  /admin/territories — serves territory-manager.html, requires admin auth
+  /dealer/claim-territory — serves territory-manager.html (same file,
+    the view toggle in the JS switches between admin and dealer views)
+
+Add a link to /admin/territories in the admin dashboard navigation,
+labeled "Territory Manager".
+
+Add a link to /dealer/claim-territory in the dealer onboarding flow,
+shown after a dealer account is created but before payment processing.
+
+
+════════════════════════════════════════════════
+CHANGE 4 — WIRE FRONTEND TO API
+════════════════════════════════════════════════
+
+In territory-manager.html, find these four comments and replace each
+with real API calls:
+
+COMMENT 1 — In renderSidebar(), find:
+  // In Replit: replace TERRITORY_DB with API call
+Add a fetch to GET /api/territories?state=[selected state] at the top
+of renderSidebar() and use the returned data instead of TERRITORY_DB.
+
+COMMENT 2 — In saveNewTerritory(), find:
+  // In Replit: POST /api/territories { name, state, counties, households }
+Replace the local TERRITORY_DB.push() with a POST fetch to
+/api/territories and re-render the sidebar on success.
+
+COMMENT 3 — In markAvailable() and deleteTerritory(), find:
+  // In Replit: PUT /api/territories/:id ...
+Replace local mutations with PUT or DELETE fetch calls to the API.
+
+COMMENT 4 — In submitSignup(), find:
+  // In Replit: POST /api/dealer-signup { name, email, phone, territoryId }
+Replace with a POST fetch to /api/territory-claims, then redirect to
+Stripe checkout for the $99/month dealer subscription on success.
+
+
+════════════════════════════════════════════════
+CHANGE 5 — MAP UPGRADE NOTE
+════════════════════════════════════════════════
+
+The current map uses simplified rectangle shapes for counties as
+placeholders. For a production-quality map, replace these with real
+Georgia county GeoJSON from the US Census Bureau TIGER/Line files:
+  https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html
+
+This is optional for the initial launch but strongly recommended before
+showing the map to dealers. The rectangles are functional for admin use.
+
+To upgrade the map:
+  1. Download Georgia county GeoJSON
+  2. Add a script tag to load D3.js from cdnjs.cloudflare.com
+  3. Replace the renderMap() function to use D3 geo projection
+  4. The rest of the code (tooltips, selection, coloring) stays the same
+
+This upgrade does not require any database or API changes.
+
+
+════════════════════════════════════════════════
+CHANGE 6 — REMOVE OLD ZIP CODE TERRITORY SYSTEM
+════════════════════════════════════════════════
+
+Find the existing zip-code-based territory assignment code in the
+dealer portal. Disable or remove it and replace references to it with
+links to the new /dealer/claim-territory page.
+
+Do not delete any dealer records that already have territory assignments.
+Those dealers keep their existing territories — the new system is for
+new signups going forward.
+
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+  Postcard composer or layout builder
+  Payment pages or Stripe integration (except wiring territory claim to checkout)
+  Ad generators of any version
+  Image library admin tool
+  Any existing dealer account records
+  Any authentication or session logic
+
+
+════════════════════════════════════════════════
+TEST AFTER BUILDING
+════════════════════════════════════════════════
+
+ADMIN TEST:
+  1. Go to /admin/territories
+  2. The left sidebar shows the 12 Georgia starter territories with
+     their status badges (available, pending, taken)
+  3. The map shows colored county blocks for each territory
+  4. Clicking a territory in the sidebar or on the map opens the
+     detail panel with territory info
+  5. Click + Define New Territory, search for counties, add them,
+     save — new territory appears in the list and on the map
+  6. Mark Available, Edit, and Delete buttons work correctly
+
+DEALER TEST:
+  1. Click the Dealer Signup tab at the top
+  2. Available territories show in green, taken ones in red and disabled
+  3. Selecting a territory enables the Claim button
+  4. Filling in name, email, phone and clicking Claim shows the
+     success confirmation with territory details
+  5. The claimed territory switches to pending status in the admin view
+
+STATE EXPANSION TEST:
+  1. The state dropdown in both admin and dealer views shows Georgia
+     as active and other states as "coming soon" and disabled
+  2. Adding territory data for a new state to the territories table
+     and updating the dropdown to enable that state is all that is
+     required to expand — no other code changes needed
