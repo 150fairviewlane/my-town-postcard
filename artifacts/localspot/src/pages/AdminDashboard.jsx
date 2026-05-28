@@ -346,7 +346,7 @@ function Dashboard({ token }) {
             🔁 Subscriptions
           </a>
           <a
-            href={`/api/admin/territories?token=${encodeURIComponent(token)}`}
+            href={`/admin/territories?token=${encodeURIComponent(token)}`}
             style={{
               fontSize: 13, fontWeight: 700, color: "#374151",
               background: "#fff", border: "1px solid #d1d5db",

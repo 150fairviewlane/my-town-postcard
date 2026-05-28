@@ -230,14 +230,23 @@ router.post("/territory-claims", async (req, res): Promise<void> => {
     return;
   }
 
+  // Atomically transition status + insert claim. The UPDATE is guarded by
+  // status='available' so concurrent requests racing here will find 0 rows
+  // updated — we check the count before inserting the claim row, ensuring a
+  // claim is ONLY created when this request won the race.
+  let claimed = false;
   await db.transaction(async tx => {
-    await tx
+    const updated = await tx
       .update(territoriesTable)
       .set({ status: "pending" })
       .where(and(
         eq(territoriesTable.id, parsed.data.territory_id),
         eq(territoriesTable.status, "available"),
-      ));
+      ))
+      .returning({ id: territoriesTable.id });
+
+    if (updated.length === 0) return; // another request beat us
+
     await tx.insert(dealerTerritoryClaimsTable).values({
       territoryId:  parsed.data.territory_id,
       dealerName:   parsed.data.dealer_name,
@@ -245,7 +254,13 @@ router.post("/territory-claims", async (req, res): Promise<void> => {
       dealerPhone:  parsed.data.dealer_phone ?? null,
       status:       "pending",
     });
+    claimed = true;
   });
+
+  if (!claimed) {
+    res.status(409).json({ error: "This territory is no longer available" });
+    return;
+  }
 
   req.log.info(
     { territoryId: parsed.data.territory_id, dealer: parsed.data.dealer_email },
