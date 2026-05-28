@@ -265,10 +265,10 @@ export function buildAdPrompt(
           : templateKey === "made-fresh"
             ? "landscape Made Fresh layout: warm wood-table bg, white plate + gingham cloth left, 'Made Fresh For You' chalkboard A-frame sign upper-right, white paint-stroke business info panel, golden ticket-stub coupon right. Reproduce all textures and zones exactly."
             : templateKey === "neighborhood-pro"
-              ? "landscape Neighborhood Pro layout: deep forest-green bg, large white brush-stroke splash panel upper-left (headline zone), full-bleed hero photo upper-right, horizontal row of four diagonal-cut service panels with circular lime-green icon badges, wide white brush-stroke offer/coupon area lower-center, dark green footer bar. Reproduce exactly."
+              ? "landscape Neighborhood Pro layout: deep forest-green bg, large white brush-stroke splash panel upper-left (headline zone), full-bleed hero photo upper-right, horizontal row of diagonal-cut service panels with circular lime-green icon badges, wide white brush-stroke offer/coupon area lower-center, dark green footer bar. Reproduce exactly."
               : templateKey === "at-your-service"
-                ? "landscape At Your Service layout: light gray/cream textured bg, large dark navy hexagonal badge upper-left (logo zone), gold/yellow brush-stroke sweeping upper area, large hero photo zone blending into bg upper-right, wide dark navy band with four circular white icon service badges, gold/yellow dashed-border coupon box lower-right, footer: location-pin + address left, phone center, QR right. Reproduce exactly."
-                : "landscape Health & Wellness layout: soft cream/off-white bg, clinic/office photo in organic curved teal blob upper-left, large wide rounded-rectangle white headline panel upper-center, teal pill-shaped tagline bar below it, four equal-width service panels with circular teal icon badges and white rounded-rect text boxes, reception photo in organic teal blob lower-left, stethoscope on dark teal circular blob lower-right, small white rounded QR box, dark teal footer bar. Reproduce exactly.";
+                ? "landscape At Your Service layout: light gray/cream textured bg, large dark navy hexagonal badge upper-left (logo zone), gold/yellow brush-stroke sweeping upper area, large hero photo zone blending into bg upper-right, wide dark navy band with circular white icon service badges, gold/yellow dashed-border coupon box lower-right, footer: location-pin + address left, phone center, QR right. Reproduce exactly."
+                : "landscape Health & Wellness layout: soft cream/off-white bg, clinic/office photo in organic curved teal blob upper-left, large wide rounded-rectangle white headline panel upper-center, teal pill-shaped tagline bar below it, service panels row with circular teal icon badges and white rounded-rect text boxes, reception photo in organic teal blob lower-left, stethoscope on dark teal circular blob lower-right, small white rounded QR box, dark teal footer bar. Reproduce exactly.";
       refLines.push(`  • IMAGE ${imgIdx++} (LANDSCAPE TEMPLATE) — ${lsTmplDesc}`);
     }
     if (hasPhoto) {
@@ -296,11 +296,11 @@ export function buildAdPrompt(
       templateKey === "made-fresh"
         ? "  • IMAGE 1 (TEMPLATE) — warm restaurant postcard: natural wood table surface, 'Made Fresh For You' chalkboard sign, gingham cloth, golden ticket coupon stub, fresh white plate as hero focal point. Preserve all zones and atmosphere exactly."
         : templateKey === "neighborhood-pro"
-          ? "  • IMAGE 1 (TEMPLATE) — bold outdoor-service postcard on deep forest-green bg: two overlapping white paint-brush splash shapes upper-left (headline zone), large hero photo zone upper-right, horizontal row of four diagonal-cut service photo panels with circular green icon badges and white brush-stroke labels, wide white brush-stroke offer area lower section, dark green footer bar. Reproduce exactly."
+          ? "  • IMAGE 1 (TEMPLATE) — bold outdoor-service postcard on deep forest-green bg: two overlapping white paint-brush splash shapes upper-left (headline zone), large hero photo zone upper-right, horizontal row of diagonal-cut service photo panels with circular green icon badges and white brush-stroke labels, wide white brush-stroke offer area lower section, dark green footer bar. Reproduce exactly."
           : templateKey === "at-your-service"
-            ? "  • IMAGE 1 (TEMPLATE) — home-services postcard on light gray/off-white textured bg, navy blue + gold/yellow scheme: large dark navy hexagonal badge upper-left (logo zone), bold horizontal gold/yellow brush-stroke sweeping upper third, large hero photo zone upper-right blending naturally, wide dark navy horizontal band center-full-width, horizontal row of six circular white icon service badges on the navy band, gold/yellow dashed-border coupon box lower-right, dark strip footer. Reproduce exactly."
+            ? "  • IMAGE 1 (TEMPLATE) — home-services postcard on light gray/off-white textured bg, navy blue + gold/yellow scheme: large dark navy hexagonal badge upper-left (logo zone), bold horizontal gold/yellow brush-stroke sweeping upper third, large hero photo zone upper-right blending naturally, wide dark navy horizontal band center-full-width, circular white icon service badges on the navy band, gold/yellow dashed-border coupon box lower-right, dark strip footer. Reproduce exactly."
             : templateKey === "health-wellness"
-              ? "  • IMAGE 1 (TEMPLATE) — health/wellness postcard on soft cream bg with teal accents: two clinic/office photos inside organic curved teal blob shapes upper section, large wide rounded-rectangle white panel center (headline zone), narrow teal pill-shaped bar below it (tagline zone), four equal-width service panels with circular teal badge icons and white rounded-rect text boxes, reception/waiting-room photo in organic blob lower-left, teal stethoscope on dark teal circular blob lower-right, small white rounded QR box, dark teal footer bar. Reproduce exactly."
+              ? "  • IMAGE 1 (TEMPLATE) — health/wellness postcard on soft cream bg with teal accents: two clinic/office photos inside organic curved teal blob shapes upper section, large wide rounded-rectangle white panel center (headline zone), narrow teal pill-shaped bar below it (tagline zone), service panels with circular teal badge icons and white rounded-rect text boxes, reception/waiting-room photo in organic blob lower-left, teal stethoscope on dark teal circular blob lower-right, small white rounded QR box, dark teal footer bar. Reproduce exactly."
               : "  • IMAGE 1 (TEMPLATE) — postcard with parchment texture, brush-stroke headline band, orange pennant ribbon, circular checkmark badge, dashed coupon box, dark footer strip. Reproduce every zone and element exactly.",
     );
     imgIdx = 2;
@@ -331,8 +331,8 @@ export function buildAdPrompt(
         : (d.tagline ? `TAGLINE: tagline in italic script beside the pennant.\n\n` : "")) +
       `SERVICE LIST (left column, parchment area): ` +
       (menuCount > 0
-        ? `${menuCount} orange circular checkmark badge items, one per service in BUSINESS DETAILS. Badge label text ≥14pt bold, clearly legible at print size.\n\n`
-        : `three orange circular checkmark badge items with relevant services. Badge label text ≥14pt bold.\n\n`) +
+        ? `EXACTLY ${menuCount} orange circular checkmark badge item${menuCount !== 1 ? "s" : ""} — one per service in BUSINESS DETAILS, exactly as written. No extras. No invented services. Badge label text ≥14pt bold.\n\n`
+        : `no services provided — leave the service list area empty; do not render any badge labels or invented items.\n\n`) +
       (hasPhoto ? `HERO PHOTO (right-center): composite IMAGE 2 blended into parchment texture, no hard border.\n\n` : "") +
       (d.offer
         ? `COUPON (dashed dark box, lower-right): offer text bold white/cream, large. Fine print smaller below. No QR inside coupon.\n\n`
@@ -368,8 +368,8 @@ export function buildAdPrompt(
         : `generate photorealistic outdoor service scene, vibrant, no rectangular border.\n\n`) +
       `SERVICE PANELS (middle horizontal row): ` +
       (menuCount > 0
-        ? `exactly ${menuCount} diagonal-cut panel${menuCount !== 1 ? "s" : ""} — one per service in BUSINESS DETAILS, circular lime-green icon badge + white brush-stroke label per panel. No extras. Panel label text ≥14pt bold.\n\n`
-        : `three diagonal-cut panels with circular lime-green icon badges and white brush-stroke labels. Label text ≥14pt bold.\n\n`) +
+        ? `EXACTLY ${menuCount} diagonal-cut panel${menuCount !== 1 ? "s" : ""} — one per service in BUSINESS DETAILS, exactly as written. Circular lime-green icon badge + white brush-stroke label per panel. No extras. No invented services. Panel label text ≥14pt bold.\n\n`
+        : `service panel row — render the structural diagonal-cut panel shapes with circular lime-green icon badge graphics only; NO text labels (no services provided).\n\n`) +
       (d.offer
         ? `OFFER (wide white brush-stroke area, lower section): offer text bold dark-green, large. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
@@ -389,8 +389,8 @@ export function buildAdPrompt(
         : `generate professional tools/equipment or home-service scene, left edge blends naturally.\n\n`) +
       `SERVICE BADGES (wide dark navy band, center full-width): ` +
       (menuCount > 0
-        ? `one circular white icon badge per service in BUSINESS DETAILS. Each service once. Badge caption ≥14pt bold.\n\n`
-        : `three circular white icon service badges (house, paint roller, wrench). Badge caption ≥14pt bold.\n\n`) +
+        ? `EXACTLY ${menuCount} circular white icon badge${menuCount !== 1 ? "s" : ""} on the navy band — one per service in BUSINESS DETAILS, exactly as written. No extras. No invented services. Badge caption ≥14pt bold.\n\n`
+        : `navy band — render decorative circular icon badge graphics only; NO text captions or labels (no services provided).\n\n`) +
       (d.offer
         ? `COUPON (gold/yellow dashed-border box, lower-right): offer text bold dark navy, prominent. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
@@ -408,8 +408,8 @@ export function buildAdPrompt(
       (d.tagline ? `TAGLINE (teal pill-shaped bar below white panel): tagline in clean white sans-serif, centered.\n\n` : "") +
       `SERVICE PANELS (middle section): ` +
       (menuCount > 0
-        ? `exactly ${menuCount} equal-width panel${menuCount !== 1 ? "s" : ""} — one per service in BUSINESS DETAILS, circular teal icon badge + white rounded-rect text box per panel. No extras. Panel text ≥14pt bold.\n\n`
-        : `three equal-width panels with circular teal icon badges and white rounded-rect text boxes. Panel text ≥14pt bold.\n\n`) +
+        ? `EXACTLY ${menuCount} equal-width panel${menuCount !== 1 ? "s" : ""} — one per service in BUSINESS DETAILS, exactly as written. Circular teal icon badge + white rounded-rect text box per panel. No extras. No invented services. Panel text ≥14pt bold.\n\n`
+        : `service panel row — render the structural panel shapes with circular teal icon badge graphics only; NO text labels (no services provided).\n\n`) +
       (hasLogo ? `LOGO (IMAGE ${logoImg}) in an upper corner or within the headline panel.\n\n` : "") +
       (d.offer
         ? `OFFER (teal-bordered rect or dashed coupon box, visually distinct from service panels): offer text large and bold. Fine print smaller below. No QR inside coupon.\n\n`
@@ -458,8 +458,8 @@ export function buildAdPrompt(
         : `  Generate a photorealistic outdoor service scene — bright daylight, vibrant. Full bleed, no rectangular border.\n\n`) +
       `SERVICE PANELS (middle horizontal row): ` +
       (menuCount > 0
-        ? `exactly ${menuCount} diagonal-cut panel${menuCount !== 1 ? "s" : ""} — one per service in BUSINESS DETAILS, service photo + circular green icon badge + white brush-stroke label. No extras. No offer in service panels.\n\n`
-        : `four diagonal-cut service photo panels, each with circular green icon badge + white brush-stroke label.\n\n`) +
+        ? `EXACTLY ${menuCount} diagonal-cut panel${menuCount !== 1 ? "s" : ""} — one per service in BUSINESS DETAILS, exactly as written. Service photo + circular green icon badge + white brush-stroke label per panel. No extras. No invented services. No offer in service panels.\n\n`
+        : `service panel row — render the structural diagonal-cut panel shapes with circular green icon badge graphics only; NO text labels (no services provided).\n\n`) +
       (d.offer
         ? `SPECIAL OFFER (wide white brush-stroke area, lower section): offer text bold dark-green, large. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
@@ -480,8 +480,8 @@ export function buildAdPrompt(
         : `  Generate a photorealistic image of tools, equipment, or professional at work. Fill upper-right zone, blend naturally into off-white bg.\n\n`) +
       `SERVICE ICONS (wide dark navy band, center full-width): ` +
       (menuCount > 0
-        ? `one circular white icon badge per service in BUSINESS DETAILS, on the navy band. Each service exactly once.\n\n`
-        : `six circular white icon service badges (house, paint roller, lightbulb, faucet, door, wrench) on the navy band.\n\n`) +
+        ? `EXACTLY ${menuCount} circular white icon badge${menuCount !== 1 ? "s" : ""} on the navy band — one per service in BUSINESS DETAILS, exactly as written. No extras. No invented services.\n\n`
+        : `navy band — render decorative circular icon badge graphics only; NO text captions or labels (no services provided).\n\n`) +
       (d.offer
         ? `SPECIAL OFFER (gold/yellow dashed-border coupon box, lower-right): offer text bold dark navy, large. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
@@ -530,8 +530,8 @@ export function buildAdPrompt(
       (d.tagline ? `TAGLINE (teal pill-shaped bar below white panel): tagline in clean white sans-serif, centered.\n\n` : "") +
       `SERVICE PANELS (middle section): ` +
       (menuCount > 0
-        ? `exactly ${menuCount} equal-width panel${menuCount !== 1 ? "s" : ""} — one per service in BUSINESS DETAILS. Each panel: circular teal badge + white icon on top, white rounded-rect text box below. No extras. No offer in service panels.\n\n`
-        : `four equal-width panels — circular teal icon badges (spine/massage/leaf/doctor) + white rounded-rect text boxes.\n\n`) +
+        ? `EXACTLY ${menuCount} equal-width panel${menuCount !== 1 ? "s" : ""} — one per service in BUSINESS DETAILS, exactly as written. Each panel: circular teal badge + white icon on top, white rounded-rect text box below. No extras. No invented services. No offer in service panels.\n\n`
+        : `service panel row — render the structural panel shapes with circular teal icon badge graphics only; NO text labels (no services provided).\n\n`) +
       "LOWER PHOTOS (organic blob shapes): reception or waiting-room scene in left blob; teal stethoscope/medical prop on dark teal circular blob right.\n\n" +
       (d.offer
         ? `SPECIAL OFFER: offer text prominently in teal or dark text in an available white-space area. Fine print smaller below. No QR inside coupon.\n\n`
@@ -576,6 +576,8 @@ export function buildAdPrompt(
     (variantBlock ? variantBlock + "\n" : "") +
     outputRequirements + "\n" +
     "STYLE: high-end editorial advertising. Cinematic photography, rich vibrant color, professional lighting. Bold confident typography hierarchy. Premium color palette — deep, saturated, controlled. Print-ready sharpness throughout.\n\n" +
+    "STRICT FIDELITY — ABSOLUTE: Every word of text on this ad must come from BUSINESS DETAILS. Do NOT invent, add, hallucinate, or paraphrase any text, service name, menu item, or label not present in BUSINESS DETAILS. " +
+    "If a field is '(none)', omit that element entirely. If no services are listed, render no service text labels anywhere on the ad. " +
     "CRITICAL: All text must appear exactly as specified — zero tolerance for errors on phone numbers, prices, business name, or address. " +
     (fullAddress !== "(none)" ? `Address "${fullAddress}" MUST appear in the footer. ` : "") +
     "No website URL text anywhere. Business name: each word appears exactly once across the entire ad. " +
