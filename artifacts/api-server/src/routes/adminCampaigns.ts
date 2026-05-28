@@ -387,16 +387,4 @@ router.post("/admin/campaigns/:id/complete", requireAdmin, async (req, res): Pro
   res.json(CompleteCampaignResponse.parse(detail));
 });
 
-// TEMPORARY: patch a spot's template_data from an admin call. Remove after prod sync.
-router.post("/admin/spots/:id/patch-template-data", requireAdmin, async (req, res): Promise<void> => {
-  const id = parseInt(String(req.params.id), 10);
-  if (isNaN(id)) { res.status(400).json({ error: "bad id" }); return; }
-  const { templateData } = req.body;
-  await db.update(spotsTable)
-    .set({ templateData: templateData ? JSON.stringify(templateData) : null })
-    .where(eq(spotsTable.id, id));
-  req.log.info({ spotId: id }, "patch-template-data applied");
-  res.json({ ok: true });
-});
-
 export default router;
