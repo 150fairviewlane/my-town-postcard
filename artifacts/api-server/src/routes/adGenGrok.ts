@@ -260,13 +260,13 @@ function buildFooterZone(
     phoneIconStyle === "inline-icon"    ? "a small phone icon + "           : "";
 
   return (
-    "FOOTER REGION (bottom ~15–20% of card): elements float over imagery — no background bar needed.\n" +
-    "  Legibility required: drop shadows or dark-field wash on all text.\n" +
-    `  LEFT — ${iconPrefix}phone "${phone}" bold, ad font. Zero digit changes.\n` +
+    "FOOTER REGION (bottom 15–20% of card): a SOLID DARK BACKGROUND BAR spanning the full card width — opaque, high contrast, no transparency or bleed into imagery above.\n" +
+    "  PHONE NUMBER RULE — CRITICAL: the phone number must appear EXACTLY ONCE in the entire ad — ONLY inside this footer bar. NEVER place the phone number in any service panel, coupon zone, headline area, right column, or anywhere else outside the footer.\n" +
+    `  LEFT — ${iconPrefix}phone "${phone}" in bold white, large and dominant. Zero digit changes.\n` +
     (hasAddr ? `  BESIDE/BELOW phone — address: ${addrRule}\n` : "") +
     "  RIGHT — small QR code graphic (max 0.5\"×0.5\" at print size). No coupon box, dashed frame, or decorative border.\n" +
     "  QR QUIET ZONE: 4-unit clear white border on all sides, no overlaps.\n" +
-    "  TYPOGRAPHY: phone + address IDENTICAL size (~9–10pt at print), bold. No website URL text.\n\n"
+    "  TYPOGRAPHY: phone + address IDENTICAL size (~14–16pt at print = large, clearly readable at arm's length), bold white. No website URL text.\n\n"
   );
 }
 
@@ -629,8 +629,9 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           "    Relevant wellness/medical services for this practice. Each once only.\n\n") +
       (hasLogo ? `  LOGO: IMAGE ${logoImg} in an upper corner or within the headline panel. Preserve exact colors.\n\n` : "") +
       (d.offer
-        ? `  ZONE 5 — OFFER:\n    "${d.offer}" prominently in an available white area.\n` +
-          (d.offerFine ? `    Fine print: "${d.offerFine}" smaller below.\n` : "") + "\n"
+        ? `  ZONE 5 — OFFER (its own visually distinct zone — a teal-bordered rectangle, contrasting panel, or dashed coupon box; NEVER merged with or placed adjacent to the service panels):\n` +
+          `    "${d.offer}" prominently inside this dedicated offer zone — large, bold text.\n` +
+          (d.offerFine ? `    Fine print: "${d.offerFine}" smaller below, inside the same offer zone.\n` : "") + "\n"
         : "") +
       buildFooterZone(d.phone || "", fullAddress, "circular-badge") +
       "TYPOGRAPHIC RULES:\n" +
@@ -654,6 +655,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "  Parchment/rustic | Chalkboard/bistro | Forest-green contractor | Navy/gold home services | Teal/sage wellness\n\n" +
 
       "MANDATORY VISUAL RULES:\n" +
+      "  - FILL THE ENTIRE 3\"×2\" (landscape) ad space — 100% coverage. No blank, empty, or unused areas anywhere in the ad.\n" +
       "  - No hard rectangular photo borders — mask/blend edges with organic shapes, gradients, or diagonal cuts.\n" +
       "  - Background must have depth: gradient, texture, or layered wash — NEVER flat solid color.\n" +
       "  - Three depth planes: (1) textured bg, (2) graphic mid-layer shapes, (3) foreground text with shadows/glows.\n" +
@@ -667,10 +669,11 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
         : `  HERO IMAGE: photorealistic business-appropriate image, cinematic quality, blended into bg — no rectangular frame.\n`) +
       (hasLogo ? `  LOGO: IMAGE ${logoImg} — exact placement, no stylization.\n` : "") +
       (d.tagline ? `  TAGLINE: "${d.tagline}" — supporting, secondary to headline.\n` : "") +
-      (menuStr !== "  (none)" ? `  SERVICES/MENU: ${menuStr} — each item exactly once.\n` : "") +
+      (menuStr !== "  (none)" ? `  SERVICES/MENU: ${menuStr} — each item exactly once, in its own clearly defined list zone.\n` : "") +
       (d.offer
-        ? `  SPECIAL OFFER: "${d.offer}" — prominent. Coupon zone: ONLY this offer text and fine print — NEVER add filler phrases like 'Admit One Offer' or 'Stub No.'.\n` +
-          (d.offerFine ? `  Fine print: "${d.offerFine}".\n` : "")
+        ? `  SPECIAL OFFER — in its OWN VISUALLY DISTINCT ZONE (dashed coupon box, contrasting rectangle, or bordered panel) that is CLEARLY SEPARATED from the services/menu list. The coupon zone contains ONLY the offer text and fine print — NEVER merge with the services list, NEVER add filler phrases like 'Admit One Offer' or 'Stub No.':\n` +
+          `    "${d.offer}" — large, bold, prominent inside the coupon zone.\n` +
+          (d.offerFine ? `    Fine print: "${d.offerFine}" — smaller, inside same coupon zone.\n` : "")
         : "") +
       buildFooterZone(d.phone || "", fullAddress, "minimal") +
       "TYPOGRAPHIC RULES:\n" +
@@ -828,9 +831,9 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       (d.tagline ? `    TAGLINE: "${d.tagline}" — supporting, secondary to headline.\n` : "") +
       (menuStr !== "  (none)" ? `    SERVICES/MENU: ${menuStr} — displayed clearly, not crowded. Each item exactly once.\n` : "") +
       (d.offer
-        ? `    SPECIAL OFFER: "${d.offer}" — given prominent visual emphasis. ` +
-          "The coupon area contains ONLY this offer text and the fine print below — NEVER add decorative filler phrases like 'Admit One Offer', 'Admit Offer', 'Stub No.', or any text not provided here.\n" +
-          (d.offerFine ? `    Fine print: "${d.offerFine}" — smaller but legible.\n` : "")
+        ? `    SPECIAL OFFER — in its OWN VISUALLY DISTINCT ZONE (dashed coupon box, contrasting panel, or bordered shape) that is CLEARLY SEPARATED from the services/menu list — NEVER placed in the same column or merged with services:\n` +
+          `    "${d.offer}" — large, bold, prominent inside the coupon zone. ONLY this offer text and fine print here — no filler phrases.\n` +
+          (d.offerFine ? `    Fine print: "${d.offerFine}" — smaller, inside same coupon zone.\n` : "")
         : "") +
       buildFooterZone(d.phone || "", fullAddress, "minimal") +
       "  QUALITY STANDARD — all of the following are required, no exceptions:\n" +
