@@ -6,6 +6,7 @@ import sharp from "sharp";
 import { and, eq, ne, or } from "drizzle-orm";
 import { db, spotsTable } from "@workspace/db";
 import { logger } from "../lib/logger";
+import { buildAdPrompt } from "../lib/buildAdPrompt";
 
 function findWorkspaceRoot(): string {
   let dir = process.cwd();
@@ -1079,47 +1080,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "  • NEVER render the website URL as visible text"
     );
 
-  const adPrompt =
-    (isLandscape && templateKey === "surprise-me"
-      ? "You are a world-class print advertising art director with complete creative freedom. " +
-        "Invent a PRINT-READY premium LANDSCAPE (3\"×2\") postcard ad from scratch — original layout, original color scheme, original typography — " +
-        "tailored specifically to this business's industry and personality. " +
-        "The result must look like a bespoke ad designed by a top agency for this exact business, not a generic template.\n\n"
-      : isLandscape
-        ? "You are a world-class print advertising art director and expert photo compositor. " +
-          "Create a PRINT-READY premium LANDSCAPE (3\"×2\") postcard ad by taking the template layout and seamlessly integrating " +
-          "the business details and any provided reference photos into it — the result must look like a single cohesive ad designed by a top agency, " +
-          "not a template with content pasted on top.\n\n"
-        : templateKey === "surprise-me"
-        ? "You are a world-class print advertising art director with complete creative freedom. " +
-          "Invent a PRINT-READY premium postcard ad from scratch — original layout, original color scheme, original typography — " +
-          "tailored specifically to this business's industry and personality. " +
-          "The result must look like a bespoke ad designed by a top agency for this exact business, not a generic template.\n\n"
-        : "You are a world-class print advertising art director and expert photo compositor. " +
-          "Create a PRINT-READY premium postcard ad by taking the template layout and seamlessly integrating " +
-          "the business details and any provided reference photos into it — the result must look like a single cohesive ad designed by a top agency, " +
-          "not a template with content pasted on top.\n\n") +
-    (refLines.length > 0
-      ? `REFERENCE IMAGES: You are provided ${refLines.length} reference image${refLines.length > 1 ? "s" : ""}. ` +
-        "Treat them as distinct inputs — do NOT merge their design styles or treat any of them as already finished:\n" +
-        refLines.join("\n") + "\n\n"
-      : "") +
-    (variantBlock ? variantBlock + "\n" : "") +
-    outputRequirements + "\n" +
-    "STYLE: high-end editorial advertising aesthetic. Cinematic photography with rich, vibrant color and " +
-    "professional lighting. Bold confident typography hierarchy. Premium color palette — deep, saturated, controlled. " +
-    "Every element is intentionally placed; nothing looks accidental or generic. Print-ready sharpness throughout.\n\n" +
-    "CRITICAL: Every piece of text must appear EXACTLY as specified. " +
-    "Phone numbers, prices, business name, and address — zero tolerance for errors or omissions. " +
-    (fullAddress !== "(none)" ? `The address "${fullAddress}" MUST be visible in the footer region — do not skip it. ` : "") +
-    "No website URL text anywhere. " +
-    "FOOTER STANDARD: phone number minimum 18pt bold — the largest text element in the footer bar; address minimum 14pt bold. " +
-    "QR code must have a clear 4-unit white quiet zone on all four sides. " +
-    `BUSINESS NAME INTEGRITY: The business name is "${d.bizName}". Render it EXACTLY as given — every word appears EXACTLY ONCE across the entire ad. ` +
-    "NEVER split the name and repeat any single word (e.g. if the name is 'Smith Chiropractic', do NOT write 'Chiropractic' a second time anywhere on the ad as a headline, label, icon badge, or decorative element). " +
-    "NO DUPLICATE SERVICES OR MENU ITEMS: each service or menu item from the list must appear exactly once in the ad — never repeat the same item or a near-synonym of it in two different zones or icon badges. " +
-    "OFFER IS NOT A MENU ITEM: the Special Offer must appear in its own distinct zone (coupon box, stamp, or highlighted panel) — it must NEVER be listed alongside or treated as one of the menu/service items.\n\n" +
-    "BUSINESS DETAILS:\n" + businessBlock;
+  // Prompt assembled by the extracted pure function — see lib/buildAdPrompt.ts
+  const adPrompt = buildAdPrompt(d, isLandscape, adIndex);
 
   // ── Enforce xAI 8000-byte prompt limit ───────────────────────────────────────
   // xAI enforces a hard byte limit, not a JS character limit. Multi-byte UTF-8
