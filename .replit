@@ -20,8 +20,23 @@ author = "agent"
 task = "workflow.run"
 args = "prompt-size-guard"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Prompt size guard"
+
 [[workflows.workflow]]
 name = "prompt-size-guard"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/api-server run check:prompt-size"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow]]
+name = "Prompt size guard"
 author = "agent"
 
 [[workflows.workflow.tasks]]
