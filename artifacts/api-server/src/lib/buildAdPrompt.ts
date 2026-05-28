@@ -314,8 +314,15 @@ export function buildAdPrompt(
   }
 
   // ── Output requirements (template × orientation) ─────────────────────────
+  const LANDSCAPE_CANVAS_RULE =
+    "CANVAS RULE — ABSOLUTE: The 3\"×2\" image IS the ad. Fill 100% of the canvas to every edge — top, bottom, left, right. " +
+    "NEVER render the postcard as a floating card, framed artwork, or object sitting on a background. " +
+    "NEVER add any outer border, drop shadow, glow, vignette, gradient halo, or decorative element outside the ad content. " +
+    "The ad begins at pixel 0 on all four sides.\n\n";
+
   const outputRequirements = isLandscape && templateKey === "parchment-classic"
     ? (
+      LANDSCAPE_CANVAS_RULE +
       "LAYOUT — reproduce Parchment Classic LANDSCAPE zones exactly:\n\n" +
       `HEADLINE (dark brush-stroke band, upper area): business name in bold condensed all-caps slab serif, white. ` +
       `If the name has a common English category noun (Cafe/Grill/Pizza/Bar/Bakery/Salon/Diner) — render ONLY that word in warm orange script. Each word exactly once.\n\n` +
@@ -334,6 +341,7 @@ export function buildAdPrompt(
     )
     : isLandscape && templateKey === "made-fresh"
     ? (
+      LANDSCAPE_CANVAS_RULE +
       "LAYOUT — reproduce Made Fresh LANDSCAPE zones exactly:\n\n" +
       "BACKGROUND: warm wood-table scene — gingham cloth, white plate, 'Made Fresh For You' chalkboard A-frame sign, plant props. All exactly as in template.\n\n" +
       (hasPhoto ? "HERO PHOTO: composite IMAGE 2 as the featured dish on or near the white plate. Match warm editorial lighting.\n\n" : "") +
@@ -347,6 +355,7 @@ export function buildAdPrompt(
     )
     : isLandscape && templateKey === "neighborhood-pro"
     ? (
+      LANDSCAPE_CANVAS_RULE +
       "LAYOUT — reproduce Neighborhood Pro LANDSCAPE zones exactly:\n\n" +
       `HEADLINE (upper-left, white brush-stroke splash panel): business name bold condensed all-caps slab serif, dark green/near-black. ` +
       `If name has a common English service-category noun (Lawn/Cleaning/Roofing/Plumbing) — that word only in bright lime-green script. Each word once.\n\n` +
@@ -368,6 +377,7 @@ export function buildAdPrompt(
     )
     : isLandscape && templateKey === "at-your-service"
     ? (
+      LANDSCAPE_CANVAS_RULE +
       "LAYOUT — reproduce At Your Service LANDSCAPE zones exactly:\n\n" +
       (hasLogo ? `LOGO (IMAGE ${logoImg} centered inside dark navy hexagonal badge, upper-left).\n\n` : "") +
       `HEADLINE (beside hexagonal badge, upper-left): business name bold condensed all-caps slab serif, dark navy. ` +
@@ -388,6 +398,7 @@ export function buildAdPrompt(
     )
     : isLandscape && templateKey === "health-wellness"
     ? (
+      LANDSCAPE_CANVAS_RULE +
       "LAYOUT — reproduce Health & Wellness LANDSCAPE zones exactly:\n\n" +
       "PHOTOS (upper area, inside organic teal blob shapes): " +
       (hasPhoto
