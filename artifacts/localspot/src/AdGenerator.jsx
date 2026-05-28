@@ -882,7 +882,7 @@ background: leftBg, fontFamily: "sans-serif",
 );
 }
 
-const TEMPLATES = {
+export const TEMPLATES = {
 "photo-bold":  { name: "Photo Bold",    desc: "Hero photo, bold overlay text",   Component: PhotoBoldTemplate },
 "split-clean": { name: "Split Clean",   desc: "50/50 photo + content split",      Component: SplitCleanTemplate },
 "magazine":    { name: "Magazine",      desc: "Editorial multi-photo layout",     Component: MagazineTemplate },
