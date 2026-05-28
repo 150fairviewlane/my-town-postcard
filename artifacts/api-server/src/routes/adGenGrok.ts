@@ -35,6 +35,7 @@ const GenerateSchema = z.object({
   sizeKey:   z.string().optional().default("xl"),
   photoUrl:  z.string().optional().default(""),
   logoData:  z.string().optional().default(""),
+  generationIndex: z.number().int().optional().default(0),
   spotId:    z.number().int().optional(),
 });
 
@@ -359,9 +360,9 @@ function buildFooterZone(
     `  LEFT — ${iconPrefix}phone "${phone}" in bold white, large and dominant. Zero digit changes.\n` +
     (hasAddr ? `  ADDRESS — directly below the phone number, left-aligned in the same left column (NEVER drift to a center or right column, NEVER appear in a separate area): ${addrRule}\n` : "") +
     "  RIGHT — small QR code graphic (max 0.5\"×0.5\" at print size). No coupon box, dashed frame, or decorative border.\n" +
-    "  QR CODE RULE — CRITICAL: the QR code must appear EXACTLY ONCE in the entire ad — ONLY here in the footer. NEVER place a second QR code in any coupon zone, service panel, headline area, or anywhere else outside the footer.\n" +
+    "  QR CODE RULE — CRITICAL: the QR code must appear EXACTLY ONCE in the entire ad — ONLY here in the footer bottom-right corner. NEVER place a QR code anywhere outside this footer — not in any coupon zone, service panel, headline area, or elsewhere.\n" +
     "  QR QUIET ZONE: 4-unit clear white border on all sides, no overlaps.\n" +
-    "  TYPOGRAPHY: phone ~16pt bold white; address ~14pt bold white. NEVER render the address text smaller than 12pt — if space is tight, shrink the coupon or reduce service panel height before reducing the address font size. No website URL text.\n\n"
+    "  TYPOGRAPHY: phone minimum 18pt bold white — the largest text in the footer bar; address minimum 14pt bold white. NEVER render the address text smaller than 12pt — if space is tight, shrink the coupon or reduce service panel height before reducing the address font size. No website URL text.\n\n"
   );
 }
 
@@ -442,7 +443,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   // guaranteeing a visually distinct result every time Regenerate is clicked.
   const surpriseMeDefaultIdx = getDefaultThemeIndex(d.industry);
   const surpriseMeThemeIdx =
-    adIndex === 0
+    d.generationIndex === 0
       ? surpriseMeDefaultIdx
       : (() => {
           const opts = SURPRISE_ME_THEMES.map((_, i) => i).filter(
@@ -627,7 +628,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       (d.offer
         ? `  ZONE 5 — COUPON (dashed dark rectangular box, lower-right):\n` +
           `    Inside: "${d.offer}" in bold white or cream text, large and prominent.\n` +
-          (d.offerFine ? `    Fine print: "${d.offerFine}" smaller below.\n` : "") + "\n"
+          (d.offerFine ? `    Fine print: "${d.offerFine}" smaller below.\n` : "") +
+          "    NEVER place a QR code inside this coupon zone — the QR code belongs ONLY in the footer bottom-right corner.\n\n"
         : "") +
       buildFooterZone(d.phone || "", fullAddress, "inline-icon") +
       "TYPOGRAPHIC RULES:\n" +
@@ -650,7 +652,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       (d.offer
         ? `  ZONE B — GOLDEN TICKET-STUB COUPON (lower-right):\n` +
           `    Inside: "${d.offer}" in bold dark text, large and prominent.\n` +
-          (d.offerFine ? `    Fine print: "${d.offerFine}" smaller below.\n` : "") + "\n"
+          (d.offerFine ? `    Fine print: "${d.offerFine}" smaller below.\n` : "") +
+          "    NEVER place a QR code inside this coupon zone — the QR code belongs ONLY in the footer bottom-right corner.\n\n"
         : "") +
       buildFooterZone(d.phone || "", fullAddress, "inline-icon") +
       "TYPOGRAPHIC RULES:\n" +
@@ -683,7 +686,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       (d.offer
         ? `  ZONE 4 — OFFER (wide white brush-stroke area, lower section):\n` +
           `    "${d.offer}" in bold dark-green text, large and prominent.\n` +
-          (d.offerFine ? `    Fine print: "${d.offerFine}" smaller below.\n` : "") + "\n"
+          (d.offerFine ? `    Fine print: "${d.offerFine}" smaller below.\n` : "") +
+          "    NEVER place a QR code inside this coupon zone — the QR code belongs ONLY in the footer bottom-right corner.\n\n"
         : "") +
       buildFooterZone(d.phone || "", fullAddress, "inline-icon") +
       "TYPOGRAPHIC RULES:\n" +
@@ -714,7 +718,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       (d.offer
         ? `  ZONE 5 — COUPON (gold/yellow dashed-border box, lower-right):\n` +
           `    "${d.offer}" in bold dark navy text, prominent.\n` +
-          (d.offerFine ? `    Fine print: "${d.offerFine}" smaller below.\n` : "") + "\n"
+          (d.offerFine ? `    Fine print: "${d.offerFine}" smaller below.\n` : "") +
+          "    NEVER place a QR code inside this coupon zone — the QR code belongs ONLY in the footer bottom-right corner.\n\n"
         : "") +
       buildFooterZone(d.phone || "", fullAddress, "circular-badge") +
       "TYPOGRAPHIC RULES:\n" +
@@ -747,7 +752,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       (d.offer
         ? `  ZONE 5 — OFFER (its own visually distinct zone — a teal-bordered rectangle, contrasting panel, or dashed coupon box; NEVER merged with or placed adjacent to the service panels):\n` +
           `    "${d.offer}" prominently inside this dedicated offer zone — large, bold text.\n` +
-          (d.offerFine ? `    Fine print: "${d.offerFine}" smaller below, inside the same offer zone.\n` : "") + "\n"
+          (d.offerFine ? `    Fine print: "${d.offerFine}" smaller below, inside the same offer zone.\n` : "") +
+          "    NEVER place a QR code inside this coupon zone — the QR code belongs ONLY in the footer bottom-right corner.\n\n"
         : "") +
       buildFooterZone(d.phone || "", fullAddress, "circular-badge") +
       "TYPOGRAPHIC RULES:\n" +
@@ -790,7 +796,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       (d.offer
         ? `  SPECIAL OFFER — in its OWN VISUALLY DISTINCT ZONE (dashed coupon box, contrasting rectangle, or bordered panel) that is CLEARLY SEPARATED from the services/menu list. The coupon zone contains ONLY the offer text and fine print — NEVER merge with the services list, NEVER add filler phrases like 'Admit One Offer' or 'Stub No.':\n` +
           `    "${d.offer}" — large, bold, prominent inside the coupon zone.\n` +
-          (d.offerFine ? `    Fine print: "${d.offerFine}" — smaller, inside same coupon zone.\n` : "")
+          (d.offerFine ? `    Fine print: "${d.offerFine}" — smaller, inside same coupon zone.\n` : "") +
+          "    NEVER place a QR code inside this coupon zone — the QR code belongs ONLY in the footer bottom-right corner.\n"
         : "") +
       buildFooterZone(d.phone || "", fullAddress, "minimal") +
       "TYPOGRAPHIC RULES:\n" +
@@ -842,7 +849,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
         ? "  ZONE 5 — SPECIAL OFFER (wide white brush-stroke area, lower section):\n" +
           `    Inside the large white brush-stroke shape: render "${d.offer}" in bold dark-green text, large and prominent.\n` +
           (d.offerFine ? `    Fine print: "${d.offerFine}" in smaller text below.\n` : "") +
-          "\n"
+          "    NEVER place a QR code inside this coupon zone — the QR code belongs ONLY in the footer bottom-right corner.\n\n"
         : "") +
 
       buildFooterZone(d.phone || "", fullAddress, "inline-icon") +
@@ -889,7 +896,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
         ? "  ZONE 5 — SPECIAL OFFER (gold/yellow dashed-border coupon box, lower-right):\n" +
           `    Inside the gold/yellow dashed coupon rectangle: render "${d.offer}" in bold dark navy text, large and prominent.\n` +
           (d.offerFine ? `    Fine print: "${d.offerFine}" in smaller text below the offer.\n` : "") +
-          "\n"
+          "    NEVER place a QR code inside this coupon zone — the QR code belongs ONLY in the footer bottom-right corner.\n\n"
         : "") +
 
       buildFooterZone(d.phone || "", fullAddress, "circular-badge") +
@@ -931,7 +938,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "    (d) Hero photo must appear cinematically lit with soft-light or rim-light, and its shadow/edge must " +
       "blend realistically into the mid-layer (Plane 2), not float above it.\n" +
       "    (e) Every text element must sit ON the composition with drop shadows, glows, light knockouts, or dark-field " +
-      "backlighting — NEVER floating on bare flat color.\n\n" +
+      "backlighting — NEVER floating on bare flat color.\n" +
+      "    (f) FILL EVERY SQUARE INCH of the card — NO empty, bare, or background-only zones. Every region not occupied by a content zone must be covered by textures, patterns, color fills, or decorative graphic elements from your theme.\n\n" +
 
       "  REQUIRED CONTENT ZONES (place and style these however fits your design):\n" +
       `    HEADLINE: Business name "${d.bizName}" — very large, dominant, instantly readable at a glance. Maximum typographic impact.\n` +
@@ -947,7 +955,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       (d.offer
         ? `    SPECIAL OFFER — in its OWN VISUALLY DISTINCT ZONE (dashed coupon box, contrasting panel, or bordered shape) that is CLEARLY SEPARATED from the services/menu list — NEVER placed in the same column or merged with services:\n` +
           `    "${d.offer}" — large, bold, prominent inside the coupon zone. ONLY this offer text and fine print here — no filler phrases.\n` +
-          (d.offerFine ? `    Fine print: "${d.offerFine}" — smaller, inside same coupon zone.\n` : "")
+          (d.offerFine ? `    Fine print: "${d.offerFine}" — smaller, inside same coupon zone.\n` : "") +
+          "    NEVER place a QR code inside this coupon zone — the QR code belongs ONLY in the footer bottom-right corner.\n"
         : "") +
       buildFooterZone(d.phone || "", fullAddress, "minimal") +
       "  QUALITY STANDARD — all of the following are required, no exceptions:\n" +
@@ -1006,7 +1015,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
         ? "  ZONE 5B — SPECIAL OFFER:\n" +
           `    Render "${d.offer}" prominently in teal or dark text in an available white space area.\n` +
           (d.offerFine ? `    Fine print: "${d.offerFine}" in smaller text below.\n` : "") +
-          "\n"
+          "    NEVER place a QR code inside this coupon zone — the QR code belongs ONLY in the footer bottom-right corner.\n\n"
         : "") +
 
       buildFooterZone(d.phone || "", fullAddress, "circular-badge") +
@@ -1054,7 +1063,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
 
       (d.offer
         ? "  ZONE 5 — SPECIAL OFFER (dashed coupon box):\n" +
-          `    "${d.offer}" in bold inside the dashed coupon rectangle. If fine print exists, render it smaller below.\n\n`
+          `    "${d.offer}" in bold inside the dashed coupon rectangle. If fine print exists, render it smaller below.\n` +
+          "    NEVER place a QR code inside this coupon zone — the QR code belongs ONLY in the footer bottom-right corner.\n\n"
         : "") +
 
       buildFooterZone(d.phone || "", fullAddress, "inline-icon") +
@@ -2112,6 +2122,7 @@ var _originalResultUrl = '';
 var _activeTemplate = 'parchment-classic';
 var _spotSize = 'XL';
 var _spotId = 0;
+var _genCount = 0;
 var _takenCategories = [];
 
 function showTakenDialog(industry){
@@ -2415,6 +2426,7 @@ async function generate(){
   var biz = document.getElementById('bizName').value.trim();
   if(!biz){ alert('Please enter a business name.'); return; }
 
+  _genCount++;
   hideResult(); hideErr();
   document.getElementById('genBtn').disabled = true;
   document.getElementById('genLabel').textContent = 'Generating\\u2026';
@@ -2436,6 +2448,7 @@ async function generate(){
     template:  _activeTemplate,
     sizeKey:   _spotSize || 'XL',
     spotId:    _spotId || undefined,
+    generationIndex: _genCount,
   };
 
   try{
