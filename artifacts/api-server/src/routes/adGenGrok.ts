@@ -2496,6 +2496,19 @@ function useThisAd(){
     template:      _activeTemplate,
     sizeKey:       _spotSize || 'XL',
   };
+  // Persist the ad to localStorage so the parent window can recover it if
+  // it reloaded (Vite HMR in dev, accidental browser refresh in prod) after
+  // the popup was opened.  The parent reads this key on mount and offers a
+  // "Resume your ad" banner.  Use try/catch so storage errors never block.
+  try {
+    var urlParams = new URLSearchParams(window.location.search);
+    localStorage.setItem('localspot:grok:pendingAd', JSON.stringify({
+      formData:     formData,
+      pickerSpotId: urlParams.get('spotId') || '',
+      spotSize:     urlParams.get('spotSize') || 'XL',
+      savedAt:      Date.now(),
+    }));
+  } catch(e) {}
   if(window.opener && !window.opener.closed){
     window.opener.postMessage({ type: 'grok-ad-result', formData: formData }, '*');
     showToast('Ad sent! Completing your reservation\\u2026');

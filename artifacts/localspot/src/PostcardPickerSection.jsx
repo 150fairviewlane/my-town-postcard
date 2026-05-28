@@ -448,6 +448,8 @@ const [sel,setSel]=useState(null);
 const [adMethod,setAdMethod]=useState(null);
 const [reserving,setReserving]=useState(false);
 const [reserveError,setReserveError]=useState(null);
+const PENDING_AD_KEY='localspot:grok:pendingAd';
+const [pendingGrokAd,setPendingGrokAd]=useState(null);
 
 const handleSpotSelect=(spot)=>{setSel(spot);setAdMethod(null);setReserveError(null);};
 const [highlighted,setHighlighted]=useState(highlightArea);
@@ -463,6 +465,23 @@ useEffect(()=>{
   const clearT=setTimeout(()=>setHighlighted(null),3000);
   return()=>{clearTimeout(scrollT);clearTimeout(clearT);};
 },[highlighted]);
+
+// On mount: check for a Grok ad the user finished before the page reloaded.
+// The popup writes this key to localStorage right before sending postMessage,
+// so even if the parent page reloaded and the listener was gone, we can
+// recover and offer to complete the reservation.
+useEffect(()=>{
+  try{
+    const raw=localStorage.getItem(PENDING_AD_KEY);
+    if(!raw)return;
+    const pending=JSON.parse(raw);
+    if(Date.now()-(pending.savedAt||0)>30*60*1000){
+      localStorage.removeItem(PENDING_AD_KEY);
+      return;
+    }
+    setPendingGrokAd(pending);
+  }catch(e){}
+},[]);
 const queryClient=useQueryClient();
 const {data:campaign,isFetching:campaignFetching}=useGetActiveCampaign();
 const reserveMutation=useReserveSpot();
@@ -581,6 +600,7 @@ const handleComplete=async(formData,selOverride,sideOverride)=>{
       },
     });
     setSel(null);
+    localStorage.removeItem(PENDING_AD_KEY);
     navigate(`/checkout/${result.id}`);
   }catch(err){
     console.error('[handleComplete] caught error:',err);
@@ -588,6 +608,27 @@ const handleComplete=async(formData,selOverride,sideOverride)=>{
   }finally{
     setReserving(false);
   }
+};
+
+// Resume a pending Grok ad after the parent page reloaded.
+const handleResumePendingAd=()=>{
+  if(!pendingGrokAd)return;
+  const{formData,pickerSpotId,spotSize}=pendingGrokAd;
+  // Infer side from picker ID convention: back-side spots start with 'b'.
+  const inferredSide=pickerSpotId.startsWith('b')?'back':'front';
+  const sideSpots=inferredSide==='front'?FRONT:BACK;
+  // Prefer the exact spot; fall back to any available spot of the same size.
+  const pickerSpot=sideSpots.find(s=>s.id===pickerSpotId)||sideSpots.find(s=>s.size===spotSize);
+  // Always clear the stored entry before doing anything so the banner
+  // doesn't reappear if the user navigates back after a success.
+  localStorage.removeItem(PENDING_AD_KEY);
+  setPendingGrokAd(null);
+  if(!pickerSpot)return;
+  setSide(inferredSide);
+  setSel(pickerSpot);
+  setAdMethod('grok');
+  savedGrokContextRef.current={formData,sel:pickerSpot,side:inferredSide};
+  handleComplete(formData,pickerSpot,inferredSide);
 };
 
 const grokListenerRef=useRef(null);
@@ -659,6 +700,21 @@ return(<div style={{fontFamily:"sans-serif"}}>
 </div>
 
 <div className="postcard-section" style={{display:"flex",width:"100%",fontFamily:"sans-serif",background:"transparent",flexDirection:"column",boxSizing:"border-box",height:"100vh",padding:"8px 20px 8px",overflow:"hidden"}}>
+  {pendingGrokAd&&(
+    <div style={{background:"#1a2744",color:"#fff",borderRadius:8,padding:"8px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0,gap:12,marginBottom:6}}>
+      <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <span style={{fontSize:20}}>⚡</span>
+        <div>
+          <div style={{fontWeight:700,fontSize:13,lineHeight:1.3}}>Your AI ad for {pendingGrokAd.formData?.businessName||'your business'} is ready</div>
+          <div style={{fontSize:11,opacity:0.7}}>Page reloaded before your reservation completed — pick up right where you left off</div>
+        </div>
+      </div>
+      <div style={{display:"flex",gap:8,flexShrink:0}}>
+        <button onClick={handleResumePendingAd} style={{background:"#991b1b",color:"#fff",border:"none",borderRadius:6,padding:"6px 14px",cursor:"pointer",fontWeight:700,fontSize:12,whiteSpace:"nowrap"}}>Continue →</button>
+        <button onClick={()=>{localStorage.removeItem(PENDING_AD_KEY);setPendingGrokAd(null);}} style={{background:"rgba(255,255,255,0.15)",color:"#fff",border:"none",borderRadius:6,padding:"6px 10px",cursor:"pointer",fontSize:13,lineHeight:1}}>✕</button>
+      </div>
+    </div>
+  )}
   <div style={{textAlign:"center",marginBottom:2,flexShrink:0}}>
     <div style={{fontSize:22,fontWeight:900,color:"#111",fontFamily:"Georgia,serif",letterSpacing:-0.3}}>Reserve Your Spot on the Postcard</div>
     <div style={{fontSize:16,color:"#64748b",marginTop:1}}>Click any <span style={{color:"#16a34a",fontWeight:700}}>green spot</span> below to claim yours</div>
@@ -796,7 +852,7 @@ return(<div style={{fontFamily:"sans-serif"}}>
           </button>
         )}
         <button
-          onClick={()=>{setAdMethod(null);setReserveError(null);}}
+          onClick={()=>{setAdMethod(null);setReserveError(null);localStorage.removeItem(PENDING_AD_KEY);setPendingGrokAd(null);}}
           style={{background:"#fff",color:"#374151",border:"1.5px solid #d1d5db",borderRadius:8,padding:"11px 0",cursor:"pointer",fontWeight:600,fontSize:14,width:"100%"}}>
           Choose a different spot
         </button>
