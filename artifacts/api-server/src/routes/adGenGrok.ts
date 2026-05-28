@@ -778,6 +778,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
 
       "MANDATORY VISUAL RULES:\n" +
       "  - FILL THE ENTIRE 3\"×2\" (landscape) ad space — 100% coverage. No blank, empty, or unused areas anywhere in the ad.\n" +
+      "  - IMAGE CANVAS RULE — ABSOLUTE: The image canvas boundary IS the ad boundary. Fill 100% of the canvas to every edge — top, bottom, left, right. NEVER render the ad as a card, postcard object, or framed artwork floating on a surface. NEVER add any outer border, drop shadow, glow, vignette, gradient halo, or background color outside the ad content. The composition begins at pixel 0 on all four sides.\n" +
       "  - No hard rectangular photo borders — mask/blend edges with organic shapes, gradients, or diagonal cuts.\n" +
       "  - Background must have depth: gradient, texture, or layered wash — NEVER flat solid color.\n" +
       "  - Three depth planes: (1) textured bg, (2) graphic mid-layer shapes, (3) foreground text with shadows/glows.\n" +
@@ -939,7 +940,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "blend realistically into the mid-layer (Plane 2), not float above it.\n" +
       "    (e) Every text element must sit ON the composition with drop shadows, glows, light knockouts, or dark-field " +
       "backlighting — NEVER floating on bare flat color.\n" +
-      "    (f) FILL EVERY SQUARE INCH of the card — NO empty, bare, or background-only zones. Every region not occupied by a content zone must be covered by textures, patterns, color fills, or decorative graphic elements from your theme.\n\n" +
+      "    (f) FILL EVERY SQUARE INCH of the card — NO empty, bare, or background-only zones. Every region not occupied by a content zone must be covered by textures, patterns, color fills, or decorative graphic elements from your theme.\n" +
+      "    (g) IMAGE CANVAS RULE — ABSOLUTE: The canvas boundary IS the ad boundary. Fill 100% of the canvas to every edge — top, bottom, left, right. NEVER render the ad as a card or postcard floating on a surface or background. NEVER add any outer border, drop shadow, glow, vignette, gradient halo, or background color outside the ad content. The composition begins at pixel 0 on all four sides.\n\n" +
 
       "  REQUIRED CONTENT ZONES (place and style these however fits your design):\n" +
       `    HEADLINE: Business name "${d.bizName}" — very large, dominant, instantly readable at a glance. Maximum typographic impact.\n` +
