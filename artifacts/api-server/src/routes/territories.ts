@@ -2,12 +2,24 @@ import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod/v4";
 import jwt from "jsonwebtoken";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
 import { db, territoriesTable, dealerTerritoryClaimsTable } from "@workspace/db";
+
+// Works in both ESM dev (tsx watch) and the esbuild production bundle.
+// In prod, esbuild's banner sets globalThis.__dirname = dist/, so the
+// fallback to import.meta.url is only reached in dev.
+const _dirname: string =
+  (globalThis as any).__dirname ??
+  path.dirname(fileURLToPath(import.meta.url));
 
 const router: IRouter = Router();
 
 const JWT_SECRET = process.env.SESSION_SECRET || "localspot-secret";
 
+// ─── Middleware ────────────────────────────────────────────────────────────────
+// Used on data-mutating admin API routes (Authorization: Bearer <token>).
 function requireAdmin(req: any, res: any, next: any): void {
   const auth = req.headers.authorization;
   if (!auth?.startsWith("Bearer ")) {
@@ -22,73 +34,104 @@ function requireAdmin(req: any, res: any, next: any): void {
   }
 }
 
-// ─── Seed Data ────────────────────────────────────────────────────────────────
-const GA_SEED: Array<{
-  id: string; name: string; state: string; counties: string[];
-  households: number; status: "available" | "pending" | "taken";
-}> = [
-  { id: "GA-001", name: "White / Habersham Counties",   state: "GA", counties: ["White","Habersham"],          households: 28000,  status: "available" },
-  { id: "GA-002", name: "Hall County (Gainesville)",    state: "GA", counties: ["Hall"],                       households: 82000,  status: "available" },
-  { id: "GA-003", name: "Stephens / Franklin / Hart",   state: "GA", counties: ["Stephens","Franklin","Hart"], households: 32000,  status: "pending"   },
-  { id: "GA-004", name: "Rabun / Towns / Union",        state: "GA", counties: ["Rabun","Towns","Union"],      households: 22000,  status: "available" },
-  { id: "GA-005", name: "Fannin / Gilmer Counties",     state: "GA", counties: ["Fannin","Gilmer"],            households: 30000,  status: "taken"     },
-  { id: "GA-006", name: "Pickens / Dawson / Lumpkin",  state: "GA", counties: ["Pickens","Dawson","Lumpkin"], households: 46000,  status: "available" },
-  { id: "GA-007", name: "Banks / Jackson",              state: "GA", counties: ["Banks","Jackson"],            households: 52000,  status: "available" },
-  { id: "GA-008", name: "Cherokee County",              state: "GA", counties: ["Cherokee"],                   households: 98000,  status: "available" },
-  { id: "GA-009", name: "Forsyth County",               state: "GA", counties: ["Forsyth"],                    households: 112000, status: "taken"     },
-  { id: "GA-010", name: "Murray / Whitfield Counties", state: "GA", counties: ["Murray","Whitfield"],         households: 56000,  status: "available" },
-  { id: "GA-011", name: "Gordon / Bartow Counties",    state: "GA", counties: ["Gordon","Bartow"],            households: 68000,  status: "available" },
-  { id: "GA-012", name: "Lumpkin / Dawson Counties",   state: "GA", counties: ["Lumpkin","Dawson"],           households: 28000,  status: "available" },
-];
-
-async function seedIfEmpty(): Promise<void> {
-  const existing = await db.select({ id: territoriesTable.id }).from(territoriesTable).limit(1);
-  if (existing.length > 0) return;
-  await db.insert(territoriesTable).values(
-    GA_SEED.map(t => ({
-      id: t.id, name: t.name, state: t.state,
-      counties: t.counties, households: t.households,
-      zones: 4, status: t.status,
-    })),
-  );
+// Validates a JWT passed as a ?token= query param (used by HTML page routes so
+// the browser GET can be authenticated without a custom header).
+function verifyQueryToken(token: string): boolean {
+  try {
+    jwt.verify(token, JWT_SECRET);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-// Run seed once on startup (non-blocking)
-seedIfEmpty().catch(() => {/* silent — table may not exist yet during first push */});
+// ─── Static HTML ──────────────────────────────────────────────────────────────
+// The territory-manager HTML lives in src/public/ (dev) and dist/public/ (prod).
+// The build step copies src/public → dist/public, so __dirname-relative paths
+// work identically in both environments.
+function resolveHtmlPath(): string {
+  // In production (esbuild bundle), _dirname = dist/
+  const prodPath = path.resolve(_dirname, "public", "territory-manager.html");
+  if (fs.existsSync(prodPath)) return prodPath;
+  // In development (tsx watch), _dirname = src/routes/
+  const devPath = path.resolve(_dirname, "..", "public", "territory-manager.html");
+  if (fs.existsSync(devPath)) return devPath;
+  throw new Error("territory-manager.html not found (checked both dist/public/ and src/public/)");
+}
+
+const HTML_FILE_PATH = resolveHtmlPath();
+
+// ─── Seed Data ────────────────────────────────────────────────────────────────
+type TerritoryStatus = "available" | "pending" | "taken";
+interface SeedRow {
+  id: string; name: string; state: string; counties: string[];
+  households: number; status: TerritoryStatus;
+}
+const GA_SEED: SeedRow[] = [
+  { id: "GA-001", name: "White / Habersham Counties",  state: "GA", counties: ["White","Habersham"],          households: 28000,  status: "available" },
+  { id: "GA-002", name: "Hall County (Gainesville)",   state: "GA", counties: ["Hall"],                       households: 82000,  status: "available" },
+  { id: "GA-003", name: "Stephens / Franklin / Hart",  state: "GA", counties: ["Stephens","Franklin","Hart"], households: 32000,  status: "pending"   },
+  { id: "GA-004", name: "Rabun / Towns / Union",       state: "GA", counties: ["Rabun","Towns","Union"],      households: 22000,  status: "available" },
+  { id: "GA-005", name: "Fannin / Gilmer Counties",    state: "GA", counties: ["Fannin","Gilmer"],            households: 30000,  status: "taken"     },
+  { id: "GA-006", name: "Pickens / Dawson / Lumpkin", state: "GA", counties: ["Pickens","Dawson","Lumpkin"], households: 46000,  status: "available" },
+  { id: "GA-007", name: "Banks / Jackson",             state: "GA", counties: ["Banks","Jackson"],            households: 52000,  status: "available" },
+  { id: "GA-008", name: "Cherokee County",             state: "GA", counties: ["Cherokee"],                   households: 98000,  status: "available" },
+  { id: "GA-009", name: "Forsyth County",              state: "GA", counties: ["Forsyth"],                    households: 112000, status: "available" },
+  { id: "GA-010", name: "Murray / Whitfield Counties", state: "GA", counties: ["Murray","Whitfield"],         households: 56000,  status: "available" },
+  { id: "GA-011", name: "Gordon / Bartow Counties",   state: "GA", counties: ["Gordon","Bartow"],            households: 68000,  status: "available" },
+  { id: "GA-012", name: "Lumpkin / Dawson Counties",  state: "GA", counties: ["Lumpkin","Dawson"],           households: 28000,  status: "available" },
+];
+
+// Idempotent seed: inserts each starter territory by primary key, skipping rows
+// that already exist. Safe to call on every boot; never overwrites existing data.
+async function seedStarterTerritories(): Promise<void> {
+  await db
+    .insert(territoriesTable)
+    .values(
+      GA_SEED.map(t => ({
+        id: t.id, name: t.name, state: t.state,
+        counties: t.counties, households: t.households,
+        zones: 4, status: t.status,
+      })),
+    )
+    .onConflictDoNothing();
+}
+
+// Run seed once on startup (non-blocking; silently skips if table doesn't exist
+// yet — first `pnpm --filter @workspace/db run push` creates it).
+seedStarterTerritories().catch(() => {});
 
 // ─── Zod Schemas ──────────────────────────────────────────────────────────────
 const CreateTerritorySchema = z.object({
-  name: z.string().min(1).max(200),
-  state: z.string().length(2),
-  counties: z.array(z.string().min(1)).min(1),
+  name:       z.string().min(1).max(200),
+  state:      z.string().length(2),
+  counties:   z.array(z.string().min(1)).min(1),
   households: z.number().int().min(0),
 });
 
 const UpdateTerritorySchema = z.object({
-  name: z.string().min(1).max(200).optional(),
-  counties: z.array(z.string().min(1)).optional(),
+  name:       z.string().min(1).max(200).optional(),
+  counties:   z.array(z.string().min(1)).optional(),
   households: z.number().int().min(0).optional(),
-  status: z.enum(["available", "pending", "taken"]).optional(),
-  dealerId: z.number().int().nullable().optional(),
+  status:     z.enum(["available", "pending", "taken"]).optional(),
+  dealerId:   z.number().int().nullable().optional(),
 });
 
 const ClaimSchema = z.object({
-  territory_id: z.string().min(1),
-  dealer_name: z.string().min(1).max(120),
-  dealer_email: z.string().email().max(180),
-  dealer_phone: z.string().max(40).optional().nullable(),
+  territory_id:  z.string().min(1),
+  dealer_name:   z.string().min(1).max(120),
+  dealer_email:  z.string().email().max(180),
+  dealer_phone:  z.string().max(40).optional().nullable(),
 });
 
 // ─── GET /api/territories?state=GA ────────────────────────────────────────────
 router.get("/territories", async (req, res): Promise<void> => {
-  await seedIfEmpty().catch(() => {});
+  // Ensure starter territories exist before serving the list
+  await seedStarterTerritories().catch(() => {});
   const state = typeof req.query.state === "string" ? req.query.state.toUpperCase() : null;
-  let rows;
-  if (state) {
-    rows = await db.select().from(territoriesTable).where(eq(territoriesTable.state, state));
-  } else {
-    rows = await db.select().from(territoriesTable);
-  }
+  const rows = state
+    ? await db.select().from(territoriesTable).where(eq(territoriesTable.state, state))
+    : await db.select().from(territoriesTable);
   res.json(rows);
 });
 
@@ -113,7 +156,6 @@ router.post("/territories", requireAdmin, async (req, res): Promise<void> => {
     .from(territoriesTable)
     .where(eq(territoriesTable.state, state));
 
-  // Auto-generate next id in series
   const nums = existingRows
     .map(r => parseInt(r.id.replace(`${state}-`, ""), 10))
     .filter(n => !isNaN(n));
@@ -141,11 +183,11 @@ router.put("/territories/:id", requireAdmin, async (req, res): Promise<void> => 
   if (!existing) { res.status(404).json({ error: "Territory not found" }); return; }
 
   const updateData: Record<string, unknown> = {};
-  if (parsed.data.name !== undefined) updateData.name = parsed.data.name;
-  if (parsed.data.counties !== undefined) updateData.counties = parsed.data.counties;
+  if (parsed.data.name !== undefined)       updateData.name       = parsed.data.name;
+  if (parsed.data.counties !== undefined)   updateData.counties   = parsed.data.counties;
   if (parsed.data.households !== undefined) updateData.households = parsed.data.households;
-  if (parsed.data.status !== undefined) updateData.status = parsed.data.status;
-  if (parsed.data.dealerId !== undefined) updateData.dealerId = parsed.data.dealerId;
+  if (parsed.data.status !== undefined)     updateData.status     = parsed.data.status;
+  if (parsed.data.dealerId !== undefined)   updateData.dealerId   = parsed.data.dealerId;
 
   const [updated] = await db
     .update(territoriesTable)
@@ -188,7 +230,6 @@ router.post("/territory-claims", async (req, res): Promise<void> => {
     return;
   }
 
-  // Mark territory pending and create claim record in a single transaction
   await db.transaction(async tx => {
     await tx
       .update(territoriesTable)
@@ -198,842 +239,38 @@ router.post("/territory-claims", async (req, res): Promise<void> => {
         eq(territoriesTable.status, "available"),
       ));
     await tx.insert(dealerTerritoryClaimsTable).values({
-      territoryId: parsed.data.territory_id,
-      dealerName: parsed.data.dealer_name,
-      dealerEmail: parsed.data.dealer_email,
-      dealerPhone: parsed.data.dealer_phone ?? null,
-      status: "pending",
+      territoryId:  parsed.data.territory_id,
+      dealerName:   parsed.data.dealer_name,
+      dealerEmail:  parsed.data.dealer_email,
+      dealerPhone:  parsed.data.dealer_phone ?? null,
+      status:       "pending",
     });
   });
 
-  req.log.info({ territoryId: parsed.data.territory_id, dealer: parsed.data.dealer_email }, "Territory claimed");
+  req.log.info(
+    { territoryId: parsed.data.territory_id, dealer: parsed.data.dealer_email },
+    "Territory claimed",
+  );
   res.status(201).json({ ok: true, message: "Territory claimed successfully" });
 });
 
-// ─── HTML pages ───────────────────────────────────────────────────────────────
-// Both admin and dealer views are served from the same HTML file.
-// The page reads localStorage('admin_token') for admin API calls.
-// /api/admin/territories → shows admin view by default
-// /api/dealer/claim-territory → shows dealer signup view by default
-
-const TERRITORY_MANAGER_HTML = buildTerritoryManagerHtml();
-
-router.get("/admin/territories", (_req, res): void => {
-  res.setHeader("Content-Type", "text/html; charset=utf-8");
-  res.send(TERRITORY_MANAGER_HTML);
+// ─── GET /api/admin/territories (HTML — admin JWT required via ?token=) ───────
+// The admin dashboard passes the JWT as a ?token= query param so the browser
+// GET can be authenticated without custom headers. The page itself re-uses the
+// token (stored in localStorage) for subsequent AJAX API calls.
+router.get("/admin/territories", (req, res): void => {
+  const token = typeof req.query.token === "string" ? req.query.token : null;
+  if (!token || !verifyQueryToken(token)) {
+    // No valid token — redirect to the React admin login page
+    res.redirect("/admin");
+    return;
+  }
+  res.sendFile(HTML_FILE_PATH);
 });
 
+// ─── GET /api/dealer/claim-territory (HTML — public) ──────────────────────────
 router.get("/dealer/claim-territory", (_req, res): void => {
-  res.setHeader("Content-Type", "text/html; charset=utf-8");
-  res.send(TERRITORY_MANAGER_HTML);
+  res.sendFile(HTML_FILE_PATH);
 });
 
 export default router;
-
-// ─── HTML Template ────────────────────────────────────────────────────────────
-function buildTerritoryManagerHtml(): string {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LocalSpot — Territory Manager</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --burg:#7C1C2E;--burg-dark:#5a1220;--burg-pale:#f9eaed;
-  --ink:#0f1117;--ink-mid:#374151;--ink-light:#6B7280;
-  --surface:#F4F1ED;--card:#fff;--border:#E2DDD6;
-  --green:#1a5c3a;--gold:#C8952A;
-  --available:#1a5c3a;--taken:#7C1C2E;--pending:#C8952A;
-}
-body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh;color:var(--ink)}
-.hdr{background:var(--ink);padding:0 28px;height:54px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--burg);position:sticky;top:0;z-index:200}
-.brand{font-family:'Bebas Neue',sans-serif;font-size:21px;color:#fff;letter-spacing:.08em}
-.brand span{color:#C8A882}
-.hdr-nav{display:flex;gap:4px}
-.hdr-tab{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:transparent;color:rgba(255,255,255,.5);transition:all .2s;letter-spacing:.04em;text-transform:uppercase}
-.hdr-tab:hover{color:#fff;background:rgba(255,255,255,.08)}
-.hdr-tab.active{background:var(--burg);color:#fff}
-.hdr-back{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;color:rgba(255,255,255,.5);text-decoration:none;letter-spacing:.04em;text-transform:uppercase}
-.hdr-back:hover{color:#fff}
-.view{display:none;min-height:calc(100vh - 54px)}
-.view.active{display:flex;flex-direction:column}
-.admin-layout{flex:1;display:grid;grid-template-columns:320px 1fr;overflow:hidden;height:calc(100vh - 54px)}
-.sidebar{background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
-.sidebar-hdr{padding:16px;border-bottom:1px solid var(--border);background:#FAFAF8}
-.sidebar-title{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.06em;color:var(--ink);margin-bottom:2px}
-.sidebar-sub{font-size:11px;color:var(--ink-light)}
-.sidebar-body{flex:1;overflow-y:auto;padding:12px}
-.state-row{display:flex;gap:8px;align-items:center;margin-bottom:14px}
-.state-row select{flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);background:var(--surface);outline:none}
-.state-row select:focus{border-color:var(--burg)}
-.tlist{display:flex;flex-direction:column;gap:6px}
-.titem{padding:10px 12px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface);cursor:pointer;transition:all .2s}
-.titem:hover{border-color:#bbb;background:#f0ece6}
-.titem.selected{border-color:var(--burg);background:var(--burg-pale)}
-.titem.status-available{border-left:3px solid var(--available)}
-.titem.status-taken{border-left:3px solid var(--taken)}
-.titem.status-pending{border-left:3px solid var(--pending)}
-.titem-name{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:3px}
-.titem-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.titem-counties{font-size:11px;color:var(--ink-light)}
-.titem-badge{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:10px}
-.badge-available{background:#dcfce7;color:var(--available)}
-.badge-taken{background:var(--burg-pale);color:var(--burg)}
-.badge-pending{background:#fef9c3;color:#854d0e}
-.new-tform{margin-top:14px;padding:14px;background:var(--surface);border-radius:8px;border:1.5px dashed var(--border);display:none}
-.new-tform.visible{display:block}
-.ntf-title{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--burg);margin-bottom:10px}
-.ntf-field{margin-bottom:9px}
-.ntf-field label{display:block;font-size:10px;font-weight:600;color:var(--ink-mid);margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em}
-.ntf-field input{width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:6px;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--ink);background:var(--card);outline:none}
-.ntf-field input:focus{border-color:var(--burg)}
-.county-chips{display:flex;flex-wrap:wrap;gap:5px;min-height:36px;padding:6px;border:1.5px solid var(--border);border-radius:6px;background:var(--card);margin-bottom:5px}
-.county-chip{background:var(--burg-pale);color:var(--burg);padding:3px 8px;border-radius:12px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:4px;cursor:pointer}
-.county-chip:hover{background:#f5c6ce}
-.county-chip span{opacity:.6;font-size:12px;line-height:1}
-.county-search{width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none;background:var(--surface)}
-.county-search:focus{border-color:var(--burg);background:#fff}
-.county-suggestions{max-height:140px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;background:#fff;display:none}
-.county-suggestions.visible{display:block}
-.county-sugg-item{padding:7px 10px;font-size:12px;cursor:pointer;transition:background .15s;border-bottom:1px solid var(--border)}
-.county-sugg-item:last-child{border-bottom:none}
-.county-sugg-item:hover{background:var(--burg-pale);color:var(--burg)}
-.county-sugg-item.in-territory{color:#bbb;cursor:not-allowed}
-.ntf-actions{display:flex;gap:7px;margin-top:10px}
-.ntf-save{flex:1;padding:8px;background:var(--burg);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
-.ntf-cancel{padding:8px 12px;background:var(--surface);color:var(--ink-mid);border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
-.add-tterritory-btn{width:100%;padding:9px;margin-top:10px;background:none;border:1.5px dashed var(--burg);border-radius:7px;color:var(--burg);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif}
-.add-tterritory-btn:hover{background:var(--burg-pale)}
-.map-area{background:#E8E4DE;position:relative;overflow:hidden;display:flex;flex-direction:column}
-.map-toolbar{padding:10px 16px;background:var(--card);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.map-title{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:.06em;color:var(--ink)}
-.map-legend{display:flex;gap:12px;margin-left:auto}
-.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-mid);font-weight:500}
-.legend-dot{width:10px;height:10px;border-radius:50%}
-.map-container{flex:1;position:relative;overflow:hidden}
-#adminMap{width:100%;height:100%}
-.county-path{stroke:#fff;stroke-width:0.8;fill:#D4C9BA;cursor:pointer;transition:fill .2s}
-.county-path:hover{fill:#C8B89A;stroke:#888;stroke-width:1.5}
-.county-path.territory-available{fill:#86EFAC;stroke:#16a34a;stroke-width:0.8}
-.county-path.territory-taken{fill:#FCA5A5;stroke:#dc2626;stroke-width:0.8}
-.county-path.territory-pending{fill:#FDE68A;stroke:#d97706;stroke-width:0.8}
-.county-path.territory-selected{fill:#BFDBFE;stroke:#2563eb;stroke-width:1.5}
-.county-path.highlight{stroke:#7C1C2E;stroke-width:2;filter:drop-shadow(0 0 4px rgba(124,28,46,.4))}
-.map-tooltip{position:absolute;pointer-events:none;background:var(--ink);color:#fff;padding:8px 12px;border-radius:8px;font-size:12px;box-shadow:0 4px 16px rgba(0,0,0,.3);display:none;z-index:50;max-width:220px;line-height:1.5}
-.map-tooltip.visible{display:block}
-.tt-name{font-weight:700;margin-bottom:2px}
-.tt-territory{font-size:11px;color:rgba(255,255,255,.65)}
-.tt-status{font-size:10px;margin-top:3px;padding:2px 6px;border-radius:8px;display:inline-block}
-.tt-available{background:rgba(22,163,74,.3);color:#86efac}
-.tt-taken{background:rgba(220,38,38,.3);color:#fca5a5}
-.tt-pending{background:rgba(217,119,6,.3);color:#fde68a}
-.tt-unassigned{background:rgba(255,255,255,.1);color:rgba(255,255,255,.5)}
-.map-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(232,228,222,.8);font-size:13px;color:var(--ink-mid);font-weight:600;z-index:10}
-.detail-panel{position:absolute;bottom:0;right:0;width:280px;background:var(--card);border-top:1px solid var(--border);border-left:1px solid var(--border);border-radius:12px 0 0 0;padding:16px;z-index:30;transform:translateY(100%);transition:transform .3s ease}
-.detail-panel.visible{transform:translateY(0)}
-.dp-close{position:absolute;top:10px;right:10px;background:none;border:none;cursor:pointer;color:var(--ink-light);font-size:18px;line-height:1}
-.dp-title{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.06em;color:var(--ink);margin-bottom:2px;padding-right:24px}
-.dp-counties{font-size:11px;color:var(--ink-light);margin-bottom:10px}
-.dp-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px}
-.dp-row:last-of-type{border-bottom:none}
-.dp-label{color:var(--ink-light);font-weight:500}
-.dp-val{color:var(--ink);font-weight:600}
-.dp-actions{display:flex;gap:7px;margin-top:12px}
-.dp-btn{flex:1;padding:8px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:var(--surface);color:var(--ink-mid);transition:all .2s}
-.dp-btn:hover{border-color:var(--burg);color:var(--burg)}
-.dp-btn.primary{background:var(--burg);border-color:var(--burg);color:#fff}
-.dp-btn.primary:hover{background:var(--burg-dark)}
-.dp-btn:disabled{opacity:.4;cursor:not-allowed}
-.signup-hero{background:var(--ink);padding:48px 32px;text-align:center;border-bottom:3px solid var(--burg)}
-.signup-hero-title{font-family:'Bebas Neue',sans-serif;font-size:42px;letter-spacing:.06em;color:#fff;margin-bottom:8px}
-.signup-hero-title span{color:#C8A882}
-.signup-hero-sub{font-family:'Crimson Pro',serif;font-style:italic;font-size:18px;color:rgba(255,255,255,.55);max-width:500px;margin:0 auto}
-.signup-body{max-width:900px;margin:0 auto;padding:40px 24px}
-.signup-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px}
-.signup-card{background:var(--card);border:1.5px solid var(--border);border-radius:12px;overflow:hidden}
-.sc-hdr{padding:14px 18px;border-bottom:1px solid var(--border);background:#FAFAF8}
-.sc-title{font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--burg)}
-.sc-body{padding:18px}
-.field{margin-bottom:12px}
-.field:last-child{margin-bottom:0}
-.field label{display:block;font-size:11px;font-weight:600;color:var(--ink-mid);margin-bottom:3px;letter-spacing:.06em;text-transform:uppercase}
-.field input,.field select{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:7px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);background:var(--surface);outline:none;transition:border-color .2s}
-.field input:focus,.field select:focus{border-color:var(--burg);background:#fff}
-.tpicker-state-row{display:flex;gap:10px;margin-bottom:14px}
-.tpicker-state-row select{flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;font-family:'DM Sans',sans-serif;color:var(--ink);background:var(--surface);outline:none}
-.tpicker-state-row select:focus{border-color:var(--burg)}
-.territory-grid{display:flex;flex-direction:column;gap:7px;max-height:340px;overflow-y:auto}
-.topt{position:relative}
-.topt input{position:absolute;opacity:0;width:0;height:0}
-.topt label{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border:2px solid var(--border);border-radius:9px;cursor:pointer;transition:all .2s;background:var(--surface)}
-.topt label:hover{border-color:#aaa;background:#f0ece6}
-.topt input:checked+label{border-color:var(--burg);background:var(--burg-pale);box-shadow:0 0 0 1px var(--burg)}
-.topt.taken label{opacity:.5;cursor:not-allowed;background:#fafafa}
-.topt.taken label:hover{border-color:var(--border);background:#fafafa}
-.topt-indicator{width:12px;height:12px;border-radius:50%;flex-shrink:0;margin-top:3px}
-.topt-name{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:2px}
-.topt-counties{font-size:11px;color:var(--ink-light);line-height:1.4}
-.topt-status{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-top:3px}
-.status-available{color:var(--available)}
-.status-taken{color:var(--taken)}
-.status-pending{color:var(--pending)}
-.value-props{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px}
-.vp{background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:16px;text-align:center}
-.vp-icon{font-size:24px;margin-bottom:6px}
-.vp-num{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.04em;color:var(--burg)}
-.vp-label{font-size:11px;color:var(--ink-light);line-height:1.4;margin-top:2px}
-.submit-btn{width:100%;padding:15px;background:var(--burg);color:#fff;border:none;border-radius:10px;font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.12em;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:10px}
-.submit-btn:hover:not(:disabled){background:var(--burg-dark);transform:translateY(-1px);box-shadow:0 6px 20px rgba(124,28,46,.3)}
-.submit-btn:disabled{background:#bbb;cursor:not-allowed;transform:none}
-.success-panel{background:var(--card);border:1.5px solid var(--green);border-radius:12px;padding:32px;text-align:center;display:none}
-.success-panel.visible{display:block}
-.success-icon{font-size:48px;margin-bottom:12px}
-.success-title{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:.06em;color:var(--green);margin-bottom:6px}
-.success-sub{font-size:14px;color:var(--ink-mid);line-height:1.6}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:#fff;padding:10px 22px;border-radius:30px;font-size:13px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,.3);transition:transform .3s cubic-bezier(.34,1.56,.64,1);z-index:999;pointer-events:none}
-.toast.show{transform:translateX(-50%) translateY(0)}
-@media(max-width:800px){
-  .admin-layout{grid-template-columns:1fr;grid-template-rows:auto 1fr}
-  .map-area{min-height:400px}
-  .signup-grid,.value-props{grid-template-columns:1fr}
-}
-</style>
-</head>
-<body>
-
-<header class="hdr">
-  <div class="brand">Local<span>Spot</span> — Territory Manager</div>
-  <div class="hdr-nav">
-    <button class="hdr-tab active" id="tabAdmin" onclick="switchView('admin')">Admin View</button>
-    <button class="hdr-tab" id="tabDealer" onclick="switchView('dealer')">Dealer Signup</button>
-    <a class="hdr-back" href="/api/admin/territories">← Back to Admin</a>
-  </div>
-</header>
-
-<div class="toast" id="toast"></div>
-
-<!-- ADMIN VIEW -->
-<div class="view active" id="view-admin">
-  <div class="admin-layout">
-    <div class="sidebar">
-      <div class="sidebar-hdr">
-        <div class="sidebar-title">Territory Manager</div>
-        <div class="sidebar-sub">Define and manage dealer territories</div>
-      </div>
-      <div class="sidebar-body">
-        <div class="state-row">
-          <select id="adminStateSelect" onchange="loadState()">
-            <option value="GA">Georgia</option>
-            <option value="SC" disabled>South Carolina (coming soon)</option>
-            <option value="TN" disabled>Tennessee (coming soon)</option>
-            <option value="FL" disabled>Florida (coming soon)</option>
-            <option value="NC" disabled>North Carolina (coming soon)</option>
-            <option value="AL" disabled>Alabama (coming soon)</option>
-          </select>
-        </div>
-        <div style="display:flex;gap:8px;margin-bottom:14px">
-          <div style="flex:1;text-align:center;background:var(--surface);border-radius:7px;padding:8px 4px;border:1px solid var(--border)">
-            <div id="statTotal" style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--ink)">0</div>
-            <div style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-light)">Total</div>
-          </div>
-          <div style="flex:1;text-align:center;background:#dcfce7;border-radius:7px;padding:8px 4px;border:1px solid #86efac">
-            <div id="statAvail" style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--available)">0</div>
-            <div style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--available)">Open</div>
-          </div>
-          <div style="flex:1;text-align:center;background:var(--burg-pale);border-radius:7px;padding:8px 4px;border:1px solid #fca5a5">
-            <div id="statTaken" style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--burg)">0</div>
-            <div style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--burg)">Taken</div>
-          </div>
-        </div>
-        <div class="tlist" id="adminTlist"></div>
-        <button class="add-tterritory-btn" onclick="toggleNewForm()">+ Define New Territory</button>
-        <div class="new-tform" id="newTForm">
-          <div class="ntf-title">New Territory</div>
-          <div class="ntf-field">
-            <label>Territory Name</label>
-            <input type="text" id="ntfName" placeholder="e.g. White/Habersham Counties">
-          </div>
-          <div class="ntf-field">
-            <label>Counties Included</label>
-            <div class="county-chips" id="selectedChips"></div>
-            <input type="text" class="county-search" id="countySearch" placeholder="Search counties to add..." oninput="searchCounties()" onfocus="searchCounties()">
-            <div class="county-suggestions" id="countySuggestions"></div>
-          </div>
-          <div class="ntf-field">
-            <label>Estimated Households</label>
-            <input type="number" id="ntfHouseholds" placeholder="e.g. 22000">
-          </div>
-          <div class="ntf-actions">
-            <button class="ntf-cancel" onclick="toggleNewForm()">Cancel</button>
-            <button class="ntf-save" onclick="saveNewTerritory()">Save Territory</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="map-area">
-      <div class="map-toolbar">
-        <div class="map-title" id="mapTitle">Georgia — County Territory Map</div>
-        <div class="map-legend">
-          <div class="legend-item"><div class="legend-dot" style="background:#86EFAC"></div>Available</div>
-          <div class="legend-item"><div class="legend-dot" style="background:#FCA5A5"></div>Taken</div>
-          <div class="legend-item"><div class="legend-dot" style="background:#FDE68A"></div>Pending</div>
-          <div class="legend-item"><div class="legend-dot" style="background:#BFDBFE"></div>Selected</div>
-          <div class="legend-item"><div class="legend-dot" style="background:#D4C9BA"></div>Unassigned</div>
-        </div>
-      </div>
-      <div class="map-container">
-        <svg id="adminMap"></svg>
-        <div class="map-loading" id="mapLoading">Loading Georgia county map…</div>
-        <div class="map-tooltip" id="mapTooltip">
-          <div class="tt-name" id="ttName"></div>
-          <div class="tt-territory" id="ttTerritory"></div>
-          <div class="tt-status" id="ttStatus"></div>
-        </div>
-      </div>
-      <div class="detail-panel" id="detailPanel">
-        <button class="dp-close" onclick="closeDetail()">×</button>
-        <div class="dp-title" id="dpTitle"></div>
-        <div class="dp-counties" id="dpCounties"></div>
-        <div class="dp-row"><span class="dp-label">State</span><span class="dp-val" id="dpState"></span></div>
-        <div class="dp-row"><span class="dp-label">Households</span><span class="dp-val" id="dpHouseholds"></span></div>
-        <div class="dp-row"><span class="dp-label">Zones</span><span class="dp-val">4</span></div>
-        <div class="dp-row"><span class="dp-label">Status</span><span class="dp-val" id="dpStatus"></span></div>
-        <div class="dp-row"><span class="dp-label">Dealer</span><span class="dp-val" id="dpDealer"></span></div>
-        <div class="dp-actions">
-          <button class="dp-btn" onclick="deleteTerritory()" id="btnDelete">Delete</button>
-          <button class="dp-btn primary" onclick="markAvailable()" id="btnMarkAvail">Mark Available</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- DEALER VIEW -->
-<div class="view" id="view-dealer">
-  <div class="signup-hero">
-    <div class="signup-hero-title">Claim Your <span>Territory</span></div>
-    <div class="signup-hero-sub">Exclusive dealer rights in your area. We handle printing, mailing, and delivery. You handle sales.</div>
-  </div>
-  <div class="signup-body">
-    <div class="value-props">
-      <div class="vp"><div class="vp-icon">📬</div><div class="vp-num">15</div><div class="vp-label">Ad slots per postcard</div></div>
-      <div class="vp"><div class="vp-icon">💰</div><div class="vp-num">80%</div><div class="vp-label">Commission on every ad sold</div></div>
-      <div class="vp"><div class="vp-icon">🗺️</div><div class="vp-num">4</div><div class="vp-label">Mailing zones per territory</div></div>
-    </div>
-    <div id="signupForm">
-      <div class="signup-grid">
-        <div class="signup-card">
-          <div class="sc-hdr"><div class="sc-title">Your Information</div></div>
-          <div class="sc-body">
-            <div class="field"><label>Full Name *</label><input type="text" id="dealerName" placeholder="Jane Smith"></div>
-            <div class="field"><label>Email *</label><input type="email" id="dealerEmail" placeholder="jane@example.com"></div>
-            <div class="field"><label>Phone *</label><input type="tel" id="dealerPhone" placeholder="(706) 555-0100"></div>
-            <div class="field"><label>City, State</label><input type="text" id="dealerCity" placeholder="Clarkesville, GA"></div>
-          </div>
-        </div>
-        <div class="signup-card">
-          <div class="sc-hdr"><div class="sc-title">Choose Your Territory</div></div>
-          <div class="sc-body">
-            <div class="tpicker-state-row">
-              <select id="dealerStateSelect" onchange="loadDealerTerritories()">
-                <option value="GA">Georgia</option>
-                <option value="SC" disabled>South Carolina (coming soon)</option>
-                <option value="TN" disabled>Tennessee (coming soon)</option>
-                <option value="FL" disabled>Florida (coming soon)</option>
-                <option value="NC" disabled>North Carolina (coming soon)</option>
-              </select>
-            </div>
-            <div class="territory-grid" id="dealerTerritoryGrid">
-              <div style="font-size:12px;color:var(--ink-light);text-align:center;padding:20px">Loading territories…</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <button class="submit-btn" id="submitBtn" onclick="submitSignup()" disabled>
-        ✦ Claim My Territory — $99/month
-      </button>
-    </div>
-    <div class="success-panel" id="successPanel">
-      <div class="success-icon">🎉</div>
-      <div class="success-title">Territory Claimed!</div>
-      <div class="success-sub" id="successMsg"></div>
-    </div>
-  </div>
-</div>
-
-<script>
-// ── State ─────────────────────────────────────────────────────────────────────
-let territories = [];
-let selectedTerritoryId = null;
-let newTerritoryCounties = [];
-let selectedDealerTerritoryId = null;
-let usAtlasCache = null; // cache the loaded TopoJSON
-
-const ADMIN_TOKEN = localStorage.getItem('admin_token') || '';
-
-// Georgia counties with FIPS codes (for county name search + D3 map lookup)
-const GA_COUNTIES = [
-  {name:'Rabun',fips:'13241'},{name:'Towns',fips:'13281'},{name:'Union',fips:'13291'},
-  {name:'Fannin',fips:'13111'},{name:'Gilmer',fips:'13123'},{name:'Pickens',fips:'13227'},
-  {name:'Dawson',fips:'13085'},{name:'Lumpkin',fips:'13187'},{name:'White',fips:'13311'},
-  {name:'Habersham',fips:'13137'},{name:'Stephens',fips:'13257'},{name:'Franklin',fips:'13119'},
-  {name:'Hart',fips:'13147'},{name:'Banks',fips:'13011'},{name:'Hall',fips:'13139'},
-  {name:'Jackson',fips:'13157'},{name:'Barrow',fips:'13013'},{name:'Cherokee',fips:'13057'},
-  {name:'Forsyth',fips:'13117'},{name:'Murray',fips:'13213'},{name:'Whitfield',fips:'13313'},
-  {name:'Gordon',fips:'13129'},{name:'Bartow',fips:'13015'},{name:'Cobb',fips:'13067'},
-  {name:'Fulton',fips:'13121'},{name:'Gwinnett',fips:'13135'},{name:'DeKalb',fips:'13089'},
-  {name:'Clayton',fips:'13061'},{name:'Henry',fips:'13149'},{name:'Rockdale',fips:'13247'},
-  {name:'Newton',fips:'13217'},{name:'Walton',fips:'13297'},{name:'Bibb',fips:'13021'},
-  {name:'Houston',fips:'13153'},{name:'Baldwin',fips:'13009'},{name:'Jones',fips:'13167'},
-  {name:'Monroe',fips:'13207'},{name:'Lamar',fips:'13171'},{name:'Butts',fips:'13035'},
-  {name:'Spalding',fips:'13255'},{name:'Chatham',fips:'13051'},{name:'Bryan',fips:'13029'},
-  {name:'Liberty',fips:'13179'},{name:'Glynn',fips:'13127'},{name:'Camden',fips:'13039'},
-  {name:'Dougherty',fips:'13095'},{name:'Lee',fips:'13177'},{name:'Worth',fips:'13321'},
-  {name:'Colquitt',fips:'13071'},{name:'Thomas',fips:'13275'},{name:'Lowndes',fips:'13185'},
-  {name:'Richmond',fips:'13245'},{name:'Columbia',fips:'13073'},{name:'Clarke',fips:'13059'},
-  {name:'Oconee',fips:'13219'},{name:'Madison',fips:'13195'},{name:'Elbert',fips:'13105'},
-  {name:'Oglethorpe',fips:'13221'},{name:'Greene',fips:'13133'},{name:'Morgan',fips:'13211'},
-  {name:'Catoosa',fips:'13047'},{name:'Walker',fips:'13295'},{name:'Dade',fips:'13083'},
-  {name:'Chattooga',fips:'13055'},{name:'Floyd',fips:'13115'},{name:'Polk',fips:'13233'},
-  {name:'Haralson',fips:'13143'},{name:'Carroll',fips:'13045'},{name:'Douglas',fips:'13097'},
-  {name:'Paulding',fips:'13223'},{name:'Fayette',fips:'13113'},{name:'Coweta',fips:'13077'},
-  {name:'Meriwether',fips:'13199'},{name:'Troup',fips:'13285'},{name:'Harris',fips:'13145'},
-  {name:'Muscogee',fips:'13215'},{name:'Talbot',fips:'13263'},{name:'Upson',fips:'13293'},
-  {name:'Pike',fips:'13231'},{name:'Jasper',fips:'13159'},{name:'Putnam',fips:'13237'},
-  {name:'Hancock',fips:'13141'},{name:'Warren',fips:'13301'},{name:'McDuffie',fips:'13189'},
-  {name:'Jefferson',fips:'13163'},{name:'Burke',fips:'13033'},{name:'Jenkins',fips:'13165'},
-  {name:'Screven',fips:'13251'},{name:'Bulloch',fips:'13031'},{name:'Candler',fips:'13041'},
-  {name:'Emanuel',fips:'13107'},{name:'Johnson',fips:'13167'},{name:'Treutlen',fips:'13283'},
-  {name:'Montgomery',fips:'13209'},{name:'Toombs',fips:'13279'},{name:'Evans',fips:'13109'},
-  {name:'Tattnall',fips:'13267'},{name:'Appling',fips:'13001'},{name:'Wayne',fips:'13305'},
-  {name:'Brantley',fips:'13025'},{name:'Ware',fips:'13299'},{name:'Pierce',fips:'13229'},
-  {name:'Bacon',fips:'13005'},{name:'Coffee',fips:'13069'},{name:'Atkinson',fips:'13003'},
-  {name:'Clinch',fips:'13065'},{name:'Echols',fips:'13101'},{name:'Lanier',fips:'13173'},
-  {name:'Berrien',fips:'13019'},{name:'Brooks',fips:'13027'},{name:'Cook',fips:'13075'},
-  {name:'Tift',fips:'13277'},{name:'Ben Hill',fips:'13017'},{name:'Irwin',fips:'13155'},
-  {name:'Turner',fips:'13287'},{name:'Wilcox',fips:'13315'},{name:'Crisp',fips:'13081'},
-  {name:'Dooly',fips:'13091'},{name:'Pulaski',fips:'13235'},{name:'Wilkinson',fips:'13319'},
-  {name:'Twiggs',fips:'13289'},{name:'Bleckley',fips:'13023'},{name:'Laurens',fips:'13175'},
-  {name:'Dodge',fips:'13091'},{name:'Wheeler',fips:'13309'},{name:'Telfair',fips:'13271'},
-  {name:'Jeff Davis',fips:'13161'},{name:'McIntosh',fips:'13191'},{name:'Long',fips:'13183'},
-  {name:'Effingham',fips:'13103'},{name:'Chatham',fips:'13051'},{name:'Bulloch',fips:'13031'},
-  {name:'Macon',fips:'13193'},{name:'Taylor',fips:'13269'},{name:'Schley',fips:'13249'},
-  {name:'Webster',fips:'13307'},{name:'Stewart',fips:'13259'},{name:'Quitman',fips:'13239'},
-  {name:'Clay',fips:'13061'},{name:'Early',fips:'13099'},{name:'Miller',fips:'13201'},
-  {name:'Baker',fips:'13007'},{name:'Mitchell',fips:'13205'},{name:'Colquitt',fips:'13071'},
-  {name:'Decatur',fips:'13087'},{name:'Grady',fips:'13131'},{name:'Seminole',fips:'13253'},
-  {name:'Miller',fips:'13201'},{name:'Calhoun',fips:'13037'},{name:'Randolph',fips:'13243'},
-  {name:'Terrell',fips:'13273'},{name:'Lee',fips:'13177'},{name:'Sumter',fips:'13261'},
-  {name:'Schley',fips:'13249'},{name:'Marion',fips:'13197'},{name:'Talbot',fips:'13263'},
-  {name:'Harris',fips:'13145'},{name:'Muscogee',fips:'13215'},{name:'Chattahoochee',fips:'13053'},
-  {name:'Webster',fips:'13307'},{name:'Quitman',fips:'13239'},{name:'Stewart',fips:'13259'},
-  {name:'Lincoln',fips:'13181'},{name:'Wilkes',fips:'13317'},{name:'Taliaferro',fips:'13265'},
-  {name:'Glascock',fips:'13125'},{name:'Washington',fips:'13303'},{name:'Baldwin',fips:'13009'},
-];
-
-// Build FIPS → name lookup (deduplicated)
-const FIPS_TO_NAME = {};
-GA_COUNTIES.forEach(c => { if (!FIPS_TO_NAME[c.fips]) FIPS_TO_NAME[c.fips] = c.name; });
-
-// Unique county names for search (deduplicated)
-const GA_COUNTY_NAMES_UNIQUE = [...new Set(GA_COUNTIES.map(c => c.name))].sort();
-
-// ── View Switching ────────────────────────────────────────────────────────────
-function switchView(name) {
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.querySelectorAll('.hdr-tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('view-' + name).classList.add('active');
-  document.getElementById('tab' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('active');
-  if (name === 'dealer') loadDealerTerritories();
-}
-
-// ── API Helpers ───────────────────────────────────────────────────────────────
-async function apiFetch(path, opts = {}) {
-  const headers = { 'Content-Type': 'application/json', ...opts.headers };
-  if (ADMIN_TOKEN) headers['Authorization'] = 'Bearer ' + ADMIN_TOKEN;
-  const res = await fetch('/api' + path, { ...opts, headers });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error || res.statusText);
-  }
-  return res.json();
-}
-
-// ── Load & Render Sidebar ─────────────────────────────────────────────────────
-async function loadState() {
-  const state = document.getElementById('adminStateSelect').value;
-  try {
-    territories = await apiFetch('/territories?state=' + state);
-  } catch (e) {
-    showToast('Failed to load territories: ' + e.message);
-    territories = [];
-  }
-  renderSidebar();
-  renderMap();
-}
-
-function renderSidebar() {
-  const total  = territories.length;
-  const avail  = territories.filter(t => t.status === 'available').length;
-  const taken  = territories.filter(t => t.status === 'taken').length;
-  document.getElementById('statTotal').textContent = total;
-  document.getElementById('statAvail').textContent = avail;
-  document.getElementById('statTaken').textContent = taken;
-
-  const list = document.getElementById('adminTlist');
-  list.innerHTML = territories.length
-    ? territories.map(t => \`
-        <div class="titem status-\${t.status}\${selectedTerritoryId === t.id ? ' selected' : ''}"
-             onclick="selectTerritory('\${t.id}')">
-          <div class="titem-name">\${t.name}</div>
-          <div class="titem-meta">
-            <div class="titem-counties">\${(t.counties||[]).join(' · ')}</div>
-            <div class="titem-badge badge-\${t.status}">\${t.status}</div>
-          </div>
-        </div>\`).join('')
-    : '<div style="font-size:12px;color:var(--ink-light);text-align:center;padding:20px">No territories defined yet.<br>Click + Define New Territory to start.</div>';
-}
-
-// ── D3 Map ────────────────────────────────────────────────────────────────────
-async function renderMap() {
-  const container = document.getElementById('adminMap');
-  const wrapper   = container.parentElement;
-  const loading   = document.getElementById('mapLoading');
-  loading.style.display = 'flex';
-
-  try {
-    if (!usAtlasCache) {
-      usAtlasCache = await d3.json('https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json');
-    }
-    const us = usAtlasCache;
-    const allFeatures = topojson.feature(us, us.objects.counties).features;
-    // Georgia FIPS state code = 13 (5-digit county FIPS starts with "13")
-    const gaFeatures = allFeatures.filter(f => String(f.id).startsWith('13'));
-
-    const width  = wrapper.clientWidth  || 800;
-    const height = wrapper.clientHeight || 600;
-
-    const geoCollection = { type: 'FeatureCollection', features: gaFeatures };
-    const projection = d3.geoAlbersUsa().fitSize([width - 20, height - 20], geoCollection);
-    const pathGen    = d3.geoPath().projection(projection);
-
-    // Build county-name → territory lookup
-    const countyMap = {};
-    territories.forEach(t => (t.counties||[]).forEach(c => { countyMap[c] = t; }));
-
-    const svg = d3.select('#adminMap')
-      .attr('viewBox', \`0 0 \${width} \${height}\`)
-      .attr('width', width)
-      .attr('height', height);
-
-    svg.selectAll('*').remove();
-
-    const paths = svg.selectAll('.county-path')
-      .data(gaFeatures)
-      .join('path')
-      .attr('d', pathGen)
-      .attr('data-fips', d => d.id)
-      .attr('data-county', d => FIPS_TO_NAME[String(d.id)] || '')
-      .each(function(d) {
-        const name = FIPS_TO_NAME[String(d.id)] || '';
-        const territory = countyMap[name];
-        let cls = 'county-path';
-        if (territory) {
-          cls += ' territory-' + territory.status;
-          if (territory.id === selectedTerritoryId) cls += ' highlight';
-        }
-        this.setAttribute('class', cls);
-      })
-      .on('mousemove', function(event, d) {
-        const name = FIPS_TO_NAME[String(d.id)] || 'Unknown';
-        const territory = countyMap[name];
-        showTooltip(event, name, territory);
-      })
-      .on('mouseleave', hideTooltip)
-      .on('click', function(event, d) {
-        const name = FIPS_TO_NAME[String(d.id)] || '';
-        const territory = countyMap[name];
-        if (territory) selectTerritory(territory.id);
-      });
-
-    // County labels for named counties
-    svg.selectAll('.county-label')
-      .data(gaFeatures.filter(d => FIPS_TO_NAME[String(d.id)]))
-      .join('text')
-      .attr('class', 'county-label')
-      .attr('pointer-events', 'none')
-      .attr('text-anchor', 'middle')
-      .attr('font-size', '5.5')
-      .attr('font-family', 'DM Sans, sans-serif')
-      .attr('fill', 'rgba(0,0,0,0.45)')
-      .attr('transform', d => {
-        const c = pathGen.centroid(d);
-        return \`translate(\${c[0]},\${c[1]})\`;
-      })
-      .text(d => FIPS_TO_NAME[String(d.id)] || '');
-
-    // State label
-    svg.append('text')
-      .attr('x', 16).attr('y', 20)
-      .attr('font-size', 11).attr('font-family', 'Bebas Neue, sans-serif')
-      .attr('fill', 'rgba(0,0,0,0.25)').attr('letter-spacing', 2)
-      .text('GEORGIA');
-
-  } catch (e) {
-    console.error('Map render error:', e);
-  } finally {
-    loading.style.display = 'none';
-  }
-}
-
-// ── Tooltip ───────────────────────────────────────────────────────────────────
-function showTooltip(event, countyName, territory) {
-  const tt = document.getElementById('mapTooltip');
-  const container = tt.parentElement.getBoundingClientRect();
-  const x = event.clientX - container.left + 12;
-  const y = event.clientY - container.top  - 10;
-  document.getElementById('ttName').textContent = countyName + ' County';
-  document.getElementById('ttTerritory').textContent = territory ? territory.name : 'Unassigned';
-  const statusEl = document.getElementById('ttStatus');
-  if (territory) {
-    statusEl.textContent = territory.status.charAt(0).toUpperCase() + territory.status.slice(1);
-    statusEl.className = 'tt-status tt-' + territory.status;
-  } else {
-    statusEl.textContent = 'Not in any territory';
-    statusEl.className = 'tt-status tt-unassigned';
-  }
-  tt.style.left = Math.min(x, container.width - 230) + 'px';
-  tt.style.top  = Math.max(0, y) + 'px';
-  tt.classList.add('visible');
-}
-function hideTooltip() { document.getElementById('mapTooltip').classList.remove('visible'); }
-
-// ── Territory Selection ───────────────────────────────────────────────────────
-function selectTerritory(id) {
-  const t = territories.find(t => t.id === id);
-  if (!t) return;
-  selectedTerritoryId = id;
-  renderSidebar();
-  renderMap();
-
-  document.getElementById('dpTitle').textContent = t.name;
-  document.getElementById('dpCounties').textContent = (t.counties||[]).join(' · ') + (t.counties?.length === 1 ? ' county' : ' counties');
-  document.getElementById('dpState').textContent = t.state;
-  document.getElementById('dpHouseholds').textContent = (t.households||0).toLocaleString();
-  const statusEl = document.getElementById('dpStatus');
-  statusEl.textContent = t.status.charAt(0).toUpperCase() + t.status.slice(1);
-  statusEl.style.color = t.status === 'available' ? 'var(--available)' : t.status === 'taken' ? 'var(--taken)' : 'var(--pending)';
-  document.getElementById('dpDealer').textContent = t.dealer_id ? ('Dealer #' + t.dealer_id) : '—';
-  document.getElementById('detailPanel').classList.add('visible');
-}
-
-function closeDetail() {
-  selectedTerritoryId = null;
-  document.getElementById('detailPanel').classList.remove('visible');
-  renderSidebar();
-  renderMap();
-}
-
-async function markAvailable() {
-  if (!selectedTerritoryId) return;
-  try {
-    await apiFetch('/territories/' + selectedTerritoryId, {
-      method: 'PUT',
-      body: JSON.stringify({ status: 'available', dealerId: null }),
-    });
-    showToast('Territory marked as available');
-    await loadState();
-    closeDetail();
-  } catch (e) { showToast('Error: ' + e.message); }
-}
-
-async function deleteTerritory() {
-  if (!selectedTerritoryId) return;
-  const t = territories.find(t => t.id === selectedTerritoryId);
-  if (t && t.status !== 'available') {
-    showToast('Only available territories can be deleted');
-    return;
-  }
-  if (!confirm('Delete this territory? This cannot be undone.')) return;
-  try {
-    await apiFetch('/territories/' + selectedTerritoryId, { method: 'DELETE' });
-    showToast('Territory deleted');
-    selectedTerritoryId = null;
-    document.getElementById('detailPanel').classList.remove('visible');
-    await loadState();
-  } catch (e) { showToast('Error: ' + e.message); }
-}
-
-// ── New Territory Form ────────────────────────────────────────────────────────
-function toggleNewForm() {
-  const form = document.getElementById('newTForm');
-  form.classList.toggle('visible');
-  if (form.classList.contains('visible')) {
-    newTerritoryCounties = [];
-    renderChips();
-    document.getElementById('ntfName').value = '';
-    document.getElementById('ntfHouseholds').value = '';
-    document.getElementById('countySearch').value = '';
-  }
-}
-
-function renderChips() {
-  const chips = document.getElementById('selectedChips');
-  chips.innerHTML = newTerritoryCounties.map(c =>
-    \`<div class="county-chip" onclick="removeChip('\${c}')">\${c}<span>×</span></div>\`
-  ).join('') || '<span style="font-size:11px;color:var(--ink-light);padding:2px 4px">No counties selected</span>';
-}
-
-function removeChip(name) {
-  newTerritoryCounties = newTerritoryCounties.filter(c => c !== name);
-  renderChips();
-}
-
-function searchCounties() {
-  const q = document.getElementById('countySearch').value.toLowerCase();
-  const sugg = document.getElementById('countySuggestions');
-  const usedCounties = new Set(territories.flatMap(t => t.counties || []));
-
-  const matches = GA_COUNTY_NAMES_UNIQUE.filter(name => name.toLowerCase().includes(q) && q.length > 0).slice(0, 10);
-  if (!matches.length) { sugg.classList.remove('visible'); return; }
-
-  sugg.innerHTML = matches.map(name => {
-    const inNew   = newTerritoryCounties.includes(name);
-    const inExist = usedCounties.has(name);
-    const disabled = inNew || inExist;
-    return \`<div class="county-sugg-item\${disabled ? ' in-territory' : ''}"
-      onclick="\${disabled ? '' : \`addChip('\${name}')\`}"
-      title="\${inNew ? 'Already added' : inExist ? 'In another territory' : 'Add ' + name}">
-      \${name} County\${inNew ? ' ✓' : inExist ? ' (taken)' : ''}
-    </div>\`;
-  }).join('');
-  sugg.classList.add('visible');
-}
-
-document.addEventListener('click', e => {
-  if (!e.target.closest('#countySearch') && !e.target.closest('#countySuggestions')) {
-    document.getElementById('countySuggestions').classList.remove('visible');
-  }
-});
-
-function addChip(name) {
-  if (!newTerritoryCounties.includes(name)) { newTerritoryCounties.push(name); renderChips(); }
-  document.getElementById('countySearch').value = '';
-  document.getElementById('countySuggestions').classList.remove('visible');
-}
-
-async function saveNewTerritory() {
-  const name       = document.getElementById('ntfName').value.trim();
-  const households = parseInt(document.getElementById('ntfHouseholds').value) || 0;
-  const state      = document.getElementById('adminStateSelect').value;
-
-  if (!name) { showToast('Please enter a territory name'); return; }
-  if (newTerritoryCounties.length < 1) { showToast('Please add at least one county'); return; }
-  if (households < 1000) { showToast('Please enter estimated households'); return; }
-
-  try {
-    await apiFetch('/territories', {
-      method: 'POST',
-      body: JSON.stringify({ name, state, counties: [...newTerritoryCounties], households }),
-    });
-    showToast('Territory "' + name + '" saved!');
-    toggleNewForm();
-    await loadState();
-  } catch (e) { showToast('Error: ' + e.message); }
-}
-
-// ── Dealer Territory Picker ───────────────────────────────────────────────────
-async function loadDealerTerritories() {
-  const state = document.getElementById('dealerStateSelect').value;
-  const grid  = document.getElementById('dealerTerritoryGrid');
-  grid.innerHTML = '<div style="font-size:12px;color:var(--ink-light);text-align:center;padding:20px">Loading…</div>';
-  try {
-    const rows = await fetch('/api/territories?state=' + state).then(r => r.json());
-    grid.innerHTML = rows.length
-      ? rows.map(t => {
-          const unavailable = t.status !== 'available';
-          const color = t.status === 'available' ? '#86efac' : t.status === 'taken' ? '#fca5a5' : '#fde68a';
-          return \`<div class="topt\${unavailable ? ' taken' : ''}">
-            <input type="radio" name="dealerTerritory" id="dt-\${t.id}" value="\${t.id}"
-              \${unavailable ? 'disabled' : ''} onchange="onTerritoryPick('\${t.id}')">
-            <label for="dt-\${t.id}">
-              <div class="topt-indicator" style="background:\${color}"></div>
-              <div class="topt-info">
-                <div class="topt-name">\${t.name}</div>
-                <div class="topt-counties">\${(t.counties||[]).join(' · ')}</div>
-                <div class="topt-status status-\${t.status}">\${t.status === 'available' ? '✓ Available' : t.status === 'taken' ? '✗ Taken' : '⏳ Pending'}</div>
-              </div>
-            </label>
-          </div>\`;
-        }).join('')
-      : '<div style="font-size:12px;color:var(--ink-light);text-align:center;padding:20px">No territories available in this state yet.</div>';
-  } catch (e) {
-    grid.innerHTML = '<div style="font-size:12px;color:#991b1b;text-align:center;padding:20px">Failed to load territories.</div>';
-  }
-  selectedDealerTerritoryId = null;
-  document.getElementById('submitBtn').disabled = true;
-}
-
-function onTerritoryPick(id) {
-  selectedDealerTerritoryId = id;
-  document.getElementById('submitBtn').disabled = false;
-}
-
-// ── Dealer Signup Submit ──────────────────────────────────────────────────────
-async function submitSignup() {
-  const name  = document.getElementById('dealerName').value.trim();
-  const email = document.getElementById('dealerEmail').value.trim();
-  const phone = document.getElementById('dealerPhone').value.trim();
-
-  if (!name || !email || !phone) { showToast('Please fill in your name, email, and phone'); return; }
-  if (!selectedDealerTerritoryId)  { showToast('Please select a territory'); return; }
-
-  const btn = document.getElementById('submitBtn');
-  btn.disabled = true;
-  btn.textContent = 'Submitting…';
-
-  try {
-    await fetch('/api/territory-claims', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ territory_id: selectedDealerTerritoryId, dealer_name: name, dealer_email: email, dealer_phone: phone }),
-    }).then(async r => { if (!r.ok) { const e = await r.json(); throw new Error(e.error || r.statusText); } return r.json(); });
-
-    const t = (await fetch('/api/territories/' + selectedDealerTerritoryId + '/counties').then(r => r.json()));
-    document.getElementById('signupForm').style.display = 'none';
-    document.getElementById('successPanel').classList.add('visible');
-    document.getElementById('successMsg').innerHTML =
-      \`<strong>\${name}</strong>, you've claimed your territory!<br><br>
-       We'll be in touch at <strong>\${email}</strong> to complete your setup.<br><br>
-       Your territory covers: \${(t.counties||[]).join(', ')} \${(t.counties||[]).length === 1 ? 'County' : 'Counties'}.\`;
-  } catch (e) {
-    showToast('Error: ' + e.message);
-    btn.disabled = false;
-    btn.textContent = '✦ Claim My Territory — $99/month';
-  }
-}
-
-// ── Toast ─────────────────────────────────────────────────────────────────────
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2800);
-}
-
-// ── Init ──────────────────────────────────────────────────────────────────────
-// Detect initial view from URL path
-const isDealer = window.location.pathname.includes('claim-territory');
-if (isDealer) switchView('dealer');
-
-loadState();
-</script>
-</body>
-</html>`;
-}
