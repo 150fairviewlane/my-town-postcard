@@ -23,6 +23,7 @@ import aiAdCreatorRouter from "./aiAdCreator";
 import adGenGrokRouter from "./adGenGrok";
 import interestRouter from "./interest";
 import subscriptionsRouter from "./subscriptions";
+import territoriesRouter from "./territories";
 
 const router: IRouter = Router();
 
@@ -50,5 +51,6 @@ router.use(aiAdCreatorRouter);
 router.use(adGenGrokRouter);
 router.use(interestRouter);
 router.use(subscriptionsRouter);
+router.use(territoriesRouter);
 
 export default router;

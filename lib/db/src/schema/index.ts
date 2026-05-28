@@ -9,3 +9,4 @@ export * from "./generatedAds";
 export * from "./spotSubscriptions";
 export * from "./subscriptionIssueAssignments";
 export * from "./stripeWebhookEvents";
+export * from "./territories";

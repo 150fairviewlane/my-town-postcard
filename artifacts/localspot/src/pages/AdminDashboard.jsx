@@ -346,6 +346,16 @@ function Dashboard({ token }) {
             🔁 Subscriptions
           </a>
           <a
+            href="/api/admin/territories"
+            style={{
+              fontSize: 13, fontWeight: 700, color: "#374151",
+              background: "#fff", border: "1px solid #d1d5db",
+              borderRadius: 8, padding: "7px 12px", textDecoration: "none",
+            }}
+          >
+            🗺️ Territory Manager
+          </a>
+          <a
             href={`${import.meta.env.BASE_URL}admin/ai-test`}
             style={{
               fontSize: 13, fontWeight: 700, color: "#7c3aed",
