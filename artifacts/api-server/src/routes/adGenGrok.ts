@@ -265,6 +265,7 @@ function buildFooterZone(
     `  LEFT — ${iconPrefix}phone "${phone}" in bold white, large and dominant. Zero digit changes.\n` +
     (hasAddr ? `  BESIDE/BELOW phone — address: ${addrRule}\n` : "") +
     "  RIGHT — small QR code graphic (max 0.5\"×0.5\" at print size). No coupon box, dashed frame, or decorative border.\n" +
+    "  QR CODE RULE — CRITICAL: the QR code must appear EXACTLY ONCE in the entire ad — ONLY here in the footer. NEVER place a second QR code in any coupon zone, service panel, headline area, or anywhere else outside the footer.\n" +
     "  QR QUIET ZONE: 4-unit clear white border on all sides, no overlaps.\n" +
     "  TYPOGRAPHY: phone ~16pt bold white; address ~14pt bold white. NEVER render the address text smaller than 12pt — if space is tight, shrink the coupon or reduce service panel height before reducing the address font size. No website URL text.\n\n"
   );
