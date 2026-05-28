@@ -1121,16 +1121,29 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     "OFFER IS NOT A MENU ITEM: the Special Offer must appear in its own distinct zone (coupon box, stamp, or highlighted panel) — it must NEVER be listed alongside or treated as one of the menu/service items.\n\n" +
     "BUSINESS DETAILS:\n" + businessBlock;
 
-  // ── Enforce xAI 8000-char prompt limit ───────────────────────────────────────
-  // The structural/template sections are fixed; the menu list is the main variable.
-  // Progressively trim menu items until we're under the limit; hard-truncate as a
-  // final safety net so xAI never rejects the request.
-  const MAX_PROMPT_CHARS = 7900;
+  // ── Enforce xAI 8000-byte prompt limit ───────────────────────────────────────
+  // xAI enforces a hard byte limit, not a JS character limit. Multi-byte UTF-8
+  // characters (curly quotes, em dashes, ×, bullets, etc.) inflate byte count
+  // above JS .length — a 7900-char string can easily be 8100+ bytes. All checks
+  // and truncation use Buffer.byteLength so the limit is always respected.
+  const MAX_PROMPT_BYTES = 7800; // 200-byte headroom below the 8000-byte xAI cap
+  /** UTF-8 byte length of a string */
+  const promptBytes = (s: string) => Buffer.byteLength(s, "utf8");
+  /** Truncate s to at most maxBytes, respecting UTF-8 multi-byte boundaries */
+  const truncateToBytes = (s: string, maxBytes: number): string => {
+    if (promptBytes(s) <= maxBytes) return s;
+    const buf = Buffer.from(s, "utf8");
+    // Walk back from maxBytes to avoid slicing inside a multi-byte sequence
+    let end = maxBytes;
+    while (end > 0 && (buf[end]! & 0xc0) === 0x80) end--;
+    return buf.slice(0, end).toString("utf8");
+  };
+
   let finalAdPrompt = adPrompt;
-  if (finalAdPrompt.length > MAX_PROMPT_CHARS) {
+  if (promptBytes(finalAdPrompt) > MAX_PROMPT_BYTES) {
     const allItems = d.menu.filter(Boolean);
     for (const limit of [8, 5, 3, 1, 0]) {
-      if (finalAdPrompt.length <= MAX_PROMPT_CHARS) break;
+      if (promptBytes(finalAdPrompt) <= MAX_PROMPT_BYTES) break;
       const kept = allItems.slice(0, limit);
       const menuReplacement =
         kept.length > 0
@@ -1142,16 +1155,16 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
         `Menu/Services :\n${menuReplacement}`,
       );
     }
-    if (finalAdPrompt.length > MAX_PROMPT_CHARS) {
+    if (promptBytes(finalAdPrompt) > MAX_PROMPT_BYTES) {
       req.log.warn(
-        { origLen: adPrompt.length, trimmedLen: finalAdPrompt.length },
-        "grok-imagine: prompt still over limit after menu trim — hard-truncating",
+        { origBytes: promptBytes(adPrompt), trimmedBytes: promptBytes(finalAdPrompt) },
+        "grok-imagine: prompt still over byte limit after menu trim — hard-truncating",
       );
-      finalAdPrompt = finalAdPrompt.slice(0, MAX_PROMPT_CHARS);
+      finalAdPrompt = truncateToBytes(finalAdPrompt, MAX_PROMPT_BYTES);
     } else {
       req.log.info(
-        { origLen: adPrompt.length, trimmedLen: finalAdPrompt.length },
-        "grok-imagine: prompt trimmed to fit xAI 8000-char limit",
+        { origBytes: promptBytes(adPrompt), trimmedBytes: promptBytes(finalAdPrompt) },
+        "grok-imagine: prompt trimmed to fit xAI 8000-byte limit",
       );
     }
   }
