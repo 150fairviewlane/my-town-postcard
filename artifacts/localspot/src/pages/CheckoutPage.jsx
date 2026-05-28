@@ -379,7 +379,7 @@ function SubscriptionRedirect({ spotId, size, planKey, onError }) {
           <strong>{plan?.label}</strong> · {plan?.totalIssues} issues · {SIZE_LABELS[size] ?? size.toUpperCase()}
         </div>
         <div style={{ fontSize: 14, color: "#111" }}>
-          {formatUsd(monthly)}/mo · <strong>{formatUsd(total)} total committed</strong>
+          {formatUsd(monthly)}/mo
         </div>
       </div>
       <button
