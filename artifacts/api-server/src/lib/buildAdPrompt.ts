@@ -144,7 +144,20 @@ export function getDefaultThemeIndex(industry: string): number {
 
 // ── Footer zone builder ──────────────────────────────────────────────────────
 
-export function buildFooterZone(phone: string, address: string): string {
+export function buildFooterZone(phone: string, address: string, isLandscape = false): string {
+  if (isLandscape) {
+    const hasAddr = address !== "(none)";
+    return (
+      `FOOTER (full-width dark bar, 15–20% of card height): ` +
+      `THREE inline columns left to right — ` +
+      `LEFT: "${phone}" bold white ≥22pt (largest text in footer); ` +
+      `CENTER: ` + (hasAddr
+        ? `"${address}" bold white ≥18pt, split to 2 lines at the comma (street on line 1, city/state on line 2), center-aligned in the bar; `
+        : `(centered placeholder); `) +
+      `RIGHT: QR code (≤0.5"×0.5", 4-unit white quiet zone). ` +
+      `Phone and QR appear EXACTLY ONCE — only inside this footer bar, never elsewhere.\n\n`
+    );
+  }
   return (
     `FOOTER (full-width dark bar, 15–20% of card): ` +
     `"${phone}" bold white ≥18pt left (largest footer text); ` +
@@ -220,8 +233,9 @@ export function buildAdPrompt(
   const selectedTheme = SURPRISE_ME_THEMES[surpriseMeThemeIdx]!;
 
   // Derived values
-  const menuStr     = d.menu.filter(Boolean).map((m, i) => `  ${i + 1}. ${m}`).join("\n") || "  (none)";
-  const menuCount   = d.menu.filter(Boolean).length;
+  const menu      = isLandscape ? d.menu.filter(Boolean).slice(0, 3) : d.menu.filter(Boolean);
+  const menuStr   = menu.map((m, i) => `  ${i + 1}. ${m}`).join("\n") || "  (none)";
+  const menuCount = menu.length;
   const fullAddress = [d.address, d.city].filter(Boolean).join(", ") || "(none)";
   const hasPhoto    = !!d.photoUrl;
   const hasLogo     = !!d.logoData;
@@ -310,13 +324,13 @@ export function buildAdPrompt(
         : (d.tagline ? `TAGLINE: tagline in italic script beside the pennant.\n\n` : "")) +
       `SERVICE LIST (left column, parchment area): ` +
       (menuCount > 0
-        ? `${menuCount} orange circular checkmark badge items, one per service in BUSINESS DETAILS.\n\n`
-        : `four orange circular checkmark badge items with relevant services.\n\n`) +
+        ? `${menuCount} orange circular checkmark badge items, one per service in BUSINESS DETAILS. Badge label text ≥14pt bold, clearly legible at print size.\n\n`
+        : `three orange circular checkmark badge items with relevant services. Badge label text ≥14pt bold.\n\n`) +
       (hasPhoto ? `HERO PHOTO (right-center): composite IMAGE 2 blended into parchment texture, no hard border.\n\n` : "") +
       (d.offer
         ? `COUPON (dashed dark box, lower-right): offer text bold white/cream, large. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape)
     )
     : isLandscape && templateKey === "made-fresh"
     ? (
@@ -329,7 +343,7 @@ export function buildAdPrompt(
       (d.offer
         ? `GOLDEN TICKET-STUB COUPON (lower-right): offer text bold dark, large. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape)
     )
     : isLandscape && templateKey === "neighborhood-pro"
     ? (
@@ -345,12 +359,12 @@ export function buildAdPrompt(
         : `generate photorealistic outdoor service scene, vibrant, no rectangular border.\n\n`) +
       `SERVICE PANELS (middle horizontal row): ` +
       (menuCount > 0
-        ? `exactly ${menuCount} diagonal-cut panel${menuCount !== 1 ? "s" : ""} — one per service in BUSINESS DETAILS, circular lime-green icon badge + white brush-stroke label per panel. No extras.\n\n`
-        : `four diagonal-cut panels with circular lime-green icon badges and white brush-stroke labels.\n\n`) +
+        ? `exactly ${menuCount} diagonal-cut panel${menuCount !== 1 ? "s" : ""} — one per service in BUSINESS DETAILS, circular lime-green icon badge + white brush-stroke label per panel. No extras. Panel label text ≥14pt bold.\n\n`
+        : `three diagonal-cut panels with circular lime-green icon badges and white brush-stroke labels. Label text ≥14pt bold.\n\n`) +
       (d.offer
         ? `OFFER (wide white brush-stroke area, lower section): offer text bold dark-green, large. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape)
     )
     : isLandscape && templateKey === "at-your-service"
     ? (
@@ -365,12 +379,12 @@ export function buildAdPrompt(
         : `generate professional tools/equipment or home-service scene, left edge blends naturally.\n\n`) +
       `SERVICE BADGES (wide dark navy band, center full-width): ` +
       (menuCount > 0
-        ? `one circular white icon badge per service in BUSINESS DETAILS. Each service once.\n\n`
-        : `four circular white icon service badges (house, paint roller, wrench, lightbulb).\n\n`) +
+        ? `one circular white icon badge per service in BUSINESS DETAILS. Each service once. Badge caption ≥14pt bold.\n\n`
+        : `three circular white icon service badges (house, paint roller, wrench). Badge caption ≥14pt bold.\n\n`) +
       (d.offer
         ? `COUPON (gold/yellow dashed-border box, lower-right): offer text bold dark navy, prominent. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape)
     )
     : isLandscape && templateKey === "health-wellness"
     ? (
@@ -383,13 +397,13 @@ export function buildAdPrompt(
       (d.tagline ? `TAGLINE (teal pill-shaped bar below white panel): tagline in clean white sans-serif, centered.\n\n` : "") +
       `SERVICE PANELS (middle section): ` +
       (menuCount > 0
-        ? `exactly ${menuCount} equal-width panel${menuCount !== 1 ? "s" : ""} — one per service in BUSINESS DETAILS, circular teal icon badge + white rounded-rect text box per panel. No extras.\n\n`
-        : `four equal-width panels with circular teal icon badges and white rounded-rect text boxes.\n\n`) +
+        ? `exactly ${menuCount} equal-width panel${menuCount !== 1 ? "s" : ""} — one per service in BUSINESS DETAILS, circular teal icon badge + white rounded-rect text box per panel. No extras. Panel text ≥14pt bold.\n\n`
+        : `three equal-width panels with circular teal icon badges and white rounded-rect text boxes. Panel text ≥14pt bold.\n\n`) +
       (hasLogo ? `LOGO (IMAGE ${logoImg}) in an upper corner or within the headline panel.\n\n` : "") +
       (d.offer
         ? `OFFER (teal-bordered rect or dashed coupon box, visually distinct from service panels): offer text large and bold. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape)
     )
     : isLandscape
     ? (
@@ -412,11 +426,11 @@ export function buildAdPrompt(
         : `  HERO IMAGE: photorealistic business-appropriate image, cinematic quality, blended into bg.\n`) +
       (hasLogo ? `  LOGO: IMAGE ${logoImg} — exact placement, no stylization.\n` : "") +
       (d.tagline ? `  TAGLINE: tagline from BUSINESS DETAILS — supporting, secondary to headline.\n` : "") +
-      (menuCount > 0 ? `  SERVICES/MENU: each service from BUSINESS DETAILS exactly once, in its own clearly defined list zone.\n` : "") +
+      (menuCount > 0 ? `  SERVICES/MENU: each service from BUSINESS DETAILS exactly once, in its own clearly defined list zone. Service text ≥14pt bold.\n` : "") +
       (d.offer
         ? `  SPECIAL OFFER (own visually distinct coupon zone — dashed box or bordered panel, clearly separated from services): offer text and fine print from BUSINESS DETAILS. No filler phrases. No QR inside coupon.\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape)
     )
     : templateKey === "neighborhood-pro"
     ? (
@@ -438,7 +452,7 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (wide white brush-stroke area, lower section): offer text bold dark-green, large. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape)
     )
     : templateKey === "at-your-service"
     ? (
@@ -460,7 +474,7 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (gold/yellow dashed-border coupon box, lower-right): offer text bold dark navy, large. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape)
     )
     : templateKey === "surprise-me"
     ? (
@@ -488,7 +502,7 @@ export function buildAdPrompt(
       (d.offer
         ? `  SPECIAL OFFER (own visually distinct coupon zone, clearly separated from services): offer text and fine print from BUSINESS DETAILS. No filler phrases. No QR inside coupon.\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress) +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape) +
       "QUALITY STANDARD:\n" +
       "  ✗ No flat solid-color backgrounds | ✗ No rectangular photo frames | ✗ No text on bare flat color\n" +
       "  ✗ No filler text in coupon area (no 'Admit One Offer', 'Stub No.', etc.)\n" +
@@ -511,7 +525,7 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER: offer text prominently in teal or dark text in an available white-space area. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape)
     )
     : (
       // Default: parchment-classic portrait
@@ -533,7 +547,7 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (dashed coupon box): offer text bold inside dashed rectangle. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape)
     );
 
   return (

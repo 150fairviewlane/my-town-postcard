@@ -2282,7 +2282,8 @@ function onIndustryChange(){
   var list = document.getElementById('menuList');
   list.innerHTML = '';
   var menuDefaults = MENU_DEFAULTS[industry];
-  if(menuDefaults) menuDefaults.forEach(function(v){ addMenuItem(v); });
+  var _menuCap = getOrientation(_spotSize) === 'landscape' ? 3 : 4;
+  if(menuDefaults) menuDefaults.slice(0, _menuCap).forEach(function(v){ addMenuItem(v); });
   // Tagline
   var taglineEl = document.getElementById('tagline');
   taglineEl.value = TAGLINE_DEFAULTS[industry] || '';
