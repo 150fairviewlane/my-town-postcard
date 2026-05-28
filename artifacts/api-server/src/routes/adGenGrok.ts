@@ -266,7 +266,7 @@ function buildFooterZone(
     (hasAddr ? `  BESIDE/BELOW phone — address: ${addrRule}\n` : "") +
     "  RIGHT — small QR code graphic (max 0.5\"×0.5\" at print size). No coupon box, dashed frame, or decorative border.\n" +
     "  QR QUIET ZONE: 4-unit clear white border on all sides, no overlaps.\n" +
-    "  TYPOGRAPHY: phone + address IDENTICAL size (~14–16pt at print = large, clearly readable at arm's length), bold white. No website URL text.\n\n"
+    "  TYPOGRAPHY: phone ~16pt bold white; address ~14pt bold white. NEVER render the address text smaller than 12pt — if space is tight, shrink the coupon or reduce service panel height before reducing the address font size. No website URL text.\n\n"
   );
 }
 
@@ -521,6 +521,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "TYPOGRAPHIC RULES:\n" +
       "  • Headline: bold condensed all-caps slab serif, white on dark brush-stroke\n" +
       "  • Script: warm orange, single English category noun only; never proper nouns\n" +
+      "  • TEXT LEGIBILITY: every text element must be clearly readable — dark text on light zones, light text on dark zones. If any zone background is ambiguous, add a semi-opaque backing panel. Subtle 1px shadows are NOT sufficient.\n" +
       "  • NEVER render website URL as text"
     )
     : isLandscape && templateKey === "made-fresh"
@@ -543,6 +544,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "TYPOGRAPHIC RULES:\n" +
       "  • Business name: bold condensed all-caps slab serif, dark on white panel\n" +
       "  • Tagline: handwriting-style italic, slightly smaller\n" +
+      "  • TEXT LEGIBILITY: every text element must be clearly readable — dark text on light zones, light text on dark zones. If any zone background is ambiguous, add a semi-opaque backing panel. Subtle 1px shadows are NOT sufficient.\n" +
       "  • NEVER render website URL as text"
     )
     : isLandscape && templateKey === "neighborhood-pro"
@@ -575,6 +577,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "TYPOGRAPHIC RULES:\n" +
       "  • Headline: bold condensed all-caps slab serif, dark green or near-black\n" +
       "  • Script: bright lime-green, single English service-category noun only\n" +
+      "  • TEXT LEGIBILITY: every text element must be clearly readable — dark text on light zones, light text on dark zones. If any zone background is ambiguous, add a semi-opaque backing panel. Subtle 1px shadows are NOT sufficient.\n" +
       "  • NEVER render website URL as text"
     )
     : isLandscape && templateKey === "at-your-service"
@@ -606,6 +609,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "  • Headline: bold condensed all-caps slab serif, dark navy blue\n" +
       "  • Script: gold/yellow, single English service-category noun only\n" +
       "  • Gold/yellow brush stroke must remain visible in the upper area\n" +
+      "  • TEXT LEGIBILITY: every text element must be clearly readable — dark text on light zones, light text on dark zones. If any zone background is ambiguous, add a semi-opaque backing panel. Subtle 1px shadows are NOT sufficient.\n" +
       "  • NEVER render website URL as text"
     )
     : isLandscape && templateKey === "health-wellness"
@@ -637,6 +641,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "TYPOGRAPHIC RULES:\n" +
       "  • Headline: bold condensed all-caps sans-serif, dark teal or near-black\n" +
       "  • NEVER repeat any word from the business name\n" +
+      "  • TEXT LEGIBILITY: every text element must be clearly readable — dark text on light zones, light text on dark zones. If any zone background is ambiguous, add a semi-opaque backing panel. Subtle 1px shadows are NOT sufficient.\n" +
       "  • NEVER render website URL as text"
     )
     : isLandscape
@@ -660,7 +665,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "  - Background must have depth: gradient, texture, or layered wash — NEVER flat solid color.\n" +
       "  - Three depth planes: (1) textured bg, (2) graphic mid-layer shapes, (3) foreground text with shadows/glows.\n" +
       "  - Hero photo: cinematic rim/soft lighting, edges blend into mid-layer — never floating above it.\n" +
-      "  - All text sits ON the composition with drop shadows, glows, or dark-field backlighting.\n\n" +
+      "  - All text sits ON the composition with drop shadows, glows, or dark-field backlighting.\n" +
+      "  - TEXT LEGIBILITY — CRITICAL: every text block must be CLEARLY readable at arm's length against its background. For any text placed over a photo, gradient, or texture you MUST use ONE of: (a) a semi-opaque or fully opaque backing panel / brush-stroke shape behind the text, (b) very heavy multi-layer drop shadow (thick and clearly visible, NOT a subtle 1px shadow), or (c) a solid-fill opaque text zone. Subtle shadows alone are not enough. Headlines especially: NEVER dark text on dark background, NEVER light text on light/golden gradient — anchor them on a contrasting panel. Sacrifice decorative detail to achieve legibility.\n\n" +
 
       "REQUIRED CONTENT ZONES:\n" +
       `  HEADLINE: "${d.bizName}" — very large, dominant, instantly readable.\n` +
