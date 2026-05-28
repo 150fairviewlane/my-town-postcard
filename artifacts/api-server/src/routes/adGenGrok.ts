@@ -83,34 +83,34 @@ const COUPON_VARIANTS: string[] = [
 
 const COLOR_VARIANTS: Record<string, string[]> = {
   "parchment-classic": [
-    "Color palette A — Primary: deep burgundy (#7B1418). Background: warm ivory (#EDD9AB). Accent/script: warm orange-gold (#C8541A). Footer: near-black (#1C0F0A). Rich, warm, appetite-driving.",
-    "Color palette B — Primary: rich chocolate brown (#4A2010). Background: parchment beige (#F0DEB4). Accent/script: copper-amber (#B87333). Footer: dark espresso (#1A0E08). Warm artisan depth.",
-    "Color palette C — Primary: forest-ink dark green (#1C3520). Background: cream (#F5EDCD). Accent/script: warm amber (#D4882A). Footer: near-black with green tint (#0F1C12). Natural, premium, farm-to-table.",
+    "Color palette A — Primary: deep burgundy. Background: warm ivory. Accent/script: warm orange-gold. Footer: near-black. Rich, warm, appetite-driving.",
+    "Color palette B — Primary: rich chocolate brown. Background: parchment beige. Accent/script: copper-amber. Footer: dark espresso. Warm artisan depth.",
+    "Color palette C — Primary: forest-ink dark green. Background: cream. Accent/script: warm amber. Footer: near-black with green tint. Natural, premium, farm-to-table.",
   ],
   "made-fresh": [
-    "Color palette A — Primary: warm charcoal (#2C2C2C). Chalkboard: near-black (#1A1A1A). Accent: golden yellow (#F4C430). Highlight: fresh white. Classic bistro chalk-art palette.",
-    "Color palette B — Primary: tomato red (#C0392B). Background: rustic cream (#FAF0DC). Accent: basil green (#27AE60). Warm highlight: honey tan (#F39C12). Italian trattoria energy.",
-    "Color palette C — Primary: navy blue (#1B3A5C). Background: warm white. Accent: bright coral (#E74C3C). Footer: deep navy (#0D1F33). Modern casual-dining freshness.",
+    "Color palette A — Primary: warm charcoal. Chalkboard: near-black. Accent: golden yellow. Highlight: fresh white. Classic bistro chalk-art palette.",
+    "Color palette B — Primary: tomato red. Background: rustic cream. Accent: basil green. Warm highlight: honey tan. Italian trattoria energy.",
+    "Color palette C — Primary: navy blue. Background: warm white. Accent: bright coral. Footer: deep navy. Modern casual-dining freshness.",
   ],
   "neighborhood-pro": [
-    "Color palette A — Background: forest green (#1A4D2E). Panels and text: clean white. Accent/script: lime green (#39D353). Footer: dark forest (#0D2918). Energetic outdoor contractor look.",
-    "Color palette B — Background: deep navy (#152C4A). Panels and text: white. Accent/script: electric blue (#2E86DE). Footer: near-black navy (#0A1828). Trustworthy professional trades.",
-    "Color palette C — Background: charcoal (#2D2D2D). Panels and text: white. Accent/script: bold orange (#E85D04). Footer: near-black (#1A1A1A). High-visibility construction aesthetic.",
+    "Color palette A — Background: forest green. Panels and text: clean white. Accent/script: lime green. Footer: dark forest. Energetic outdoor contractor look.",
+    "Color palette B — Background: deep navy. Panels and text: white. Accent/script: electric blue. Footer: near-black navy. Trustworthy professional trades.",
+    "Color palette C — Background: charcoal. Panels and text: white. Accent/script: bold orange. Footer: near-black. High-visibility construction aesthetic.",
   ],
   "at-your-service": [
-    "Color palette A — Primary: dark navy (#1B2A4A). Background: light gray (#F0F0F0). Accent: gold/yellow (#F0B429). Footer: near-black navy (#0E1829). Premium home-services authority.",
-    "Color palette B — Primary: deep slate (#2D3748). Background: off-white (#FAFAFA). Accent: copper (#B87333). Footer: darkest slate (#1A202C). Established artisan trades feel.",
-    "Color palette C — Primary: charcoal (#2C2C2C). Background: white. Accent: steel blue (#4A90D9). Footer: near-black (#111111). Clean technical precision.",
+    "Color palette A — Primary: dark navy. Background: light gray. Accent: gold/yellow. Footer: near-black navy. Premium home-services authority.",
+    "Color palette B — Primary: deep slate. Background: off-white. Accent: copper. Footer: darkest slate. Established artisan trades feel.",
+    "Color palette C — Primary: charcoal. Background: white. Accent: steel blue. Footer: near-black. Clean technical precision.",
   ],
   "health-wellness": [
-    "Color palette A — Primary: teal (#3D8B9C). Background: cream/off-white (#F8F4EE). Accent: sage green (#7CB99A). Footer: dark teal (#1F4E5F). Calm, trustworthy clinical warmth.",
-    "Color palette B — Primary: deep teal (#2A7080). Background: warm white (#FDFAF6). Accent: soft coral (#E8927C). Footer: darkest teal (#163844). Nurturing boutique wellness feel.",
-    "Color palette C — Primary: forest teal (#1F5C5A). Background: light mint (#E8F5F0). Accent: warm gold (#D4A843). Footer: deep forest teal (#0E3330). Upscale spa and wellness luxury.",
+    "Color palette A — Primary: teal. Background: cream/off-white. Accent: sage green. Footer: dark teal. Calm, trustworthy clinical warmth.",
+    "Color palette B — Primary: deep teal. Background: warm white. Accent: soft coral. Footer: darkest teal. Nurturing boutique wellness feel.",
+    "Color palette C — Primary: forest teal. Background: light mint. Accent: warm gold. Footer: deep forest teal. Upscale spa and wellness luxury.",
   ],
   "surprise-me": [
-    "Color palette A — Warm and rich: dominant deep burgundy/crimson (#7B1418) paired with warm ivory (#FAF3E0) and antique gold (#C8A33A) accents. Footer: near-black (#1A0A0A). Appetite-driving, premium editorial warmth.",
-    "Color palette B — Cool and bold: dominant deep navy/charcoal (#1B2A4A) paired with crisp white (#FFFFFF) and electric blue or vivid coral (#2E86DE or #E84545) as the hero accent. Footer: near-black navy (#0D1829). High-contrast, authoritative, modern.",
-    "Color palette C — Natural and fresh: dominant deep forest green (#1C3A1C) paired with warm cream (#F5EDD0) and warm amber (#D4882A) accents. Footer: near-black with green undertone (#0F1C10). Earthy, premium, inviting.",
+    "Color palette A — Warm and rich: dominant deep burgundy/crimson paired with warm ivory and antique gold accents. Footer: near-black. Appetite-driving, premium editorial warmth.",
+    "Color palette B — Cool and bold: dominant deep navy/charcoal paired with crisp white and electric blue or vivid coral as the hero accent. Footer: near-black navy. High-contrast, authoritative, modern.",
+    "Color palette C — Natural and fresh: dominant deep forest green paired with warm cream and warm amber accents. Footer: near-black with green undertone. Earthy, premium, inviting.",
   ],
 };
 
@@ -252,9 +252,10 @@ function buildFooterZone(
     ? ""
     : address.length <= 28
       ? `"${address}" on a SINGLE line, same font size as the phone number.`
-      : `"${address}" — split into TWO lines at the natural comma or space; ` +
-        `if splitting at a comma, the first line must NOT end with a comma. ` +
-        `Same font size as phone number (never shrink text to force a single line).`;
+      : `"${address}" — street on line 1, city/state on line 2 (split at the natural comma; ` +
+        `line 1 must NOT end with a comma). City/state MUST appear immediately below the street ` +
+        `on the very next line — NEVER in a separate column or distant area. ` +
+        `Same font size as phone number (never shrink text).`;
   const iconPrefix =
     phoneIconStyle === "circular-badge" ? "a circular phone-icon badge + " :
     phoneIconStyle === "inline-icon"    ? "a small phone icon + "           : "";
@@ -263,7 +264,7 @@ function buildFooterZone(
     "FOOTER REGION (bottom 15–20% of card): a SOLID DARK BACKGROUND BAR spanning the full card width — opaque, high contrast, no transparency or bleed into imagery above.\n" +
     "  PHONE NUMBER RULE — CRITICAL: the phone number must appear EXACTLY ONCE in the entire ad — ONLY inside this footer bar. NEVER place the phone number in any service panel, coupon zone, headline area, right column, or anywhere else outside the footer.\n" +
     `  LEFT — ${iconPrefix}phone "${phone}" in bold white, large and dominant. Zero digit changes.\n` +
-    (hasAddr ? `  BESIDE/BELOW phone — address: ${addrRule}\n` : "") +
+    (hasAddr ? `  ADDRESS — directly below the phone number, left-aligned in the same left column (NEVER drift to a center or right column, NEVER appear in a separate area): ${addrRule}\n` : "") +
     "  RIGHT — small QR code graphic (max 0.5\"×0.5\" at print size). No coupon box, dashed frame, or decorative border.\n" +
     "  QR CODE RULE — CRITICAL: the QR code must appear EXACTLY ONCE in the entire ad — ONLY here in the footer. NEVER place a second QR code in any coupon zone, service panel, headline area, or anywhere else outside the footer.\n" +
     "  QR QUIET ZONE: 4-unit clear white border on all sides, no overlaps.\n" +
@@ -687,7 +688,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "  - NEVER repeat any word from the business name — each appears exactly once.\n" +
       "  - NEVER add script accent words or category nouns not present in the business name.\n" +
       "  - Headline: maximum weight, instantly legible.\n" +
-      "  - NEVER render the website URL as visible text."
+      "  - NEVER render the website URL as visible text.\n" +
+      "  - NEVER render any hex color code (e.g. #0F1C10, #FFFFFF), CSS value, or design metadata as visible text anywhere in the ad."
     )
     : templateKey === "neighborhood-pro"
     ? (
@@ -857,7 +859,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "  • NEVER repeat any word from the business name — each word appears exactly once across the entire ad\n" +
       "  • NEVER add script accent words or decorative category nouns not present in the business name\n" +
       "  • Fine print: smallest text, still legible\n" +
-      "  • NEVER render the website URL as visible text"
+      "  • NEVER render the website URL as visible text\n" +
+      "  • NEVER render any hex color code (e.g. #0F1C10, #FFFFFF), CSS value, or design metadata as visible text anywhere in the ad"
     )
     : templateKey === "health-wellness"
     ? (
