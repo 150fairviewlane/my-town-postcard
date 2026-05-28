@@ -114,6 +114,99 @@ const COLOR_VARIANTS: Record<string, string[]> = {
   ],
 };
 
+// ── Surprise Me — 5 named style themes ───────────────────────────────────────
+interface SurpriseMeTheme {
+  name: string;
+  palette: string;
+  typography: string;
+  layoutLandscape: string;
+  layoutPortrait: string;
+  mood: string;
+}
+
+const SURPRISE_ME_THEMES: SurpriseMeTheme[] = [
+  {
+    // Index 0 — default for professional services, legal, finance, real estate, insurance
+    name: "Midnight Luxe",
+    palette:
+      "Near-black or deep charcoal dominant background; electric gold or platinum white as the primary accent; rich ivory or cream for secondary body text; footer zone in near-black.",
+    typography:
+      "Elegant condensed serif headline — tall, refined, editorial weight with generous letter-spacing; fine italic or ultra-light sans-serif tagline; thin rule separators between info zones.",
+    layoutLandscape:
+      "Full-bleed atmospheric hero photo filling the right two-thirds of the card; headline and tagline locked onto a narrow opaque near-black vertical panel on the left third; services listed in fine italic below; coupon in a refined gold-bordered rectangular box lower-right.",
+    layoutPortrait:
+      "Hero photo filling the upper 55% of the card with a cinematic vignette at the bottom edge; a full-width near-black opaque band below holding the headline in condensed gold serif; services in a slim column with thin gold rule dividers; coupon in a gold-bordered box at the very bottom.",
+    mood: "premium, sophisticated, high-end, exclusive",
+  },
+  {
+    // Index 1 — default for healthcare, veterinary, dental, wellness, spa, chiropractic
+    name: "Coastal Bright",
+    palette:
+      "Warm white or light cream dominant background; ocean blue as the primary accent; sandy coral or warm peach as the secondary accent; footer in deep ocean blue or near-black navy.",
+    typography:
+      "Bold rounded sans-serif headline — friendly, approachable, confident; light-weight sans body text; wave or arc motifs in graphic dividers.",
+    layoutLandscape:
+      "Horizontal photo strip or rounded-rectangle photo panel spanning the top third of the card; headline large in the left zone on the white background; services in a clean pill-badge row or two-column list in the center; coupon in a coral-bordered rounded rectangle lower-right.",
+    layoutPortrait:
+      "Rounded-rectangle hero photo centered in the upper third; headline large below on the white/cream background; clean two-column service list with circular ocean-blue icon badges; coupon in a coral accent rounded box near the bottom.",
+    mood: "fresh, friendly, clean, approachable",
+  },
+  {
+    // Index 2 — default for contractor, HVAC, plumbing, electrical, roofing, auto, landscaping, pest
+    name: "Industrial Edge",
+    palette:
+      "Concrete, slate gray, or weathered charcoal texture as the dominant background; vivid orange or electric yellow as the primary accent; crisp white for all text; footer in near-black or dark concrete.",
+    typography:
+      "Wide ultra-bold condensed all-caps stencil or block typeface for the headline — very large, zero-ambiguity, stacked; bold sans-serif for service items; sharp angular graphic elements throughout.",
+    layoutLandscape:
+      "Background filled with a concrete or slate texture; a bold diagonal cut divides the hero photo zone (right half) from the text info zone (left half); headline in oversized all-caps stacked vertically on the left; vivid orange or yellow accent bar or stripe cuts diagonally across the center; coupon in a bold heavy-bordered rectangular badge lower-right.",
+    layoutPortrait:
+      "Full-width concrete or slate texture background; large hero photo with a bold diagonal slash edge blending into the texture; oversized stacked all-caps headline left-aligned below; horizontal vivid-accent band separating the services from the coupon; coupon in a heavy-bordered rectangular box at the bottom.",
+    mood: "bold, rugged, authoritative, high-contrast",
+  },
+  {
+    // Index 3 — default for restaurant, bakery, cafe, florist, boutique retail, yoga, nutrition
+    name: "Botanical Garden",
+    palette:
+      "Sage green or dusty rose as the dominant background tone; deep forest green as the primary accent; warm blush or antique cream as the secondary; footer in deep forest green.",
+    typography:
+      "Refined upright serif headline — elegant, editorial, generously sized; flowing italic or delicate script tagline; soft organic shapes and fine rules around text zones.",
+    layoutLandscape:
+      "Organic blob or torn-paper shapes in sage green framing the hero photo on the right two-thirds; headline in large refined serif on a cream or white panel upper-left; services in a soft rounded list with small botanical leaf icon accents; coupon in a delicate dashed or hand-drawn-style border box lower-left.",
+    layoutPortrait:
+      "Organic tinted blob shape framing the hero photo in the upper third; headline on a wide cream panel below in a large refined serif; service list with small botanical icon accents beside each item; coupon in a soft rounded or hand-drawn border box near the bottom.",
+    mood: "natural, artisanal, boutique, warm",
+  },
+  {
+    // Index 4 — default for retail, salon, fitness, entertainment, childcare, and all other industries
+    name: "Urban Pop",
+    palette:
+      "Vivid primary color field as the full-bleed background — bold red, cobalt blue, or deep violet; contrasting bright secondary — lime green, warm yellow, or electric white for accent elements; footer in the same primary color, darkened by 20%.",
+    typography:
+      "Oversized stacked display type for the headline — extremely large, extremely bold, flat graphic weight with tight leading; playful scale contrast between the headline and supporting body text; flat bold geometric icons for service items.",
+    layoutLandscape:
+      "Bold flat color block fills the left 40% of the card holding the headline in oversized stacked type; hero photo occupies the right 60% with a hard-edge or slight diagonal cut against the color field; services listed in a vivid accent-colored band across the lower center; coupon in a contrasting bright flat-color box lower-left.",
+    layoutPortrait:
+      "Full-bleed vivid background color; hero photo in the upper half with a bold color-band overlay at the bottom edge blending it into the layout; oversized stacked headline in the center band; service items as flat circular badge icons; coupon in a bright contrasting flat-color rectangular box at the bottom.",
+    mood: "energetic, modern, eye-catching, playful",
+  },
+];
+
+/** Return the index into SURPRISE_ME_THEMES whose default industries best match the given industry string. Falls back to Urban Pop (4) if nothing matches. */
+function getDefaultThemeIndex(industry: string): number {
+  const ind = industry.toLowerCase();
+  // Midnight Luxe — professional services, legal, finance, real estate, insurance
+  if (/legal|law|attorney|lawyer|finance|financial|accounting|accountant|cpa|insurance|real estate|realtor|mortgage|wealth|investment|consulting|consultant|advisor|notary/.test(ind)) return 0;
+  // Coastal Bright — healthcare, veterinary, dental, wellness, spa, chiropractic
+  if (/health|medical|clinic|hospital|veterinarian|veterinary|\bvet\b|dental|dentist|wellness|spa|chiropractic|chiropractor|physical therapy|therapy|optometry|optometrist|physician|doctor|pharmacy|pediatric|gynecolog|oncolog|orthopedic|audiolog/.test(ind)) return 1;
+  // Industrial Edge — contractor, HVAC, plumbing, electrical, roofing, auto, landscaping, pest
+  if (/contractor|hvac|heating|cooling|plumbing|plumber|electrical|electrician|roofing|roofer|auto|automotive|mechanic|landscaping|landscape|lawn|pest|exterminator|construction|renovation|remodel|flooring|painting|painter|pressure wash|pool|septic|junk|moving|storage/.test(ind)) return 2;
+  // Botanical Garden — restaurant, bakery, cafe, florist, boutique, yoga, nutrition
+  if (/restaurant|bakery|bake|cafe|coffee|catering|florist|floral|boutique|yoga|nutrition|supplement|organic|farm|winery|brewery|distillery|beauty|cosmetic|nail|estheti|massage|candle|gift|jewelry|jewellery|antique|art studio/.test(ind)) return 3;
+  // Urban Pop — retail, salon, fitness, entertainment, childcare, cleaning, and everything else
+  return 4;
+}
+
 /** Convert a base64 data URL (data:image/png;base64,...) to a Blob. */
 function dataUrlToBlob(dataUrl: string, defaultMime = "image/png"): Blob {
   const commaIdx = dataUrl.indexOf(",");
@@ -342,6 +435,23 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
 
   // Load template PNG as raw buffer — portrait and landscape each have their own template images
   const templateKey = d.template || "parchment-classic";
+
+  // ── Surprise Me theme selection ────────────────────────────────────────────
+  // First generation (adIndex 0) → pick the theme that best suits the industry.
+  // Regeneration (adIndex > 0) → pick any theme EXCEPT the industry default,
+  // guaranteeing a visually distinct result every time Regenerate is clicked.
+  const surpriseMeDefaultIdx = getDefaultThemeIndex(d.industry);
+  const surpriseMeThemeIdx =
+    adIndex === 0
+      ? surpriseMeDefaultIdx
+      : (() => {
+          const opts = SURPRISE_ME_THEMES.map((_, i) => i).filter(
+            (i) => i !== surpriseMeDefaultIdx,
+          );
+          return opts[Math.floor(Math.random() * opts.length)]!;
+        })();
+  const selectedTheme = SURPRISE_ME_THEMES[surpriseMeThemeIdx]!;
+
   let tmplBuf: Buffer | null = null;
   let tmplMime = "image/png";
   if (templateKey !== "surprise-me") {
@@ -651,15 +761,14 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       // Surprise Me landscape — full creative freedom in a horizontal format
       `DESIGN BRIEF — original LANDSCAPE (3"x2") postcard ad for this business. Full creative freedom.\n\n` +
 
-      `CREATIVE DIRECTION: Let the INDUSTRY ("${d.industry}") and BUSINESS NAME ("${d.bizName}") drive the aesthetic.\n` +
-      "  Food/cafe/bakery: warm cinematic food photography, rich color, editorial type.\n" +
-      "  Trades/contractor/lawn/roofing: bold action, high-contrast, authority layout.\n" +
-      "  Health/wellness/dental: organic shapes, clean clinical photography, soft palette.\n" +
-      "  Retail/salon/spa: lifestyle photography, mood-driven editorial color.\n" +
-      "  Professional/legal/real estate: structured authority, trust signals, refined palette.\n\n" +
+      `STYLE THEME — "${selectedTheme.name}" (mood: ${selectedTheme.mood}):\n` +
+      `  PALETTE: ${selectedTheme.palette}\n` +
+      `  TYPOGRAPHY: ${selectedTheme.typography}\n` +
+      `  LAYOUT APPROACH: ${selectedTheme.layoutLandscape}\n\n` +
 
-      "FORBIDDEN styles — invent something genuinely distinct from all of these:\n" +
-      "  Parchment/rustic | Chalkboard/bistro | Forest-green contractor | Navy/gold home services | Teal/sage wellness\n\n" +
+      "FORBIDDEN styles — do NOT recreate any of these existing LocalSpot templates:\n" +
+      "  Parchment/rustic | Chalkboard/bistro | Forest-green contractor | Navy/gold home services | Teal/sage wellness\n" +
+      "  Apply your theme faithfully while making something genuinely original.\n\n" +
 
       "MANDATORY VISUAL RULES:\n" +
       "  - FILL THE ENTIRE 3\"×2\" (landscape) ad space — 100% coverage. No blank, empty, or unused areas anywhere in the ad.\n" +
@@ -795,14 +904,10 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     ? (
       "DESIGN BRIEF — create a completely ORIGINAL postcard ad for this business. You have full creative freedom:\n\n" +
 
-      "  CREATIVE DIRECTION:\n" +
-      `    Look at the INDUSTRY ("${d.industry}") and BUSINESS NAME ("${d.bizName}") and let them drive your entire design aesthetic.\n` +
-      "    • Food / restaurant / cafe / bakery → warm cinematic food photography, menu panels, rich appetizing color, editorial script accents\n" +
-      "    • Contractor / outdoor / trades / lawn / roofing / cleaning → bold action scenes, high-contrast colors, strong authority layout\n" +
-      "    • Health / wellness / medical / chiropractic / dental → calming organic shapes, bright welcoming office photography, soft professional palette\n" +
-      "    • Retail / boutique / beauty / salon / spa → lifestyle photography, editorial typography, mood-driven color\n" +
-      "    • Professional services / finance / legal / real estate → structured authority layout, trust signals, refined palette\n" +
-      "    • Any other industry → infer the best premium advertising aesthetic from the business name and details\n\n" +
+      `  STYLE THEME — "${selectedTheme.name}" (mood: ${selectedTheme.mood}):\n` +
+      `    PALETTE: ${selectedTheme.palette}\n` +
+      `    TYPOGRAPHY: ${selectedTheme.typography}\n` +
+      `    LAYOUT APPROACH: ${selectedTheme.layoutPortrait}\n\n` +
 
       "  FORBIDDEN — do NOT recreate any of these five existing ad styles:\n" +
       "    • Parchment/rustic (warm ivory background, orange pennant ribbon, brush-stroke swoosh, burgundy)\n" +
@@ -810,7 +915,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "    • Forest-green contractor (deep green background, white paint-brush splashes, lime-green script accent)\n" +
       "    • Navy/gold home services (navy hexagonal badge, gold brush-stroke, circular icon band)\n" +
       "    • Teal/sage wellness (teal blob shapes, teal pill bar, cream background, teal footer)\n" +
-      "    Invent something genuinely distinct.\n\n" +
+      "    Apply your theme faithfully while creating something genuinely original.\n\n" +
 
       "  VISUAL CONSTRUCTION — these rules are MANDATORY, not optional:\n" +
       "    (a) NO hard rectangular photo borders. Every photo must be masked or blended into the background " +
