@@ -108,7 +108,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
 .badge-taken{background:#fee2e2;color:var(--taken)}
 .badge-pending{background:#fef9c3;color:var(--pending)}
 
-.tcard-counties{font-size:11px;color:var(--ink-light);margin-bottom:4px;line-height:1.4}
+.tcard-counties{font-size:11px;color:var(--ink-light);margin-bottom:2px;line-height:1.4}
+.tcard-cities{font-size:10.5px;color:var(--ink-light);opacity:.7;margin-bottom:4px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tcard-meta{display:flex;gap:12px}
 .tcard-stat{font-size:11px;color:var(--ink-mid)}
 .tcard-stat strong{color:var(--ink);font-weight:700}
@@ -326,6 +327,7 @@ if(_sp.get('zip') && /^\d{5}$/.test(_sp.get('zip'))){
         <div class="sd-title" id="sdName"></div>
         <div class="sd-counties" id="sdCounties"></div>
         <div class="sd-rows">
+          <div class="sd-row" id="sdCitiesRow" style="display:none"><span class="sd-label">Key Cities</span><span class="sd-val" id="sdCities"></span></div>
           <div class="sd-row"><span class="sd-label">Estimated Households</span><span class="sd-val" id="sdHH"></span></div>
           <div class="sd-row"><span class="sd-label">Status</span><span class="sd-val" id="sdStatus"></span></div>
           <div class="sd-row"><span class="sd-label">Monthly Fee</span><span class="sd-val">$99 / month</span></div>
@@ -756,6 +758,7 @@ function showNearbyTerritories(territories, heading){
         <div class="tcard-badge badge-${t.status}">${t.status}</div>
       </div>
       <div class="tcard-counties">${t.counties.join(' · ')} Counti${t.counties.length===1?'y':'es'}</div>
+      ${t.zoneNote ? `<div class="tcard-cities">${t.zoneNote}</div>` : ''}
       <div class="tcard-meta">
         <div class="tcard-stat">~<strong>${t.households.toLocaleString()}</strong> households</div>
       </div>
@@ -798,7 +801,11 @@ function selectTerritoryOnMap(t){
   const detail = document.getElementById('selectedDetail');
   detail.classList.add('visible');
   document.getElementById('sdName').textContent = t.name;
-  document.getElementById('sdCounties').textContent = t.counties.join(' · ') + (t.counties.length===1?' County':' Counties');
+  document.getElementById('sdCounties').textContent = t.counties.join(' · ');
+  const citiesEl = document.getElementById('sdCities');
+  const citiesRow = document.getElementById('sdCitiesRow');
+  if(t.zoneNote){ citiesEl.textContent = t.zoneNote; citiesRow.style.display='flex'; }
+  else { citiesRow.style.display='none'; }
   document.getElementById('sdHH').textContent = '~' + t.households.toLocaleString();
   const statusEl = document.getElementById('sdStatus');
   statusEl.textContent = t.status.charAt(0).toUpperCase() + t.status.slice(1);
