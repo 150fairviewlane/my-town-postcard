@@ -286,7 +286,7 @@ const FAQ_ITEMS = [
   { q: "Do I have to provide my own designs or printer?",
     a: "No - that's the best part! We design every business's ad, print the postcards on commercial stock, and drop them with USPS EDDM. You're the local relationship — we're the operations engine." },
   { q: "What kind of business is good for selling these?",
-    a: "Anyone with strong local relationships does well: real estate agents, insurance brokers, chamber-of-commerce types, retired sales reps, networking pros. If you're already known in town, this is a turnkey side income." },
+    a: "Anyone with strong local relationships does well: real estate agents, insurance brokers, chamber-of-commerce types, retired sales reps, networking pros - even stay-at-home parents and college students. Make it a side hustle or a full time business - you decide." },
   { q: "How quickly will I see my territories?",
     a: "Immediately. As soon as you complete the application form and confirm your home ZIP, our system shows you the 4 proposed postcard zones live, before payment. You can re-shuffle the layout if you want a different split." },
   { q: "Can I cancel anytime?",
