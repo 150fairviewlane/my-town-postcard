@@ -93,6 +93,9 @@ const ZONE_NOTES: Record<string, string> = {
   "GA-067": "Jeffersonville, Cochran, Dublin, Montrose, Dexter",
   "GA-068": "Vienna, Cordele, Arabi, Ashburn area",
   "GA-069": "Fort Valley, Roberta, Byron area, Marshallville, Ideal",
+  "GA-070": "Milledgeville, Sandersville, Sparta, Wrightsville, Davidsboro",
+  "GA-071": "Jeffersonville, Cochran, Dublin, Dexter, Montrose",
+  "GA-072": "Vienna, Cordele, Unadilla, Byromville, Pinehurst",
   // SOUTH CENTRAL
   "GA-073": "Eastman, Mount Vernon, McRae-Helena, Chauncey, Lumber City",
   "GA-074": "Alamo, Soperton, Lyons, Vidalia, Ailey, Uvalda",
@@ -122,9 +125,13 @@ const ZONE_NOTES: Record<string, string> = {
 };
 
 async function main() {
+  const ids = Object.keys(ZONE_NOTES);
+  if (ids.length !== 96) {
+    throw new Error(`Expected 96 GA territory entries in ZONE_NOTES, found ${ids.length}. Check for missing or duplicate IDs.`);
+  }
+
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-  const ids = Object.keys(ZONE_NOTES);
   const caseExpr = ids
     .map((id) => `WHEN $${ids.indexOf(id) * 2 + 1} THEN $${ids.indexOf(id) * 2 + 2}`)
     .join("\n      ");
