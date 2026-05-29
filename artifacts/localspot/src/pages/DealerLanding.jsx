@@ -288,7 +288,7 @@ const FAQ_ITEMS = [
   { q: "What kind of business is good for selling these?",
     a: "Anyone with strong local relationships does well: real estate agents, insurance brokers, chamber-of-commerce types, retired sales reps, networking pros - even stay-at-home parents and college students. Make it a side hustle or a full time business - you decide." },
   { q: "How quickly will I see my territories?",
-    a: "Immediately. As soon as you complete the application form and confirm your home ZIP, our system shows you the 4 proposed postcard zones live, before payment. You can re-shuffle the layout if you want a different split." },
+    a: "Immediately. As soon as you complete the application form and confirm your home ZIP, our system shows you the proposed territory live, before payment." },
   { q: "Can I cancel anytime?",
     a: "Yes — your monthly subscription cancels with one click from your dealer portal (coming in Phase 2). No long-term contracts." },
   { q: "What does it cost the businesses I sell to?",
