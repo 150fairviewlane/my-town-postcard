@@ -298,6 +298,7 @@ router.put("/territories/:id", requireAdmin, async (req, res): Promise<void> => 
   if (parsed.data.households !== undefined) updateData.households = parsed.data.households;
   if (parsed.data.status !== undefined)     updateData.status     = parsed.data.status;
   if (parsed.data.dealerId !== undefined)   updateData.dealerId   = parsed.data.dealerId;
+  if (parsed.data.zoneNote !== undefined)   updateData.zoneNote   = parsed.data.zoneNote;
 
   const [updated] = await db
     .update(territoriesTable)
