@@ -303,6 +303,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
 // TERRITORY DATA — loaded from API on init
 // ══════════════════════════════════════════════════════════════
 let TERRITORIES = [];
+// zip (string) → territoryId (string) — populated by loadZipGeoJSON
+let zipAssignments = {};
 
 async function loadTerritories() {
   const res = await fetch('/api/territories?state=GA');
@@ -426,79 +428,83 @@ async function initMap(){
     maxZoom:18,
   }).addTo(map);
 
-  // Load Georgia county GeoJSON from our cached backend endpoint
-  loadCountyGeoJSON();
+  // Load Georgia ZIP GeoJSON and assignments from our backend endpoints
+  loadZipGeoJSON();
 }
 
-async function loadCountyGeoJSON(){
+async function loadZipGeoJSON(){
   try {
-    const res = await fetch('/api/georgia-counties-geojson');
-    if (!res.ok) throw new Error('GeoJSON fetch failed');
-    const gaGeoJSON = await res.json();
-    renderCountyLayer(gaGeoJSON);
+    const [geoRes, assignRes] = await Promise.all([
+      fetch('/api/georgia-zip-geojson'),
+      fetch('/api/territories/zip-assignments'),
+    ]);
+    if(!geoRes.ok || !assignRes.ok) throw new Error('Fetch failed');
+    const [gaZipGeoJSON, assignRows] = await Promise.all([
+      geoRes.json(),
+      assignRes.json(),
+    ]);
+    // Populate global zip→territoryId lookup
+    zipAssignments = {};
+    assignRows.forEach(r => { zipAssignments[r.zip] = r.territoryId; });
+    renderZipLayer(gaZipGeoJSON);
   } catch(e) {
-    console.warn('GeoJSON load failed, using marker-based display', e);
+    console.warn('ZIP GeoJSON load failed, using marker-based display', e);
     renderMarkersOnly();
   }
 }
 
-function renderCountyLayer(geojson){
-  // Build county name (lower) → GeoJSON feature lookup
-  const countyFeatureMap = {};
+function renderZipLayer(geojson){
+  // Build a fast territory lookup
+  const territoryMap = {};
+  TERRITORIES.forEach(t => { territoryMap[t.id] = t; });
+
+  const assignedFeatures   = [];
+  const unassignedFeatures = [];
+
   geojson.features.forEach(f => {
-    countyFeatureMap[f.properties.NAME.toLowerCase()] = f;
+    const tId = zipAssignments[f.properties.ZCTA5CE10];
+    if(tId && territoryMap[tId]){ assignedFeatures.push(f); }
+    else { unassignedFeatures.push(f); }
   });
 
-  // Track which county names are claimed by at least one territory
-  const assignedCounties = new Set();
+  // Render assigned ZIPs — one L.geoJSON layer using per-feature styling + events
+  L.geoJSON(
+    { type:'FeatureCollection', features: assignedFeatures },
+    {
+      style: feature => {
+        const t = territoryMap[zipAssignments[feature.properties.ZCTA5CE10]];
+        return getCountyStyle(t?.status || 'unassigned', false);
+      },
+      onEachFeature: (feature, layer) => {
+        const zip = feature.properties.ZCTA5CE10;
+        const t = territoryMap[zipAssignments[zip]];
+        if(!t) return;
 
-  // Render each territory as a merged polygon (union of all its counties)
-  TERRITORIES.forEach(t => {
-    const features = t.counties
-      .map(c => countyFeatureMap[c.toLowerCase()])
-      .filter(Boolean);
+        layer.bindTooltip(
+          `<div style="font-weight:700">${t.name}</div>
+           <div style="font-size:11px;color:#666">ZIP ${zip}</div>`,
+          { sticky:true, opacity:0.92 }
+        );
+        layer.on('click', () => selectTerritoryOnMap(t));
+        layer.on('mouseover', () => {
+          if(selectedTerritoryId !== t.id){
+            layer.setStyle({ weight:2, fillOpacity:0.8 });
+            layer.bringToFront();
+          }
+        });
+        layer.on('mouseout', () => {
+          if(selectedTerritoryId !== t.id)
+            layer.setStyle(getCountyStyle(t.status, false));
+        });
 
-    if(!features.length) return;
-
-    features.forEach(f => assignedCounties.add(f.properties.NAME.toLowerCase()));
-
-    // Union multi-county territories into one shape
-    let merged = features[0];
-    for(let i = 1; i < features.length; i++){
-      try { merged = turf.union(merged, features[i]); } catch(e) {/* keep last good merged */}
+        // Track per-territory leaf layers so selectTerritoryOnMap can restyle them
+        if(!territoryLayers.has(t.id)) territoryLayers.set(t.id, { layers:[], territory:t });
+        territoryLayers.get(t.id).layers.push(layer);
+      },
     }
+  ).addTo(map);
 
-    const layer = L.geoJSON(merged, {
-      style: getCountyStyle(t.status, false),
-    }).addTo(map);
-
-    layer.on('mouseover', () => {
-      if(selectedTerritoryId !== t.id){
-        layer.setStyle({ weight:2.5, fillOpacity:0.85 });
-        layer.bringToFront();
-      }
-    });
-    layer.on('mouseout', () => {
-      if(selectedTerritoryId !== t.id){
-        layer.setStyle(getCountyStyle(t.status, false));
-      }
-    });
-    layer.on('click', () => selectTerritoryOnMap(t));
-
-    const countyLabel = t.counties.join(' · ') + (t.counties.length===1?' County':' Counties');
-    layer.bindTooltip(
-      `<div style="font-weight:700">${t.name}</div>
-       <div style="font-size:11px;color:#666">${countyLabel}</div>`,
-      {sticky:true, opacity:0.92}
-    );
-
-    territoryLayers.set(t.id, { layer, territory: t });
-  });
-
-  // Render unassigned counties as non-interactive grey polygons
-  const unassignedFeatures = geojson.features.filter(
-    f => !assignedCounties.has(f.properties.NAME.toLowerCase())
-  );
+  // Render unassigned ZIPs as non-interactive grey polygons
   if(unassignedFeatures.length){
     L.geoJSON(
       { type:'FeatureCollection', features: unassignedFeatures },
@@ -564,6 +570,13 @@ async function searchByZip(){
     }).addTo(map).bindPopup(`<strong>${county} County</strong><br>Zip: ${zip}`).openPopup();
 
     findNearbyTerritories(lat, lng, county);
+
+    // If this ZIP is directly assigned to a territory, auto-select it
+    const directTId = zipAssignments[zip];
+    if(directTId){
+      const direct = TERRITORIES.find(t => t.id === directTId);
+      if(direct) setTimeout(() => selectTerritoryOnMap(direct), 150);
+    }
   } catch(e) {
     showToast('Could not look up zip code — try selecting your county below');
   } finally {
@@ -665,13 +678,15 @@ function selectTerritoryOnMap(t){
   selectedTerritoryId = t.id;
 
   // Reset all territory layers to their status style, then highlight the selected one
-  territoryLayers.forEach(({ layer, territory }) => {
-    layer.setStyle(getCountyStyle(territory.status, false));
+  territoryLayers.forEach(({ layers, territory }) => {
+    layers.forEach(l => l.setStyle(getCountyStyle(territory.status, false)));
   });
   const entry = territoryLayers.get(t.id);
   if(entry){
-    entry.layer.setStyle(getCountyStyle('selected', false));
-    entry.layer.bringToFront();
+    entry.layers.forEach(l => {
+      l.setStyle(getCountyStyle('selected', false));
+      l.bringToFront();
+    });
   }
 
   const detail = document.getElementById('selectedDetail');

@@ -126,8 +126,15 @@ async function copyPublicAssets() {
   await cp(src, dest, { recursive: true });
 }
 
+async function copyDataAssets() {
+  const src  = path.resolve(artifactDir, "src", "data");
+  const dest = path.resolve(artifactDir, "dist", "data");
+  await cp(src, dest, { recursive: true });
+}
+
 buildAll()
   .then(copyPublicAssets)
+  .then(copyDataAssets)
   .catch((err) => {
   console.error(err);
   process.exit(1);

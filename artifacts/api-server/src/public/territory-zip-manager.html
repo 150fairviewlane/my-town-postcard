@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LocalSpot — Territory ZIP Manager</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --burg:#7C1C2E;--burg-dark:#5a1220;--burg-pale:#f9eaed;
+  --ink:#0f1117;--ink-mid:#374151;--ink-light:#6B7280;
+  --surface:#F4F1ED;--card:#fff;--border:#E2DDD6;
+  --green:#1a5c3a;--gold:#C8952A;
+  --avail:#16a34a;--taken:#dc2626;--pending:#d97706;--selected:#2563eb;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh;color:var(--ink)}
+
+.hdr{background:var(--ink);padding:0 28px;height:54px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--burg);position:sticky;top:0;z-index:1000}
+.brand{font-family:'Bebas Neue',sans-serif;font-size:21px;color:#fff;letter-spacing:.08em}
+.brand span{color:#C8A882}
+.hdr-right{display:flex;align-items:center;gap:10px}
+.hdr-tag{background:var(--burg);color:#fff;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:4px 12px;border-radius:20px}
+.hdr-back{color:rgba(255,255,255,.5);font-size:12px;font-weight:600;text-decoration:none;letter-spacing:.04em;text-transform:uppercase;padding:6px 12px;border-radius:6px;transition:color .2s}
+.hdr-back:hover{color:#fff}
+
+.layout{display:grid;grid-template-columns:340px 1fr;height:calc(100vh - 54px)}
+
+/* SIDEBAR */
+.sidebar{background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sidebar-hdr{padding:16px 18px;border-bottom:1px solid var(--border);background:#FAFAF8}
+.sidebar-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.06em;color:var(--ink);margin-bottom:2px}
+.sidebar-sub{font-size:11px;color:var(--ink-light);line-height:1.4}
+
+.stats-row{display:flex;gap:6px;padding:12px 18px;border-bottom:1px solid var(--border);background:#FAFAF8}
+.stat-chip{flex:1;text-align:center;padding:7px 4px;border-radius:7px;border:1px solid var(--border);background:var(--surface)}
+.stat-num{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--ink)}
+.stat-lbl{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-light)}
+
+.warn-banner{margin:10px 12px 0;padding:9px 12px;background:#fef9c3;border:1px solid #fde047;border-radius:7px;display:none}
+.warn-banner.visible{display:block}
+.warn-banner-title{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#854d0e;margin-bottom:5px}
+.warn-banner-list{font-size:11px;color:#92400e;line-height:1.7}
+
+.tlist-wrap{flex:1;overflow-y:auto;padding:10px 12px}
+.tlist-hdr{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-light);margin-bottom:8px}
+
+.titem{
+  padding:10px 12px;border-radius:8px;border:1.5px solid var(--border);
+  background:var(--surface);cursor:pointer;transition:all .15s;margin-bottom:6px;
+  display:flex;align-items:flex-start;justify-content:space-between;gap:6px;
+}
+.titem:hover{border-color:#bbb;background:#f0ece6}
+.titem.selected{border-color:var(--selected);background:#eff6ff;box-shadow:0 0 0 1px var(--selected)}
+.titem-left{min-width:0}
+.titem-name{font-size:12px;font-weight:700;color:var(--ink);line-height:1.25;margin-bottom:2px}
+.titem-status{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.status-available{color:var(--avail)}.status-taken{color:var(--taken)}.status-pending{color:var(--pending)}
+.titem-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
+.zip-badge{
+  font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;
+  background:#dbeafe;color:#1d4ed8;white-space:nowrap;
+}
+.zip-badge.warn{background:#fef9c3;color:#854d0e}
+.zip-badge.zero{background:#fee2e2;color:var(--taken)}
+
+/* MAP */
+.map-wrap{position:relative;display:flex;flex-direction:column}
+.map-toolbar{
+  padding:10px 16px;background:var(--card);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+}
+.map-title{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:.06em;color:var(--ink)}
+.selected-info{
+  background:var(--burg-pale);border:1px solid var(--burg);border-radius:6px;
+  padding:4px 10px;font-size:11px;font-weight:600;color:var(--burg);
+  display:none;white-space:nowrap;
+}
+.selected-info.visible{display:block}
+.map-legend{display:flex;gap:12px;margin-left:auto;align-items:center}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-mid);font-weight:500}
+.legend-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+
+.map-area{flex:1;position:relative}
+#map{width:100%;height:100%}
+
+.pending-bar{
+  position:absolute;bottom:0;left:0;right:0;z-index:600;
+  background:var(--ink);color:#fff;
+  padding:10px 20px;display:flex;align-items:center;justify-content:space-between;
+  transform:translateY(100%);transition:transform .3s ease;
+}
+.pending-bar.visible{transform:translateY(0)}
+.pending-count{font-size:13px;font-weight:600}
+.pending-count em{color:#C8A882;font-style:normal}
+.pending-actions{display:flex;gap:8px}
+.discard-btn{
+  padding:7px 14px;background:transparent;border:1px solid rgba(255,255,255,.3);
+  color:rgba(255,255,255,.7);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;
+}
+.save-btn{
+  padding:7px 18px;background:var(--burg);border:none;color:#fff;
+  border-radius:6px;font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:.08em;cursor:pointer;
+  transition:background .2s;
+}
+.save-btn:hover{background:var(--burg-dark)}
+.save-btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* Map loading overlay */
+.map-loading{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  background:rgba(232,228,222,.85);font-size:14px;color:var(--ink-mid);font-weight:600;z-index:500;
+}
+.map-loading.hidden{display:none}
+
+/* TOAST */
+.toast{
+  position:fixed;bottom:64px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:var(--ink);color:#fff;padding:10px 22px;border-radius:30px;
+  font-size:13px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,.3);
+  transition:transform .3s cubic-bezier(.34,1.56,.64,1);z-index:2000;pointer-events:none;
+}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* CONTEXT MENU */
+.ctx-menu{
+  position:fixed;background:var(--card);border:1px solid var(--border);border-radius:8px;
+  box-shadow:0 8px 24px rgba(0,0,0,.18);z-index:800;display:none;min-width:180px;overflow:hidden;
+}
+.ctx-menu.visible{display:block}
+.ctx-item{
+  padding:10px 14px;font-size:12px;font-weight:600;cursor:pointer;
+  display:flex;align-items:center;gap:8px;transition:background .15s;
+  border-bottom:1px solid var(--border);
+}
+.ctx-item:last-child{border-bottom:none}
+.ctx-item:hover{background:var(--burg-pale);color:var(--burg)}
+.ctx-item.danger:hover{background:#fee2e2;color:var(--taken)}
+
+@media(max-width:768px){
+  .layout{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+  .sidebar{max-height:40vh}
+  .map-wrap{min-height:60vh}
+}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="brand">Local<span>Spot</span> — Territory ZIP Manager</div>
+  <div class="hdr-right">
+    <div class="hdr-tag">🗺 ZIP Assignments</div>
+    <a class="hdr-back" id="backLink" href="/admin">← Admin</a>
+  </div>
+</header>
+
+<div class="toast" id="toast"></div>
+
+<!-- CONTEXT MENU -->
+<div class="ctx-menu" id="ctxMenu">
+  <div class="ctx-item" id="ctxAssign">✦ Assign to Selected Territory</div>
+  <div class="ctx-item danger" id="ctxUnassign">✕ Remove Assignment</div>
+</div>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-hdr">
+      <div class="sidebar-title">Territories</div>
+      <div class="sidebar-sub">Click a territory to select it, then click grey ZIPs on the map to assign them.</div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-chip">
+        <div class="stat-num" id="statTotal">—</div>
+        <div class="stat-lbl">Territories</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-num" id="statAssigned">—</div>
+        <div class="stat-lbl">ZIPs assigned</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-num" id="statUnassigned">—</div>
+        <div class="stat-lbl">Unassigned</div>
+      </div>
+    </div>
+
+    <div class="warn-banner" id="warnBanner">
+      <div class="warn-banner-title">⚠ Territories with 0 ZIPs</div>
+      <div class="warn-banner-list" id="warnList"></div>
+    </div>
+
+    <div class="tlist-wrap">
+      <div class="tlist-hdr">All Territories</div>
+      <div id="tlist"></div>
+    </div>
+  </div>
+
+  <!-- MAP -->
+  <div class="map-wrap">
+    <div class="map-toolbar">
+      <div class="map-title">Georgia — ZIP Assignments</div>
+      <div class="selected-info" id="selectedInfo">No territory selected</div>
+      <div class="map-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#86efac;border:1px solid #16a34a"></div>Available</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#fca5a5;border:1px solid #dc2626"></div>Taken</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#fde68a;border:1px solid #d97706"></div>Pending</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#d4c9ba;border:1px solid #9ca3af"></div>Unassigned</div>
+      </div>
+    </div>
+    <div class="map-area">
+      <div id="map"></div>
+      <div class="map-loading" id="mapLoading">Loading ZIP boundaries…</div>
+      <div class="pending-bar" id="pendingBar">
+        <div class="pending-count">Unsaved changes: <em id="pendingCount">0</em></div>
+        <div class="pending-actions">
+          <button class="discard-btn" onclick="discardChanges()">Discard</button>
+          <button class="save-btn" id="saveBtn" onclick="saveChanges()">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── Auth ───────────────────────────────────────────────────────────────────────
+const params = new URLSearchParams(window.location.search);
+const URL_TOKEN = params.get('token') || '';
+const LS_TOKEN  = localStorage.getItem('admin_token') || '';
+const ADMIN_TOKEN = URL_TOKEN || LS_TOKEN;
+if (URL_TOKEN) localStorage.setItem('admin_token', URL_TOKEN);
+document.getElementById('backLink').href = '/admin';
+
+// ── State ──────────────────────────────────────────────────────────────────────
+let TERRITORIES   = [];
+let zipAssignments = {};    // zip → territoryId (committed in DB)
+let pendingChanges = {};    // zip → territoryId | null (null = remove)
+let selectedTerritoryId = null;
+let zipLayers = {};         // zip → Leaflet layer reference
+let totalZipCount = 0;
+
+// Context menu state
+let ctxZip = null;
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+function effectiveAssignment(zip) {
+  if (zip in pendingChanges) return pendingChanges[zip]; // null means unassigned
+  return zipAssignments[zip] || null;
+}
+
+function getPendingCount() {
+  return Object.keys(pendingChanges).length;
+}
+
+function getZipStyle(zip, isSelected) {
+  const tId = effectiveAssignment(zip);
+  if (!tId) {
+    return isSelected
+      ? { fillColor:'#bfdbfe', fillOpacity:.65, color:'#2563eb', weight:2 }
+      : { fillColor:'#d4c9ba', fillOpacity:.45, color:'#9ca3af', weight:0.5 };
+  }
+  const t = TERRITORIES.find(t => t.id === tId);
+  const status = t?.status || 'available';
+  const base = {
+    available: { fillColor:'#86efac', color:'#16a34a' },
+    taken:     { fillColor:'#fca5a5', color:'#dc2626' },
+    pending:   { fillColor:'#fde68a', color:'#d97706' },
+  }[status] || { fillColor:'#86efac', color:'#16a34a' };
+  return isSelected
+    ? { ...base, fillOpacity:.75, weight:2.5 }
+    : { ...base, fillOpacity:.55, weight:0.8 };
+}
+
+function showToast(msg, isErr) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = isErr ? '#dc2626' : 'var(--ink)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── Sidebar rendering ──────────────────────────────────────────────────────────
+function renderSidebar() {
+  const zipCounts = {};
+  TERRITORIES.forEach(t => { zipCounts[t.id] = 0; });
+  for (const [zip, tId] of Object.entries(zipAssignments)) {
+    if (tId && zipCounts[tId] !== undefined) zipCounts[tId]++;
+  }
+  // Apply pending changes
+  for (const [zip, tId] of Object.entries(pendingChanges)) {
+    const oldTId = zipAssignments[zip];
+    if (oldTId && zipCounts[oldTId] !== undefined) zipCounts[oldTId]--;
+    if (tId && zipCounts[tId] !== undefined) zipCounts[tId]++;
+  }
+
+  const totalAssigned = Object.values(zipCounts).reduce((a, b) => a + b, 0);
+  document.getElementById('statTotal').textContent = TERRITORIES.length;
+  document.getElementById('statAssigned').textContent = totalAssigned;
+  document.getElementById('statUnassigned').textContent = totalZipCount - totalAssigned;
+
+  // Warn about zero-ZIP territories
+  const zeroTerritories = TERRITORIES.filter(t => (zipCounts[t.id] || 0) === 0);
+  const warnBanner = document.getElementById('warnBanner');
+  if (zeroTerritories.length) {
+    warnBanner.classList.add('visible');
+    document.getElementById('warnList').textContent = zeroTerritories.map(t => t.name).join(', ');
+  } else {
+    warnBanner.classList.remove('visible');
+  }
+
+  const list = document.getElementById('tlist');
+  list.innerHTML = TERRITORIES.map(t => {
+    const cnt = zipCounts[t.id] || 0;
+    const badgeCls = cnt === 0 ? 'zero' : cnt < 3 ? 'warn' : '';
+    return `
+      <div class="titem${selectedTerritoryId === t.id ? ' selected' : ''}"
+           onclick="selectTerritory('${t.id}')">
+        <div class="titem-left">
+          <div class="titem-name">${t.name}</div>
+          <div class="titem-status status-${t.status}">${t.status}</div>
+        </div>
+        <div class="titem-right">
+          <div class="zip-badge ${badgeCls}">${cnt} ZIP${cnt !== 1 ? 's' : ''}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function selectTerritory(id) {
+  selectedTerritoryId = id;
+  const t = TERRITORIES.find(t => t.id === id);
+  const info = document.getElementById('selectedInfo');
+  if (t) {
+    info.textContent = `Assigning to: ${t.name}`;
+    info.classList.add('visible');
+  }
+  renderSidebar();
+}
+
+// ── Pending changes ────────────────────────────────────────────────────────────
+function applyChange(zip, newTId) {
+  const committed = zipAssignments[zip] || null;
+  if (newTId === committed) {
+    // Reverts to committed state → remove pending entry
+    delete pendingChanges[zip];
+  } else {
+    pendingChanges[zip] = newTId;
+  }
+  updatePendingBar();
+  renderSidebar();
+
+  // Restyle affected layer
+  const layer = zipLayers[zip];
+  if (layer) {
+    const isSelected = selectedTerritoryId && effectiveAssignment(zip) === selectedTerritoryId;
+    layer.setStyle(getZipStyle(zip, isSelected));
+    const tId = effectiveAssignment(zip);
+    const t = tId ? TERRITORIES.find(t => t.id === tId) : null;
+    layer.unbindTooltip();
+    if (t) {
+      layer.bindTooltip(
+        `<div style="font-weight:700">${t.name}</div><div style="font-size:11px;color:#666">ZIP ${zip}</div>`,
+        { sticky: true, opacity: 0.92 }
+      );
+    } else {
+      layer.bindTooltip(`<div style="color:#666;font-size:12px">ZIP ${zip} — unassigned</div>`, { sticky: true, opacity: 0.92 });
+    }
+  }
+}
+
+function updatePendingBar() {
+  const cnt = getPendingCount();
+  document.getElementById('pendingCount').textContent = cnt;
+  const bar = document.getElementById('pendingBar');
+  if (cnt > 0) bar.classList.add('visible');
+  else bar.classList.remove('visible');
+}
+
+function discardChanges() {
+  if (!confirm('Discard all unsaved changes?')) return;
+  pendingChanges = {};
+  updatePendingBar();
+  renderSidebar();
+  // Re-restyle all affected layers
+  Object.keys(zipLayers).forEach(zip => {
+    const layer = zipLayers[zip];
+    if (layer) layer.setStyle(getZipStyle(zip, false));
+  });
+}
+
+async function saveChanges() {
+  const cnt = getPendingCount();
+  if (!cnt) return;
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  try {
+    const toAssign = Object.entries(pendingChanges)
+      .filter(([, tId]) => tId !== null)
+      .map(([zip, territoryId]) => ({ zip, territoryId }));
+
+    const toUnassign = Object.entries(pendingChanges)
+      .filter(([, tId]) => tId === null)
+      .map(([zip]) => zip);
+
+    // Upsert assigned ZIPs
+    if (toAssign.length) {
+      const res = await fetch('/api/admin/territories/zip-assignments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${ADMIN_TOKEN}` },
+        body: JSON.stringify({ assignments: toAssign }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+    }
+
+    // Delete unassigned ZIPs
+    for (const zip of toUnassign) {
+      const res = await fetch(`/api/admin/territories/zip-assignments/${zip}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${ADMIN_TOKEN}` },
+      });
+      if (!res.ok) throw new Error(await res.text());
+    }
+
+    // Commit changes to local state
+    for (const [zip, tId] of Object.entries(pendingChanges)) {
+      if (tId) zipAssignments[zip] = tId;
+      else delete zipAssignments[zip];
+    }
+    pendingChanges = {};
+    updatePendingBar();
+    renderSidebar();
+    showToast(`✓ Saved ${cnt} ZIP assignment${cnt !== 1 ? 's' : ''}`);
+  } catch (err) {
+    showToast('Save failed: ' + err.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save Changes';
+  }
+}
+
+// ── Context Menu ───────────────────────────────────────────────────────────────
+function showCtxMenu(e, zip) {
+  e.originalEvent.preventDefault();
+  ctxZip = zip;
+  const menu = document.getElementById('ctxMenu');
+  const sel = document.getElementById('ctxAssign');
+  const unas = document.getElementById('ctxUnassign');
+
+  const hasSel = !!selectedTerritoryId;
+  const isAssigned = !!effectiveAssignment(zip);
+
+  sel.style.display = hasSel ? 'flex' : 'none';
+  unas.style.display = isAssigned ? 'flex' : 'none';
+
+  if (!hasSel && !isAssigned) { closeCtxMenu(); return; }
+
+  menu.style.left = e.originalEvent.pageX + 'px';
+  menu.style.top  = e.originalEvent.pageY + 'px';
+  menu.classList.add('visible');
+}
+
+function closeCtxMenu() {
+  document.getElementById('ctxMenu').classList.remove('visible');
+  ctxZip = null;
+}
+
+document.getElementById('ctxAssign').onclick = () => {
+  if (!ctxZip || !selectedTerritoryId) { closeCtxMenu(); return; }
+  applyChange(ctxZip, selectedTerritoryId);
+  closeCtxMenu();
+};
+document.getElementById('ctxUnassign').onclick = () => {
+  if (!ctxZip) { closeCtxMenu(); return; }
+  applyChange(ctxZip, null);
+  closeCtxMenu();
+};
+document.addEventListener('click', e => {
+  if (!document.getElementById('ctxMenu').contains(e.target)) closeCtxMenu();
+});
+
+// ── Map ────────────────────────────────────────────────────────────────────────
+let map;
+
+async function initMap() {
+  map = L.map('map', { zoomControl: true }).setView([32.8, -83.4], 7);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 18,
+  }).addTo(map);
+
+  try {
+    const [terRes, geoRes, assignRes] = await Promise.all([
+      fetch('/api/territories?state=GA'),
+      fetch('/api/georgia-zip-geojson'),
+      fetch('/api/territories/zip-assignments'),
+    ]);
+    if (!terRes.ok || !geoRes.ok || !assignRes.ok) throw new Error('API fetch failed');
+    const [territories, geojson, assignRows] = await Promise.all([
+      terRes.json(), geoRes.json(), assignRes.json(),
+    ]);
+
+    TERRITORIES = territories;
+    zipAssignments = {};
+    assignRows.forEach(r => { zipAssignments[r.zip] = r.territoryId; });
+    totalZipCount = geojson.features.length;
+
+    renderSidebar();
+    renderZipLayer(geojson);
+  } catch (err) {
+    showToast('Failed to load data: ' + err.message, true);
+  } finally {
+    document.getElementById('mapLoading').classList.add('hidden');
+  }
+}
+
+function renderZipLayer(geojson) {
+  L.geoJSON(geojson, {
+    style: feature => getZipStyle(feature.properties.ZCTA5CE10, false),
+    onEachFeature: (feature, layer) => {
+      const zip = feature.properties.ZCTA5CE10;
+      zipLayers[zip] = layer;
+
+      const tId = effectiveAssignment(zip);
+      const t = tId ? TERRITORIES.find(t => t.id === tId) : null;
+      if (t) {
+        layer.bindTooltip(
+          `<div style="font-weight:700">${t.name}</div><div style="font-size:11px;color:#666">ZIP ${zip}</div>`,
+          { sticky: true, opacity: 0.92 }
+        );
+      } else {
+        layer.bindTooltip(
+          `<div style="color:#666;font-size:12px">ZIP ${zip} — unassigned</div>`,
+          { sticky: true, opacity: 0.92 }
+        );
+      }
+
+      layer.on('click', () => {
+        if (!selectedTerritoryId) {
+          showToast('Select a territory from the sidebar first');
+          return;
+        }
+        const current = effectiveAssignment(zip);
+        if (current === selectedTerritoryId) {
+          // Already assigned here — offer to remove
+          applyChange(zip, null);
+        } else {
+          applyChange(zip, selectedTerritoryId);
+        }
+      });
+
+      layer.on('contextmenu', e => showCtxMenu(e, zip));
+
+      layer.on('mouseover', () => {
+        if (!zipLayers[zip]) return;
+        const isSelected = selectedTerritoryId && effectiveAssignment(zip) === selectedTerritoryId;
+        layer.setStyle({ ...getZipStyle(zip, isSelected), weight: 2 });
+        layer.bringToFront();
+      });
+      layer.on('mouseout', () => {
+        const isSelected = selectedTerritoryId && effectiveAssignment(zip) === selectedTerritoryId;
+        layer.setStyle(getZipStyle(zip, isSelected));
+      });
+    },
+  }).addTo(map);
+}
+
+initMap();
+</script>
+</body>
+</html>

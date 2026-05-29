@@ -21,8 +21,9 @@ function resolveHtml(filename: string): string {
   throw new Error(`${filename} not found (checked dist/public/ and src/public/)`);
 }
 
-const MANAGER_HTML  = resolveHtml("territory-manager.html");
-const FINDER_HTML   = resolveHtml("territory-finder.html");
+const MANAGER_HTML      = resolveHtml("territory-manager.html");
+const FINDER_HTML       = resolveHtml("territory-finder.html");
+const ZIP_MANAGER_HTML  = resolveHtml("territory-zip-manager.html");
 
 function verifyQueryToken(token: string): boolean {
   try { jwt.verify(token, JWT_SECRET); return true; } catch { return false; }
@@ -41,6 +42,13 @@ router.get("/admin/territories", (req, res): void => {
 // GET /dealer/claim-territory — legacy public dealer signup page
 router.get("/dealer/claim-territory", (_req, res): void => {
   res.sendFile(MANAGER_HTML);
+});
+
+// GET /admin/territories/zip-manager — admin ZIP assignment tool (JWT required)
+router.get("/admin/territories/zip-manager", (req, res): void => {
+  const token = typeof req.query.token === "string" ? req.query.token : null;
+  if (!token || !verifyQueryToken(token)) { res.redirect("/admin"); return; }
+  res.sendFile(ZIP_MANAGER_HTML);
 });
 
 // GET /find-territory — public interactive territory finder map

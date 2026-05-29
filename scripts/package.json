@@ -10,6 +10,7 @@
     "provision-stripe-prices": "tsx ./src/provisionStripePrices.ts",
     "seed:ga-territories": "tsx ./src/seed-ga-territories.ts",
     "update:ga-centroids": "tsx ./src/update-ga-centroids.ts",
+    "seed:zip-assignments": "tsx ./src/seed-zip-assignments.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {

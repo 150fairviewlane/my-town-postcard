@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
-import { db, territoriesTable, dealerTerritoryClaimsTable } from "@workspace/db";
+import { db, territoriesTable, dealerTerritoryClaimsTable, territoryZipAssignmentsTable } from "@workspace/db";
 
 // Works in both ESM dev (tsx watch) and the esbuild production bundle.
 // In prod, esbuild's banner sets globalThis.__dirname = dist/, so the
@@ -516,6 +516,79 @@ router.get("/zip-to-county", async (req, res): Promise<void> => {
     req.log.warn({ zip, err: err?.message }, "zip-to-county lookup failed");
     res.json({ zip, county: null, state: null });
   }
+});
+
+// ─── Local data file resolver ─────────────────────────────────────────────────
+function resolveDataPath(filename: string): string {
+  // In production (esbuild bundle), _dirname = dist/
+  const prodPath = path.resolve(_dirname, "data", filename);
+  if (fs.existsSync(prodPath)) return prodPath;
+  // In development (tsx watch), _dirname = src/routes/
+  const devPath = path.resolve(_dirname, "..", "data", filename);
+  if (fs.existsSync(devPath)) return devPath;
+  throw new Error(`${filename} not found (checked dist/data/ and src/data/)`);
+}
+
+// ─── GET /api/georgia-zip-geojson ─────────────────────────────────────────────
+// Serves the local ga-zips.geojson file with in-memory cache.
+let gaZipGeoJsonCache: object | null = null;
+
+router.get("/georgia-zip-geojson", (req, res): void => {
+  if (gaZipGeoJsonCache) { res.json(gaZipGeoJsonCache); return; }
+  try {
+    const filePath = resolveDataPath("ga-zips.geojson");
+    gaZipGeoJsonCache = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    req.log.info("Cached GA ZIP GeoJSON");
+    res.json(gaZipGeoJsonCache);
+  } catch (err: any) {
+    req.log.error({ err: err?.message }, "Failed to serve GA ZIP GeoJSON");
+    res.status(500).json({ error: "Could not load ZIP GeoJSON" });
+  }
+});
+
+// ─── GET /api/territories/zip-assignments ─────────────────────────────────────
+// Returns all ZIP→territory assignments. Used by the public map and ZIP manager.
+router.get("/territories/zip-assignments", async (req, res): Promise<void> => {
+  try {
+    const rows = await db.select().from(territoryZipAssignmentsTable);
+    res.json(rows);
+  } catch (err: any) {
+    req.log.error({ err: err?.message }, "Failed to fetch zip assignments");
+    res.status(500).json({ error: "Failed to fetch zip assignments" });
+  }
+});
+
+// ─── POST /api/admin/territories/zip-assignments ──────────────────────────────
+// Upserts one or more ZIP assignments. Body: { assignments: [{zip, territoryId}] }
+const ZipAssignmentsSchema = z.object({
+  assignments: z.array(z.object({
+    zip:         z.string().length(5),
+    territoryId: z.string().min(1),
+  })).min(1).max(2000),
+});
+
+router.post("/admin/territories/zip-assignments", requireAdmin, async (req, res): Promise<void> => {
+  const parsed = ZipAssignmentsSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+  const { assignments } = parsed.data;
+  await db
+    .insert(territoryZipAssignmentsTable)
+    .values(assignments.map(a => ({ zip: a.zip, territoryId: a.territoryId })))
+    .onConflictDoUpdate({
+      target: territoryZipAssignmentsTable.zip,
+      set: { territoryId: rawSql`excluded.territory_id` },
+    });
+  req.log.info({ count: assignments.length }, "ZIP assignments upserted");
+  res.json({ ok: true, count: assignments.length });
+});
+
+// ─── DELETE /api/admin/territories/zip-assignments/:zip ──────────────────────
+// Removes a single ZIP assignment (unassigns it).
+router.delete("/admin/territories/zip-assignments/:zip", requireAdmin, async (req, res): Promise<void> => {
+  const { zip } = req.params;
+  await db.delete(territoryZipAssignmentsTable).where(eq(territoryZipAssignmentsTable.zip, zip));
+  req.log.info({ zip }, "ZIP assignment removed");
+  res.json({ ok: true });
 });
 
 // ─── GET /api/georgia-counties-geojson ────────────────────────────────────────

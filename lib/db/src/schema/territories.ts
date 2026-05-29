@@ -53,6 +53,17 @@ export const dealerTerritoryClaimsTable = pgTable("dealer_territory_claims", {
   claimedAt: timestamp("claimed_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// ZIP-to-territory assignments. Each ZIP code belongs to at most one territory
+// (enforced by the TEXT PRIMARY KEY). Used to render per-ZIP boundaries on the
+// public territory-finder map instead of county polygons, eliminating all
+// county-level overlaps and sub-county ambiguities.
+export const territoryZipAssignmentsTable = pgTable("territory_zip_assignments", {
+  zip: text("zip").primaryKey(),
+  territoryId: text("territory_id")
+    .notNull()
+    .references(() => territoriesTable.id, { onDelete: "cascade" }),
+});
+
 export const insertTerritorySchema = createInsertSchema(territoriesTable).omit({
   createdAt: true,
 });
@@ -64,3 +75,4 @@ export const insertTerritoryClaimSchema = createInsertSchema(dealerTerritoryClai
 export type Territory = typeof territoriesTable.$inferSelect;
 export type InsertTerritory = z.infer<typeof insertTerritorySchema>;
 export type DealerTerritoryClaimRow = typeof dealerTerritoryClaimsTable.$inferSelect;
+export type TerritoryZipAssignment = typeof territoryZipAssignmentsTable.$inferSelect;
