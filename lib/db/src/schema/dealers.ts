@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp, real, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, real, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -29,6 +29,10 @@ export const dealersTable = pgTable(
     // campaigns.ts, which already FKs dealer_id back to this table. Populated
     // idempotently when the dealer's subscription activates.
     landingPageCampaignId: integer("landing_page_campaign_id"),
+    // Opaque token used by the dealer's self-service portal (/my-territory?token=<>).
+    // Generated automatically at row creation. Lets us give the dealer a
+    // bookmark-able link without building a full login system.
+    portalToken: uuid("portal_token").defaultRandom().unique(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     activatedAt: timestamp("activated_at", { withTimezone: true }),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),

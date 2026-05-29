@@ -40,6 +40,8 @@ const DealerSignup = lazy(() => import("./pages/DealerSignup"));
 // @ts-expect-error JSX module without types
 const DealerConfirmation = lazy(() => import("./pages/DealerConfirmation"));
 // @ts-expect-error JSX module without types
+const DealerPortal = lazy(() => import("./pages/DealerPortal"));
+// @ts-expect-error JSX module without types
 const AdminDealersPage = lazy(() => import("./pages/AdminDealersPage"));
 // @ts-expect-error JSX module without types
 const AdminAITestPage = lazy(() => import("./pages/AdminAITestPage"));
@@ -63,7 +65,7 @@ import NotFound from "./pages/not-found";
 const RESERVED_SLUGS = new Set([
   "checkout", "upload", "confirmation", "admin", "subscription-confirmation",
   "spot-confirmation", "ad-gen", "request-options", "dealers", "find-territory",
-  "test", "go", "api",
+  "my-territory", "test", "go", "api",
 ]);
 
 const queryClient = new QueryClient();
@@ -110,10 +112,11 @@ function Router() {
         <Route path="/spot-confirmation" component={SpotConfirmationPage} />
         <Route path="/ad-gen" component={AdGenV7Page} />
         <Route path="/request-options" component={RequestOptionsPage} />
-        {/* Dealer program routes — public landing + signup + confirmation */}
+        {/* Dealer program routes — public landing + signup + confirmation + portal */}
         <Route path="/dealers" component={DealerLanding} />
         <Route path="/dealers/signup" component={DealerSignup} />
         <Route path="/dealers/confirmation" component={DealerConfirmation} />
+        <Route path="/my-territory" component={DealerPortal} />
         {/* /test/ad is a hidden render route used by the Playwright visual
             regression suite. Gated to dev/test builds only — Vite tree-shakes
             the import in production so it adds nothing to the prod bundle. */}
