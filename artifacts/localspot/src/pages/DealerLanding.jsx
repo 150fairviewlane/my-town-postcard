@@ -292,7 +292,7 @@ const FAQ_ITEMS = [
   { q: "Can I cancel anytime?",
     a: "Yes — your monthly subscription cancels with one click from your dealer portal - no long-term contracts. But, please contact us first - we would love to help you succeed!" },
   { q: "What does it cost the businesses I sell to?",
-    a: "Spots range from $199 (Small) to $499 (Extra-Large). All include design and mailing." },
+    a: "Spots range from $199 (Small) to $499 (Extra-Large). All include design, printing and mailing." },
   { q: "Is there a sales quota?",
     a: "No quotas. As long as you can hit our 12-spot minimum to mail a postcard at least once a year, you keep your territories. We'll work with you actively if you're not seeing traction." },
   { q: "When and how are commissions paid?",
