@@ -1,0 +1,128 @@
+Seed the territories database table with the complete Georgia territory list. Follow these instructions carefully.
+
+
+════════════════════════════════════════════════
+OVERVIEW
+════════════════════════════════════════════════
+
+The territories table already exists from the previous territory manager build. It currently has 12 placeholder rows. This prompt replaces those with the complete production Georgia territory list — 95 territories covering all 159 Georgia counties.
+
+Do not touch any other tables, routes, files, or functionality.
+
+
+════════════════════════════════════════════════
+CHANGE 1 — ADD THE SEED FILE
+════════════════════════════════════════════════
+
+Add the attached file georgia-territories-seed.js to the project. Place it in a seeds or data folder — wherever seed files are stored in this project. If no seed folder exists, create one at /data/seeds/.
+
+
+════════════════════════════════════════════════
+CHANGE 2 — CLEAR AND RESEED THE TABLE
+════════════════════════════════════════════════
+
+Create a script that does the following in order:
+
+Step 1 — Delete all existing rows from the territories table where state = 'GA'. Do not delete territories from other states if any exist.
+
+Step 2 — Insert all 95 territories from the georgia-territories-seed.js file into the territories table.
+
+For each territory, insert these fields:
+  id              — the id string from the seed (e.g. 'GA-001')
+  name            — the name string from the seed
+  state           — always 'GA'
+  counties        — store as a JSON array of county name strings
+  zone_note       — the zone_note string (key cities/communities in the territory)
+  households      — the integer household estimate
+  zones           — always 4 (integer)
+  status          — the status string from the seed (all are 'available')
+  dealer_id       — null
+  created_at      — current timestamp
+
+Step 3 — Log the count of inserted rows to confirm all 95 were inserted.
+
+Step 4 — Run this script automatically once on deploy. After it runs successfully, it should not run again on subsequent deploys (check if GA territories already exist before running).
+
+
+════════════════════════════════════════════════
+CHANGE 3 — UPDATE THE API ROUTE
+════════════════════════════════════════════════
+
+The GET /api/territories?state=GA route currently returns data from TERRITORY_DB (a hardcoded JavaScript object in the territory-manager.html file or a backend file).
+
+Update this route to return data from the territories database table instead, filtering by the state query parameter.
+
+The response format should remain the same JSON array structure that the frontend already expects:
+  id, name, state, counties, households, zones, status, dealer_id
+
+
+════════════════════════════════════════════════
+CHANGE 4 — UPDATE THE FRONTEND
+════════════════════════════════════════════════
+
+In territory-manager.html, find the TERRITORY_DB constant near the top of the script section. This is the hardcoded 12-territory array.
+
+The renderSidebar() and loadDealerTerritories() functions should already be making API calls if Change 4 from the previous territory manager prompt was completed. If they are, no changes are needed here.
+
+If they are still using TERRITORY_DB directly, update both functions to fetch from /api/territories?state=[selected state] instead and use the API response data.
+
+
+════════════════════════════════════════════════
+IMPORTANT NOTES ON THE DATA
+════════════════════════════════════════════════
+
+SPLIT TERRITORIES (GA-001 through GA-010):
+  Fulton, Gwinnett, Cobb, and DeKalb counties each appear in multiple
+  territory rows because they are split into sub-markets. The counties
+  array for these rows contains the county name once, and the zone_note
+  field indicates which portion of the county the territory covers.
+  This is intentional. Do not deduplicate or merge these rows.
+
+BORDERLINE TERRITORIES:
+  Several territories have household estimates below 20,000. These are
+  real territories in sparse rural areas of Georgia. Insert them as-is.
+  They are flagged in the zone_note field where relevant.
+  Territory IDs: GA-061, GA-076, GA-080, GA-081, GA-089, GA-091
+
+ALL 159 COUNTIES:
+  The seed data accounts for all 159 Georgia counties. Some county names
+  in the counties array use the exact name as it appears in official
+  Georgia county records (e.g. 'Ben Hill' not 'Ben Hill County').
+  Store them exactly as provided.
+
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+  Any existing dealer records or dealer_territory_claims rows
+  Territories from states other than GA
+  Any ad generator files
+  Payment pages or Stripe integration
+  Image library
+  Any other database tables
+  Authentication or session logic
+
+
+════════════════════════════════════════════════
+TEST AFTER BUILDING
+════════════════════════════════════════════════
+
+  1. Go to /admin/territories
+     The sidebar should show approximately 95 territories
+     The stats bar should show: Total 95, Open 95, Taken 0
+
+  2. Select a few territories and confirm the detail panel shows
+     the correct county list, zone note, and household count
+
+  3. Switch to the Dealer Signup tab
+     All 95 territories should appear in the picker list
+     All should show as Available in green
+
+  4. Run this query against the database and confirm 95 rows:
+     SELECT COUNT(*) FROM territories WHERE state = 'GA'
+
+  5. Confirm all 159 Georgia counties appear at least once across
+     all territory county arrays by running:
+     SELECT counties FROM territories WHERE state = 'GA'
+     and verifying no county is missing from the full list
