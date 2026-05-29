@@ -290,7 +290,7 @@ const FAQ_ITEMS = [
   { q: "How quickly will I see my territories?",
     a: "Immediately. As soon as you complete the application form and confirm your home ZIP, our system shows you the proposed territory live, before payment." },
   { q: "Can I cancel anytime?",
-    a: "Yes — your monthly subscription cancels with one click from your dealer portal (coming in Phase 2). No long-term contracts." },
+    a: "Yes — your monthly subscription cancels with one click from your dealer portal - no long-term contracts. But, please contact us first - we would love to help you succeed!" },
   { q: "What does it cost the businesses I sell to?",
     a: "Spots range from $199 (Small) to $499 (Extra-Large). All include design and mailing." },
   { q: "Is there a sales quota?",
