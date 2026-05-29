@@ -344,7 +344,7 @@ function AdS({d}){return(<div style={{width:200,height:200,overflow:"hidden",pos
 
 function AdHouse({w,h,territory}){return(<div style={{width:w,height:h,background:"#0f172a",display:"flex",alignItems:"stretch",justifyContent:"center",gap:18,padding:"0 22px",boxSizing:"border-box"}}><div style={{width:2,height:44,background:"#991b1b",flexShrink:0,alignSelf:"center"}}/><div style={{textAlign:"center",flex:1,display:"flex",flexDirection:"column",justifyContent:"center"}}><div style={{color:"#f1f5f9",fontWeight:900,fontSize:22,fontFamily:"Georgia,serif",letterSpacing:0.5,lineHeight:1.1}}>Shop, Dine & Buy Local</div><div style={{height:12}}/><div style={{color:"rgba(255,255,255,0.5)",fontSize:12,fontFamily:"sans-serif",marginTop:0,letterSpacing:1,textTransform:"uppercase",lineHeight:1.3}}>Your Ad Here · Reach 5,000 {territory||"Habersham County"} Homes</div><div style={{color:"#991b1b",fontWeight:800,fontSize:15,fontFamily:"sans-serif",marginTop:5}}>mytownpostcard.com</div></div><div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",gap:4,flexShrink:0,alignSelf:"stretch",paddingBottom:4}}><div style={{background:"#fff",borderRadius:4,padding:4,boxSizing:"border-box"}}><img src={"https://api.qrserver.com/v1/create-qr-code/?size=120x120&data="+encodeURIComponent("https://mytownpostcard.com")} style={{width:64,height:64,display:"block"}} alt="QR"/></div><div style={{color:"rgba(255,255,255,0.55)",fontSize:9,fontFamily:"sans-serif",letterSpacing:0.5}}>Scan to learn more</div></div><div style={{width:2,height:44,background:"#991b1b",flexShrink:0,alignSelf:"center"}}/></div>);}
 
-function AdEDDM({w,h}){return(<div style={{width:w,height:h,background:"#f8f8f8",border:"2px solid #aaa",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,boxSizing:"border-box",padding:16}}><div style={{width:44,height:44,borderRadius:"50%",border:"3px solid #555",display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{width:26,height:26,borderRadius:"50%",border:"2px dashed #555"}}/></div><div style={{textAlign:"center",lineHeight:1.8,fontFamily:"sans-serif",color:"#333"}}><div style={{fontSize:9,letterSpacing:1,fontWeight:600}}>PRESORTED STD</div><div style={{fontSize:9,letterSpacing:1,fontWeight:600}}>U.S. POSTAGE PAID</div><div style={{fontSize:9,letterSpacing:1,fontWeight:600}}>CLARKESVILLE, GA 30523</div><div style={{marginTop:6,paddingTop:6,borderTop:"1px solid #ccc",fontSize:9,letterSpacing:2,fontWeight:600}}>LOCAL POSTAL CUSTOMER</div><div style={{fontWeight:900,fontSize:15,letterSpacing:3,marginTop:2}}>EDDM</div></div></div>);}
+function AdEDDM({w,h,eddmCity,eddmZip}){return(<div style={{width:w,height:h,background:"#f8f8f8",border:"2px solid #aaa",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,boxSizing:"border-box",padding:16}}><div style={{width:44,height:44,borderRadius:"50%",border:"3px solid #555",display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{width:26,height:26,borderRadius:"50%",border:"2px dashed #555"}}/></div><div style={{textAlign:"center",lineHeight:1.8,fontFamily:"sans-serif",color:"#333"}}><div style={{fontSize:9,letterSpacing:1,fontWeight:600}}>PRESORTED STD</div><div style={{fontSize:9,letterSpacing:1,fontWeight:600}}>U.S. POSTAGE PAID</div><div style={{fontSize:9,letterSpacing:1,fontWeight:600}}>{eddmCity||"CLARKESVILLE"}, GA {eddmZip||"30523"}</div><div style={{marginTop:6,paddingTop:6,borderTop:"1px solid #ccc",fontSize:9,letterSpacing:2,fontWeight:600}}>LOCAL POSTAL CUSTOMER</div><div style={{fontWeight:900,fontSize:15,letterSpacing:3,marginTop:2}}>EDDM</div></div></div>);}
 
 const SZ={
 XL:{label:"Extra Large Ad", dims:'4" x 5"', price:"$499"},
@@ -383,11 +383,11 @@ const cw=spot.w*scale-7,ch=spot.h*scale-7;
 return(<div style={{position:"absolute",left:spot.x*scale+3.5,top:spot.y*scale+3.5,width:cw,height:ch,overflow:"hidden",borderRadius:3}}><div style={{width:spot.w,height:spot.h,transform:`scale(${cw/spot.w},${ch/spot.h})`,transformOrigin:"top left"}}>{children}</div></div>);
 }
 
-function SpotCell({spot,scale,hov,onHov,onOut,onSel,liveSpot,isHighlighted,territory}){
+function SpotCell({spot,scale,hov,onHov,onOut,onSel,liveSpot,isHighlighted,territory,eddmCity,eddmZip}){
 const k=spot.sample;
 const t=spot.tmpl||"photo";
 if(k==="house")return<ScaledCell spot={spot} scale={scale}><AdHouse w={spot.w} h={spot.h} territory={territory}/></ScaledCell>;
-if(k==="eddm") return<ScaledCell spot={spot} scale={scale}><AdEDDM w={spot.w} h={spot.h}/></ScaledCell>;
+if(k==="eddm") return<ScaledCell spot={spot} scale={scale}><AdEDDM w={spot.w} h={spot.h} eddmCity={eddmCity} eddmZip={eddmZip}/></ScaledCell>;
 // Paid spot with saved template data → render the real customer ad (pointer-events off so it's display only)
 if(liveSpot&&liveSpot.status==="paid"&&liveSpot.templateData){
   const{template,sizeKey,finishedAdUrl,...adData}=liveSpot.templateData;
@@ -760,7 +760,7 @@ return(<div style={{fontFamily:"sans-serif"}}>
           {spots.map(spot=>{
             const liveSpot=spot.dbGridArea?spotByGridArea[spot.dbGridArea]:null;
             const isHighlighted=highlighted&&spot.dbGridArea===highlighted;
-            return<SpotCell key={spot.id} spot={spot} scale={scale} hov={hov} onHov={setHov} onOut={()=>setHov(null)} onSel={handleSpotSelect} liveSpot={liveSpot} isHighlighted={isHighlighted} territory={campaign?.territory}/>;
+            return<SpotCell key={spot.id} spot={spot} scale={scale} hov={hov} onHov={setHov} onOut={()=>setHov(null)} onSel={handleSpotSelect} liveSpot={liveSpot} isHighlighted={isHighlighted} territory={campaign?.territory} eddmCity={(campaign?.cityList||"").split(",")[0].trim().toUpperCase()||undefined} eddmZip={campaign?.zipCode||undefined}/>;
           })}
           {campaignFetching&&!reserving&&(
             <div style={{position:"absolute",inset:0,pointerEvents:"none",zIndex:10,display:"flex",alignItems:"center",justifyContent:"center"}}>

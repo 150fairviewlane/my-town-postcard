@@ -531,7 +531,7 @@ export default function PostcardSpotPicker() {
             borderRadius: "0 0 6px 6px", display: "flex", justifyContent: "space-between" }}>
             <div style={{ fontSize: 7.5, color: "#9ca3af" }}>LOCAL POSTAL CUSTOMER · EDDM</div>
             <div style={{ fontSize: 7.5, color: "#9ca3af" }}>
-              PRESORTED STD · U.S. POSTAGE PAID · CLARKESVILLE GA {campaign.zipCode}
+              PRESORTED STD · U.S. POSTAGE PAID · {((campaign?.cityList||"").split(",")[0].trim().toUpperCase()||"CLARKESVILLE")} GA {campaign?.zipCode||"30523"}
             </div>
           </div>
         </div>
