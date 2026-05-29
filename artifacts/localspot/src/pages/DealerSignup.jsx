@@ -91,7 +91,19 @@ function Step1Info({ form, setForm, onNext }) {
       setError("Please enter a valid email address.");
       return;
     }
-    onNext();
+    if (!form.zip.trim() || !/^\d{5}$/.test(form.zip.trim())) {
+      setError("Please enter a valid 5-digit ZIP code.");
+      return;
+    }
+    const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+    const params = new URLSearchParams({
+      zip:   form.zip.trim(),
+      name:  form.name.trim(),
+      email: form.email.trim().toLowerCase(),
+      ref:   "signup",
+    });
+    if (form.phone.trim()) params.set("phone", form.phone.trim());
+    window.location.href = `${base}/find-territory?${params.toString()}`;
   };
 
   return (
@@ -101,7 +113,7 @@ function Step1Info({ form, setForm, onNext }) {
         <h2 style={{ fontSize: 26, fontWeight: 900, color: "#111",
           fontFamily: "Georgia,serif", marginBottom: 6 }}>Tell us about yourself</h2>
         <p style={{ color: "#666", fontSize: 14, marginBottom: 24 }}>
-          Next you'll pick your exclusive territory from the available counties in our network.
+          Enter your ZIP code and we'll show you the available territory on the map.
         </p>
         <form onSubmit={handleNext} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <div>
@@ -122,6 +134,13 @@ function Step1Info({ form, setForm, onNext }) {
             <input style={inputStyle} type="tel" value={form.phone}
               onChange={set("phone")} placeholder="(555) 123-4567" />
           </div>
+          <div>
+            <label style={{ fontSize: 12.5, fontWeight: 600, color: "#374151",
+              display: "block", marginBottom: 4 }}>Your ZIP code *</label>
+            <input style={inputStyle} required type="text" inputMode="numeric"
+              maxLength={5} value={form.zip} onChange={set("zip")}
+              placeholder="e.g. 30523" />
+          </div>
           {error && (
             <div style={{ background: "#fef2f2", color: "#991b1b",
               borderRadius: 8, padding: "10px 12px", fontSize: 13, fontWeight: 600 }}>
@@ -132,7 +151,7 @@ function Step1Info({ form, setForm, onNext }) {
             style={{ marginTop: 8, background: RED,
               color: "#fff", border: "none", borderRadius: 9,
               padding: "14px 0", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>
-            See Available Territories →
+            See My Territory on the Map →
           </button>
         </form>
       </div>
@@ -511,7 +530,7 @@ function Step3Payment({ form, selectedTerritory, onBack }) {
 
 export default function DealerSignup() {
   const [step, setStep] = useState(1);
-  const [form, setForm] = useState({ name: "", email: "", phone: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", zip: "" });
   const [selectedTerritory, setSelectedTerritory] = useState(null);
 
   const cancelled = useMemo(() => {

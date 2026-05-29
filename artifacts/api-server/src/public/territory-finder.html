@@ -207,9 +207,26 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
 <body>
 
 <header class="hdr">
-  <div class="brand">My Town <span>Postcard</span></div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <div class="brand">My Town <span>Postcard</span></div>
+    <div id="backLink" style="display:none">
+      <a href="/dealers/signup"
+        style="color:#C8A882;font-size:12px;font-weight:600;text-decoration:none;
+               letter-spacing:.04em;opacity:.85;transition:opacity .15s"
+        onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.85">
+        ← Back to signup
+      </a>
+    </div>
+  </div>
   <div class="hdr-tag">✦ Find Your Territory</div>
 </header>
+
+<script>
+// Show back link only when arriving from the dealer signup form
+if(new URLSearchParams(window.location.search).get('ref')==='signup'){
+  document.getElementById('backLink').style.display='block';
+}
+</script>
 
 <div class="toast" id="toast"></div>
 
@@ -449,6 +466,12 @@ async function loadZipGeoJSON(){
     zipAssignments = {};
     assignRows.forEach(r => { zipAssignments[r.zip] = r.territoryId; });
     renderZipLayer(gaZipGeoJSON);
+    // Auto-search if ?zip= was passed from the dealer signup flow
+    const urlZip = new URLSearchParams(window.location.search).get('zip');
+    if(urlZip && /^\d{5}$/.test(urlZip)){
+      document.getElementById('zipInput').value = urlZip;
+      await searchByZip();
+    }
   } catch(e) {
     console.warn('ZIP GeoJSON load failed, using marker-based display', e);
     renderMarkersOnly();
@@ -753,9 +776,11 @@ function openModal(){
     t.counties.join(' · ') + ' Counti' + (t.counties.length===1?'y':'es') +
     ' · ~' + t.households.toLocaleString() + ' households';
 
-  document.getElementById('claimName').value='';
-  document.getElementById('claimEmail').value='';
-  document.getElementById('claimPhone').value='';
+  // Pre-fill from URL params if dealer came from the signup form
+  const sp = new URLSearchParams(window.location.search);
+  document.getElementById('claimName').value  = sp.get('name')  || '';
+  document.getElementById('claimEmail').value = sp.get('email') || '';
+  document.getElementById('claimPhone').value = sp.get('phone') || '';
 
   const btn = document.getElementById('modalSubmitBtn');
   btn.textContent = '✦ Claim It — $99/mo';
