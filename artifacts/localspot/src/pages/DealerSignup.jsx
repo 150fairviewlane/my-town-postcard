@@ -1,10 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "wouter";
-import { buildTerritories, loadZips } from "../lib/territoryEngine";
 
 const RED = "#7B1418";
 const GOLD = "#d4a017";
-const ZONE_COLORS = ["#7B1418", "#d4a017", "#15803d", "#1d4ed8", "#7c3aed", "#be185d"];
 
 function ProgressBar({ step }) {
   const steps = ["Your Info", "Pick Your Territory", "Payment"];
@@ -79,41 +77,20 @@ const inputStyle = {
 
 function Step1Info({ form, setForm, onNext }) {
   const [error, setError] = useState(null);
-  const [validating, setValidating] = useState(false);
 
   const set = (k) => (e) => setForm(p => ({ ...p, [k]: e.target.value }));
 
-  const handleNext = async (e) => {
+  const handleNext = (e) => {
     e.preventDefault();
     setError(null);
-    if (!form.name.trim() || !form.email.trim() || !form.homeZip.trim()) {
-      setError("Please fill in your name, email, and home ZIP.");
-      return;
-    }
-    if (!/^\d{5}$/.test(form.homeZip.trim())) {
-      setError("Please enter a valid 5-digit ZIP code.");
+    if (!form.name.trim() || !form.email.trim()) {
+      setError("Please fill in your name and email.");
       return;
     }
     if (!/.+@.+\..+/.test(form.email.trim())) {
       setError("Please enter a valid email address.");
       return;
     }
-    // Quickly verify the ZIP exists in our dataset before advancing — saves
-    // the dealer from clicking through to step 2 only to see "ZIP not found".
-    setValidating(true);
-    try {
-      const data = await loadZips();
-      if (!data.byZip.has(form.homeZip.trim())) {
-        setError(`We couldn't find ZIP ${form.homeZip} in our US dataset. Double-check the ZIP and try again.`);
-        setValidating(false);
-        return;
-      }
-    } catch (err) {
-      setError(`Couldn't load our ZIP database — ${err.message}. Try again.`);
-      setValidating(false);
-      return;
-    }
-    setValidating(false);
     onNext();
   };
 
@@ -124,7 +101,7 @@ function Step1Info({ form, setForm, onNext }) {
         <h2 style={{ fontSize: 26, fontWeight: 900, color: "#111",
           fontFamily: "Georgia,serif", marginBottom: 6 }}>Tell us about yourself</h2>
         <p style={{ color: "#666", fontSize: 14, marginBottom: 24 }}>
-          We'll use your home ZIP to compute your 4 postcard territories on the next step.
+          Next you'll pick your exclusive territory from the available counties in our network.
         </p>
         <form onSubmit={handleNext} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <div>
@@ -145,27 +122,17 @@ function Step1Info({ form, setForm, onNext }) {
             <input style={inputStyle} type="tel" value={form.phone}
               onChange={set("phone")} placeholder="(555) 123-4567" />
           </div>
-          <div>
-            <label style={{ fontSize: 12.5, fontWeight: 600, color: "#374151",
-              display: "block", marginBottom: 4 }}>Your home ZIP code *</label>
-            <input style={inputStyle} required value={form.homeZip}
-              onChange={set("homeZip")} placeholder="30523"
-              inputMode="numeric" maxLength={5} pattern="\d{5}" />
-            <div style={{ fontSize: 12, color: "#888", marginTop: 6 }}>
-              We'll cluster ~30 miles of nearby ZIPs into your 4 postcard zones.
-            </div>
-          </div>
           {error && (
             <div style={{ background: "#fef2f2", color: "#991b1b",
               borderRadius: 8, padding: "10px 12px", fontSize: 13, fontWeight: 600 }}>
               {error}
             </div>
           )}
-          <button type="submit" disabled={validating}
-            style={{ marginTop: 8, background: validating ? "#999" : RED,
+          <button type="submit"
+            style={{ marginTop: 8, background: RED,
               color: "#fff", border: "none", borderRadius: 9,
               padding: "14px 0", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>
-            {validating ? "Looking up your area…" : "See My Territories →"}
+            See Available Territories →
           </button>
         </form>
       </div>
@@ -173,200 +140,259 @@ function Step1Info({ form, setForm, onNext }) {
   );
 }
 
-function TerritoryCard({ territory, color }) {
+const STATUS_BADGE = {
+  available: { label: "Available", bg: "#dcfce7", color: "#166534" },
+  pending:   { label: "Pending",   bg: "#fef9c3", color: "#854d0e" },
+  taken:     { label: "Taken",     bg: "#fee2e2", color: "#991b1b" },
+};
+
+function TerritoryRow({ territory, selected, onSelect }) {
+  const badge = STATUS_BADGE[territory.status] ?? STATUS_BADGE.available;
+  const isSelectable = territory.status === "available";
+  const isSelected = selected?.id === territory.id;
+
   return (
-    <div style={{ background: "#fff", borderRadius: 12,
-      border: `2px solid ${color}`, padding: 18,
-      display: "flex", flexDirection: "column", gap: 8 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ width: 28, height: 28, borderRadius: "50%",
-          background: color, color: "#fff", display: "flex",
-          alignItems: "center", justifyContent: "center",
-          fontSize: 13, fontWeight: 900 }}>
-          {territory.territoryIndex + 1}
+    <label style={{
+      display: "flex", alignItems: "flex-start", gap: 14, padding: "16px 18px",
+      borderRadius: 10, cursor: isSelectable ? "pointer" : "default",
+      border: isSelected
+        ? `2px solid ${RED}`
+        : "2px solid #e5e7eb",
+      background: isSelected ? `${RED}08` : isSelectable ? "#fff" : "#f9fafb",
+      opacity: isSelectable ? 1 : 0.6,
+      transition: "border-color 0.15s, background 0.15s",
+    }}>
+      <input
+        type="radio"
+        name="territory"
+        value={territory.id}
+        checked={isSelected}
+        disabled={!isSelectable}
+        onChange={() => isSelectable && onSelect(territory)}
+        style={{ marginTop: 3, accentColor: RED, flexShrink: 0 }}
+      />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
+          marginBottom: 4 }}>
+          <span style={{ fontWeight: 800, fontSize: 15, color: "#111",
+            fontFamily: "Georgia,serif" }}>
+            {territory.name}
+          </span>
+          <span style={{
+            fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999,
+            background: badge.bg, color: badge.color, textTransform: "uppercase",
+            letterSpacing: 0.4,
+          }}>
+            {badge.label}
+          </span>
         </div>
-        <div style={{ fontSize: 16, fontWeight: 800, color: "#111",
-          fontFamily: "Georgia,serif" }}>{territory.cityLabel}</div>
-      </div>
-      <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-        <div>
-          <div style={{ fontSize: 11, color: "#888", fontWeight: 700,
-            textTransform: "uppercase", letterSpacing: 0.4 }}>ZIPs</div>
-          <div style={{ fontSize: 18, fontWeight: 900, color: "#111" }}>
-            {territory.zipCodes.length}
-          </div>
+        <div style={{ fontSize: 12.5, color: "#666", marginBottom: 2 }}>
+          <strong>Counties:</strong> {territory.counties.join(", ")}
         </div>
-        <div>
-          <div style={{ fontSize: 11, color: "#888", fontWeight: 700,
-            textTransform: "uppercase", letterSpacing: 0.4 }}>Est. Households</div>
-          <div style={{ fontSize: 18, fontWeight: 900, color: "#111" }}>
-            ~{territory.estimatedHouseholds.toLocaleString()}
-          </div>
+        <div style={{ fontSize: 12.5, color: "#666" }}>
+          <strong>Households:</strong> ~{Number(territory.households).toLocaleString()}
         </div>
       </div>
-      <div style={{ fontSize: 12, color: "#666", lineHeight: 1.5, marginTop: 2 }}>
-        <strong>ZIPs:</strong>{" "}
-        {territory.zipCodes.slice(0, 8).join(", ")}
-        {territory.zipCodes.length > 8 && ` +${territory.zipCodes.length - 8} more`}
-      </div>
-    </div>
+    </label>
   );
 }
 
-function TerritoryMap({ territories }) {
-  // Simple proportional scatter: project lat/lng to SVG using bbox of all
-  // points + centroids. Color points by their cluster. Communicates the
-  // shape of the assigned area without needing a real map tile provider.
-  const points = useMemo(() => {
-    const all = [];
-    territories.forEach((t, i) => {
-      // We don't keep individual lat/lngs of every ZIP here (only zipCodes
-      // strings), so plot the centroid as the territory marker. Looks like
-      // 4 dots — clean and readable.
-      all.push({ lat: t.centerLat, lng: t.centerLng, color: ZONE_COLORS[i % ZONE_COLORS.length],
-        index: i, label: t.cityLabel, size: t.estimatedHouseholds });
-    });
-    return all;
-  }, [territories]);
+const US_STATES = [
+  { code: "GA", name: "Georgia" },
+  { code: "AL", name: "Alabama" },
+  { code: "FL", name: "Florida" },
+  { code: "NC", name: "North Carolina" },
+  { code: "SC", name: "South Carolina" },
+  { code: "TN", name: "Tennessee" },
+];
 
-  if (points.length === 0) return null;
+function Step2CountyPicker({ form, selectedTerritory, setSelectedTerritory, onBack, onNext }) {
+  const [stateCode, setStateCode] = useState("GA");
+  const [territories, setTerritories] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState(null);
+  const [claimError, setClaimError] = useState(null);
+  const [claiming, setClaiming] = useState(false);
 
-  const lats = points.map(p => p.lat);
-  const lngs = points.map(p => p.lng);
-  const minLat = Math.min(...lats), maxLat = Math.max(...lats);
-  const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
-  const padLat = Math.max(0.05, (maxLat - minLat) * 0.4);
-  const padLng = Math.max(0.05, (maxLng - minLng) * 0.4);
-  const W = 360, H = 280;
-  const project = (lat, lng) => {
-    const x = ((lng - (minLng - padLng)) / ((maxLng + padLng) - (minLng - padLng))) * W;
-    // Invert Y because lat increases northward (up) but SVG y increases down
-    const y = H - ((lat - (minLat - padLat)) / ((maxLat + padLat) - (minLat - padLat))) * H;
-    return { x, y };
-  };
+  const baseUrl = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", maxWidth: 460,
-      background: "#fafafa", borderRadius: 12, border: "1px solid #e5e7eb" }}>
-      {points.map((p, i) => {
-        const { x, y } = project(p.lat, p.lng);
-        const r = 22 + (p.size / 5000) * 18;
-        return (
-          <g key={i}>
-            <circle cx={x} cy={y} r={r} fill={p.color} opacity="0.18" />
-            <circle cx={x} cy={y} r={r * 0.6} fill={p.color} opacity="0.32" />
-            <circle cx={x} cy={y} r={6} fill={p.color} stroke="#fff" strokeWidth="2" />
-            <text x={x} y={y - r - 4} textAnchor="middle"
-              style={{ fontFamily: "sans-serif", fontSize: 10.5, fontWeight: 800, fill: "#111" }}>
-              {i + 1}. {p.label.length > 18 ? p.label.slice(0, 18) + "…" : p.label}
-            </text>
-          </g>
-        );
-      })}
-    </svg>
-  );
-}
-
-function Step2Territories({ form, territories, setTerritories, onBack, onNext, loading, error }) {
-  const [reshuffling, setReshuffling] = useState(false);
-
-  const reshuffle = async () => {
-    setReshuffling(true);
+  const fetchTerritories = async (state) => {
+    setLoading(true);
+    setFetchError(null);
     try {
-      const seed = Math.floor(Math.random() * 1_000_000) + 1;
-      const t = await buildTerritories(form.homeZip, { seed });
-      setTerritories(t);
+      const res = await fetch(`${baseUrl}/api/territories?state=${state}`);
+      if (!res.ok) throw new Error(`Server returned ${res.status}`);
+      const data = await res.json();
+      setTerritories(data);
     } catch (err) {
-      // Surface to the user via error prop in parent — but we already have
-      // territories from initial render so just log and bail.
-      console.error("Re-shuffle failed", err);
+      setFetchError(err.message || "Couldn't load territories. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    setReshuffling(false);
   };
 
+  useEffect(() => {
+    fetchTerritories(stateCode);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stateCode]);
+
+  const handleStateChange = (e) => {
+    setStateCode(e.target.value);
+    setSelectedTerritory(null);
+    setClaimError(null);
+  };
+
+  const handleClaim = async () => {
+    if (!selectedTerritory) return;
+    setClaiming(true);
+    setClaimError(null);
+    try {
+      const res = await fetch(`${baseUrl}/api/territory-claims`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          territory_id: selectedTerritory.id,
+          dealer_name:  form.name.trim(),
+          dealer_email: form.email.trim().toLowerCase(),
+          dealer_phone: form.phone.trim() || null,
+        }),
+      });
+      if (res.status === 409) {
+        setClaimError("Someone else just claimed that territory. Please pick another.");
+        setSelectedTerritory(null);
+        await fetchTerritories(stateCode);
+        setClaiming(false);
+        return;
+      }
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Server returned ${res.status}`);
+      }
+      onNext();
+    } catch (err) {
+      setClaimError(err.message || "Something went wrong. Please try again.");
+      setClaiming(false);
+    }
+  };
+
+  const availableCount = territories.filter(t => t.status === "available").length;
+
   return (
-    <div style={{ maxWidth: 900, margin: "0 auto", padding: "0 16px" }}>
+    <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 16px" }}>
       <div style={{ background: "#fff", borderRadius: 14, padding: 32,
         boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
         <h2 style={{ fontSize: 26, fontWeight: 900, color: "#111",
           fontFamily: "Georgia,serif", marginBottom: 6 }}>
-          Your 4 proposed territories
+          Pick your exclusive territory
         </h2>
-        <p style={{ color: "#666", fontSize: 14, marginBottom: 24 }}>
-          These are your 4 postcard zones, computed from ZIPs near{" "}
-          <strong>{form.homeZip}</strong>. Each zone is one postcard run
-          (~5,000 homes). Don't love the split? Re-shuffle to try a different layout.
+        <p style={{ color: "#666", fontSize: 14, marginBottom: 20 }}>
+          Each territory is a group of counties you'll serve exclusively. Select the area
+          that's the best fit for your business.
         </p>
 
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ fontSize: 12.5, fontWeight: 600, color: "#374151",
+            display: "block", marginBottom: 6 }}>State</label>
+          <select
+            value={stateCode}
+            onChange={handleStateChange}
+            style={{ ...inputStyle, width: "auto", minWidth: 200 }}
+          >
+            {US_STATES.map(s => (
+              <option key={s.code} value={s.code}>{s.name}</option>
+            ))}
+          </select>
+        </div>
+
         {loading && (
-          <div style={{ textAlign: "center", padding: 60, color: "#666" }}>
+          <div style={{ textAlign: "center", padding: 48, color: "#666" }}>
             <div style={{ fontSize: 24, marginBottom: 8 }}>🗺️</div>
-            <div>Computing your territories…</div>
+            <div>Loading territories…</div>
           </div>
         )}
 
-        {error && (
+        {fetchError && (
           <div style={{ background: "#fef2f2", color: "#991b1b",
             borderRadius: 10, padding: 16, fontSize: 14, marginBottom: 18 }}>
-            <strong>Couldn't build territories:</strong> {error}
+            <strong>Couldn't load territories:</strong> {fetchError}
+            <button
+              type="button"
+              onClick={() => fetchTerritories(stateCode)}
+              style={{ marginLeft: 12, fontSize: 13, fontWeight: 700,
+                color: "#991b1b", background: "none", border: "none",
+                cursor: "pointer", textDecoration: "underline" }}>
+              Try again
+            </button>
           </div>
         )}
 
-        {!loading && !error && territories.length > 0 && (
+        {!loading && !fetchError && territories.length === 0 && (
+          <div style={{ textAlign: "center", padding: 40, color: "#888",
+            background: "#f9fafb", borderRadius: 10 }}>
+            No territories found for {stateCode}. Check back soon.
+          </div>
+        )}
+
+        {!loading && !fetchError && territories.length > 0 && (
           <>
-            <div style={{ display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-              gap: 16, marginBottom: 24 }}>
-              {territories.map((t, i) => (
-                <TerritoryCard key={i} territory={t}
-                  color={ZONE_COLORS[i % ZONE_COLORS.length]} />
-              ))}
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
-              <TerritoryMap territories={territories} />
-            </div>
-
-            <div style={{ background: "#fafafa", borderRadius: 10, padding: 16,
-              fontSize: 13.5, color: "#444", lineHeight: 1.6, marginBottom: 24 }}>
-              <strong>Total reach:</strong>{" "}
-              {territories.reduce((s, t) => s + t.estimatedHouseholds, 0).toLocaleString()}{" "}
-              households across {territories.length} territories,{" "}
-              covering{" "}
-              {territories.reduce((s, t) => s + t.zipCodes.length, 0)} ZIP codes.
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "space-between",
-              gap: 12, flexWrap: "wrap" }}>
-              <button type="button" onClick={onBack}
-                style={{ background: "#fff", color: "#374151", border: "1.5px solid #d1d5db",
-                  borderRadius: 9, padding: "12px 22px", fontSize: 14, fontWeight: 700,
-                  cursor: "pointer" }}>
-                ← Back
-              </button>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <button type="button" onClick={reshuffle} disabled={reshuffling}
-                  style={{ background: "#fff", color: RED, border: `2px solid ${RED}`,
-                    borderRadius: 9, padding: "12px 22px", fontSize: 14, fontWeight: 700,
-                    cursor: "pointer" }}>
-                  {reshuffling ? "Re-shuffling…" : "🔀 Re-shuffle"}
-                </button>
-                <button type="button" onClick={onNext}
-                  style={{ background: RED, color: "#fff", border: "none",
-                    borderRadius: 9, padding: "12px 28px", fontSize: 15, fontWeight: 800,
-                    cursor: "pointer" }}>
-                  Looks Good → Payment
-                </button>
+            {availableCount === 0 && (
+              <div style={{ background: "#fffbeb", color: "#92400e",
+                border: "1px solid #fde68a", borderRadius: 8, padding: "10px 14px",
+                fontSize: 13, marginBottom: 14 }}>
+                All territories in {stateCode} are currently pending or taken.
+                Check another state or contact us to be added to the waitlist.
               </div>
+            )}
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+              {territories.map(t => (
+                <TerritoryRow
+                  key={t.id}
+                  territory={t}
+                  selected={selectedTerritory}
+                  onSelect={setSelectedTerritory}
+                />
+              ))}
             </div>
           </>
         )}
+
+        {claimError && (
+          <div style={{ background: "#fef2f2", color: "#991b1b",
+            borderRadius: 8, padding: "10px 12px", fontSize: 13, fontWeight: 600,
+            marginBottom: 14 }}>
+            {claimError}
+          </div>
+        )}
+
+        <div style={{ display: "flex", justifyContent: "space-between",
+          gap: 12, flexWrap: "wrap" }}>
+          <button type="button" onClick={onBack}
+            style={{ background: "#fff", color: "#374151", border: "1.5px solid #d1d5db",
+              borderRadius: 9, padding: "12px 22px", fontSize: 14, fontWeight: 700,
+              cursor: "pointer" }}>
+            ← Back
+          </button>
+          <button
+            type="button"
+            onClick={handleClaim}
+            disabled={!selectedTerritory || claiming}
+            style={{
+              background: !selectedTerritory || claiming ? "#d1d5db" : RED,
+              color: !selectedTerritory || claiming ? "#9ca3af" : "#fff",
+              border: "none", borderRadius: 9, padding: "12px 28px",
+              fontSize: 15, fontWeight: 800,
+              cursor: !selectedTerritory || claiming ? "default" : "pointer",
+              transition: "background 0.15s",
+            }}>
+            {claiming ? "Claiming…" : "Looks Good → Payment"}
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
-function Step3Payment({ form, territories, onBack }) {
+function Step3Payment({ form, selectedTerritory, onBack }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
@@ -382,15 +408,8 @@ function Step3Payment({ form, territories, onBack }) {
           name: form.name.trim(),
           email: form.email.trim().toLowerCase(),
           phone: form.phone.trim() || null,
-          homeZip: form.homeZip.trim(),
-          territories: territories.map(t => ({
-            territoryIndex: t.territoryIndex,
-            zipCodes: t.zipCodes,
-            centerLat: t.centerLat,
-            centerLng: t.centerLng,
-            cityLabel: t.cityLabel,
-            estimatedHouseholds: t.estimatedHouseholds,
-          })),
+          territoryId: selectedTerritory?.id,
+          territoryName: selectedTerritory?.name,
         }),
       });
       if (!res.ok) {
@@ -401,15 +420,12 @@ function Step3Payment({ form, territories, onBack }) {
       if (!body.checkoutUrl) {
         throw new Error("No checkout URL returned by the server.");
       }
-      // Hand off to Stripe Checkout. The success_url returns to /dealers/confirmation.
       window.location.href = body.checkoutUrl;
     } catch (err) {
       setError(err.message || "Something went wrong. Please try again.");
       setSubmitting(false);
     }
   };
-
-  const totalReach = territories.reduce((s, t) => s + t.estimatedHouseholds, 0);
 
   return (
     <div style={{ maxWidth: 560, margin: "0 auto", padding: "0 16px" }}>
@@ -447,13 +463,21 @@ function Step3Payment({ form, territories, onBack }) {
           </div>
         </div>
 
-        <div style={{ background: `${GOLD}11`, border: `1px solid ${GOLD}55`,
-          borderRadius: 10, padding: 14, marginBottom: 22, fontSize: 13.5,
-          color: "#5a4708", lineHeight: 1.55 }}>
-          <strong>You're locking in:</strong> {territories.length} exclusive
-          territories covering ~{totalReach.toLocaleString()} households. Once
-          you pay, no other dealer can be assigned to your ZIPs.
-        </div>
+        {selectedTerritory && (
+          <div style={{ background: `${GOLD}11`, border: `1px solid ${GOLD}55`,
+            borderRadius: 10, padding: 14, marginBottom: 22, fontSize: 13.5,
+            color: "#5a4708", lineHeight: 1.55 }}>
+            <strong>Your territory:</strong>{" "}
+            {selectedTerritory.name}
+            {selectedTerritory.counties?.length > 0 && (
+              <span style={{ color: "#7a5f1a" }}>
+                {" "}({selectedTerritory.counties.join(", ")})
+              </span>
+            )}
+            {" "}— ~{Number(selectedTerritory.households).toLocaleString()} households.
+            Once you pay, this territory is exclusively yours.
+          </div>
+        )}
 
         {error && (
           <div style={{ background: "#fef2f2", color: "#991b1b",
@@ -487,41 +511,13 @@ function Step3Payment({ form, territories, onBack }) {
 
 export default function DealerSignup() {
   const [step, setStep] = useState(1);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", homeZip: "" });
-  const [territories, setTerritories] = useState([]);
-  const [tLoading, setTLoading] = useState(false);
-  const [tError, setTError] = useState(null);
+  const [form, setForm] = useState({ name: "", email: "", phone: "" });
+  const [selectedTerritory, setSelectedTerritory] = useState(null);
 
-  // Detect ?cancelled=1 from a Stripe-cancelled checkout — show a soft note
-  // that they can try again.
   const cancelled = useMemo(() => {
     if (typeof window === "undefined") return false;
     return new URLSearchParams(window.location.search).get("cancelled") === "1";
   }, []);
-
-  // Compute territories whenever we enter step 2 with a fresh ZIP.
-  useEffect(() => {
-    if (step !== 2) return;
-    if (!form.homeZip) return;
-    let cancel = false;
-    setTLoading(true);
-    setTError(null);
-    buildTerritories(form.homeZip, { seed: 1 })
-      .then(t => {
-        if (!cancel) {
-          setTerritories(t);
-          setTLoading(false);
-        }
-      })
-      .catch(err => {
-        if (!cancel) {
-          setTError(err.message);
-          setTLoading(false);
-        }
-      });
-    return () => { cancel = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, form.homeZip]);
 
   return (
     <PageShell step={step}>
@@ -538,17 +534,18 @@ export default function DealerSignup() {
         <Step1Info form={form} setForm={setForm} onNext={() => setStep(2)} />
       )}
       {step === 2 && (
-        <Step2Territories
-          form={form} territories={territories}
-          setTerritories={setTerritories}
-          loading={tLoading} error={tError}
+        <Step2CountyPicker
+          form={form}
+          selectedTerritory={selectedTerritory}
+          setSelectedTerritory={setSelectedTerritory}
           onBack={() => setStep(1)}
           onNext={() => setStep(3)}
         />
       )}
       {step === 3 && (
         <Step3Payment
-          form={form} territories={territories}
+          form={form}
+          selectedTerritory={selectedTerritory}
           onBack={() => setStep(2)}
         />
       )}
