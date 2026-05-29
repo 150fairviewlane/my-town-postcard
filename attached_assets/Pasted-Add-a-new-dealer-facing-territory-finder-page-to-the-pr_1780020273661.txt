@@ -1,0 +1,199 @@
+Add a new dealer-facing territory finder page to the project. This replaces the simple territory list in the dealer signup flow with an interactive map experience. Do not modify any existing files except where explicitly stated.
+
+
+════════════════════════════════════════════════
+OVERVIEW
+════════════════════════════════════════════════
+
+The territory finder lets a prospective dealer enter their zip code or
+select their county. The system finds the 8-10 nearest available
+territories, zooms the map to show them, and lets the dealer click on
+any territory to see details and claim it.
+
+The map uses Leaflet.js with OpenStreetMap tiles — free, no API key
+required. County shapes come from a public GeoJSON source.
+
+
+════════════════════════════════════════════════
+CHANGE 1 — ADD THE FILE AND ROUTE
+════════════════════════════════════════════════
+
+Add the attached file territory-finder.html to the project.
+
+Create two routes that both serve this file:
+  /find-territory
+  /dealer/find-territory
+
+Add a link to /find-territory in:
+  - The main public-facing navigation or homepage, labeled "Become a Dealer"
+  - The dealer onboarding flow, as the territory selection step
+  - The /dealer/claim-territory page if it exists (replace or supplement it)
+
+
+════════════════════════════════════════════════
+CHANGE 2 — WIRE TERRITORIES API
+════════════════════════════════════════════════
+
+In territory-finder.html, find the TERRITORIES array near the top of
+the script section. This is hardcoded sample data.
+
+Replace it with a fetch call to the existing territories API:
+
+  async function loadTerritories() {
+    const res = await fetch('/api/territories?state=GA');
+    const data = await res.json();
+    return data; // array of territory objects
+  }
+
+Call loadTerritories() at the bottom of the script (in the init section)
+and assign the result to a variable called TERRITORIES before calling
+initMap().
+
+The territory objects from the API must include a lat and lng field for
+the map centroid of each territory. If those fields do not exist in the
+territories table yet, add them:
+
+  ALTER TABLE territories ADD COLUMN centroid_lat DECIMAL(10,6);
+  ALTER TABLE territories ADD COLUMN centroid_lng DECIMAL(10,6);
+
+Then update each Georgia territory row with its centroid coordinates.
+The centroid values are embedded in the TERRITORIES array in the HTML
+file — use those values to populate the new columns via an UPDATE
+statement or migration script.
+
+
+════════════════════════════════════════════════
+CHANGE 3 — WIRE ZIP CODE LOOKUP
+════════════════════════════════════════════════
+
+In territory-finder.html, find the ZIP_TO_COUNTY object. This is a
+partial hardcoded zip-to-county mapping for demonstration.
+
+Create a new API route:
+  GET /api/zip-to-county?zip=30523
+
+This route should look up which Georgia county a zip code belongs to.
+
+Use one of these approaches in order of preference:
+  Option A: If a zip_codes table already exists, query it
+  Option B: Use the free Zippopotam.us API as a proxy:
+    fetch(`https://api.zippopotam.us/us/${zip}`)
+    The response includes state and city — combine with a county lookup
+    table if available, or return the city name and let the frontend
+    match it to a county using the COUNTY_CENTROIDS object
+  Option C: Use a static Georgia zip-to-county JSON file
+
+The route should return:
+  { zip: "30523", county: "Habersham", state: "GA" }
+
+Or if not found:
+  { zip: "30523", county: null, state: null }
+
+In territory-finder.html, find the searchByZip() function. Find this
+comment:
+  // In Replit: fetch(`/api/zip-to-county?zip=${zip}`) for full coverage
+
+Replace the ZIP_TO_COUNTY[zip] lookup with a real fetch to
+/api/zip-to-county?zip=${zip} and use the returned county name.
+
+
+════════════════════════════════════════════════
+CHANGE 4 — WIRE TERRITORY CLAIM
+════════════════════════════════════════════════
+
+In territory-finder.html, find the submitClaim() function. Find this
+comment:
+  // In Replit: POST /api/territory-claims { ... }
+
+Replace the local state mutation (t.status = 'pending') with a real
+POST fetch to /api/territory-claims:
+
+  const res = await fetch('/api/territory-claims', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      dealerName: name,
+      dealerEmail: email,
+      dealerPhone: phone,
+      territoryId: t.id
+    })
+  });
+  const result = await res.json();
+  if (result.error) { showToast(result.error); return; }
+
+After a successful claim, redirect to Stripe checkout for the $99/month
+dealer subscription. Use the same Stripe flow that the existing dealer
+signup uses.
+
+
+════════════════════════════════════════════════
+CHANGE 5 — GEOJSON SOURCE
+════════════════════════════════════════════════
+
+The map loads Georgia county shapes from this public URL:
+  https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json
+
+This is a large file (~4MB) containing all US counties. The code
+filters it to Georgia (FIPS codes starting with 13) client-side.
+
+To improve performance, create a backend route that caches this file:
+  GET /api/georgia-counties-geojson
+
+This route should:
+  1. On first request, fetch the full GeoJSON from the plotly URL
+  2. Filter to only Georgia features (id starting with "13")
+  3. Cache the filtered result in memory or as a static file
+  4. Return the filtered GeoJSON on subsequent requests
+
+In territory-finder.html, find the loadCountyGeoJSON() function and
+update the URL from the plotly raw URL to /api/georgia-counties-geojson.
+
+This reduces the data the client downloads from ~4MB to ~150KB.
+
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+  The admin territory manager at /admin/territories
+  Any ad generator files
+  Payment pages except wiring the claim to Stripe
+  Image library
+  Any existing dealer account records
+  Any authentication or session logic not related to territory claiming
+
+
+════════════════════════════════════════════════
+TEST AFTER BUILDING
+════════════════════════════════════════════════
+
+  1. Go to /find-territory
+     The page loads with a full Georgia map showing colored counties:
+     green for available territories, red for taken, yellow for pending
+
+  2. Enter zip code 30523 (Clarkesville, GA / Habersham County)
+     The map zooms to northeast Georgia
+     The sidebar shows 8-10 nearby territories
+     White/Habersham Counties territory should be first or second in list
+
+  3. Enter zip code 30301 (Atlanta / Fulton County)
+     The map zooms to the Atlanta metro area
+     Multiple Fulton, Gwinnett, Cobb, DeKalb split territories appear
+
+  4. Click any available (green) territory on the map
+     The sidebar highlights that territory with its details
+     The Claim This Territory button appears
+
+  5. Click Claim This Territory
+     The modal opens with the territory name pre-filled
+
+  6. Fill in name, email, phone and click Claim
+     The territory status updates to pending (yellow) on the map
+     A success toast appears
+     The flow proceeds to Stripe checkout
+
+  7. Select any county from the county dropdown
+     Same behavior as zip code search — map zooms, nearby territories appear
+
+  8. Taken territories (red) are shown on the map and in the list
+     but the Claim button does not appear for them
