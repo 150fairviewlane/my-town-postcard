@@ -1,8 +1,15 @@
 import { Router, type IRouter, type Request } from "express";
-import { eq, sql, desc } from "drizzle-orm";
+import { eq, sql, desc, and, or, isNull } from "drizzle-orm";
 import { z } from "zod/v4";
 import jwt from "jsonwebtoken";
-import { db, dealersTable, dealerTerritoriesTable, campaignsTable, spotsTable, territoriesTable } from "@workspace/db";
+import {
+  db,
+  dealersTable,
+  dealerTerritoriesTable,
+  campaignsTable,
+  spotsTable,
+  territoriesTable,
+} from "@workspace/db";
 import { getStripeClient, isStripeConfigured } from "../lib/stripeClient";
 import { ensureDealerLandingPage } from "../lib/dealerLandingPage";
 import { logger } from "../lib/logger";
@@ -16,10 +23,6 @@ const router: IRouter = Router();
 const SETUP_FEE_CENTS = 9900;
 const MONTHLY_FEE_CENTS = 9900;
 
-// Fail fast if SESSION_SECRET is missing — never fall back to a hard-coded
-// signing key for admin auth. (The legacy admin.ts / adminCampaigns.ts
-// routes still use a fallback for backward compatibility; this newer route
-// is strict so we don't perpetuate that pattern.)
 function getJwtSecret(): string {
   const s = process.env.SESSION_SECRET;
   if (!s || s.length < 8) {
@@ -84,8 +87,6 @@ const CreateDealerBodySchema = z.union([
 function getOrigin(req: Request): string {
   const envOrigin = process.env.PUBLIC_APP_URL?.replace(/\/$/, "");
   if (envOrigin) return envOrigin;
-  // Replit deployments expose the public host via REPLIT_DOMAINS (comma-
-  // separated). Fall back to the request's own host header in dev/preview.
   const replitDomain = process.env.REPLIT_DOMAINS?.split(",")[0]?.trim();
   if (replitDomain) return `https://${replitDomain}`;
   const host = req.get("host") ?? `localhost:${process.env.PORT ?? "3000"}`;
@@ -93,19 +94,39 @@ function getOrigin(req: Request): string {
   return `${proto}://${host}`;
 }
 
-// ─── Helper: update the linked territory's status ─────────────────────────────
-// Finds the territory row where dealer_id = dealerId and sets its status.
-// Used by the activation and cancellation paths so territory availability
-// stays in sync with the dealer's subscription state.
+// ─── Territory status helpers ──────────────────────────────────────────────────
+
+/**
+ * Returns the WHERE clause used to guard a territory claim. Accepts the
+ * territory only if it is "available", or already "pending" and linked to
+ * this same dealer (idempotent re-attempt from a prior POST /api/dealers call).
+ * Used inside the transaction in POST /api/dealers.
+ */
+function territoryClaimGuard(territoryId: string, dealerId: number) {
+  return and(
+    eq(territoriesTable.id, territoryId),
+    or(
+      eq(territoriesTable.status, "available"),
+      and(
+        eq(territoriesTable.status, "pending"),
+        or(
+          isNull(territoriesTable.dealerId),
+          eq(territoriesTable.dealerId, dealerId),
+        ),
+      ),
+    ),
+  );
+}
+
+/**
+ * Updates the linked territory's status. Used by the activation and
+ * cancellation paths so territory availability stays in sync with
+ * the dealer's subscription state.
+ */
 async function setTerritoryStatusForDealer(
   dealerId: number,
   newStatus: "pending" | "taken" | "available",
 ): Promise<void> {
-  const rows = await db
-    .select({ id: territoriesTable.id })
-    .from(territoriesTable)
-    .where(eq(territoriesTable.dealerId, dealerId));
-  if (rows.length === 0) return; // territory not linked yet — nothing to update
   await db
     .update(territoriesTable)
     .set({
@@ -113,6 +134,24 @@ async function setTerritoryStatusForDealer(
       ...(newStatus === "available" ? { dealerId: null } : {}),
     })
     .where(eq(territoriesTable.dealerId, dealerId));
+}
+
+/**
+ * Releases a "pending" territory back to "available" if the associated dealer
+ * never paid (checkout abandoned / expired / failed). Idempotent — won't touch
+ * territories that are already "taken" (i.e. payment succeeded). Exported for
+ * use in the webhook handler.
+ */
+export async function releaseDealerPendingTerritory(dealerId: number): Promise<void> {
+  await db
+    .update(territoriesTable)
+    .set({ status: "available", dealerId: null })
+    .where(
+      and(
+        eq(territoriesTable.dealerId, dealerId),
+        eq(territoriesTable.status, "pending"),
+      ),
+    );
 }
 
 router.post("/dealers", async (req, res): Promise<void> => {
@@ -132,9 +171,7 @@ router.post("/dealers", async (req, res): Promise<void> => {
 
   const { name, email, phone } = parsed.data;
 
-  // Determine whether this is the new county-based flow or the legacy ZIP flow.
   const isCountyFlow = "territoryId" in parsed.data;
-  // County flow: store a placeholder zip so the NOT NULL column is satisfied.
   const homeZip = isCountyFlow ? "00000" : (parsed.data as any).homeZip as string;
   const territoryId = isCountyFlow ? (parsed.data as any).territoryId as string : null;
   const territoryDisplayName = isCountyFlow
@@ -144,9 +181,6 @@ router.post("/dealers", async (req, res): Promise<void> => {
     ? null
     : (parsed.data as any).territories as z.infer<typeof LegacyTerritorySchema>[];
 
-  // Re-attempted signup with an existing email: if the dealer is still in
-  // pending_payment we recycle the row and create a fresh Checkout Session.
-  // If the dealer is already active or cancelled, refuse politely.
   const [existing] = await db.select().from(dealersTable).where(eq(dealersTable.email, email));
   if (existing && existing.status === "active") {
     res.status(409).json({ error: "A dealer account with this email is already active." });
@@ -160,53 +194,77 @@ router.post("/dealers", async (req, res): Promise<void> => {
     return;
   }
 
+  // Run the dealer upsert + territory claim atomically. If the territory
+  // has already been taken by someone else, the whole transaction rolls back
+  // and we return a 409 instead of partially mutating state.
   let dealerId: number;
   let portalToken: string;
-  if (existing) {
-    dealerId = existing.id;
-    portalToken = existing.portalToken ?? crypto.randomUUID();
-    await db
-      .update(dealersTable)
-      .set({ name, phone: phone ?? null, homeZip, portalToken })
-      .where(eq(dealersTable.id, dealerId));
-    // Replace any stale legacy territory rows from an earlier attempt.
-    await db.delete(dealerTerritoriesTable).where(eq(dealerTerritoriesTable.dealerId, dealerId));
-  } else {
-    const [created] = await db
-      .insert(dealersTable)
-      .values({ name, email, phone: phone ?? null, homeZip, status: "pending_payment" })
-      .returning({ id: dealersTable.id, portalToken: dealersTable.portalToken });
-    dealerId = created.id;
-    portalToken = created.portalToken ?? crypto.randomUUID();
-  }
 
-  // County flow: link the territory row to this dealer and ensure its status
-  // is "pending" so the picker shows it as unavailable immediately. Step 2
-  // of the signup (POST /api/territory-claims) already set territories.status
-  // to "pending" — this call also sets the dealerId FK so we can look it up
-  // later during activation and cancellation.
-  if (territoryId) {
-    await db
-      .update(territoriesTable)
-      .set({ status: "pending", dealerId })
-      .where(eq(territoriesTable.id, territoryId));
-  }
+  try {
+    const result = await db.transaction(async (tx) => {
+      let txDealerId: number;
+      let txPortalToken: string;
 
-  // Legacy ZIP-cluster flow: persist the territory rows so the admin can
-  // review them. County-based flow skips this — the claim is already recorded
-  // in dealer_territory_claims by Step 2 of the signup.
-  if (legacyTerritories) {
-    await db.insert(dealerTerritoriesTable).values(
-      legacyTerritories.map((t) => ({
-        dealerId,
-        territoryIndex: t.territoryIndex,
-        zipCodes: t.zipCodes,
-        centerLat: t.centerLat,
-        centerLng: t.centerLng,
-        cityLabel: t.cityLabel,
-        estimatedHouseholds: t.estimatedHouseholds,
-      })),
-    );
+      if (existing) {
+        txDealerId = existing.id;
+        txPortalToken = existing.portalToken ?? crypto.randomUUID();
+        await tx
+          .update(dealersTable)
+          .set({ name, phone: phone ?? null, homeZip, portalToken: txPortalToken })
+          .where(eq(dealersTable.id, txDealerId));
+        // Replace any stale legacy territory rows from an earlier attempt.
+        await tx
+          .delete(dealerTerritoriesTable)
+          .where(eq(dealerTerritoriesTable.dealerId, txDealerId));
+      } else {
+        const [created] = await tx
+          .insert(dealersTable)
+          .values({ name, email, phone: phone ?? null, homeZip, status: "pending_payment" })
+          .returning({ id: dealersTable.id, portalToken: dealersTable.portalToken });
+        txDealerId = created.id;
+        txPortalToken = created.portalToken ?? crypto.randomUUID();
+      }
+
+      // County flow: atomically link the territory to this dealer, guarded by
+      // a status check so we never overwrite a "taken" territory or one claimed
+      // by a different dealer. Throws inside the transaction so it rolls back.
+      if (territoryId) {
+        const claimed = await tx
+          .update(territoriesTable)
+          .set({ status: "pending", dealerId: txDealerId })
+          .where(territoryClaimGuard(territoryId, txDealerId))
+          .returning({ id: territoriesTable.id });
+        if (claimed.length === 0) {
+          throw Object.assign(new Error("Territory is no longer available."), { status: 409 });
+        }
+      }
+
+      // Legacy ZIP-cluster flow: persist territory rows for admin review.
+      if (legacyTerritories) {
+        await tx.insert(dealerTerritoriesTable).values(
+          legacyTerritories.map((t) => ({
+            dealerId: txDealerId,
+            territoryIndex: t.territoryIndex,
+            zipCodes: t.zipCodes,
+            centerLat: t.centerLat,
+            centerLng: t.centerLng,
+            cityLabel: t.cityLabel,
+            estimatedHouseholds: t.estimatedHouseholds,
+          })),
+        );
+      }
+
+      return { dealerId: txDealerId, portalToken: txPortalToken };
+    });
+
+    dealerId = result.dealerId;
+    portalToken = result.portalToken;
+  } catch (err: any) {
+    if ((err as any).status === 409) {
+      res.status(409).json({ error: err.message });
+      return;
+    }
+    throw err;
   }
 
   const stripe = await getStripeClient();
@@ -214,6 +272,12 @@ router.post("/dealers", async (req, res): Promise<void> => {
   const subscriptionProductName = territoryDisplayName
     ? `My Town Postcard — Dealer Subscription (${territoryDisplayName})`
     : "My Town Postcard — Dealer Subscription";
+
+  // success_url goes directly to the dealer's self-service portal, keyed by
+  // their opaque portalToken. Activation is handled by the webhook
+  // (checkout.session.completed, kind=dealer) and idempotently by the
+  // /dealers/confirm endpoint (reachable via the portal's own "complete
+  // activation" flow if the webhook hasn't fired yet).
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     customer_email: email,
@@ -240,7 +304,7 @@ router.post("/dealers", async (req, res): Promise<void> => {
     subscription_data: {
       metadata: { kind: "dealer", dealerId: String(dealerId) },
     },
-    success_url: `${origin}/dealers/confirmation?session_id={CHECKOUT_SESSION_ID}`,
+    success_url: `${origin}/my-territory?token=${portalToken}`,
     cancel_url: `${origin}/dealers/signup?cancelled=1`,
   });
 
@@ -292,12 +356,6 @@ router.get("/dealers/confirm", async (req, res): Promise<void> => {
     return;
   }
 
-  // Activate the dealer if Stripe says payment cleared. Both `paid` and
-  // `no_payment_required` are accepted (the latter happens for trials,
-  // which we don't currently use but is safe to allow). Idempotent — a
-  // second confirm call is a no-op. We *only* promote from pending_payment
-  // so a stale/replayed Checkout session can never resurrect a previously
-  // cancelled dealer (reinstatement requires an explicit admin action).
   const isPaid = session.payment_status === "paid" || session.payment_status === "no_payment_required";
   if (isPaid && dealer.status === "pending_payment") {
     await db
@@ -313,11 +371,8 @@ router.get("/dealers/confirm", async (req, res): Promise<void> => {
         activatedAt: new Date(),
       })
       .where(eq(dealersTable.id, dealerId));
-    // Mark the territory as "taken" now that payment has cleared.
     await setTerritoryStatusForDealer(dealerId, "taken");
     req.log.info({ dealerId, sessionId }, "Dealer activated via /confirm");
-    // Auto-create the dealer's published landing page (idempotent). Don't let a
-    // hiccup here fail the confirm response — the webhook also calls this.
     try {
       await ensureDealerLandingPage(dealerId);
     } catch (err: any) {
@@ -325,15 +380,9 @@ router.get("/dealers/confirm", async (req, res): Promise<void> => {
     }
   }
 
-  // Build the portal URL so the frontend can redirect the dealer straight to
-  // their self-service page without another round-trip.
   const origin = getOrigin(req);
-  const freshDealer = isPaid && dealer.status === "pending_payment"
-    ? { ...dealer, status: "active" as const }
-    : dealer;
-  const portalUrl = freshDealer.portalToken
-    ? `${origin}/my-territory?token=${freshDealer.portalToken}`
-    : null;
+  const portalToken = dealer.portalToken;
+  const portalUrl = portalToken ? `${origin}/my-territory?token=${portalToken}` : null;
 
   const territories = await db
     .select()
@@ -346,7 +395,7 @@ router.get("/dealers/confirm", async (req, res): Promise<void> => {
     email: dealer.email,
     status: isPaid ? "active" : dealer.status,
     paymentStatus: session.payment_status,
-    portalToken: dealer.portalToken,
+    portalToken,
     portalUrl,
     territories: territories.map((t) => ({
       territoryIndex: t.territoryIndex,
@@ -359,12 +408,18 @@ router.get("/dealers/confirm", async (req, res): Promise<void> => {
 
 // ─── Dealer self-service portal ────────────────────────────────────────────────
 // Public endpoint — authenticated by the opaque portalToken UUID, not a login.
-// Returns the dealer's name, territory, and campaign sell-through summary so
-// they can track progress without giving them access to admin endpoints.
+// Returns the dealer's name, territory, and campaign sell-through summary.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 router.get("/dealer-portal", async (req, res): Promise<void> => {
   const token = typeof req.query.token === "string" ? req.query.token.trim() : null;
   if (!token) {
     res.status(400).json({ error: "Missing token" });
+    return;
+  }
+  // Guard against non-UUID strings that would cause a PostgreSQL type error.
+  if (!UUID_RE.test(token)) {
+    res.status(404).json({ error: "Invalid or expired portal link." });
     return;
   }
 
@@ -377,14 +432,11 @@ router.get("/dealer-portal", async (req, res): Promise<void> => {
     return;
   }
 
-  // Look up the territory linked to this dealer.
   const [territory] = await db
     .select()
     .from(territoriesTable)
     .where(eq(territoriesTable.dealerId, dealer.id));
 
-  // Look up the dealer's landing-page campaign (prefer stored ref, fall back
-  // to dealer_id FK on the campaign).
   let campaign;
   if (dealer.landingPageCampaignId) {
     [campaign] = await db
@@ -402,7 +454,6 @@ router.get("/dealer-portal", async (req, res): Promise<void> => {
 
   const origin = getOrigin(req);
   let campaignSummary = null;
-  let pageUrl: string | null = null;
 
   if (campaign) {
     const spots = await db
@@ -413,11 +464,10 @@ router.get("/dealer-portal", async (req, res): Promise<void> => {
     const sold = spots.filter((s) => s.status === "paid");
     const revenueCents = sold.reduce((sum, s) => sum + (s.price || 0), 0);
 
-    pageUrl = campaign.slug ? `${origin}/${campaign.slug}` : null;
     campaignSummary = {
       campaignId: campaign.id,
       campaignName: campaign.name,
-      pageUrl,
+      pageUrl: campaign.slug ? `${origin}/${campaign.slug}` : null,
       isPublished: campaign.isPublished,
       totalSpots: spots.length,
       soldSpots: sold.length,
@@ -444,10 +494,8 @@ router.get("/dealer-portal", async (req, res): Promise<void> => {
   });
 });
 
-// Dealer portal data (Task #134). Admin-only summary of a dealer's auto-created
-// landing page: its public URL plus live sell-through and per-spot revenue.
-// Requires the admin bearer token — it exposes campaign sales metrics, so it
-// must not be reachable by enumerating dealer ids.
+// Dealer portal data (admin-only). Summary of a dealer's auto-created landing
+// page: public URL + live sell-through + per-spot revenue.
 router.get("/dealers/:id/landing-page", requireAdmin, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
   if (!Number.isFinite(id)) {
@@ -461,8 +509,6 @@ router.get("/dealers/:id/landing-page", requireAdmin, async (req, res): Promise<
     return;
   }
 
-  // Locate the dealer's landing-page campaign (prefer the back-reference, fall
-  // back to dealerId). If none yet, the page hasn't been auto-created.
   let campaign;
   if (dealer.landingPageCampaignId) {
     [campaign] = await db
@@ -624,13 +670,13 @@ export async function activateDealerFromCheckoutSession(session: any): Promise<n
   const [dealer] = await db.select().from(dealersTable).where(eq(dealersTable.id, dealerId));
   if (!dealer) return null;
   if (dealer.status === "active") {
-    // Already active — still ensure territory is "taken" in case the confirm
+    // Already active — ensure territory is "taken" in case the confirm
     // endpoint ran before the territory FK was set (idempotent).
     await setTerritoryStatusForDealer(dealerId, "taken");
     return dealerId;
   }
   // Only activate from pending_payment — a replayed webhook on a previously
-  // cancelled dealer should NOT resurrect them. Reinstatement is admin-only.
+  // cancelled dealer should NOT resurrect them.
   if (dealer.status !== "pending_payment") return null;
 
   await db
@@ -647,11 +693,8 @@ export async function activateDealerFromCheckoutSession(session: any): Promise<n
     })
     .where(eq(dealersTable.id, dealerId));
 
-  // Flip the territory from "pending" → "taken" so the picker shows it as
-  // permanently unavailable now that payment has cleared.
   await setTerritoryStatusForDealer(dealerId, "taken");
 
-  // Auto-create the dealer's published landing page (idempotent).
   try {
     await ensureDealerLandingPage(dealerId);
   } catch (err: any) {
@@ -674,7 +717,7 @@ export async function cancelDealerFromSubscription(subscription: any): Promise<n
     .set({ status: "cancelled", cancelledAt: new Date() })
     .where(eq(dealersTable.id, dealer.id));
 
-  // Release the territory back to "available" so other dealers can claim it.
+  // Release the territory back to "available" so another dealer can claim it.
   await setTerritoryStatusForDealer(dealer.id, "available");
 
   return dealer.id;

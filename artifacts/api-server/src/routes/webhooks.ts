@@ -9,6 +9,7 @@ import { getStripeClient } from "../lib/stripeClient";
 import {
   activateDealerFromCheckoutSession,
   cancelDealerFromSubscription,
+  releaseDealerPendingTerritory,
 } from "./dealers";
 import {
   recordWebhookEvent,
@@ -197,12 +198,24 @@ export async function stripeWebhookHandler(
       }
       case "checkout.session.expired": {
         // Customer abandoned a Stripe Checkout Session before paying.
-        // Free the spot immediately so other shoppers don't have to wait
-        // for the 5-minute periodic sweeper. (The current PaymentIntent
-        // flow doesn't emit this event; this arm is here to support a
-        // future Stripe Checkout Sessions migration without dropping holds
-        // on the floor.)
-        await handleCheckoutSessionExpired(event.data.object, req);
+        // Route by metadata.kind:
+        //   - kind=dealer: release the "pending" territory back to "available".
+        //   - everything else: free the reserved ad spot so other shoppers
+        //     don't have to wait for the 5-minute periodic sweeper.
+        const expiredMeta = (event.data.object?.metadata ?? {}) as Record<string, string>;
+        if (expiredMeta.kind === "dealer") {
+          const dealerIdStr = expiredMeta.dealerId;
+          const expiredDealerId = dealerIdStr ? parseInt(String(dealerIdStr), 10) : null;
+          if (expiredDealerId && Number.isFinite(expiredDealerId)) {
+            await releaseDealerPendingTerritory(expiredDealerId);
+            req.log.info(
+              { dealerId: expiredDealerId, sessionId: event.data.object?.id },
+              "Released pending dealer territory after checkout.session.expired",
+            );
+          }
+        } else {
+          await handleCheckoutSessionExpired(event.data.object, req);
+        }
         break;
       }
       default:

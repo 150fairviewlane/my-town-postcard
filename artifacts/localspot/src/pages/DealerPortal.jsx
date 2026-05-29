@@ -1,8 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Link } from "wouter";
 
 const RED = "#7B1418";
 const GOLD = "#d4a017";
+
+// How long to keep polling when the dealer is still pending_payment.
+// The Stripe webhook usually fires within a few seconds of redirect.
+const POLL_INTERVAL_MS = 3000;
+const MAX_POLLS = 10;
 
 function StatCard({ label, value, sub, color = "#111" }) {
   return (
@@ -44,23 +49,42 @@ function SellThroughBar({ sold, total }) {
 
 export default function DealerPortal() {
   const [state, setState] = useState({ status: "loading", data: null, error: null });
+  const [pollCount, setPollCount] = useState(0);
 
-  useEffect(() => {
-    const token = new URLSearchParams(window.location.search).get("token");
+  const token = new URLSearchParams(window.location.search).get("token");
+
+  const fetchPortal = useCallback(async () => {
     if (!token) {
       setState({ status: "error", data: null,
         error: "No portal token found in the URL. Please use the link from your welcome email." });
       return;
     }
     const baseUrl = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
-    fetch(`${baseUrl}/api/dealer-portal?token=${encodeURIComponent(token)}`)
-      .then(async (res) => {
-        const body = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(body.error || `Server returned ${res.status}`);
-        setState({ status: "ok", data: body, error: null });
-      })
-      .catch((err) => setState({ status: "error", data: null, error: err.message }));
-  }, []);
+    try {
+      const res = await fetch(`${baseUrl}/api/dealer-portal?token=${encodeURIComponent(token)}`);
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || `Server returned ${res.status}`);
+      setState({ status: "ok", data: body, error: null });
+    } catch (err) {
+      setState({ status: "error", data: null, error: err.message });
+    }
+  }, [token]);
+
+  // Initial load
+  useEffect(() => { fetchPortal(); }, [fetchPortal]);
+
+  // Poll while pending_payment — the webhook usually fires within seconds.
+  useEffect(() => {
+    if (state.status !== "ok") return;
+    if (state.data?.status !== "pending_payment") return;
+    if (pollCount >= MAX_POLLS) return;
+
+    const timer = setTimeout(() => {
+      setPollCount((c) => c + 1);
+      fetchPortal();
+    }, POLL_INTERVAL_MS);
+    return () => clearTimeout(timer);
+  }, [state, pollCount, fetchPortal]);
 
   return (
     <div style={{ background: "#f9fafb", minHeight: "100vh",
@@ -114,6 +138,46 @@ export default function DealerPortal() {
           const firstName = name?.split(" ")[0] || "there";
           const money = (cents) =>
             `$${((cents || 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 0 })}`;
+
+          // Payment received but webhook hasn't fired yet — show an activating
+          // banner and keep polling until status flips to "active".
+          if (status === "pending_payment") {
+            return (
+              <div style={{ background: "#fff", borderRadius: 14, padding: 40,
+                boxShadow: "0 2px 12px rgba(0,0,0,0.05)", textAlign: "center" }}>
+                <div style={{ fontSize: 48, marginBottom: 12 }}>
+                  {pollCount >= MAX_POLLS ? "🎉" : "⏳"}
+                </div>
+                <h1 style={{ fontSize: 24, fontWeight: 900, color: "#111",
+                  fontFamily: "Georgia,serif", marginBottom: 8 }}>
+                  Payment received — activating your account…
+                </h1>
+                <p style={{ fontSize: 14, color: "#666", lineHeight: 1.6, marginBottom: 20 }}>
+                  This usually takes just a few seconds. Hang tight, {firstName}!
+                </p>
+                {pollCount < MAX_POLLS ? (
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 8,
+                    fontSize: 13, color: "#9ca3af", fontWeight: 600 }}>
+                    <div style={{
+                      width: 16, height: 16, border: "2px solid #e5e7eb",
+                      borderTopColor: RED, borderRadius: "50%",
+                      animation: "lsspin 0.8s linear infinite",
+                    }} />
+                    Checking activation status…
+                    <style>{`@keyframes lsspin { to { transform: rotate(360deg); } }`}</style>
+                  </div>
+                ) : (
+                  <p style={{ fontSize: 13, color: "#666" }}>
+                    If this persists, contact{" "}
+                    <a href="mailto:info@mytownpostcard.com" style={{ color: RED }}>
+                      info@mytownpostcard.com
+                    </a>{" "}
+                    and we'll activate your account manually.
+                  </p>
+                )}
+              </div>
+            );
+          }
 
           return (
             <>
