@@ -9,6 +9,8 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
 <!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<!-- Turf.js — used to union multi-county territory polygons into one shape -->
+<script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 
@@ -405,7 +407,9 @@ const COUNTY_CENTROIDS = {
 // ══════════════════════════════════════════════════════════════
 // MAP SETUP
 // ══════════════════════════════════════════════════════════════
-let map, geojsonLayer, userMarker, selectedTerritoryId = null;
+let map, userMarker, selectedTerritoryId = null;
+// territoryLayers: Map<territoryId, {layer: L.GeoJSON, territory: object}>
+const territoryLayers = new Map();
 
 async function initMap(){
   // Load territories from API first so the GeoJSON layer can color them
@@ -439,54 +443,68 @@ async function loadCountyGeoJSON(){
 }
 
 function renderCountyLayer(geojson){
-  // Build county name → territory lookup
-  const countyToTerritory = {};
-  TERRITORIES.forEach(t => {
-    t.counties.forEach(c => {
-      const key = c.toLowerCase();
-      if(!countyToTerritory[key]) countyToTerritory[key] = [];
-      countyToTerritory[key].push(t);
-    });
+  // Build county name (lower) → GeoJSON feature lookup
+  const countyFeatureMap = {};
+  geojson.features.forEach(f => {
+    countyFeatureMap[f.properties.NAME.toLowerCase()] = f;
   });
 
-  geojsonLayer = L.geoJSON(geojson, {
-    style: feature => {
-      const countyName = feature.properties.NAME;
-      const territories = countyToTerritory[countyName.toLowerCase()] || [];
-      const status = territories.length ? territories[0].status : 'unassigned';
-      return getCountyStyle(status, false);
-    },
-    onEachFeature: (feature, layer) => {
-      const countyName = feature.properties.NAME;
-      const territories = (countyToTerritory[countyName.toLowerCase()] || []);
+  // Track which county names are claimed by at least one territory
+  const assignedCounties = new Set();
 
-      layer.on({
-        mouseover: e => {
-          const l = e.target;
-          l.setStyle({ weight:2.5, fillOpacity:0.85 });
-          l.bringToFront();
-        },
-        mouseout: e => {
-          geojsonLayer.resetStyle(e.target);
-        },
-        click: () => {
-          if(territories.length === 1){
-            selectTerritoryOnMap(territories[0]);
-          } else if(territories.length > 1){
-            showNearbyTerritories(territories, `${countyName} County — Multiple Territories`);
-          }
-        }
-      });
+  // Render each territory as a merged polygon (union of all its counties)
+  TERRITORIES.forEach(t => {
+    const features = t.counties
+      .map(c => countyFeatureMap[c.toLowerCase()])
+      .filter(Boolean);
 
-      if(territories.length){
-        layer.bindTooltip(
-          `<div style="font-weight:700">${countyName} County</div>
-           <div style="font-size:11px;color:#666">${territories.map(t=>t.name).join('<br>')}</div>`,
-          {sticky:true, opacity:0.92}
-        );
-      }
+    if(!features.length) return;
+
+    features.forEach(f => assignedCounties.add(f.properties.NAME.toLowerCase()));
+
+    // Union multi-county territories into one shape
+    let merged = features[0];
+    for(let i = 1; i < features.length; i++){
+      try { merged = turf.union(merged, features[i]); } catch(e) {/* keep last good merged */}
     }
-  }).addTo(map);
+
+    const layer = L.geoJSON(merged, {
+      style: getCountyStyle(t.status, false),
+    }).addTo(map);
+
+    layer.on('mouseover', () => {
+      if(selectedTerritoryId !== t.id){
+        layer.setStyle({ weight:2.5, fillOpacity:0.85 });
+        layer.bringToFront();
+      }
+    });
+    layer.on('mouseout', () => {
+      if(selectedTerritoryId !== t.id){
+        layer.setStyle(getCountyStyle(t.status, false));
+      }
+    });
+    layer.on('click', () => selectTerritoryOnMap(t));
+
+    const countyLabel = t.counties.join(' · ') + (t.counties.length===1?' County':' Counties');
+    layer.bindTooltip(
+      `<div style="font-weight:700">${t.name}</div>
+       <div style="font-size:11px;color:#666">${countyLabel}</div>`,
+      {sticky:true, opacity:0.92}
+    );
+
+    territoryLayers.set(t.id, { layer, territory: t });
+  });
+
+  // Render unassigned counties as non-interactive grey polygons
+  const unassignedFeatures = geojson.features.filter(
+    f => !assignedCounties.has(f.properties.NAME.toLowerCase())
+  );
+  if(unassignedFeatures.length){
+    L.geoJSON(
+      { type:'FeatureCollection', features: unassignedFeatures },
+      { style: getCountyStyle('unassigned', false), interactive: false }
+    ).addTo(map);
+  }
 }
 
 function getCountyStyle(status, highlighted){
@@ -646,6 +664,16 @@ function selectTerritoryCard(id){
 function selectTerritoryOnMap(t){
   selectedTerritoryId = t.id;
 
+  // Reset all territory layers to their status style, then highlight the selected one
+  territoryLayers.forEach(({ layer, territory }) => {
+    layer.setStyle(getCountyStyle(territory.status, false));
+  });
+  const entry = territoryLayers.get(t.id);
+  if(entry){
+    entry.layer.setStyle(getCountyStyle('selected', false));
+    entry.layer.bringToFront();
+  }
+
   const detail = document.getElementById('selectedDetail');
   detail.classList.add('visible');
   document.getElementById('sdName').textContent = t.name;
@@ -656,7 +684,7 @@ function selectTerritoryOnMap(t){
   statusEl.style.color = t.status==='available'?'#86efac':t.status==='taken'?'#fca5a5':'#fde68a';
   document.getElementById('claimBtn').style.display = t.status==='available'?'flex':'none';
 
-  if(t.lat && t.lng) map.setView([t.lat, t.lng], 10, {animate:true});
+  if(t.lat && t.lng) map.setView([t.lat, t.lng], 9, {animate:true});
 
   document.querySelectorAll('.tcard').forEach(c=>{
     c.classList.remove('selected');
