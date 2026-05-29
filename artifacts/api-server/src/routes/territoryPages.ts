@@ -13,34 +13,44 @@ const _dirname: string =
   (globalThis as any).__dirname ??
   path.dirname(fileURLToPath(import.meta.url));
 
-function resolveHtmlPath(): string {
-  const prodPath = path.resolve(_dirname, "public", "territory-manager.html");
+function resolveHtml(filename: string): string {
+  const prodPath = path.resolve(_dirname, "public", filename);
   if (fs.existsSync(prodPath)) return prodPath;
-  const devPath = path.resolve(_dirname, "..", "public", "territory-manager.html");
+  const devPath = path.resolve(_dirname, "..", "public", filename);
   if (fs.existsSync(devPath)) return devPath;
-  throw new Error("territory-manager.html not found");
+  throw new Error(`${filename} not found (checked dist/public/ and src/public/)`);
 }
 
-const HTML_FILE_PATH = resolveHtmlPath();
+const MANAGER_HTML  = resolveHtml("territory-manager.html");
+const FINDER_HTML   = resolveHtml("territory-finder.html");
 
 function verifyQueryToken(token: string): boolean {
   try { jwt.verify(token, JWT_SECRET); return true; } catch { return false; }
 }
 
 // GET /admin/territories — admin JWT required via ?token= query param
-// The admin dashboard passes the token so the browser GET can be authenticated.
 router.get("/admin/territories", (req, res): void => {
   const token = typeof req.query.token === "string" ? req.query.token : null;
   if (!token || !verifyQueryToken(token)) {
     res.redirect("/admin");
     return;
   }
-  res.sendFile(HTML_FILE_PATH);
+  res.sendFile(MANAGER_HTML);
 });
 
-// GET /dealer/claim-territory — public dealer signup page
+// GET /dealer/claim-territory — legacy public dealer signup page
 router.get("/dealer/claim-territory", (_req, res): void => {
-  res.sendFile(HTML_FILE_PATH);
+  res.sendFile(MANAGER_HTML);
+});
+
+// GET /find-territory — public interactive territory finder map
+router.get("/find-territory", (_req, res): void => {
+  res.sendFile(FINDER_HTML);
+});
+
+// GET /dealer/find-territory — same page, alternate entry point
+router.get("/dealer/find-territory", (_req, res): void => {
+  res.sendFile(FINDER_HTML);
 });
 
 export default router;

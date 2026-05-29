@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, json, doublePrecision } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { dealersTable } from "./dealers";
@@ -20,6 +20,9 @@ export const territoriesTable = pgTable("territories", {
     .default("available"),
   // Key cities / communities within the territory (display hint for dealers)
   zoneNote: text("zone_note"),
+  // Geographic centroid of the territory (averaged from constituent county centroids)
+  centroidLat: doublePrecision("centroid_lat"),
+  centroidLng: doublePrecision("centroid_lng"),
   // Linked dealer (set when territory is claimed + activated)
   dealerId: integer("dealer_id").references(() => dealersTable.id, {
     onDelete: "set null",

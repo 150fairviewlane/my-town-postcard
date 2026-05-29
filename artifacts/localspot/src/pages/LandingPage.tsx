@@ -88,7 +88,7 @@ function NavBar() {
                     {l.label}
                   </button>
                 ))}
-                <a href={`${(import.meta.env.BASE_URL || "/").replace(/\/$/, "")}/dealers`}
+                <a href="/find-territory"
                   onClick={() => setMenuOpen(false)}
                   style={{
                     marginTop: 4, background: "#fff", color: RED,
@@ -120,7 +120,7 @@ function NavBar() {
               {l.label}
             </button>
           ))}
-          <a href={`${(import.meta.env.BASE_URL || "/").replace(/\/$/, "")}/dealers`}
+          <a href="/find-territory"
             style={{ fontSize: 14, fontWeight: 700, color: RED,
               fontFamily: "sans-serif", textDecoration: "none",
               padding: "9px 14px", borderRadius: 8, border: `1.5px solid ${RED}` }}>

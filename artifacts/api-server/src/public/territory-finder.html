@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Town Postcard — Find Your Territory</title>
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --burg:#7C1C2E;--burg-dark:#5a1220;--burg-pale:#f9eaed;
+  --ink:#0f1117;--ink-mid:#374151;--ink-light:#6B7280;
+  --surface:#F4F1ED;--card:#fff;--border:#E2DDD6;
+  --green:#1a5c3a;--gold:#C8952A;
+  --avail:#16a34a;--taken:#dc2626;--pending:#d97706;--selected:#2563eb;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh;color:var(--ink)}
+
+/* HEADER */
+.hdr{background:var(--ink);padding:0 28px;height:54px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--burg);position:sticky;top:0;z-index:1000}
+.brand{font-family:'Bebas Neue',sans-serif;font-size:21px;color:#fff;letter-spacing:.08em}
+.brand span{color:#C8A882}
+.hdr-tag{background:var(--burg);color:#fff;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:4px 12px;border-radius:20px}
+
+/* LAYOUT */
+.layout{display:grid;grid-template-columns:380px 1fr;height:calc(100vh - 54px)}
+
+/* SIDEBAR */
+.sidebar{background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;z-index:10}
+
+.sidebar-hdr{padding:20px 20px 16px;border-bottom:1px solid var(--border);background:#FAFAF8}
+.sidebar-title{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.06em;color:var(--ink);margin-bottom:4px}
+.sidebar-sub{font-family:'Crimson Pro',serif;font-style:italic;font-size:14px;color:var(--ink-light)}
+
+/* SEARCH PANEL */
+.search-panel{padding:16px 20px;border-bottom:1px solid var(--border)}
+.search-label{font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--burg);margin-bottom:8px;display:block}
+
+.search-row{display:flex;gap:8px;margin-bottom:10px}
+.search-input{
+  flex:1;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;
+  font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);
+  background:var(--surface);outline:none;transition:border-color .2s;
+}
+.search-input:focus{border-color:var(--burg);background:#fff}
+.search-btn{
+  padding:9px 16px;background:var(--burg);color:#fff;border:none;border-radius:8px;
+  font-size:13px;font-weight:600;cursor:pointer;transition:background .2s;white-space:nowrap;
+}
+.search-btn:hover{background:var(--burg-dark)}
+
+.divider-txt{
+  display:flex;align-items:center;gap:8px;
+  font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-light);margin-bottom:10px;
+}
+.divider-txt::before,.divider-txt::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* County dropdown */
+.county-select{
+  width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;
+  font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);
+  background:var(--surface);outline:none;cursor:pointer;
+}
+.county-select:focus{border-color:var(--burg);background:#fff}
+
+/* RESULTS PANEL */
+.results-panel{flex:1;overflow-y:auto;padding:12px}
+.results-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:10px;
+}
+.results-title{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-mid)}
+.results-count{font-size:11px;color:var(--ink-light)}
+
+.no-results{
+  text-align:center;padding:32px 16px;
+  font-family:'Crimson Pro',serif;font-style:italic;
+  font-size:15px;color:var(--ink-light);line-height:1.6;
+}
+
+/* TERRITORY CARDS */
+.tcard{
+  padding:12px 14px;border-radius:9px;border:2px solid var(--border);
+  background:var(--surface);cursor:pointer;transition:all .2s;margin-bottom:8px;
+}
+.tcard:hover{border-color:#aaa;background:#f0ece6;transform:translateX(2px)}
+.tcard.selected{border-color:var(--selected);background:#eff6ff;box-shadow:0 0 0 1px var(--selected)}
+.tcard.taken{opacity:.55;cursor:not-allowed;background:#fafafa}
+.tcard.taken:hover{transform:none;border-color:var(--border)}
+
+.tcard-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:5px}
+.tcard-name{font-size:13px;font-weight:700;color:var(--ink);line-height:1.25}
+.tcard-badge{
+  font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  padding:3px 8px;border-radius:10px;flex-shrink:0;
+}
+.badge-available{background:#dcfce7;color:var(--avail)}
+.badge-taken{background:#fee2e2;color:var(--taken)}
+.badge-pending{background:#fef9c3;color:var(--pending)}
+
+.tcard-counties{font-size:11px;color:var(--ink-light);margin-bottom:4px;line-height:1.4}
+.tcard-meta{display:flex;gap:12px}
+.tcard-stat{font-size:11px;color:var(--ink-mid)}
+.tcard-stat strong{color:var(--ink);font-weight:700}
+
+/* SELECTED TERRITORY DETAIL */
+.selected-detail{
+  background:var(--ink);color:#fff;border-radius:10px;
+  padding:16px;margin-bottom:10px;display:none;
+}
+.selected-detail.visible{display:block}
+.sd-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.06em;color:#C8A882;margin-bottom:6px}
+.sd-counties{font-size:11px;color:rgba(255,255,255,.55);margin-bottom:12px;line-height:1.5}
+.sd-rows{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.sd-row{display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+.sd-row:last-child{border-bottom:none}
+.sd-label{color:rgba(255,255,255,.5)}
+.sd-val{color:#fff;font-weight:600}
+.claim-btn{
+  width:100%;padding:11px;background:var(--burg);color:#fff;border:none;border-radius:8px;
+  font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.1em;cursor:pointer;
+  transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.claim-btn:hover{background:var(--burg-dark);transform:translateY(-1px)}
+
+/* LEGEND */
+.legend{
+  padding:10px 20px;border-top:1px solid var(--border);background:#FAFAF8;
+  display:flex;gap:16px;flex-wrap:wrap;
+}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-mid);font-weight:500}
+.legend-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+
+/* MAP */
+.map-wrap{position:relative}
+#map{width:100%;height:100%}
+
+/* Map overlay tip */
+.map-tip{
+  position:absolute;top:12px;left:50%;transform:translateX(-50%);
+  background:rgba(15,17,23,.8);color:#fff;backdrop-filter:blur(6px);
+  padding:8px 16px;border-radius:20px;font-size:12px;font-weight:500;
+  pointer-events:none;z-index:500;white-space:nowrap;
+  transition:opacity .3s;
+}
+.map-tip.hidden{opacity:0}
+
+/* Leaflet popup customization */
+.leaflet-popup-content-wrapper{border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.2)}
+.leaflet-popup-content{margin:12px 16px;font-family:'DM Sans',sans-serif}
+.popup-name{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:4px}
+.popup-counties{font-size:11px;color:var(--ink-light);margin-bottom:6px}
+.popup-hh{font-size:11px;color:var(--ink-mid);margin-bottom:8px}
+.popup-btn{
+  width:100%;padding:8px;background:var(--burg);color:#fff;border:none;border-radius:6px;
+  font-size:12px;font-weight:600;cursor:pointer;transition:background .2s;
+}
+.popup-btn:hover{background:var(--burg-dark)}
+.popup-taken{color:var(--taken);font-size:11px;font-weight:600;text-align:center;padding:4px 0}
+
+/* TOAST */
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:var(--ink);color:#fff;padding:10px 22px;border-radius:30px;
+  font-size:13px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,.3);
+  transition:transform .3s cubic-bezier(.34,1.56,.64,1);z-index:2000;pointer-events:none;
+}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* CLAIM MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1500;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-bg.visible{display:flex}
+.modal{background:var(--card);border-radius:14px;padding:28px;max-width:440px;width:90%;box-shadow:0 24px 80px rgba(0,0,0,.3)}
+.modal-title{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:.06em;color:var(--ink);margin-bottom:4px}
+.modal-sub{font-size:13px;color:var(--ink-light);margin-bottom:20px;font-family:'Crimson Pro',serif;font-style:italic}
+.modal-territory{background:var(--burg-pale);border:1px solid var(--burg);border-radius:8px;padding:10px 14px;margin-bottom:18px}
+.modal-territory-name{font-size:14px;font-weight:700;color:var(--burg);margin-bottom:2px}
+.modal-territory-counties{font-size:11px;color:var(--ink-mid)}
+.mfield{margin-bottom:12px}
+.mfield label{display:block;font-size:11px;font-weight:600;color:var(--ink-mid);margin-bottom:3px;letter-spacing:.06em;text-transform:uppercase}
+.mfield input{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:7px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);background:var(--surface);outline:none;transition:border-color .2s}
+.mfield input:focus{border-color:var(--burg);background:#fff}
+.modal-actions{display:flex;gap:10px;margin-top:20px}
+.modal-submit{flex:1;padding:11px;background:var(--burg);color:#fff;border:none;border-radius:8px;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.1em;cursor:pointer;transition:background .2s}
+.modal-submit:hover{background:var(--burg-dark)}
+.modal-submit:disabled{opacity:.6;cursor:not-allowed}
+.modal-cancel{padding:11px 18px;background:var(--surface);color:var(--ink-mid);border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.modal-cancel:hover{border-color:var(--burg);color:var(--burg)}
+
+@media(max-width:768px){
+  .layout{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+  .sidebar{max-height:55vh}
+  .map-wrap{min-height:45vh}
+}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="brand">My Town <span>Postcard</span></div>
+  <div class="hdr-tag">✦ Find Your Territory</div>
+</header>
+
+<div class="toast" id="toast"></div>
+
+<!-- CLAIM MODAL -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <div class="modal-title">Claim Your Territory</div>
+    <div class="modal-sub">You're one step away from exclusive dealer rights in your area</div>
+    <div class="modal-territory">
+      <div class="modal-territory-name" id="modalTerritoryName"></div>
+      <div class="modal-territory-counties" id="modalTerritoryCounties"></div>
+    </div>
+    <div class="mfield"><label>Full Name *</label><input type="text" id="claimName" placeholder="Jane Smith"></div>
+    <div class="mfield"><label>Email *</label><input type="email" id="claimEmail" placeholder="jane@example.com"></div>
+    <div class="mfield"><label>Phone *</label><input type="tel" id="claimPhone" placeholder="(706) 555-0100"></div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-submit" id="modalSubmitBtn" onclick="submitClaim()">✦ Claim It — $99/mo</button>
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- ══ SIDEBAR ══ -->
+  <div class="sidebar">
+    <div class="sidebar-hdr">
+      <div class="sidebar-title">Find Your Territory</div>
+      <div class="sidebar-sub">Enter your zip code or county to see available territories near you</div>
+    </div>
+
+    <div class="search-panel">
+      <span class="search-label">Search by Zip Code</span>
+      <div class="search-row">
+        <input type="text" class="search-input" id="zipInput"
+          placeholder="e.g. 30523"
+          maxlength="5"
+          onkeypress="if(event.key==='Enter') searchByZip()">
+        <button class="search-btn" onclick="searchByZip()">Find</button>
+      </div>
+
+      <div class="divider-txt">or browse by county</div>
+
+      <select class="county-select" id="countySelect" onchange="searchByCounty()">
+        <option value="">— Select a Georgia County —</option>
+        <!-- Populated by JS -->
+      </select>
+    </div>
+
+    <!-- Selected territory detail -->
+    <div class="results-panel">
+      <div class="selected-detail" id="selectedDetail">
+        <div class="sd-title" id="sdName"></div>
+        <div class="sd-counties" id="sdCounties"></div>
+        <div class="sd-rows">
+          <div class="sd-row"><span class="sd-label">Estimated Households</span><span class="sd-val" id="sdHH"></span></div>
+          <div class="sd-row"><span class="sd-label">Mailing Zones</span><span class="sd-val">4 distinct zones</span></div>
+          <div class="sd-row"><span class="sd-label">Status</span><span class="sd-val" id="sdStatus"></span></div>
+          <div class="sd-row"><span class="sd-label">Monthly Fee</span><span class="sd-val">$99 / month</span></div>
+        </div>
+        <button class="claim-btn" id="claimBtn" onclick="openModal()">✦ Claim This Territory</button>
+      </div>
+
+      <div class="results-hdr" id="resultsHdr" style="display:none">
+        <div class="results-title">Nearby Territories</div>
+        <div class="results-count" id="resultsCount"></div>
+      </div>
+
+      <div id="territoryList">
+        <div class="no-results">Enter your zip code above or select a county to find available territories near you.</div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#86efac;border:1px solid #16a34a"></div>Available</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#fca5a5;border:1px solid #dc2626"></div>Taken</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#fde68a;border:1px solid #d97706"></div>Pending</div>
+    </div>
+  </div>
+
+  <!-- ══ MAP ══ -->
+  <div class="map-wrap">
+    <div id="map"></div>
+    <div class="map-tip" id="mapTip">Enter your zip code or select a county to find territories</div>
+  </div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// TERRITORY DATA — loaded from API on init
+// ══════════════════════════════════════════════════════════════
+let TERRITORIES = [];
+
+async function loadTerritories() {
+  const res = await fetch('/api/territories?state=GA');
+  if (!res.ok) throw new Error('Failed to load territories');
+  const rows = await res.json();
+  TERRITORIES = rows
+    .filter(t => t.centroidLat != null && t.centroidLng != null)
+    .map(t => ({
+      id:         t.id,
+      name:       t.name,
+      counties:   Array.isArray(t.counties) ? t.counties : [],
+      households: t.households,
+      status:     t.status,
+      zoneNote:   t.zoneNote || '',
+      lat:        t.centroidLat,
+      lng:        t.centroidLng,
+    }));
+}
+
+// All Georgia counties for dropdown (alphabetical)
+const GA_COUNTIES = [
+  'Appling','Atkinson','Bacon','Baker','Baldwin','Banks','Barrow','Bartow',
+  'Ben Hill','Berrien','Bibb','Bleckley','Brantley','Brooks','Bryan','Bulloch',
+  'Burke','Butts','Calhoun','Camden','Candler','Carroll','Catoosa','Charlton',
+  'Chatham','Chattahoochee','Cherokee','Clarke','Clay','Clayton','Clinch',
+  'Cobb','Coffee','Colquitt','Columbia','Cook','Coweta','Crawford','Crisp',
+  'Dade','Dawson','Decatur','DeKalb','Dodge','Dooly','Dougherty','Douglas',
+  'Early','Echols','Effingham','Elbert','Emanuel','Evans','Fannin','Fayette',
+  'Floyd','Forsyth','Franklin','Fulton','Gilmer','Glascock','Glynn','Gordon',
+  'Grady','Greene','Gwinnett','Habersham','Hall','Hancock','Haralson','Harris',
+  'Hart','Heard','Henry','Houston','Irwin','Jackson','Jasper','Jeff Davis',
+  'Jefferson','Jenkins','Johnson','Jones','Lamar','Lanier','Laurens','Lee',
+  'Lincoln','Long','Lowndes','Lumpkin','McDuffie','McIntosh','Macon','Madison',
+  'Marion','Meriwether','Miller','Mitchell','Monroe','Montgomery','Morgan',
+  'Murray','Muscogee','Newton','Oconee','Oglethorpe','Paulding','Peach',
+  'Pickens','Pierce','Pike','Polk','Pulaski','Putnam','Quitman','Rabun',
+  'Randolph','Richmond','Rockdale','Schley','Screven','Seminole','Spalding',
+  'Stephens','Stewart','Sumter','Talbot','Taliaferro','Tattnall','Taylor',
+  'Telfair','Terrell','Thomas','Tift','Toombs','Towns','Treutlen','Troup',
+  'Turner','Twiggs','Union','Upson','Walker','Walton','Ware','Warren',
+  'Washington','Wayne','Webster','Wheeler','White','Whitfield','Wilcox',
+  'Wilkes','Wilkinson','Worth'
+];
+
+// Georgia county centroids (lat/lng) for proximity lookup
+const COUNTY_CENTROIDS = {
+  'Appling':{lat:31.75,lng:-82.29},'Atkinson':{lat:31.30,lng:-82.88},'Bacon':{lat:31.55,lng:-82.45},
+  'Baker':{lat:31.33,lng:-84.43},'Baldwin':{lat:33.07,lng:-83.25},'Banks':{lat:34.37,lng:-83.49},
+  'Barrow':{lat:33.99,lng:-83.72},'Bartow':{lat:34.24,lng:-84.84},'Ben Hill':{lat:31.77,lng:-83.22},
+  'Berrien':{lat:31.28,lng:-83.24},'Bibb':{lat:32.84,lng:-83.64},'Bleckley':{lat:32.43,lng:-83.33},
+  'Brantley':{lat:31.19,lng:-81.98},'Brooks':{lat:30.83,lng:-83.58},'Bryan':{lat:32.03,lng:-81.43},
+  'Bulloch':{lat:32.41,lng:-81.78},'Burke':{lat:33.05,lng:-82.00},'Butts':{lat:33.30,lng:-84.00},
+  'Calhoun':{lat:31.53,lng:-84.74},'Camden':{lat:30.88,lng:-81.65},'Candler':{lat:32.40,lng:-82.07},
+  'Carroll':{lat:33.58,lng:-85.08},'Catoosa':{lat:34.90,lng:-85.12},'Charlton':{lat:30.78,lng:-82.13},
+  'Chatham':{lat:32.03,lng:-81.10},'Chattahoochee':{lat:32.35,lng:-84.79},'Cherokee':{lat:34.24,lng:-84.47},
+  'Clarke':{lat:33.95,lng:-83.37},'Clay':{lat:31.63,lng:-84.99},'Clayton':{lat:33.55,lng:-84.37},
+  'Clinch':{lat:31.00,lng:-82.70},'Cobb':{lat:33.92,lng:-84.58},'Coffee':{lat:31.55,lng:-82.85},
+  'Colquitt':{lat:31.17,lng:-83.77},'Columbia':{lat:33.55,lng:-82.18},'Cook':{lat:31.15,lng:-83.43},
+  'Coweta':{lat:33.35,lng:-84.77},'Crawford':{lat:32.73,lng:-84.00},'Crisp':{lat:31.93,lng:-83.77},
+  'Dade':{lat:34.85,lng:-85.49},'Dawson':{lat:34.44,lng:-84.17},'Decatur':{lat:30.87,lng:-84.58},
+  'DeKalb':{lat:33.77,lng:-84.22},'Dodge':{lat:32.17,lng:-83.17},'Dooly':{lat:32.17,lng:-83.73},
+  'Dougherty':{lat:31.52,lng:-84.19},'Douglas':{lat:33.70,lng:-84.77},'Early':{lat:31.32,lng:-84.89},
+  'Echols':{lat:30.70,lng:-82.88},'Effingham':{lat:32.37,lng:-81.33},'Elbert':{lat:34.12,lng:-82.87},
+  'Emanuel':{lat:32.60,lng:-82.31},'Evans':{lat:32.19,lng:-81.89},'Fannin':{lat:34.86,lng:-84.32},
+  'Fayette':{lat:33.42,lng:-84.47},'Floyd':{lat:34.27,lng:-85.22},'Forsyth':{lat:34.21,lng:-84.12},
+  'Franklin':{lat:34.38,lng:-83.22},'Fulton':{lat:33.79,lng:-84.47},'Gilmer':{lat:34.68,lng:-84.47},
+  'Glascock':{lat:33.23,lng:-82.62},'Glynn':{lat:31.21,lng:-81.49},'Gordon':{lat:34.50,lng:-84.87},
+  'Grady':{lat:30.87,lng:-84.19},'Greene':{lat:33.58,lng:-83.15},'Gwinnett':{lat:33.96,lng:-84.02},
+  'Habersham':{lat:34.63,lng:-83.53},'Hall':{lat:34.30,lng:-83.82},'Hancock':{lat:33.27,lng:-83.00},
+  'Haralson':{lat:33.79,lng:-85.22},'Harris':{lat:32.83,lng:-84.91},'Hart':{lat:34.35,lng:-82.97},
+  'Heard':{lat:33.30,lng:-85.13},'Henry':{lat:33.45,lng:-84.15},'Houston':{lat:32.47,lng:-83.65},
+  'Irwin':{lat:31.60,lng:-83.29},'Jackson':{lat:34.13,lng:-83.56},'Jasper':{lat:33.32,lng:-84.00},
+  'Jeff Davis':{lat:31.80,lng:-82.63},'Jefferson':{lat:33.05,lng:-82.42},'Jenkins':{lat:32.80,lng:-81.97},
+  'Johnson':{lat:32.70,lng:-82.65},'Jones':{lat:33.02,lng:-83.57},'Lamar':{lat:33.07,lng:-84.14},
+  'Lanier':{lat:31.03,lng:-83.06},'Laurens':{lat:32.47,lng:-82.93},'Lee':{lat:31.77,lng:-84.14},
+  'Lincoln':{lat:33.79,lng:-82.48},'Long':{lat:31.77,lng:-81.73},'Lowndes':{lat:30.83,lng:-83.28},
+  'Lumpkin':{lat:34.56,lng:-83.98},'McDuffie':{lat:33.46,lng:-82.47},'McIntosh':{lat:31.53,lng:-81.40},
+  'Macon':{lat:32.35,lng:-84.04},'Madison':{lat:33.84,lng:-83.22},'Marion':{lat:32.35,lng:-84.53},
+  'Meriwether':{lat:33.07,lng:-84.68},'Miller':{lat:31.17,lng:-84.73},'Mitchell':{lat:31.24,lng:-84.18},
+  'Monroe':{lat:33.03,lng:-83.90},'Montgomery':{lat:32.18,lng:-82.54},'Morgan':{lat:33.59,lng:-83.49},
+  'Murray':{lat:34.79,lng:-84.75},'Muscogee':{lat:32.51,lng:-84.97},'Newton':{lat:33.55,lng:-83.85},
+  'Oconee':{lat:33.81,lng:-83.43},'Oglethorpe':{lat:33.88,lng:-83.07},'Paulding':{lat:33.92,lng:-84.87},
+  'Peach':{lat:32.56,lng:-83.83},'Pickens':{lat:34.46,lng:-84.47},'Pierce':{lat:31.35,lng:-82.21},
+  'Pike':{lat:33.09,lng:-84.38},'Polk':{lat:34.00,lng:-85.19},'Pulaski':{lat:32.23,lng:-83.47},
+  'Putnam':{lat:33.32,lng:-83.37},'Quitman':{lat:31.87,lng:-85.03},'Rabun':{lat:34.88,lng:-83.40},
+  'Randolph':{lat:31.78,lng:-84.74},'Richmond':{lat:33.37,lng:-82.07},'Rockdale':{lat:33.65,lng:-84.02},
+  'Schley':{lat:32.27,lng:-84.31},'Screven':{lat:32.77,lng:-81.62},'Seminole':{lat:30.93,lng:-84.88},
+  'Spalding':{lat:33.25,lng:-84.27},'Stephens':{lat:34.56,lng:-83.47},'Stewart':{lat:32.08,lng:-84.83},
+  'Sumter':{lat:32.07,lng:-84.19},'Talbot':{lat:32.70,lng:-84.53},'Taliaferro':{lat:33.57,lng:-82.88},
+  'Tattnall':{lat:32.05,lng:-82.07},'Taylor':{lat:32.55,lng:-84.25},'Telfair':{lat:31.90,lng:-82.95},
+  'Terrell':{lat:31.77,lng:-84.43},'Thomas':{lat:30.85,lng:-83.92},'Tift':{lat:31.45,lng:-83.52},
+  'Toombs':{lat:32.12,lng:-82.32},'Towns':{lat:34.92,lng:-83.73},'Treutlen':{lat:32.40,lng:-82.56},
+  'Troup':{lat:33.03,lng:-85.03},'Turner':{lat:31.72,lng:-83.62},'Twiggs':{lat:32.67,lng:-83.42},
+  'Union':{lat:34.83,lng:-83.99},'Upson':{lat:32.89,lng:-84.28},'Walker':{lat:34.74,lng:-85.38},
+  'Walton':{lat:33.77,lng:-83.72},'Ware':{lat:31.05,lng:-82.45},'Warren':{lat:33.41,lng:-82.68},
+  'Washington':{lat:32.97,lng:-82.82},'Wayne':{lat:31.55,lng:-81.93},'Webster':{lat:32.05,lng:-84.55},
+  'Wheeler':{lat:32.10,lng:-82.73},'White':{lat:34.64,lng:-83.73},'Whitfield':{lat:34.76,lng:-84.97},
+  'Wilcox':{lat:31.97,lng:-83.43},'Wilkes':{lat:33.78,lng:-82.73},'Wilkinson':{lat:32.80,lng:-83.18},
+  'Worth':{lat:31.55,lng:-83.87}
+};
+
+// ══════════════════════════════════════════════════════════════
+// MAP SETUP
+// ══════════════════════════════════════════════════════════════
+let map, geojsonLayer, userMarker, selectedTerritoryId = null;
+
+async function initMap(){
+  // Load territories from API first so the GeoJSON layer can color them
+  try {
+    await loadTerritories();
+  } catch(e) {
+    console.warn('Territory load failed, map will show uncolored counties', e);
+  }
+
+  map = L.map('map', { zoomControl:true }).setView([32.8, -83.4], 7);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom:18,
+  }).addTo(map);
+
+  // Load Georgia county GeoJSON from our cached backend endpoint
+  loadCountyGeoJSON();
+}
+
+async function loadCountyGeoJSON(){
+  try {
+    const res = await fetch('/api/georgia-counties-geojson');
+    if (!res.ok) throw new Error('GeoJSON fetch failed');
+    const gaGeoJSON = await res.json();
+    renderCountyLayer(gaGeoJSON);
+  } catch(e) {
+    console.warn('GeoJSON load failed, using marker-based display', e);
+    renderMarkersOnly();
+  }
+}
+
+function renderCountyLayer(geojson){
+  // Build county name → territory lookup
+  const countyToTerritory = {};
+  TERRITORIES.forEach(t => {
+    t.counties.forEach(c => {
+      const key = c.toLowerCase();
+      if(!countyToTerritory[key]) countyToTerritory[key] = [];
+      countyToTerritory[key].push(t);
+    });
+  });
+
+  geojsonLayer = L.geoJSON(geojson, {
+    style: feature => {
+      const countyName = feature.properties.NAME;
+      const territories = countyToTerritory[countyName.toLowerCase()] || [];
+      const status = territories.length ? territories[0].status : 'unassigned';
+      return getCountyStyle(status, false);
+    },
+    onEachFeature: (feature, layer) => {
+      const countyName = feature.properties.NAME;
+      const territories = (countyToTerritory[countyName.toLowerCase()] || []);
+
+      layer.on({
+        mouseover: e => {
+          const l = e.target;
+          l.setStyle({ weight:2.5, fillOpacity:0.85 });
+          l.bringToFront();
+        },
+        mouseout: e => {
+          geojsonLayer.resetStyle(e.target);
+        },
+        click: () => {
+          if(territories.length === 1){
+            selectTerritoryOnMap(territories[0]);
+          } else if(territories.length > 1){
+            showNearbyTerritories(territories, `${countyName} County — Multiple Territories`);
+          }
+        }
+      });
+
+      if(territories.length){
+        layer.bindTooltip(
+          `<div style="font-weight:700">${countyName} County</div>
+           <div style="font-size:11px;color:#666">${territories.map(t=>t.name).join('<br>')}</div>`,
+          {sticky:true, opacity:0.92}
+        );
+      }
+    }
+  }).addTo(map);
+}
+
+function getCountyStyle(status, highlighted){
+  const styles = {
+    available: { fillColor:'#86efac', fillOpacity:.55, color:'#16a34a', weight: highlighted?2:0.8 },
+    taken:     { fillColor:'#fca5a5', fillOpacity:.55, color:'#dc2626', weight: highlighted?2:0.8 },
+    pending:   { fillColor:'#fde68a', fillOpacity:.55, color:'#d97706', weight: highlighted?2:0.8 },
+    selected:  { fillColor:'#bfdbfe', fillOpacity:.75, color:'#2563eb', weight:2.5 },
+    unassigned:{ fillColor:'#d4c9ba', fillOpacity:.4,  color:'#9ca3af', weight:0.5 },
+  };
+  return styles[status] || styles.unassigned;
+}
+
+function renderMarkersOnly(){
+  TERRITORIES.forEach(t => {
+    if(!t.lat || !t.lng) return;
+    const color = t.status==='available'?'#16a34a':t.status==='taken'?'#dc2626':'#d97706';
+    const circle = L.circleMarker([t.lat, t.lng], {
+      radius:12, fillColor:color, color:'#fff', weight:2, fillOpacity:.8
+    }).addTo(map);
+    circle.on('click', () => selectTerritoryOnMap(t));
+    circle.bindTooltip(`<strong>${t.name}</strong><br>${t.status}`, {sticky:true});
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// SEARCH
+// ══════════════════════════════════════════════════════════════
+async function searchByZip(){
+  const zip = document.getElementById('zipInput').value.trim();
+  if(zip.length < 5){ showToast('Please enter a 5-digit zip code'); return; }
+
+  const btn = document.querySelector('.search-btn');
+  btn.textContent = '…';
+  btn.disabled = true;
+
+  try {
+    const resp = await fetch(`/api/zip-to-county?zip=${zip}`);
+    const data = await resp.json();
+
+    if(!data.county){
+      showToast(`Zip code ${zip} not found — try selecting your county below`);
+      return;
+    }
+
+    const lat = data.lat;
+    const lng = data.lng;
+    const county = data.county;
+
+    // Place user marker
+    if(userMarker) map.removeLayer(userMarker);
+    userMarker = L.marker([lat, lng], {
+      icon: L.divIcon({
+        html:'<div style="background:#7C1C2E;width:14px;height:14px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4)"></div>',
+        iconSize:[14,14], iconAnchor:[7,7]
+      })
+    }).addTo(map).bindPopup(`<strong>${county} County</strong><br>Zip: ${zip}`).openPopup();
+
+    findNearbyTerritories(lat, lng, county);
+  } catch(e) {
+    showToast('Could not look up zip code — try selecting your county below');
+  } finally {
+    btn.textContent = 'Find';
+    btn.disabled = false;
+  }
+}
+
+function searchByCounty(){
+  const county = document.getElementById('countySelect').value;
+  if(!county) return;
+
+  const centroid = COUNTY_CENTROIDS[county];
+  if(!centroid){ showToast('County location not found'); return; }
+
+  // Place user marker
+  if(userMarker) map.removeLayer(userMarker);
+  userMarker = L.marker([centroid.lat, centroid.lng], {
+    icon: L.divIcon({
+      html:'<div style="background:#7C1C2E;width:14px;height:14px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4)"></div>',
+      iconSize:[14,14], iconAnchor:[7,7]
+    })
+  }).addTo(map).bindPopup(`<strong>${county} County</strong>`).openPopup();
+
+  findNearbyTerritories(centroid.lat, centroid.lng, county);
+}
+
+function findNearbyTerritories(lat, lng, homeCounty){
+  const withDistance = TERRITORIES.map(t => ({
+    ...t,
+    distance: haversineDistance(lat, lng, t.lat, t.lng)
+  }));
+
+  withDistance.sort((a,b) => a.distance - b.distance);
+
+  // Take nearest 10, deduplicate by id
+  const seen = new Set();
+  const nearby = [];
+  for(const t of withDistance){
+    if(!seen.has(t.id)){
+      seen.add(t.id);
+      nearby.push(t);
+    }
+    if(nearby.length >= 10) break;
+  }
+
+  // Zoom map to show user location and nearby territories
+  const bounds = L.latLngBounds([[lat, lng]]);
+  nearby.forEach(t => { if(t.lat && t.lng) bounds.extend([t.lat, t.lng]); });
+  map.fitBounds(bounds.pad(0.15));
+
+  // Hide map tip
+  document.getElementById('mapTip').classList.add('hidden');
+
+  showNearbyTerritories(nearby, `Territories near ${homeCounty} County`);
+}
+
+function showNearbyTerritories(territories, heading){
+  const list = document.getElementById('territoryList');
+  const hdr  = document.getElementById('resultsHdr');
+  const avail = territories.filter(t=>t.status==='available').length;
+
+  hdr.style.display = 'flex';
+  document.getElementById('resultsCount').textContent = `${avail} available`;
+
+  list.innerHTML = territories.map(t => `
+    <div class="tcard${t.status==='taken'?' taken':''}${selectedTerritoryId===t.id?' selected':''}"
+         ${t.status!=='taken'?`onclick="selectTerritoryCard('${t.id}')"`:''} 
+         id="tcard-${t.id}">
+      <div class="tcard-top">
+        <div class="tcard-name">${t.name}</div>
+        <div class="tcard-badge badge-${t.status}">${t.status}</div>
+      </div>
+      <div class="tcard-counties">${t.counties.join(' · ')} Counti${t.counties.length===1?'y':'es'}</div>
+      <div class="tcard-meta">
+        <div class="tcard-stat">~<strong>${t.households.toLocaleString()}</strong> households</div>
+        <div class="tcard-stat"><strong>4</strong> mailing zones</div>
+      </div>
+    </div>
+  `).join('');
+
+  list.scrollTop = 0;
+}
+
+function selectTerritoryCard(id){
+  selectedTerritoryId = id;
+  const t = TERRITORIES.find(t=>t.id===id);
+  if(!t) return;
+
+  document.querySelectorAll('.tcard').forEach(c=>{
+    c.classList.remove('selected');
+    if(c.id===`tcard-${id}`) c.classList.add('selected');
+  });
+
+  selectTerritoryOnMap(t);
+}
+
+function selectTerritoryOnMap(t){
+  selectedTerritoryId = t.id;
+
+  const detail = document.getElementById('selectedDetail');
+  detail.classList.add('visible');
+  document.getElementById('sdName').textContent = t.name;
+  document.getElementById('sdCounties').textContent = t.counties.join(' · ') + (t.counties.length===1?' County':' Counties');
+  document.getElementById('sdHH').textContent = '~' + t.households.toLocaleString();
+  const statusEl = document.getElementById('sdStatus');
+  statusEl.textContent = t.status.charAt(0).toUpperCase() + t.status.slice(1);
+  statusEl.style.color = t.status==='available'?'#86efac':t.status==='taken'?'#fca5a5':'#fde68a';
+  document.getElementById('claimBtn').style.display = t.status==='available'?'flex':'none';
+
+  if(t.lat && t.lng) map.setView([t.lat, t.lng], 10, {animate:true});
+
+  document.querySelectorAll('.tcard').forEach(c=>{
+    c.classList.remove('selected');
+    if(c.id===`tcard-${t.id}`) c.classList.add('selected');
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// CLAIM MODAL
+// ══════════════════════════════════════════════════════════════
+function openModal(){
+  if(!selectedTerritoryId) return;
+  const t = TERRITORIES.find(t=>t.id===selectedTerritoryId);
+  if(!t||t.status!=='available') return;
+
+  document.getElementById('modalTerritoryName').textContent = t.name;
+  document.getElementById('modalTerritoryCounties').textContent =
+    t.counties.join(' · ') + ' Counti' + (t.counties.length===1?'y':'es') +
+    ' · ~' + t.households.toLocaleString() + ' households';
+
+  document.getElementById('claimName').value='';
+  document.getElementById('claimEmail').value='';
+  document.getElementById('claimPhone').value='';
+
+  const btn = document.getElementById('modalSubmitBtn');
+  btn.textContent = '✦ Claim It — $99/mo';
+  btn.disabled = false;
+
+  document.getElementById('modalBg').classList.add('visible');
+}
+
+function closeModal(){
+  document.getElementById('modalBg').classList.remove('visible');
+}
+
+async function submitClaim(){
+  const name  = document.getElementById('claimName').value.trim();
+  const email = document.getElementById('claimEmail').value.trim();
+  const phone = document.getElementById('claimPhone').value.trim();
+
+  if(!name||!email||!phone){ showToast('Please fill in all fields'); return; }
+
+  const t = TERRITORIES.find(t=>t.id===selectedTerritoryId);
+  if(!t) return;
+
+  const btn = document.getElementById('modalSubmitBtn');
+  btn.textContent = 'Processing…';
+  btn.disabled = true;
+
+  try {
+    const resp = await fetch('/api/dealers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name,
+        email,
+        phone,
+        territoryId: t.id,
+        territoryName: t.name,
+      }),
+    });
+    const result = await resp.json();
+    if(!resp.ok) throw new Error(result.error || 'Request failed');
+    window.location.href = result.checkoutUrl;
+  } catch(err) {
+    showToast('Error: ' + err.message);
+    btn.textContent = '✦ Claim It — $99/mo';
+    btn.disabled = false;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// UTILITIES
+// ══════════════════════════════════════════════════════════════
+function haversineDistance(lat1, lng1, lat2, lng2){
+  const R = 3959; // miles
+  const dLat = (lat2-lat1) * Math.PI/180;
+  const dLng = (lng2-lng1) * Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2800);
+}
+
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+// Populate county dropdown
+const sel = document.getElementById('countySelect');
+GA_COUNTIES.forEach(c=>{
+  const opt = document.createElement('option');
+  opt.value = c; opt.textContent = c + ' County';
+  sel.appendChild(opt);
+});
+
+// Close modal on background click
+document.getElementById('modalBg').addEventListener('click', e=>{
+  if(e.target===document.getElementById('modalBg')) closeModal();
+});
+
+initMap();
+</script>
+</body>
+</html>
