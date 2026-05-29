@@ -212,6 +212,20 @@ router.post("/dealers", async (req, res): Promise<void> => {
           .update(dealersTable)
           .set({ name, phone: phone ?? null, homeZip, portalToken: txPortalToken })
           .where(eq(dealersTable.id, txDealerId));
+        // Release any pending territory linked to this dealer from a prior
+        // signup attempt. This ensures that if the dealer picks a different
+        // territory on retry, the old one returns to "available" and we never
+        // end up with multiple territories linked to the same dealer (which
+        // would cause all of them to flip to "taken" on activation).
+        await tx
+          .update(territoriesTable)
+          .set({ status: "available", dealerId: null })
+          .where(
+            and(
+              eq(territoriesTable.dealerId, txDealerId),
+              eq(territoriesTable.status, "pending"),
+            ),
+          );
         // Replace any stale legacy territory rows from an earlier attempt.
         await tx
           .delete(dealerTerritoriesTable)
