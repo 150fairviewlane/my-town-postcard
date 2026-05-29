@@ -1,0 +1,366 @@
+Build a dynamic multi-territory landing page system. When a dealer's subscription activates, the system automatically creates a landing page for their territory at a unique URL. The page is identical to the existing Habersham page in design and content, with only territory-specific fields replaced. Businesses can purchase ad slots directly via Stripe.
+
+
+════════════════════════════════════════════════
+OVERVIEW
+════════════════════════════════════════════════
+
+The existing Habersham page at / (or /habersham) is the reference design.
+Do not modify it. Instead:
+
+1. Convert it into a dynamic template that renders any territory
+2. Auto-create a landing page record when a dealer's Stripe
+   subscription activates
+3. Serve each territory at /[slug] e.g. /white-county, /hall-county
+4. Show 15 ad slots per page (split Front Side / Back Side)
+5. Let businesses purchase slots via Stripe Checkout
+6. Give dealers a simple portal to share their page and track sales
+
+
+════════════════════════════════════════════════
+CHANGE 1 — DATABASE TABLES
+════════════════════════════════════════════════
+
+Create these tables. Use the same database/ORM already in the project.
+
+TABLE: landing_pages
+  id                  serial primary key
+  territory_id        text references territories(id)
+  slug                text unique not null
+  dealer_id           integer references dealers(id)
+  is_published        boolean default false
+  mailing_season      text default 'Summer 2026'
+  mailing_month       text default 'third week of June 2026'
+  target_homes        integer default 5000
+  created_at          timestamp default now()
+
+TABLE: ad_slots
+  id                  serial primary key
+  landing_page_id     integer references landing_pages(id)
+  slot_number         integer not null (1–15)
+  side                text not null ('front' or 'back')
+  size                text not null ('small','medium','large','extra-large')
+  price               integer not null (in cents: 19900/29900/39900/49900)
+  position            text (e.g. 'top-left', 'center', 'bottom-right')
+  status              text default 'available' ('available','reserved','sold')
+  advertiser_name     text
+  advertiser_email    text
+  advertiser_phone    text
+  business_category   text
+  ad_image_url        text
+  stripe_session_id   text
+  stripe_payment_id   text
+  purchased_at        timestamp
+  created_at          timestamp default now()
+  UNIQUE (landing_page_id, slot_number)
+
+TABLE: advertisers
+  id                  serial primary key
+  landing_page_id     integer references landing_pages(id)
+  business_name       text not null
+  contact_name        text
+  email               text not null
+  phone               text
+  business_category   text
+  stripe_customer_id  text
+  created_at          timestamp default now()
+
+The dealers table should already exist from the territory claim system.
+Add these columns if not already present:
+  stripe_customer_id  text
+  stripe_subscription_id text
+  subscription_status text default 'inactive'
+  landing_page_id     integer references landing_pages(id)
+
+
+════════════════════════════════════════════════
+CHANGE 2 — SLOT LAYOUT CONFIGURATION
+════════════════════════════════════════════════
+
+Each landing page has exactly 15 ad slots matching the existing
+Habersham page layout. Use this slot definition for every new page:
+
+FRONT SIDE (7 slots):
+  Slot 1:  extra-large  $499  4"×5"   (top-left, largest)
+  Slot 2:  large        $399  3"×4"   (top-right)
+  Slot 3:  large        $399  3"×4"   (middle-left)
+  Slot 4:  medium       $299  3"×2"   (middle-center)
+  Slot 5:  medium       $299  3"×2"   (middle-right)
+  Slot 6:  small        $199  2"×2"   (bottom-left)
+  Slot 7:  small        $199  2"×2"   (bottom-center)
+
+BACK SIDE (8 slots):
+  Slot 8:  extra-large  $499  4"×5"   (top-left)
+  Slot 9:  large        $399  3"×4"   (top-right)
+  Slot 10: large        $399  3"×4"   (middle-left)
+  Slot 11: medium       $299  3"×2"   (middle-center)
+  Slot 12: medium       $299  3"×2"   (middle-right)
+  Slot 13: small        $199  2"×2"   (bottom-left)
+  Slot 14: small        $199  2"×2"   (bottom-center)
+  Slot 15: small        $199  2"×2"   (bottom-right)
+
+When a landing page is created, auto-insert all 15 slot records
+with status = 'available'.
+
+
+════════════════════════════════════════════════
+CHANGE 3 — DYNAMIC LANDING PAGE TEMPLATE
+════════════════════════════════════════════════
+
+Create a new route: GET /:slug
+
+This route:
+1. Looks up the landing_page record by slug
+2. If not found or is_published = false: return 404
+3. Joins to territories table to get: name, zone_note, households
+4. Joins to dealers table to get dealer contact info
+5. Fetches all 15 ad_slots for this landing_page_id
+6. Renders the template with territory-specific data injected
+
+The template is identical to the existing Habersham page with these
+fields replaced dynamically:
+
+FIELD REPLACEMENTS (all instances throughout the page):
+
+  "Habersham County" → territory.name
+  "Habersham" (standalone) → territory.name (shortened if needed)
+
+  Hero subheadline:
+    "5,000 Clarkesville, Demorest, Cornelia and Alto homes"
+    → "{{target_homes | number}}, {{city_list}} homes"
+    where city_list = territory.zone_note split by comma,
+    first 4 cities joined with commas and "and" before last
+
+  How It Works Step 3:
+    "5,000 postcards printed and delivered to Habersham homes via USPS"
+    → "{{target_homes}} postcards printed and delivered to
+       {{territory.name}} homes via USPS"
+
+  Pricing section mailing card:
+    "Summer 2026 Mailing"
+    → "{{landing_page.mailing_season}} Mailing"
+
+    "Timed to reach 5,000 Habersham County homes during peak local
+     shopping season — targeted for the third week of June 2026"
+    → "Timed to reach {{target_homes}} {{territory.name}} homes
+       during peak local shopping season — targeted for
+       {{landing_page.mailing_month}}"
+
+  Targeted Areas card:
+    "We focus on specific Habersham County neighborhoods where
+     your customers already live"
+    → "We focus on specific {{territory.name}} neighborhoods where
+       your customers already live"
+
+  Page title tag:
+    "My Town Postcard"
+    → "{{territory.name}} Postcard | My Town Postcard"
+
+AD SLOT GRID:
+  Replace the static Habersham ad grid with a dynamic grid built
+  from the 15 ad_slot records. Each slot renders as either:
+
+  A) SOLD/RESERVED: shows the advertiser's ad image if uploaded,
+     or a placeholder with business name and category
+
+  B) AVAILABLE: shows the green "+" button with:
+     - Ad size label (e.g. "Extra Large Ad")
+     - Price (e.g. "$499")
+     - Ad dimensions (e.g. "4" × 5"")
+     - "Reserve This Spot" button that triggers Stripe Checkout
+     - "Reaches {{target_homes}} local homes" subtext
+
+  Keep the Front Side / Back Side tab toggle exactly as it is now,
+  with live counts of sold slots per side.
+
+
+════════════════════════════════════════════════
+CHANGE 4 — AD SLOT PURCHASE VIA STRIPE
+════════════════════════════════════════════════
+
+When a business clicks "Reserve This Spot":
+
+Step 1 — Show a modal or inline form collecting:
+  Business Name *
+  Contact Name *
+  Email *
+  Phone *
+  Business Category * (dropdown — same 32 categories as the ad studio)
+
+Step 2 — On form submit, POST to /api/slots/:slotId/checkout
+  This endpoint:
+  a. Validates the slot is still available
+  b. Creates or finds a Stripe Customer with the email
+  c. Creates a Stripe Checkout Session:
+       mode: 'payment'
+       line_items: [{ price_data: { currency: 'usd',
+         unit_amount: slot.price,
+         product_data: { name: slot.size + ' Ad — ' + territory.name,
+           description: slot.size + ' ad space on the ' +
+             territory.name + ' postcard, reaching ' +
+             target_homes + ' local homes' }},
+         quantity: 1 }]
+       success_url: '/[slug]/success?session_id={CHECKOUT_SESSION_ID}'
+       cancel_url: '/[slug]'
+       metadata: { slotId: slot.id, landingPageId: slot.landing_page_id }
+  d. Marks slot as 'reserved' in the database
+  e. Returns { url: checkoutUrl } to redirect the browser
+
+Step 3 — Stripe webhook at /api/webhooks/stripe handles
+  checkout.session.completed:
+  a. Reads metadata.slotId from the session
+  b. Marks slot status = 'sold'
+  c. Stores stripe_payment_id and purchased_at on the slot
+  d. Sends confirmation email to advertiser (if email sending exists)
+  e. Notifies dealer (if email sending exists)
+
+Step 4 — Success page at /[slug]/success:
+  Shows "Your spot is reserved!" confirmation with:
+  - Territory name
+  - Slot size and price paid
+  - What happens next (dealer will contact to create your ad)
+  - Dealer contact info
+
+
+════════════════════════════════════════════════
+CHANGE 5 — AUTO-CREATE LANDING PAGE ON DEALER ACTIVATION
+════════════════════════════════════════════════
+
+When a dealer's Stripe subscription becomes active (webhook event
+customer.subscription.updated with status = 'active', or
+checkout.session.completed for a dealer subscription purchase):
+
+Automatically run this sequence:
+
+1. Find the dealer's territory_id from their record
+2. Look up the territory to get name and zone_note
+3. Generate a slug from the territory name:
+   - Lowercase
+   - Replace spaces with hyphens
+   - Remove special characters
+   - Examples: "White / Habersham Counties" → "white-habersham"
+     "Hall County" → "hall-county"
+     "Alpharetta / Milton / Roswell" → "alpharetta-milton-roswell"
+4. Check slug is unique — append -2, -3 etc if collision
+5. INSERT into landing_pages:
+   territory_id, slug, dealer_id, is_published = true,
+   mailing_season = 'Summer 2026',
+   mailing_month = 'third week of June 2026',
+   target_homes = 5000
+6. INSERT all 15 ad_slot records with status = 'available'
+7. UPDATE dealers SET landing_page_id = new_id
+8. Log "Landing page created: /[slug]" to console
+
+The page is immediately live and accessible at /[slug].
+
+
+════════════════════════════════════════════════
+CHANGE 6 — DEALER PORTAL ADDITION
+════════════════════════════════════════════════
+
+Add a section to the existing dealer portal (wherever dealers log in
+to manage their account) showing:
+
+MY LANDING PAGE
+  URL: my-town-postcard.replit.app/[slug]   [Copy Link] [View Page]
+  Status: Live
+
+AD SLOT SALES
+  Front Side: X of 7 sold   ($X,XXX revenue)
+  Back Side:  X of 8 sold   ($X,XXX revenue)
+  Total:      X of 15 sold  ($X,XXX revenue)
+
+SLOT DETAIL TABLE
+  Slot # | Side  | Size        | Price | Status    | Business
+  -------|-------|-------------|-------|-----------|----------
+  1      | Front | Extra Large | $499  | Sold      | Mr. Biscuit's Cafe
+  2      | Front | Large       | $399  | Available | —
+  ...
+
+Each available slot row has a [Mark as Sold] button for cases where
+the dealer collects payment offline and just needs to mark it taken.
+Clicking [Mark as Sold] shows a small form: Business Name, Category.
+
+
+════════════════════════════════════════════════
+CHANGE 7 — EXISTING HABERSHAM PAGE
+════════════════════════════════════════════════
+
+The existing Habersham page should be migrated to use the new
+dynamic template rather than being a separate static page.
+
+To do this:
+1. Create a landing_pages record for Habersham using the existing
+   territory record (find it by name containing 'Habersham')
+2. Set slug = 'habersham' (or whatever the current URL path is)
+3. Set is_published = true
+4. Create the 15 ad_slot records, marking any slots that are
+   already sold in the existing page as 'sold' with the
+   existing advertiser info
+5. Serve /habersham (or current path) through the new dynamic route
+
+The existing Habersham page must continue to work exactly as it does
+now — same URL, same appearance, same slot data.
+
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+  The visual design, colors, fonts, or layout of the existing page
+  Navigation, header, or footer
+  Pricing amounts ($199/$299/$399/$499)
+  Territory finder or territory manager
+  Ad generator or image library
+  Authentication logic (dealers log in the same way)
+
+
+════════════════════════════════════════════════
+TEST AFTER BUILDING
+════════════════════════════════════════════════
+
+TEST 1 — Existing page still works
+  Go to the current Habersham URL
+  Page renders identically to current version
+  Ad slots show correct sold/available state
+  No visual changes
+
+TEST 2 — New territory page auto-creation
+  In the dealer portal or admin, manually trigger landing page
+  creation for the White / Habersham Counties territory
+  (or use a test dealer account)
+  Confirm a record is created in landing_pages
+  Confirm 15 records created in ad_slots all with status=available
+  Confirm the page loads at /white-habersham (or generated slug)
+
+TEST 3 — Dynamic content renders correctly
+  Visit /white-habersham (or whichever test slug was created)
+  Hero headline should say "White / Habersham Counties's" or
+  the territory name — not "Habersham County's"
+  Subheadline should list cities from zone_note (first 4)
+  All 15 slots should show the green "+" available state
+  Front Side tab shows "0 of 7 sold"
+  Back Side tab shows "0 of 8 sold"
+
+TEST 4 — Ad slot purchase flow
+  Click "Reserve This Spot" on any available slot
+  Business info form appears
+  Fill in test business details and submit
+  Stripe Checkout page loads with correct amount and description
+  After completing test payment (use Stripe test card 4242 4242 4242 4242)
+  Slot changes to sold/reserved state on the landing page
+  Success page shows confirmation
+
+TEST 5 — Dealer portal
+  Log in as a dealer
+  My Landing Page section shows the correct URL
+  Ad Slot Sales shows correct counts (0 sold initially)
+  After test purchase in Test 4, counts update correctly
+
+TEST 6 — Slug generation
+  Verify these slugs are generated correctly:
+  "Hall County" → hall-county
+  "Alpharetta / Milton / Roswell" → alpharetta-milton-roswell
+  "White / Habersham Counties" → white-habersham
+  "Fulton County — North" → fulton-north
+  "Marietta / Kennesaw / Acworth" → marietta-kennesaw-acworth
