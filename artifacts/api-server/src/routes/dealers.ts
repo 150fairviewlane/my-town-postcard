@@ -318,7 +318,10 @@ router.post("/dealers", async (req, res): Promise<void> => {
     subscription_data: {
       metadata: { kind: "dealer", dealerId: String(dealerId) },
     },
-    success_url: `${origin}/my-territory?token=${portalToken}`,
+    // {CHECKOUT_SESSION_ID} is replaced by Stripe with the real session ID.
+    // The portal page uses it as a synchronous fallback activation in case
+    // the checkout.session.completed webhook hasn't fired yet.
+    success_url: `${origin}/my-territory?token=${portalToken}&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/dealers/signup?cancelled=1`,
   });
 

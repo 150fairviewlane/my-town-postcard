@@ -51,7 +51,11 @@ export default function DealerPortal() {
   const [state, setState] = useState({ status: "loading", data: null, error: null });
   const [pollCount, setPollCount] = useState(0);
 
-  const token = new URLSearchParams(window.location.search).get("token");
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get("token");
+  const sessionId = params.get("session_id");
+
+  const baseUrl = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 
   const fetchPortal = useCallback(async () => {
     if (!token) {
@@ -59,7 +63,6 @@ export default function DealerPortal() {
         error: "No portal token found in the URL. Please use the link from your welcome email." });
       return;
     }
-    const baseUrl = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
     try {
       const res = await fetch(`${baseUrl}/api/dealer-portal?token=${encodeURIComponent(token)}`);
       const body = await res.json().catch(() => ({}));
@@ -68,12 +71,31 @@ export default function DealerPortal() {
     } catch (err) {
       setState({ status: "error", data: null, error: err.message });
     }
-  }, [token]);
+  }, [token, baseUrl]);
 
-  // Initial load
-  useEffect(() => { fetchPortal(); }, [fetchPortal]);
+  // On first load: if Stripe redirected here with a session_id, call the
+  // confirm endpoint synchronously. This activates the account even if the
+  // webhook hasn't fired yet. Errors are swallowed — fetchPortal() below
+  // will still show the current state (worst case: still pending_payment,
+  // which the polling loop will retry).
+  useEffect(() => {
+    async function initPortal() {
+      if (sessionId && sessionId.startsWith("cs_")) {
+        try {
+          await fetch(
+            `${baseUrl}/api/dealers/confirm?session_id=${encodeURIComponent(sessionId)}`,
+          );
+        } catch {
+          // ignore — fetchPortal will still load current status
+        }
+      }
+      await fetchPortal();
+    }
+    initPortal();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // run once on mount only
 
-  // Poll while pending_payment — the webhook usually fires within seconds.
+  // Poll while pending_payment — fallback if confirm couldn't activate yet.
   useEffect(() => {
     if (state.status !== "ok") return;
     if (state.data?.status !== "pending_payment") return;
