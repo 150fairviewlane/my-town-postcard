@@ -95,15 +95,7 @@ function Step1Info({ form, setForm, onNext }) {
       setError("Please enter a valid 5-digit ZIP code.");
       return;
     }
-    const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
-    const params = new URLSearchParams({
-      zip:   form.zip.trim(),
-      name:  form.name.trim(),
-      email: form.email.trim().toLowerCase(),
-      ref:   "signup",
-    });
-    if (form.phone.trim()) params.set("phone", form.phone.trim());
-    window.location.href = `${base}/find-territory?${params.toString()}`;
+    onNext();
   };
 
   return (
