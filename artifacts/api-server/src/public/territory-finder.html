@@ -368,6 +368,14 @@ let TERRITORIES = [];
 // zip (string) → territoryId (string) — populated by loadZipGeoJSON
 let zipAssignments = {};
 
+function filterCities(zoneNote) {
+  if(!zoneNote) return '';
+  return zoneNote.split(',')
+    .map(s => s.trim())
+    .filter(s => !/\barea$/i.test(s))
+    .join(', ');
+}
+
 async function loadTerritories() {
   const res = await fetch('/api/territories?state=GA');
   if (!res.ok) throw new Error('Failed to load territories');
@@ -758,7 +766,7 @@ function showNearbyTerritories(territories, heading){
         <div class="tcard-badge badge-${t.status}">${t.status}</div>
       </div>
       <div class="tcard-counties">${t.counties.join(' · ')} Counti${t.counties.length===1?'y':'es'}</div>
-      ${t.zoneNote ? `<div class="tcard-cities">${t.zoneNote}</div>` : ''}
+      ${filterCities(t.zoneNote) ? `<div class="tcard-cities">${filterCities(t.zoneNote)}</div>` : ''}
       <div class="tcard-meta">
         <div class="tcard-stat">~<strong>${t.households.toLocaleString()}</strong> households</div>
       </div>
@@ -804,7 +812,8 @@ function selectTerritoryOnMap(t){
   document.getElementById('sdCounties').textContent = t.counties.join(' · ');
   const citiesEl = document.getElementById('sdCities');
   const citiesRow = document.getElementById('sdCitiesRow');
-  if(t.zoneNote){ citiesEl.textContent = t.zoneNote; citiesRow.style.display='flex'; }
+  const filteredCities = filterCities(t.zoneNote);
+  if(filteredCities){ citiesEl.textContent = filteredCities; citiesRow.style.display='flex'; }
   else { citiesRow.style.display='none'; }
   document.getElementById('sdHH').textContent = '~' + t.households.toLocaleString();
   const statusEl = document.getElementById('sdStatus');
