@@ -62,7 +62,8 @@ import NotFound from "./pages/not-found";
 // list is the guard for the catch-all's own handler (and documents intent).
 const RESERVED_SLUGS = new Set([
   "checkout", "upload", "confirmation", "admin", "subscription-confirmation",
-  "spot-confirmation", "ad-gen", "request-options", "dealers", "test", "go", "api",
+  "spot-confirmation", "ad-gen", "request-options", "dealers", "find-territory",
+  "test", "go", "api",
 ]);
 
 const queryClient = new QueryClient();

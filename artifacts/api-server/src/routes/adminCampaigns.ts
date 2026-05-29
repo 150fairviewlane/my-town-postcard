@@ -274,9 +274,14 @@ router.post("/admin/campaigns/:id/activate", requireAdmin, async (req, res): Pro
         ),
       );
 
+    // Promote the target to active AND mark it published. The public picker
+    // serves /campaigns/active, and spots.reserve gates purchases on
+    // isPublished (Task #134). Without flipping isPublished here, an
+    // admin-created campaign (default isPublished:false) would appear on the
+    // homepage but reject every reservation. Activation == "live + sellable".
     await tx
       .update(campaignsTable)
-      .set({ status: "active" })
+      .set({ status: "active", isPublished: true })
       .where(eq(campaignsTable.id, params.data.id));
   });
 

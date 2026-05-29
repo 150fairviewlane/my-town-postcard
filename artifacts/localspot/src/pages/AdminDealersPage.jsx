@@ -37,13 +37,11 @@ export default function AdminDealersPage() {
   const [expanded, setExpanded] = useState(null);
   const [pages, setPages] = useState({});
 
-  const togglePage = (dealerId) => {
-    setExpanded((cur) => (cur === dealerId ? null : dealerId));
-    if (pages[dealerId]) return;
+  const loadPage = (dealerId) => {
     const baseUrl = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
     const token = localStorage.getItem("admin_token");
     setPages((p) => ({ ...p, [dealerId]: { status: "loading" } }));
-    fetch(`${baseUrl}/api/dealers/${dealerId}/landing-page`, {
+    return fetch(`${baseUrl}/api/dealers/${dealerId}/landing-page`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
       .then(async (res) => {
@@ -54,6 +52,12 @@ export default function AdminDealersPage() {
       .catch((err) =>
         setPages((p) => ({ ...p, [dealerId]: { status: "error", error: err.message } })),
       );
+  };
+
+  const togglePage = (dealerId) => {
+    setExpanded((cur) => (cur === dealerId ? null : dealerId));
+    if (pages[dealerId]) return;
+    loadPage(dealerId);
   };
 
   useEffect(() => {
@@ -203,7 +207,7 @@ export default function AdminDealersPage() {
                         {expanded === d.id && (
                           <tr style={{ background: "#fafafa" }}>
                             <td colSpan={8} style={{ padding: "0 16px 18px" }}>
-                              <LandingPagePanel state={pages[d.id]} />
+                              <LandingPagePanel state={pages[d.id]} onRefresh={() => loadPage(d.id)} />
                             </td>
                           </tr>
                         )}
@@ -235,7 +239,35 @@ function Td({ children, style }) {
     </td>
   );
 }
-function LandingPagePanel({ state }) {
+function LandingPagePanel({ state, onRefresh }) {
+  const [pendingSpotId, setPendingSpotId] = useState(null);
+  const [actionError, setActionError] = useState(null);
+
+  const markSold = async (spotId) => {
+    if (pendingSpotId) return;
+    setActionError(null);
+    setPendingSpotId(spotId);
+    try {
+      const baseUrl = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+      const token = localStorage.getItem("admin_token");
+      const res = await fetch(`${baseUrl}/api/admin/spots/${spotId}/mark-sold`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({}),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || `Server returned ${res.status}`);
+      if (onRefresh) await onRefresh();
+    } catch (err) {
+      setActionError(err.message);
+    } finally {
+      setPendingSpotId(null);
+    }
+  };
+
   if (!state || state.status === "loading") {
     return <div style={{ padding: "16px 0", color: "#666", fontSize: 13 }}>Loading landing page…</div>;
   }
@@ -302,6 +334,7 @@ function LandingPagePanel({ state }) {
                 <th style={{ padding: "6px 10px", fontWeight: 700 }}>Status</th>
                 <th style={{ padding: "6px 10px", fontWeight: 700 }}>Business</th>
                 <th style={{ padding: "6px 10px", fontWeight: 700 }}>Price</th>
+                <th style={{ padding: "6px 10px", fontWeight: 700 }}>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -318,10 +351,34 @@ function LandingPagePanel({ state }) {
                   </td>
                   <td style={{ padding: "6px 10px" }}>{s.businessName || "—"}</td>
                   <td style={{ padding: "6px 10px" }}>{money(s.price)}</td>
+                  <td style={{ padding: "6px 10px" }}>
+                    {s.status === "paid" ? (
+                      <span style={{ color: "#9ca3af", fontSize: 11.5 }}>—</span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => markSold(s.id)}
+                        disabled={!!pendingSpotId}
+                        style={{
+                          background: "#fff", border: `1.5px solid ${RED}`, color: RED,
+                          borderRadius: 7, padding: "4px 10px", fontSize: 11.5, fontWeight: 800,
+                          cursor: pendingSpotId ? "default" : "pointer",
+                          opacity: pendingSpotId && pendingSpotId !== s.id ? 0.5 : 1,
+                        }}
+                      >
+                        {pendingSpotId === s.id ? "Marking…" : "Mark sold"}
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          {actionError && (
+            <div style={{ marginTop: 10, color: "#991b1b", fontSize: 12.5 }}>
+              Could not mark sold: {actionError}
+            </div>
+          )}
         </div>
       )}
     </div>
