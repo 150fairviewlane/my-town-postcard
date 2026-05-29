@@ -1,0 +1,304 @@
+Fix the grey territory problem on the map and resolve all duplicate county assignments. This involves two things: redesigning the metro Atlanta territories to use named city clusters instead of abstract North/South splits, and fixing 4 counties that appear in two territory records each.
+
+
+════════════════════════════════════════════════
+PART 1 — METRO ATLANTA TERRITORY REDESIGN
+════════════════════════════════════════════════
+
+The current GA-001 through GA-010 territories use abstract geographic
+splits (Fulton North, Fulton Central, Cobb South etc.) that cannot be
+auto-assigned because no ZIP code data tells us where "North" ends and
+"Central" begins.
+
+Replace them with named city-cluster territories. Each cluster maps
+to a clear, well-known set of ZIP codes that can be assigned
+automatically.
+
+UPDATE these 10 territory rows in the territories table:
+
+GA-001:
+  name = 'Alpharetta / Milton / Roswell'
+  counties = ['Fulton']
+  zone_note = 'Alpharetta, Milton, Roswell, Johns Creek, Mountain Park'
+  households = 95000
+  centroid_lat = 34.07, centroid_lng = -84.29
+
+GA-002:
+  name = 'Sandy Springs / Buckhead / Dunwoody'
+  counties = ['Fulton', 'DeKalb']
+  zone_note = 'Sandy Springs, Buckhead, Dunwoody, Brookhaven, Chamblee'
+  households = 92000
+  centroid_lat = 33.92, centroid_lng = -84.36
+
+GA-003:
+  name = 'Atlanta / Midtown / Inman Park'
+  counties = ['Fulton', 'DeKalb']
+  zone_note = 'Atlanta city core, Midtown, Inman Park, Grant Park, Virginia Highland'
+  households = 88000
+  centroid_lat = 33.77, centroid_lng = -84.37
+
+GA-004:
+  name = 'Duluth / Peachtree Corners / Norcross'
+  counties = ['Gwinnett']
+  zone_note = 'Duluth, Peachtree Corners, Norcross, Berkeley Lake, Doraville area'
+  households = 88000
+  centroid_lat = 33.97, centroid_lng = -84.14
+
+GA-005:
+  name = 'Lawrenceville / Snellville / Lilburn'
+  counties = ['Gwinnett']
+  zone_note = 'Lawrenceville, Snellville, Lilburn, Stone Mountain, Tucker'
+  households = 95000
+  centroid_lat = 33.85, centroid_lng = -84.00
+
+GA-006:
+  name = 'Buford / Sugar Hill / Braselton'
+  counties = ['Gwinnett']
+  zone_note = 'Buford, Sugar Hill, Dacula, Braselton, Grayson, Loganville'
+  households = 86000
+  centroid_lat = 34.10, centroid_lng = -83.93
+
+GA-007:
+  name = 'Marietta / Kennesaw / Acworth'
+  counties = ['Cobb']
+  zone_note = 'Marietta, Kennesaw, Acworth, Holly Springs area'
+  households = 92000
+  centroid_lat = 34.02, centroid_lng = -84.60
+
+GA-008:
+  name = 'Smyrna / Mableton / Powder Springs'
+  counties = ['Cobb']
+  zone_note = 'Smyrna, Mableton, Powder Springs, Austell, Vinings'
+  households = 88000
+  centroid_lat = 33.85, centroid_lng = -84.55
+
+GA-009:
+  name = 'Decatur / Tucker / Clarkston'
+  counties = ['DeKalb']
+  zone_note = 'Decatur, Tucker, Clarkston, Avondale Estates, Pine Lake'
+  households = 82000
+  centroid_lat = 33.77, centroid_lng = -84.22
+
+GA-010:
+  name = 'Stonecrest / Lithonia / South DeKalb'
+  counties = ['DeKalb']
+  zone_note = 'Stonecrest, Lithonia, South DeKalb'
+  households = 78000
+  centroid_lat = 33.67, centroid_lng = -84.07
+
+Also INSERT this new territory for South Fulton which was previously
+part of the old GA-003 Fulton South:
+
+  id = 'GA-096'
+  name = 'South Fulton / Fairburn / Union City'
+  state = 'GA'
+  counties = ['Fulton']
+  zone_note = 'Union City, Fairburn, Palmetto, South Fulton, Chattahoochee Hills'
+  households = 72000
+  status = 'available'
+  centroid_lat = 33.57, centroid_lng = -84.58
+
+
+════════════════════════════════════════════════
+PART 2 — AUTO-ASSIGN METRO ZIP CODES BY CITY NAME
+════════════════════════════════════════════════
+
+After updating the territory records above, auto-assign ZIP codes to
+the metro territories using the ZIP's primary city name rather than
+county boundary. Use this mapping:
+
+For each ZIP in territory_zip_assignments that is currently unassigned
+(or for ZIPs in the ga-zips GeoJSON that have no assignment yet),
+look at the ZIP's NAME or city field in the GeoJSON properties and
+assign it using these rules:
+
+ASSIGN to GA-001 (Alpharetta/Milton/Roswell) if city name contains:
+  Alpharetta, Milton, Roswell, Johns Creek, Mountain Park
+
+ASSIGN to GA-002 (Sandy Springs/Buckhead/Dunwoody) if city contains:
+  Sandy Springs, Buckhead, Dunwoody, Brookhaven, Chamblee, Doraville,
+  Peachtree Corners (partial overlap — use GA-004 if Gwinnett FIPS)
+
+ASSIGN to GA-003 (Atlanta/Midtown) if city contains:
+  Atlanta (and ZIP is in Fulton or DeKalb FIPS 13121 or 13089)
+
+ASSIGN to GA-004 (Duluth/Peachtree Corners/Norcross) if city contains:
+  Duluth, Norcross, Peachtree Corners, Berkeley Lake
+
+ASSIGN to GA-005 (Lawrenceville/Snellville/Lilburn) if city contains:
+  Lawrenceville, Snellville, Lilburn, Stone Mountain, Tucker,
+  Grayson, Loganville (Gwinnett side)
+
+ASSIGN to GA-006 (Buford/Sugar Hill/Braselton) if city contains:
+  Buford, Sugar Hill, Dacula, Braselton, Hoschton, Pendergrass,
+  Flowery Branch (Gwinnett side only — Hall County Flowery Branch
+  stays in GA-026 Hall County)
+
+ASSIGN to GA-007 (Marietta/Kennesaw/Acworth) if city contains:
+  Marietta, Kennesaw, Acworth, Canton (Cobb side only)
+
+ASSIGN to GA-008 (Smyrna/Mableton/Powder Springs) if city contains:
+  Smyrna, Mableton, Powder Springs, Austell, Vinings, Clarkdale,
+  Lithia Springs (Cobb side)
+
+ASSIGN to GA-009 (Decatur/Tucker/Clarkston) if city contains:
+  Decatur, Tucker, Clarkston, Avondale Estates, Pine Lake,
+  Scottdale, Panthersville
+
+ASSIGN to GA-010 (Stonecrest/Lithonia) if city contains:
+  Stonecrest, Lithonia, Redan, Ellenwood (DeKalb side)
+
+ASSIGN to GA-096 (South Fulton) if city contains:
+  Union City, Fairburn, Palmetto, Chattahoochee Hills, Tyrone
+  (Fulton side only — Tyrone in Fayette stays in GA-018)
+
+For any ZIP that does not match a city name rule above, fall back to
+the county-based assignment from the existing seed logic. Only skip
+a ZIP if it genuinely cannot be determined.
+
+After running the city-name assignment, log how many ZIPs were assigned
+to each metro territory and how many remain unassigned. The goal is
+fewer than 10 unassigned ZIPs across all metro territories.
+
+
+════════════════════════════════════════════════
+PART 3 — FIX DUPLICATE COUNTY ASSIGNMENTS
+════════════════════════════════════════════════
+
+These 4 counties currently appear in 2 territory records each, causing
+their ZIPs to be skipped. Fix by updating the territory records so each
+county appears in exactly one territory.
+
+DAWSON COUNTY (currently in GA-038 and GA-039):
+  Keep Dawson in GA-038. Update GA-039:
+    GA-039: counties = ['Lumpkin', 'White'], name = 'Lumpkin / White Counties'
+    zone_note = 'Dahlonega, Cleveland, Auraria, Turnersville'
+    centroid_lat = 34.60, centroid_lng = -83.85
+  White was previously in GA-047. Update GA-047:
+    GA-047: counties = ['Habersham', 'Stephens']
+    name = 'Habersham / Stephens Counties'
+    zone_note = 'Clarkesville, Cornelia, Demorest, Toccoa, Baldwin'
+    centroid_lat = 34.55, centroid_lng = -83.52
+  Stephens was previously in GA-048. Update GA-048:
+    GA-048: counties = ['Franklin', 'Hart']
+    name = 'Franklin / Hart Counties'
+    zone_note = 'Carnesville, Hartwell, Canon, Royston, Bowersville'
+    centroid_lat = 34.37, centroid_lng = -83.08
+  Franklin was previously in GA-056. Update GA-056:
+    GA-056: counties = ['Banks', 'Madison']
+    name = 'Banks / Madison Counties'
+    zone_note = 'Homer, Danielsville, Maysville, Commerce area'
+    centroid_lat = 34.10, centroid_lng = -83.36
+  Madison was previously in GA-055. Update GA-055:
+    GA-055: counties = ['Oglethorpe', 'Elbert']
+    name = 'Oglethorpe / Elbert Counties'
+    zone_note = 'Lexington, Elberton, Crawford, Bowman'
+    centroid_lat = 33.98, centroid_lng = -82.97
+
+GORDON COUNTY (currently in GA-032 and GA-053):
+  Keep Gordon in GA-032 solo (26k HH, viable alone).
+  Update GA-053 to Murray only:
+    GA-053: counties = ['Murray']
+    name = 'Murray County'
+    zone_note = 'Chatsworth, Eton, Crandall, Cisco'
+    centroid_lat = 34.79, centroid_lng = -84.75
+    households = 18000
+
+SCHLEY COUNTY (currently in GA-070 and GA-073):
+  Keep Schley in GA-073 (Sumter/Schley — Americus is the natural hub).
+  Remove Schley from GA-070 and add Webster to reach threshold:
+    GA-070: counties = ['Macon', 'Taylor', 'Marion', 'Webster']
+    name = 'Macon / Taylor / Marion / Webster Counties'
+    zone_note = 'Oglethorpe, Butler, Buena Vista, Preston'
+    centroid_lat = 32.25, centroid_lng = -84.45
+    households = 18000
+
+
+════════════════════════════════════════════════
+PART 4 — RE-RUN ZIP SEED FOR FIXED COUNTIES
+════════════════════════════════════════════════
+
+After making all the territory record updates in Parts 1, 2, and 3,
+re-run the ZIP assignment seed for these previously-skipped counties:
+
+  Dawson (now only in GA-038)
+  White (now only in GA-039)
+  Stephens (now only in GA-047)
+  Franklin (now only in GA-048)
+  Banks (now only in GA-056, paired with Madison)
+  Madison (now only in GA-056)
+  Oglethorpe (now only in GA-055, paired with Elbert)
+  Elbert (now only in GA-055)
+  Gordon (now only in GA-032)
+  Murray (now only in GA-053)
+  Schley (now only in GA-073)
+  Webster (now only in GA-070)
+
+For each of these counties, find all ZIPs in the ga-zips GeoJSON that
+fall within that county (using the FIPS code or county name in the
+GeoJSON properties), and insert them into territory_zip_assignments
+with the correct territory_id.
+
+Log the number of ZIPs assigned per county.
+
+
+════════════════════════════════════════════════
+PART 5 — VERIFY NO REMAINING DUPLICATES
+════════════════════════════════════════════════
+
+After all updates, run this verification query:
+
+  SELECT zip, COUNT(*) as territory_count
+  FROM territory_zip_assignments
+  GROUP BY zip
+  HAVING COUNT(*) > 1;
+
+The result must be zero rows. If any duplicates exist, report them and
+do not proceed until they are resolved.
+
+Also run:
+  SELECT COUNT(*) FROM territory_zip_assignments WHERE territory_id IS NOT NULL;
+
+Report the total number of assigned ZIPs. Georgia has approximately
+950 ZIP codes — the goal is to have fewer than 50 unassigned.
+
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+  Any territory outside of Georgia (state != 'GA')
+  Any dealer records or claims
+  Any ad generator files
+  Payment pages or Stripe integration
+  Image library or ad studio
+  Authentication logic
+
+
+════════════════════════════════════════════════
+TEST AFTER BUILDING
+════════════════════════════════════════════════
+
+  1. Go to /find-territory
+     The Atlanta metro area should now show colored territories
+     instead of a large grey void
+
+  2. Enter zip code 30005 (Alpharetta)
+     Should highlight GA-001 Alpharetta/Milton/Roswell
+
+  3. Enter zip code 30060 (Marietta)
+     Should highlight GA-007 Marietta/Kennesaw/Acworth
+
+  4. Enter zip code 30043 (Lawrenceville)
+     Should highlight GA-005 Lawrenceville/Snellville/Lilburn
+
+  5. Enter zip code 30523 (Clarkesville / Habersham)
+     Should highlight GA-047 Habersham/Stephens Counties
+
+  6. Enter zip code 30533 (Dahlonega / Lumpkin)
+     Should highlight GA-039 Lumpkin/White Counties
+
+  7. No grey patches should remain in the Atlanta metro ring
+     No grey patches in Dawsonville, Dahlonega, Toccoa, or Calhoun areas
+
+  8. Run the duplicate check query — must return zero rows

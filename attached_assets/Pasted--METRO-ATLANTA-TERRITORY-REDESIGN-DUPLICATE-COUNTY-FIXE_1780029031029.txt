@@ -1,0 +1,309 @@
+// METRO ATLANTA TERRITORY REDESIGN + DUPLICATE COUNTY FIXES
+// Replace GA-001 through GA-010 (the abstract North/South/Central splits)
+// with named city-cluster territories that map cleanly to ZIP codes
+// Also fixes 4 duplicate county assignments: Dawson, Franklin, Gordon, Schley
+//
+// Send this to Replit with the prompt below
+
+const METRO_REPLACEMENTS = [
+
+  // ══════════════════════════════════════════════════
+  // REPLACE GA-001 through GA-003 (old Fulton splits)
+  // ══════════════════════════════════════════════════
+  {
+    id: 'GA-001',
+    name: 'Alpharetta / Milton / Roswell',
+    state: 'GA',
+    counties: ['Fulton'],
+    zone_note: 'Alpharetta, Milton, Roswell, Johns Creek, Mountain Park',
+    households: 95000,
+    status: 'available',
+    centroid_lat: 34.07,
+    centroid_lng: -84.29,
+    // ZIPs: 30004, 30005, 30009, 30022, 30023, 30076, 30077, 30097, 30098, 30350
+  },
+  {
+    id: 'GA-002',
+    name: 'Sandy Springs / Buckhead / Dunwoody',
+    state: 'GA',
+    counties: ['Fulton', 'DeKalb'],
+    zone_note: 'Sandy Springs, Buckhead, Dunwoody, Brookhaven, Chamblee',
+    households: 92000,
+    status: 'available',
+    centroid_lat: 33.92,
+    centroid_lng: -84.36,
+    // ZIPs: 30305, 30319, 30326, 30327, 30328, 30338, 30342, 30346, 30360
+  },
+  {
+    id: 'GA-003',
+    name: 'Atlanta / Midtown / Inman Park',
+    state: 'GA',
+    counties: ['Fulton', 'DeKalb'],
+    zone_note: 'Atlanta city core, Midtown, Inman Park, Grant Park, Virginia Highland',
+    households: 88000,
+    status: 'available',
+    centroid_lat: 33.77,
+    centroid_lng: -84.37,
+    // ZIPs: 30301-30316, 30318, 30324, 30329, 30331, 30336
+  },
+
+  // Note: South Fulton (Union City, Fairburn, Palmetto) folds into
+  // existing GA-017 Coweta County territory which borders it,
+  // OR create a new GA-003b if needed. See note below.
+
+  // ══════════════════════════════════════════════════
+  // REPLACE GA-004 through GA-006 (old Gwinnett splits)
+  // ══════════════════════════════════════════════════
+  {
+    id: 'GA-004',
+    name: 'Duluth / Peachtree Corners / Norcross',
+    state: 'GA',
+    counties: ['Gwinnett'],
+    zone_note: 'Duluth, Peachtree Corners, Norcross, Berkeley Lake, Doraville area',
+    households: 88000,
+    status: 'available',
+    centroid_lat: 33.97,
+    centroid_lng: -84.14,
+    // ZIPs: 30024, 30092, 30093, 30096, 30097, 30360, 30071, 30099
+  },
+  {
+    id: 'GA-005',
+    name: 'Lawrenceville / Snellville / Lilburn',
+    state: 'GA',
+    counties: ['Gwinnett'],
+    zone_note: 'Lawrenceville, Snellville, Lilburn, Stone Mountain, Tucker',
+    households: 95000,
+    status: 'available',
+    centroid_lat: 33.85,
+    centroid_lng: -84.00,
+    // ZIPs: 30039, 30043, 30044, 30045, 30046, 30047, 30052, 30058, 30078, 30084, 30087, 30088
+  },
+  {
+    id: 'GA-006',
+    name: 'Buford / Sugar Hill / Braselton',
+    state: 'GA',
+    counties: ['Gwinnett'],
+    zone_note: 'Buford, Sugar Hill, Dacula, Braselton, Grayson, Loganville',
+    households: 86000,
+    status: 'available',
+    centroid_lat: 34.10,
+    centroid_lng: -83.93,
+    // ZIPs: 30017, 30019, 30040, 30041, 30042, 30048, 30049, 30052, 30518, 30519
+  },
+
+  // ══════════════════════════════════════════════════
+  // REPLACE GA-007 through GA-008 (old Cobb splits)
+  // ══════════════════════════════════════════════════
+  {
+    id: 'GA-007',
+    name: 'Marietta / Kennesaw / Acworth',
+    state: 'GA',
+    counties: ['Cobb'],
+    zone_note: 'Marietta, Kennesaw, Acworth, Big Canoe, Holly Springs area',
+    households: 92000,
+    status: 'available',
+    centroid_lat: 34.02,
+    centroid_lng: -84.60,
+    // ZIPs: 30060, 30061, 30062, 30064, 30065, 30066, 30067, 30068, 30101, 30102, 30152, 30189
+  },
+  {
+    id: 'GA-008',
+    name: 'Smyrna / Mableton / Powder Springs',
+    state: 'GA',
+    counties: ['Cobb'],
+    zone_note: 'Smyrna, Mableton, Powder Springs, Austell, Vinings, Clarkdale',
+    households: 88000,
+    status: 'available',
+    centroid_lat: 33.85,
+    centroid_lng: -84.55,
+    // ZIPs: 30080, 30082, 30126, 30127, 30144, 30168, 30339
+  },
+
+  // ══════════════════════════════════════════════════
+  // REPLACE GA-009 through GA-010 (old DeKalb splits)
+  // Note: GA-002 and GA-003 already absorb Sandy Springs/
+  // Dunwoody/Buckhead/Brookhaven which are technically DeKalb.
+  // These two cover the remaining DeKalb areas.
+  // ══════════════════════════════════════════════════
+  {
+    id: 'GA-009',
+    name: 'Decatur / Tucker / Clarkston',
+    state: 'GA',
+    counties: ['DeKalb'],
+    zone_note: 'Decatur, Tucker, Clarkston, Avondale Estates, Pine Lake',
+    households: 82000,
+    status: 'available',
+    centroid_lat: 33.77,
+    centroid_lng: -84.22,
+    // ZIPs: 30030, 30032, 30033, 30034, 30035, 30079, 30083, 30084, 30085, 30086, 30087, 30088
+  },
+  {
+    id: 'GA-010',
+    name: 'Stonecrest / Lithonia / Conyers area',
+    state: 'GA',
+    counties: ['DeKalb'],
+    zone_note: 'Stonecrest, Lithonia, Conyers border, South DeKalb',
+    households: 78000,
+    status: 'available',
+    centroid_lat: 33.67,
+    centroid_lng: -84.07,
+    // ZIPs: 30038, 30058, 30316, 30317, 30058
+  },
+
+];
+
+// ══════════════════════════════════════════════════
+// DUPLICATE COUNTY FIXES
+// These 4 counties appear in 2 territory records each.
+// Fix by removing from one territory in each pair.
+// ══════════════════════════════════════════════════
+
+const DUPLICATE_FIXES = [
+
+  // DAWSON COUNTY — appears in GA-038 and GA-039
+  // Fix: keep Dawson in GA-038 (Pickens/Dawson), pair Lumpkin with White
+  {
+    id: 'GA-038',
+    name: 'Pickens / Dawson Counties',
+    counties: ['Pickens', 'Dawson'],
+    zone_note: 'Jasper, Dawsonville, Marble Hill, Nelson',
+    households: 24000,
+    centroid_lat: 34.45,
+    centroid_lng: -84.30,
+  },
+  {
+    id: 'GA-039',
+    name: 'Lumpkin / White Counties',
+    counties: ['Lumpkin', 'White'],
+    zone_note: 'Dahlonega, Cleveland, Turnersville, Auraria',
+    households: 22000,
+    centroid_lat: 34.60,
+    centroid_lng: -83.85,
+  },
+  // NOTE: White County was previously in GA-047 (White/Habersham)
+  // Fix GA-047 to be Habersham only, or pair with Stephens:
+  {
+    id: 'GA-047',
+    name: 'Habersham / Stephens Counties',
+    counties: ['Habersham', 'Stephens'],
+    zone_note: 'Clarkesville, Cornelia, Demorest, Toccoa, Baldwin',
+    households: 30000,
+    centroid_lat: 34.55,
+    centroid_lng: -83.52,
+  },
+  // NOTE: Stephens was previously in GA-048 (Stephens/Franklin/Hart)
+  // Fix GA-048 to Franklin/Hart only:
+  {
+    id: 'GA-048',
+    name: 'Franklin / Hart Counties',
+    counties: ['Franklin', 'Hart'],
+    zone_note: 'Carnesville, Hartwell, Canon, Royston, Bowersville',
+    households: 22000,
+    centroid_lat: 34.37,
+    centroid_lng: -83.08,
+  },
+  // NOTE: Franklin was previously in GA-056 (Banks/Franklin)
+  // Fix GA-056 to Banks only — too small solo, add Madison:
+  {
+    id: 'GA-056',
+    name: 'Banks / Madison Counties',
+    counties: ['Banks', 'Madison'],
+    zone_note: 'Homer, Danielsville, Maysville, Commerce area',
+    households: 20000,
+    centroid_lat: 34.10,
+    centroid_lng: -83.36,
+  },
+  // NOTE: Madison was previously in GA-055 (Madison/Oglethorpe)
+  // Fix GA-055 to Oglethorpe only — too small solo, add Elbert:
+  {
+    id: 'GA-055',
+    name: 'Oglethorpe / Elbert Counties',
+    counties: ['Oglethorpe', 'Elbert'],
+    zone_note: 'Lexington, Elberton, Crawford, Bowman',
+    households: 20000,
+    centroid_lat: 33.98,
+    centroid_lng: -82.97,
+  },
+  // NOTE: Elbert was previously in GA-043 (Hart/Elbert)
+  // Hart is now solo in GA-048 with Franklin so this is resolved.
+
+  // GORDON COUNTY — appears in GA-032 and GA-053 (Murray/Gordon)
+  // Fix: keep Gordon in GA-053 (Murray/Gordon is a natural pair)
+  // GA-032 becomes Gordon solo OR pairs with Floyd area
+  // Gordon alone is 26k HH which is viable:
+  {
+    id: 'GA-032',
+    name: 'Gordon County',
+    counties: ['Gordon'],
+    zone_note: 'Calhoun, Resaca, Fairmount, Plainville, Ranger',
+    households: 26000,
+    centroid_lat: 34.50,
+    centroid_lng: -84.87,
+  },
+  {
+    id: 'GA-053',
+    name: 'Murray County',
+    counties: ['Murray'],
+    zone_note: 'Chatsworth, Eton, Crandall, Cisco',
+    households: 18000,
+    centroid_lat: 34.79,
+    centroid_lng: -84.75,
+    // NOTE: 18k HH is borderline — consider pairing Murray with Whitfield
+    // but Whitfield (GA-027) is already solo at 38k. Keep Murray solo
+    // or fold it into GA-040 Fannin/Gilmer area if it stays grey.
+  },
+
+  // SCHLEY COUNTY — appears in GA-070 (Macon/Taylor/Marion/Schley)
+  // and GA-073 (Sumter/Schley)
+  // Fix: Schley pairs naturally with Sumter (Americus is the hub)
+  // Remove Schley from GA-070:
+  {
+    id: 'GA-070',
+    name: 'Macon / Taylor / Marion Counties',
+    counties: ['Macon', 'Taylor', 'Marion'],
+    zone_note: 'Oglethorpe, Butler, Buena Vista, Ideal',
+    households: 16000,
+    centroid_lat: 32.35,
+    centroid_lng: -84.37,
+    // NOTE: Now 16k HH — borderline. Add Webster to reach threshold:
+  },
+  {
+    id: 'GA-070',
+    name: 'Macon / Taylor / Marion / Webster Counties',
+    counties: ['Macon', 'Taylor', 'Marion', 'Webster'],
+    zone_note: 'Oglethorpe, Butler, Buena Vista, Preston',
+    households: 18000,
+    centroid_lat: 32.25,
+    centroid_lng: -84.45,
+  },
+  {
+    id: 'GA-073',
+    name: 'Sumter / Schley Counties',
+    counties: ['Sumter', 'Schley'],
+    zone_note: 'Americus, Ellaville, Plains, Leslie',
+    households: 24000,
+    centroid_lat: 32.07,
+    centroid_lng: -84.31,
+  },
+
+];
+
+// ══════════════════════════════════════════════════
+// SOUTH FULTON — currently unassigned
+// The old GA-003 "Fulton South" covered Union City/Fairburn/Palmetto.
+// With GA-003 now being Atlanta/Midtown, create a new territory:
+// ══════════════════════════════════════════════════
+
+const NEW_TERRITORY = {
+  id: 'GA-096', // use next available ID after GA-095
+  name: 'South Fulton / Fairburn / Union City',
+  state: 'GA',
+  counties: ['Fulton'],
+  zone_note: 'Union City, Fairburn, Palmetto, South Fulton, Chattahoochee Hills',
+  households: 72000,
+  status: 'available',
+  centroid_lat: 33.57,
+  centroid_lng: -84.58,
+};
+
+module.exports = { METRO_REPLACEMENTS, DUPLICATE_FIXES, NEW_TERRITORY };
