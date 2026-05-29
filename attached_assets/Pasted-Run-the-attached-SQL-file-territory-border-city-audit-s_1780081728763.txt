@@ -1,0 +1,119 @@
+Run the attached SQL file territory-border-city-audit.sql against the database. This corrects city assignments in the zone_note field for Georgia territories after a full border city audit.
+
+No schema changes. No territory record changes other than zone_note text.
+Only UPDATE statements on the zone_note field.
+
+
+════════════════════════════════════════════════
+SUMMARY OF WHAT CHANGED AND WHY
+════════════════════════════════════════════════
+
+WOODSTOCK — moved from GA-007 (Marietta/Kennesaw) to GA-011 (Cherokee)
+  Woodstock is Cherokee County. GA-007 now has fewer cities so
+  Powder Springs moves there to rebalance.
+
+POWDER SPRINGS — moved from GA-008 (Smyrna/Mableton) to GA-007 (Marietta/Kennesaw)
+  Powder Springs is Cobb County. GA-007 lost Woodstock so adding
+  Powder Springs keeps both territories balanced.
+
+LOGANVILLE — moved from GA-005/GA-006 to GA-023 (Walton County)
+  Loganville spans Walton and Gwinnett. Principal county is Walton.
+  GA-023 Walton had fewer cities so it goes there.
+
+BRASELTON — moved from GA-006 to GA-025 (Jackson County)
+  Braselton spans Jackson, Barrow, Gwinnett, Hall. Principal county
+  is Jackson. GA-025 had fewer cities so it stays there.
+
+SUWANEE — moved from GA-004 to GA-006 (Buford/Sugar Hill)
+  Suwanee is northern Gwinnett. GA-006 had fewer cities.
+
+JOHNS CREEK — confirmed in GA-001 (Alpharetta/Milton/Roswell)
+  Johns Creek is Fulton County, north Fulton corridor.
+
+TYRONE — moved from GA-096 to GA-018 (Fayette County)
+  Tyrone is Fayette County, not Fulton.
+
+VILLA RICA — moved to GA-019 (Carroll County)
+  Villa Rica is Carroll County. Was incorrectly in GA-015 and GA-016.
+
+BREMEN — confirmed in GA-054 (Haralson/Polk)
+  Bremen is Haralson County. Was incorrectly removed from notes.
+
+CONYERS — moved from GA-010 to GA-021 (Rockdale County)
+  Conyers is Rockdale County, not DeKalb.
+
+TUCKER — moved from GA-005 to GA-009 (DeKalb)
+  Tucker is DeKalb County, not Gwinnett.
+
+DORAVILLE — confirmed in GA-004 (Duluth/Peachtree Corners)
+  Doraville is DeKalb but in the west Gwinnett corridor border.
+  Removed from GA-002 Sandy Springs which is a different area.
+
+BUFORD — removed from GA-026 Hall County
+  Buford spans Hall and Gwinnett. Already in GA-006 Gwinnett.
+  Keeping it in one territory only.
+
+
+════════════════════════════════════════════════
+ALSO ADD THIS CLIENT-SIDE FILTER IF NOT ALREADY DONE
+════════════════════════════════════════════════
+
+In the territory detail panel and sidebar cards on /find-territory,
+the zone_note cities should be filtered before display to remove any
+item ending in the word "area" (case insensitive).
+
+If this filter is not already in place, add it now:
+
+  const cities = territory.zone_note
+    ? territory.zone_note
+        .split(',')
+        .map(c => c.trim())
+        .filter(c => !c.toLowerCase().endsWith('area'))
+        .join(', ')
+    : '';
+
+Apply this filter wherever zone_note is rendered — both the detail
+panel and the sidebar territory cards.
+
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+  Territory status, households, counties, centroid fields
+  Any non-Georgia territories
+  ZIP assignments
+  Dealer records or claims
+  Any ad generator, image library, payment, or auth files
+
+
+════════════════════════════════════════════════
+TEST AFTER RUNNING
+════════════════════════════════════════════════
+
+1. Go to /find-territory and search zip 30189 (Woodstock)
+   Detail panel Key Cities should include Woodstock
+   Territory should be Cherokee County (GA-011)
+
+2. Search zip 30060 (Marietta)
+   Territory GA-007 cities should show:
+   Marietta, Kennesaw, Acworth, Powder Springs
+   Should NOT show Woodstock
+
+3. Search zip 30080 (Smyrna)
+   Territory GA-008 cities should show:
+   Smyrna, Mableton, Austell, Vinings, Clarkdale
+   Should NOT show Powder Springs
+
+4. Search zip 30052 (Loganville)
+   Territory GA-023 Walton County cities should include Loganville
+
+5. Search zip 30518 (Buford)
+   Territory GA-006 cities should include Suwanee and Buford
+   Should NOT include Loganville
+
+6. Search zip 30022 (Johns Creek / Alpharetta area)
+   Territory GA-001 cities should include Johns Creek and Alpharetta
+
+7. Run the verification query from the SQL file and confirm no city
+   appears in more than one territory's zone_note

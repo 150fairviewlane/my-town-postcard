@@ -1,0 +1,285 @@
+Border city audit — corrected zone_note values for all Georgia metro territories.
+Every city placed in its correct county territory.
+Where a city spans multiple counties, placed in the territory with fewer cities.
+"area" suffix cities removed from display by client-side filter already in place.
+
+Run these UPDATE statements in order.
+
+
+════════════════════════════════════════════════
+METRO ATLANTA — CORRECTED CITY ASSIGNMENTS
+════════════════════════════════════════════════
+
+-- GA-001: Alpharetta / Milton / Roswell (Fulton North)
+-- Johns Creek is Fulton County — added here (fewer cities than GA-004)
+-- Mountain Park is unincorporated Fulton — included
+UPDATE territories SET zone_note = 'Alpharetta, Milton, Roswell, Johns Creek, Mountain Park'
+WHERE id = 'GA-001';
+
+-- GA-002: Sandy Springs / Buckhead / Dunwoody
+-- Brookhaven and Chamblee are DeKalb but listed here (GA-009 has more cities)
+-- Doraville is DeKalb — move to GA-009 which needs more cities
+UPDATE territories SET zone_note = 'Sandy Springs, Buckhead, Dunwoody, Brookhaven, Chamblee'
+WHERE id = 'GA-002';
+
+-- GA-003: Atlanta / Midtown
+-- Core Atlanta only — no border cities
+UPDATE territories SET zone_note = 'Atlanta, Midtown, Inman Park, Grant Park, East Atlanta, Kirkwood'
+WHERE id = 'GA-003';
+
+-- GA-004: Duluth / Peachtree Corners / Norcross
+-- Suwanee moves to GA-006 (fewer cities there)
+-- Berkeley Lake stays here — it is in Gwinnett west corridor
+-- Doraville moves here from GA-002 — it is DeKalb but borders Gwinnett west
+UPDATE territories SET zone_note = 'Duluth, Peachtree Corners, Norcross, Berkeley Lake, Doraville'
+WHERE id = 'GA-004';
+
+-- GA-005: Lawrenceville / Snellville / Lilburn
+-- Loganville moves to GA-023 Walton (Walton has fewer cities)
+-- Grayson stays — primarily Gwinnett
+-- Stone Mountain stays — DeKalb but closer to this cluster
+-- Tucker moves to GA-009 (DeKalb territory)
+UPDATE territories SET zone_note = 'Lawrenceville, Snellville, Lilburn, Stone Mountain, Grayson'
+WHERE id = 'GA-005';
+
+-- GA-006: Buford / Sugar Hill / Braselton
+-- Suwanee moves here from GA-004 (this territory has fewer cities)
+-- Braselton moves here from GA-025 Jackson — Gwinnett/Hall portion is large
+-- Wait — Braselton principal county is Jackson. GA-025 has fewer cities. Keep there.
+-- Hoschton is Jackson County — keep in GA-025
+-- Dacula is Gwinnett — add here, fewer cities than GA-005
+UPDATE territories SET zone_note = 'Buford, Sugar Hill, Suwanee, Dacula, Braselton, Grayson'
+WHERE id = 'GA-006';
+
+-- GA-007: Marietta / Kennesaw / Acworth
+-- Woodstock removed — it is Cherokee County (GA-011)
+-- Powder Springs moves here from GA-008 — GA-007 now has fewer cities after Woodstock leaves
+UPDATE territories SET zone_note = 'Marietta, Kennesaw, Acworth, Powder Springs'
+WHERE id = 'GA-007';
+
+-- GA-008: Smyrna / Mableton / Powder Springs
+-- Powder Springs moves to GA-007 (now has fewer cities)
+-- Austell stays — Cobb County
+-- Vinings stays — Cobb County unincorporated
+UPDATE territories SET zone_note = 'Smyrna, Mableton, Austell, Vinings, Clarkdale'
+WHERE id = 'GA-008';
+
+-- GA-009: Decatur / Tucker / Clarkston
+-- Tucker moves here from GA-005 — it is DeKalb County
+-- Doraville moves to GA-004 (borders Gwinnett west)
+-- Avondale Estates stays — DeKalb
+-- Scottdale stays — DeKalb unincorporated
+UPDATE territories SET zone_note = 'Decatur, Tucker, Clarkston, Avondale Estates, Scottdale'
+WHERE id = 'GA-009';
+
+-- GA-010: Stonecrest / Lithonia / South DeKalb
+-- Conyers is Rockdale County — remove, it belongs in GA-021
+UPDATE territories SET zone_note = 'Stonecrest, Lithonia, Redan, Ellenwood'
+WHERE id = 'GA-010';
+
+-- GA-096: South Fulton / Fairburn / Union City
+-- Tyrone is Fayette County — remove, belongs in GA-018
+-- Chattahoochee Hills is Fulton — keep
+UPDATE territories SET zone_note = 'South Fulton, Union City, Fairburn, Palmetto, Chattahoochee Hills'
+WHERE id = 'GA-096';
+
+
+════════════════════════════════════════════════
+ATLANTA SUBURBS — CORRECTED CITY ASSIGNMENTS
+════════════════════════════════════════════════
+
+-- GA-011: Cherokee County
+-- Woodstock moves here from GA-007 — it IS Cherokee County
+-- Ball Ground, Canton, Holly Springs all confirmed Cherokee
+UPDATE territories SET zone_note = 'Canton, Woodstock, Ball Ground, Holly Springs, Nelson, Waleska'
+WHERE id = 'GA-011';
+
+-- GA-012: Forsyth County
+-- Suwanee touches Forsyth but is primarily Gwinnett — keep Suwanee in GA-006
+-- Gainesville touches Forsyth but is Hall County — keep in GA-026
+UPDATE territories SET zone_note = 'Cumming, South Forsyth, Coal Mountain, Midway, Settingdown'
+WHERE id = 'GA-012';
+
+-- GA-013: Henry County — no border issues
+UPDATE territories SET zone_note = 'McDonough, Stockbridge, Hampton, Locust Grove, Lovejoy, Jenkinsburg'
+WHERE id = 'GA-013';
+
+-- GA-014: Clayton County — no border issues
+UPDATE territories SET zone_note = 'Jonesboro, Riverdale, Forest Park, College Park, Morrow, Lake City, Lovejoy'
+WHERE id = 'GA-014';
+
+-- GA-015: Paulding County
+-- Powder Springs is Cobb — remove from here
+-- Villa Rica is Carroll County — remove, belongs in GA-019
+-- Acworth touches Paulding but is Cobb — remove
+UPDATE territories SET zone_note = 'Dallas, Hiram, Braswell, Yorkville, Buchanan'
+WHERE id = 'GA-015';
+
+-- GA-016: Douglas County
+-- Villa Rica is Carroll County — remove, belongs in GA-019
+-- Austell is Cobb County — remove, belongs in GA-008
+UPDATE territories SET zone_note = 'Douglasville, Lithia Springs, Winston, Mableton'
+WHERE id = 'GA-016';
+
+-- GA-017: Coweta County — no major border issues
+UPDATE territories SET zone_note = 'Newnan, Senoia, Sharpsburg, Moreland, Turin, Grantville'
+WHERE id = 'GA-017';
+
+-- GA-018: Fayette County
+-- Tyrone moves here from GA-096 — it IS Fayette County
+UPDATE territories SET zone_note = 'Fayetteville, Peachtree City, Tyrone, Brooks, Woolsey, Starr Mill'
+WHERE id = 'GA-018';
+
+-- GA-019: Carroll County
+-- Villa Rica is Carroll County — add here (was incorrectly in GA-015 and GA-016)
+-- Bremen is actually Haralson County — remove, belongs in GA-054
+UPDATE territories SET zone_note = 'Carrollton, Villa Rica, Whitesburg, Temple, Bowdon, Roopville'
+WHERE id = 'GA-019';
+
+-- GA-020: Barrow County — no border issues
+UPDATE territories SET zone_note = 'Winder, Auburn, Bethlehem, Carl, Statham, Kilcrease'
+WHERE id = 'GA-020';
+
+-- GA-021: Rockdale County
+-- Conyers moves here from GA-010 — it IS Rockdale County
+UPDATE territories SET zone_note = 'Conyers, Milstead, Olde Town Conyers'
+WHERE id = 'GA-021';
+
+-- GA-022: Newton County
+-- Social Circle spans Walton/Newton — fewer cities in Newton, keep here
+UPDATE territories SET zone_note = 'Covington, Oxford, Mansfield, Porterdale, Social Circle'
+WHERE id = 'GA-022';
+
+-- GA-023: Walton County
+-- Loganville moves here from GA-005 and GA-006 — Walton is primary county, fewer cities
+-- Social Circle spans Newton/Walton — already in GA-022 Newton, remove from here
+UPDATE territories SET zone_note = 'Monroe, Loganville, Good Hope, Between, Jersey'
+WHERE id = 'GA-023';
+
+-- GA-024: Spalding County — no border issues
+UPDATE territories SET zone_note = 'Griffin, Orchard Hill, Sunny Side, Experiment, Williamson'
+WHERE id = 'GA-024';
+
+-- GA-025: Jackson County
+-- Braselton stays here — Jackson is principal county (fewer cities than Gwinnett)
+-- Hoschton is Jackson — confirmed
+-- Commerce is Jackson — confirmed
+UPDATE territories SET zone_note = 'Jefferson, Commerce, Braselton, Hoschton, Pendergrass, Nicholson'
+WHERE id = 'GA-025';
+
+-- GA-026: Hall County
+-- Flowery Branch is Hall — confirmed
+-- Buford spans Hall/Gwinnett — fewer cities in GA-006 Gwinnett, remove from here
+-- Gainesville is Hall County seat — confirmed
+UPDATE territories SET zone_note = 'Gainesville, Flowery Branch, Oakwood, Clermont, Lula, Gillsville'
+WHERE id = 'GA-026';
+
+
+════════════════════════════════════════════════
+NORTH GEORGIA — CORRECTED CITY ASSIGNMENTS
+════════════════════════════════════════════════
+
+-- GA-027: Whitfield County — no border issues
+UPDATE territories SET zone_note = 'Dalton, Tunnel Hill, Cohutta, Varnell, Rocky Face, Carbondale'
+WHERE id = 'GA-027';
+
+-- GA-028: Bartow County
+-- White (city) is Bartow — confirmed
+-- Kingston is Bartow — confirmed
+UPDATE territories SET zone_note = 'Cartersville, Adairsville, Emerson, Euharlee, Kingston, White, Taylorsville'
+WHERE id = 'GA-028';
+
+-- GA-029: Floyd County — no border issues
+UPDATE territories SET zone_note = 'Rome, Cave Spring, Armuchee, Shannon, Lindale, Coosa'
+WHERE id = 'GA-029';
+
+-- GA-030: Catoosa County — no border issues
+UPDATE territories SET zone_note = 'Ringgold, Fort Oglethorpe, Graysville, Battlefield'
+WHERE id = 'GA-030';
+
+-- GA-031: Walker / Dade Counties
+-- Chickamauga is Walker — confirmed
+-- Trenton is Dade — confirmed
+UPDATE territories SET zone_note = 'LaFayette, Rock Spring, Chickamauga, Rossville, Trenton, Wildwood'
+WHERE id = 'GA-031';
+
+-- GA-032: Gordon County — no border issues
+UPDATE territories SET zone_note = 'Calhoun, Resaca, Fairmount, Plainville, Ranger, Pine Log'
+WHERE id = 'GA-032';
+
+-- GA-033: Clarke County
+-- Bogart spans Oconee/Clarke — fewer cities in GA-045 Oconee, move there
+-- Winterville is Clarke — confirmed
+UPDATE territories SET zone_note = 'Athens, Winterville, Watkinsville, Bishop, Arnoldsville'
+WHERE id = 'GA-033';
+
+-- GA-054: Haralson / Polk Counties
+-- Bremen is Haralson — add here (was incorrectly removed from GA-019)
+-- Tallapoosa is Haralson — confirmed
+UPDATE territories SET zone_note = 'Buchanan, Cedartown, Rockmart, Bremen, Tallapoosa, Waco'
+WHERE id = 'GA-054';
+
+
+════════════════════════════════════════════════
+NORTHEAST GEORGIA — CORRECTED CITY ASSIGNMENTS
+════════════════════════════════════════════════
+
+-- GA-047: Habersham / Stephens
+UPDATE territories SET zone_note = 'Clarkesville, Cornelia, Demorest, Toccoa, Baldwin, Mount Airy, Alto, Tallulah Falls'
+WHERE id = 'GA-047';
+
+-- GA-048: Franklin / Hart Counties
+UPDATE territories SET zone_note = 'Carnesville, Hartwell, Canon, Royston, Bowersville, Lavonia'
+WHERE id = 'GA-048';
+
+-- GA-049: Rabun / Towns / Union Counties
+UPDATE territories SET zone_note = 'Clayton, Dillard, Sky Valley, Rabun Gap, Hiawassee, Young Harris, Blairsville, Suches'
+WHERE id = 'GA-049';
+
+-- GA-050: Fannin / Gilmer Counties
+UPDATE territories SET zone_note = 'Blue Ridge, Ellijay, McCaysville, Morganton, East Ellijay, Cherry Log'
+WHERE id = 'GA-050';
+
+-- GA-051: Pickens / Dawson Counties
+UPDATE territories SET zone_note = 'Jasper, Dawsonville, Marble Hill, Nelson, Talking Rock'
+WHERE id = 'GA-051';
+
+-- GA-052: Lumpkin / White Counties
+-- Helen is White County — confirmed
+UPDATE territories SET zone_note = 'Dahlonega, Cleveland, Helen, Suches, Turnersville, Neel Gap'
+WHERE id = 'GA-052';
+
+-- GA-053: Murray County
+UPDATE territories SET zone_note = 'Chatsworth, Eton, Crandall, Cisco, Spring Place'
+WHERE id = 'GA-053';
+
+-- GA-055: Oglethorpe / Elbert Counties
+UPDATE territories SET zone_note = 'Lexington, Elberton, Crawford, Bowman, Maxeys, Arnoldsville'
+WHERE id = 'GA-055';
+
+-- GA-056: Banks / Madison Counties
+UPDATE territories SET zone_note = 'Homer, Danielsville, Maysville, Harmony Grove, Comer'
+WHERE id = 'GA-056';
+
+
+════════════════════════════════════════════════
+VERIFY AFTER RUNNING
+════════════════════════════════════════════════
+
+SELECT id, name, zone_note
+FROM territories
+WHERE state = 'GA'
+ORDER BY id;
+
+Visually check that:
+  - No zone_note contains "Woodstock" except GA-011
+  - No zone_note contains "Loganville" except GA-023
+  - No zone_note contains "Powder Springs" except GA-007
+  - No zone_note contains "Villa Rica" except GA-019
+  - No zone_note contains "Braselton" except GA-025
+  - No zone_note contains "Tyrone" except GA-018
+  - No zone_note contains "Bremen" except GA-054
+  - No zone_note contains "Conyers" except GA-021
+  - No zone_note contains "Suwanee" except GA-006
+  - No zone_note contains "Johns Creek" except GA-001
+  - No city appears in two different zone_note values
