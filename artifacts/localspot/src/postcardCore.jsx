@@ -814,7 +814,7 @@ export function ReservedSpot({ spot }) {
 }
 
 // ─── Public: Modal ─────────────────────────────────────────────────────────────
-export function Modal({ spot, onClose, onSubmit, isLoading, error }) {
+export function Modal({ spot, onClose, onSubmit, isLoading, error, territory }) {
   const sz = SIZES[spot.size] ?? SIZES.small;
   const displayPrice = Math.round((spot.price ?? 0) / 100);
   const [f, setF] = useState({ biz: "", cat: "", email: "", phone: "" });
@@ -836,7 +836,7 @@ export function Modal({ spot, onClose, onSubmit, isLoading, error }) {
               ${displayPrice}
             </div>
             <div style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>
-              Reaches 5,000 Habersham County homes
+              Reaches 5,000 {territory || "Habersham County"} homes
             </div>
           </div>
           <button onClick={onClose} style={{ background: "#f3f4f6", border: "none", borderRadius: "50%",

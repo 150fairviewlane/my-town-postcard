@@ -627,6 +627,7 @@ export default function PostcardSpotPicker() {
           onSubmit={handleSubmit}
           isLoading={reserveMutation.isPending}
           error={reserveError}
+          territory={campaign?.territory}
         />
       )}
     </div>
