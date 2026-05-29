@@ -1,0 +1,225 @@
+Two changes needed. First fix the territory detail display on the Find Your Territory page. Second update the city lists for all Georgia territories.
+
+
+════════════════════════════════════════════════
+CHANGE 1 — FIX THE TERRITORY DETAIL PANEL
+════════════════════════════════════════════════
+
+On the /find-territory page, the selected territory detail panel
+currently shows the counties list twice and no city information.
+
+Find where the detail panel HTML is rendered (in territory-finder.html
+or the frontend component that renders the selected territory detail).
+
+Make these changes:
+
+1. Remove the duplicate counties line — show counties only once,
+   as a small subdued label under the territory name.
+
+2. Add a "Key Cities" row that displays the zone_note field from
+   the territory record. Label it "Key Cities" and show the value
+   as a comma-separated list.
+
+3. The final detail panel layout should be:
+
+   TERRITORY NAME (large, bold)
+   Counties: Lumpkin · White  (small, subdued)
+
+   Key Cities         Dahlonega, Cleveland, Helen, Suches
+   Households         ~22,000
+   Status             Available
+   Monthly Fee        $99 / month
+
+   [CLAIM THIS TERRITORY button]
+
+4. In the nearby territory list cards on the left sidebar, also add
+   the zone_note cities as a third line under the county names,
+   in a smaller lighter font. Keep it to one line — truncate with
+   ellipsis if too long.
+
+The zone_note field is already returned by GET /api/territories?state=GA
+so no API changes are needed — just display it in the frontend.
+
+
+════════════════════════════════════════════════
+CHANGE 2 — UPDATE CITY LISTS FOR ALL TERRITORIES
+════════════════════════════════════════════════
+
+Update the zone_note field in the territories table for every Georgia
+territory with a comprehensive list of cities that have enough
+businesses to be meaningful postcard targets. Use the list below.
+
+Run these UPDATE statements:
+
+-- METRO ATLANTA
+UPDATE territories SET zone_note = 'Alpharetta, Milton, Roswell, Johns Creek, Mountain Park' WHERE id = 'GA-001';
+UPDATE territories SET zone_note = 'Sandy Springs, Buckhead, Dunwoody, Brookhaven, Chamblee, Doraville' WHERE id = 'GA-002';
+UPDATE territories SET zone_note = 'Atlanta, Midtown, Inman Park, Grant Park, East Atlanta, Kirkwood' WHERE id = 'GA-003';
+UPDATE territories SET zone_note = 'Duluth, Peachtree Corners, Norcross, Berkeley Lake, Doraville' WHERE id = 'GA-004';
+UPDATE territories SET zone_note = 'Lawrenceville, Snellville, Lilburn, Stone Mountain, Tucker, Grayson' WHERE id = 'GA-005';
+UPDATE territories SET zone_note = 'Buford, Sugar Hill, Dacula, Braselton, Hoschton, Grayson, Loganville' WHERE id = 'GA-006';
+UPDATE territories SET zone_note = 'Marietta, Kennesaw, Acworth, Powder Springs, Woodstock' WHERE id = 'GA-007';
+UPDATE territories SET zone_note = 'Smyrna, Mableton, Powder Springs, Austell, Vinings, Clarkdale' WHERE id = 'GA-008';
+UPDATE territories SET zone_note = 'Decatur, Tucker, Clarkston, Avondale Estates, Scottdale, Panthersville' WHERE id = 'GA-009';
+UPDATE territories SET zone_note = 'Stonecrest, Lithonia, Redan, Ellenwood, Conyers area' WHERE id = 'GA-010';
+
+-- ATLANTA SUBURBS
+UPDATE territories SET zone_note = 'Canton, Ball Ground, Holly Springs, Waleska, Nelson' WHERE id = 'GA-011';
+UPDATE territories SET zone_note = 'Cumming, Suwanee, South Forsyth, Gainesville area' WHERE id = 'GA-012';
+UPDATE territories SET zone_note = 'McDonough, Stockbridge, Hampton, Locust Grove, Lovejoy' WHERE id = 'GA-013';
+UPDATE territories SET zone_note = 'Jonesboro, Riverdale, Forest Park, College Park, Morrow, Lake City' WHERE id = 'GA-014';
+UPDATE territories SET zone_note = 'Dallas, Hiram, Douglasville area, Acworth area, Villa Rica area' WHERE id = 'GA-015';
+UPDATE territories SET zone_note = 'Douglasville, Lithia Springs, Villa Rica, Austell area' WHERE id = 'GA-016';
+UPDATE territories SET zone_note = 'Newnan, Senoia, Sharpsburg, Moreland, Turin' WHERE id = 'GA-017';
+UPDATE territories SET zone_note = 'Fayetteville, Peachtree City, Tyrone, Brooks, Woolsey' WHERE id = 'GA-018';
+UPDATE territories SET zone_note = 'Carrollton, Villa Rica, Whitesburg, Temple, Bowdon, Bremen' WHERE id = 'GA-019';
+UPDATE territories SET zone_note = 'Winder, Auburn, Bethlehem, Carl, Statham' WHERE id = 'GA-020';
+UPDATE territories SET zone_note = 'Conyers, Milstead, Olde Town Conyers' WHERE id = 'GA-021';
+UPDATE territories SET zone_note = 'Covington, Oxford, Mansfield, Porterdale, Social Circle' WHERE id = 'GA-022';
+UPDATE territories SET zone_note = 'Monroe, Social Circle, Loganville, Good Hope, Between' WHERE id = 'GA-023';
+UPDATE territories SET zone_note = 'Griffin, Orchard Hill, Sunny Side, Experiment, Williamson' WHERE id = 'GA-024';
+UPDATE territories SET zone_note = 'Jefferson, Commerce, Braselton, Hoschton, Pendergrass, Nicholson' WHERE id = 'GA-025';
+UPDATE territories SET zone_note = 'South Fulton, Union City, Fairburn, Palmetto, Chattahoochee Hills' WHERE id = 'GA-096';
+
+-- NORTH GEORGIA
+UPDATE territories SET zone_note = 'Gainesville, Flowery Branch, Oakwood, Buford, Clermont, Gillsville' WHERE id = 'GA-026';
+UPDATE territories SET zone_note = 'Dalton, Tunnel Hill, Cohutta, Varnell, Rocky Face' WHERE id = 'GA-027';
+UPDATE territories SET zone_note = 'Cartersville, Adairsville, Emerson, Euharlee, Kingston, White' WHERE id = 'GA-028';
+UPDATE territories SET zone_note = 'Rome, Cave Spring, Armuchee, Shannon, Lindale, Coosa' WHERE id = 'GA-029';
+UPDATE territories SET zone_note = 'Ringgold, Fort Oglethorpe, Tunnel Hill, Graysville, Chickamauga' WHERE id = 'GA-030';
+UPDATE territories SET zone_note = 'LaFayette, Rock Spring, Chickamauga, Rossville, Trenton, Wildwood' WHERE id = 'GA-031';
+UPDATE territories SET zone_note = 'Calhoun, Resaca, Fairmount, Plainville, Ranger, Pine Log' WHERE id = 'GA-032';
+UPDATE territories SET zone_note = 'Athens, Winterville, Bogart, Watkinsville, Bishop' WHERE id = 'GA-033';
+
+-- MAJOR CITIES
+UPDATE territories SET zone_note = 'Savannah, Pooler, Garden City, Port Wentworth, Bloomingdale, Thunderbolt' WHERE id = 'GA-034';
+UPDATE territories SET zone_note = 'Augusta, Hephzibah, Blythe, Gracewood' WHERE id = 'GA-035';
+UPDATE territories SET zone_note = 'Columbus, Midland, Upatoi, Fortson, Cataula' WHERE id = 'GA-036';
+UPDATE territories SET zone_note = 'Macon, Lizella, Payne City, Vineville, Bowman' WHERE id = 'GA-037';
+UPDATE territories SET zone_note = 'Warner Robins, Perry, Centerville, Byron, Kathleen, Bonaire' WHERE id = 'GA-038';
+UPDATE territories SET zone_note = 'Evans, Grovetown, Harlem, Martinez, Appling, Dearing' WHERE id = 'GA-039';
+UPDATE territories SET zone_note = 'Valdosta, Hahira, Lake Park, Remerton, Dasher, Clyattville' WHERE id = 'GA-040';
+UPDATE territories SET zone_note = 'Statesboro, Brooklet, Portal, Register, Metter area' WHERE id = 'GA-041';
+UPDATE territories SET zone_note = 'Springfield, Guyton, Rincon, Pooler area, Bloomingdale area' WHERE id = 'GA-042';
+UPDATE territories SET zone_note = 'Brunswick, St. Simons Island, Jekyll Island, Sea Island, Dock Junction' WHERE id = 'GA-043';
+UPDATE territories SET zone_note = 'Tifton, Omega, Ty Ty, Chula, Enigma, Brookfield' WHERE id = 'GA-044';
+UPDATE territories SET zone_note = 'Douglas, Nicholls, Broxton, Ambrose, Pearson area' WHERE id = 'GA-045';
+UPDATE territories SET zone_note = 'LaGrange, West Point, Hogansville, Lanett area, Roanoke area' WHERE id = 'GA-046';
+
+-- NORTHEAST GEORGIA MOUNTAINS
+UPDATE territories SET zone_note = 'Dahlonega, Cleveland, Helen, Suches, Turnersville, Auraria' WHERE id = 'GA-052';
+UPDATE territories SET zone_note = 'Clarkesville, Cornelia, Demorest, Toccoa, Baldwin, Mount Airy' WHERE id = 'GA-047';
+UPDATE territories SET zone_note = 'Carnesville, Hartwell, Canon, Royston, Bowersville, Lavonia' WHERE id = 'GA-048';
+UPDATE territories SET zone_note = 'Jasper, Dawsonville, Marble Hill, Nelson, Cherry Log' WHERE id = 'GA-051';
+UPDATE territories SET zone_note = 'Chatsworth, Eton, Crandall, Cisco, Spring Place' WHERE id = 'GA-053';
+UPDATE territories SET zone_note = 'Blue Ridge, Ellijay, McCaysville, Morganton, Cherry Log' WHERE id = 'GA-050';
+UPDATE territories SET zone_note = 'Buchanan, Bremen, Cedartown, Rockmart, Tallapoosa' WHERE id = 'GA-054';
+UPDATE territories SET zone_note = 'Clayton, Dillard, Sky Valley, Rabun Gap, Mountain City' WHERE id = 'GA-049';
+UPDATE territories SET zone_note = 'Homer, Danielsville, Maysville, Commerce area, Harmony Grove' WHERE id = 'GA-056';
+UPDATE territories SET zone_note = 'Lexington, Elberton, Crawford, Bowman, Maxeys' WHERE id = 'GA-055';
+UPDATE territories SET zone_note = 'Watkinsville, Greensboro, Union Point, White Plains, Siloam' WHERE id = 'GA-045';
+UPDATE territories SET zone_note = 'Madison, Eatonton, Buckhead, Rutledge, Newborn' WHERE id = 'GA-046';
+
+-- MID-STATE / EAST CENTRAL
+UPDATE territories SET zone_note = 'Monticello, Gray, Juliette, Shady Dale, Round Oak' WHERE id = 'GA-047';
+UPDATE territories SET zone_note = 'Zebulon, Barnesville, Thomaston, Milner, Concord' WHERE id = 'GA-062';
+UPDATE territories SET zone_note = 'Griffin, Jackson, Locust Grove area, Barnesville area' WHERE id = 'GA-063';
+UPDATE territories SET zone_note = 'Hamilton, Pine Mountain, Waverly Hall, Cataula, Ellerslie' WHERE id = 'GA-064';
+UPDATE territories SET zone_note = 'Franklin, Greenville, Warm Springs, Manchester, Talbotton, Geneva' WHERE id = 'GA-065';
+UPDATE territories SET zone_note = 'Evans, Grovetown, Harlem, Martinez, Thomson, Warrenton' WHERE id = 'GA-060';
+UPDATE territories SET zone_note = 'Thomson, Warrenton, Louisville, Wrens, Stapleton' WHERE id = 'GA-061';
+UPDATE territories SET zone_note = 'Washington, Lincolnton, Crawfordville, Gibson, Sparta area' WHERE id = 'GA-049';
+UPDATE territories SET zone_note = 'Milledgeville, Wrightsville, Sandersville, Sparta, Davidsboro' WHERE id = 'GA-066';
+UPDATE territories SET zone_note = 'Jeffersonville, Cochran, Dublin, Montrose, Dexter' WHERE id = 'GA-067';
+
+-- CENTRAL / SOUTH CENTRAL
+UPDATE territories SET zone_note = 'Fort Valley, Roberta, Byron area, Marshallville, Ideal' WHERE id = 'GA-069';
+UPDATE territories SET zone_note = 'Vienna, Cordele, Arabi, Ashburn area' WHERE id = 'GA-068';
+UPDATE territories SET zone_note = 'Eastman, Mount Vernon, McRae-Helena, Chauncey, Lumber City' WHERE id = 'GA-073';
+UPDATE territories SET zone_note = 'Alamo, Soperton, Lyons, Vidalia, Ailey, Uvalda' WHERE id = 'GA-074';
+UPDATE territories SET zone_note = 'Rochelle, Hawkinsville, Irwinton, Abbeville, McRae area' WHERE id = 'GA-075';
+UPDATE territories SET zone_note = 'Oglethorpe, Butler, Buena Vista, Preston, Ideal' WHERE id = 'GA-076';
+UPDATE territories SET zone_note = 'Richmond Hill, Pemberton, Hinesville, Midway, Flemington, Walthourville' WHERE id = 'GA-057';
+UPDATE territories SET zone_note = 'Kingsland, St. Marys, Woodbine, White Oak' WHERE id = 'GA-058';
+UPDATE territories SET zone_note = 'Ludowici, Darien, Folkston, Nahunta, Jesup area' WHERE id = 'GA-059';
+
+-- SOUTHWEST GEORGIA
+UPDATE territories SET zone_note = 'Albany, Leesburg, Radium Springs, Newton' WHERE id = 'GA-077';
+UPDATE territories SET zone_note = 'Americus, Ellaville, Plains, Leslie, Smithville' WHERE id = 'GA-078';
+UPDATE territories SET zone_note = 'Dawson, Leesburg, Smithville, Parrott, Sasser' WHERE id = 'GA-079';
+UPDATE territories SET zone_note = 'Cuthbert, Morgan, Fort Gaines, Georgetown, Shellman' WHERE id = 'GA-080';
+UPDATE territories SET zone_note = 'Lumpkin, Preston, Cusseta, Webster' WHERE id = 'GA-081';
+UPDATE territories SET zone_note = 'Blakely, Donalsonville, Colquitt, Newton, Jakin' WHERE id = 'GA-082';
+UPDATE territories SET zone_note = 'Bainbridge, Attapulgus, Climax, Brinson, Iron City' WHERE id = 'GA-083';
+UPDATE territories SET zone_note = 'Camilla, Moultrie, Norman Park, Berlin, Funston' WHERE id = 'GA-084';
+UPDATE territories SET zone_note = 'Sylvester, Ashburn, Isabella, Poulan, Warwick' WHERE id = 'GA-085';
+UPDATE territories SET zone_note = 'Thomasville, Quitman, Cairo, Coolidge, Meigs, Pavo' WHERE id = 'GA-086';
+
+-- SOUTH GEORGIA
+UPDATE territories SET zone_note = 'Fitzgerald, Ocilla, Nashville, Alapaha, Enigma, Willacoochee' WHERE id = 'GA-087';
+UPDATE territories SET zone_note = 'Adel, Pearson, Lakeland, Homerville area, Hahira area' WHERE id = 'GA-088';
+UPDATE territories SET zone_note = 'Statenville, Homerville, Fargo, Argyle' WHERE id = 'GA-089';
+UPDATE territories SET zone_note = 'Swainsboro, Metter, Twin City, Adrian, Oak Park' WHERE id = 'GA-090';
+UPDATE territories SET zone_note = 'Sylvania, Millen, Newington, Oliver, Rocky Ford' WHERE id = 'GA-091';
+UPDATE territories SET zone_note = 'Claxton, Reidsville, Collins, Mount Vernon area, Glennville area' WHERE id = 'GA-092';
+UPDATE territories SET zone_note = 'Baxley, Hazlehurst, Alma area, Broxton area' WHERE id = 'GA-093';
+UPDATE territories SET zone_note = 'Jesup, Nahunta, Odum, Screven, Hickox' WHERE id = 'GA-094';
+UPDATE territories SET zone_note = 'Waycross, Blackshear, Alma, Manor, Hoboken, Offerman' WHERE id = 'GA-095';
+
+-- COASTAL
+UPDATE territories SET zone_note = 'Richmond Hill, Pooler, Bloomingdale, Guyton, Rincon, Springfield' WHERE id = 'GA-042';
+
+
+════════════════════════════════════════════════
+IMPORTANT NOTES
+════════════════════════════════════════════════
+
+Some territory IDs appear more than once in the list above due to
+overlapping notes in planning — if a territory ID appears twice,
+use the LAST occurrence for that ID as the authoritative value.
+Only one zone_note value should be stored per territory.
+
+Do not update any territory records for states other than GA.
+
+Do not change any other fields — only zone_note.
+
+After running all updates, verify with:
+  SELECT id, name, zone_note FROM territories
+  WHERE state = 'GA' AND zone_note IS NULL OR zone_note = '';
+This should return zero rows — every territory should have cities listed.
+
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+  Territory status, households, counties, or centroid fields
+  Any non-Georgia territories
+  Dealer records or claims
+  Any ad generator, image library, payment, or auth files
+
+
+════════════════════════════════════════════════
+TEST AFTER BUILDING
+════════════════════════════════════════════════
+
+1. Go to /find-territory and enter zip 30528 (White County)
+   The detail panel should show:
+   - Territory name: Lumpkin / White Counties
+   - Counties: Lumpkin · White  (small, once only)
+   - Key Cities: Dahlonega, Cleveland, Helen, Suches, Turnersville, Auraria
+   - Estimated Households: ~22,000
+   - Mailing Zones: 4 distinct zones
+   - Status: Available
+   - Monthly Fee: $99 / month
+   - Claim This Territory button
+
+2. The nearby territory cards in the sidebar should each show
+   a third line with city names in smaller lighter text
+
+3. Enter zip 30060 (Marietta) — detail panel should show:
+   Key Cities: Marietta, Kennesaw, Acworth, Powder Springs, Woodstock
+
+4. Enter zip 31401 (Savannah) — detail panel should show:
+   Key Cities: Savannah, Pooler, Garden City, Port Wentworth,
+   Bloomingdale, Thunderbolt
