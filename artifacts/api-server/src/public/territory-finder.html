@@ -410,8 +410,10 @@ const COUNTY_CENTROIDS = {
 // MAP SETUP
 // ══════════════════════════════════════════════════════════════
 let map, userMarker, selectedTerritoryId = null;
-// territoryLayers: Map<territoryId, {layer: L.GeoJSON, territory: object}>
+// territoryLayers: Map<territoryId, {layers: L.GeoJSON[], territory: object}>
 const territoryLayers = new Map();
+// ZIP interaction overlay — kept on top so per-ZIP tooltips work after bringToFront
+let zipInteractionLayer = null;
 
 async function initMap(){
   // Load territories from API first so the GeoJSON layer can color them
@@ -454,7 +456,6 @@ async function loadZipGeoJSON(){
 }
 
 function renderZipLayer(geojson){
-  // Build a fast territory lookup
   const territoryMap = {};
   TERRITORIES.forEach(t => { territoryMap[t.id] = t; });
 
@@ -472,45 +473,69 @@ function renderZipLayer(geojson){
     }
   });
 
-  // Dissolve each territory's ZIPs into a single merged shape via turf.union,
-  // then render one L.geoJSON per territory so the territory appears as a unified region.
+  // ── Pass 1: Merged territory base shapes (visual, non-interactive) ─────────
+  // Dissolve each territory's ZIPs into one merged polygon so each territory
+  // shows as a clean unified region with no internal ZIP grid lines.
+  // Interaction (hover tooltip + click) is handled by the ZIP overlay below.
   Object.entries(byTerritory).forEach(([tId, features]) => {
     const t = territoryMap[tId];
-
-    // Union all ZIP polygons for this territory into one merged feature
     let merged = features[0];
     for(let i = 1; i < features.length; i++){
       try { merged = turf.union(merged, features[i]); }
       catch(e) { /* skip geometrically invalid ZIP */ }
     }
-
     const layer = L.geoJSON(merged, {
       style: () => getCountyStyle(t.status, false),
+      interactive: false,   // interaction handled by ZIP overlay
     });
-
-    layer.bindTooltip(
-      `<div style="font-weight:700">${t.name}</div>
-       <div style="font-size:11px;color:#666">${features.length} ZIP${features.length !== 1 ? 's' : ''}</div>`,
-      { sticky:true, opacity:0.92 }
-    );
-    layer.on('click', () => selectTerritoryOnMap(t));
-    layer.on('mouseover', () => {
-      if(selectedTerritoryId !== t.id){
-        layer.setStyle({ weight:2, fillOpacity:0.8 });
-        layer.bringToFront();
-      }
-    });
-    layer.on('mouseout', () => {
-      if(selectedTerritoryId !== t.id)
-        layer.setStyle(getCountyStyle(t.status, false));
-    });
-
     layer.addTo(map);
-    // Store so selectTerritoryOnMap can restyle/bring-to-front the merged shape
     territoryLayers.set(t.id, { layers:[layer], territory:t });
   });
 
-  // Render unassigned ZIPs as non-interactive grey polygons
+  // ── Pass 2: Per-ZIP transparent interaction overlay ────────────────────────
+  // Transparent polygons cover every assigned ZIP. SVG hit detection works with
+  // fillOpacity:0 (fill is present, just invisible) — do NOT use fill:false which
+  // removes the hit area. Hovering a ZIP shows territory name + ZIP code in the
+  // tooltip and highlights the territory's merged base shape; clicking selects
+  // the territory in the sidebar.
+  const assignedFeatures = geojson.features.filter(
+    f => zipAssignments[f.properties.ZCTA5CE10] &&
+         territoryMap[zipAssignments[f.properties.ZCTA5CE10]]
+  );
+
+  zipInteractionLayer = L.geoJSON(
+    { type:'FeatureCollection', features: assignedFeatures },
+    {
+      style: { fillOpacity: 0, weight: 0 },
+      onEachFeature: (feature, layer) => {
+        const zip = feature.properties.ZCTA5CE10;
+        const t = territoryMap[zipAssignments[zip]];
+        if(!t) return;
+
+        layer.bindTooltip(
+          `<div style="font-weight:700">${t.name}</div>
+           <div style="font-size:11px;color:#666">ZIP ${zip}</div>`,
+          { sticky:true, opacity:0.92 }
+        );
+        layer.on('click', () => selectTerritoryOnMap(t));
+        layer.on('mouseover', () => {
+          // Highlight the territory's merged base layer (not just this ZIP)
+          if(selectedTerritoryId !== t.id){
+            const entry = territoryLayers.get(t.id);
+            if(entry) entry.layers.forEach(l => l.setStyle({ weight:2, fillOpacity:0.8 }));
+          }
+        });
+        layer.on('mouseout', () => {
+          if(selectedTerritoryId !== t.id){
+            const entry = territoryLayers.get(t.id);
+            if(entry) entry.layers.forEach(l => l.setStyle(getCountyStyle(t.status, false)));
+          }
+        });
+      },
+    }
+  ).addTo(map);
+
+  // ── Pass 3: Unassigned ZIPs ───────────────────────────────────────────────
   if(unassignedFeatures.length){
     L.geoJSON(
       { type:'FeatureCollection', features: unassignedFeatures },
@@ -693,6 +718,8 @@ function selectTerritoryOnMap(t){
       l.setStyle(getCountyStyle('selected', false));
       l.bringToFront();
     });
+    // Keep the ZIP interaction overlay on top so per-ZIP tooltips remain reachable
+    if(zipInteractionLayer) zipInteractionLayer.bringToFront();
   }
 
   const detail = document.getElementById('selectedDetail');
