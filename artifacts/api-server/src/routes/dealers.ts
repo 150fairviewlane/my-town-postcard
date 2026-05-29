@@ -51,7 +51,7 @@ function requireAdmin(req: any, res: any, next: any): void {
   }
 }
 
-const TerritorySchema = z.object({
+const LegacyTerritorySchema = z.object({
   territoryIndex: z.number().int().min(0).max(15),
   zipCodes: z.array(z.string().regex(/^\d{5}$/)).min(1).max(500),
   centerLat: z.number().min(-90).max(90),
@@ -60,13 +60,24 @@ const TerritorySchema = z.object({
   estimatedHouseholds: z.number().int().min(0).max(1_000_000),
 });
 
-const CreateDealerBodySchema = z.object({
-  name: z.string().trim().min(1).max(120),
-  email: z.string().trim().toLowerCase().email().max(180),
-  phone: z.string().trim().max(40).optional().nullable(),
-  homeZip: z.string().regex(/^\d{5}$/),
-  territories: z.array(TerritorySchema).min(1).max(8),
-});
+// Accepts both the new county-based format (territoryId + territoryName) and
+// the legacy ZIP-cluster format (homeZip + territories[]) for backward compat.
+const CreateDealerBodySchema = z.union([
+  z.object({
+    name: z.string().trim().min(1).max(120),
+    email: z.string().trim().toLowerCase().email().max(180),
+    phone: z.string().trim().max(40).optional().nullable(),
+    territoryId: z.string().min(1).max(20),
+    territoryName: z.string().min(1).max(200),
+  }),
+  z.object({
+    name: z.string().trim().min(1).max(120),
+    email: z.string().trim().toLowerCase().email().max(180),
+    phone: z.string().trim().max(40).optional().nullable(),
+    homeZip: z.string().regex(/^\d{5}$/),
+    territories: z.array(LegacyTerritorySchema).min(1).max(8),
+  }),
+]);
 
 function getOrigin(req: Request): string {
   const envOrigin = process.env.PUBLIC_APP_URL?.replace(/\/$/, "");
@@ -95,7 +106,18 @@ router.post("/dealers", async (req, res): Promise<void> => {
     return;
   }
 
-  const { name, email, phone, homeZip, territories } = parsed.data;
+  const { name, email, phone } = parsed.data;
+
+  // Determine whether this is the new county-based flow or the legacy ZIP flow.
+  const isCountyFlow = "territoryId" in parsed.data;
+  // County flow: store a placeholder zip so the NOT NULL column is satisfied.
+  const homeZip = isCountyFlow ? "00000" : (parsed.data as any).homeZip as string;
+  const territoryDisplayName = isCountyFlow
+    ? (parsed.data as any).territoryName as string
+    : null;
+  const legacyTerritories = isCountyFlow
+    ? null
+    : (parsed.data as any).territories as z.infer<typeof LegacyTerritorySchema>[];
 
   // Re-attempted signup with an existing email: if the dealer is still in
   // pending_payment we recycle the row and create a fresh Checkout Session.
@@ -120,7 +142,7 @@ router.post("/dealers", async (req, res): Promise<void> => {
       .update(dealersTable)
       .set({ name, phone: phone ?? null, homeZip })
       .where(eq(dealersTable.id, dealerId));
-    // Replace any stale territory rows from an earlier attempt.
+    // Replace any stale legacy territory rows from an earlier attempt.
     await db.delete(dealerTerritoriesTable).where(eq(dealerTerritoriesTable.dealerId, dealerId));
   } else {
     const [created] = await db
@@ -130,21 +152,28 @@ router.post("/dealers", async (req, res): Promise<void> => {
     dealerId = created.id;
   }
 
-  type T = z.infer<typeof TerritorySchema>;
-  await db.insert(dealerTerritoriesTable).values(
-    territories.map((t: T) => ({
-      dealerId,
-      territoryIndex: t.territoryIndex,
-      zipCodes: t.zipCodes,
-      centerLat: t.centerLat,
-      centerLng: t.centerLng,
-      cityLabel: t.cityLabel,
-      estimatedHouseholds: t.estimatedHouseholds,
-    })),
-  );
+  // Legacy ZIP-cluster flow: persist the territory rows so the admin can
+  // review them. County-based flow skips this — the claim is already recorded
+  // in dealer_territory_claims by Step 2 of the signup.
+  if (legacyTerritories) {
+    await db.insert(dealerTerritoriesTable).values(
+      legacyTerritories.map((t) => ({
+        dealerId,
+        territoryIndex: t.territoryIndex,
+        zipCodes: t.zipCodes,
+        centerLat: t.centerLat,
+        centerLng: t.centerLng,
+        cityLabel: t.cityLabel,
+        estimatedHouseholds: t.estimatedHouseholds,
+      })),
+    );
+  }
 
   const stripe = await getStripeClient();
   const origin = getOrigin(req);
+  const subscriptionProductName = territoryDisplayName
+    ? `My Town Postcard — Dealer Subscription (${territoryDisplayName})`
+    : "My Town Postcard — Dealer Subscription";
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     customer_email: email,
@@ -160,7 +189,7 @@ router.post("/dealers", async (req, res): Promise<void> => {
       {
         price_data: {
           currency: "usd",
-          product_data: { name: "My Town Postcard — Dealer Subscription" },
+          product_data: { name: subscriptionProductName },
           unit_amount: MONTHLY_FEE_CENTS,
           recurring: { interval: "month" },
         },

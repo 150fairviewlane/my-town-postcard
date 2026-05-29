@@ -142,7 +142,7 @@ function Step1Info({ form, setForm, onNext }) {
 
 const STATUS_BADGE = {
   available: { label: "Available", bg: "#dcfce7", color: "#166534" },
-  pending:   { label: "Pending",   bg: "#fef9c3", color: "#854d0e" },
+  pending:   { label: "Taken",     bg: "#fee2e2", color: "#991b1b" },
   taken:     { label: "Taken",     bg: "#fee2e2", color: "#991b1b" },
 };
 
