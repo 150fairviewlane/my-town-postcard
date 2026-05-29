@@ -547,10 +547,27 @@ router.get("/georgia-zip-geojson", (req, res): void => {
 });
 
 // ─── GET /api/territories/zip-assignments ─────────────────────────────────────
-// Returns all ZIP→territory assignments. Used by the public map and ZIP manager.
+// Returns ZIP→territory assignments.
+// Optional ?state=GA filters to only assignments whose territory belongs to that state.
 router.get("/territories/zip-assignments", async (req, res): Promise<void> => {
   try {
-    const rows = await db.select().from(territoryZipAssignmentsTable);
+    const stateFilter =
+      typeof req.query.state === "string" ? req.query.state.toUpperCase() : null;
+
+    const rows = stateFilter
+      ? await db
+          .select({
+            zip: territoryZipAssignmentsTable.zip,
+            territoryId: territoryZipAssignmentsTable.territoryId,
+          })
+          .from(territoryZipAssignmentsTable)
+          .innerJoin(
+            territoriesTable,
+            eq(territoryZipAssignmentsTable.territoryId, territoriesTable.id),
+          )
+          .where(eq(territoriesTable.state, stateFilter))
+      : await db.select().from(territoryZipAssignmentsTable);
+
     res.json(rows);
   } catch (err: any) {
     req.log.error({ err: err?.message }, "Failed to fetch zip assignments");

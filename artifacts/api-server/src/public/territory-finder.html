@@ -458,51 +458,57 @@ function renderZipLayer(geojson){
   const territoryMap = {};
   TERRITORIES.forEach(t => { territoryMap[t.id] = t; });
 
-  const assignedFeatures   = [];
+  // Group ZIP features by territory
+  const byTerritory = {};   // territoryId → Feature[]
   const unassignedFeatures = [];
 
   geojson.features.forEach(f => {
     const tId = zipAssignments[f.properties.ZCTA5CE10];
-    if(tId && territoryMap[tId]){ assignedFeatures.push(f); }
-    else { unassignedFeatures.push(f); }
+    if(tId && territoryMap[tId]){
+      if(!byTerritory[tId]) byTerritory[tId] = [];
+      byTerritory[tId].push(f);
+    } else {
+      unassignedFeatures.push(f);
+    }
   });
 
-  // Render assigned ZIPs — one L.geoJSON layer using per-feature styling + events
-  L.geoJSON(
-    { type:'FeatureCollection', features: assignedFeatures },
-    {
-      style: feature => {
-        const t = territoryMap[zipAssignments[feature.properties.ZCTA5CE10]];
-        return getCountyStyle(t?.status || 'unassigned', false);
-      },
-      onEachFeature: (feature, layer) => {
-        const zip = feature.properties.ZCTA5CE10;
-        const t = territoryMap[zipAssignments[zip]];
-        if(!t) return;
+  // Dissolve each territory's ZIPs into a single merged shape via turf.union,
+  // then render one L.geoJSON per territory so the territory appears as a unified region.
+  Object.entries(byTerritory).forEach(([tId, features]) => {
+    const t = territoryMap[tId];
 
-        layer.bindTooltip(
-          `<div style="font-weight:700">${t.name}</div>
-           <div style="font-size:11px;color:#666">ZIP ${zip}</div>`,
-          { sticky:true, opacity:0.92 }
-        );
-        layer.on('click', () => selectTerritoryOnMap(t));
-        layer.on('mouseover', () => {
-          if(selectedTerritoryId !== t.id){
-            layer.setStyle({ weight:2, fillOpacity:0.8 });
-            layer.bringToFront();
-          }
-        });
-        layer.on('mouseout', () => {
-          if(selectedTerritoryId !== t.id)
-            layer.setStyle(getCountyStyle(t.status, false));
-        });
-
-        // Track per-territory leaf layers so selectTerritoryOnMap can restyle them
-        if(!territoryLayers.has(t.id)) territoryLayers.set(t.id, { layers:[], territory:t });
-        territoryLayers.get(t.id).layers.push(layer);
-      },
+    // Union all ZIP polygons for this territory into one merged feature
+    let merged = features[0];
+    for(let i = 1; i < features.length; i++){
+      try { merged = turf.union(merged, features[i]); }
+      catch(e) { /* skip geometrically invalid ZIP */ }
     }
-  ).addTo(map);
+
+    const layer = L.geoJSON(merged, {
+      style: () => getCountyStyle(t.status, false),
+    });
+
+    layer.bindTooltip(
+      `<div style="font-weight:700">${t.name}</div>
+       <div style="font-size:11px;color:#666">${features.length} ZIP${features.length !== 1 ? 's' : ''}</div>`,
+      { sticky:true, opacity:0.92 }
+    );
+    layer.on('click', () => selectTerritoryOnMap(t));
+    layer.on('mouseover', () => {
+      if(selectedTerritoryId !== t.id){
+        layer.setStyle({ weight:2, fillOpacity:0.8 });
+        layer.bringToFront();
+      }
+    });
+    layer.on('mouseout', () => {
+      if(selectedTerritoryId !== t.id)
+        layer.setStyle(getCountyStyle(t.status, false));
+    });
+
+    layer.addTo(map);
+    // Store so selectTerritoryOnMap can restyle/bring-to-front the merged shape
+    territoryLayers.set(t.id, { layers:[layer], territory:t });
+  });
 
   // Render unassigned ZIPs as non-interactive grey polygons
   if(unassignedFeatures.length){

@@ -237,6 +237,7 @@ document.getElementById('backLink').href = '/admin';
 
 // ── State ──────────────────────────────────────────────────────────────────────
 let TERRITORIES   = [];
+let territoriesById = {};   // territoryId → territory object
 let zipAssignments = {};    // zip → territoryId (committed in DB)
 let pendingChanges = {};    // zip → territoryId | null (null = remove)
 let selectedTerritoryId = null;
@@ -506,6 +507,7 @@ async function initMap() {
     ]);
 
     TERRITORIES = territories;
+    territoriesById = Object.fromEntries(territories.map(t => [t.id, t]));
     zipAssignments = {};
     assignRows.forEach(r => { zipAssignments[r.zip] = r.territoryId; });
     totalZipCount = geojson.features.length;
@@ -547,9 +549,20 @@ function renderZipLayer(geojson) {
         }
         const current = effectiveAssignment(zip);
         if (current === selectedTerritoryId) {
-          // Already assigned here — offer to remove
-          applyChange(zip, null);
+          // Already assigned to the selected territory — confirm removal
+          const tName = territoriesById[selectedTerritoryId]?.name || selectedTerritoryId;
+          if (confirm(`Remove ZIP ${zip} from "${tName}"?`)) {
+            applyChange(zip, null);
+          }
+        } else if (current !== null) {
+          // Assigned to a different territory — confirm reassignment
+          const fromName = territoriesById[current]?.name || current;
+          const toName   = territoriesById[selectedTerritoryId]?.name || selectedTerritoryId;
+          if (confirm(`Reassign ZIP ${zip} from\n"${fromName}"\nto\n"${toName}"?`)) {
+            applyChange(zip, selectedTerritoryId);
+          }
         } else {
+          // Unassigned — assign directly, no confirmation needed
           applyChange(zip, selectedTerritoryId);
         }
       });
