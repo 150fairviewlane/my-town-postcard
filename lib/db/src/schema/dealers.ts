@@ -24,6 +24,11 @@ export const dealersTable = pgTable(
     stripeCheckoutSessionId: text("stripe_checkout_session_id"),
     stripeCustomerId: text("stripe_customer_id"),
     stripeSubscriptionId: text("stripe_subscription_id"),
+    // The dealer's auto-created landing-page campaign (Task #134). Plain
+    // integer (not a Drizzle .references()) to avoid a circular import with
+    // campaigns.ts, which already FKs dealer_id back to this table. Populated
+    // idempotently when the dealer's subscription activates.
+    landingPageCampaignId: integer("landing_page_campaign_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     activatedAt: timestamp("activated_at", { withTimezone: true }),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),

@@ -2,8 +2,10 @@ import { Router, type IRouter, type Request } from "express";
 import { eq, sql, desc } from "drizzle-orm";
 import { z } from "zod/v4";
 import jwt from "jsonwebtoken";
-import { db, dealersTable, dealerTerritoriesTable } from "@workspace/db";
+import { db, dealersTable, dealerTerritoriesTable, campaignsTable, spotsTable } from "@workspace/db";
 import { getStripeClient, isStripeConfigured } from "../lib/stripeClient";
+import { ensureDealerLandingPage } from "../lib/dealerLandingPage";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
@@ -274,6 +276,13 @@ router.get("/dealers/confirm", async (req, res): Promise<void> => {
       })
       .where(eq(dealersTable.id, dealerId));
     req.log.info({ dealerId, sessionId }, "Dealer activated via /confirm");
+    // Auto-create the dealer's published landing page (idempotent). Don't let a
+    // hiccup here fail the confirm response — the webhook also calls this.
+    try {
+      await ensureDealerLandingPage(dealerId);
+    } catch (err: any) {
+      req.log.error({ err: err?.message, dealerId }, "ensureDealerLandingPage failed in /confirm — webhook will retry");
+    }
   }
 
   const territories = await db
@@ -293,6 +302,87 @@ router.get("/dealers/confirm", async (req, res): Promise<void> => {
       zipCount: t.zipCodes.length,
       estimatedHouseholds: t.estimatedHouseholds,
     })),
+  });
+});
+
+// Dealer portal data (Task #134). Admin-only summary of a dealer's auto-created
+// landing page: its public URL plus live sell-through and per-spot revenue.
+// Requires the admin bearer token — it exposes campaign sales metrics, so it
+// must not be reachable by enumerating dealer ids.
+router.get("/dealers/:id/landing-page", requireAdmin, async (req, res): Promise<void> => {
+  const id = parseInt(String(req.params.id), 10);
+  if (!Number.isFinite(id)) {
+    res.status(400).json({ error: "Invalid dealer id" });
+    return;
+  }
+
+  const [dealer] = await db.select().from(dealersTable).where(eq(dealersTable.id, id));
+  if (!dealer) {
+    res.status(404).json({ error: "Dealer not found" });
+    return;
+  }
+
+  // Locate the dealer's landing-page campaign (prefer the back-reference, fall
+  // back to dealerId). If none yet, the page hasn't been auto-created.
+  let campaign;
+  if (dealer.landingPageCampaignId) {
+    [campaign] = await db
+      .select()
+      .from(campaignsTable)
+      .where(eq(campaignsTable.id, dealer.landingPageCampaignId));
+  }
+  if (!campaign) {
+    [campaign] = await db
+      .select()
+      .from(campaignsTable)
+      .where(eq(campaignsTable.dealerId, id))
+      .limit(1);
+  }
+  if (!campaign) {
+    res.json({ dealerId: id, name: dealer.name, page: null });
+    return;
+  }
+
+  const spots = await db
+    .select()
+    .from(spotsTable)
+    .where(eq(spotsTable.campaignId, campaign.id));
+
+  const sold = spots.filter((s) => s.status === "paid");
+  const frontSold = sold.filter((s) => s.side === "front").length;
+  const backSold = sold.filter((s) => s.side === "back").length;
+  const revenueCents = sold.reduce((sum, s) => sum + (s.price || 0), 0);
+
+  res.json({
+    dealerId: id,
+    name: dealer.name,
+    page: {
+      slug: campaign.slug,
+      url: campaign.slug ? `${getOrigin(req)}/${campaign.slug}` : null,
+      published: campaign.isPublished,
+      territory: campaign.territory,
+      cityList: campaign.cityList,
+      campaignId: campaign.id,
+    },
+    summary: {
+      totalSpots: spots.length,
+      soldSpots: sold.length,
+      availableSpots: spots.filter((s) => s.status === "available").length,
+      frontSold,
+      backSold,
+      revenueCents,
+    },
+    spots: spots
+      .map((s) => ({
+        id: s.id,
+        gridArea: s.gridArea,
+        side: s.side,
+        size: s.size,
+        status: s.status,
+        businessName: s.businessName,
+        price: s.price,
+      }))
+      .sort((a, b) => (a.side === b.side ? a.gridArea.localeCompare(b.gridArea) : a.side === "front" ? -1 : 1)),
   });
 });
 
@@ -412,6 +502,12 @@ export async function activateDealerFromCheckoutSession(session: any): Promise<n
       activatedAt: new Date(),
     })
     .where(eq(dealersTable.id, dealerId));
+  // Auto-create the dealer's published landing page (idempotent).
+  try {
+    await ensureDealerLandingPage(dealerId);
+  } catch (err: any) {
+    logger.error({ err: err?.message, dealerId }, "ensureDealerLandingPage failed in webhook activation");
+  }
   return dealerId;
 }
 

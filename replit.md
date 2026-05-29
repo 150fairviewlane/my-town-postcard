@@ -168,22 +168,28 @@ Every paid spot is automatically issued a URL-safe slug `tracking_code` (e.g. `r
 ## Routes
 
 ### Frontend (Wouter)
-- `/` — PostcardSpotPicker (live postcard grid)
+- `/` — PostcardSpotPicker (live postcard grid). Flagship Habersham landing page.
 - `/checkout/:spotId` — Stripe payment
 - `/upload/:spotId` — Ad file upload / design request
 - `/confirmation` — Order confirmation
+- `/spot-confirmation` — Hosted Stripe Checkout success landing (territory pages). Reads `?session_id=`, confirms via `/api/checkout/spot-session-confirm`.
 - `/admin` — Admin dashboard (JWT protected)
 - `/go/:code` — QR redirect (handled by api-server, not the frontend)
+- `/:slug` — Per-territory / per-dealer landing page (catch-all, registered LAST). Guarded by a RESERVED_SLUGS list so explicit routes are never shadowed; unknown slugs fall through to NotFound. See "Multi-Territory Landing Pages" below.
 
 ### Backend (Express, all under `/api`)
 - `GET /api/campaigns/active`
+- `GET /api/campaigns/by-slug/:slug` — published campaign + spots for a territory page (public)
 - `POST /api/spots/:id/reserve`
 - `POST /api/spots/:id/upload-ad`
 - `POST /api/checkout/create-payment-intent`
 - `POST /api/checkout/confirm`
+- `POST /api/checkout/create-spot-session` — hosted Stripe Checkout session for a slug page spot (`{spotId, slug}` → `{url}`)
+- `GET /api/checkout/spot-session-confirm?session_id=` — sync mark-paid for the hosted Checkout return
 - `POST /api/admin/login`
 - `GET /api/admin/campaign`
 - `POST /api/admin/spots/:id/approve`
+- `GET /api/dealers/:id/landing-page` — **admin auth required**; landing-page URL + live sell-through + revenue for the admin Dealers view
 
 ## Admin Access
 

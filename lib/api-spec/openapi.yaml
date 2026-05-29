@@ -53,6 +53,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /campaigns/by-slug/{slug}:
+    get:
+      operationId: getCampaignBySlug
+      tags: [campaigns]
+      summary: Get a published territory campaign by URL slug, with all spots
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Published campaign with spots
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignWithSpots"
+        "404":
+          description: No published page for this slug
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /campaigns/active/taken-categories:
     get:
       operationId: getActiveCampaignTakenCategories
@@ -667,6 +692,18 @@ components:
         status:
           type: string
           enum: [draft, active, completed]
+        slug:
+          type: ["string", "null"]
+        isPublished:
+          type: boolean
+        dealerId:
+          type: ["integer", "null"]
+        mailingSeason:
+          type: ["string", "null"]
+        mailingMonth:
+          type: ["string", "null"]
+        cityList:
+          type: ["string", "null"]
         createdAt:
           type: string
       required:

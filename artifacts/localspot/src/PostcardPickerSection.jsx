@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useLocation, useSearch } from "wouter";
-import { useGetActiveCampaign, useReserveSpot, getGetActiveCampaignQueryKey } from "@workspace/api-client-react";
+import { useGetActiveCampaign, useGetCampaignBySlug, useReserveSpot, getGetActiveCampaignQueryKey, getGetCampaignBySlugQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AdTemplatePreview } from "./AdGenerator";
 import AdUploadModal from "./AdUploadModal";
@@ -436,7 +436,7 @@ return(<ScaledCell spot={spot} scale={scale}>{spot.size==="XL"&&<AdXL d={d} tmpl
 const FRONT_GRID_MAP = { xl1:"mb", xl2:"dn", xl3:"re", l1:"l1", l2:"l2", l3:"l3", l4:"l4" };
 const BACK_GRID_MAP  = { bxl1:"bxl", bxl2:"bxl2", bxl3:"bxl3", bm1:"bm1", bm2:"bm2", bm3:"bm3", bm4:"bm4", bs1:"bs1" };
 
-export default function PostcardPicker(){
+export default function PostcardPicker({slug}={}){
 const search=useSearch();
 const params=new URLSearchParams(search);
 const initialSide=params.get("side")==="back"?"back":"front";
@@ -483,7 +483,16 @@ useEffect(()=>{
   }catch(e){}
 },[]);
 const queryClient=useQueryClient();
-const {data:campaign,isFetching:campaignFetching}=useGetActiveCampaign();
+// Home page (no slug) loads the single active campaign; a territory/dealer
+// landing page passes its slug and loads that published campaign instead.
+// Both queries are always mounted but only the relevant one is enabled.
+const activeQ=useGetActiveCampaign({query:{enabled:!slug}});
+const slugQ=useGetCampaignBySlug(slug||"",{query:{enabled:!!slug}});
+const campaign=slug?slugQ.data:activeQ.data;
+const campaignFetching=slug?slugQ.isFetching:activeQ.isFetching;
+// Query key used when we need to force-refresh campaign data mid-flow (e.g.
+// right before reserving so we don't grab a spot that was just taken).
+const campaignQueryKey=slug?getGetCampaignBySlugQueryKey(slug):getGetActiveCampaignQueryKey();
 const reserveMutation=useReserveSpot();
 // Build gridArea → live spot lookup so each picker cell can check the DB status
 const spotByGridArea=useMemo(()=>{
@@ -514,7 +523,7 @@ const handleComplete=async(formData,selOverride,sideOverride)=>{
   setReserveError(null);
   try{
     // Refresh campaign data so we don't pick a spot that was just taken
-    const fresh=await queryClient.fetchQuery({queryKey:getGetActiveCampaignQueryKey(),staleTime:0});
+    const fresh=await queryClient.fetchQuery({queryKey:campaignQueryKey,staleTime:0});
     const spots=fresh?.spots||[];
     const sizeMap={XL:"xl",L:"large",M:"medium",S:"small"};
     const dbSize=sizeMap[currentSel?.size];
@@ -601,6 +610,21 @@ const handleComplete=async(formData,selOverride,sideOverride)=>{
     });
     setSel(null);
     localStorage.removeItem(PENDING_AD_KEY);
+    if(slug){
+      // Territory/dealer landing pages use hosted Stripe Checkout: create a
+      // session for the reserved spot and hand off to Stripe. On success the
+      // customer lands on /spot-confirmation which finalizes the sale.
+      const res=await fetch(`${import.meta.env.BASE_URL}api/checkout/create-spot-session`,{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({spotId:result.id,slug}),
+      });
+      const data=await res.json();
+      if(!res.ok||!data?.url){
+        throw new Error(data?.error||"Could not start checkout. Please try again.");
+      }
+      window.location.href=data.url;
+      return;
+    }
     navigate(`/checkout/${result.id}`);
   }catch(err){
     console.error('[handleComplete] caught error:',err);

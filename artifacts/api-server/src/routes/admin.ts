@@ -11,6 +11,7 @@ import {
 } from "@workspace/api-zod";
 import jwt from "jsonwebtoken";
 import { fetchScanCountsForSpotIds } from "../lib/scanCounts";
+import { ensureTrackingCode } from "../lib/trackingCode";
 
 const router: IRouter = Router();
 
@@ -239,6 +240,72 @@ router.post("/admin/spots/:id/approve", requireAdmin, async (req, res): Promise<
 
   req.log.info({ spotId: params.data.id }, "Ad approved");
   res.json(ApproveAdResponse.parse(ser(updated)));
+});
+
+// Offline "mark as sold" (Task #134). Lets an admin record a spot sold outside
+// the online checkout (e.g. a dealer closed the deal in person). Flips the spot
+// to paid, clears any hold, stamps optional business info, records a manual
+// order for revenue rollups, and issues a QR tracking code. No Stripe, no
+// customer email — this is a bookkeeping action.
+router.post("/admin/spots/:id/mark-sold", requireAdmin, async (req, res): Promise<void> => {
+  const id = parseInt(String(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id), 10);
+  if (!Number.isFinite(id)) {
+    res.status(400).json({ error: "Invalid spot id" });
+    return;
+  }
+
+  const [spot] = await db.select().from(spotsTable).where(eq(spotsTable.id, id));
+  if (!spot) {
+    res.status(404).json({ error: "Spot not found" });
+    return;
+  }
+  if (spot.status === "paid") {
+    res.status(409).json({ error: "This spot is already sold." });
+    return;
+  }
+
+  const businessName =
+    typeof req.body?.businessName === "string" && req.body.businessName.trim()
+      ? req.body.businessName.trim()
+      : spot.businessName;
+  const businessCategory =
+    typeof req.body?.businessCategory === "string" && req.body.businessCategory.trim()
+      ? req.body.businessCategory.trim()
+      : spot.businessCategory;
+
+  const [updated] = await db
+    .update(spotsTable)
+    .set({ status: "paid", expiresAt: null, businessName, businessCategory })
+    .where(eq(spotsTable.id, id))
+    .returning();
+
+  // Record a manual order so admin revenue rollups (which sum paid orders)
+  // include offline sales. Synthetic ref keeps the unique index happy.
+  try {
+    await db.insert(ordersTable).values({
+      spotId: id,
+      stripePaymentIntentId: `manual-${id}-${Date.now()}`,
+      amountCents: spot.price,
+      status: "paid",
+    });
+  } catch (err: any) {
+    req.log.warn({ err: err?.message, spotId: id }, "Manual order insert skipped (likely already recorded)");
+  }
+
+  try {
+    await ensureTrackingCode(updated);
+  } catch (err: any) {
+    req.log.error({ err: err?.message, spotId: id }, "Tracking code assignment failed on mark-sold — continuing");
+  }
+
+  const scanCount = (await fetchScanCountsForSpotIds([id])).get(id) ?? 0;
+  req.log.info({ spotId: id }, "Spot marked sold (offline)");
+  res.json({
+    ...updated,
+    createdAt: updated.createdAt instanceof Date ? updated.createdAt.toISOString() : updated.createdAt,
+    expiresAt: null,
+    scanCount,
+  });
 });
 
 export default router;

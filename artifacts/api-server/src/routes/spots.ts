@@ -88,16 +88,19 @@ router.post("/spots/:id/reserve", async (req, res): Promise<void> => {
     return;
   }
 
-  // Defense in depth: refuse to reserve any spot whose campaign has been
-  // marked completed. The picker only renders the active campaign so this
-  // shouldn't happen via the UI, but we keep the API honest if a stale
-  // tab calls /reserve directly after the campaign was closed.
+  // Defense in depth: refuse to reserve any spot whose campaign isn't open for
+  // sale. Multi-tenant territory pages (Task #134) are gated on isPublished
+  // rather than the single-active rule — the house homepage campaign is BOTH
+  // active and published, dealer pages are published+draft, and a completed
+  // campaign is never sellable. The picker only renders purchasable campaigns
+  // so this shouldn't happen via the UI, but we keep the API honest if a stale
+  // tab calls /reserve directly after a page was unpublished/completed.
   const [parentCampaign] = await db
     .select()
     .from(campaignsTable)
     .where(eq(campaignsTable.id, spot.campaignId));
 
-  if (!parentCampaign || parentCampaign.status !== "active") {
+  if (!parentCampaign || !parentCampaign.isPublished || parentCampaign.status === "completed") {
     res.status(400).json({ error: "This campaign is no longer accepting new spots." });
     return;
   }

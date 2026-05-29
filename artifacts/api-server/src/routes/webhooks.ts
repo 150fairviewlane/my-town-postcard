@@ -394,7 +394,7 @@ function parseSpotIdFromMetadata(meta: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-async function markSpotPaidAndNotify(
+export async function markSpotPaidAndNotify(
   spotId: number,
   paymentRef: string,
   amountCentsFromEvent: number | null,

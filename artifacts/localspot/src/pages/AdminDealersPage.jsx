@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { Link } from "wouter";
 
 const RED = "#7B1418";
@@ -34,6 +34,27 @@ function formatDate(iso) {
 export default function AdminDealersPage() {
   const [dealers, setDealers] = useState(null);
   const [error, setError] = useState(null);
+  const [expanded, setExpanded] = useState(null);
+  const [pages, setPages] = useState({});
+
+  const togglePage = (dealerId) => {
+    setExpanded((cur) => (cur === dealerId ? null : dealerId));
+    if (pages[dealerId]) return;
+    const baseUrl = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+    const token = localStorage.getItem("admin_token");
+    setPages((p) => ({ ...p, [dealerId]: { status: "loading" } }));
+    fetch(`${baseUrl}/api/dealers/${dealerId}/landing-page`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then(async (res) => {
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(body.error || `Server returned ${res.status}`);
+        setPages((p) => ({ ...p, [dealerId]: { status: "ok", data: body } }));
+      })
+      .catch((err) =>
+        setPages((p) => ({ ...p, [dealerId]: { status: "error", error: err.message } })),
+      );
+  };
 
   useEffect(() => {
     const stored = localStorage.getItem("admin_token");
@@ -147,25 +168,46 @@ export default function AdminDealersPage() {
                       <Th>Households</Th>
                       <Th>Signed Up</Th>
                       <Th>Activated</Th>
+                      <Th>Landing Page</Th>
                     </tr>
                   </thead>
                   <tbody>
                     {dealers.map((d) => (
-                      <tr key={d.id} style={{ borderTop: "1px solid #f0f0f0" }}>
-                        <Td>
-                          <div style={{ fontWeight: 700, color: "#111", fontSize: 13.5 }}>{d.name}</div>
-                          <div style={{ fontSize: 12, color: "#888" }}>{d.email}</div>
-                          {d.phone && (
-                            <div style={{ fontSize: 11.5, color: "#888" }}>{d.phone}</div>
-                          )}
-                        </Td>
-                        <Td><StatusPill status={d.status} /></Td>
-                        <Td style={{ fontFamily: "monospace", fontSize: 13 }}>{d.homeZip}</Td>
-                        <Td>{d.territoryCount}</Td>
-                        <Td>~{(d.totalHouseholds || 0).toLocaleString()}</Td>
-                        <Td style={{ fontSize: 12.5, color: "#666" }}>{formatDate(d.createdAt)}</Td>
-                        <Td style={{ fontSize: 12.5, color: "#666" }}>{formatDate(d.activatedAt)}</Td>
-                      </tr>
+                      <Fragment key={d.id}>
+                        <tr style={{ borderTop: "1px solid #f0f0f0" }}>
+                          <Td>
+                            <div style={{ fontWeight: 700, color: "#111", fontSize: 13.5 }}>{d.name}</div>
+                            <div style={{ fontSize: 12, color: "#888" }}>{d.email}</div>
+                            {d.phone && (
+                              <div style={{ fontSize: 11.5, color: "#888" }}>{d.phone}</div>
+                            )}
+                          </Td>
+                          <Td><StatusPill status={d.status} /></Td>
+                          <Td style={{ fontFamily: "monospace", fontSize: 13 }}>{d.homeZip}</Td>
+                          <Td>{d.territoryCount}</Td>
+                          <Td>~{(d.totalHouseholds || 0).toLocaleString()}</Td>
+                          <Td style={{ fontSize: 12.5, color: "#666" }}>{formatDate(d.createdAt)}</Td>
+                          <Td style={{ fontSize: 12.5, color: "#666" }}>{formatDate(d.activatedAt)}</Td>
+                          <Td>
+                            <button onClick={() => togglePage(d.id)} style={{
+                              background: expanded === d.id ? RED : "#fff",
+                              color: expanded === d.id ? "#fff" : RED,
+                              border: `1.5px solid ${RED}`, borderRadius: 8,
+                              padding: "6px 12px", fontSize: 12.5, fontWeight: 800,
+                              cursor: "pointer", whiteSpace: "nowrap",
+                            }}>
+                              {expanded === d.id ? "Hide ▲" : "View ▾"}
+                            </button>
+                          </Td>
+                        </tr>
+                        {expanded === d.id && (
+                          <tr style={{ background: "#fafafa" }}>
+                            <td colSpan={8} style={{ padding: "0 16px 18px" }}>
+                              <LandingPagePanel state={pages[d.id]} />
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
                     ))}
                   </tbody>
                 </table>
@@ -193,6 +235,110 @@ function Td({ children, style }) {
     </td>
   );
 }
+function LandingPagePanel({ state }) {
+  if (!state || state.status === "loading") {
+    return <div style={{ padding: "16px 0", color: "#666", fontSize: 13 }}>Loading landing page…</div>;
+  }
+  if (state.status === "error") {
+    return (
+      <div style={{ padding: "16px 0", color: "#991b1b", fontSize: 13 }}>
+        Could not load landing page: {state.error}
+      </div>
+    );
+  }
+  const { page, summary, spots } = state.data || {};
+  if (!page) {
+    return (
+      <div style={{ padding: "16px 0", color: "#92400e", fontSize: 13 }}>
+        No landing page yet. It's auto-created when the dealer's campaign is activated.
+      </div>
+    );
+  }
+  const money = (cents) => `$${((cents || 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 0 })}`;
+  return (
+    <div style={{ padding: "16px 0", display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
+        {page.url ? (
+          <a href={page.url} target="_blank" rel="noreferrer" style={{
+            fontSize: 13.5, fontWeight: 800, color: RED, textDecoration: "none",
+            background: "#fff", border: `1.5px solid ${RED}`, borderRadius: 8, padding: "8px 14px",
+          }}>
+            🔗 {page.url} ↗
+          </a>
+        ) : (
+          <span style={{ fontSize: 13, color: "#92400e" }}>No public slug assigned yet.</span>
+        )}
+        <span style={{
+          background: page.published ? "#f0fdf4" : "#fffbeb",
+          color: page.published ? "#15803d" : "#92400e",
+          borderRadius: 999, padding: "4px 12px", fontSize: 11, fontWeight: 800,
+          textTransform: "uppercase", letterSpacing: 0.4,
+        }}>
+          {page.published ? "Published" : "Unpublished"}
+        </span>
+        {page.territory && (
+          <span style={{ fontSize: 12.5, color: "#666" }}>{page.territory}</span>
+        )}
+      </div>
+
+      {summary && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 10 }}>
+          <MiniStat label="Sold" value={`${summary.soldSpots}/${summary.totalSpots}`} />
+          <MiniStat label="Front Sold" value={summary.frontSold} />
+          <MiniStat label="Back Sold" value={summary.backSold} />
+          <MiniStat label="Available" value={summary.availableSpots} />
+          <MiniStat label="Revenue" value={money(summary.revenueCents)} color="#15803d" />
+        </div>
+      )}
+
+      {Array.isArray(spots) && spots.length > 0 && (
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
+            <thead>
+              <tr style={{ textAlign: "left", color: "#6b7280" }}>
+                <th style={{ padding: "6px 10px", fontWeight: 700 }}>Slot</th>
+                <th style={{ padding: "6px 10px", fontWeight: 700 }}>Side</th>
+                <th style={{ padding: "6px 10px", fontWeight: 700 }}>Size</th>
+                <th style={{ padding: "6px 10px", fontWeight: 700 }}>Status</th>
+                <th style={{ padding: "6px 10px", fontWeight: 700 }}>Business</th>
+                <th style={{ padding: "6px 10px", fontWeight: 700 }}>Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              {spots.map((s) => (
+                <tr key={s.id} style={{ borderTop: "1px solid #eee" }}>
+                  <td style={{ padding: "6px 10px", fontFamily: "monospace" }}>{s.gridArea}</td>
+                  <td style={{ padding: "6px 10px" }}>{s.side}</td>
+                  <td style={{ padding: "6px 10px" }}>{s.size}</td>
+                  <td style={{ padding: "6px 10px" }}>
+                    <span style={{
+                      color: s.status === "paid" ? "#15803d" : s.status === "reserved" ? "#92400e" : "#6b7280",
+                      fontWeight: 700,
+                    }}>{s.status}</span>
+                  </td>
+                  <td style={{ padding: "6px 10px" }}>{s.businessName || "—"}</td>
+                  <td style={{ padding: "6px 10px" }}>{money(s.price)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MiniStat({ label, value, color = "#111" }) {
+  return (
+    <div style={{ background: "#fff", borderRadius: 10, padding: "10px 14px",
+      border: "1px solid #eee" }}>
+      <div style={{ fontSize: 10.5, color: "#888", textTransform: "uppercase",
+        fontWeight: 800, letterSpacing: 0.4, marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 17, fontWeight: 900, color, fontFamily: "Georgia,serif" }}>{value}</div>
+    </div>
+  );
+}
+
 function SummaryCard({ label, value, color = "#111" }) {
   return (
     <div style={{ background: "#fff", borderRadius: 12, padding: 18,

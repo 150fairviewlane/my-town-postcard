@@ -207,6 +207,93 @@ export function useGetActiveCampaign<
 }
 
 /**
+ * @summary Get a published territory campaign by URL slug, with all spots
+ */
+export const getGetCampaignBySlugUrl = (slug: string) => {
+  return `/api/campaigns/by-slug/${slug}`;
+};
+
+export const getCampaignBySlug = async (
+  slug: string,
+  options?: RequestInit,
+): Promise<CampaignWithSpots> => {
+  return customFetch<CampaignWithSpots>(getGetCampaignBySlugUrl(slug), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCampaignBySlugQueryKey = (slug: string) => {
+  return [`/api/campaigns/by-slug/${slug}`] as const;
+};
+
+export const getGetCampaignBySlugQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCampaignBySlug>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  slug: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCampaignBySlug>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCampaignBySlugQueryKey(slug);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCampaignBySlug>>
+  > = ({ signal }) => getCampaignBySlug(slug, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!slug,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCampaignBySlug>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCampaignBySlugQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCampaignBySlug>>
+>;
+export type GetCampaignBySlugQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get a published territory campaign by URL slug, with all spots
+ */
+
+export function useGetCampaignBySlug<
+  TData = Awaited<ReturnType<typeof getCampaignBySlug>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  slug: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCampaignBySlug>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCampaignBySlugQueryOptions(slug, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
  * @summary Get taken business categories for the active campaign
  */
 export const getGetActiveCampaignTakenCategoriesUrl = () => {

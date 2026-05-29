@@ -21,6 +21,7 @@ import jwt from "jsonwebtoken";
 import { fetchScanCountsForSpotIds } from "../lib/scanCounts";
 import { sendCampaignCompletedAdminEmail } from "../lib/emails";
 import { markCampaignAssignmentsMailed } from "../lib/subscriptions";
+import { STANDARD_SPOT_LAYOUT } from "../lib/standardLayout";
 
 const router: IRouter = Router();
 
@@ -41,39 +42,6 @@ function requireAdmin(req: any, res: any, next: any): void {
     res.status(401).json({ error: "Invalid or expired token" });
   }
 }
-
-// Standard postcard layout — mirrors the picker / print page exactly. The
-// picker grid (postcardCore.GRID_AREAS + postcardBack.BACK_GRID_AREAS) is the
-// authoritative visual definition; this list mirrors the *sellable* cells
-// from that grid (house ad cells like `hs`, `bhs`, `bhr`, `bhn` and the
-// `ed` EDDM block are rendered statically by the frontend and intentionally
-// have no DB row). Prices in cents.
-const STANDARD_SPOT_LAYOUT: ReadonlyArray<{
-  side: "front" | "back";
-  size: "xl" | "large" | "medium" | "small";
-  gridArea: string;
-  price: number;
-}> = [
-  // Front side — 7 sellable cells: 3 XL (top row) + 4 Large portrait (bottom row).
-  // No house ad. Every inch of the front is a paid spot.
-  // XL  = 4"×5" (400×500 natural px). Large = 3"×4" portrait (300×400 natural px).
-  { side: "front", size: "xl",    gridArea: "mb", price: 49900 },
-  { side: "front", size: "xl",    gridArea: "dn", price: 49900 },
-  { side: "front", size: "xl",    gridArea: "re", price: 49900 },
-  { side: "front", size: "large", gridArea: "l1", price: 39900 },
-  { side: "front", size: "large", gridArea: "l2", price: 39900 },
-  { side: "front", size: "large", gridArea: "l3", price: 39900 },
-  { side: "front", size: "large", gridArea: "l4", price: 39900 },
-  // Back side — 8 sellable cells: 3 XL (top row) + 4 Medium (middle row) + 1 Small.
-  { side: "back",  size: "xl",     gridArea: "bxl",  price: 49900 },
-  { side: "back",  size: "xl",     gridArea: "bxl2", price: 49900 },
-  { side: "back",  size: "xl",     gridArea: "bxl3", price: 49900 },
-  { side: "back",  size: "medium", gridArea: "bm1",  price: 29900 },
-  { side: "back",  size: "medium", gridArea: "bm2",  price: 29900 },
-  { side: "back",  size: "medium", gridArea: "bm3",  price: 29900 },
-  { side: "back",  size: "medium", gridArea: "bm4",  price: 29900 },
-  { side: "back",  size: "small",  gridArea: "bs1",  price: 19900 },
-];
 
 const serializeDate = (d: Date | string | null | undefined) =>
   d instanceof Date ? d.toISOString() : (d ?? null);

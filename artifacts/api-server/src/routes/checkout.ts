@@ -10,6 +10,7 @@ import {
 import { sendAdProofEmail, sendAdminNewOrder } from "../lib/emails";
 import { ensureTrackingCode } from "../lib/trackingCode";
 import { logger } from "../lib/logger";
+import { markSpotPaidAndNotify } from "./webhooks";
 import {
   getStripeClient,
   getStripePublishableKey,
@@ -17,6 +18,21 @@ import {
 } from "../lib/stripeClient";
 
 const router: IRouter = Router();
+
+// Resolve the public origin for Stripe redirect URLs. Prefers an explicit
+// APP_URL/PUBLIC_APP_URL, then the Replit deployment domain, then the request's
+// own host (dev/preview). Mirrors the helper in dealers.ts / subscriptions.ts.
+function publicOrigin(req: any): string {
+  const envOrigin =
+    process.env.APP_URL?.replace(/\/$/, "") || process.env.PUBLIC_APP_URL?.replace(/\/$/, "");
+  if (envOrigin) return envOrigin;
+  const replitDomain = process.env.REPLIT_DOMAINS?.split(",")[0]?.trim();
+  if (replitDomain) return `https://${replitDomain}`;
+  const host = req.get("host") ?? `localhost:${process.env.PORT ?? "3000"}`;
+  const proto =
+    req.protocol === "https" || req.get("x-forwarded-proto") === "https" ? "https" : "http";
+  return `${proto}://${host}`;
+}
 
 // Lightweight config endpoint so the frontend can load Stripe.js with the
 // right publishable key for the current environment (dev vs deployment).
@@ -320,6 +336,143 @@ router.post("/checkout/confirm", async (req, res): Promise<void> => {
   }
 
   res.json(ConfirmPaymentResponse.parse({ success: true, orderId: order.id }));
+});
+
+// --- Hosted Stripe Checkout for one-time spot purchases (Task #134) ---
+// Territory landing pages use Stripe's hosted Checkout (redirect) instead of the
+// embedded CardElement the homepage uses. The webhook already routes these back
+// through markSpotPaidAndNotify (metadata.kind is neither "dealer" nor
+// "spot_subscription", so it falls to the one-time spot branch). This is the
+// same fulfillment path as the embedded flow — orders, tracking codes, emails.
+router.post("/checkout/create-spot-session", async (req, res): Promise<void> => {
+  const spotId = parseInt(String(req.body?.spotId ?? ""), 10);
+  if (!Number.isFinite(spotId)) {
+    res.status(400).json({ error: "Missing or invalid spotId" });
+    return;
+  }
+
+  const [spot] = await db.select().from(spotsTable).where(eq(spotsTable.id, spotId));
+  if (!spot) {
+    res.status(404).json({ error: "Spot not found" });
+    return;
+  }
+  if (spot.status !== "reserved") {
+    res.status(400).json({ error: "Spot must be reserved before payment" });
+    return;
+  }
+
+  // Don't open a second Checkout if this spot is already paid.
+  const alreadyPaid = await db
+    .select({ id: ordersTable.id })
+    .from(ordersTable)
+    .where(and(eq(ordersTable.spotId, spot.id), eq(ordersTable.status, "paid")))
+    .limit(1);
+  if (alreadyPaid.length > 0) {
+    res.status(409).json({ error: "This spot has already been paid for." });
+    return;
+  }
+
+  let stripe;
+  try {
+    stripe = await getStripeClient();
+  } catch (err: any) {
+    req.log.error({ err: err?.message }, "Stripe client unavailable");
+    res.status(503).json({
+      error:
+        "Payments are not configured for this environment. Connect the Stripe integration to enable checkout.",
+    });
+    return;
+  }
+
+  const origin = publicOrigin(req);
+  const sizeLabel = `${spot.size.charAt(0).toUpperCase()}${spot.size.slice(1)} Postcard Ad`;
+  const session = await stripe.checkout.sessions.create({
+    mode: "payment",
+    payment_method_types: ["card"],
+    line_items: [
+      {
+        quantity: 1,
+        price_data: {
+          currency: "usd",
+          unit_amount: spot.price,
+          product_data: {
+            name: sizeLabel,
+            description: spot.businessName ? `Reserved for ${spot.businessName}` : undefined,
+          },
+        },
+      },
+    ],
+    // metadata.spotId drives the webhook + sync confirm; kind keeps the webhook
+    // router explicit (falls to the one-time spot branch).
+    metadata: {
+      spotId: String(spot.id),
+      kind: "spot_one_time",
+      businessName: spot.businessName ?? "",
+      businessCategory: spot.businessCategory ?? "",
+    },
+    payment_intent_data: {
+      metadata: { spotId: String(spot.id), kind: "spot_one_time" },
+    },
+    success_url: `${origin}/spot-confirmation?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${origin}/checkout/${spot.id}?cancelled=1`,
+  });
+
+  req.log.info({ spotId: spot.id, sessionId: session.id }, "Spot checkout session created");
+  res.json({ url: session.url });
+});
+
+router.get("/checkout/spot-session-confirm", async (req, res): Promise<void> => {
+  const sessionId = typeof req.query.session_id === "string" ? req.query.session_id : null;
+  if (!sessionId || !sessionId.startsWith("cs_")) {
+    res.status(400).json({ error: "Missing or invalid session_id" });
+    return;
+  }
+  if (!(await isStripeConfigured())) {
+    res.status(503).json({ error: "Payments are not configured for this environment." });
+    return;
+  }
+
+  const stripe = await getStripeClient();
+  let session;
+  try {
+    session = await stripe.checkout.sessions.retrieve(sessionId);
+  } catch (err: any) {
+    req.log.warn({ err: err?.message, sessionId }, "Could not retrieve spot checkout session");
+    res.status(400).json({ error: "Could not verify checkout session." });
+    return;
+  }
+
+  const spotId = parseInt(String((session.metadata as any)?.spotId ?? ""), 10);
+  if (!Number.isFinite(spotId)) {
+    res.status(400).json({ error: "Session is not linked to a spot." });
+    return;
+  }
+
+  const isPaid =
+    session.payment_status === "paid" || session.payment_status === "no_payment_required";
+  if (isPaid) {
+    const paymentRef =
+      (typeof session.payment_intent === "string"
+        ? session.payment_intent
+        : (session.payment_intent as any)?.id) || session.id;
+    // Idempotent — webhook may have already recorded this order. Same path.
+    await markSpotPaidAndNotify(
+      spotId,
+      paymentRef,
+      typeof session.amount_total === "number" ? session.amount_total : null,
+      req,
+    );
+  }
+
+  const [spot] = await db.select().from(spotsTable).where(eq(spotsTable.id, spotId));
+  res.json({
+    success: isPaid,
+    paymentStatus: session.payment_status,
+    spotId,
+    businessName: spot?.businessName ?? null,
+    size: spot?.size ?? null,
+    amountCents: typeof session.amount_total === "number" ? session.amount_total : spot?.price ?? null,
+  });
 });
 
 export default router;

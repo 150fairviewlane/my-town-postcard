@@ -31,6 +31,17 @@ export interface Campaign {
   mailDate?: string | null;
   homesCount: number;
   status: CampaignStatus;
+  /** @nullable */
+  slug?: string | null;
+  isPublished?: boolean;
+  /** @nullable */
+  dealerId?: number | null;
+  /** @nullable */
+  mailingSeason?: string | null;
+  /** @nullable */
+  mailingMonth?: string | null;
+  /** @nullable */
+  cityList?: string | null;
   createdAt: string;
 }
 

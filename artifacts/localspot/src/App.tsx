@@ -51,6 +51,19 @@ const RequestOptionsPage = lazy(() => import("./pages/RequestOptionsPage"));
 const SubscriptionConfirmationPage = lazy(() => import("./pages/SubscriptionConfirmationPage"));
 // @ts-expect-error JSX module without types
 const AdminSubscriptionsPage = lazy(() => import("./pages/AdminSubscriptionsPage"));
+// @ts-expect-error JSX module without types
+const SpotConfirmationPage = lazy(() => import("./pages/SpotConfirmationPage"));
+const TerritoryLandingPage = lazy(() => import("./pages/TerritoryLandingPage"));
+import NotFound from "./pages/not-found";
+
+// Top-level frontend route prefixes that must NEVER be shadowed by a
+// territory slug. The /:slug catch-all is registered last, but wouter's
+// Switch matches the first hit, so these explicit routes already win — this
+// list is the guard for the catch-all's own handler (and documents intent).
+const RESERVED_SLUGS = new Set([
+  "checkout", "upload", "confirmation", "admin", "subscription-confirmation",
+  "spot-confirmation", "ad-gen", "request-options", "dealers", "test", "go", "api",
+]);
 
 const queryClient = new QueryClient();
 
@@ -93,6 +106,7 @@ function Router() {
         <Route path="/admin/ai-test" component={AdminAITestPage} />
         <Route path="/admin" component={AdminDashboard} />
         <Route path="/subscription-confirmation" component={SubscriptionConfirmationPage} />
+        <Route path="/spot-confirmation" component={SpotConfirmationPage} />
         <Route path="/ad-gen" component={AdGenV7Page} />
         <Route path="/request-options" component={RequestOptionsPage} />
         {/* Dealer program routes — public landing + signup + confirmation */}
@@ -103,6 +117,18 @@ function Router() {
             regression suite. Gated to dev/test builds only — Vite tree-shakes
             the import in production so it adds nothing to the prod bundle. */}
         {import.meta.env.DEV && <Route path="/test/ad" component={TestAdPage} />}
+        {/* Catch-all territory/dealer landing pages served at a root slug
+            (e.g. /habersham). MUST be last so all explicit routes above win.
+            The reserved-word guard rejects any slug colliding with a known
+            prefix and falls through to the 404-style not-found page. */}
+        <Route path="/:slug">
+          {(params) =>
+            RESERVED_SLUGS.has(params.slug)
+              ? <NotFound />
+              : <TerritoryLandingPage params={params} />
+          }
+        </Route>
+        <Route component={NotFound} />
       </Switch>
     </Suspense>
   );

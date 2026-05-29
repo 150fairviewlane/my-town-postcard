@@ -26,6 +26,65 @@ export const GetActiveCampaignResponse = zod
     mailDate: zod.string().nullish(),
     homesCount: zod.number(),
     status: zod.enum(["draft", "active", "completed"]),
+    slug: zod.string().nullish(),
+    isPublished: zod.boolean().optional(),
+    dealerId: zod.number().nullish(),
+    mailingSeason: zod.string().nullish(),
+    mailingMonth: zod.string().nullish(),
+    cityList: zod.string().nullish(),
+    createdAt: zod.string(),
+  })
+  .and(
+    zod.object({
+      spots: zod.array(
+        zod.object({
+          id: zod.number(),
+          campaignId: zod.number(),
+          side: zod.enum(["front", "back"]),
+          size: zod.enum(["xl", "large", "medium", "small"]),
+          gridArea: zod.string(),
+          price: zod.number(),
+          categoryLock: zod.string().nullish(),
+          status: zod.enum(["available", "reserved", "paid"]),
+          businessName: zod.string().nullish(),
+          businessCategory: zod.string().nullish(),
+          contactEmail: zod.string().nullish(),
+          contactPhone: zod.string().nullish(),
+          website: zod.string().nullish(),
+          adFileUrl: zod.string().nullish(),
+          adStatus: zod.string().nullish(),
+          trackingCode: zod.string().nullish(),
+          templateData: zod.record(zod.string(), zod.unknown()).nullish(),
+          scanCount: zod.number().optional(),
+          expiresAt: zod.string().nullish(),
+          createdAt: zod.string(),
+        }),
+      ),
+    }),
+  );
+
+/**
+ * @summary Get a published territory campaign by URL slug, with all spots
+ */
+export const GetCampaignBySlugParams = zod.object({
+  slug: zod.coerce.string(),
+});
+
+export const GetCampaignBySlugResponse = zod
+  .object({
+    id: zod.number(),
+    name: zod.string(),
+    territory: zod.string(),
+    zipCode: zod.string(),
+    mailDate: zod.string().nullish(),
+    homesCount: zod.number(),
+    status: zod.enum(["draft", "active", "completed"]),
+    slug: zod.string().nullish(),
+    isPublished: zod.boolean().optional(),
+    dealerId: zod.number().nullish(),
+    mailingSeason: zod.string().nullish(),
+    mailingMonth: zod.string().nullish(),
+    cityList: zod.string().nullish(),
     createdAt: zod.string(),
   })
   .and(
@@ -219,6 +278,12 @@ export const GetAdminCampaignResponse = zod.object({
     mailDate: zod.string().nullish(),
     homesCount: zod.number(),
     status: zod.enum(["draft", "active", "completed"]),
+    slug: zod.string().nullish(),
+    isPublished: zod.boolean().optional(),
+    dealerId: zod.number().nullish(),
+    mailingSeason: zod.string().nullish(),
+    mailingMonth: zod.string().nullish(),
+    cityList: zod.string().nullish(),
     createdAt: zod.string(),
   }),
   spots: zod.array(
@@ -309,6 +374,12 @@ export const ListAdminCampaignsResponse = zod.object({
         mailDate: zod.string().nullish(),
         homesCount: zod.number(),
         status: zod.enum(["draft", "active", "completed"]),
+        slug: zod.string().nullish(),
+        isPublished: zod.boolean().optional(),
+        dealerId: zod.number().nullish(),
+        mailingSeason: zod.string().nullish(),
+        mailingMonth: zod.string().nullish(),
+        cityList: zod.string().nullish(),
         createdAt: zod.string(),
       })
       .and(
@@ -344,6 +415,12 @@ export const CreateCampaignResponse = zod
       mailDate: zod.string().nullish(),
       homesCount: zod.number(),
       status: zod.enum(["draft", "active", "completed"]),
+      slug: zod.string().nullish(),
+      isPublished: zod.boolean().optional(),
+      dealerId: zod.number().nullish(),
+      mailingSeason: zod.string().nullish(),
+      mailingMonth: zod.string().nullish(),
+      cityList: zod.string().nullish(),
       createdAt: zod.string(),
     }),
     spots: zod.array(
@@ -404,6 +481,12 @@ export const GetAdminCampaignByIdResponse = zod
       mailDate: zod.string().nullish(),
       homesCount: zod.number(),
       status: zod.enum(["draft", "active", "completed"]),
+      slug: zod.string().nullish(),
+      isPublished: zod.boolean().optional(),
+      dealerId: zod.number().nullish(),
+      mailingSeason: zod.string().nullish(),
+      mailingMonth: zod.string().nullish(),
+      cityList: zod.string().nullish(),
       createdAt: zod.string(),
     }),
     spots: zod.array(
@@ -464,6 +547,12 @@ export const ActivateCampaignResponse = zod
       mailDate: zod.string().nullish(),
       homesCount: zod.number(),
       status: zod.enum(["draft", "active", "completed"]),
+      slug: zod.string().nullish(),
+      isPublished: zod.boolean().optional(),
+      dealerId: zod.number().nullish(),
+      mailingSeason: zod.string().nullish(),
+      mailingMonth: zod.string().nullish(),
+      cityList: zod.string().nullish(),
       createdAt: zod.string(),
     }),
     spots: zod.array(
@@ -524,6 +613,12 @@ export const CompleteCampaignResponse = zod
       mailDate: zod.string().nullish(),
       homesCount: zod.number(),
       status: zod.enum(["draft", "active", "completed"]),
+      slug: zod.string().nullish(),
+      isPublished: zod.boolean().optional(),
+      dealerId: zod.number().nullish(),
+      mailingSeason: zod.string().nullish(),
+      mailingMonth: zod.string().nullish(),
+      cityList: zod.string().nullish(),
       createdAt: zod.string(),
     }),
     spots: zod.array(
