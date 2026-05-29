@@ -18,6 +18,8 @@ export const territoriesTable = pgTable("territories", {
   status: text("status", { enum: ["available", "pending", "taken"] })
     .notNull()
     .default("available"),
+  // Key cities / communities within the territory (display hint for dealers)
+  zoneNote: text("zone_note"),
   // Linked dealer (set when territory is claimed + activated)
   dealerId: integer("dealer_id").references(() => dealersTable.id, {
     onDelete: "set null",
