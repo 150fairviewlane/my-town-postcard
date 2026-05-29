@@ -202,6 +202,36 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
   .sidebar{max-height:55vh}
   .map-wrap{min-height:45vh}
 }
+
+/* LOADING OVERLAY */
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse-text{0%,100%{opacity:.7}50%{opacity:1}}
+.loading-overlay{
+  position:fixed;inset:0;z-index:3000;
+  background:rgba(244,241,237,.92);backdrop-filter:blur(3px);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:20px;transition:opacity .4s ease;
+}
+.loading-overlay.hidden{opacity:0;pointer-events:none}
+.loading-spinner{
+  width:52px;height:52px;border-radius:50%;
+  border:4px solid rgba(124,28,46,.15);
+  border-top-color:var(--burg);
+  animation:spin .85s linear infinite;
+}
+.loading-icon{
+  font-size:30px;position:absolute;
+  animation:pulse-text 1.6s ease-in-out infinite;
+}
+.loading-spinner-wrap{position:relative;width:52px;height:52px;display:flex;align-items:center;justify-content:center}
+.loading-label{
+  font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.08em;
+  color:var(--burg);animation:pulse-text 1.6s ease-in-out infinite;
+}
+.loading-sub{
+  font-family:'Crimson Pro',serif;font-style:italic;font-size:14px;
+  color:var(--ink-light);margin-top:-12px;
+}
 </style>
 </head>
 <body>
@@ -221,14 +251,28 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
   <div class="hdr-tag">✦ Find Your Territory</div>
 </header>
 
-<script>
-// Show back link only when arriving from the dealer signup form
-if(new URLSearchParams(window.location.search).get('ref')==='signup'){
-  document.getElementById('backLink').style.display='block';
-}
-</script>
+<div class="loading-overlay" id="loadingOverlay" style="display:none">
+  <div class="loading-spinner-wrap">
+    <div class="loading-spinner"></div>
+    <div class="loading-icon">📮</div>
+  </div>
+  <div class="loading-label">Finding Your Territory</div>
+  <div class="loading-sub">Locating available territories near your ZIP code…</div>
+</div>
 
 <div class="toast" id="toast"></div>
+
+<script>
+// Show back link only when arriving from the dealer signup form
+const _sp = new URLSearchParams(window.location.search);
+if(_sp.get('ref')==='signup'){
+  document.getElementById('backLink').style.display='block';
+}
+// Show loading overlay immediately if a ZIP was passed so the page doesn't look frozen
+if(_sp.get('zip') && /^\d{5}$/.test(_sp.get('zip'))){
+  document.getElementById('loadingOverlay').style.display='flex';
+}
+</script>
 
 <!-- CLAIM MODAL -->
 <div class="modal-bg" id="modalBg">
@@ -635,7 +679,15 @@ async function searchByZip(){
   } finally {
     btn.textContent = 'Find';
     btn.disabled = false;
+    hideLoadingOverlay();
   }
+}
+
+function hideLoadingOverlay(){
+  const ov = document.getElementById('loadingOverlay');
+  if(!ov || ov.style.display==='none') return;
+  ov.classList.add('hidden');
+  setTimeout(() => { ov.style.display='none'; ov.classList.remove('hidden'); }, 420);
 }
 
 function searchByCounty(){
