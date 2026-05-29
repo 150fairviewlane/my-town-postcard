@@ -157,6 +157,7 @@ export async function releaseDealerPendingTerritory(dealerId: number): Promise<v
 router.post("/dealers", async (req, res): Promise<void> => {
   const parsed = CreateDealerBodySchema.safeParse(req.body);
   if (!parsed.success) {
+    req.log.warn({ zodError: parsed.error.issues, body: req.body }, "POST /dealers Zod validation failed");
     res.status(400).json({ error: "Please make sure you've selected a territory and filled in all required fields." });
     return;
   }
