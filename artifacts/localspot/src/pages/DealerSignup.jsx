@@ -130,16 +130,16 @@ function Step1Info({ form, setForm, onNext }) {
           </div>
           <div>
             <label style={{ fontSize: 12.5, fontWeight: 600, color: "#374151",
-              display: "block", marginBottom: 4 }}>Phone (optional)</label>
-            <input style={inputStyle} type="tel" value={form.phone}
-              onChange={set("phone")} placeholder="(555) 123-4567" />
-          </div>
-          <div>
-            <label style={{ fontSize: 12.5, fontWeight: 600, color: "#374151",
               display: "block", marginBottom: 4 }}>Your ZIP code *</label>
             <input style={inputStyle} required type="text" inputMode="numeric"
               maxLength={5} value={form.zip} onChange={set("zip")}
               placeholder="e.g. 30523" />
+          </div>
+          <div>
+            <label style={{ fontSize: 12.5, fontWeight: 600, color: "#374151",
+              display: "block", marginBottom: 4 }}>Phone (optional)</label>
+            <input style={inputStyle} type="tel" value={form.phone}
+              onChange={set("phone")} placeholder="(555) 123-4567" />
           </div>
           {error && (
             <div style={{ background: "#fef2f2", color: "#991b1b",
