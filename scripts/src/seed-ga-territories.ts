@@ -35,7 +35,7 @@ async function run() {
     .from(territoriesTable)
     .where(eq(territoriesTable.state, "GA"));
 
-  if (Number(count) >= 95) {
+  if (Number(count) >= 96) {
     console.log(`Already have ${count} GA territories — skipping reseed.`);
     await pool.end();
     return;

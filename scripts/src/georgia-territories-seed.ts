@@ -14,17 +14,18 @@ export interface GaTerritoryRow {
 
 export const GEORGIA_TERRITORIES: GaTerritoryRow[] = [
 
-  // ── TIER 1 — METRO SPLITS (Fulton, Gwinnett, Cobb, DeKalb) ──────────────────
-  { id: "GA-001", name: "Fulton County — North",       state: "GA", counties: ["Fulton"],             zoneNote: "Alpharetta, Roswell, Milton, Johns Creek",            households: 125000, status: "available" },
-  { id: "GA-002", name: "Fulton County — Central",     state: "GA", counties: ["Fulton"],             zoneNote: "Atlanta, Buckhead, Sandy Springs, Midtown",           households: 110000, status: "available" },
-  { id: "GA-003", name: "Fulton County — South",       state: "GA", counties: ["Fulton"],             zoneNote: "Union City, Fairburn, Palmetto, South Fulton",        households: 85000,  status: "available" },
-  { id: "GA-004", name: "Gwinnett County — West",      state: "GA", counties: ["Gwinnett"],           zoneNote: "Norcross, Peachtree Corners, Duluth, Berkeley Lake",  households: 105000, status: "available" },
-  { id: "GA-005", name: "Gwinnett County — Central",   state: "GA", counties: ["Gwinnett"],           zoneNote: "Lawrenceville, Snellville, Lilburn, Stone Mountain",  households: 98000,  status: "available" },
-  { id: "GA-006", name: "Gwinnett County — Northeast", state: "GA", counties: ["Gwinnett"],           zoneNote: "Buford, Sugar Hill, Dacula, Grayson, Loganville",     households: 90000,  status: "available" },
-  { id: "GA-007", name: "Cobb County — North",         state: "GA", counties: ["Cobb"],              zoneNote: "Marietta, Kennesaw, Acworth, Woodstock area",         households: 95000,  status: "available" },
-  { id: "GA-008", name: "Cobb County — South",         state: "GA", counties: ["Cobb"],              zoneNote: "Smyrna, Vinings, Austell, Mableton, Powder Springs",  households: 90000,  status: "available" },
-  { id: "GA-009", name: "DeKalb County — North",       state: "GA", counties: ["DeKalb"],            zoneNote: "Dunwoody, Doraville, Chamblee, Tucker, Clarkston",    households: 95000,  status: "available" },
-  { id: "GA-010", name: "DeKalb County — South",       state: "GA", counties: ["DeKalb"],            zoneNote: "Decatur, Lithonia, Stonecrest",                       households: 85000,  status: "available" },
+  // ── TIER 1 — METRO ATLANTA CITY CLUSTERS ─────────────────────────────────────
+  // Metro ZIPs are assigned via the explicit curated map in seed-zip-assignments.ts.
+  { id: "GA-001", name: "Alpharetta / Milton / Roswell",        state: "GA", counties: ["Fulton"],           zoneNote: "Alpharetta, Milton, Roswell, Johns Creek, Mountain Park",        households: 95000, status: "available" },
+  { id: "GA-002", name: "Sandy Springs / Buckhead / Dunwoody",  state: "GA", counties: ["Fulton", "DeKalb"],  zoneNote: "Sandy Springs, Buckhead, Dunwoody, Brookhaven, Chamblee",        households: 92000, status: "available" },
+  { id: "GA-003", name: "Atlanta / Midtown / Inman Park",       state: "GA", counties: ["Fulton", "DeKalb"],  zoneNote: "Atlanta city core, Midtown, Inman Park, Grant Park, Va-Highland", households: 88000, status: "available" },
+  { id: "GA-004", name: "Duluth / Peachtree Corners / Norcross", state: "GA", counties: ["Gwinnett"],         zoneNote: "Duluth, Peachtree Corners, Norcross, Berkeley Lake",             households: 88000, status: "available" },
+  { id: "GA-005", name: "Lawrenceville / Snellville / Lilburn", state: "GA", counties: ["Gwinnett"],          zoneNote: "Lawrenceville, Snellville, Lilburn, Grayson",                    households: 95000, status: "available" },
+  { id: "GA-006", name: "Buford / Sugar Hill / Braselton",      state: "GA", counties: ["Gwinnett"],          zoneNote: "Buford, Sugar Hill, Dacula, Braselton, Loganville",              households: 86000, status: "available" },
+  { id: "GA-007", name: "Marietta / Kennesaw / Acworth",        state: "GA", counties: ["Cobb"],              zoneNote: "Marietta, Kennesaw, Acworth, Powder Springs area",               households: 92000, status: "available" },
+  { id: "GA-008", name: "Smyrna / Mableton / Powder Springs",   state: "GA", counties: ["Cobb"],              zoneNote: "Smyrna, Mableton, Powder Springs, Austell, Vinings",             households: 88000, status: "available" },
+  { id: "GA-009", name: "Decatur / Tucker / Clarkston",         state: "GA", counties: ["DeKalb"],            zoneNote: "Decatur, Tucker, Clarkston, Avondale Estates, Pine Lake",        households: 82000, status: "available" },
+  { id: "GA-010", name: "Stonecrest / Lithonia / South DeKalb", state: "GA", counties: ["DeKalb"],            zoneNote: "Stonecrest, Lithonia, South DeKalb, East Atlanta",               households: 78000, status: "available" },
 
   // ── TIER 2 — SINGLE COUNTY (Atlanta suburbs) ─────────────────────────────────
   { id: "GA-011", name: "Cherokee County",  state: "GA", counties: ["Cherokee"],  zoneNote: "Canton, Ball Ground, Holly Springs, Woodstock",      households: 105000, status: "available" },
@@ -49,7 +50,7 @@ export const GEORGIA_TERRITORIES: GaTerritoryRow[] = [
   { id: "GA-028", name: "Bartow County",    state: "GA", counties: ["Bartow"],    zoneNote: "Cartersville, Adairsville, Emerson, Euharlee",       households: 42000,  status: "available" },
   { id: "GA-029", name: "Floyd County",     state: "GA", counties: ["Floyd"],     zoneNote: "Rome, Cave Spring, Armuchee, Shannon",               households: 38000,  status: "available" },
   { id: "GA-030", name: "Catoosa County",   state: "GA", counties: ["Catoosa"],   zoneNote: "Ringgold, Fort Oglethorpe, Tunnel Hill area",        households: 25000,  status: "available" },
-  { id: "GA-031", name: "Walker / Dade Counties", state: "GA", counties: ["Walker", "Dade"], zoneNote: "LaFayette, Rock Spring, Chickamauga, Trenton", households: 30000, status: "available" },
+  { id: "GA-031", name: "Walker / Dade / Chattooga Counties", state: "GA", counties: ["Walker", "Dade", "Chattooga"], zoneNote: "LaFayette, Rock Spring, Chickamauga, Trenton, Summerville", households: 30000, status: "available" },
   { id: "GA-032", name: "Gordon County",    state: "GA", counties: ["Gordon"],    zoneNote: "Calhoun, Resaca, Fairmount, Plainville",             households: 26000,  status: "available" },
   { id: "GA-033", name: "Clarke County",    state: "GA", counties: ["Clarke"],    zoneNote: "Athens, Winterville, Bogart",                        households: 48000,  status: "available" },
 
@@ -69,18 +70,18 @@ export const GEORGIA_TERRITORIES: GaTerritoryRow[] = [
   { id: "GA-046", name: "Troup County",     state: "GA", counties: ["Troup"],     zoneNote: "LaGrange, West Point, Hogansville",                  households: 28000,  status: "available" },
 
   // ── TIER 3 — COMBINED COUNTIES (Northeast Georgia Mountains) ─────────────────
-  { id: "GA-047", name: "White / Habersham Counties",          state: "GA", counties: ["White", "Habersham"],                          zoneNote: "Cleveland, Helen, Clarkesville, Cornelia, Demorest",           households: 28000, status: "available" },
-  { id: "GA-048", name: "Stephens / Franklin / Hart Counties", state: "GA", counties: ["Stephens", "Franklin", "Hart"],                zoneNote: "Toccoa, Carnesville, Hartwell",                                households: 30000, status: "available" },
+  { id: "GA-047", name: "Habersham / Stephens Counties",       state: "GA", counties: ["Habersham", "Stephens"],                       zoneNote: "Clarkesville, Cornelia, Demorest, Toccoa, Baldwin",            households: 30000, status: "available" },
+  { id: "GA-048", name: "Franklin / Hart Counties",            state: "GA", counties: ["Franklin", "Hart"],                            zoneNote: "Carnesville, Hartwell, Canon, Royston, Bowersville",           households: 22000, status: "available" },
   { id: "GA-049", name: "Rabun / Towns / Union Counties",      state: "GA", counties: ["Rabun", "Towns", "Union"],                     zoneNote: "Clayton, Hiawassee, Blairsville",                              households: 22000, status: "available" },
   { id: "GA-050", name: "Fannin / Gilmer Counties",            state: "GA", counties: ["Fannin", "Gilmer"],                            zoneNote: "Blue Ridge, Ellijay",                                          households: 28000, status: "available" },
   { id: "GA-051", name: "Pickens / Dawson Counties",           state: "GA", counties: ["Pickens", "Dawson"],                           zoneNote: "Jasper, Dawsonville",                                          households: 24000, status: "available" },
-  { id: "GA-052", name: "Lumpkin / Dawson Counties",           state: "GA", counties: ["Lumpkin", "Dawson"],                           zoneNote: "Dahlonega, Dawsonville",                                       households: 22000, status: "available" },
-  { id: "GA-053", name: "Murray / Gordon Counties",            state: "GA", counties: ["Murray", "Gordon"],                            zoneNote: "Chatsworth, Calhoun, Resaca",                                  households: 34000, status: "available" },
+  { id: "GA-052", name: "Lumpkin / White Counties",            state: "GA", counties: ["Lumpkin", "White"],                            zoneNote: "Dahlonega, Cleveland, Helen, Turnersville, Auraria",           households: 22000, status: "available" },
+  { id: "GA-053", name: "Murray County",                       state: "GA", counties: ["Murray"],                                      zoneNote: "Chatsworth, Eton, Crandall, Cisco",                            households: 18000, status: "available" },
   { id: "GA-054", name: "Haralson / Polk Counties",            state: "GA", counties: ["Haralson", "Polk"],                            zoneNote: "Buchanan, Bremen, Cedartown, Rockmart",                        households: 26000, status: "available" },
 
   // ── TIER 3 — COMBINED COUNTIES (Northeast Georgia) ───────────────────────────
-  { id: "GA-055", name: "Madison / Oglethorpe Counties",       state: "GA", counties: ["Madison", "Oglethorpe"],                       zoneNote: "Danielsville, Lexington",                                     households: 20000, status: "available" },
-  { id: "GA-056", name: "Banks / Franklin Counties",           state: "GA", counties: ["Banks", "Franklin"],                           zoneNote: "Homer, Lavonia, Canon, Royston",                               households: 20000, status: "available" },
+  { id: "GA-055", name: "Oglethorpe / Elbert Counties",        state: "GA", counties: ["Oglethorpe", "Elbert"],                        zoneNote: "Lexington, Elberton, Crawford, Bowman",                        households: 20000, status: "available" },
+  { id: "GA-056", name: "Banks / Madison Counties",            state: "GA", counties: ["Banks", "Madison"],                            zoneNote: "Homer, Danielsville, Maysville, Commerce area",                households: 20000, status: "available" },
   { id: "GA-057", name: "Oconee / Greene Counties",            state: "GA", counties: ["Oconee", "Greene"],                            zoneNote: "Watkinsville, Greensboro, Union Point",                        households: 30000, status: "available" },
   { id: "GA-058", name: "Morgan / Putnam Counties",            state: "GA", counties: ["Morgan", "Putnam"],                            zoneNote: "Madison, Eatonton",                                            households: 22000, status: "available" },
   { id: "GA-059", name: "Jasper / Jones Counties",             state: "GA", counties: ["Jasper", "Jones"],                             zoneNote: "Monticello, Gray, Juliette",                                   households: 20000, status: "available" },
@@ -106,7 +107,7 @@ export const GEORGIA_TERRITORIES: GaTerritoryRow[] = [
   { id: "GA-073", name: "Dodge / Montgomery / Telfair Counties",state: "GA", counties: ["Dodge", "Montgomery", "Telfair"],             zoneNote: "Eastman, Mount Vernon, McRae-Helena",                          households: 22000, status: "available" },
   { id: "GA-074", name: "Wheeler / Treutlen / Toombs Counties",state: "GA", counties: ["Wheeler", "Treutlen", "Toombs"],               zoneNote: "Alamo, Soperton, Lyons, Vidalia",                              households: 22000, status: "available" },
   { id: "GA-075", name: "Wilcox / Pulaski / Wilkinson Counties",state: "GA", counties: ["Wilcox", "Pulaski", "Wilkinson"],             zoneNote: "Rochelle, Hawkinsville, Irwinton",                             households: 20000, status: "available" },
-  { id: "GA-076", name: "Macon / Taylor / Marion / Schley Counties", state: "GA", counties: ["Macon", "Taylor", "Marion", "Schley"],  zoneNote: "Oglethorpe, Butler, Buena Vista, Ellaville",                  households: 18000, status: "available" },
+  { id: "GA-076", name: "Macon / Taylor / Marion Counties",    state: "GA", counties: ["Macon", "Taylor", "Marion"],                    zoneNote: "Oglethorpe, Butler, Buena Vista, Ideal",                       households: 16000, status: "available" },
 
   // ── TIER 3 — COMBINED COUNTIES (Southwest Georgia) ───────────────────────────
   { id: "GA-077", name: "Baker / Dougherty Counties",          state: "GA", counties: ["Baker", "Dougherty"],                          zoneNote: "Albany, Newton, Leesburg",                                     households: 37000, status: "available" },
@@ -125,9 +126,12 @@ export const GEORGIA_TERRITORIES: GaTerritoryRow[] = [
   { id: "GA-088", name: "Cook / Atkinson / Lanier Counties",   state: "GA", counties: ["Cook", "Atkinson", "Lanier"],                  zoneNote: "Adel, Pearson, Lakeland",                                      households: 20000, status: "available" },
   { id: "GA-089", name: "Echols / Clinch Counties",            state: "GA", counties: ["Echols", "Clinch"],                            zoneNote: "Statenville, Homerville",                                      households: 12000, status: "available" },
   { id: "GA-090", name: "Emanuel / Candler Counties",          state: "GA", counties: ["Emanuel", "Candler"],                          zoneNote: "Swainsboro, Metter",                                           households: 20000, status: "available" },
-  { id: "GA-091", name: "Screven / Jenkins Counties",          state: "GA", counties: ["Screven", "Jenkins"],                          zoneNote: "Sylvania, Millen",                                             households: 16000, status: "available" },
+  { id: "GA-091", name: "Screven / Jenkins / Burke Counties",          state: "GA", counties: ["Screven", "Jenkins", "Burke"],                          zoneNote: "Sylvania, Millen, Waynesboro",                                             households: 16000, status: "available" },
   { id: "GA-092", name: "Evans / Tattnall Counties",           state: "GA", counties: ["Evans", "Tattnall"],                           zoneNote: "Claxton, Reidsville, Collins",                                  households: 20000, status: "available" },
   { id: "GA-093", name: "Appling / Jeff Davis Counties",       state: "GA", counties: ["Appling", "Jeff Davis"],                       zoneNote: "Baxley, Hazlehurst",                                           households: 22000, status: "available" },
   { id: "GA-094", name: "Wayne / Brantley Counties",           state: "GA", counties: ["Wayne", "Brantley"],                           zoneNote: "Jesup, Nahunta, Odum",                                         households: 20000, status: "available" },
   { id: "GA-095", name: "Ware / Pierce / Bacon Counties",      state: "GA", counties: ["Ware", "Pierce", "Bacon"],                     zoneNote: "Waycross, Blackshear, Alma",                                   households: 28000, status: "available" },
+
+  // ── METRO ADDITION — South Fulton (replaces the old Fulton-South split) ───────
+  { id: "GA-096", name: "South Fulton / Fairburn / Union City", state: "GA", counties: ["Fulton"],           zoneNote: "Union City, Fairburn, Palmetto, South Fulton, Chattahoochee Hills", households: 72000, status: "available" },
 ];

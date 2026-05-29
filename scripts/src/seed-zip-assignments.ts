@@ -1,9 +1,19 @@
 // Bulk-seed territory_zip_assignments from the GA ZCTA GeoJSON + territory county data.
-// For each ZIP, find the nearest GA county centroid (haversine). Then check how many
-// territories claim that county:
-//   - Exactly 1 territory → insert the assignment
-//   - 0 or 2+ territories → skip (leave for manual resolution in ZIP Manager)
-// Safe to re-run: uses ON CONFLICT DO NOTHING so existing assignments are untouched.
+//
+// Assignment priority for each ZIP:
+//   1. Explicit metro map (METRO_ZIP_TERRITORY) — the Atlanta city-cluster
+//      territories (GA-001..GA-010, GA-096) share single counties (Fulton, DeKalb,
+//      Gwinnett, Cobb) and CANNOT be split by county logic, so their ZIPs are
+//      curated by hand here. Each ZIP appears exactly once (conflicts resolved).
+//   2. County logic — nearest GA county centroid (haversine); if exactly one
+//      territory claims that county, assign it.
+//   3. Contested-county fallback — if 2+ territories claim the nearest county
+//      (the metro counties), assign to whichever of those territories has the
+//      nearest stored centroid. This keeps stray metro ZIPs off the grey list.
+//   4. Otherwise leave unassigned and log the ZIP + reason.
+//
+// Only ZIPs present in the GeoJSON are inserted. Safe to re-run: uses
+// ON CONFLICT DO NOTHING so existing assignments are untouched.
 
 import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
@@ -72,6 +82,54 @@ const COUNTY_CENTROIDS: Record<string, { lat: number; lng: number }> = {
   Worth:{lat:31.55,lng:-83.87},
 };
 
+// ── Curated metro Atlanta ZIP → territory map ────────────────────────────────
+// Fulton, DeKalb, Gwinnett and Cobb are each split into multiple city-cluster
+// territories, so county logic alone can't place these ZIPs. Every ZIP below
+// appears exactly once; cross-cluster conflicts have been resolved by geography
+// (e.g. 30097 Johns Creek → GA-001, 30360 Dunwoody → GA-002, 30316 East Atlanta
+// → GA-003, 30058 Lithonia → GA-010, 30084/30087/30088 Tucker/Stone Mtn →
+// GA-009, 30052 Loganville → GA-006).
+const METRO_ZIP_TERRITORY: Record<string, string> = {
+  // GA-001 Alpharetta / Milton / Roswell (Fulton)
+  "30004": "GA-001", "30005": "GA-001", "30009": "GA-001", "30022": "GA-001",
+  "30075": "GA-001", "30076": "GA-001", "30077": "GA-001", "30097": "GA-001",
+  "30350": "GA-001",
+  // GA-002 Sandy Springs / Buckhead / Dunwoody (Fulton + DeKalb)
+  "30305": "GA-002", "30319": "GA-002", "30326": "GA-002", "30327": "GA-002",
+  "30328": "GA-002", "30338": "GA-002", "30342": "GA-002", "30346": "GA-002",
+  "30360": "GA-002",
+  // GA-003 Atlanta / Midtown / Inman Park (Fulton + DeKalb core)
+  "30303": "GA-003", "30306": "GA-003", "30307": "GA-003", "30308": "GA-003",
+  "30309": "GA-003", "30310": "GA-003", "30312": "GA-003", "30313": "GA-003",
+  "30314": "GA-003", "30315": "GA-003", "30316": "GA-003", "30318": "GA-003",
+  "30324": "GA-003", "30329": "GA-003", "30334": "GA-003", "30363": "GA-003",
+  // GA-004 Duluth / Peachtree Corners / Norcross (Gwinnett)
+  "30024": "GA-004", "30071": "GA-004", "30092": "GA-004", "30093": "GA-004",
+  "30096": "GA-004",
+  // GA-005 Lawrenceville / Snellville / Lilburn (Gwinnett)
+  "30039": "GA-005", "30043": "GA-005", "30044": "GA-005", "30045": "GA-005",
+  "30046": "GA-005", "30047": "GA-005", "30078": "GA-005",
+  // GA-006 Buford / Sugar Hill / Braselton (Gwinnett)
+  "30017": "GA-006", "30019": "GA-006", "30052": "GA-006", "30518": "GA-006",
+  "30519": "GA-006",
+  // GA-007 Marietta / Kennesaw / Acworth (Cobb)
+  "30060": "GA-007", "30062": "GA-007", "30064": "GA-007", "30066": "GA-007",
+  "30067": "GA-007", "30068": "GA-007", "30101": "GA-007", "30102": "GA-007",
+  "30144": "GA-007", "30152": "GA-007", "30189": "GA-007",
+  // GA-008 Smyrna / Mableton / Powder Springs (Cobb)
+  "30080": "GA-008", "30082": "GA-008", "30106": "GA-008", "30126": "GA-008",
+  "30127": "GA-008", "30168": "GA-008", "30339": "GA-008",
+  // GA-009 Decatur / Tucker / Clarkston (DeKalb)
+  "30021": "GA-009", "30030": "GA-009", "30032": "GA-009", "30033": "GA-009",
+  "30034": "GA-009", "30035": "GA-009", "30079": "GA-009", "30083": "GA-009",
+  "30084": "GA-009", "30087": "GA-009", "30088": "GA-009", "30317": "GA-009",
+  // GA-010 Stonecrest / Lithonia / South DeKalb (DeKalb)
+  "30038": "GA-010", "30058": "GA-010", "30288": "GA-010", "30294": "GA-010",
+  // GA-096 South Fulton / Fairburn / Union City (Fulton)
+  "30213": "GA-096", "30268": "GA-096", "30291": "GA-096", "30311": "GA-096",
+  "30331": "GA-096", "30337": "GA-096", "30344": "GA-096", "30349": "GA-096",
+};
+
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -95,9 +153,22 @@ async function main() {
   const client = await pool.connect();
   try {
     console.log("Loading GA territories from DB…");
-    const { rows: territories } = await client.query<{ id: string; counties: string[] }>(
-      "SELECT id, counties FROM territories WHERE state = 'GA'"
+    const { rows: territories } = await client.query<{
+      id: string;
+      counties: string[];
+      centroid_lat: number | null;
+      centroid_lng: number | null;
+    }>(
+      "SELECT id, counties, centroid_lat, centroid_lng FROM territories WHERE state = 'GA'"
     );
+
+    const validTerritoryIds = new Set(territories.map(t => t.id));
+    const territoryCentroids = new Map<string, { lat: number; lng: number }>();
+    for (const t of territories) {
+      if (t.centroid_lat != null && t.centroid_lng != null) {
+        territoryCentroids.set(t.id, { lat: Number(t.centroid_lat), lng: Number(t.centroid_lng) });
+      }
+    }
 
     // Build county (lowercase) → territoryId[] map
     const countyToTerritories = new Map<string, string[]>();
@@ -109,12 +180,32 @@ async function main() {
       }
     }
 
-    // Find contested counties (appear in 2+ territories → ZIPs skipped)
+    // Find contested counties (appear in 2+ territories → resolved via centroid fallback)
     const contestedCounties = new Set<string>();
     for (const [county, tids] of countyToTerritories) {
       if (tids.length > 1) contestedCounties.add(county);
     }
     console.log(`Found ${territories.length} territories. Contested counties: ${[...contestedCounties].join(", ")}`);
+
+    // Warn if the curated metro map references an unknown territory id.
+    for (const tid of new Set(Object.values(METRO_ZIP_TERRITORY))) {
+      if (!validTerritoryIds.has(tid)) {
+        console.warn(`⚠ METRO_ZIP_TERRITORY references unknown territory ${tid}`);
+      }
+    }
+
+    // Pick the closest territory (by stored centroid) among a candidate set.
+    function nearestTerritoryByCentroid(lat: number, lng: number, candidates: string[]): string | null {
+      let best: string | null = null;
+      let bestDist = Infinity;
+      for (const tid of candidates) {
+        const c = territoryCentroids.get(tid);
+        if (!c) continue;
+        const d = haversineKm(lat, lng, c.lat, c.lng);
+        if (d < bestDist) { bestDist = d; best = tid; }
+      }
+      return best;
+    }
 
     console.log(`Loading GeoJSON from ${GEOJSON_PATH}…`);
     const geojson = JSON.parse(readFileSync(GEOJSON_PATH, "utf-8"));
@@ -123,25 +214,46 @@ async function main() {
 
     const toInsert: Array<{ zip: string; territoryId: string }> = [];
     const skipped: Array<{ zip: string; county: string; reason: string }> = [];
+    let viaMetroMap = 0;
+    let viaCounty = 0;
+    let viaFallback = 0;
 
     for (const f of features) {
       const zip = f.properties.ZCTA5CE10;
       const lat = parseFloat(f.properties.INTPTLAT10);
       const lng = parseFloat(f.properties.INTPTLON10);
+
+      // 1. Curated metro map wins outright (only if the territory still exists).
+      const metroTid = METRO_ZIP_TERRITORY[zip];
+      if (metroTid && validTerritoryIds.has(metroTid)) {
+        toInsert.push({ zip, territoryId: metroTid });
+        viaMetroMap++;
+        continue;
+      }
+
+      // 2. County logic — single territory claims the nearest county.
       const county = nearestCounty(lat, lng);
       const countyKey = county.toLowerCase();
       const tids = countyToTerritories.get(countyKey) ?? [];
 
       if (tids.length === 1) {
         toInsert.push({ zip, territoryId: tids[0] });
-      } else if (tids.length === 0) {
-        skipped.push({ zip, county, reason: "no territory claims this county" });
+        viaCounty++;
+      } else if (tids.length >= 2) {
+        // 3. Contested county → nearest territory centroid among the claimants.
+        const chosen = nearestTerritoryByCentroid(lat, lng, tids);
+        if (chosen) {
+          toInsert.push({ zip, territoryId: chosen });
+          viaFallback++;
+        } else {
+          skipped.push({ zip, county, reason: `contested (${tids.join(", ")}) and no territory centroids available` });
+        }
       } else {
-        skipped.push({ zip, county, reason: `contested (${tids.join(", ")})` });
+        skipped.push({ zip, county, reason: "no territory claims this county" });
       }
     }
 
-    console.log(`\nAuto-assigning ${toInsert.length} ZIPs, skipping ${skipped.length} ZIPs…`);
+    console.log(`\nAuto-assigning ${toInsert.length} ZIPs (metro map: ${viaMetroMap}, county: ${viaCounty}, centroid fallback: ${viaFallback}), skipping ${skipped.length} ZIPs…`);
 
     // Insert in batches of 200 using ON CONFLICT DO NOTHING
     const BATCH = 200;
@@ -168,6 +280,14 @@ async function main() {
     console.log("Skipped ZIP counts by county:");
     for (const [county, count] of [...contestedSummary].sort((a, b) => b[1] - a[1])) {
       console.log(`  ${county}: ${count} ZIPs`);
+    }
+
+    // Enumerate every unassigned ZIP with its reason (target: < 50 total).
+    if (skipped.length) {
+      console.log(`\nUnassigned ZIPs (${skipped.length}):`);
+      for (const s of [...skipped].sort((a, b) => a.zip.localeCompare(b.zip))) {
+        console.log(`  ${s.zip} (nearest county: ${s.county}) — ${s.reason}`);
+      }
     }
 
     // Warn about territories with 0 assigned ZIPs

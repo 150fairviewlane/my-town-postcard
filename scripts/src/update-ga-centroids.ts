@@ -60,6 +60,24 @@ const COUNTY_CENTROIDS: Record<string, { lat: number; lng: number }> = {
   Worth:{lat:31.55,lng:-83.87},
 };
 
+// Explicit centroid overrides for the metro Atlanta city-cluster territories.
+// Several of these share a single county (Fulton / DeKalb), so county-averaging
+// would collapse their markers onto the same point. These hand-tuned points keep
+// each city cluster visually distinct on the proximity search / map.
+const TERRITORY_CENTROID_OVERRIDES: Record<string, { lat: number; lng: number }> = {
+  "GA-001": { lat: 34.07, lng: -84.29 }, // Alpharetta / Milton / Roswell
+  "GA-002": { lat: 33.92, lng: -84.36 }, // Sandy Springs / Buckhead / Dunwoody
+  "GA-003": { lat: 33.77, lng: -84.37 }, // Atlanta / Midtown / Inman Park
+  "GA-004": { lat: 33.97, lng: -84.14 }, // Duluth / Peachtree Corners / Norcross
+  "GA-005": { lat: 33.85, lng: -84.00 }, // Lawrenceville / Snellville / Lilburn
+  "GA-006": { lat: 34.10, lng: -83.93 }, // Buford / Sugar Hill / Braselton
+  "GA-007": { lat: 34.02, lng: -84.60 }, // Marietta / Kennesaw / Acworth
+  "GA-008": { lat: 33.85, lng: -84.55 }, // Smyrna / Mableton / Powder Springs
+  "GA-009": { lat: 33.77, lng: -84.22 }, // Decatur / Tucker / Clarkston
+  "GA-010": { lat: 33.67, lng: -84.07 }, // Stonecrest / Lithonia / South DeKalb
+  "GA-096": { lat: 33.57, lng: -84.58 }, // South Fulton / Fairburn / Union City
+};
+
 async function main() {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
@@ -73,15 +91,23 @@ async function main() {
   let skipped = 0;
 
   for (const t of territories) {
-    const counties: string[] = Array.isArray(t.counties) ? t.counties : JSON.parse(t.counties as any);
-    const known = counties.filter(c => COUNTY_CENTROIDS[c]);
-    if (known.length === 0) {
-      console.warn(`  SKIP ${t.id} — no known centroids for [${counties.join(", ")}]`);
-      skipped++;
-      continue;
+    const override = TERRITORY_CENTROID_OVERRIDES[t.id];
+    let lat: number;
+    let lng: number;
+    if (override) {
+      lat = override.lat;
+      lng = override.lng;
+    } else {
+      const counties: string[] = Array.isArray(t.counties) ? t.counties : JSON.parse(t.counties as any);
+      const known = counties.filter(c => COUNTY_CENTROIDS[c]);
+      if (known.length === 0) {
+        console.warn(`  SKIP ${t.id} — no known centroids for [${counties.join(", ")}]`);
+        skipped++;
+        continue;
+      }
+      lat = known.reduce((s, c) => s + COUNTY_CENTROIDS[c].lat, 0) / known.length;
+      lng = known.reduce((s, c) => s + COUNTY_CENTROIDS[c].lng, 0) / known.length;
     }
-    const lat = known.reduce((s, c) => s + COUNTY_CENTROIDS[c].lat, 0) / known.length;
-    const lng = known.reduce((s, c) => s + COUNTY_CENTROIDS[c].lng, 0) / known.length;
     await pool.query(
       "UPDATE territories SET centroid_lat = $1, centroid_lng = $2 WHERE id = $3",
       [lat, lng, t.id],
