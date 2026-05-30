@@ -638,6 +638,7 @@ const ProposeSchema = z.object({
   dealerName:  z.string().max(120).optional(),
   dealerEmail: z.string().email().max(180).optional(),
   dealerPhone: z.string().max(40).optional(),
+  isTest:      z.boolean().optional(),
 });
 
 // ── POST /api/territories/propose (public, rate-limited) ─────────────────────
@@ -654,13 +655,13 @@ router.post("/territories/propose", async (req, res): Promise<void> => {
     return;
   }
 
-  const { zipCode, dealerName, dealerEmail, dealerPhone } = parsed.data;
+  const { zipCode, dealerName, dealerEmail, dealerPhone, isTest } = parsed.data;
   const dealerInfo =
     dealerName && dealerEmail
       ? { name: dealerName, email: dealerEmail, phone: dealerPhone ?? "" }
       : undefined;
 
-  const result = await getTerritoryForZip(zipCode, dealerInfo);
+  const result = await getTerritoryForZip(zipCode, dealerInfo, { isTest: isTest ?? false });
   res.json(result);
 });
 

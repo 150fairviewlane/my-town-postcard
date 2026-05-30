@@ -6,7 +6,7 @@
  */
 
 import { db, territoriesTable, territoryProposalsTable } from "@workspace/db";
-import { eq, and, isNotNull } from "drizzle-orm";
+import { eq, and, isNotNull, gt, sql } from "drizzle-orm";
 import {
   getCountyFromZip,
   getAdReadyBusinessCount,
@@ -532,8 +532,10 @@ export interface TerritoryForZipResult {
  */
 export async function getTerritoryForZip(
   zipCode: string,
-  dealerInfo?: { name: string; email: string; phone: string }
+  dealerInfo?: { name: string; email: string; phone: string },
+  options?: { isTest?: boolean }
 ): Promise<TerritoryForZipResult> {
+  const isTest = options?.isTest ?? false;
   // 1. Resolve ZIP → county
   const county = await getCountyFromZip(zipCode);
   if (!county) {
@@ -583,9 +585,10 @@ export async function getTerritoryForZip(
     return { type: "existing", territory: existing as Record<string, unknown> };
   }
 
-  // 3. Check for pending proposals WITH dealer contact for this county.
-  // Anonymous preview proposals (dealerEmail IS NULL) are allowed to be
-  // superseded by a dealer submission — they don't block new submissions.
+  // 3. Check for pending proposals WITH dealer contact for this county,
+  // created within the last 48 hours. Older records are treated as stale
+  // and never block new submissions. Anonymous previews (dealerEmail IS NULL)
+  // are also excluded so the first ZIP search never blocks the claim form.
   const activePending = await db
     .select({ id: territoryProposalsTable.id })
     .from(territoryProposalsTable)
@@ -594,6 +597,7 @@ export async function getTerritoryForZip(
         eq(territoryProposalsTable.countyFips, countyFips3.padStart(3, "0")),
         eq(territoryProposalsTable.status, "pending_review"),
         isNotNull(territoryProposalsTable.dealerEmail),
+        gt(territoryProposalsTable.createdAt, sql`NOW() - INTERVAL '48 hours'`),
       ),
     );
 
@@ -610,55 +614,59 @@ export async function getTerritoryForZip(
   const rawResult = await buildTerritoryProposal(stateFips, countyFips3, zipCode);
   const proposals = Array.isArray(rawResult) ? rawResult : [rawResult];
 
-  // 5. Save proposals to DB
+  // 5. Save proposals to DB (skipped for test/smoke-test requests)
   const savedIds: number[] = [];
-  for (const proposal of proposals) {
-    const proposedGeoids = proposal.counties.map(c => c.fips);
-    const [saved] = await db
-      .insert(territoryProposalsTable)
-      .values({
-        zipCode,
-        stateFips,
-        stateAbbr,
-        countyFips: countyFips3.padStart(3, "0"),
-        countyName,
-        proposedName: proposal.proposedName,
-        proposedCounties: proposedGeoids,
-        proposedCities: proposal.topCities,
-        businessCount: proposal.totalBusinessCount,
-        isSplit: proposal.isSplit,
-        splitIndex: proposal.splitIndex ?? null,
-        splitTotal: proposal.splitTotal ?? null,
-        dealerName: dealerInfo?.name ?? null,
-        dealerEmail: dealerInfo?.email ?? null,
-        dealerPhone: dealerInfo?.phone ?? null,
-      })
-      .returning({ id: territoryProposalsTable.id });
-    if (saved) savedIds.push(saved.id);
+  if (!isTest) {
+    for (const proposal of proposals) {
+      const proposedGeoids = proposal.counties.map(c => c.fips);
+      const [saved] = await db
+        .insert(territoryProposalsTable)
+        .values({
+          zipCode,
+          stateFips,
+          stateAbbr,
+          countyFips: countyFips3.padStart(3, "0"),
+          countyName,
+          proposedName: proposal.proposedName,
+          proposedCounties: proposedGeoids,
+          proposedCities: proposal.topCities,
+          businessCount: proposal.totalBusinessCount,
+          isSplit: proposal.isSplit,
+          splitIndex: proposal.splitIndex ?? null,
+          splitTotal: proposal.splitTotal ?? null,
+          dealerName: dealerInfo?.name ?? null,
+          dealerEmail: dealerInfo?.email ?? null,
+          dealerPhone: dealerInfo?.phone ?? null,
+        })
+        .returning({ id: territoryProposalsTable.id });
+      if (saved) savedIds.push(saved.id);
+    }
   }
 
-  // 6. Admin notification (fire-and-forget — imported lazily to avoid circular deps)
-  try {
-    const { sendTerritoryProposalEmail } = await import("./emails");
-    for (const proposal of proposals) {
-      await sendTerritoryProposalEmail({
-        proposedName: proposal.proposedName,
-        stateAbbr,
-        stateName: (await getCountyInfo(stateFips, countyFips3))?.stateName ?? stateAbbr,
-        countyNames: proposal.counties.map(c => c.name),
-        totalBusinessCount: proposal.totalBusinessCount,
-        estimatedZones: proposal.estimatedZones,
-        topCities: proposal.topCities,
-        isViable: proposal.isViable,
-        dealerName: dealerInfo?.name,
-        dealerEmail: dealerInfo?.email,
-        dealerPhone: dealerInfo?.phone,
-        zipCode,
-      });
+  // 6. Admin notification (fire-and-forget; skipped for test requests)
+  if (!isTest) {
+    try {
+      const { sendTerritoryProposalEmail } = await import("./emails");
+      for (const proposal of proposals) {
+        await sendTerritoryProposalEmail({
+          proposedName: proposal.proposedName,
+          stateAbbr,
+          stateName: (await getCountyInfo(stateFips, countyFips3))?.stateName ?? stateAbbr,
+          countyNames: proposal.counties.map(c => c.name),
+          totalBusinessCount: proposal.totalBusinessCount,
+          estimatedZones: proposal.estimatedZones,
+          topCities: proposal.topCities,
+          isViable: proposal.isViable,
+          dealerName: dealerInfo?.name,
+          dealerEmail: dealerInfo?.email,
+          dealerPhone: dealerInfo?.phone,
+          zipCode,
+        });
+      }
+    } catch (err: unknown) {
+      logger.warn({ err: err instanceof Error ? err.message : String(err) },
+        "Territory proposal email failed — continuing");
     }
-  } catch (err: unknown) {
-    logger.warn({ err: err instanceof Error ? err.message : String(err) },
-      "Territory proposal email failed — continuing");
   }
 
   return { type: "proposed", proposals, proposalIds: savedIds };
