@@ -354,20 +354,16 @@ router.get("/admin/census/county-info", requireAdmin, async (req, res): Promise<
     getNeighboringCounties(geoid),
   ]);
 
-  if (!countyInfo) {
-    res.status(404).json({ error: `County not found: state=${stateFips} county=${countyFips}` });
-    return;
-  }
-
   res.json({
-    county: `${countyInfo.name}, ${countyInfo.stateName}`,
-    geoid: countyInfo.geoid,
-    stateAbbr: countyInfo.stateAbbr,
+    county: countyInfo ? `${countyInfo.name}, ${countyInfo.stateName}` : null,
+    geoid: countyInfo ? countyInfo.geoid : geoid,
+    stateAbbr: countyInfo ? countyInfo.stateAbbr : null,
     adReadyBusinessCount: businessCount,
     topCities,
     neighbors,
     cachedAt: new Date().toISOString(),
     ...(resolvedViaZip ? { resolvedFromZip: resolvedViaZip } : {}),
+    ...(countyInfo === null ? { warning: "Census ACS API unavailable — county name not resolved" } : {}),
   });
 });
 

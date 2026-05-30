@@ -33,7 +33,6 @@ export const EXCLUDED_NAICS_6DIGIT = [
   "813110", // Religious Organizations
   "813211", // Grantmaking Foundations
   "813212", // Voluntary Health Organizations
-  "813219", // Other Grantmaking and Giving Services
   "813311", // Human Rights Organizations
   "813312", // Environment, Conservation Organizations
   "813319", // Other Social Advocacy Organizations
@@ -128,7 +127,7 @@ export async function getCountyFromZip(zip: string): Promise<CountyFromZipResult
   if (cached !== null) return cached as CountyFromZipResult;
 
   try {
-    // Step 1: Zippopotam.us → state abbreviation + state name (no API key needed)
+    // Step 1: Zippopotam.us → city + state abbreviation (no key needed)
     const zipRes = await fetchWithRetry(`https://api.zippopotam.us/us/${zip}`);
     if (!zipRes || zipRes.status === 404 || !zipRes.ok) return null;
 
@@ -145,41 +144,65 @@ export async function getCountyFromZip(zip: string): Promise<CountyFromZipResult
 
     const stateAbbr = place["state abbreviation"];
     const stateName = place["state"];
+    const cityName = place["place name"];
     const stateFips = STATE_FIPS[stateAbbr];
     if (!stateFips) return null;
 
-    // Step 2: Nominatim (OpenStreetMap, no API key) → county name
-    // e.g. "Hall County" — returned in the `county` address field.
-    const nomUrl =
-      `https://nominatim.openstreetmap.org/search` +
-      `?postalcode=${encodeURIComponent(zip)}&country=us&format=json&addressdetails=1&limit=1`;
-    const nomRes = await fetchWithRetry(nomUrl, 0, {
-      "User-Agent": "LocalSpot-Mailer/1.0 (territory-builder)",
-      Accept: "application/json",
-    });
-    if (!nomRes || !nomRes.ok) return null;
+    // Step 2: ACS county list for this state — NAME format is
+    // "Hall County, Georgia" — fuzzy-match against the city name to find
+    // which county the ZIP belongs to and extract the 3-digit county FIPS.
+    const acsUrl =
+      `https://api.census.gov/data/2023/acs/acs5` +
+      `?get=NAME&for=county:*&in=state:${stateFips}` +
+      censusKeyParam;
+    const acsRes = await fetchWithRetry(acsUrl);
+    if (!acsRes || !acsRes.ok) return null;
 
-    const nomData = await nomRes.json() as Array<{
-      address?: { county?: string };
-    }>;
-    const countyName = nomData[0]?.address?.county ?? "";
-    if (!countyName) return null;
+    const acsData = await acsRes.json() as string[][];
+    if (!Array.isArray(acsData) || acsData.length < 2) return null;
 
-    // Step 3: TIGER REST API → 3-digit county FIPS by state + county name
-    // (No API key required — TIGER is a geographic services endpoint.)
-    const countyNameEnc = encodeURIComponent(`'${countyName}'`);
-    const tigerUrl =
-      `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/1/query` +
-      `?where=STATE%3D'${stateFips}'+AND+NAME%3D${countyNameEnc}` +
-      `&outFields=NAME%2CSTATE%2CCOUNTY&returnGeometry=false&f=json`;
-    const tigerRes = await fetchWithRetry(tigerUrl);
-    if (!tigerRes || !tigerRes.ok) return null;
+    const headers = acsData[0];
+    const nameIdx = headers.indexOf("NAME");
+    const countyIdx = headers.indexOf("county");
+    if (nameIdx === -1 || countyIdx === -1) return null;
 
-    const tigerData = await tigerRes.json() as {
-      features?: Array<{ attributes?: { NAME?: string; COUNTY?: string } }>;
-    };
-    const countyFips3 = tigerData.features?.[0]?.attributes?.COUNTY ?? "";
+    // Match county name containing the ZIP's city name.
+    // ACS county NAME is "Hall County, Georgia" — compare lowercase.
+    const cityLower = cityName.toLowerCase();
+    let matchedRow: string[] | null = null;
+
+    for (let i = 1; i < acsData.length; i++) {
+      const rowName = (acsData[i][nameIdx] ?? "").toLowerCase();
+      // e.g. "hall county, georgia" includes "gainesville" only if the
+      // city name appears in the county name (rare). More reliably: the
+      // ZIP's city is typically the county seat and its name is usually
+      // the first word of the county name — so prefix-match the county
+      // name against the city name.
+      const countyFirstWord = rowName.split(/\s+/)[0] ?? "";
+      if (cityLower.startsWith(countyFirstWord) || countyFirstWord.startsWith(cityLower)) {
+        matchedRow = acsData[i];
+        break;
+      }
+    }
+    // Fallback: substring search
+    if (!matchedRow) {
+      for (let i = 1; i < acsData.length; i++) {
+        const rowName = (acsData[i][nameIdx] ?? "").toLowerCase();
+        if (rowName.includes(cityLower)) {
+          matchedRow = acsData[i];
+          break;
+        }
+      }
+    }
+    if (!matchedRow) return null;
+
+    const countyFips3 = matchedRow[countyIdx];
     if (!countyFips3) return null;
+
+    // County name: "Hall County, Georgia" → "Hall County"
+    const fullName = matchedRow[nameIdx] ?? "";
+    const commaIdx = fullName.indexOf(",");
+    const countyName = commaIdx >= 0 ? fullName.slice(0, commaIdx).trim() : fullName.trim();
 
     const result: CountyFromZipResult = {
       countyFips: countyFips3,
@@ -207,14 +230,6 @@ export async function getAdReadyBusinessCount(
   const cacheKey = `cbp:${stateFips}:${countyFips}`;
   const cached = getCached(cacheKey);
   if (cached !== null) return cached as number;
-
-  if (!CENSUS_API_KEY) {
-    logger.warn(
-      { stateFips, countyFips },
-      "CENSUS_API_KEY not set — business count unavailable (returning 0)"
-    );
-    return 0;
-  }
 
   // Fetch all NAICS sectors in parallel — never sequentially.
   const sectorCounts = await Promise.all(
@@ -380,48 +395,26 @@ export async function getCountyInfo(
   const cached = getCached(cacheKey);
   if (cached !== null) return cached as CountyInfo;
 
-  // TIGER REST API — no API key required; returns NAME, STATE, COUNTY attributes.
   const url =
-    `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/1/query` +
-    `?where=STATE%3D'${stateFips}'+AND+COUNTY%3D'${countyFips.padStart(3, "0")}'` +
-    `&outFields=NAME%2CSTATE%2CCOUNTY&returnGeometry=false&f=json`;
+    `https://api.census.gov/data/2023/acs/acs5` +
+    `?get=NAME&for=county:${countyFips}&in=state:${stateFips}` +
+    censusKeyParam;
   try {
     const res = await fetchWithRetry(url);
     if (!res || !res.ok) return null;
 
-    const data = await res.json() as {
-      features?: Array<{ attributes?: { NAME?: string; STATE?: string; COUNTY?: string } }>;
-    };
+    const data = await res.json() as string[][];
+    if (!Array.isArray(data) || data.length < 2) return null;
 
-    const attrs = data.features?.[0]?.attributes;
-    if (!attrs?.NAME) return null;
-
-    // TIGER NAME is e.g. "Hall County" — no state name appended.
+    // NAME format: "Hall County, Georgia"
+    const nameField = data[1]?.[0] ?? "";
+    const commaIdx = nameField.lastIndexOf(",");
+    const name = commaIdx >= 0 ? nameField.slice(0, commaIdx).trim() : nameField.trim();
+    const stateName = commaIdx >= 0 ? nameField.slice(commaIdx + 1).trim() : "";
     const stateAbbr = FIPS_TO_STATE_ABBR[stateFips] ?? "";
     const geoid = `${stateFips}${countyFips.padStart(3, "0")}`;
 
-    // Derive state name from the stateAbbr via a simple reverse lookup.
-    // TIGER doesn't include state name in the county record, so we infer it.
-    const STATE_NAME_MAP: Record<string, string> = {
-      AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California",
-      CO: "Colorado", CT: "Connecticut", DE: "Delaware", FL: "Florida", GA: "Georgia",
-      HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa",
-      KS: "Kansas", KY: "Kentucky", LA: "Louisiana", ME: "Maine", MD: "Maryland",
-      MA: "Massachusetts", MI: "Michigan", MN: "Minnesota", MS: "Mississippi", MO: "Missouri",
-      MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire", NJ: "New Jersey",
-      NM: "New Mexico", NY: "New York", NC: "North Carolina", ND: "North Dakota", OH: "Ohio",
-      OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania", RI: "Rhode Island", SC: "South Carolina",
-      SD: "South Dakota", TN: "Tennessee", TX: "Texas", UT: "Utah", VT: "Vermont",
-      VA: "Virginia", WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming",
-      DC: "District of Columbia",
-    };
-
-    const result: CountyInfo = {
-      name: attrs.NAME,
-      stateName: STATE_NAME_MAP[stateAbbr] ?? stateAbbr,
-      stateAbbr,
-      geoid,
-    };
+    const result: CountyInfo = { name, stateName, stateAbbr, geoid };
     setCached(cacheKey, result, CACHE_TTL_30D);
     return result;
   } catch (err: unknown) {
@@ -434,13 +427,19 @@ export async function getCountyInfo(
 // ─── getTopCitiesInCounty ─────────────────────────────────────────────────────
 
 const LEGAL_SUFFIX_RE =
-  /\s+(city|town|village|township|borough|CDP|census-designated place)$/i;
+  /\s+(CCD|city|town|village|township|borough|CDP|census-designated place)$/i;
 
 /**
- * Returns the top {limit} cities/places in a county by population,
- * derived from ACS county subdivision data. NAME format from ACS:
- * "Gainesville city, Hall County, Georgia" → "Gainesville".
- * Falls back to an empty array if the Census call fails (non-fatal).
+ * Returns the top {limit} cities/places in a county by area,
+ * derived from the Census Gazetteer county subdivisions file for the state.
+ *
+ * County subdivisions GEOID is STATEFP(2) + COUNTYFP(3) + COUSUBFP(5), so
+ * filtering by countyFips = GEOID.slice(2, 5) isolates the county.
+ * Rows are sorted by ALAND (land area, sq meters) descending — a reliable
+ * proxy for population when POP10 is not in the file. Legal suffixes such
+ * as "CCD", "city", "town" are stripped from the returned names.
+ *
+ * Falls back to an empty array if the Gazetteer fetch fails (non-fatal).
  */
 export async function getTopCitiesInCounty(
   stateFips: string,
@@ -451,63 +450,65 @@ export async function getTopCitiesInCounty(
   const cached = getCached(cacheKey);
   if (cached !== null) return cached as string[];
 
-  if (!CENSUS_API_KEY) {
-    logger.warn(
-      { stateFips, countyFips },
-      "CENSUS_API_KEY not set — top cities unavailable (returning [])"
-    );
-    setCached(cacheKey, [], CACHE_TTL_7D);
-    return [];
-  }
+  const countyFips3 = countyFips.padStart(3, "0");
+  const url =
+    `https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2024_Gazetteer` +
+    `/2024_gaz_cousubs_${stateFips}.txt`;
 
   try {
-    const url =
-      `https://api.census.gov/data/2023/acs/acs5` +
-      `?get=NAME,B01003_001E&for=county+subdivision:*` +
-      `&in=state:${stateFips}+county:${countyFips}` +
-      censusKeyParam;
     const res = await fetchWithRetry(url);
-
     if (!res || !res.ok) {
+      logger.warn({ url, stateFips, countyFips }, "Gazetteer cousubs fetch failed");
       setCached(cacheKey, [], CACHE_TTL_7D);
       return [];
     }
 
-    const data = await res.json() as string[][];
-    if (!Array.isArray(data) || data.length < 2) {
+    const text = await res.text();
+    const lines = text.split("\n");
+    if (lines.length < 2) {
       setCached(cacheKey, [], CACHE_TTL_7D);
       return [];
     }
 
-    const headers = data[0];
-    const nameIdx = headers.indexOf("NAME");
-    const popIdx = headers.indexOf("B01003_001E");
-    if (nameIdx === -1 || popIdx === -1) {
+    // Header: USPS GEOID ANSICODE NAME FUNCSTAT ALAND AWATER ALAND_SQMI AWATER_SQMI INTPTLAT INTPTLONG
+    const header = lines[0].split("\t");
+    const geoidIdx = header.indexOf("GEOID");
+    const nameIdx = header.indexOf("NAME");
+    const alandIdx = header.indexOf("ALAND");
+    if (geoidIdx === -1 || nameIdx === -1 || alandIdx === -1) {
+      logger.warn({ url, header }, "Gazetteer cousubs: unexpected column layout");
       setCached(cacheKey, [], CACHE_TTL_7D);
       return [];
     }
 
-    const places = data.slice(1).map((row) => {
-      // "Gainesville city, Hall County, Georgia" → first comma-segment
-      const fullName = row[nameIdx] ?? "";
-      const raw = fullName.split(",")[0]?.trim() ?? "";
-      const name = raw.replace(LEGAL_SUFFIX_RE, "").trim();
-      const pop = parseInt(row[popIdx], 10) || 0;
-      return { name, pop };
-    });
+    type GazRow = { name: string; aland: number };
+    const rows: GazRow[] = [];
 
-    const cities = places
-      .filter((p) => p.name && p.pop > 0)
-      .sort((a, b) => b.pop - a.pop)
-      .map((p) => p.name);
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split("\t");
+      if (cols.length <= Math.max(geoidIdx, nameIdx, alandIdx)) continue;
+
+      const geoid = cols[geoidIdx]?.trim() ?? "";
+      // GEOID for cousubs: STATEFP(2) + COUNTYFP(3) + COUSUBFP(5)
+      const rowCountyFips = geoid.slice(2, 5);
+      if (rowCountyFips !== countyFips3) continue;
+
+      const rawName = cols[nameIdx]?.trim() ?? "";
+      const name = rawName.replace(LEGAL_SUFFIX_RE, "").trim();
+      const aland = parseInt(cols[alandIdx] ?? "0", 10) || 0;
+      if (name) rows.push({ name, aland });
+    }
+
+    const cities = rows
+      .sort((a, b) => b.aland - a.aland)
+      .map((r) => r.name);
 
     const unique = [...new Set(cities)].slice(0, limit);
-
     setCached(cacheKey, unique, CACHE_TTL_7D);
     return unique;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    logger.error({ err: msg, stateFips, countyFips }, "getTopCitiesInCounty failed");
+    logger.error({ err: msg, url, stateFips, countyFips }, "getTopCitiesInCounty failed");
     setCached(cacheKey, [], CACHE_TTL_7D);
     return [];
   }
