@@ -1,0 +1,424 @@
+Build a Census API integration module that will power the national territory auto-builder. This is backend infrastructure only — no UI changes. The module fetches ad-ready business counts by county from the US Census Bureau and loads the county adjacency file so the territory builder knows which counties border each other.
+
+This is Prompt 1 of 3. Prompts 2 and 3 will build the territory builder engine and dealer-facing UI on top of this module.
+
+
+════════════════════════════════════════════════
+OVERVIEW
+════════════════════════════════════════════════
+
+Two data sources are needed:
+
+SOURCE 1 — Census County Business Patterns (CBP) API
+  Provides the number of business establishments by county and
+  industry code. Free, no API key required.
+  Base URL: https://api.census.gov/data/2023/cbp
+
+SOURCE 2 — Census County Adjacency File
+  Lists every county and which counties border it. Used to find
+  neighboring counties when bundling small counties into a territory.
+  Free download, pipe-delimited text file.
+  URL: https://www2.census.gov/geo/docs/reference/county_adjacency.txt
+
+Both sources are cached in memory (and optionally to the database)
+after first load so the Census servers are not hit on every request.
+
+
+════════════════════════════════════════════════
+CHANGE 1 — FILE LOCATION
+════════════════════════════════════════════════
+
+Create a new file:
+  artifacts/api-server/src/lib/censusApi.ts
+  (or wherever utility/lib modules live in this project)
+
+All code in this prompt goes in that file unless otherwise noted.
+Export every function so Prompt 2 can import them.
+
+
+════════════════════════════════════════════════
+CHANGE 2 — AD-READY NAICS CODES
+════════════════════════════════════════════════
+
+Define this constant at the top of the file. These are the 2-digit
+NAICS sector codes for industries that buy local print advertising.
+Only these sectors count toward a territory's ad-ready business score.
+
+const AD_READY_NAICS = [
+  '44',  // Retail Trade (44-45 split, use 44 and 45)
+  '45',  // Retail Trade continued
+  '53',  // Real Estate and Rental and Leasing
+  '54',  // Professional, Scientific, and Technical Services
+           // (includes local law offices, accounting, insurance agents)
+  '56',  // Administrative and Support Services
+           // (includes cleaning services, pest control, landscaping)
+  '61',  // Educational Services (includes dance studios, tutoring)
+  '62',  // Health Care and Social Assistance
+           // (includes dentists, chiropractors, vets, medical offices)
+  '71',  // Arts, Entertainment, and Recreation
+           // (includes gyms, bowling alleys, golf courses)
+  '72',  // Accommodation and Food Services
+           // (restaurants, cafes, bars — the biggest category)
+  '81',  // Other Services (except Public Administration)
+           // (includes salons, barbershops, auto repair, pet grooming,
+           //  dry cleaners, funeral homes, religious orgs excluded below)
+];
+
+// NAICS codes to EXCLUDE even within the above sectors
+// These are within sector 81 but are not postcard ad buyers
+const EXCLUDED_NAICS_6DIGIT = [
+  '813110', // Religious Organizations
+  '813211', // Grantmaking Foundations
+  '813212', // Voluntary Health Organizations
+  '813219', // Other Grantmaking and Giving Services
+  '813311', // Human Rights Organizations
+  '813312', // Environment, Conservation Organizations
+  '813319', // Other Social Advocacy Organizations
+  '813410', // Civic and Social Organizations (most)
+  '814110', // Private Households
+];
+
+// Note: We query at the 2-digit NAICS level for speed and simplicity.
+// The excluded codes above are a small fraction of sector 81 and
+// do not materially affect the business count score. Document this
+// limitation in code comments. If more precision is needed later,
+// switch to 6-digit queries (slower, more API calls).
+
+
+════════════════════════════════════════════════
+CHANGE 3 — IN-MEMORY CACHE
+════════════════════════════════════════════════
+
+Create a simple in-memory cache store:
+
+  const cache = new Map<string, { data: any; fetchedAt: number }>();
+  const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+  function getCached(key: string): any | null {
+    const entry = cache.get(key);
+    if (!entry) return null;
+    if (Date.now() - entry.fetchedAt > CACHE_TTL_MS) {
+      cache.delete(key);
+      return null;
+    }
+    return entry.data;
+  }
+
+  function setCached(key: string, data: any): void {
+    cache.set(key, { data, fetchedAt: Date.now() });
+  }
+
+Cache keys follow the pattern:
+  'cbp:{stateFips}:{countyFips}'  for business count results
+  'adjacency'                      for the full adjacency map
+  'zip:{zipCode}'                  for zip-to-county lookups
+
+
+════════════════════════════════════════════════
+CHANGE 4 — ZIP TO COUNTY LOOKUP
+════════════════════════════════════════════════
+
+Export this function:
+
+  async function getCountyFromZip(zip: string): Promise<{
+    countyFips: string;
+    countyName: string;
+    stateFips: string;
+    stateName: string;
+    stateAbbr: string;
+  } | null>
+
+Implementation:
+  1. Check cache for 'zip:{zip}' — return if found
+  2. Fetch from Census geocoder:
+       https://geocoding.geo.census.gov/geocoder/geographies/address
+       ?benchmark=Public_AR_Current
+       &vintage=Current_Current
+       &layers=Counties
+       &format=json
+       &address={zip}
+     Note: The geocoder works better with a full address. For zip-only
+     lookups, use the ZIP Code tabulation area endpoint instead:
+       https://api.census.gov/data/2023/acs/acs5?get=NAME,B01003_001E
+       &for=zip%20code%20tabulation%20area:{zip}
+     Then use the NAME field to extract county and state.
+     
+     PREFERRED APPROACH: Use the Zippopotam.us free API as primary
+     since it's simpler and returns county directly:
+       https://api.zippopotam.us/us/{zip}
+     Response includes: country abbreviation, places array with
+     place-name (city), longitude, latitude, state abbreviation,
+     state, post code.
+     
+     Then map state abbreviation to FIPS using a hardcoded lookup
+     table (all 50 states — include this in the file).
+     
+     Then fetch the county FIPS from:
+       https://api.census.gov/data/2023/acs/acs5
+       ?get=NAME&for=county:*&in=state:{stateFips}
+     Filter the response to find the county matching the city/place
+     name from Zippopotam.
+
+  3. Cache the result for 7 days
+  4. Return null if zip not found or API fails
+
+Include a STATE_FIPS lookup table mapping all 50 state abbreviations
+to their 2-digit FIPS codes. Example:
+  const STATE_FIPS: Record<string, string> = {
+    'AL': '01', 'AK': '02', 'AZ': '04', 'AR': '05', 'CA': '06',
+    'CO': '08', 'CT': '09', 'DE': '10', 'FL': '12', 'GA': '13',
+    'HI': '15', 'ID': '16', 'IL': '17', 'IN': '18', 'IA': '19',
+    'KS': '20', 'KY': '21', 'LA': '22', 'ME': '23', 'MD': '24',
+    'MA': '25', 'MI': '26', 'MN': '27', 'MS': '28', 'MO': '29',
+    'MT': '30', 'NE': '31', 'NV': '32', 'NH': '33', 'NJ': '34',
+    'NM': '35', 'NY': '36', 'NC': '37', 'ND': '38', 'OH': '39',
+    'OK': '40', 'OR': '41', 'PA': '42', 'RI': '44', 'SC': '45',
+    'SD': '46', 'TN': '47', 'TX': '48', 'UT': '49', 'VT': '50',
+    'VA': '51', 'WA': '53', 'WV': '54', 'WI': '55', 'WY': '56',
+    'DC': '11',
+  };
+
+
+════════════════════════════════════════════════
+CHANGE 5 — BUSINESS COUNT BY COUNTY
+════════════════════════════════════════════════
+
+Export this function:
+
+  async function getAdReadyBusinessCount(
+    stateFips: string,
+    countyFips: string
+  ): Promise<number>
+
+Implementation:
+  1. Check cache for 'cbp:{stateFips}:{countyFips}' — return if found
+  2. For each 2-digit code in AD_READY_NAICS, build a Census CBP
+     API URL:
+       https://api.census.gov/data/2023/cbp
+       ?get=ESTAB,NAICS2017_LABEL
+       &for=county:{countyFips}
+       &in=state:{stateFips}
+       &NAICS2017={naicsCode}
+  3. Fetch all NAICS codes in parallel (Promise.all) — do not
+     fetch sequentially, this would be too slow
+  4. Sum the ESTAB values across all responses
+  5. Handle errors gracefully — if one NAICS code fails, continue
+     with the others and log a warning
+  6. Cache the total count for 7 days
+  7. Return the total
+
+Note: The Census CBP API returns data as arrays, not objects.
+The first row is headers, subsequent rows are data.
+Example response:
+  [["ESTAB","NAICS2017_LABEL","state","county"],
+   ["47","Accommodation and Food Services","13","139"]]
+Parse accordingly.
+
+Also export a batch version for bundling multiple counties:
+
+  async function getAdReadyBusinessCountBatch(
+    counties: Array<{ stateFips: string; countyFips: string }>
+  ): Promise<Map<string, number>>
+
+Returns a Map keyed by '{stateFips}{countyFips}' → business count.
+Fetches all counties in parallel. Used by the territory builder
+to score multiple counties at once.
+
+
+════════════════════════════════════════════════
+CHANGE 6 — COUNTY ADJACENCY MAP
+════════════════════════════════════════════════
+
+Export this function:
+
+  async function getCountyAdjacency(): Promise<Map<string, string[]>>
+
+Returns a Map where:
+  key = county GEOID (5-digit FIPS, e.g. '13139' for Hall County GA)
+  value = array of neighbor GEOIDs
+
+Implementation:
+  1. Check cache for 'adjacency' — return if found
+  2. Fetch the Census county adjacency file:
+       https://www2.census.gov/geo/docs/reference/county_adjacency.txt
+     This is a pipe-delimited text file. Parse it line by line.
+     Format: CountyName|CountyGEOID|NeighborName|NeighborGEOID
+     (The 2024 version uses pipes as delimiters)
+  3. Build the Map — for each line where CountyGEOID is not empty,
+     add NeighborGEOID to the array for that CountyGEOID
+  4. Skip rows where county lists itself as its own neighbor
+  5. Cache the result — this file rarely changes, cache for 30 days
+  6. Return the Map
+
+Also export a convenience function:
+
+  async function getNeighboringCounties(
+    countyFips: string  // 5-digit GEOID
+  ): Promise<string[]>
+
+Returns the list of neighboring county GEOIDs for a given county.
+Sorted by shared border length if available (longer shared border =
+more natural pairing). Falls back to alphabetical if length not
+available.
+
+
+════════════════════════════════════════════════
+CHANGE 7 — COUNTY NAME LOOKUP
+════════════════════════════════════════════════
+
+Export this function:
+
+  async function getCountyInfo(
+    stateFips: string,
+    countyFips: string
+  ): Promise<{
+    name: string;         // e.g. "Hall County"
+    stateName: string;    // e.g. "Georgia"
+    stateAbbr: string;    // e.g. "GA"
+    geoid: string;        // 5-digit FIPS e.g. "13139"
+  } | null>
+
+Fetch from Census ACS:
+  https://api.census.gov/data/2023/acs/acs5
+  ?get=NAME&for=county:{countyFips}&in=state:{stateFips}
+
+The NAME field returns "Hall County, Georgia" — parse to extract
+county name and state name separately.
+
+Cache results for 30 days.
+
+
+════════════════════════════════════════════════
+CHANGE 8 — TOP CITIES IN COUNTY
+════════════════════════════════════════════════
+
+Export this function:
+
+  async function getTopCitiesInCounty(
+    stateFips: string,
+    countyFips: string,
+    limit: number = 4
+  ): Promise<string[]>
+
+Returns the names of the largest cities/places in a county, sorted
+by business count (not population — we care about commercial activity).
+
+Implementation:
+  Use the Census CBP ZIP Code Business Patterns data to find ZIPs
+  within the county, then rank by business establishment count:
+    https://api.census.gov/data/2023/zbp
+    ?get=ESTAB,NAME
+    &for=zipcode:*
+    &in=state:{stateFips}
+    &NAICS2017=00
+
+  Then cross-reference with the county using the ZCTA-to-county
+  relationship file (cached from the territory ZIP system already
+  in the project if available, or fetch from):
+    https://www2.census.gov/geo/docs/maps-data/data/rel2020/zcta520/
+    tab20_zcta520_county20_natl.txt
+
+  Group ZIPs by their city name (NAME field), sum ESTAB counts,
+  return top {limit} city names by business count.
+
+  If this approach is too complex or slow, fall back to:
+  Census Gazetteer Places file for the state, filter to places
+  within the county by FIPS, sort by population (ALAND or POP field),
+  return top {limit} place names.
+  Gazetteer URL:
+    https://www2.census.gov/geo/docs/maps-data/data/gazetteer/
+    2024_Gazetteer/2024_gaz_place_{stateFips}.txt
+
+  Cache results for 7 days.
+
+
+════════════════════════════════════════════════
+CHANGE 9 — API ROUTE FOR TESTING
+════════════════════════════════════════════════
+
+Add a single GET route for testing the module (admin only):
+
+  GET /api/admin/census/county-info?stateFips=13&countyFips=139
+
+Response:
+  {
+    "county": "Hall County, Georgia",
+    "geoid": "13139",
+    "adReadyBusinessCount": 847,
+    "topCities": ["Gainesville", "Flowery Branch", "Oakwood", "Clermont"],
+    "neighbors": ["13013", "13085", "13085", "13137", "13157", "13281"],
+    "cachedAt": "2026-05-29T..."
+  }
+
+This route is for your own testing only — it will be used in
+Prompt 2 to verify the module works before building on top of it.
+
+
+════════════════════════════════════════════════
+ERROR HANDLING REQUIREMENTS
+════════════════════════════════════════════════
+
+All Census API calls must:
+  - Have a 10-second timeout
+  - Retry once on network failure before giving up
+  - Return null or 0 gracefully on failure (never throw to caller)
+  - Log the error with the URL that failed
+
+The Census API occasionally returns 204 No Content for counties
+with very few businesses in a sector. Treat this as 0 establishments
+for that sector, not as an error.
+
+The Census API also suppresses data for counties where a count
+would identify a single business (disclosure avoidance). These
+show as 'D' instead of a number. Treat 'D' values as an estimate
+of 5 establishments (the minimum for disclosure) rather than 0.
+
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+  Any existing territory, dealer, or landing page functionality
+  The territory finder map or admin territory manager
+  Any ad generator, image library, or payment files
+  Authentication logic
+  The Georgia territory seed data
+
+
+════════════════════════════════════════════════
+TEST AFTER BUILDING
+════════════════════════════════════════════════
+
+TEST 1 — ZIP to county lookup
+  GET /api/admin/census/county-info with zip 30501 (Gainesville, GA)
+  Should resolve to Hall County, Georgia, FIPS 13139
+
+TEST 2 — Business count
+  Hit the test route for Hall County (stateFips=13, countyFips=139)
+  Should return an adReadyBusinessCount greater than 500
+  (Hall County / Gainesville is a large commercial area)
+
+TEST 3 — Small rural county
+  Hit the test route for Towns County GA (stateFips=13, countyFips=281)
+  Should return adReadyBusinessCount less than 150
+  (Towns County / Hiawassee is a small mountain town)
+
+TEST 4 — Adjacency
+  The neighbors array for Hall County should include GEOIDs for:
+  Banks (13011), Dawson (13085), Forsyth (13117), Gwinnett (13135),
+  Habersham (13137), Jackson (13157), Lumpkin (13187), White (13311)
+
+TEST 5 — Top cities
+  Hall County top cities should include Gainesville as #1
+
+TEST 6 — Caching
+  Hit the same county twice — second call should be instant
+  (served from cache, no Census API call made)
+
+TEST 7 — Batch fetch
+  Call getAdReadyBusinessCountBatch with Hall, White, and Habersham
+  counties simultaneously — all three should return within 5 seconds
+
+Log the census module initialization to console on server start:
+  "Census API module loaded — adjacency file will be fetched on
+   first territory request"
