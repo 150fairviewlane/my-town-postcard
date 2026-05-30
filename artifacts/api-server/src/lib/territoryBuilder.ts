@@ -14,6 +14,7 @@ import {
   getNeighboringCounties,
   getCountyInfo,
   getTopCitiesInCounty,
+  getCountyCentroid,
 } from "./censusApi";
 import { logger } from "./logger";
 
@@ -28,29 +29,6 @@ const MAX_NEIGHBOR_RINGS = 3;      // rings of neighbors before giving up on bun
 // Add states here as they are hand-seeded; they get the same hard gate automatically.
 const MANAGED_STATES = ["GA"];
 
-// ─── State Centroids ──────────────────────────────────────────────────────────
-// Keyed by 2-digit state FIPS string (zero-padded). Used to populate
-// centroidLat/centroidLng on territory proposals so the map can zoom to the
-// right region for any US state without requiring external API calls.
-const US_STATE_CENTROIDS: Record<string, { lat: number; lng: number }> = {
-  "01":{lat:32.80,lng:-86.79}, "02":{lat:64.20,lng:-153.37}, "04":{lat:34.27,lng:-111.09},
-  "05":{lat:34.80,lng:-92.20}, "06":{lat:36.78,lng:-119.42}, "08":{lat:38.99,lng:-105.55},
-  "09":{lat:41.60,lng:-72.70}, "10":{lat:38.99,lng:-75.51}, "11":{lat:38.91,lng:-77.01},
-  "12":{lat:28.63,lng:-82.40}, "13":{lat:32.84,lng:-83.38}, "15":{lat:20.91,lng:-157.50},
-  "16":{lat:44.38,lng:-114.59}, "17":{lat:39.97,lng:-89.19}, "18":{lat:39.90,lng:-86.28},
-  "19":{lat:42.08,lng:-93.50}, "20":{lat:38.53,lng:-96.93}, "21":{lat:37.52,lng:-85.31},
-  "22":{lat:31.17,lng:-91.83}, "23":{lat:45.37,lng:-69.00}, "24":{lat:39.06,lng:-76.80},
-  "25":{lat:42.31,lng:-71.77}, "26":{lat:44.31,lng:-85.41}, "27":{lat:46.39,lng:-93.47},
-  "28":{lat:32.74,lng:-89.68}, "29":{lat:38.26,lng:-92.53}, "30":{lat:46.97,lng:-109.99},
-  "31":{lat:41.53,lng:-99.93}, "32":{lat:39.53,lng:-116.67}, "33":{lat:43.68,lng:-71.58},
-  "34":{lat:40.06,lng:-74.68}, "35":{lat:34.52,lng:-106.08}, "36":{lat:42.94,lng:-75.53},
-  "37":{lat:35.54,lng:-79.36}, "38":{lat:47.53,lng:-100.47}, "39":{lat:40.39,lng:-82.76},
-  "40":{lat:35.59,lng:-96.93}, "41":{lat:44.06,lng:-120.54}, "42":{lat:40.56,lng:-77.46},
-  "44":{lat:41.68,lng:-71.51}, "45":{lat:33.94,lng:-80.90}, "46":{lat:44.44,lng:-100.23},
-  "47":{lat:35.85,lng:-86.35}, "48":{lat:31.05,lng:-97.56}, "49":{lat:39.30,lng:-111.09},
-  "50":{lat:44.07,lng:-72.67}, "51":{lat:37.77,lng:-79.46}, "53":{lat:47.40,lng:-120.56},
-  "54":{lat:38.64,lng:-80.52}, "55":{lat:44.34,lng:-89.83}, "56":{lat:43.00,lng:-107.55},
-};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -264,8 +242,8 @@ export async function splitLargeCounty(
       splitIndex: i + 1,
       splitTotal: clusterCount,
       estimatedZones: Math.min(4, Math.floor(countyEntry.businessCount / MIN_PER_CLUSTER)),
-      centroidLat: US_STATE_CENTROIDS[stateFips]?.lat ?? null,
-      centroidLng: US_STATE_CENTROIDS[stateFips]?.lng ?? null,
+      centroidLat: getCountyCentroid(countyEntry.fips)?.lat ?? null,
+      centroidLng: getCountyCentroid(countyEntry.fips)?.lng ?? null,
     });
   }
   return proposals;
@@ -437,9 +415,28 @@ export async function buildTerritoryProposal(
     isViable: totalCount >= MIN_BUSINESS_COUNT,
     isSplit: false,
     estimatedZones: Math.min(4, Math.floor(totalCount / MIN_PER_CLUSTER)),
-    centroidLat: US_STATE_CENTROIDS[stateFips]?.lat ?? null,
-    centroidLng: US_STATE_CENTROIDS[stateFips]?.lng ?? null,
+    ...computeBundledCentroid(bundled.map(c => c.geoid)),
   };
+}
+
+/**
+ * Averages Census 2020 population-weighted centroids across a set of county GEOIDs.
+ * Counties missing from the centroids file are skipped with a warning.
+ * Returns { centroidLat: null, centroidLng: null } when no centroids are available.
+ */
+function computeBundledCentroid(geoids: string[]): { centroidLat: number | null; centroidLng: number | null } {
+  const found = geoids
+    .map(g => getCountyCentroid(g))
+    .filter((c): c is { lat: number; lng: number } => c !== null);
+  if (found.length === 0) {
+    if (geoids.length > 0) {
+      logger.warn({ geoids }, "County centroid(s) not found in Census file — centroid will be null");
+    }
+    return { centroidLat: null, centroidLng: null };
+  }
+  const centroidLat = found.reduce((s, c) => s + c.lat, 0) / found.length;
+  const centroidLng = found.reduce((s, c) => s + c.lng, 0) / found.length;
+  return { centroidLat, centroidLng };
 }
 
 // ─── Approval / Rejection ─────────────────────────────────────────────────────

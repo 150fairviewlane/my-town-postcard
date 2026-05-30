@@ -133,6 +133,17 @@ const countyInfoByGeoid = new Map<string, CountyRow>();
  */
 const countyFipsByShortName = new Map<string, string>();
 
+/**
+ * 5-digit county GEOID → population-weighted centroid.
+ * Source: src/data/county-centroids.csv (Census 2020 CenPop)
+ * Key: "06037" (Los Angeles County, CA)
+ */
+interface CountyCentroidRow {
+  lat: number;
+  lng: number;
+}
+const countyCentroidsMap = new Map<string, CountyCentroidRow>();
+
 // Strip legal suffixes before uppercasing to get nameShort
 const COUNTY_SUFFIX_RE =
   / (County|Parish|Borough|Census Area|City and Borough|Municipality|Municipio|District|City)$/i;
@@ -291,11 +302,46 @@ function loadStaticData(): void {
     logger.error({ err: err instanceof Error ? err.message : String(err) },
       "Census: failed to load county-adjacency.txt");
   }
+
+  // ── 5. county-centroids.csv ───────────────────────────────────────────────────
+  // Header: STATEFP,COUNTYFP,COUNAME,STNAME,POPULATION,LATITUDE,LONGITUDE
+  // Census 2020 population-weighted county centroids.
+  // STATEFP and COUNTYFP may not be zero-padded in the raw file.
+  try {
+    const text = readFileSync(join(dataDir, "county-centroids.csv"), "utf-8");
+    let count = 0;
+    for (const raw of text.split("\n")) {
+      const line = raw.trim();
+      if (!line || line.startsWith("STATEFP")) continue;
+      const cols = line.split(",");
+      if (cols.length < 7) continue;
+      const stateFp  = (cols[0]?.trim() ?? "").padStart(2, "0");
+      const countyFp = (cols[1]?.trim() ?? "").padStart(3, "0");
+      const lat      = parseFloat(cols[5]?.trim() ?? "");
+      const lng      = parseFloat(cols[6]?.trim() ?? "");
+      if (!stateFp || !countyFp || isNaN(lat) || isNaN(lng)) continue;
+      countyCentroidsMap.set(`${stateFp}${countyFp}`, { lat, lng });
+      count++;
+    }
+    logger.info({ count }, "Census: loaded county-centroids.csv");
+  } catch (err: unknown) {
+    logger.error({ err: err instanceof Error ? err.message : String(err) },
+      "Census: failed to load county-centroids.csv");
+  }
 }
 
 loadStaticData();
 
 // ─── Exported Types ───────────────────────────────────────────────────────────
+
+/**
+ * Returns the Census 2020 population-weighted centroid for a county.
+ * Pass the 5-digit GEOID (e.g. "06037" for Los Angeles County, CA).
+ * Returns null when the GEOID is not found in the centroids dataset.
+ */
+export function getCountyCentroid(geoid: string): { lat: number; lng: number } | null {
+  return countyCentroidsMap.get(geoid) ?? null;
+}
 
 export interface CountyFromZipResult {
   countyFips: string;  // 3-digit county FIPS
