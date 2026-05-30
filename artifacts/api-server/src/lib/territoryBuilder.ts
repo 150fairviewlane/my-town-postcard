@@ -20,16 +20,25 @@ import { logger } from "./logger";
 
 // ─── Thresholds ───────────────────────────────────────────────────────────────
 
-const MIN_BUSINESS_COUNT = 400;    // minimum businesses to be a viable territory
-const MAX_BUSINESS_COUNT = 1600;   // above this, consider splitting into sub-territories
+const MIN_BUSINESS_COUNT = 300;    // minimum businesses to be a viable territory
+const MAX_BUSINESS_COUNT = 2000;   // above this, split into sub-territories
 const MIN_PER_CLUSTER = 100;       // minimum businesses per postcard area
-const MAX_NEIGHBOR_RINGS = 3;      // rings of neighbors before giving up on bundling
+const MAX_NEIGHBOR_RINGS = 5;      // rings of neighbors before giving up on bundling (wider net for rural areas)
+
+// Geography cap: never bundle counties more than this far from the starting county.
+// Prevents absurd territories spanning hundreds of miles of desert or mountain wilderness.
+const MAX_BUNDLE_RADIUS_MILES = 75;
+
+// Metro threshold: counties above this are considered metro-scale and receive finer splits.
+const METRO_THRESHOLD = 5_000;
 
 // Household viability — proxy: 1 ad-ready business ≈ 12 households in typical markets.
 // Rural counties beat the business count floor but fail the household floor because
-// businesses are spread thin across low-density land.
+// businesses are spread thin across low-density land. Without ZIP-level household data
+// we gate at the county level; MIN_ZIP_HOUSEHOLDS documents the intended ZIP-level floor.
 const HOUSEHOLDS_PER_BUSINESS = 12;
-const MIN_HOUSEHOLDS = 8_000;          // minimum estimated households for a viable territory
+const MIN_ZIP_HOUSEHOLDS = 300;        // floor for ZIP-level check (placeholder — no ZIP data yet)
+const MIN_HOUSEHOLDS = 8_000;          // county-level proxy gate (~667 ad-ready businesses)
 const MIN_HOUSEHOLDS_TO_SPLIT = MIN_HOUSEHOLDS * 3; // 24,000 — need 3× minimum before splitting
 
 // States with manually managed territories — auto-builder never runs here.
@@ -51,9 +60,10 @@ export interface TerritoryProposal {
     businessCount: number;
   }>;
   totalBusinessCount: number;
-  householdsEstimate: number; // proxy: totalBusinessCount × HOUSEHOLDS_PER_BUSINESS
+  householdsEstimate: number;  // proxy: totalBusinessCount × HOUSEHOLDS_PER_BUSINESS
   topCities: string[];
   isViable: boolean;
+  viabilityReason?: string;    // set when isViable=false to explain why
   isSplit: boolean;
   splitIndex?: number;
   splitTotal?: number;
@@ -70,6 +80,17 @@ const COUNTY_SUFFIX_RE =
 /** Returns the county short name without legal suffix, title-cased. */
 function countyShortName(fullName: string): string {
   return fullName.replace(COUNTY_SUFFIX_RE, "").trim();
+}
+
+/** Haversine distance in miles between two lat/lng points. */
+function haversineDistanceMiles(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 3_959; // Earth radius in miles
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLng = (lng2 - lng1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 /**
@@ -217,7 +238,10 @@ export async function splitLargeCounty(
   const stateAbbr = info?.stateAbbr ?? "";
   const stateName = info?.stateName ?? "";
 
-  const clusterCount = Math.min(4, Math.ceil(totalBusinessCount / MIN_BUSINESS_COUNT));
+  // Metro-scale splitting: target ~MAX_BUSINESS_COUNT businesses per zone.
+  // LA County (~50k businesses) → 25 raw clusters → capped at 12.
+  // A typical 2,500-biz county → 2 clusters. Cap at 12 to prevent micro-fragmentation.
+  const clusterCount = Math.min(12, Math.ceil(totalBusinessCount / MAX_BUSINESS_COUNT));
   const allCities = await getTopCitiesInCounty(stateFips, countyFips, 20);
 
   // Split city list into clusterCount roughly equal groups (raw file order = population order)
@@ -349,6 +373,10 @@ export async function buildTerritoryProposal(
       arr.forEach(g => pendingGeoids.add(g));
     }
 
+    // Starting county centroid for the 75-mile distance cap (Fix 2).
+    // Prevents bundling counties that are hundreds of miles apart in rural/western states.
+    const startCentroid = getCountyCentroid(geoid);
+
     // Current frontier = directly bundled GEOIDs
     let frontier = [geoid];
 
@@ -359,8 +387,19 @@ export async function buildTerritoryProposal(
         const neighborGeoids = await getNeighboringCounties(frontierGeoid);
         for (const nGeoid of neighborGeoids) {
           if (seen.has(nGeoid)) continue;
-          // Same state only
+          // Same state only — territories must never span state lines
           if (nGeoid.slice(0, 2) !== stateFips) continue;
+          // Distance cap — skip counties further than MAX_BUNDLE_RADIUS_MILES from
+          // the starting county. Prevents 400-mile desert territories in the West.
+          if (startCentroid) {
+            const nCentroid = getCountyCentroid(nGeoid);
+            if (nCentroid) {
+              const distMiles = haversineDistanceMiles(
+                startCentroid.lat, startCentroid.lng, nCentroid.lat, nCentroid.lng
+              );
+              if (distMiles > MAX_BUNDLE_RADIUS_MILES) continue;
+            }
+          }
           seen.add(nGeoid);
 
           const nFips3 = nGeoid.slice(2);
@@ -446,6 +485,12 @@ export async function buildTerritoryProposal(
     // Viable only when the territory has enough businesses AND enough estimated
     // households to support a real direct-mail campaign.
     isViable: totalCount >= MIN_BUSINESS_COUNT && householdsEstimate >= MIN_HOUSEHOLDS,
+    viabilityReason:
+      totalCount < MIN_BUSINESS_COUNT
+        ? `Fewer than ${MIN_BUSINESS_COUNT} ad-ready businesses within ${MAX_BUNDLE_RADIUS_MILES} miles. This area may be too rural for a standard postcard territory.`
+        : householdsEstimate < MIN_HOUSEHOLDS
+        ? `Estimated household count (${householdsEstimate.toLocaleString()}) is below the ${MIN_HOUSEHOLDS.toLocaleString()} minimum for viable direct mail.`
+        : undefined,
     isSplit: false,
     estimatedZones: Math.min(4, Math.floor(totalCount / MIN_PER_CLUSTER)),
     ...computeBundledCentroid(bundled.map(c => c.geoid)),
@@ -596,8 +641,11 @@ export async function getTerritoryForZip(
     return { type: "unavailable", message: "ZIP code not recognized" };
   }
 
-  const { stateFips, stateAbbr, countyFips: countyFips3, countyName } = county;
-  const geoid = `${stateFips}${countyFips3.padStart(3, "0")}`;
+  const { stateFips, stateAbbr } = county;
+  // Use let so Fix 8 (fringe-ZIP anchor shift) can re-anchor to a neighbor county
+  let countyFips3 = county.countyFips;
+  let countyName = county.countyName;
+  let geoid = `${stateFips}${countyFips3.padStart(3, "0")}`;
 
   // 1b. Hard gate — auto-builder never runs for manually managed states.
   // Return the existing territory if one covers this county, otherwise unavailable.
@@ -619,6 +667,41 @@ export async function getTerritoryForZip(
       message:
         "Territory finder is not available for this area. Please contact us directly.",
     };
+  }
+
+  // 1c. Fringe-ZIP anchor shift (Fix 8) — if the triggering ZIP's primary county
+  // has very few businesses (< 150), it likely falls in a sparse rural edge of
+  // that county. Check the 3 nearest same-state neighbors and re-anchor to
+  // whichever has the most businesses, so the territory builds from the real hub.
+  const anchorBizCheck = await getAdReadyBusinessCount(stateFips, countyFips3);
+  if (anchorBizCheck < 150) {
+    const anchorNeighborGeoids = await getNeighboringCounties(geoid);
+    const anchorCandidates = anchorNeighborGeoids
+      .filter(g => g.slice(0, 2) === stateFips)
+      .slice(0, 3);
+    if (anchorCandidates.length > 0) {
+      const neighborCounts = await getAdReadyBusinessCountBatch(
+        anchorCandidates.map(g => ({ stateFips: g.slice(0, 2), countyFips: g.slice(2) }))
+      );
+      let bestAnchorGeoid = "";
+      let bestAnchorCount = anchorBizCheck;
+      for (const [g, c] of neighborCounts.entries()) {
+        if (c > bestAnchorCount) { bestAnchorGeoid = g; bestAnchorCount = c; }
+      }
+      if (bestAnchorGeoid) {
+        const newAnchorInfo = await getCountyInfo(bestAnchorGeoid.slice(0, 2), bestAnchorGeoid.slice(2));
+        if (newAnchorInfo) {
+          const originalCounty = county.countyFips;
+          countyFips3 = bestAnchorGeoid.slice(2);
+          countyName = newAnchorInfo.name;
+          geoid = bestAnchorGeoid;
+          logger.info(
+            { zipCode, originalCounty, newGeoid: geoid, bestAnchorCount },
+            "Territory builder: shifted anchor county for fringe ZIP"
+          );
+        }
+      }
+    }
   }
 
   // 2. Check conflict with existing territories (non-managed states only)

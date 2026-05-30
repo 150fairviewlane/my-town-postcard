@@ -1,0 +1,281 @@
+Comprehensive fix for territory builder edge cases. The goal is
+that every proposed territory gives a dealer a realistic, winnable
+market — enough businesses to fill postcards, enough households to
+mail to, and a geographic area small enough to actually work.
+
+When in doubt, give the dealer MORE territory, not less.
+
+
+════════════════════════════════════════════════
+UPDATED CONSTANTS
+════════════════════════════════════════════════
+
+Replace the existing constants in territoryBuilder.ts with these:
+
+  // Minimum ad-ready businesses for a viable territory
+  // Lower than before — we bundle more aggressively now
+  const MIN_BUSINESS_COUNT = 300;
+
+  // Above this, split into sub-territories
+  // Raised slightly — better to have one large territory than
+  // force a dealer into a tiny split zone
+  const MAX_BUSINESS_COUNT = 2000;
+
+  // Minimum businesses per postcard mailing area
+  const MIN_PER_CLUSTER = 100;
+
+  // Maximum rings of neighboring counties to bundle before giving up
+  // Raised from 3 to 5 — cast a wider net for rural areas
+  const MAX_NEIGHBOR_RINGS = 5;
+
+  // Maximum geographic radius for bundling (miles)
+  // Prevents bundling counties that are too far apart to make
+  // sense as a single dealer territory
+  const MAX_BUNDLE_RADIUS_MILES = 75;
+
+  // Minimum ZIP household count to proceed with territory building
+  const MIN_ZIP_HOUSEHOLDS = 300;
+
+  // Maximum businesses before we consider a county "metro-scale"
+  // and apply special metro splitting logic
+  const METRO_THRESHOLD = 5000;
+
+
+════════════════════════════════════════════════
+FIX 1 — ZIP HOUSEHOLD CHECK (already written, confirm in place)
+════════════════════════════════════════════════
+
+In getTerritoryForZip(), immediately after getCountyFromZip() resolves,
+check the ZIP's household count from zip-county.csv.
+
+If ZIP households < MIN_ZIP_HOUSEHOLDS (300):
+  return {
+    type: 'unavailable',
+    message: 'This ZIP code appears to be in a rural or non-residential
+    area. Please try a ZIP code in a nearby town or city.'
+  }
+
+300 households is a very low floor — it only blocks truly empty ZIPs
+like Yemassee (ZCTA population 0) without blocking any legitimate
+small-town ZIP.
+
+
+════════════════════════════════════════════════
+FIX 2 — DISTANCE CAP ON COUNTY BUNDLING
+════════════════════════════════════════════════
+
+When bundling neighboring counties to reach MIN_BUSINESS_COUNT,
+add a distance check before adding each neighbor.
+
+Calculate the distance between the starting county centroid and
+each candidate neighbor county centroid using the county-centroids.csv
+data already loaded.
+
+If the distance exceeds MAX_BUNDLE_RADIUS_MILES (75 miles):
+  Skip that neighbor — do not add it to the bundle
+
+This prevents absurd territories like:
+  - A rural Nevada ZIP bundling 5 rings of neighbors to create a
+    territory spanning 400 miles of desert
+  - A rural Alaska ZIP creating a territory the size of Texas
+
+If after MAX_NEIGHBOR_RINGS rings within the radius the territory
+still hasn't reached MIN_BUSINESS_COUNT:
+  Return the territory anyway with isViable = false and:
+  viabilityReason = 'Insufficient businesses within 75 miles.
+  This may be too rural for a standard postcard territory.'
+
+The admin can still approve it manually if they see potential.
+
+
+════════════════════════════════════════════════
+FIX 3 — METRO SCALE SPLITTING FOR GIANT COUNTIES
+════════════════════════════════════════════════
+
+The current split logic fires at MAX_BUSINESS_COUNT (2,000) and
+creates at most 4 sub-territories. This is wrong for giant metro
+counties.
+
+Los Angeles County has ~50,000 ad-ready businesses.
+Cook County (Chicago) has ~40,000.
+Harris County (Houston) has ~35,000.
+Maricopa County (Phoenix) has ~30,000.
+
+Splitting these into 4 creates sub-territories with 10,000+
+businesses each — way too large for one dealer.
+
+Fix the split logic:
+
+  targetClusterCount = min(12, ceil(businessCount / MAX_BUSINESS_COUNT))
+
+This means:
+  2,000–4,000 businesses → 2 territories
+  4,000–6,000 businesses → 3 territories
+  6,000–8,000 businesses → 4 territories
+  8,000–10,000 businesses → 5 territories
+  10,000+ businesses → up to 12 territories
+
+Cap at 12 to prevent creating too many tiny fragments even in
+the largest metros.
+
+Name the clusters using the city-cluster approach already in place,
+but generate more cluster names for larger splits.
+
+
+════════════════════════════════════════════════
+FIX 4 — GIANT WESTERN COUNTY AREA CHECK
+════════════════════════════════════════════════
+
+Some western counties are geographically enormous even if they have
+enough businesses. A dealer cannot realistically serve San Bernardino
+County (20,000 sq miles) as a single territory even if it splits.
+
+Add a geographic area check. The county-centroids.csv has ALAND
+(land area in square meters). Convert to square miles.
+
+If a single county's land area > 5,000 sq miles AND the county
+has no major city cluster (fewer than 3 cities with 10,000+
+population):
+  Do not propose this county as a territory.
+  Return type: 'unavailable' with message:
+  'This area covers too large a geographic region for a standard
+  postcard territory. Please contact us to discuss options for
+  your market.'
+
+5,000 sq miles is roughly the size of Connecticut — a meaningful
+threshold that catches problematic western counties without
+affecting normal counties.
+
+Note: The county-centroids.csv file does NOT have ALAND. To get
+land area, either:
+  Option A: Add a county-areas.csv download in the shell:
+    curl -L -o src/data/county-areas.csv
+    "https://www2.census.gov/geo/docs/maps-data/data/gazetteer/
+    2024_Gazetteer/2024_gaz_counties_national.txt"
+  Option B: Skip this check for v1 and rely on Fix 2's distance
+    cap (75 miles) to prevent overly large territories.
+
+RECOMMENDED: Use Option B for now. The 75-mile distance cap in
+Fix 2 effectively prevents most absurd western territories without
+needing land area data. Revisit if specific large-county problems
+appear in testing.
+
+
+════════════════════════════════════════════════
+FIX 5 — MINIMUM VIABLE TERRITORY PRESENTATION
+════════════════════════════════════════════════
+
+When a territory proposal is returned to the dealer UI, always
+show the estimated number of businesses prominently and honestly.
+
+If totalBusinessCount < 400 (below ideal minimum):
+  Show a note on the proposal card:
+  "⚠ Smaller market — this territory may take longer to fill
+  all postcard spots. You'll have a larger exclusive area."
+
+If totalBusinessCount >= 400 and < 800:
+  Show: "Good market — solid pipeline for postcard sales."
+
+If totalBusinessCount >= 800:
+  Show: "Strong market — plenty of businesses to approach."
+
+This sets honest expectations for dealers in rural areas while
+still letting them claim territory if they want it.
+
+
+════════════════════════════════════════════════
+FIX 6 — SAME-STATE-ONLY NEIGHBOR BUNDLING (confirm in place)
+════════════════════════════════════════════════
+
+Confirm that the neighbor bundling logic already filters to
+same-state counties only. A dealer's territory must never span
+state lines.
+
+Check the getNeighboringCounties() call in buildTerritoryProposal()
+— it should filter candidates where stateFips matches the starting
+county's stateFips before adding any neighbor.
+
+If this filter is not in place, add it now.
+
+
+════════════════════════════════════════════════
+FIX 7 — IMPROVE TERRITORY NAMING FOR BUNDLED COUNTIES
+════════════════════════════════════════════════
+
+When multiple counties are bundled together, the territory name
+currently uses top cities from the primary county only. This means
+a territory covering 4 rural counties might be named after one
+small town when there are better-known cities in the neighboring
+counties.
+
+Fix generateTerritoryName() to pull top cities from ALL bundled
+counties, merge them, sort by business count across all counties,
+and pick the top 3-4 for the name.
+
+This ensures bundled territories have names that reflect the whole
+market, not just the ZIP's home county.
+
+
+════════════════════════════════════════════════
+FIX 8 — HANDLE MULTI-COUNTY ZIP CODES
+════════════════════════════════════════════════
+
+Some ZIP codes span multiple counties (like 29945 spanning 4).
+The zip-county.csv typically assigns such ZIPs to their primary
+county, but that county may not be the best anchor for the territory.
+
+When zip-county.csv returns a county, check whether that county
+alone has fewer than 150 businesses. If so, it's likely the ZIP
+is in a sparse fringe area of the county.
+
+In that case, also check the 3 neighboring counties and pick the
+one with the highest business count as the anchor county instead.
+Then build the territory from that anchor.
+
+This handles cases where a ZIP's primary county is a tiny rural
+county but a neighboring county is the real commercial hub.
+
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+  Georgia MANAGED_STATES hard gate — leave exactly as-is
+  South Carolina state filter fix already applied
+  Existing territory data or ZIP assignments
+  Landing page system or ad slot purchases
+  Ad generator, image library, or payment files
+
+
+════════════════════════════════════════════════
+TEST CASES AFTER FIXING
+════════════════════════════════════════════════
+
+RURAL SPARSE TESTS (should return unavailable or flagged):
+  29945 (Yemassee SC) → unavailable, rural message
+  Loving County TX area → unavailable or flagged low viability
+  Any Wyoming/Montana rural ZIP → either unavailable or proposal
+    with ⚠ smaller market note, NOT a territory spanning 200 miles
+
+NORMAL SMALL CITY TESTS (should propose correctly):
+  29611 (Greenville SC) → proposed, good market
+  37201 (Nashville TN) → proposed, strong market, splits correctly
+  29072 (Lexington SC) → proposed, good market
+
+LARGE METRO TESTS (should split into multiple territories):
+  90210 (Beverly Hills/LA) → splits into multiple LA territories
+    Each split territory should have 1,500-3,000 businesses
+    Not 4 territories with 10,000+ each
+  60601 (Chicago) → splits into multiple Chicago territories
+  77001 (Houston) → splits into multiple Houston territories
+  85001 (Phoenix/Maricopa) → splits into multiple territories
+
+BUNDLING DISTANCE TEST:
+  A rural ZIP in central Nevada should NOT bundle counties
+  200 miles away. The 75-mile cap should limit the bundle
+  to nearby counties only. If not enough businesses within
+  75 miles, return flagged as low viability.
+
+GEORGIA PROTECTION (must still work):
+  30501 (Gainesville GA) → existing GA-026, never proposed
+  31401 (Savannah GA) → existing GA-034, never proposed

@@ -396,6 +396,7 @@ if(_sp.get('zip') && /^\d{5}$/.test(_sp.get('zip'))){
           <div class="pc-mailing-areas-label">Key Mailing Areas</div>
           <div id="pcMailingAreasList"></div>
         </div>
+        <div id="pcMarketQuality" style="display:none;font-size:12px;padding:6px 10px;border-radius:4px;margin:6px 0;line-height:1.4"></div>
         <hr class="pc-divider">
         <div class="pc-note" id="pcNote">This territory is being created for your area. Reserve it now and we'll activate it within 24 hours.</div>
         <button class="reserve-btn" onclick="openProposalModal()">✦ Reserve This Territory — $99/mo</button>
@@ -1190,6 +1191,21 @@ function renderProposalCard(p){
     mailingWrap.style.display = 'none';
     noteEl.textContent = "This territory is being created for your area. Reserve it now and we'll activate it within 24 hours.";
   }
+
+  // Market quality note (Fix 5) — set expectation honestly based on business count
+  const mqEl = document.getElementById('pcMarketQuality');
+  const biz = p.totalBusinessCount || 0;
+  if(biz < 400){
+    mqEl.textContent = '⚠ Smaller market — this territory may take longer to fill all postcard spots. You\'ll have a larger exclusive area.';
+    mqEl.style.background = '#fef3c7'; mqEl.style.color = '#92400e';
+  } else if(biz < 800){
+    mqEl.textContent = '✓ Good market — solid pipeline for postcard sales.';
+    mqEl.style.background = '#dcfce7'; mqEl.style.color = '#166534';
+  } else {
+    mqEl.textContent = '★ Strong market — plenty of businesses to approach.';
+    mqEl.style.background = '#dbeafe'; mqEl.style.color = '#1e40af';
+  }
+  mqEl.style.display = '';
 
   document.getElementById('proposalCard').classList.add('visible');
 }
