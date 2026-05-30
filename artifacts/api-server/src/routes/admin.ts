@@ -12,6 +12,13 @@ import {
 import jwt from "jsonwebtoken";
 import { fetchScanCountsForSpotIds } from "../lib/scanCounts";
 import { ensureTrackingCode } from "../lib/trackingCode";
+import {
+  getCountyInfo,
+  getCountyFromZip,
+  getAdReadyBusinessCount,
+  getTopCitiesInCounty,
+  getNeighboringCounties,
+} from "../lib/censusApi";
 
 const router: IRouter = Router();
 
@@ -308,4 +315,61 @@ router.post("/admin/spots/:id/mark-sold", requireAdmin, async (req, res): Promis
   });
 });
 
+// ─── Census county-info test route ───────────────────────────────────────────
+// For testing the Census API module (Prompt 1 of 3). Accepts either:
+//   ?stateFips=13&countyFips=139   — direct FIPS lookup
+//   ?zip=30501                      — ZIP lookup (resolves county first)
+router.get("/admin/census/county-info", requireAdmin, async (req, res): Promise<void> => {
+  const zipParam = typeof req.query.zip === "string" ? req.query.zip.trim() : null;
+  const stateFipsParam = typeof req.query.stateFips === "string" ? req.query.stateFips.trim() : null;
+  const countyFipsParam = typeof req.query.countyFips === "string" ? req.query.countyFips.trim() : null;
+
+  let stateFips: string;
+  let countyFips: string;
+  let resolvedViaZip: ReturnType<typeof getCountyFromZip> extends Promise<infer T> ? T : never = null as any;
+
+  if (zipParam) {
+    const zipResult = await getCountyFromZip(zipParam);
+    if (!zipResult) {
+      res.status(404).json({ error: `Could not resolve ZIP code: ${zipParam}` });
+      return;
+    }
+    resolvedViaZip = zipResult;
+    stateFips = zipResult.stateFips;
+    countyFips = zipResult.countyFips;
+  } else if (stateFipsParam && countyFipsParam) {
+    stateFips = stateFipsParam;
+    countyFips = countyFipsParam;
+  } else {
+    res.status(400).json({ error: "Provide either ?zip= or both ?stateFips= and ?countyFips=" });
+    return;
+  }
+
+  const geoid = `${stateFips}${countyFips.padStart(3, "0")}`;
+
+  const [countyInfo, businessCount, topCities, neighbors] = await Promise.all([
+    getCountyInfo(stateFips, countyFips),
+    getAdReadyBusinessCount(stateFips, countyFips),
+    getTopCitiesInCounty(stateFips, countyFips),
+    getNeighboringCounties(geoid),
+  ]);
+
+  if (!countyInfo) {
+    res.status(404).json({ error: `County not found: state=${stateFips} county=${countyFips}` });
+    return;
+  }
+
+  res.json({
+    county: `${countyInfo.name}, ${countyInfo.stateName}`,
+    geoid: countyInfo.geoid,
+    stateAbbr: countyInfo.stateAbbr,
+    adReadyBusinessCount: businessCount,
+    topCities,
+    neighbors,
+    cachedAt: new Date().toISOString(),
+    ...(resolvedViaZip ? { resolvedFromZip: resolvedViaZip } : {}),
+  });
+});
+
 export default router;
+
