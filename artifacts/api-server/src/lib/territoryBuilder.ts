@@ -24,6 +24,10 @@ const MAX_BUSINESS_COUNT = 1600;   // above this, split into sub-territories
 const MIN_PER_CLUSTER = 100;       // minimum businesses per postcard area
 const MAX_NEIGHBOR_RINGS = 3;      // rings of neighbors before giving up on bundling
 
+// States with manually managed territories — auto-builder never runs here.
+// Add states here as they are hand-seeded; they get the same hard gate automatically.
+const MANAGED_STATES = ["GA"];
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface TerritoryProposal {
@@ -539,7 +543,29 @@ export async function getTerritoryForZip(
   const { stateFips, stateAbbr, countyFips: countyFips3, countyName } = county;
   const geoid = `${stateFips}${countyFips3.padStart(3, "0")}`;
 
-  // 2. Check conflict with existing territories
+  // 1b. Hard gate — auto-builder never runs for manually managed states.
+  // Return the existing territory if one covers this county, otherwise unavailable.
+  // No proposal is ever created, regardless of DB coverage or county name matching.
+  if (MANAGED_STATES.includes(stateAbbr)) {
+    const managedConflict = await checkTerritoryConflicts([geoid], stateAbbr);
+    if (managedConflict.hasConflict && managedConflict.conflictingTerritoryId) {
+      const managedStatus = managedConflict.conflictingTerritoryStatus ?? "available";
+      if (managedStatus === "available") {
+        const [existing] = await db
+          .select()
+          .from(territoriesTable)
+          .where(eq(territoriesTable.id, managedConflict.conflictingTerritoryId));
+        return { type: "existing", territory: existing as Record<string, unknown> };
+      }
+    }
+    return {
+      type: "unavailable",
+      message:
+        "Territory finder is not available for this area. Please contact us directly.",
+    };
+  }
+
+  // 2. Check conflict with existing territories (non-managed states only)
   const conflict = await checkTerritoryConflicts([geoid], stateAbbr);
   if (conflict.hasConflict && conflict.conflictingTerritoryId) {
     const status = conflict.conflictingTerritoryStatus ?? "available";
