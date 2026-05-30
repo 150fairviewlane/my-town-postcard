@@ -5,7 +5,12 @@ import jwt from "jsonwebtoken";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
-import { db, territoriesTable, dealerTerritoryClaimsTable, territoryZipAssignmentsTable } from "@workspace/db";
+import { db, territoriesTable, dealerTerritoryClaimsTable, territoryZipAssignmentsTable, territoryProposalsTable } from "@workspace/db";
+import {
+  getTerritoryForZip,
+  approveTerritory,
+  rejectTerritory,
+} from "../lib/territoryBuilder";
 
 // Works in both ESM dev (tsx watch) and the esbuild production bundle.
 // In prod, esbuild's banner sets globalThis.__dirname = dist/, so the
@@ -610,6 +615,139 @@ router.delete("/admin/territories/zip-assignments/:zip", requireAdmin, async (re
   await db.delete(territoryZipAssignmentsTable).where(eq(territoryZipAssignmentsTable.zip, zip));
   req.log.info({ zip }, "ZIP assignment removed");
   res.json({ ok: true });
+});
+
+// ─── Territory Auto-Builder Routes ───────────────────────────────────────────
+
+// Simple in-memory rate limiter: 10 requests per IP per hour
+const _proposeRateLimit = new Map<string, { count: number; resetAt: number }>();
+function checkProposeRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = _proposeRateLimit.get(ip);
+  if (!entry || entry.resetAt < now) {
+    _proposeRateLimit.set(ip, { count: 1, resetAt: now + 3_600_000 });
+    return true;
+  }
+  if (entry.count >= 10) return false;
+  entry.count++;
+  return true;
+}
+
+const ProposeSchema = z.object({
+  zipCode:     z.string().min(5).max(10),
+  dealerName:  z.string().max(120).optional(),
+  dealerEmail: z.string().email().max(180).optional(),
+  dealerPhone: z.string().max(40).optional(),
+});
+
+// ── POST /api/territories/propose (public, rate-limited) ─────────────────────
+router.post("/territories/propose", async (req, res): Promise<void> => {
+  const ip = (req.ip ?? req.socket.remoteAddress ?? "unknown").split(",")[0]!.trim();
+  if (!checkProposeRateLimit(ip)) {
+    res.status(429).json({ error: "Too many requests — try again in an hour" });
+    return;
+  }
+
+  const parsed = ProposeSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const { zipCode, dealerName, dealerEmail, dealerPhone } = parsed.data;
+  const dealerInfo =
+    dealerName && dealerEmail
+      ? { name: dealerName, email: dealerEmail, phone: dealerPhone ?? "" }
+      : undefined;
+
+  const result = await getTerritoryForZip(zipCode, dealerInfo);
+  res.json(result);
+});
+
+// ── GET /api/admin/territory-proposals ───────────────────────────────────────
+router.get("/admin/territory-proposals", requireAdmin, async (req, res): Promise<void> => {
+  const status = typeof req.query.status === "string" ? req.query.status : "pending_review";
+  const page  = Math.max(1, parseInt(String(req.query.page ?? "1"), 10));
+  const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit ?? "20"), 10)));
+  const offset = (page - 1) * limit;
+
+  const rows = await db
+    .select()
+    .from(territoryProposalsTable)
+    .where(eq(territoryProposalsTable.status, status as "pending_review" | "approved" | "rejected"))
+    .orderBy(rawSql`created_at desc`)
+    .limit(limit)
+    .offset(offset);
+
+  const [{ total }] = await db
+    .select({ total: rawSql<number>`count(*)::int` })
+    .from(territoryProposalsTable)
+    .where(eq(territoryProposalsTable.status, status as "pending_review" | "approved" | "rejected"));
+
+  res.json({ proposals: rows, total, page, limit });
+});
+
+// ── GET /api/admin/territory-proposals/:id ───────────────────────────────────
+router.get("/admin/territory-proposals/:id", requireAdmin, async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const [row] = await db
+    .select()
+    .from(territoryProposalsTable)
+    .where(eq(territoryProposalsTable.id, id));
+  if (!row) { res.status(404).json({ error: "Proposal not found" }); return; }
+  res.json(row);
+});
+
+// ── POST /api/admin/territory-proposals/:id/approve ──────────────────────────
+router.post("/admin/territory-proposals/:id/approve", requireAdmin, async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const overrides = req.body?.overrides as { name?: string; status?: string } | undefined;
+  // Extract admin username from JWT (payload.sub or sub)
+  const auth = req.headers.authorization ?? "";
+  let adminUser = "admin";
+  try {
+    const payload = JSON.parse(
+      Buffer.from(auth.split(".")[1] ?? "", "base64url").toString()
+    );
+    adminUser = payload.sub ?? payload.email ?? "admin";
+  } catch { /* ignore */ }
+
+  const result = await approveTerritory(id, adminUser, overrides);
+  res.json({ ...result, message: "Territory approved and live" });
+});
+
+// ── POST /api/admin/territory-proposals/:id/reject ───────────────────────────
+router.post("/admin/territory-proposals/:id/reject", requireAdmin, async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const reason = typeof req.body?.reason === "string" ? req.body.reason : "No reason provided";
+
+  let adminUser = "admin";
+  try {
+    const auth = req.headers.authorization ?? "";
+    const payload = JSON.parse(Buffer.from(auth.split(".")[1] ?? "", "base64url").toString());
+    adminUser = payload.sub ?? payload.email ?? "admin";
+  } catch { /* ignore */ }
+
+  await rejectTerritory(id, adminUser, reason);
+  res.json({ ok: true });
+});
+
+// ── GET /api/admin/census/county-score ───────────────────────────────────────
+router.get("/admin/census/county-score", requireAdmin, async (req, res): Promise<void> => {
+  const { stateFips, countyFips } = req.query as Record<string, string>;
+  if (!stateFips || !countyFips) {
+    res.status(400).json({ error: "stateFips and countyFips are required" });
+    return;
+  }
+  const [count, cities] = await Promise.all([
+    (await import("../lib/censusApi")).getAdReadyBusinessCount(stateFips, countyFips),
+    (await import("../lib/censusApi")).getTopCitiesInCounty(stateFips, countyFips),
+  ]);
+  res.json({ stateFips, countyFips, adReadyBusinessCount: count, topCities: cities });
 });
 
 // ─── GET /api/georgia-counties-geojson ────────────────────────────────────────

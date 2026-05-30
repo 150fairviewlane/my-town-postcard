@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp, json, doublePrecision } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, json, jsonb, doublePrecision, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { dealersTable } from "./dealers";
@@ -15,7 +15,7 @@ export const territoriesTable = pgTable("territories", {
   counties: json("counties").$type<string[]>().notNull().default([]),
   households: integer("households").notNull().default(0),
   zones: integer("zones").notNull().default(4),
-  status: text("status", { enum: ["available", "pending", "taken"] })
+  status: text("status", { enum: ["available", "pending", "taken", "proposed"] })
     .notNull()
     .default("available"),
   // Key cities / communities within the territory (display hint for dealers)
@@ -28,6 +28,12 @@ export const territoriesTable = pgTable("territories", {
     onDelete: "set null",
   }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  // Auto-builder fields
+  businessCount: integer("business_count"),
+  source: text("source").default("manual"),        // 'manual' | 'auto-generated'
+  proposedByZip: text("proposed_by_zip"),
+  approvedBy: text("approved_by"),
+  approvedAt: timestamp("approved_at"),
 });
 
 // Records each dealer's territory claim. Created when the dealer submits the
@@ -64,6 +70,38 @@ export const territoryZipAssignmentsTable = pgTable("territory_zip_assignments",
     .references(() => territoriesTable.id, { onDelete: "cascade" }),
 });
 
+// Auto-builder proposal workflow. Created when a dealer enters their ZIP code;
+// reviewed and approved/rejected by admin before becoming a live territory.
+export const territoryProposalsTable = pgTable("territory_proposals", {
+  id: serial("id").primaryKey(),
+  // Populated after admin approves and the territory row is inserted
+  territoryId: text("territory_id"),
+  zipCode: text("zip_code").notNull(),
+  stateFips: text("state_fips").notNull(),
+  stateAbbr: text("state_abbr").notNull(),
+  // Primary county (the one containing the dealer's ZIP)
+  countyFips: text("county_fips").notNull(),
+  countyName: text("county_name").notNull(),
+  proposedName: text("proposed_name").notNull(),
+  // JSONB arrays — proposed_counties: 5-digit GEOID strings; proposed_cities: city names
+  proposedCounties: jsonb("proposed_counties").$type<string[]>().notNull(),
+  proposedCities: jsonb("proposed_cities").$type<string[]>().notNull(),
+  businessCount: integer("business_count").notNull(),
+  isSplit: boolean("is_split").default(false),
+  splitIndex: integer("split_index"),
+  splitTotal: integer("split_total"),
+  status: text("status", { enum: ["pending_review", "approved", "rejected"] })
+    .notNull()
+    .default("pending_review"),
+  dealerName: text("dealer_name"),
+  dealerEmail: text("dealer_email"),
+  dealerPhone: text("dealer_phone"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewedBy: text("reviewed_by"),
+  notes: text("notes"),
+});
+
 export const insertTerritorySchema = createInsertSchema(territoriesTable).omit({
   createdAt: true,
 });
@@ -71,8 +109,13 @@ export const insertTerritoryClaimSchema = createInsertSchema(dealerTerritoryClai
   id: true,
   claimedAt: true,
 });
+export const insertTerritoryProposalSchema = createInsertSchema(territoryProposalsTable).omit({
+  id: true,
+  createdAt: true,
+});
 
 export type Territory = typeof territoriesTable.$inferSelect;
 export type InsertTerritory = z.infer<typeof insertTerritorySchema>;
 export type DealerTerritoryClaimRow = typeof dealerTerritoryClaimsTable.$inferSelect;
 export type TerritoryZipAssignment = typeof territoryZipAssignmentsTable.$inferSelect;
+export type TerritoryProposalRow = typeof territoryProposalsTable.$inferSelect;

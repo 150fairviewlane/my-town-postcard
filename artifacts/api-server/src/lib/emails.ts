@@ -472,3 +472,72 @@ export async function sendAdminNewOrder(order: OrderInfo): Promise<void> {
     logger.error({ err, orderId: order.orderId }, "Failed to send admin email");
   }
 }
+
+// ─── Territory Proposal Notification ─────────────────────────────────────────
+
+export interface TerritoryProposalEmailInfo {
+  proposedName: string;
+  stateAbbr: string;
+  stateName: string;
+  countyNames: string[];
+  totalBusinessCount: number;
+  estimatedZones: number;
+  topCities: string[];
+  isViable: boolean;
+  dealerName?: string;
+  dealerEmail?: string;
+  dealerPhone?: string;
+  zipCode: string;
+}
+
+export async function sendTerritoryProposalEmail(
+  info: TerritoryProposalEmailInfo
+): Promise<void> {
+  const resend = getResendClient();
+  if (!resend) {
+    logger.info(
+      {
+        proposedName: info.proposedName,
+        state: info.stateAbbr,
+        businessCount: info.totalBusinessCount,
+        zip: info.zipCode,
+        dealer: info.dealerName ?? "Anonymous",
+      },
+      "Territory proposal (email skipped — RESEND_API_KEY not set)"
+    );
+    return;
+  }
+
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: ADMIN_EMAIL,
+      subject: `New Territory Proposal — ${escapeHtml(info.proposedName)}, ${info.stateAbbr}`,
+      html: `
+        <div style="font-family:sans-serif;max-width:560px;margin:0 auto;">
+          <h2 style="color:#1a1a1a;">New Territory Proposal</h2>
+          <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
+            <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;"><strong>Territory</strong></td><td style="padding:8px;border-bottom:1px solid #e5e7eb;">${escapeHtml(info.proposedName)}</td></tr>
+            <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;"><strong>State</strong></td><td style="padding:8px;border-bottom:1px solid #e5e7eb;">${escapeHtml(info.stateName)}</td></tr>
+            <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;"><strong>Counties</strong></td><td style="padding:8px;border-bottom:1px solid #e5e7eb;">${escapeHtml(info.countyNames.join(", "))}</td></tr>
+            <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;"><strong>Ad-Ready Businesses</strong></td><td style="padding:8px;border-bottom:1px solid #e5e7eb;">${info.totalBusinessCount.toLocaleString()}</td></tr>
+            <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;"><strong>Estimated Zones</strong></td><td style="padding:8px;border-bottom:1px solid #e5e7eb;">${info.estimatedZones}</td></tr>
+            <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;"><strong>Top Cities</strong></td><td style="padding:8px;border-bottom:1px solid #e5e7eb;">${escapeHtml(info.topCities.join(", "))}</td></tr>
+            <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;"><strong>Viable</strong></td><td style="padding:8px;border-bottom:1px solid #e5e7eb;">${info.isViable ? "Yes" : "No (too rural)"}</td></tr>
+          </table>
+          <h3 style="color:#1a1a1a;">Submitted By</h3>
+          <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
+            <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;"><strong>Name</strong></td><td style="padding:8px;border-bottom:1px solid #e5e7eb;">${escapeHtml(info.dealerName ?? "Anonymous")}</td></tr>
+            <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;"><strong>Email</strong></td><td style="padding:8px;border-bottom:1px solid #e5e7eb;">${escapeHtml(info.dealerEmail ?? "not provided")}</td></tr>
+            <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;"><strong>Phone</strong></td><td style="padding:8px;border-bottom:1px solid #e5e7eb;">${escapeHtml(info.dealerPhone ?? "not provided")}</td></tr>
+            <tr><td style="padding:8px;"><strong>ZIP Code</strong></td><td style="padding:8px;">${escapeHtml(info.zipCode)}</td></tr>
+          </table>
+          <p><a href="${APP_URL}/admin/territory-proposals">Review and approve →</a></p>
+        </div>
+      `,
+    });
+    logger.info({ proposedName: info.proposedName }, "Territory proposal email sent");
+  } catch (err) {
+    logger.error({ err, proposedName: info.proposedName }, "Failed to send territory proposal email");
+  }
+}
