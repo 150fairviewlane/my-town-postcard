@@ -1,0 +1,583 @@
+Build the territory builder engine. This is Prompt 2 of 3. It imports the Census API module built in Prompt 1 and uses it to automatically generate a territory proposal from a dealer's zip code. No UI yet — that's Prompt 3. This prompt is pure backend logic and API routes.
+
+
+════════════════════════════════════════════════
+OVERVIEW
+════════════════════════════════════════════════
+
+When a prospective dealer enters their zip code, the engine:
+
+1. Finds their county via zip lookup
+2. Checks if a territory already exists for that county
+   (Georgia or any pre-defined state)
+3. If yes → returns the existing territory for them to claim
+4. If no → builds a new territory proposal:
+   a. Pulls ad-ready business count for their county
+   b. If count ≥ 400 → single county territory
+   c. If count < 400 → adds neighboring counties until ≥ 400
+   d. If count ≥ 1600 → splits into city-cluster sub-territories
+   e. Names the territory after top commercial cities
+   f. Returns a proposal for dealer to confirm and admin to approve
+5. Saves the proposal with status 'proposed' in the territories table
+6. Notifies admin via email that a new proposal needs approval
+
+
+════════════════════════════════════════════════
+CONSTANTS
+════════════════════════════════════════════════
+
+Define these thresholds at the top of the engine file:
+
+  const MIN_BUSINESS_COUNT = 400;    // minimum to be a viable territory
+  const MAX_BUSINESS_COUNT = 1600;   // above this, split into sub-territories
+  const MIN_PER_CLUSTER = 100;       // minimum businesses per postcard area
+  const TARGET_CLUSTERS = 4;         // ideal number of postcard areas
+  const MAX_NEIGHBOR_RINGS = 3;      // how many rings of neighbors to search
+                                     // before giving up on bundling
+
+
+════════════════════════════════════════════════
+CHANGE 1 — DATABASE UPDATES
+════════════════════════════════════════════════
+
+The territories table already exists. Add these columns if not present:
+
+  ALTER TABLE territories ADD COLUMN IF NOT EXISTS
+    business_count integer;          -- ad-ready business count from Census
+
+  ALTER TABLE territories ADD COLUMN IF NOT EXISTS
+    source text DEFAULT 'manual';    -- 'manual' | 'auto-generated'
+
+  ALTER TABLE territories ADD COLUMN IF NOT EXISTS
+    proposed_by_zip text;            -- the zip code that triggered creation
+
+  ALTER TABLE territories ADD COLUMN IF NOT EXISTS
+    approved_by text;                -- admin user who approved
+
+  ALTER TABLE territories ADD COLUMN IF NOT EXISTS
+    approved_at timestamp;
+
+The status column already exists with values 'available'|'pending'|'taken'.
+Add 'proposed' as a new valid status value. Proposed territories are not
+visible to dealers until approved.
+
+Create a new table for tracking territory proposals through the
+approval workflow:
+
+  CREATE TABLE IF NOT EXISTS territory_proposals (
+    id              serial primary key,
+    territory_id    text,            -- references territories(id) after save
+    zip_code        text not null,
+    state_fips      text not null,
+    state_abbr      text not null,
+    county_fips     text not null,
+    county_name     text not null,
+    proposed_name   text not null,
+    proposed_counties jsonb not null, -- array of county FIPS strings
+    proposed_cities jsonb not null,   -- array of city name strings
+    business_count  integer not null,
+    is_split        boolean default false,
+    split_index     integer,         -- if split: which cluster (1,2,3...)
+    split_total     integer,         -- if split: total number of clusters
+    status          text default 'pending_review',
+                    -- 'pending_review' | 'approved' | 'rejected'
+    dealer_name     text,
+    dealer_email    text,
+    dealer_phone    text,
+    created_at      timestamp default now(),
+    reviewed_at     timestamp,
+    reviewed_by     text,
+    notes           text
+  );
+
+
+════════════════════════════════════════════════
+CHANGE 2 — ENGINE FILE
+════════════════════════════════════════════════
+
+Create a new file:
+  artifacts/api-server/src/lib/territoryBuilder.ts
+
+Import from the Census module built in Prompt 1:
+  import {
+    getCountyFromZip,
+    getAdReadyBusinessCount,
+    getAdReadyBusinessCountBatch,
+    getNeighboringCounties,
+    getCountyInfo,
+    getTopCitiesInCounty,
+  } from './censusApi';
+
+
+════════════════════════════════════════════════
+CHANGE 3 — TERRITORY NAME GENERATOR
+════════════════════════════════════════════════
+
+Export this function:
+
+  function generateTerritoryName(
+    cities: string[],       // top cities by business count
+    countyNames: string[],  // county names included
+    stateAbbr: string
+  ): string
+
+Rules:
+  - If 1 city: "{City} Area"
+  - If 2 cities: "{City1} / {City2}"
+  - If 3 cities: "{City1} / {City2} / {City3}"
+  - If 4+ cities: "{City1} / {City2} / {City3} Area"
+  - Never include the word "County" in the name
+  - Never exceed 50 characters — truncate gracefully
+
+Examples:
+  ["Gainesville", "Flowery Branch", "Oakwood"] → "Gainesville / Flowery Branch / Oakwood"
+  ["Columbus"] → "Columbus Area"
+  ["Marietta", "Kennesaw", "Acworth", "Powder Springs"] → "Marietta / Kennesaw / Acworth Area"
+
+Export this function:
+
+  function generateSlug(name: string): string
+
+Rules:
+  - Lowercase
+  - Replace " / " with "-"
+  - Replace spaces with "-"
+  - Remove all non-alphanumeric characters except hyphens
+  - Collapse multiple hyphens into one
+  - Remove leading/trailing hyphens
+  - If slug already exists in territories table, append -2, -3 etc
+
+Examples:
+  "Gainesville / Flowery Branch / Oakwood" → "gainesville-flowery-branch-oakwood"
+  "Columbus Area" → "columbus-area"
+  "Marietta / Kennesaw / Acworth Area" → "marietta-kennesaw-acworth-area"
+
+
+════════════════════════════════════════════════
+CHANGE 4 — SINGLE TERRITORY BUILDER
+════════════════════════════════════════════════
+
+Export this core function:
+
+  async function buildTerritoryProposal(
+    stateFips: string,
+    countyFips: string,
+    zipCode: string
+  ): Promise<TerritoryProposal | TerritoryProposal[]>
+
+Returns a single proposal normally, or an array if the county
+is large enough to split.
+
+TYPE DEFINITION:
+
+  interface TerritoryProposal {
+    proposedName: string;
+    slug: string;
+    stateFips: string;
+    stateAbbr: string;
+    counties: Array<{
+      fips: string;        // 5-digit GEOID
+      name: string;        // e.g. "Hall County"
+      businessCount: number;
+    }>;
+    totalBusinessCount: number;
+    topCities: string[];
+    isViable: boolean;     // true if totalBusinessCount >= MIN_BUSINESS_COUNT
+    isSplit: boolean;      // true if original county exceeded MAX_BUSINESS_COUNT
+    splitIndex?: number;
+    splitTotal?: number;
+    estimatedZones: number; // floor(totalBusinessCount / MIN_PER_CLUSTER), max 4
+    centroidLat: number;
+    centroidLng: number;
+  }
+
+ALGORITHM:
+
+  STEP 1 — Get business count for the starting county
+    businessCount = await getAdReadyBusinessCount(stateFips, countyFips)
+
+  STEP 2 — Check if split needed (county too large)
+    if businessCount >= MAX_BUSINESS_COUNT:
+      → call splitLargeCounty() — see Change 5
+      → return array of proposals
+
+  STEP 3 — Check if viable as single county
+    if businessCount >= MIN_BUSINESS_COUNT:
+      → build single county proposal
+      → return it
+
+  STEP 4 — Bundle neighboring counties
+    Collect neighbors in rings (ring 1 = direct neighbors,
+    ring 2 = neighbors of neighbors, etc.)
+
+    bundledCounties = [{ fips: countyFips, businessCount }]
+    totalCount = businessCount
+    ring = 1
+
+    while totalCount < MIN_BUSINESS_COUNT AND ring <= MAX_NEIGHBOR_RINGS:
+      neighbors = await getNeighboringCounties(stateFips + countyFips)
+
+      Filter neighbors to:
+        - Same state only (no cross-state territories)
+        - Not already assigned to an existing territory
+          (check territories table: counties array must not contain
+           this county FIPS)
+        - Not already in bundledCounties
+        - Not themselves proposed in another pending proposal
+          (check territory_proposals table)
+
+      Sort neighbors by shared border length descending
+      (longer shared border = more natural geographic fit)
+
+      Fetch business counts for all filtered neighbors in parallel
+      Sort by business count descending (add biggest neighbors first)
+
+      For each neighbor (sorted by business count desc):
+        if totalCount >= MIN_BUSINESS_COUNT: break
+        bundledCounties.push(neighbor)
+        totalCount += neighbor.businessCount
+
+      ring++
+
+    STEP 5 — Build the proposal from bundled counties
+      Get top cities for each county in parallel
+      Merge and deduplicate city lists
+      Sort merged cities by business count
+      Take top 4
+
+      Generate territory name from top cities
+      Generate slug (check uniqueness)
+      Calculate centroid (average lat/lng of county centroids)
+
+      Return the proposal with:
+        isViable = totalCount >= MIN_BUSINESS_COUNT
+        estimatedZones = min(4, floor(totalCount / MIN_PER_CLUSTER))
+
+    STEP 6 — Handle unviable territories
+      If after MAX_NEIGHBOR_RINGS rings totalCount < MIN_BUSINESS_COUNT:
+        Return the proposal anyway with isViable = false
+        Include a note: "This area may be too rural to support a
+        full territory. Consider a larger geographic area."
+        Admin can still approve it manually if they judge it viable.
+
+
+════════════════════════════════════════════════
+CHANGE 5 — LARGE COUNTY SPLITTER
+════════════════════════════════════════════════
+
+Export this function:
+
+  async function splitLargeCounty(
+    stateFips: string,
+    countyFips: string,
+    totalBusinessCount: number
+  ): Promise<TerritoryProposal[]>
+
+Used when a single county has ≥ 1,600 ad-ready businesses.
+Splits the county into city-cluster sub-territories.
+
+ALGORITHM:
+
+  1. Get all cities/places in the county using getTopCitiesInCounty()
+     with a high limit (20)
+
+  2. Calculate how many clusters to create:
+     clusters = min(4, ceil(totalBusinessCount / 400))
+
+  3. Group cities into clusters by geographic proximity
+     Use a simple approach: get lat/lng centroid of each city
+     from the Census Gazetteer file, then use a basic k-means-style
+     grouping (assign each city to its nearest cluster center,
+     starting with the top N cities by business count as initial
+     cluster centers)
+
+  4. If geographic clustering is too complex to implement cleanly,
+     use this fallback: split cities into clusters alphabetically
+     by first letter, or split the county into N equal quadrants
+     by lat/lng bounding box. This is acceptable for v1.
+
+  5. For each cluster:
+     - Generate a name from the top 2-3 cities in that cluster
+     - Assign the county FIPS to all clusters (they share the county)
+     - Estimate business count as totalBusinessCount / clusters
+     - Set isSplit = true, splitIndex = i+1, splitTotal = clusters
+
+  6. Return array of TerritoryProposal objects, one per cluster
+
+  Example: Franklin County OH (Columbus) with 4,000 businesses
+  might split into:
+    "Columbus / German Village / Short North" (cluster 1)
+    "Westerville / New Albany / Gahanna" (cluster 2)
+    "Grove City / Hilliard / Dublin" (cluster 3)
+    "Reynoldsburg / Pickerington / Canal Winchester" (cluster 4)
+
+
+════════════════════════════════════════════════
+CHANGE 6 — CONFLICT CHECKER
+════════════════════════════════════════════════
+
+Export this function:
+
+  async function checkTerritoryConflicts(
+    counties: string[]  // array of 5-digit county GEOIDs
+  ): Promise<{
+    hasConflict: boolean;
+    conflictingTerritoryId?: string;
+    conflictingTerritoryName?: string;
+    conflictingCounty?: string;
+  }>
+
+Checks whether any of the proposed counties are already assigned
+to an existing territory (status: available, pending, or taken).
+
+Query the territories table:
+  SELECT id, name, counties FROM territories
+  WHERE state = [stateAbbr]
+  AND status != 'proposed'
+
+For each territory, check if its counties array intersects with
+the proposed counties array. If any intersection found, return
+conflict details.
+
+This prevents the builder from proposing a territory that overlaps
+with an existing pre-defined territory (like Georgia's manual ones).
+
+If a conflict is found, the builder should instead return the
+existing territory for the dealer to claim rather than creating
+a new proposal.
+
+
+════════════════════════════════════════════════
+CHANGE 7 — MAIN ENTRY POINT FUNCTION
+════════════════════════════════════════════════
+
+Export this top-level function that orchestrates everything:
+
+  async function getTerritoryForZip(
+    zipCode: string,
+    dealerInfo?: {
+      name: string;
+      email: string;
+      phone: string;
+    }
+  ): Promise<{
+    type: 'existing' | 'proposed' | 'unavailable';
+    territory?: any;           // existing territory record if type=existing
+    proposals?: TerritoryProposal[];  // new proposals if type=proposed
+    proposalIds?: number[];    // IDs saved to territory_proposals table
+    message?: string;
+  }>
+
+FLOW:
+
+  1. Look up county from zip code
+     If zip not found: return { type: 'unavailable',
+       message: 'ZIP code not recognized' }
+
+  2. Check if this county is already in a pre-defined territory
+     (conflict check against existing territories table)
+     If yes AND territory status is 'available':
+       return { type: 'existing', territory: existingTerritory }
+     If yes AND territory status is 'taken' or 'pending':
+       return { type: 'unavailable',
+         message: 'This territory has already been claimed' }
+
+  3. Check if there's already a pending proposal for this county
+     (query territory_proposals where county_fips matches and
+      status = 'pending_review')
+     If yes: return { type: 'unavailable',
+       message: 'A territory proposal for this area is already
+       under review. Please contact us to be notified when it
+       becomes available.' }
+
+  4. Build territory proposal(s)
+     proposals = await buildTerritoryProposal(stateFips, countyFips, zip)
+
+  5. Save each proposal to territory_proposals table
+     Include dealerInfo if provided
+
+  6. Send admin notification email (see Change 8)
+
+  7. Return { type: 'proposed', proposals, proposalIds }
+
+
+════════════════════════════════════════════════
+CHANGE 8 — ADMIN NOTIFICATION
+════════════════════════════════════════════════
+
+When a new proposal is created, send an email to the admin using
+whatever email service is already configured in the project.
+
+Email subject:
+  "New Territory Proposal — {proposedName}, {stateAbbr}"
+
+Email body:
+  New territory proposal submitted
+
+  Territory: {proposedName}
+  State: {stateName}
+  Counties: {county names joined by ", "}
+  Ad-Ready Businesses: {totalBusinessCount}
+  Estimated Zones: {estimatedZones}
+  Top Cities: {topCities joined by ", "}
+  Viable: {yes/no}
+
+  Submitted by:
+  Name: {dealerInfo.name or "Anonymous"}
+  Email: {dealerInfo.email or "not provided"}
+  Phone: {dealerInfo.phone or "not provided"}
+  ZIP Code: {zipCode}
+
+  Review and approve at:
+  {baseUrl}/admin/territory-proposals
+
+If no email service is configured, log the proposal details to
+the console instead and note in a comment that email should be
+wired up before production launch.
+
+
+════════════════════════════════════════════════
+CHANGE 9 — ADMIN APPROVAL FUNCTION
+════════════════════════════════════════════════
+
+Export this function (called by the admin approval route in Prompt 3):
+
+  async function approveTerritory(
+    proposalId: number,
+    adminUser: string,
+    overrides?: {
+      name?: string;       // admin can rename before approving
+      status?: string;     // default 'available'
+    }
+  ): Promise<{ territoryId: string; slug: string }>
+
+Implementation:
+  1. Fetch the proposal from territory_proposals
+  2. Generate a territory ID in the format STATE-NNN
+     Find the highest existing ID for that state and increment
+     e.g. if GA-095 is highest, next is GA-096
+     For new states: OH-001, TN-001, etc.
+  3. INSERT into territories table:
+       id, name (from proposal or override), state,
+       counties (array of county names — look up names from FIPS),
+       zone_note (top cities joined by ", "),
+       households (estimate: businessCount * 12 as a rough proxy
+                  — 1 business per ~12 households on average),
+       business_count, status = 'available',
+       source = 'auto-generated',
+       proposed_by_zip, centroid_lat, centroid_lng
+  4. UPDATE territory_proposals SET status = 'approved',
+       territory_id = new id, reviewed_at = now(),
+       reviewed_by = adminUser
+  5. If the project's ZIP assignment system exists (territory_zip_assignments
+     table from the Georgia build), trigger ZIP assignment for the
+     new territory's counties automatically
+  6. Return { territoryId, slug }
+
+Export a reject function too:
+
+  async function rejectTerritory(
+    proposalId: number,
+    adminUser: string,
+    reason: string
+  ): Promise<void>
+
+Updates territory_proposals status to 'rejected', stores reason
+in notes field.
+
+
+════════════════════════════════════════════════
+CHANGE 10 — API ROUTES
+════════════════════════════════════════════════
+
+Add these routes to the territories router file:
+
+── PUBLIC ROUTE ──
+
+POST /api/territories/propose
+  Body: { zipCode: string, dealerName?: string,
+          dealerEmail?: string, dealerPhone?: string }
+  Calls getTerritoryForZip()
+  Returns the result object
+  Rate limited to 10 requests per IP per hour to prevent abuse
+
+── ADMIN ROUTES (require admin auth) ──
+
+GET /api/admin/territory-proposals
+  Query params: status (default 'pending_review'), page, limit
+  Returns paginated list of proposals from territory_proposals table
+  Include business_count, proposed_name, state, cities, dealer info
+
+GET /api/admin/territory-proposals/:id
+  Returns single proposal with full details
+
+POST /api/admin/territory-proposals/:id/approve
+  Body: { overrides?: { name?, status? } }
+  Calls approveTerritory()
+  Returns { territoryId, slug, message: 'Territory approved and live' }
+
+POST /api/admin/territory-proposals/:id/reject
+  Body: { reason: string }
+  Calls rejectTerritory()
+
+GET /api/admin/census/county-score?stateFips=&countyFips=
+  Returns business count and top cities for any county
+  Used to manually evaluate a county before approving a proposal
+
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+  Georgia territory data or ZIP assignments
+  Existing territory finder map or admin territory manager
+  Landing page system or ad slot purchases
+  Any ad generator, image library, or payment files
+  Authentication logic
+
+
+════════════════════════════════════════════════
+TEST AFTER BUILDING
+════════════════════════════════════════════════
+
+TEST 1 — Existing state (Georgia)
+  POST /api/territories/propose
+  Body: { zipCode: '30501' }  (Gainesville, Hall County GA)
+
+  Expected: { type: 'existing', territory: { id: 'GA-026', name: 'Hall County', ... } }
+  Hall County is already defined in the Georgia territories.
+  Should NOT create a new proposal.
+
+TEST 2 — New state, viable single county
+  POST /api/territories/propose
+  Body: { zipCode: '37201' }  (Nashville, Davidson County TN)
+
+  Expected: { type: 'proposed', proposals: [{ proposedName: '...Nashville...', totalBusinessCount: >400, isViable: true }] }
+  Davidson County TN has thousands of businesses — should be viable
+  and likely trigger the split logic.
+
+TEST 3 — New state, rural county needing bundling
+  POST /api/territories/propose
+  Body: { zipCode: '38449' }  (Ardmore, TN — small rural county)
+
+  Expected: type: 'proposed' with multiple counties bundled,
+  totalBusinessCount approaching 400 after bundling.
+
+TEST 4 — Conflict detection
+  POST /api/territories/propose
+  Body: { zipCode: '30543' }  (Jackson County GA — already in GA-025)
+
+  Expected: { type: 'existing', territory: { id: 'GA-025', ... } }
+
+TEST 5 — Admin proposal list
+  GET /api/admin/territory-proposals
+  Should return proposals created in Tests 2 and 3
+
+TEST 6 — Admin approval
+  POST /api/admin/territory-proposals/{id}/approve
+  The proposal should become a live territory record
+  GET /api/territories?state=TN should now include the new territory
+
+TEST 7 — Duplicate proposal prevention
+  POST /api/territories/propose with the same zip as Test 2
+  Expected: { type: 'unavailable', message: '...already under review...' }

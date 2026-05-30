@@ -12,10 +12,9 @@ const __dirname = dirname(__filename);
  * 2-digit NAICS sector codes for industries that buy local print advertising.
  * Only these sectors count toward a territory's ad-ready business score.
  *
- * We count at the 2-digit sector level (CBP rows where naics = "XX----").
- * The 6-digit exclusions in EXCLUDED_NAICS_6DIGIT are documented for future
- * reference; they represent a small fraction of sector 81 and are not applied
- * at query time.
+ * We count at the 2-digit sector level using CBP establishment counts (est column).
+ * The 6-digit exclusions in EXCLUDED_NAICS_6DIGIT are documented for reference
+ * but not applied — they're a small fraction of sector 81.
  */
 export const AD_READY_NAICS = [
   "44", // Retail Trade
@@ -44,56 +43,6 @@ export const EXCLUDED_NAICS_6DIGIT = [
   "813410", // Civic and Social Organizations
   "814110", // Private Households
 ] as const;
-
-// ─── In-Memory Cache ──────────────────────────────────────────────────────────
-
-const cache = new Map<string, { data: unknown; fetchedAt: number; ttl: number }>();
-const CACHE_TTL_7D = 7 * 24 * 60 * 60 * 1000;
-const CACHE_TTL_30D = 30 * 24 * 60 * 60 * 1000;
-
-function getCached(key: string): unknown | null {
-  const entry = cache.get(key);
-  if (!entry) return null;
-  if (Date.now() - entry.fetchedAt > entry.ttl) {
-    cache.delete(key);
-    return null;
-  }
-  return entry.data;
-}
-
-function setCached(key: string, data: unknown, ttl = CACHE_TTL_7D): void {
-  cache.set(key, { data, fetchedAt: Date.now(), ttl });
-}
-
-// ─── Census API key (optional — used only for ACS calls) ──────────────────────
-
-const CENSUS_API_KEY = process.env.CENSUS_API_KEY ?? "";
-const censusKeyParam = CENSUS_API_KEY ? `&key=${encodeURIComponent(CENSUS_API_KEY)}` : "";
-
-// ─── Fetch Helper ─────────────────────────────────────────────────────────────
-
-async function fetchWithRetry(
-  url: string,
-  attempt = 0,
-  headers?: Record<string, string>
-): Promise<Response | null> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 10_000);
-  try {
-    const res = await fetch(url, { signal: controller.signal, headers });
-    clearTimeout(timer);
-    return res;
-  } catch (err: unknown) {
-    clearTimeout(timer);
-    const msg = err instanceof Error ? err.message : String(err);
-    if (attempt === 0) {
-      logger.warn({ url, err: msg }, "fetch failed — retrying once");
-      return fetchWithRetry(url, 1, headers);
-    }
-    logger.error({ url, err: msg }, "fetch failed after retry");
-    return null;
-  }
-}
 
 // ─── State FIPS Table ─────────────────────────────────────────────────────────
 
@@ -129,53 +78,81 @@ const STATE_NAME_BY_ABBR: Record<string, string> = {
   DC: "District of Columbia",
 };
 
-// ─── Static Data: All Four Files Loaded at Startup ───────────────────────────
+// ─── In-Memory Data Maps ──────────────────────────────────────────────────────
 
 /**
- * ZIP → county row (from zip-county.csv, loaded once at startup).
- * county is the short name without suffix, e.g. "Hall".
+ * ZIP → county row.
+ * Source: src/data/zip-county.csv
+ * Key: ZIP string (e.g. "30501")
  */
 interface ZipRow {
-  stateFips: string;   // 2-digit padded, e.g. "13"
-  stateName: string;   // e.g. "Georgia"
-  stateAbbr: string;   // e.g. "GA"
-  countyShort: string; // e.g. "Hall" (no "County" suffix)
+  stateFips: string;    // 2-digit padded, e.g. "13"
+  stateName: string;    // e.g. "Georgia"
+  stateAbbr: string;    // e.g. "GA"
+  countyShort: string;  // e.g. "Hall" (no suffix)
 }
 const zipCountyMap = new Map<string, ZipRow>();
 
 /**
  * "stateAbbr:COUNTY_UPPER" → ordered unique city list.
- * Gainesville appears first for Hall County GA in raw file order.
+ * Source: src/data/us-cities.csv
+ * Raw file order preserved; Gainesville appears first for Hall County GA.
  */
 const citiesByCountyKey = new Map<string, string[]>();
 
 /**
  * "stateFips:countyFips3" → total ad-ready establishment count.
- * Built by summing CBP est column for the 10 target 2-digit NAICS sectors
- * (rows where naics = "44----", "45----", …, "81----").
+ * Source: src/data/county-business-patterns.txt (CBP 2022)
+ * Summed over the 10 AD_READY_NAICS 2-digit sectors.
  */
 const cbpByCounty = new Map<string, number>();
 
 /**
- * County GEOID → array of neighboring county GEOIDs.
- * Loaded from the Census adjacency file at startup.
+ * 5-digit county GEOID → array of neighboring GEOIDs.
+ * Source: src/data/county-adjacency.txt
  */
 const adjacencyMap = new Map<string, string[]>();
 
-// Set of 2-digit NAICS codes we aggregate (faster than AD_READY_NAICS.includes)
+/**
+ * County info derived from the adjacency file.
+ * Key: 5-digit GEOID (e.g. "13139")
+ */
+interface CountyRow {
+  countyFips3: string;  // e.g. "139"
+  stateFips: string;    // e.g. "13"
+  stateAbbr: string;    // e.g. "GA"
+  countyName: string;   // e.g. "Hall County"
+  stateName: string;    // e.g. "Georgia"
+  nameShort: string;    // e.g. "HALL" (uppercased, suffix stripped)
+}
+const countyInfoByGeoid = new Map<string, CountyRow>();
+
+/**
+ * "stateFips:COUNTYSHORT" → countyFips3
+ * Built from adjacency data; used by getCountyFromZip to resolve county FIPS.
+ */
+const countyFipsByShortName = new Map<string, string>();
+
+// Strip legal suffixes before uppercasing to get nameShort
+const COUNTY_SUFFIX_RE =
+  / (County|Parish|Borough|Census Area|City and Borough|Municipality|Municipio|District|City)$/i;
+
+// AD_READY set for O(1) lookup during CBP parsing
 const AD_READY_SET = new Set<string>(AD_READY_NAICS);
+
+// ─── Static Data Loader ───────────────────────────────────────────────────────
 
 function loadStaticData(): void {
   const dataDir = join(__dirname, "../data");
 
   // ── 1. zip-county.csv ────────────────────────────────────────────────────────
-  // Columns: state_fips,state,state_abbr,zipcode,county,city
-  // state_fips is an unpadded integer (e.g. "1" for Alabama, "13" for Georgia).
+  // Header: state_fips,state,state_abbr,zipcode,county,city
+  // state_fips is unpadded (e.g. "13" for Georgia, "1" for Alabama).
   try {
     const text = readFileSync(join(dataDir, "zip-county.csv"), "utf-8");
-    let loaded = 0;
-    for (const rawLine of text.split("\n")) {
-      const line = rawLine.trim();
+    let count = 0;
+    for (const raw of text.split("\n")) {
+      const line = raw.trim();
       if (!line || line.startsWith("state_fips")) continue;
       const cols = line.split(",");
       if (cols.length < 5) continue;
@@ -191,167 +168,134 @@ function loadStaticData(): void {
         stateAbbr,
         countyShort,
       });
-      loaded++;
+      count++;
     }
-    logger.info({ count: loaded }, "Census: loaded ZIP→county map");
+    logger.info({ count }, "Census: loaded zip-county.csv");
   } catch (err: unknown) {
-    logger.error({ err: err instanceof Error ? err.message : String(err) }, "Census: failed to load zip-county.csv");
+    logger.error({ err: err instanceof Error ? err.message : String(err) },
+      "Census: failed to load zip-county.csv");
   }
 
   // ── 2. us-cities.csv ─────────────────────────────────────────────────────────
   // Columns (pipe-delimited): City|State short|State full|County|City alias
-  // County is uppercase without suffix, e.g. "HALL".
-  // Raw file order preserved; Gainesville is first for Hall County GA.
+  // County is already uppercase without suffix, e.g. "HALL".
+  // Raw file order preserved — Gainesville appears first for Hall County GA.
   try {
     const text = readFileSync(join(dataDir, "us-cities.csv"), "utf-8");
-    let loaded = 0;
-    for (const rawLine of text.split("\n")) {
-      const line = rawLine.trim();
+    let count = 0;
+    for (const raw of text.split("\n")) {
+      const line = raw.trim();
       if (!line || line.startsWith("City|")) continue;
       const cols = line.split("|");
       if (cols.length < 4) continue;
       const city       = cols[0]?.trim() ?? "";
       const stateShort = cols[1]?.trim() ?? "";
-      const county     = cols[3]?.trim() ?? "";
+      const county     = cols[3]?.trim() ?? ""; // e.g. "HALL"
       if (!city || !stateShort || !county) continue;
       const key = `${stateShort}:${county}`;
       let arr = citiesByCountyKey.get(key);
       if (!arr) {
         arr = [];
         citiesByCountyKey.set(key, arr);
-        loaded++;
+        count++;
       }
       if (!arr.includes(city)) arr.push(city);
     }
-    logger.info({ count: loaded }, "Census: loaded cities-by-county map");
+    logger.info({ count }, "Census: loaded us-cities.csv");
   } catch (err: unknown) {
-    logger.error({ err: err instanceof Error ? err.message : String(err) }, "Census: failed to load us-cities.csv");
+    logger.error({ err: err instanceof Error ? err.message : String(err) },
+      "Census: failed to load us-cities.csv");
   }
 
   // ── 3. county-business-patterns.txt ─────────────────────────────────────────
-  // CBP 2022 county-level data. 1.1M rows, comma-delimited, fields quoted.
+  // CBP 2022 county data. ~1.1M rows, comma-delimited, string fields quoted.
   // Header: "fipstate","fipscty","naics","emp_nf","emp","qp1_nf","qp1","ap_nf","ap","est",...
-  // We read rows where naics = "XX----" (2-digit sector + 4 dashes) and
-  // XX is one of the AD_READY_NAICS codes. Column 9 (est) = establishment count.
+  // We match rows where naics = "XX----" (2-digit sector + 4 dashes) and
+  // XX ∈ AD_READY_SET. Column 9 (est) = establishment count.
   try {
     const text = readFileSync(join(dataDir, "county-business-patterns.txt"), "utf-8");
     let rows = 0;
-    for (const rawLine of text.split("\n")) {
-      const line = rawLine.trim();
+    for (const raw of text.split("\n")) {
+      const line = raw.trim();
       if (!line || line.startsWith('"fipstate"')) continue;
-
-      // Fields are comma-separated; all string fields are double-quoted.
-      // Split on comma, then strip surrounding quotes from each field.
       const cols = line.split(",");
       if (cols.length < 10) continue;
-
       const naics = (cols[2] ?? "").replace(/^"|"$/g, "").trim();
-
-      // Match 2-digit sector rows: exactly "XX----" where XX ∈ AD_READY_SET
+      // 2-digit sector rows have form "XX----" (6 chars, last 4 are dashes)
       if (naics.length !== 6 || naics.slice(2) !== "----") continue;
       const sector = naics.slice(0, 2);
       if (!AD_READY_SET.has(sector)) continue;
-
       const fipstate = (cols[0] ?? "").replace(/^"|"$/g, "").trim();
       const fipscty  = (cols[1] ?? "").replace(/^"|"$/g, "").trim();
       if (!fipstate || !fipscty) continue;
-
-      const estRaw = (cols[9] ?? "").replace(/^"|"$/g, "").trim();
-      const est = parseInt(estRaw, 10);
+      const est = parseInt((cols[9] ?? "").replace(/^"|"$/g, "").trim(), 10);
       if (isNaN(est) || est <= 0) continue;
-
       const key = `${fipstate}:${fipscty.padStart(3, "0")}`;
       cbpByCounty.set(key, (cbpByCounty.get(key) ?? 0) + est);
       rows++;
     }
-    logger.info({ rows, counties: cbpByCounty.size }, "Census: loaded CBP business counts");
+    logger.info({ rows, counties: cbpByCounty.size }, "Census: loaded county-business-patterns.txt");
   } catch (err: unknown) {
-    logger.error({ err: err instanceof Error ? err.message : String(err) }, "Census: failed to load county-business-patterns.txt");
+    logger.error({ err: err instanceof Error ? err.message : String(err) },
+      "Census: failed to load county-business-patterns.txt");
   }
 
   // ── 4. county-adjacency.txt ──────────────────────────────────────────────────
-  // Census county adjacency file. Tab-delimited. Format:
-  //   "CountyName"\tCountyGEOID\t"NeighborName"\tNeighborGEOID
-  // Continuation rows have empty first two fields (tab-leading).
+  // Tab-delimited. Line format (actual file is tab-delimited, not pipe):
+  //   "CountyName, StateName"\tCountyGEOID\t"NeighborName"\tNeighborGEOID
+  // Continuation rows have empty first two columns (the current county applies).
+  // We also extract county info (name, state, FIPS) from the county column for
+  // use in getCountyFromZip and getTopCitiesInCounty.
   try {
     const text = readFileSync(join(dataDir, "county-adjacency.txt"), "utf-8");
     let currentGeoid: string | null = null;
+    let adjCount = 0;
     for (const line of text.split("\n")) {
       if (!line) continue;
       const parts = line.split("\t");
       if (parts.length < 4) continue;
       const countyGeoid   = parts[1]?.trim().replace(/^"|"$/g, "");
       const neighborGeoid = parts[3]?.trim().replace(/^"|"$/g, "");
+
       if (countyGeoid) {
+        // New county block — extract county info from the first column.
         currentGeoid = countyGeoid;
+        const stateFips = countyGeoid.slice(0, 2);
+        const countyFips3 = countyGeoid.slice(2);
+        const stateAbbr = FIPS_TO_STATE_ABBR[stateFips] ?? "";
+        const stateName = STATE_NAME_BY_ABBR[stateAbbr] ?? stateAbbr;
+
+        // First column: "Hall County, Georgia" (with surrounding quotes)
+        const fullField = parts[0]?.trim().replace(/^"|"$/g, "") ?? "";
+        const lastComma = fullField.lastIndexOf(",");
+        const countyName = lastComma >= 0 ? fullField.slice(0, lastComma).trim() : fullField;
+        const nameShort = countyName.replace(COUNTY_SUFFIX_RE, "").toUpperCase().trim();
+
+        if (!countyInfoByGeoid.has(currentGeoid)) {
+          countyInfoByGeoid.set(currentGeoid, {
+            countyFips3, stateFips, stateAbbr, countyName, stateName, nameShort,
+          });
+          countyFipsByShortName.set(`${stateFips}:${nameShort}`, countyFips3);
+          adjCount++;
+        }
         if (!adjacencyMap.has(currentGeoid)) adjacencyMap.set(currentGeoid, []);
       }
+
       if (!currentGeoid || !neighborGeoid) continue;
       if (neighborGeoid === currentGeoid) continue; // skip self
       const neighbors = adjacencyMap.get(currentGeoid)!;
       if (!neighbors.includes(neighborGeoid)) neighbors.push(neighborGeoid);
     }
-    logger.info({ counties: adjacencyMap.size }, "Census: loaded county adjacency map");
+    logger.info({ counties: adjCount, edges: adjacencyMap.size }, "Census: loaded county-adjacency.txt");
   } catch (err: unknown) {
-    logger.error({ err: err instanceof Error ? err.message : String(err) }, "Census: failed to load county-adjacency.txt");
+    logger.error({ err: err instanceof Error ? err.message : String(err) },
+      "Census: failed to load county-adjacency.txt");
   }
 }
 
 loadStaticData();
 
-// ─── TIGER County Lookup ──────────────────────────────────────────────────────
-
-interface TigerCounty {
-  countyFips3: string; // 3-digit padded, e.g. "139"
-  nameFull: string;    // e.g. "Hall County"
-  nameShort: string;   // e.g. "HALL" (uppercased, suffix stripped)
-}
-
-const COUNTY_SUFFIX_RE =
-  / (County|Parish|Borough|Census Area|City and Borough|Municipality|Municipio|District|City)$/i;
-
-/**
- * Fetches all counties for a state from the TIGER REST API (no Census key).
- * Results are cached 30 days in memory. Returns [] on failure (non-fatal).
- */
-async function getTigerCountiesForState(stateFips: string): Promise<TigerCounty[]> {
-  const cacheKey = `tiger-counties:${stateFips}`;
-  const cached = getCached(cacheKey);
-  if (cached !== null) return cached as TigerCounty[];
-
-  const url =
-    `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/1/query` +
-    `?where=STATE%3D'${encodeURIComponent(stateFips)}'` +
-    `&outFields=NAME%2CSTATE%2CCOUNTY&returnGeometry=false&f=json&resultRecordCount=300`;
-  try {
-    const res = await fetchWithRetry(url);
-    if (!res || !res.ok) {
-      logger.warn({ url, stateFips }, "TIGER county list fetch failed");
-      setCached(cacheKey, [], CACHE_TTL_30D);
-      return [];
-    }
-    const data = await res.json() as {
-      features?: Array<{ attributes: { NAME: string; STATE: string; COUNTY: string } }>;
-    };
-    const counties: TigerCounty[] = (data.features ?? []).map((f) => {
-      const nameFull = f.attributes.NAME ?? "";
-      const nameShort = nameFull.replace(COUNTY_SUFFIX_RE, "").toUpperCase().trim();
-      return {
-        countyFips3: (f.attributes.COUNTY ?? "").padStart(3, "0"),
-        nameFull,
-        nameShort,
-      };
-    });
-    setCached(cacheKey, counties, CACHE_TTL_30D);
-    return counties;
-  } catch (err: unknown) {
-    logger.error({ err: err instanceof Error ? err.message : String(err), url, stateFips }, "getTigerCountiesForState failed");
-    setCached(cacheKey, [], CACHE_TTL_30D);
-    return [];
-  }
-}
-
-// ─── getCountyFromZip ─────────────────────────────────────────────────────────
+// ─── Exported Types ───────────────────────────────────────────────────────────
 
 export interface CountyFromZipResult {
   countyFips: string;  // 3-digit county FIPS
@@ -361,54 +305,52 @@ export interface CountyFromZipResult {
   stateAbbr: string;   // e.g. "GA"
 }
 
+export interface CountyInfo {
+  name: string;      // e.g. "Hall County"
+  stateName: string; // e.g. "Georgia"
+  stateAbbr: string; // e.g. "GA"
+  geoid: string;     // 5-digit FIPS, e.g. "13139"
+}
+
+// ─── getCountyFromZip ─────────────────────────────────────────────────────────
+
 /**
- * Resolves a US ZIP code to its primary county.
+ * Resolves a US ZIP code to its primary county using local static data.
  *
- * Data path:
- *   1. In-memory cache (7-day TTL).
- *   2. Local zip-county.csv → state FIPS/name/abbr + county short name ("Hall").
- *   3. TIGER REST API → all counties for the state (cached 30 days) →
- *      match county by uppercased short name → get 3-digit county FIPS.
+ * Data path: zip-county.csv → county short name →
+ *   adjacency-derived countyFips3 (via countyFipsByShortName map).
+ * Returns null if the ZIP is not in the local dataset.
  */
 export async function getCountyFromZip(zip: string): Promise<CountyFromZipResult | null> {
-  const cacheKey = `zip:${zip}`;
-  const cached = getCached(cacheKey);
-  if (cached !== null) return cached as CountyFromZipResult;
-
-  const zipRow = zipCountyMap.get(zip);
-  if (!zipRow) {
-    logger.warn({ zip }, "ZIP not found in local zip-county dataset");
+  const row = zipCountyMap.get(zip);
+  if (!row) {
+    logger.warn({ zip }, "ZIP not found in local dataset");
     return null;
   }
-
-  const { stateFips, stateName, stateAbbr, countyShort } = zipRow;
-  const countyShortUpper = countyShort.toUpperCase().trim();
-
-  const tigerCounties = await getTigerCountiesForState(stateFips);
-  const match = tigerCounties.find((c) => c.nameShort === countyShortUpper);
-
-  if (!match) {
-    logger.warn({ zip, stateFips, countyShort }, "County not found in TIGER data for this state");
+  const { stateFips, stateName, stateAbbr, countyShort } = row;
+  const nameKey = `${stateFips}:${countyShort.toUpperCase().trim()}`;
+  const countyFips3 = countyFipsByShortName.get(nameKey);
+  if (!countyFips3) {
+    logger.warn({ zip, stateFips, countyShort }, "County FIPS not found in adjacency data");
     return null;
   }
-
-  const result: CountyFromZipResult = {
-    countyFips: match.countyFips3,
-    countyName: match.nameFull,
+  const geoid = `${stateFips}${countyFips3}`;
+  const countyRow = countyInfoByGeoid.get(geoid);
+  return {
+    countyFips: countyFips3,
+    countyName: countyRow?.countyName ?? `${countyShort} County`,
     stateFips,
     stateName,
     stateAbbr,
   };
-  setCached(cacheKey, result, CACHE_TTL_7D);
-  return result;
 }
 
 // ─── getAdReadyBusinessCount ──────────────────────────────────────────────────
 
 /**
  * Returns the total number of ad-ready establishments in a county.
- * Reads directly from the CBP 2022 data loaded at startup — no network call.
- * Returns 0 if the county has no CBP data (very rare; some unpopulated counties).
+ * Reads from CBP 2022 data loaded at startup. Returns 0 for counties
+ * with no CBP data (unpopulated counties or data not available).
  */
 export async function getAdReadyBusinessCount(
   stateFips: string,
@@ -419,7 +361,8 @@ export async function getAdReadyBusinessCount(
 }
 
 /**
- * Batch version — returns Map keyed by '{stateFips}{countyFips}' → business count.
+ * Batch version — fetches multiple counties simultaneously.
+ * Returns Map keyed by '{stateFips}{countyFips}' → business count.
  */
 export async function getAdReadyBusinessCountBatch(
   counties: Array<{ stateFips: string; countyFips: string }>
@@ -436,8 +379,9 @@ export async function getAdReadyBusinessCountBatch(
 // ─── getCountyAdjacency ───────────────────────────────────────────────────────
 
 /**
- * Returns the county adjacency map (pre-loaded from disk at startup).
- * Kept async to preserve the existing API contract.
+ * Returns the county adjacency map (loaded from disk at startup).
+ * Key: 5-digit county GEOID; Value: array of neighboring county GEOIDs.
+ * Kept async to preserve the API contract.
  */
 export async function getCountyAdjacency(): Promise<Map<string, string[]>> {
   return adjacencyMap;
@@ -454,120 +398,41 @@ export async function getNeighboringCounties(countyGeoid: string): Promise<strin
 
 // ─── getCountyInfo ────────────────────────────────────────────────────────────
 
-export interface CountyInfo {
-  name: string;      // e.g. "Hall County"
-  stateName: string; // e.g. "Georgia"
-  stateAbbr: string; // e.g. "GA"
-  geoid: string;     // 5-digit FIPS, e.g. "13139"
-}
-
 /**
  * Returns county name and state info for a given stateFips + countyFips.
- *
- * Primary: ACS NAME endpoint (requires CENSUS_API_KEY for best availability).
- * Fallback: TIGER REST API (no key needed, already cached per state).
- * Both paths cached 30 days.
+ * Derived from the adjacency file county data loaded at startup.
  */
 export async function getCountyInfo(
   stateFips: string,
   countyFips: string
 ): Promise<CountyInfo | null> {
-  const cacheKey = `county-info:${stateFips}:${countyFips}`;
-  const cached = getCached(cacheKey);
-  if (cached !== null) return cached as CountyInfo;
-
-  const countyFips3 = countyFips.padStart(3, "0");
-  const geoid = `${stateFips}${countyFips3}`;
-  const stateAbbr = FIPS_TO_STATE_ABBR[stateFips] ?? "";
-
-  // ── Primary: ACS ────────────────────────────────────────────────────────────
-  const acsUrl =
-    `https://api.census.gov/data/2023/acs/acs5` +
-    `?get=NAME&for=county:${countyFips3}&in=state:${stateFips}` +
-    censusKeyParam;
-  try {
-    const res = await fetchWithRetry(acsUrl);
-    if (res && res.ok) {
-      const contentType = res.headers.get("content-type") ?? "";
-      if (contentType.includes("application/json")) {
-        const data = await res.json() as string[][];
-        if (Array.isArray(data) && data.length >= 2) {
-          const nameField = data[1]?.[0] ?? "";
-          const commaIdx = nameField.lastIndexOf(",");
-          const name = commaIdx >= 0 ? nameField.slice(0, commaIdx).trim() : nameField.trim();
-          const stateName = commaIdx >= 0 ? nameField.slice(commaIdx + 1).trim() : "";
-          const result: CountyInfo = { name, stateName, stateAbbr, geoid };
-          setCached(cacheKey, result, CACHE_TTL_30D);
-          return result;
-        }
-      }
-    }
-  } catch {
-    // fall through to TIGER
-  }
-
-  // ── Fallback: TIGER ──────────────────────────────────────────────────────────
-  try {
-    const tigerCounties = await getTigerCountiesForState(stateFips);
-    const county = tigerCounties.find((c) => c.countyFips3 === countyFips3);
-    if (county) {
-      const stateName = STATE_NAME_BY_ABBR[stateAbbr] ?? stateAbbr;
-      const result: CountyInfo = { name: county.nameFull, stateName, stateAbbr, geoid };
-      setCached(cacheKey, result, CACHE_TTL_30D);
-      return result;
-    }
-  } catch (err: unknown) {
-    logger.error({ err: err instanceof Error ? err.message : String(err), stateFips, countyFips }, "getCountyInfo TIGER fallback failed");
-  }
-
-  return null;
+  const geoid = `${stateFips}${countyFips.padStart(3, "0")}`;
+  const row = countyInfoByGeoid.get(geoid);
+  if (!row) return null;
+  return { name: row.countyName, stateName: row.stateName, stateAbbr: row.stateAbbr, geoid };
 }
 
 // ─── getTopCitiesInCounty ─────────────────────────────────────────────────────
 
 /**
  * Returns the top {limit} cities in a county.
- *
- * Data path:
- *   1. In-memory cache (7-day TTL).
- *   2. TIGER REST API → county nameShort (e.g. "HALL"), cached 30 days.
- *   3. Local us-cities.csv → cities keyed by "stateAbbr:COUNTY_UPPER"
- *      in raw file order (Gainesville is first for Hall County GA).
+ * Reads from us-cities.csv data loaded at startup.
+ * Results are in raw file order (Gainesville is first for Hall County GA).
  */
 export async function getTopCitiesInCounty(
   stateFips: string,
   countyFips: string,
   limit = 4
 ): Promise<string[]> {
-  const cacheKey = `top-cities:${stateFips}:${countyFips}`;
-  const cached = getCached(cacheKey);
-  if (cached !== null) return cached as string[];
-
-  const stateAbbr = FIPS_TO_STATE_ABBR[stateFips];
-  if (!stateAbbr) {
-    setCached(cacheKey, [], CACHE_TTL_7D);
-    return [];
-  }
-
-  const countyFips3 = countyFips.padStart(3, "0");
-  const tigerCounties = await getTigerCountiesForState(stateFips);
-  const county = tigerCounties.find((c) => c.countyFips3 === countyFips3);
-
-  if (!county) {
-    logger.warn({ stateFips, countyFips }, "County not found in TIGER for top-cities lookup");
-    setCached(cacheKey, [], CACHE_TTL_7D);
-    return [];
-  }
-
-  const mapKey = `${stateAbbr}:${county.nameShort}`;
-  const cities = (citiesByCountyKey.get(mapKey) ?? []).slice(0, limit);
-  setCached(cacheKey, cities, CACHE_TTL_7D);
-  return cities;
+  const geoid = `${stateFips}${countyFips.padStart(3, "0")}`;
+  const row = countyInfoByGeoid.get(geoid);
+  if (!row) return [];
+  const mapKey = `${row.stateAbbr}:${row.nameShort}`;
+  return (citiesByCountyKey.get(mapKey) ?? []).slice(0, limit);
 }
 
 // ─── Startup ──────────────────────────────────────────────────────────────────
 
 logger.info(
-  "Census API module loaded — all four data files read from disk at startup; " +
-  "TIGER county lists fetched on first territory request per state"
+  "Census API module loaded — adjacency file will be fetched on first territory request"
 );
