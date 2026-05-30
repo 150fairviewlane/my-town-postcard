@@ -1,0 +1,21 @@
+Stop investigating the Census geographic relationship files — they’re likely also blocked or too complex to parse reliably. Use these two direct replacement approaches instead:
+
+For ZIP to county mapping — use this pre-built static CSV that contains every US ZIP code mapped to its primary county FIPS, county name, and state. No parsing complexity, no relationship files:
+https://raw.githubusercontent.com/scpike/us-state-county-zip/master/geo-data.csv
+
+Download it once on server start, parse into a Map keyed by ZIP code, done. Each row has: state, state_fips, county, county_fips, zip. This is the entire ZIP-to-county crosswalk in one file.
+
+For top cities in a county — drop the Gazetteer approach entirely. Use this pre-built dataset instead:
+https://raw.githubusercontent.com/grammakov/USA-cities-and-states/master/us_cities_states_counties.csv
+
+This CSV has city name, state, and county name in each row. Filter by state and county name to get all cities in a county, then return the top 4 by population. No COUNTYFP column needed — match on county name string.
+
+If either of those GitHub URLs is also blocked, store both files directly in the project as static data files — download them locally right now in the Replit shell with:
+wget -O src/data/zip-county.csv https://raw.githubusercontent.com/scpike/us-state-county-zip/master/geo-data.csv
+wget -O src/data/us-cities.csv https://raw.githubusercontent.com/grammakov/USA-cities-and-states/master/us_cities_states_counties.csv
+
+Store them in the project repo so they load from disk at startup with no outbound network call at all. This eliminates the network restriction problem entirely for both lookups.
+
+Once those two files are loading correctly, the Census CBP county business patterns file (cbp22co.txt from the ZIP download) should be handled the same way — download it to disk in the Replit shell now and load from local disk rather than fetching at runtime.”
+
+The key insight here: Stop trying to solve this with API calls. Download the three data files directly into the project right now using the Replit shell, commit them to the repo, and load everything from local disk. That’s faster, more reliable, and completely sidesteps the network restriction. The files together are maybe 50MB which is well within Replit’s storage limits.
