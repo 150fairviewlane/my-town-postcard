@@ -1,0 +1,112 @@
+When ZIP code 90210 (Beverly Hills, CA) is entered, the map
+highlights Fresno County instead of Los Angeles County.
+Beverly Hills is in Los Angeles County — Fresno is 3 hours north.
+
+════════════════════════════════════════════════
+DIAGNOSE FIRST
+════════════════════════════════════════════════
+
+Before fixing, run this diagnostic and report the output:
+
+1. Call getCountyFromZip('90210') directly and log the full
+   return value — what county name and FIPS does it return?
+
+2. Search the zip-county.csv file for ZIP 90210:
+   grep "90210" src/data/zip-county.csv
+   Report exactly what rows come back.
+
+3. Search for Fresno in the zip-county.csv:
+   grep -i "fresno" src/data/zip-county.csv | head -5
+   Report what FIPS code Fresno County uses.
+
+4. Check what the GeoJSON layer uses as its county identifier —
+   is it county name string, county FIPS, or state+county FIPS?
+   This tells us whether the mismatch is in the lookup or the
+   map highlighting step.
+
+════════════════════════════════════════════════
+LIKELY CAUSES AND FIXES
+════════════════════════════════════════════════
+
+CAUSE A — Wrong row in zip-county.csv
+  The CSV may have 90210 mapped to the wrong county, or the
+  lookup is matching on a partial string and hitting Fresno
+  before Los Angeles.
+  FIX: Add a direct override map for known problem ZIPs at the
+  top of censusApi.ts:
+
+  const ZIP_OVERRIDES: Record<string, {
+    countyFips: string;
+    countyName: string;
+    stateFips: string;
+    stateAbbr: string;
+  }> = {
+    '90210': { countyFips: '037', countyName: 'Los Angeles County',
+                stateFips: '06', stateAbbr: 'CA' },
+    '90001': { countyFips: '037', countyName: 'Los Angeles County',
+                stateFips: '06', stateAbbr: 'CA' },
+    '10001': { countyFips: '061', countyName: 'New York County',
+                stateFips: '36', stateAbbr: 'NY' },
+    '60601': { countyFips: '031', countyName: 'Cook County',
+                stateFips: '17', stateAbbr: 'IL' },
+    '77001': { countyFips: '201', countyName: 'Harris County',
+                stateFips: '48', stateAbbr: 'TX' },
+    '85001': { countyFips: '013', countyName: 'Maricopa County',
+                stateFips: '04', stateAbbr: 'AZ' },
+    '98101': { countyFips: '033', countyName: 'King County',
+                stateFips: '53', stateAbbr: 'WA' },
+    '30301': { countyFips: '121', countyName: 'Fulton County',
+                stateFips: '13', stateAbbr: 'GA' },
+  };
+
+  Check ZIP_OVERRIDES first at the top of getCountyFromZip()
+  before any CSV lookup:
+
+  if (ZIP_OVERRIDES[zip]) return ZIP_OVERRIDES[zip];
+
+CAUSE B — County name match hitting wrong GeoJSON feature
+  The county lookup returns Los Angeles correctly but the map
+  highlighting code is matching on county name string "Los Angeles"
+  and finding a different feature — possibly because Fresno County's
+  GeoJSON feature has a NAME property that partially matches.
+  FIX: Match GeoJSON features by 5-digit county FIPS (stateFips +
+  countyFips, zero-padded to 3 digits) rather than county name string.
+  FIPS codes are unique and unambiguous. County names are not —
+  there are multiple "Washington County" entries across states.
+
+  The GeoJSON feature ID or GEOID property should be the 5-digit
+  FIPS. Use that for all map highlighting instead of name matching.
+
+CAUSE C — Centroid coordinates are wrong
+  The proposal's centroidLat/centroidLng are calculated from the
+  county centroid in the data files. If the wrong county is being
+  returned, the centroid will point to that wrong county.
+  FIX: Fix Cause A first — correct county resolution fixes the
+  centroid automatically.
+
+════════════════════════════════════════════════
+AFTER FIXING
+════════════════════════════════════════════════
+
+Also make this general improvement to prevent future mismatches:
+Switch ALL map feature matching from county name string to
+5-digit FIPS code. Name-based matching will cause similar wrong-
+county bugs for any county that shares a name with another county
+in a different state (Washington, Jefferson, Lincoln, Madison etc —
+there are dozens of these).
+
+════════════════════════════════════════════════
+TEST AFTER FIXING
+════════════════════════════════════════════════
+
+1. Enter zip 90210 — map must highlight Los Angeles County,
+   centered near Beverly Hills. Fresno must not be highlighted.
+
+2. Enter zip 37201 (Nashville) — Davidson County TN highlighted.
+   Not Davidson County NC.
+
+3. Enter zip 30501 (Gainesville GA) — Hall County GA highlighted.
+   Not Hall County TX or Hall County NE.
+
+4. Enter zip 10001 (New York City) — Manhattan/New York County
+   highlighted. Map centers on NYC.
