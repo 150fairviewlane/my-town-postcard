@@ -792,9 +792,26 @@ async function searchByZip(){
     } else if(propData.type === 'proposed'){
       activeProposals = propData.proposals || [];
       activeProposalZip = zip;
-      if(lat && lng){
+      drawProposalLayers(activeProposals);
+
+      // Zoom to proposal centroids; fall back to geo lat/lng for unlisted states
+      const validCentroids = activeProposals
+        .filter(p => p.centroidLat && p.centroidLng)
+        .map(p => [p.centroidLat, p.centroidLng]);
+      if(validCentroids.length === 1){
+        map.setView(validCentroids[0], 7, { animate: true });
+      } else if(validCentroids.length > 1){
+        const bounds = L.latLngBounds(validCentroids);
+        // Only fitBounds when proposals genuinely span different locations;
+        // otherwise all-same state centroid would collapse to zero bounds and zoom to max
+        const diagonal = bounds.getNorthEast().distanceTo(bounds.getSouthWest());
+        if(diagonal > 5000){
+          map.fitBounds(bounds.pad(0.3), { animate: true });
+        } else {
+          map.setView(validCentroids[0], 7, { animate: true });
+        }
+      } else if(lat && lng){
         map.setView([lat, lng], 9, { animate: true });
-        drawProposalLayers(lat, lng, activeProposals);
       }
       showProposedUI();
 
@@ -1038,19 +1055,24 @@ function clearProposalUI(){
   selectedClusterIdx = 0;
 }
 
-function drawProposalLayers(lat, lng, proposals){
+function drawProposalLayers(proposals){
   clearProposalLayers();
-  const colors = ['#F59E0B','#D97706','#B45309','#92400E'];
-  proposals.forEach((p, i) => {
-    const col = colors[i % colors.length];
-    const c = L.circle([lat, lng], {
-      radius: 12000 + i * 5000,
-      fillColor: col, fillOpacity: 0.18,
-      color: col, weight: 2, dashArray: '6 4',
+  proposals.forEach(p => {
+    const cLat = p.centroidLat;
+    const cLng = p.centroidLng;
+    if(!cLat || !cLng) return;
+    const c = L.circle([cLat, cLng], {
+      radius: 80000,
+      fillColor: '#F59E0B', fillOpacity: 0.15,
+      color: '#D97706', weight: 2, dashArray: '6 4',
     }).addTo(map);
+    const countyNames = (p.counties||[]).map(c => c.name).slice(0,3).join(', ');
     c.bindTooltip(
-      `<strong>${p.proposedName}</strong><br><span style="font-size:11px">${(p.totalBusinessCount||0).toLocaleString()} businesses</span>`,
-      { sticky: true, opacity: 0.92 }
+      `<div style="font-weight:700">${p.proposedName}</div>
+       <div style="font-size:11px;color:#555;margin-top:2px">Proposed Territory</div>
+       ${countyNames ? `<div style="font-size:11px;color:#666;margin-top:1px">${countyNames}</div>` : ''}
+       <div style="font-size:11px;color:#666;margin-top:1px">${(p.totalBusinessCount||0).toLocaleString()} ad-ready businesses</div>`,
+      { sticky: true, opacity: 0.95 }
     );
     proposalLayers.push(c);
   });

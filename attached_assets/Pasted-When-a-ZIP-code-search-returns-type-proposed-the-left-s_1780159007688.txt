@@ -1,0 +1,99 @@
+When a ZIP code search returns type: 'proposed', the left sidebar
+correctly shows the territory proposal card but the Leaflet map
+stays centered on Georgia instead of zooming to the proposed area.
+
+Fix the map so it responds to proposal results the same way it
+responds to existing territory results.
+
+════════════════════════════════════════════════
+THE FIX
+════════════════════════════════════════════════
+
+In the territory-finder frontend code, find where the API response
+is handled after a ZIP code search. There should be a conditional
+that checks response.type. The 'existing' branch zooms the map to
+the territory — add the same behavior to the 'proposed' branch.
+
+The proposal response includes centroid_lat and centroid_lng on
+each proposal object. Use those to zoom the map.
+
+Add this logic to the 'proposed' response handler:
+
+1. ZOOM THE MAP to the proposal centroid:
+
+   const proposal = response.proposals[0];
+   map.setView([proposal.centroidLat, proposal.centroidLng], 9);
+
+   If multiple proposals (split territory), fit bounds to include
+   all cluster centroids:
+
+   const bounds = response.proposals.map(p => [p.centroidLat, p.centroidLng]);
+   map.fitBounds(bounds, { padding: [40, 40] });
+
+2. HIGHLIGHT THE PROPOSED COUNTIES on the map in amber:
+
+   The proposal.counties array contains objects with county FIPS codes.
+   For each county FIPS in the proposal, find the matching GeoJSON
+   feature in the already-loaded county or ZIP layer and apply
+   the amber highlight style:
+
+   { fillColor: '#F59E0B', fillOpacity: 0.5,
+     color: '#D97706', weight: 2 }
+
+   If the GeoJSON layer uses county FIPS as the feature ID or a
+   property, filter by that. If it uses ZIP codes, highlight all
+   ZIPs whose territory assignment matches the proposed county FIPS.
+
+3. CLEAR PREVIOUS HIGHLIGHTS before applying new ones:
+
+   When a new search is performed, reset all previously highlighted
+   features back to their default style before applying the new
+   proposal highlights. This prevents amber highlights from
+   accumulating across multiple searches.
+
+4. ADD A MAP MARKER at the searched ZIP centroid:
+
+   Place the same burgundy dot marker used for existing territory
+   searches at the centroid of the searched ZIP code.
+   The ZIP centroid can be calculated from the proposal's
+   centroid_lat and centroid_lng since the proposal is built
+   from that ZIP's county.
+
+════════════════════════════════════════════════
+ALSO FIX — MAP TOOLTIP FOR PROPOSED COUNTIES
+════════════════════════════════════════════════
+
+When hovering over an amber-highlighted county on the map,
+the tooltip should show:
+
+   [Territory Name]
+   Proposed Territory
+   [business count] ad-ready businesses
+
+Instead of whatever the default tooltip currently shows for
+unassigned counties.
+
+════════════════════════════════════════════════
+TEST AFTER FIXING
+════════════════════════════════════════════════
+
+1. Go to /find-territory
+   Enter zip 90210 (Beverly Hills, CA)
+   Map must zoom to the Los Angeles area — not stay on Georgia
+   Los Angeles County (or the relevant cluster counties) must
+   highlight in amber on the map
+   Hovering the amber area shows the proposal tooltip
+
+2. Enter zip 37201 (Nashville, TN)
+   Map zooms to Tennessee
+   Davidson County highlights in amber
+
+3. Enter zip 30501 (Gainesville, GA) after the above tests
+   Map resets — amber highlights clear
+   Map zooms to Hall County GA
+   Hall County shows in green (existing available territory)
+   No amber highlight remaining from previous searches
+
+4. Enter zip 90210 again after the Georgia test
+   Map correctly zooms back to Los Angeles
+   Amber highlight reapplies cleanly
