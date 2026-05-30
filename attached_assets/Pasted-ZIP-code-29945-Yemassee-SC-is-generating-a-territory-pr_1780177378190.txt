@@ -1,0 +1,118 @@
+ZIP code 29945 (Yemassee, SC) is generating a territory proposal
+showing 500 businesses and 4 mailing areas even though the area
+is nearly uninhabited. The territory builder is using county-level
+business data without checking whether the triggering ZIP has enough
+people and households to justify a mailing.
+
+Two root causes:
+
+1. The builder proposes territories based on county business count
+   alone, with no household or population minimum check. Hampton
+   County SC has ~500 businesses but they are spread across 219
+   square miles of mostly rural land with only ~1,890 households
+   in the triggering ZIP code.
+
+2. The split logic divides any county over the business threshold
+   into 4 clusters regardless of whether those clusters have any
+   real commercial density or residential base.
+
+════════════════════════════════════════════════
+FIX 1 — ADD HOUSEHOLD MINIMUM TO TERRITORY VIABILITY
+════════════════════════════════════════════════
+
+Add a minimum household check to the territory viability logic.
+
+Add this constant to territoryBuilder.ts alongside the existing
+business count constants:
+
+  const MIN_HOUSEHOLDS = 8000; // minimum households for a viable territory
+
+The household count is available in the territories table already
+(households column). For auto-generated proposals, estimate
+households from the county-business-patterns data using this
+rough proxy: households ≈ business_count × 12.
+
+However this proxy breaks for rural counties with businesses spread
+thin. A better approach: load household data from the zip-county.csv
+or a separate Census ACS file.
+
+SIMPLEST VIABLE FIX for now:
+Add a households_estimate field to TerritoryProposal calculated as:
+  householdsEstimate = totalBusinessCount * 8
+  (roughly 1 ad-ready business per 8 households in typical markets)
+
+If householdsEstimate < MIN_HOUSEHOLDS (8,000):
+  Set isViable = false
+  Set viabilityReason = 'Insufficient residential base for direct mail'
+
+This means Hampton County SC with 500 businesses estimates only
+4,000 households — below the 8,000 minimum — and gets flagged
+as not viable rather than proposed as a real territory.
+
+════════════════════════════════════════════════
+FIX 2 — ADD POPULATION DENSITY CHECK ON ZIP LOOKUP
+════════════════════════════════════════════════
+
+Before running the territory builder, check whether the triggering
+ZIP code itself is viable. Add this check to getTerritoryForZip()
+immediately after getCountyFromZip() resolves:
+
+Use the zip-county.csv file which already has household data per ZIP.
+If the triggering ZIP has fewer than 500 households:
+
+  return {
+    type: 'unavailable',
+    message: 'This ZIP code appears to be in a rural or
+    non-residential area. Please try a nearby ZIP code in
+    a more populated town or city.'
+  }
+
+500 households is a very low floor — it filters out truly empty
+ZIPs like 29945 (Yemassee with ~0 residents in the ZCTA) without
+blocking legitimate small-town ZIPs.
+
+════════════════════════════════════════════════
+FIX 3 — DON'T SPLIT BORDERLINE COUNTIES
+════════════════════════════════════════════════
+
+The split logic currently fires at MAX_BUSINESS_COUNT = 1,600.
+Only split a county into sub-territories if it also has enough
+households to support multiple mailing areas:
+
+Add this condition to the split check:
+  if (businessCount >= MAX_BUSINESS_COUNT
+      AND householdsEstimate >= MIN_HOUSEHOLDS * 3):
+    → split into sub-territories
+  else if (businessCount >= MAX_BUSINESS_COUNT):
+    → do NOT split, return as single territory with isSplit = false
+
+A county needs at least 3× the minimum households (24,000) before
+splitting makes sense — otherwise each sub-territory would be too
+thin to mail effectively.
+
+════════════════════════════════════════════════
+TEST AFTER FIXING
+════════════════════════════════════════════════
+
+1. Enter zip 29945 (Yemassee SC)
+   Must return type: 'unavailable' with the rural area message
+   Must NOT propose a territory with 4 mailing areas
+
+2. Enter zip 29611 (Greenville SC — real city)
+   Must still return type: 'proposed' with a viable territory
+   Greenville County has ~220,000 households — well above minimum
+
+3. Enter zip 29072 (Lexington SC — suburb)
+   Must still return type: 'proposed'
+   Lexington County is a real suburban market
+
+4. Enter zip 30642 (Greensboro GA — small rural Georgia town)
+   Georgia hard gate still applies — returns existing territory
+   or unavailable, never proposed
+
+5. Enter a legitimate small-town zip in any non-Georgia state
+   with a real commercial district — should still propose correctly
+
+6. Log the householdsEstimate in the proposal response so it
+   is visible in the admin queue for manual review of borderline
+   territories.

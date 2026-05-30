@@ -20,10 +20,17 @@ import { logger } from "./logger";
 
 // ─── Thresholds ───────────────────────────────────────────────────────────────
 
-const MIN_BUSINESS_COUNT = 400;    // minimum to be a viable territory
-const MAX_BUSINESS_COUNT = 1600;   // above this, split into sub-territories
+const MIN_BUSINESS_COUNT = 400;    // minimum businesses to be a viable territory
+const MAX_BUSINESS_COUNT = 1600;   // above this, consider splitting into sub-territories
 const MIN_PER_CLUSTER = 100;       // minimum businesses per postcard area
 const MAX_NEIGHBOR_RINGS = 3;      // rings of neighbors before giving up on bundling
+
+// Household viability — proxy: 1 ad-ready business ≈ 12 households in typical markets.
+// Rural counties beat the business count floor but fail the household floor because
+// businesses are spread thin across low-density land.
+const HOUSEHOLDS_PER_BUSINESS = 12;
+const MIN_HOUSEHOLDS = 8_000;          // minimum estimated households for a viable territory
+const MIN_HOUSEHOLDS_TO_SPLIT = MIN_HOUSEHOLDS * 3; // 24,000 — need 3× minimum before splitting
 
 // States with manually managed territories — auto-builder never runs here.
 // Add states here as they are hand-seeded; they get the same hard gate automatically.
@@ -44,6 +51,7 @@ export interface TerritoryProposal {
     businessCount: number;
   }>;
   totalBusinessCount: number;
+  householdsEstimate: number; // proxy: totalBusinessCount × HOUSEHOLDS_PER_BUSINESS
   topCities: string[];
   isViable: boolean;
   isSplit: boolean;
@@ -236,6 +244,10 @@ export async function splitLargeCounty(
       stateAbbr,
       counties: [countyEntry],
       totalBusinessCount: countyEntry.businessCount,
+      // Splits are only created when the full county passed the household minimum
+      // (MIN_HOUSEHOLDS_TO_SPLIT = 3 × MIN_HOUSEHOLDS). Per-split household estimate
+      // may look thin in isolation but the county as a whole is viable.
+      householdsEstimate: Math.round(countyEntry.businessCount * HOUSEHOLDS_PER_BUSINESS),
       topCities,
       isViable: true,
       isSplit: true,
@@ -268,9 +280,20 @@ export async function buildTerritoryProposal(
   const businessCount = await getAdReadyBusinessCount(stateFips, countyFips);
   logger.info({ geoid, businessCount }, "Territory builder: starting county count");
 
-  // STEP 2 — Large county: split into clusters
+  // STEP 2 — Large county: split into clusters only when the county also has
+  // enough residential density to support multiple mailing areas.
+  // Counties that beat the business threshold but not the household threshold
+  // (e.g. a large sprawling rural county) fall through to the single-territory path.
   if (businessCount >= MAX_BUSINESS_COUNT) {
-    return splitLargeCounty(stateFips, countyFips, businessCount);
+    const countyHouseholdsEstimate = Math.round(businessCount * HOUSEHOLDS_PER_BUSINESS);
+    if (countyHouseholdsEstimate >= MIN_HOUSEHOLDS_TO_SPLIT) {
+      return splitLargeCounty(stateFips, countyFips, businessCount);
+    }
+    // Enough businesses but too rural to split — continue as single territory
+    logger.info(
+      { geoid, businessCount, countyHouseholdsEstimate, MIN_HOUSEHOLDS_TO_SPLIT },
+      "Territory builder: county above biz threshold but below split household minimum — keeping as single territory",
+    );
   }
 
   interface BundledCounty {
@@ -405,6 +428,7 @@ export async function buildTerritoryProposal(
   const name = generateTerritoryName(topCities, countyNames, stateAbbr);
   const slug = await generateSlug(name);
 
+  const householdsEstimate = Math.round(totalCount * HOUSEHOLDS_PER_BUSINESS);
   return {
     proposedName: name,
     slug,
@@ -417,8 +441,11 @@ export async function buildTerritoryProposal(
       businessCount: c.businessCount,
     })),
     totalBusinessCount: totalCount,
+    householdsEstimate,
     topCities,
-    isViable: totalCount >= MIN_BUSINESS_COUNT,
+    // Viable only when the territory has enough businesses AND enough estimated
+    // households to support a real direct-mail campaign.
+    isViable: totalCount >= MIN_BUSINESS_COUNT && householdsEstimate >= MIN_HOUSEHOLDS,
     isSplit: false,
     estimatedZones: Math.min(4, Math.floor(totalCount / MIN_PER_CLUSTER)),
     ...computeBundledCentroid(bundled.map(c => c.geoid)),
@@ -644,6 +671,25 @@ export async function getTerritoryForZip(
   // 4. Build proposals
   const rawResult = await buildTerritoryProposal(stateFips, countyFips3, zipCode);
   const proposals = Array.isArray(rawResult) ? rawResult : [rawResult];
+
+  // 4b. Household viability gate — if the combined county estimate falls below the
+  // minimum, the area is too rural for a direct-mail territory. Return unavailable
+  // before saving to DB or sending admin emails, so the admin queue stays clean.
+  // For split proposals, sum across splits to get the county total.
+  const countyTotalBiz = proposals.reduce((s, p) => s + p.totalBusinessCount, 0);
+  const countyHouseholdsEstimate = Math.round(countyTotalBiz * HOUSEHOLDS_PER_BUSINESS);
+  if (countyHouseholdsEstimate < MIN_HOUSEHOLDS) {
+    logger.info(
+      { zipCode, stateFips, countyFips3, countyTotalBiz, countyHouseholdsEstimate, MIN_HOUSEHOLDS },
+      "Territory builder: county below household minimum — returning unavailable instead of saving proposal",
+    );
+    return {
+      type: "unavailable",
+      message:
+        "This ZIP code appears to be in a rural or non-residential area. " +
+        "Please try a nearby ZIP code in a more populated town or city.",
+    };
+  }
 
   // 5. Save proposals to DB (skipped for test/smoke-test requests)
   const savedIds: number[] = [];
