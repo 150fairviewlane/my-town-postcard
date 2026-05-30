@@ -1,0 +1,153 @@
+The territory proposal display has two problems to fix.
+
+════════════════════════════════════════════════
+PROBLEM 1 — SPLIT ZONES SHOWN AS SEPARATE CHOICES
+════════════════════════════════════════════════
+
+When a large county like Bexar (San Antonio) splits into 4 zones,
+the UI shows them as 4 separate territories for the dealer to pick
+from. This is wrong.
+
+The correct behavior:
+  The dealer claims ONE territory. That territory contains 3-4
+  distinct postcard mailing zones inside it. The zones are not
+  separate products — they are the mailing areas within the
+  single territory the dealer owns.
+
+FIX THE PROPOSAL CARD:
+
+Replace the "SPLIT TERRITORY — PICK YOUR ZONE" section entirely.
+
+The proposal card should show ONE territory using this layout:
+
+  ┌─────────────────────────────────────────┐
+  │ 🗺 PROPOSED TERRITORY                    │
+  │ San Antonio Area                         │
+  │ Bexar County                             │
+  │                                          │
+  │ Ad-Ready Businesses     7,162            │
+  │ Postcard Mailing Areas  4                │
+  │ Monthly Fee             $99 / month      │
+  │ Status                  Pending Approval │
+  │                                          │
+  │ KEY MAILING AREAS                        │
+  │ • Atascosa / Von Ormy / Universal City   │
+  │ • Helotes / Adkins / Randolph AFB        │
+  │ • Macdona / Converse / Saint Hedwig      │
+  │ • Somerset / Elmendorf / San Antonio     │
+  │                                          │
+  │ This territory gives you exclusive       │
+  │ dealer rights across all 4 mailing       │
+  │ areas above.                             │
+  │                                          │
+  │ [✦ RESERVE THIS TERRITORY — $99/mo]      │
+  └─────────────────────────────────────────┘
+
+The 4 zones become bullet points labeled "Key Mailing Areas" —
+not separate choices. The dealer claims the whole thing.
+
+When the API returns isSplit: true with multiple proposals,
+merge them into one display:
+  - Territory name: use the first proposal's name or generate
+    a combined name from the county name + "Area"
+    e.g. "San Antonio Area" or "Bexar County Area"
+  - Business count: use the TOTAL across all splits
+    (sum all proposal.totalBusinessCount values)
+  - Mailing areas: list each split's proposedName as a bullet
+  - Counties: show the parent county name only
+  - Claim button: claims the whole territory (all splits together)
+
+When the dealer clicks Reserve, save ALL split proposals together
+as one claim — not just the selected sub-zone.
+
+════════════════════════════════════════════════
+PROBLEM 2 — MAP SHOWS CIRCLE NOT COUNTY SHAPE
+════════════════════════════════════════════════
+
+The map shows an amber circle approximation instead of the actual
+Bexar County boundary polygon.
+
+FIX:
+The map already has a GeoJSON layer loaded for county boundaries
+(used for the Georgia territories). For proposal territories,
+highlight the actual county polygon from that GeoJSON layer
+instead of drawing a circle.
+
+Find the county feature in the GeoJSON layer by matching the
+5-digit FIPS code from the proposal (stateFips + countyFips,
+zero-padded). Apply the amber fill style to that feature:
+
+  { fillColor: '#F59E0B', fillOpacity: 0.5,
+    color: '#D97706', weight: 2.5 }
+
+If the GeoJSON layer only covers Georgia counties, extend it to
+load US county GeoJSON. Use this endpoint which is already cached
+in the project:
+  GET /api/georgia-counties-geojson
+
+For non-Georgia states, fetch from the same plotly source already
+used for Georgia but filter to the relevant state FIPS:
+  https://raw.githubusercontent.com/plotly/datasets/master/
+  geojson-counties-fips.json
+
+Filter client-side to only the counties in the proposal to keep
+the download small. Cache the result per state so it only downloads
+once per session.
+
+If fetching a new state's GeoJSON takes more than 2 seconds, show
+the amber circle as a temporary placeholder while the real boundary
+loads, then swap it out when ready.
+
+════════════════════════════════════════════════
+ALSO FIX — NEARBY TERRITORIES SECTION
+════════════════════════════════════════════════
+
+Below the proposed territory card, show a "Nearby Territories"
+section listing other proposed or available territories in the
+same state — exactly like the existing nearby territories list
+shown for Georgia zip searches.
+
+These should be completely separate cards from the main proposal,
+not sub-zones of it. Each nearby territory card should show:
+  - Territory name
+  - County
+  - Business count
+  - Status (Proposed / Available)
+  - A "View" button to select it
+
+For now if no other territories exist in that state, hide the
+nearby section entirely rather than showing an empty list.
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+  The territory builder engine logic (proposals are still generated
+  as splits — just displayed differently in the UI)
+  Georgia territory behavior
+  The existing claim form and submission logic
+  Admin proposals queue
+
+════════════════════════════════════════════════
+TEST AFTER FIXING
+════════════════════════════════════════════════
+
+1. Enter zip 78201 (San Antonio, TX)
+   Proposal card shows ONE territory: "San Antonio Area"
+   Shows total business count (sum of all splits)
+   Shows 4 bullet points under "Key Mailing Areas"
+   No "Pick Your Zone" section visible
+   One Reserve button claiming the whole territory
+   Map highlights actual Bexar County polygon in amber
+   Not a circle
+
+2. Enter zip 37201 (Nashville, TN)
+   If Davidson County is large enough to split, same behavior —
+   one unified territory card with mailing areas listed as bullets
+   If not large enough to split, shows single territory card
+   with no mailing areas list (just the business count)
+
+3. Enter zip 30501 (Gainesville, GA)
+   Existing Georgia behavior unchanged
+   Green territory card, no mailing areas bullets
+   Nearby territories list shows surrounding Georgia territories

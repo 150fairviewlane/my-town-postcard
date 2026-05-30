@@ -780,4 +780,52 @@ router.get("/georgia-counties-geojson", async (req, res): Promise<void> => {
   }
 });
 
+// ─── GET /api/counties-geojson?stateFips=XX ───────────────────────────────────
+// Generic per-state county GeoJSON. Fetches the Plotly counties dataset once
+// (shared in-memory promise so concurrent requests don't double-fetch), filters
+// to the requested state FIPS prefix, and caches the filtered result per state.
+const stateGeoJsonCache = new Map<string, object>();
+let _plotlyAllCountiesPromise: Promise<any> | null = null;
+
+function getPlotlyAllCounties(): Promise<any> {
+  if (!_plotlyAllCountiesPromise) {
+    _plotlyAllCountiesPromise = fetch(
+      "https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json",
+      { signal: AbortSignal.timeout(20000) },
+    ).then(r => {
+      if (!r.ok) throw new Error(`Upstream ${r.status}`);
+      return r.json();
+    }).catch(err => {
+      _plotlyAllCountiesPromise = null;  // allow retry on next request
+      throw err;
+    });
+  }
+  return _plotlyAllCountiesPromise;
+}
+
+router.get("/counties-geojson", async (req, res): Promise<void> => {
+  const rawFips = typeof req.query.stateFips === "string" ? req.query.stateFips.trim() : "";
+  const stateFips = rawFips.padStart(2, "0");
+  if (!stateFips || stateFips === "00") {
+    res.status(400).json({ error: "stateFips query param required (e.g. ?stateFips=06)" });
+    return;
+  }
+  const cached = stateGeoJsonCache.get(stateFips);
+  if (cached) {
+    res.json(cached);
+    return;
+  }
+  try {
+    const allCounties = await getPlotlyAllCounties();
+    const features = allCounties.features.filter((f: any) => f.id && String(f.id).startsWith(stateFips));
+    const result = { type: "FeatureCollection", features };
+    stateGeoJsonCache.set(stateFips, result);
+    req.log.info({ stateFips, featureCount: features.length }, "Cached state county GeoJSON");
+    res.json(result);
+  } catch (err: any) {
+    req.log.error({ err: err?.message }, "Failed to fetch counties GeoJSON");
+    res.status(502).json({ error: "Could not load county GeoJSON" });
+  }
+});
+
 export default router;

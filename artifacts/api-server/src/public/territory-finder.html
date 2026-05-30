@@ -266,6 +266,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
 .sidebar-load-spin{width:22px;height:22px;border:3px solid rgba(124,28,46,.15);border-top-color:var(--burg);border-radius:50%;animation:spin .85s linear infinite;margin:0 auto 8px}
 .sidebar-load-lbl{font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.08em;color:var(--burg)}
 .sidebar-load-sub{font-family:'Crimson Pro',serif;font-style:italic;font-size:11px;color:var(--ink-light);margin-top:2px}
+/* Mailing areas bullet list inside proposal card */
+.pc-mailing-areas{margin:10px 0 0}
+.pc-mailing-areas-label{font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:7px}
+.pc-mailing-area-item{font-size:12px;color:rgba(255,255,255,.8);padding:5px 0;border-bottom:1px solid rgba(255,255,255,.08);line-height:1.4;padding-left:14px;position:relative}
+.pc-mailing-area-item::before{content:'•';position:absolute;left:0;color:#F59E0B}
+.pc-mailing-area-item:last-child{border-bottom:none}
 </style>
 </head>
 <body>
@@ -375,28 +381,24 @@ if(_sp.get('zip') && /^\d{5}$/.test(_sp.get('zip'))){
         <div class="sidebar-load-sub">Checking business density &amp; availability…</div>
       </div>
 
-      <!-- Proposal card (single or selected cluster) -->
+      <!-- Proposal card (unified — splits are merged, zones shown as bullets) -->
       <div class="proposal-card" id="proposalCard">
         <div class="pc-label">🗺 Proposed Territory</div>
         <div class="pc-name" id="pcName"></div>
         <div class="pc-counties" id="pcCounties"></div>
         <div class="sd-rows">
           <div class="sd-row"><span class="sd-label">Ad-Ready Businesses</span><span class="sd-val" id="pcBiz"></span></div>
-          <div class="sd-row"><span class="sd-label">Est. Coverage Zones</span><span class="sd-val" id="pcZones"></span></div>
+          <div class="sd-row" id="pcZonesRow" style="display:none"><span class="sd-label">Postcard Mailing Areas</span><span class="sd-val" id="pcZones"></span></div>
           <div class="sd-row"><span class="sd-label">Monthly Fee</span><span class="sd-val">$99 / month</span></div>
           <div class="sd-row"><span class="sd-label">Status</span><span class="sd-val" style="color:#fde68a">Pending Approval</span></div>
         </div>
-        <div id="pcCities" style="font-size:11px;color:rgba(255,255,255,.45);margin:6px 0 0;display:none"></div>
+        <div class="pc-mailing-areas" id="pcMailingAreas" style="display:none">
+          <div class="pc-mailing-areas-label">Key Mailing Areas</div>
+          <div id="pcMailingAreasList"></div>
+        </div>
         <hr class="pc-divider">
-        <div class="pc-note">This territory is being created for your area. Reserve it now and we'll activate it within 24 hours.</div>
+        <div class="pc-note" id="pcNote">This territory is being created for your area. Reserve it now and we'll activate it within 24 hours.</div>
         <button class="reserve-btn" onclick="openProposalModal()">✦ Reserve This Territory — $99/mo</button>
-      </div>
-
-      <!-- Cluster picker (split territory) -->
-      <div class="cluster-wrap" id="clusterWrap">
-        <div class="cluster-wrap-label">Split Territory — Pick Your Zone</div>
-        <div class="cluster-msg" id="clusterMsg"></div>
-        <div class="cluster-list" id="clusterList"></div>
       </div>
 
       <!-- Unavailable -->
@@ -792,28 +794,26 @@ async function searchByZip(){
     } else if(propData.type === 'proposed'){
       activeProposals = propData.proposals || [];
       activeProposalZip = zip;
+
+      // showProposedUI first so _activeDisplayProposal is set before drawProposalLayers
+      // builds its tooltip (uses the merged county-level name, not a raw zone name)
+      showProposedUI();
       drawProposalLayers(activeProposals);
 
-      // Zoom to proposal centroids; fall back to geo lat/lng for unlisted states
+      // Zoom to the proposal centroid; fall back to geo lat/lng for unlisted states
       const validCentroids = activeProposals
         .filter(p => p.centroidLat && p.centroidLng)
         .map(p => [p.centroidLat, p.centroidLng]);
-      if(validCentroids.length === 1){
-        map.setView(validCentroids[0], 7, { animate: true });
-      } else if(validCentroids.length > 1){
-        const bounds = L.latLngBounds(validCentroids);
-        // Only fitBounds when proposals genuinely span different locations;
-        // otherwise all-same state centroid would collapse to zero bounds and zoom to max
-        const diagonal = bounds.getNorthEast().distanceTo(bounds.getSouthWest());
-        if(diagonal > 5000){
-          map.fitBounds(bounds.pad(0.3), { animate: true });
-        } else {
-          map.setView(validCentroids[0], 7, { animate: true });
-        }
+      if(validCentroids.length >= 1){
+        // All split proposals share the same county centroid — setView on the first
+        map.setView(validCentroids[0], 8, { animate: true });
       } else if(lat && lng){
         map.setView([lat, lng], 9, { animate: true });
       }
-      showProposedUI();
+
+      // Show other territories in the same state below the proposal card
+      const proposalStateAbbr = (activeProposals[0]?.stateAbbr || '').toUpperCase();
+      fetchAndShowNearbyProposals(proposalStateAbbr);
 
     } else {
       // unavailable
@@ -1040,41 +1040,87 @@ async function submitClaim(){
 // ══════════════════════════════════════════════════════════════
 let activeProposals = [];
 let activeProposalZip = '';
-let selectedClusterIdx = 0;
 let proposalLayers = [];
 let _proposalMode = false;
+let _activeDisplayProposal = null;  // merged/single proposal shown to the dealer
+let _proposalDrawGen = 0;           // incremented on each new drawProposalLayers call
+// Per-session GeoJSON cache: stateFips → Promise<FeatureCollection|null>
+const _stateGeoJsonCache = new Map();
 
 function clearProposalUI(){
   document.getElementById('proposalCard').classList.remove('visible');
-  document.getElementById('clusterWrap').style.display = 'none';
   document.getElementById('unavailCard').classList.remove('visible');
   document.getElementById('successCard').classList.remove('visible');
   clearProposalLayers();
   activeProposals = [];
   activeProposalZip = '';
-  selectedClusterIdx = 0;
+  _activeDisplayProposal = null;
+}
+
+function fetchStateCountiesGeoJson(stateFips){
+  if(_stateGeoJsonCache.has(stateFips)) return _stateGeoJsonCache.get(stateFips);
+  const p = fetch(`/api/counties-geojson?stateFips=${stateFips}`)
+    .then(r => r.ok ? r.json() : null)
+    .catch(() => null);
+  _stateGeoJsonCache.set(stateFips, p);
+  return p;
 }
 
 function drawProposalLayers(proposals){
   clearProposalLayers();
-  proposals.forEach(p => {
-    const cLat = p.centroidLat;
-    const cLng = p.centroidLng;
-    if(!cLat || !cLng) return;
-    const c = L.circle([cLat, cLng], {
-      radius: 80000,
-      fillColor: '#F59E0B', fillOpacity: 0.15,
+  if(!proposals.length) return;
+
+  const myGen = ++_proposalDrawGen;
+
+  // Collect all county 5-digit FIPS across all proposals
+  const countyFipsSet = new Set();
+  proposals.forEach(p => (p.counties||[]).forEach(c => { if(c.fips) countyFipsSet.add(String(c.fips)); }));
+
+  // State FIPS from first county (first 2 chars of the 5-digit GEOID)
+  const firstFips = [...countyFipsSet][0];
+  const stateFips = firstFips ? firstFips.slice(0, 2) : null;
+
+  // Build tooltip using the merged/display proposal
+  const display = _activeDisplayProposal || proposals[0];
+  const tooltipHtml =
+    `<div style="font-weight:700">${display.proposedName}</div>
+     <div style="font-size:11px;color:#555;margin-top:2px">Proposed Territory</div>
+     <div style="font-size:11px;color:#666;margin-top:1px">${(display.totalBusinessCount||0).toLocaleString()} ad-ready businesses</div>`;
+
+  // Show amber circle immediately as a placeholder while GeoJSON loads
+  const cLat = display.centroidLat || proposals[0]?.centroidLat;
+  const cLng = display.centroidLng || proposals[0]?.centroidLng;
+  if(cLat && cLng){
+    const circle = L.circle([cLat, cLng], {
+      radius: 55000,
+      fillColor: '#F59E0B', fillOpacity: 0.2,
       color: '#D97706', weight: 2, dashArray: '6 4',
     }).addTo(map);
-    const countyNames = (p.counties||[]).map(c => c.name).slice(0,3).join(', ');
-    c.bindTooltip(
-      `<div style="font-weight:700">${p.proposedName}</div>
-       <div style="font-size:11px;color:#555;margin-top:2px">Proposed Territory</div>
-       ${countyNames ? `<div style="font-size:11px;color:#666;margin-top:1px">${countyNames}</div>` : ''}
-       <div style="font-size:11px;color:#666;margin-top:1px">${(p.totalBusinessCount||0).toLocaleString()} ad-ready businesses</div>`,
-      { sticky: true, opacity: 0.95 }
-    );
-    proposalLayers.push(c);
+    circle.bindTooltip(tooltipHtml, { sticky: true, opacity: 0.95 });
+    proposalLayers.push(circle);
+  }
+
+  if(!stateFips || !countyFipsSet.size) return;
+
+  // Async: fetch county polygons, then replace the circle with the real shape
+  fetchStateCountiesGeoJson(stateFips).then(geoJson => {
+    if(!geoJson || _proposalDrawGen !== myGen) return;  // stale or cleared
+
+    const features = geoJson.features.filter(f => countyFipsSet.has(String(f.id)));
+    if(!features.length) return;
+
+    clearProposalLayers();   // remove placeholder circle
+
+    const layer = L.geoJSON(
+      { type: 'FeatureCollection', features },
+      {
+        style: { fillColor: '#F59E0B', fillOpacity: 0.5, color: '#D97706', weight: 2.5 },
+        onEachFeature: (_, lyr) => {
+          lyr.bindTooltip(tooltipHtml, { sticky: true, opacity: 0.95 });
+        }
+      }
+    ).addTo(map);
+    proposalLayers.push(layer);
   });
 }
 
@@ -1083,49 +1129,95 @@ function clearProposalLayers(){
   proposalLayers = [];
 }
 
+// Merge split proposals into one unified display object.
+// Single proposals pass through unchanged (mailingAreas = []).
+function mergeProposals(proposals){
+  if(!proposals.length) return null;
+  if(proposals.length === 1) return { ...proposals[0], mailingAreas: [] };
+
+  const allSplit = proposals.every(p => p.isSplit);
+  if(!allSplit) return { ...proposals[0], mailingAreas: [] };
+
+  // Derive county-level name: strip legal suffix, append "Area"
+  const firstCountyName = proposals[0]?.counties?.[0]?.name || '';
+  const countyShort = firstCountyName
+    .replace(/\s+(County|Parish|Borough|Census Area|City and Borough|Municipality|Municipio|District|City)$/i, '')
+    .trim();
+  const mergedName = countyShort ? countyShort + ' Area' : proposals[0].proposedName;
+
+  return {
+    ...proposals[0],
+    proposedName: mergedName,
+    totalBusinessCount: proposals.reduce((s, p) => s + (p.totalBusinessCount || 0), 0),
+    estimatedZones: proposals.length,
+    mailingAreas: proposals.map(p => p.proposedName),
+  };
+}
+
 function showProposedUI(){
   document.getElementById('selectedDetail').classList.remove('visible');
   document.getElementById('resultsHdr').style.display = 'none';
   document.getElementById('territoryList').innerHTML = '';
 
-  if(activeProposals.length === 1){
-    selectedClusterIdx = 0;
-    document.getElementById('clusterWrap').style.display = 'none';
-    renderProposalCard(activeProposals[0]);
-  } else {
-    document.getElementById('clusterMsg').textContent =
-      `Your area supports ${activeProposals.length} coverage zones. Pick the one that best fits your market.`;
-    document.getElementById('clusterList').innerHTML = activeProposals.map((p, i) => `
-      <div class="cluster-item${i===0?' sel':''}" id="cli-${i}" onclick="pickCluster(${i})">
-        <div class="cluster-item-name">${p.proposedName}</div>
-        <div class="cluster-item-meta">${(p.totalBusinessCount||0).toLocaleString()} businesses · ${(p.topCities||[]).slice(0,2).join(', ')}</div>
-      </div>
-    `).join('');
-    document.getElementById('clusterWrap').style.display = 'block';
-    selectedClusterIdx = 0;
-    renderProposalCard(activeProposals[0]);
-  }
-}
-
-function pickCluster(idx){
-  selectedClusterIdx = idx;
-  document.querySelectorAll('.cluster-item').forEach((el, i) => el.classList.toggle('sel', i===idx));
-  renderProposalCard(activeProposals[idx]);
+  const merged = mergeProposals(activeProposals);
+  _activeDisplayProposal = merged;
+  renderProposalCard(merged);
 }
 
 function renderProposalCard(p){
+  if(!p) return;
   document.getElementById('pcName').textContent = p.proposedName;
   document.getElementById('pcCounties').textContent = (p.counties||[]).map(c => c.name).join(' · ');
   document.getElementById('pcBiz').textContent = (p.totalBusinessCount||0).toLocaleString();
-  document.getElementById('pcZones').textContent = p.estimatedZones || '—';
-  const citEl = document.getElementById('pcCities');
-  if(p.topCities && p.topCities.length){
-    citEl.textContent = 'Key Cities: ' + p.topCities.slice(0,4).join(', ');
-    citEl.style.display = '';
+
+  const mailingAreas = p.mailingAreas || [];
+  const zonesRow    = document.getElementById('pcZonesRow');
+  const mailingWrap = document.getElementById('pcMailingAreas');
+  const mailingList = document.getElementById('pcMailingAreasList');
+  const noteEl      = document.getElementById('pcNote');
+
+  if(mailingAreas.length > 1){
+    document.getElementById('pcZones').textContent = mailingAreas.length;
+    zonesRow.style.display = '';
+    mailingList.innerHTML = mailingAreas
+      .map(name => `<div class="pc-mailing-area-item">${name}</div>`)
+      .join('');
+    mailingWrap.style.display = '';
+    noteEl.textContent =
+      `This territory gives you exclusive dealer rights across all ${mailingAreas.length} mailing areas above.`;
   } else {
-    citEl.style.display = 'none';
+    zonesRow.style.display = 'none';
+    mailingWrap.style.display = 'none';
+    noteEl.textContent = "This territory is being created for your area. Reserve it now and we'll activate it within 24 hours.";
   }
+
   document.getElementById('proposalCard').classList.add('visible');
+}
+
+// Fetch and display DB territories in the same state so the dealer can browse
+// alternatives. Only used for non-GA proposed results; GA uses findNearbyTerritories().
+async function fetchAndShowNearbyProposals(stateAbbr){
+  if(!stateAbbr || stateAbbr === 'GA') return;
+  try {
+    const res = await fetch(`/api/territories?state=${stateAbbr}`);
+    if(!res.ok) return;
+    const rows = await res.json();
+    const nearby = rows
+      .filter(t => t.status === 'proposed' || t.status === 'available')
+      .filter(t => t.centroidLat != null && t.centroidLng != null)
+      .map(t => ({
+        id:         t.id,
+        name:       t.name,
+        counties:   Array.isArray(t.counties) ? t.counties : [],
+        households: t.households || 0,
+        status:     t.status,
+        zoneNote:   t.zoneNote || '',
+        lat:        t.centroidLat,
+        lng:        t.centroidLng,
+      }));
+    if(!nearby.length) return;
+    showNearbyTerritories(nearby, `Other Territories in ${stateAbbr}`);
+  } catch(e) { /* silently ignore */ }
 }
 
 function showUnavailCard(msg){
@@ -1141,7 +1233,7 @@ function showUnavailCard(msg){
 function openProposalModal(){
   if(!activeProposals.length) return;
   _proposalMode = true;
-  const p = activeProposals[selectedClusterIdx];
+  const p = _activeDisplayProposal || activeProposals[0];
   document.getElementById('modalTerritoryName').textContent = p.proposedName;
   document.getElementById('modalTerritoryCounties').textContent =
     (p.counties||[]).map(c => c.name).join(' · ') + ' · ' + (p.totalBusinessCount||0).toLocaleString() + ' businesses';
@@ -1179,9 +1271,8 @@ async function submitProposalClaim(){
     const data = await resp.json();
     closeModal();
 
-    const p = activeProposals[selectedClusterIdx];
+    const p = _activeDisplayProposal || activeProposals[0];
     document.getElementById('proposalCard').classList.remove('visible');
-    document.getElementById('clusterWrap').style.display = 'none';
     clearProposalLayers();
 
     if(data.type === 'proposed' || data.type === 'existing'){
