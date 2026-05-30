@@ -1,0 +1,67 @@
+South Carolina ZIP codes 29611, 29072, and 29464 are all returning
+type: 'unavailable' instead of type: 'proposed'. Ohio and Texas
+are working correctly. Diagnose and fix.
+
+════════════════════════════════════════════════
+DIAGNOSE FIRST — REPORT BEFORE FIXING
+════════════════════════════════════════════════
+
+1. Check the MANAGED_STATES constant in territoryBuilder.ts.
+   Report its exact current value. It should only contain 'GA'.
+   If it contains 'SC' or any other state, that is the bug.
+
+2. Call getCountyFromZip('29611') directly and log the full
+   return value. Report what county, state, stateFips, and
+   stateAbbr it returns.
+
+3. Run getTerritoryForZip('29611') with verbose logging and
+   report exactly which line causes it to return 'unavailable'
+   and what the reason message is.
+
+4. Check the territory_proposals table for any existing SC rows:
+   SELECT * FROM territory_proposals WHERE state_abbr = 'SC';
+   Report how many rows exist and their status values.
+
+════════════════════════════════════════════════
+LIKELY CAUSES
+════════════════════════════════════════════════
+
+CAUSE A — SC is in MANAGED_STATES
+  Fix: Remove 'SC' from MANAGED_STATES. Only 'GA' should be there.
+  MANAGED_STATES should be: const MANAGED_STATES = ['GA'];
+
+CAUSE B — zip-county.csv has wrong state for SC zips
+  SC zip codes start with 29. If the CSV maps these to the wrong
+  state FIPS, the state guard or conflict checker may misfire.
+  Fix: grep "29611" src/data/zip-county.csv and report the row.
+  If state is wrong, add ZIP_OVERRIDES for common SC zips:
+    '29611': Greenville County SC (FIPS 45045)
+    '29072': Lexington County SC (FIPS 45063)
+    '29464': Charleston County SC (FIPS 45019)
+
+CAUSE C — Stale proposal records blocking SC
+  If test proposals were created for SC counties during building,
+  the duplicate check blocks new submissions.
+  Fix: DELETE FROM territory_proposals
+       WHERE state_abbr = 'SC' AND status = 'pending_review';
+
+CAUSE D — SC territories accidentally seeded in territories table
+  If the Georgia seed script accidentally inserted SC rows,
+  the conflict checker finds them and returns 'unavailable'
+  because their status is not 'available'.
+  Fix: SELECT * FROM territories WHERE state = 'SC';
+  Report any rows found. Delete any that should not exist.
+
+════════════════════════════════════════════════
+AFTER DIAGNOSING
+════════════════════════════════════════════════
+
+Apply whichever fix matches the actual cause found above.
+
+Then confirm all three SC zips work:
+  29611 (Greenville SC) → type: 'proposed' with Greenville area
+  29072 (Lexington SC)  → type: 'proposed' with Lexington area
+  29464 (Mt Pleasant SC) → type: 'proposed' with Charleston area
+
+All three should show proposed territory cards on the map
+centered on South Carolina — not Georgia.

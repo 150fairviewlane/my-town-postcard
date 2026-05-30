@@ -308,11 +308,17 @@ export async function buildTerritoryProposal(
       arr.forEach(n => claimedShortNames.add(n));
     }
 
-    // Load pending proposal county FIPs to avoid double-proposing
+    // Load pending proposal county FIPs (same state only) to avoid double-proposing.
+    // Must filter by stateFips — county FIPS are 3-digit and reused across states.
     const pendingProposals = await db
       .select({ proposedCounties: territoryProposalsTable.proposedCounties })
       .from(territoryProposalsTable)
-      .where(eq(territoryProposalsTable.status, "pending_review"));
+      .where(
+        and(
+          eq(territoryProposalsTable.stateFips, stateFips),
+          eq(territoryProposalsTable.status, "pending_review"),
+        ),
+      );
 
     const pendingGeoids = new Set<string>();
     for (const p of pendingProposals) {
@@ -606,15 +612,19 @@ export async function getTerritoryForZip(
     return { type: "existing", territory: existing as Record<string, unknown> };
   }
 
-  // 3. Check for pending proposals WITH dealer contact for this county,
-  // created within the last 48 hours. Older records are treated as stale
-  // and never block new submissions. Anonymous previews (dealerEmail IS NULL)
-  // are also excluded so the first ZIP search never blocks the claim form.
+  // 3. Check for pending proposals WITH dealer contact for this exact county
+  // (same state + same 3-digit county FIPS), created within the last 48 hours.
+  // Older records are treated as stale and never block new submissions.
+  // Anonymous previews (dealerEmail IS NULL) are also excluded so the first
+  // ZIP search never blocks the claim form.
+  // Both stateFips AND countyFips are required — county FIPS are 3-digit and
+  // are reused across states, so matching county alone causes cross-state false positives.
   const activePending = await db
     .select({ id: territoryProposalsTable.id })
     .from(territoryProposalsTable)
     .where(
       and(
+        eq(territoryProposalsTable.stateFips, stateFips),
         eq(territoryProposalsTable.countyFips, countyFips3.padStart(3, "0")),
         eq(territoryProposalsTable.status, "pending_review"),
         isNotNull(territoryProposalsTable.dealerEmail),
