@@ -1,0 +1,319 @@
+Build the dealer-facing territory proposal UI and admin approval queue.
+This is Prompt 3 of 3. It builds on top of the Census module (Prompt 1)
+and territory builder engine (Prompt 2). All backend logic already exists
+— this prompt is UI and wiring only.
+
+
+════════════════════════════════════════════════
+OVERVIEW
+════════════════════════════════════════════════
+
+Two new pages:
+
+PAGE 1 — /find-territory (UPDATE existing page)
+  Add a new flow for dealers in states with no pre-defined territories.
+  When a dealer enters a zip code that returns type: 'proposed' from
+  the territory builder, show them their proposed territory on the map
+  with a summary card and a claim form. This is seamlessly integrated
+  into the existing Find Your Territory page — not a separate page.
+
+PAGE 2 — /admin/territory-proposals (NEW page)
+  Admin-only queue showing all pending territory proposals.
+  One-click approve or reject. Approved proposals become live
+  territories immediately.
+
+
+════════════════════════════════════════════════
+CHANGE 1 — UPDATE /find-territory FOR AUTO-PROPOSALS
+════════════════════════════════════════════════
+
+The existing /find-territory page already handles two cases:
+  - type: 'existing' → shows the existing territory on the map
+  - type: 'unavailable' → shows an error message
+
+Add handling for the new third case:
+  - type: 'proposed' → show the proposed territory
+
+When the API returns type: 'proposed':
+
+1. SHOW THE PROPOSED TERRITORY ON THE MAP
+   Use the same Leaflet map already on the page.
+   For each county in the proposal's counties array, highlight it
+   on the map using a distinct color — use amber/gold (#F59E0B)
+   to differentiate from the green (available) and red (taken)
+   territories already shown.
+   If multiple proposals are returned (split territory), show all
+   clusters in different shades of amber and let the dealer pick one.
+
+2. SHOW A PROPOSAL SUMMARY CARD in the left sidebar
+   Replace the territory list with this card:
+
+   ┌─────────────────────────────────────────┐
+   │ 🗺 PROPOSED TERRITORY                    │
+   │ [Territory Name]                         │
+   │ [County names]                           │
+   │                                          │
+   │ Ad-Ready Businesses   [count]            │
+   │ Estimated Zones       [1-4]              │
+   │ Monthly Fee           $99 / month        │
+   │ Status                Pending Approval   │
+   │                                          │
+   │ Key Cities:                              │
+   │ [city1], [city2], [city3], [city4]       │
+   │                                          │
+   │ ────────────────────────────────────── │
+   │ This territory is being created for      │
+   │ your area. Reserve it now and we'll      │
+   │ activate it within 24 hours.             │
+   │                                          │
+   │ [✦ RESERVE THIS TERRITORY — $99/mo]      │
+   └─────────────────────────────────────────┘
+
+   Style the card to match the existing selected territory detail
+   panel — same dark background, same font, same burgundy button.
+   Replace "Available" green with "Pending Approval" in amber.
+
+3. CLAIM FORM
+   When dealer clicks Reserve This Territory, show the same modal
+   already used for existing territory claims. Collect:
+     Full Name *
+     Email *
+     Phone *
+   
+   On submit, POST to /api/territories/propose with the zip code
+   and dealer info included:
+     { zipCode, dealerName, dealerEmail, dealerPhone }
+   
+   This saves the proposal to territory_proposals with dealer contact
+   info attached and sends the admin notification email.
+
+4. SUCCESS STATE
+   After submitting, replace the card with:
+
+   ✓ Territory Reserved!
+   
+   [Territory Name] has been reserved for you.
+   We'll activate your territory within 24 hours and
+   send setup instructions to [email].
+   
+   Questions? Contact us at [admin email from config]
+
+5. HANDLE SPLIT TERRITORIES
+   If the proposal is a split (isSplit: true, proposals is an array):
+   Show all clusters on the map simultaneously in different amber shades.
+   Show a message: "Your area supports [N] territories. Pick the one
+   that best fits your target market."
+   Show a small card for each cluster that the dealer can click to select.
+   Once selected, proceed with the same claim flow above.
+
+
+════════════════════════════════════════════════
+CHANGE 2 — SEARCH FLOW UPDATE
+════════════════════════════════════════════════
+
+The existing search flow on /find-territory calls the API when a dealer
+enters a zip code or selects a county. Update the search handler to call
+the new endpoint:
+
+  POST /api/territories/propose
+  Body: { zipCode: enteredZip }
+
+Instead of the existing GET /api/territories?state=GA endpoint for
+the initial zip search. Keep the existing behavior for county dropdown
+selection and map clicking — those still use the existing territories API.
+
+The response type field determines what to show:
+  type: 'existing'    → existing behavior (show territory on map, claim it)
+  type: 'unavailable' → show error message with contact info
+  type: 'proposed'    → new behavior (show proposal card as above)
+
+Add a loading state while the proposal is being built — it may take
+3-8 seconds since it's fetching business data. Show a spinner with
+the message "Analyzing your area..." during the wait.
+
+
+════════════════════════════════════════════════
+CHANGE 3 — ADMIN PROPOSALS PAGE
+════════════════════════════════════════════════
+
+Create a new page at /admin/territory-proposals
+Protect with the same admin auth used by /admin/territories.
+Add a link to it in the admin navigation alongside Territory Manager,
+labeled "Territory Proposals".
+
+PAGE LAYOUT:
+
+HEADER
+  Title: "Territory Proposals"
+  Subtitle: "Review and approve auto-generated territory requests"
+  Stats bar: [X Pending] [X Approved] [X Rejected] — clickable filters
+
+PROPOSALS TABLE
+  Each row shows one proposal:
+
+  Territory Name  | State | Counties | Businesses | Cities | Dealer | Submitted | Actions
+  ─────────────────────────────────────────────────────────────────────────────────────
+  Nashville Area  | TN    | Davidson | 4,200      | Nashville, Brentwood... | John S. | 2h ago | [Approve] [Reject]
+  Columbus / Grove City | OH | Franklin | 892   | Columbus, Grove City... | — | 1d ago | [Approve] [Reject]
+
+  Columns:
+  - Territory Name (proposed name, editable inline on click)
+  - State
+  - Counties (comma separated)
+  - Ad-Ready Businesses (from business_count)
+  - Key Cities (from proposed_cities, first 3)
+  - Dealer (dealer_name + dealer_email if provided, "—" if anonymous)
+  - Submitted (relative time, e.g. "2 hours ago")
+  - Actions
+
+  Color code rows:
+    business_count >= 400 → white background (viable)
+    business_count < 400  → amber background (borderline, needs review)
+
+APPROVE ACTION
+  Clicking [Approve] on a row:
+  1. Show a small inline confirmation panel below the row (not a modal):
+     
+     Territory Name: [editable input, pre-filled with proposed name]
+     Initial Status: [dropdown: Available / Coming Soon]
+     [Confirm Approval] [Cancel]
+  
+  2. On Confirm: POST /api/admin/territory-proposals/:id/approve
+     Body: { overrides: { name: editedName, status: selectedStatus } }
+  
+  3. Row updates to show "Approved ✓" with green background
+     Territory is now live in the territories table
+
+REJECT ACTION
+  Clicking [Reject]:
+  1. Show inline: [Reason input] [Confirm Reject] [Cancel]
+  2. On Confirm: POST /api/admin/territory-proposals/:id/reject
+     Body: { reason: enteredReason }
+  3. Row updates to show "Rejected" with grey background
+
+PROPOSAL DETAIL PANEL
+  Clicking anywhere on a row (not the action buttons) expands
+  a detail panel below the row showing:
+  - Full county list with business counts per county
+  - All proposed cities
+  - Full dealer contact info (name, email, phone)
+  - The zip code that triggered the proposal
+  - Whether it's a split territory and which cluster
+  - A mini map showing the proposed territory counties highlighted
+    (use the same Leaflet map component, centered on the territory centroid)
+  - Business viability assessment:
+    ✓ Meets minimum business threshold (400+)   [if >= 400]
+    ⚠ Below minimum — review manually           [if < 400]
+    ✓ Supports [N] postcard zones               [estimatedZones]
+
+
+════════════════════════════════════════════════
+CHANGE 4 — ADMIN EMAIL NOTIFICATION
+════════════════════════════════════════════════
+
+When a new proposal is submitted by a dealer, the admin notification
+email (already implemented in Prompt 2's Change 8) should include
+a direct link to the proposal in the admin queue:
+
+  Review and approve at:
+  https://my-town-postcard.replit.app/admin/territory-proposals
+
+If email is not yet configured in the project, add a visible
+notification badge to the admin navigation instead:
+  "Territory Proposals (3)" — the number updates when new proposals arrive.
+Use a simple DB query COUNT(*) WHERE status = 'pending_review' to
+get the badge count. Refresh it every 60 seconds on admin pages.
+
+
+════════════════════════════════════════════════
+CHANGE 5 — AUTOMATIC LANDING PAGE ON APPROVAL
+════════════════════════════════════════════════
+
+When an admin approves a territory proposal AND the proposal has
+dealer contact info (dealer_email is not null):
+
+Automatically trigger the landing page creation flow that already
+exists in the project (from the landing page system build):
+  - Create a landing_pages record for the new territory
+  - Create all 15 ad_slot records with status = 'available'
+  - Set is_published = true
+
+If the dealer has already paid (stripe_subscription_id exists on
+their dealer record), the landing page goes live immediately.
+
+If the dealer has not yet paid, create the landing page with
+is_published = false and trigger the Stripe subscription checkout
+email to the dealer so they can complete payment.
+
+If no dealer info is attached to the proposal (anonymous submission),
+skip landing page creation — admin will handle it manually when
+a dealer claims the territory through the normal flow.
+
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+  Georgia territory data, ZIP assignments, or territory finder map
+  Existing territory claim flow for pre-defined territories
+  Any ad generator, image library, or Habersham landing page
+  Stripe integration beyond what is described above
+  Authentication logic
+
+
+════════════════════════════════════════════════
+TEST AFTER BUILDING
+════════════════════════════════════════════════
+
+TEST 1 — Proposal flow for non-Georgia zip
+  Go to /find-territory
+  Enter zip code 37201 (Nashville, TN)
+  Confirm:
+    Loading spinner appears for 3-8 seconds
+    Map highlights Davidson County in amber
+    Sidebar shows proposal card with Nashville business count
+    "Pending Approval" status shown in amber
+    Reserve This Territory button visible
+
+TEST 2 — Claim the proposal
+  Click Reserve This Territory on the Nashville proposal
+  Fill in name, email, phone
+  Submit
+  Confirm success message appears with email address shown
+  Confirm a row appears in territory_proposals table
+
+TEST 3 — Georgia still protected
+  Enter zip 30501 (Gainesville GA)
+  Confirm existing GA-026 Hall County territory is shown
+  No proposal card, no amber highlighting
+  Normal green available territory behavior
+
+TEST 4 — Admin proposals queue
+  Go to /admin/territory-proposals
+  Nashville proposal from Test 2 appears in the table
+  Business count shown correctly
+  Dealer name and email shown
+  Row background is white (business count >= 400)
+
+TEST 5 — Approve the proposal
+  Click Approve on the Nashville row
+  Edit the name if desired
+  Click Confirm Approval
+  Row shows "Approved ✓" in green
+  GET /api/territories?state=TN now returns the Nashville territory
+  Territory appears on /find-territory map in green (available)
+
+TEST 6 — Split territory display
+  Enter zip 90001 (Los Angeles, CA)
+  LA County has 50,000+ businesses — should trigger split into 4 clusters
+  Map shows 4 amber-highlighted clusters
+  Sidebar shows "Your area supports 4 territories" message
+  Clicking each cluster card highlights just that cluster
+
+TEST 7 — Borderline territory
+  Enter a rural zip with low business count (test with a small
+  rural county in any non-Georgia state)
+  If business count < 400 after bundling:
+  Proposal card still shows but with a note about limited market size
+  Admin queue shows the row with amber background
+  Admin can still approve it manually

@@ -233,6 +233,39 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
   font-family:'Crimson Pro',serif;font-style:italic;font-size:14px;
   color:var(--ink-light);margin-top:-12px;
 }
+
+/* ── PROPOSAL FLOW ──────────────────────────────────────────── */
+.proposal-card{background:var(--ink);color:#fff;border-radius:10px;padding:16px;margin-bottom:10px;display:none;border:2px solid #F59E0B}
+.proposal-card.visible{display:block}
+.pc-label{font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#F59E0B;margin-bottom:5px}
+.pc-name{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.06em;color:#fff;margin-bottom:4px;line-height:1.1}
+.pc-counties{font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px;line-height:1.5}
+.pc-divider{border:none;border-top:1px solid rgba(255,255,255,.1);margin:10px 0}
+.pc-note{font-family:'Crimson Pro',serif;font-style:italic;font-size:13px;color:rgba(255,255,255,.6);line-height:1.6;margin-bottom:12px}
+.reserve-btn{width:100%;padding:11px;background:var(--burg);color:#fff;border:none;border-radius:8px;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.1em;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.reserve-btn:hover{background:var(--burg-dark);transform:translateY(-1px)}
+.cluster-wrap{background:var(--ink);color:#fff;border-radius:10px;padding:14px;margin-bottom:8px;border:2px solid #F59E0B;display:none}
+.cluster-wrap-label{font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#F59E0B;margin-bottom:4px}
+.cluster-msg{font-size:12px;color:rgba(255,255,255,.65);margin-bottom:10px;line-height:1.5}
+.cluster-list{display:flex;flex-direction:column;gap:5px}
+.cluster-item{padding:9px 12px;border-radius:8px;border:2px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);cursor:pointer;transition:all .18s}
+.cluster-item:hover{border-color:#F59E0B}
+.cluster-item.sel{border-color:#F59E0B;background:rgba(245,158,11,.12)}
+.cluster-item-name{font-size:13px;font-weight:700;color:#fff}
+.cluster-item-meta{font-size:10px;color:rgba(255,255,255,.45);margin-top:2px}
+.unavail-card{background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px;margin-bottom:10px;display:none}
+.unavail-card.visible{display:block}
+.unavail-title{font-size:13px;font-weight:700;color:#991b1b;margin-bottom:5px}
+.unavail-body{font-size:12px;color:#7f1d1d;line-height:1.6}
+.success-card{background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:16px;margin-bottom:10px;display:none;text-align:center}
+.success-card.visible{display:block}
+.success-icon{font-size:22px;margin-bottom:6px}
+.success-title{font-size:14px;font-weight:800;color:#166534;margin-bottom:6px}
+.success-body{font-size:12px;color:#15803d;line-height:1.7}
+.sidebar-load{text-align:center;padding:28px 16px;display:none}
+.sidebar-load-spin{width:22px;height:22px;border:3px solid rgba(124,28,46,.15);border-top-color:var(--burg);border-radius:50%;animation:spin .85s linear infinite;margin:0 auto 8px}
+.sidebar-load-lbl{font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.08em;color:var(--burg)}
+.sidebar-load-sub{font-family:'Crimson Pro',serif;font-style:italic;font-size:11px;color:var(--ink-light);margin-top:2px}
 </style>
 </head>
 <body>
@@ -257,8 +290,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
     <div class="loading-spinner"></div>
     <div class="loading-icon">📮</div>
   </div>
-  <div class="loading-label">Finding Your Territory</div>
-  <div class="loading-sub">Locating available territories near your ZIP code…</div>
+  <div class="loading-label">Analyzing Your Area</div>
+  <div class="loading-sub">Checking business density &amp; territory availability…</div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -333,6 +366,50 @@ if(_sp.get('zip') && /^\d{5}$/.test(_sp.get('zip'))){
           <div class="sd-row"><span class="sd-label">Monthly Fee</span><span class="sd-val">$99 / month</span></div>
         </div>
         <button class="claim-btn" id="claimBtn" onclick="openModal()">✦ Claim This Territory</button>
+      </div>
+
+      <!-- Sidebar loading (proposal analysis) -->
+      <div class="sidebar-load" id="sidebarLoad">
+        <div class="sidebar-load-spin"></div>
+        <div class="sidebar-load-lbl">Analyzing Your Area</div>
+        <div class="sidebar-load-sub">Checking business density &amp; availability…</div>
+      </div>
+
+      <!-- Proposal card (single or selected cluster) -->
+      <div class="proposal-card" id="proposalCard">
+        <div class="pc-label">🗺 Proposed Territory</div>
+        <div class="pc-name" id="pcName"></div>
+        <div class="pc-counties" id="pcCounties"></div>
+        <div class="sd-rows">
+          <div class="sd-row"><span class="sd-label">Ad-Ready Businesses</span><span class="sd-val" id="pcBiz"></span></div>
+          <div class="sd-row"><span class="sd-label">Est. Coverage Zones</span><span class="sd-val" id="pcZones"></span></div>
+          <div class="sd-row"><span class="sd-label">Monthly Fee</span><span class="sd-val">$99 / month</span></div>
+          <div class="sd-row"><span class="sd-label">Status</span><span class="sd-val" style="color:#fde68a">Pending Approval</span></div>
+        </div>
+        <div id="pcCities" style="font-size:11px;color:rgba(255,255,255,.45);margin:6px 0 0;display:none"></div>
+        <hr class="pc-divider">
+        <div class="pc-note">This territory is being created for your area. Reserve it now and we'll activate it within 24 hours.</div>
+        <button class="reserve-btn" onclick="openProposalModal()">✦ Reserve This Territory — $99/mo</button>
+      </div>
+
+      <!-- Cluster picker (split territory) -->
+      <div class="cluster-wrap" id="clusterWrap">
+        <div class="cluster-wrap-label">Split Territory — Pick Your Zone</div>
+        <div class="cluster-msg" id="clusterMsg"></div>
+        <div class="cluster-list" id="clusterList"></div>
+      </div>
+
+      <!-- Unavailable -->
+      <div class="unavail-card" id="unavailCard">
+        <div class="unavail-title">⚠ Territory Not Available</div>
+        <div class="unavail-body" id="unavailBody"></div>
+      </div>
+
+      <!-- Success -->
+      <div class="success-card" id="successCard">
+        <div class="success-icon">✓</div>
+        <div class="success-title" id="successTitle"></div>
+        <div class="success-body" id="successBody"></div>
       </div>
 
       <div class="results-hdr" id="resultsHdr" style="display:none">
@@ -650,45 +727,89 @@ async function searchByZip(){
   const zip = document.getElementById('zipInput').value.trim();
   if(zip.length < 5){ showToast('Please enter a 5-digit zip code'); return; }
 
+  clearProposalUI();
+
   const btn = document.querySelector('.search-btn');
   btn.textContent = '…';
   btn.disabled = true;
+  document.getElementById('sidebarLoad').style.display = 'block';
 
   try {
-    const resp = await fetch(`/api/zip-to-county?zip=${zip}`);
-    const data = await resp.json();
+    // Run geo lookup and territory proposal in parallel
+    const [geoResp, propResp] = await Promise.all([
+      fetch(`/api/zip-to-county?zip=${zip}`),
+      fetch('/api/territories/propose', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ zipCode: zip }),
+      }),
+    ]);
+    const [geo, propData] = await Promise.all([geoResp.json(), propResp.json()]);
 
-    if(!data.county){
-      showToast(`Zip code ${zip} not found — try selecting your county below`);
+    const lat = geo.lat;
+    const lng = geo.lng;
+    const county = geo.county;
+
+    if(!county && propData.type === 'unavailable'){
+      showUnavailCard(propData.message || `Zip code ${zip} not found — try selecting your county below`);
       return;
     }
 
-    const lat = data.lat;
-    const lng = data.lng;
-    const county = data.county;
-
     // Place user marker
-    if(userMarker) map.removeLayer(userMarker);
-    userMarker = L.marker([lat, lng], {
-      icon: L.divIcon({
-        html:'<div style="background:#7C1C2E;width:14px;height:14px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4)"></div>',
-        iconSize:[14,14], iconAnchor:[7,7]
-      })
-    }).addTo(map).bindPopup(`<strong>${county} County</strong><br>Zip: ${zip}`).openPopup();
-
-    findNearbyTerritories(lat, lng, county);
-
-    // If this ZIP is directly assigned to a territory, auto-select it
-    const directTId = zipAssignments[zip];
-    if(directTId){
-      const direct = TERRITORIES.find(t => t.id === directTId);
-      if(direct) setTimeout(() => selectTerritoryOnMap(direct), 150);
+    if(lat && lng){
+      if(userMarker) map.removeLayer(userMarker);
+      userMarker = L.marker([lat, lng], {
+        icon: L.divIcon({
+          html:'<div style="background:#7C1C2E;width:14px;height:14px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4)"></div>',
+          iconSize:[14,14], iconAnchor:[7,7]
+        })
+      }).addTo(map).bindPopup(`<strong>${county||zip}</strong><br>ZIP: ${zip}`).openPopup();
     }
+
+    document.getElementById('mapTip').classList.add('hidden');
+
+    if(propData.type === 'existing'){
+      const terr = propData.territory;
+      const tLat = terr.centroidLat ?? lat;
+      const tLng = terr.centroidLng ?? lng;
+      const tObj = {
+        id: terr.id, name: terr.name,
+        counties: Array.isArray(terr.counties) ? terr.counties : [],
+        households: terr.households || 0,
+        status: terr.status,
+        zoneNote: terr.zoneNote || '',
+        lat: tLat, lng: tLng,
+      };
+      const inLocal = TERRITORIES.find(x => x.id === tObj.id);
+      if(inLocal){
+        if(lat && lng) findNearbyTerritories(lat, lng, county || tObj.counties[0] || '');
+        setTimeout(() => selectTerritoryOnMap(inLocal), 120);
+      } else {
+        selectTerritoryOnMap(tObj);
+        if(tLat && tLng) map.setView([tLat, tLng], 9, { animate: true });
+      }
+
+    } else if(propData.type === 'proposed'){
+      activeProposals = propData.proposals || [];
+      activeProposalZip = zip;
+      if(lat && lng){
+        map.setView([lat, lng], 9, { animate: true });
+        drawProposalLayers(lat, lng, activeProposals);
+      }
+      showProposedUI();
+
+    } else {
+      // unavailable
+      showUnavailCard(propData.message || 'This territory is not currently available. Please contact us directly.');
+      if(lat && lng) map.setView([lat, lng], 9, { animate: true });
+    }
+
   } catch(e) {
-    showToast('Could not look up zip code — try selecting your county below');
+    showToast('Could not look up territory — please try again');
   } finally {
     btn.textContent = 'Find';
     btn.disabled = false;
+    document.getElementById('sidebarLoad').style.display = 'none';
     hideLoadingOverlay();
   }
 }
@@ -856,10 +977,12 @@ function openModal(){
 }
 
 function closeModal(){
+  _proposalMode = false;
   document.getElementById('modalBg').classList.remove('visible');
 }
 
 async function submitClaim(){
+  if(_proposalMode){ await submitProposalClaim(); return; }
   const name  = document.getElementById('claimName').value.trim();
   const email = document.getElementById('claimEmail').value.trim();
   const phone = document.getElementById('claimPhone').value.trim();
@@ -891,6 +1014,168 @@ async function submitClaim(){
   } catch(err) {
     showToast('Error: ' + err.message);
     btn.textContent = '✦ Claim It — $99/mo';
+    btn.disabled = false;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// PROPOSAL FLOW
+// ══════════════════════════════════════════════════════════════
+let activeProposals = [];
+let activeProposalZip = '';
+let selectedClusterIdx = 0;
+let proposalLayers = [];
+let _proposalMode = false;
+
+function clearProposalUI(){
+  document.getElementById('proposalCard').classList.remove('visible');
+  document.getElementById('clusterWrap').style.display = 'none';
+  document.getElementById('unavailCard').classList.remove('visible');
+  document.getElementById('successCard').classList.remove('visible');
+  clearProposalLayers();
+  activeProposals = [];
+  activeProposalZip = '';
+  selectedClusterIdx = 0;
+}
+
+function drawProposalLayers(lat, lng, proposals){
+  clearProposalLayers();
+  const colors = ['#F59E0B','#D97706','#B45309','#92400E'];
+  proposals.forEach((p, i) => {
+    const col = colors[i % colors.length];
+    const c = L.circle([lat, lng], {
+      radius: 12000 + i * 5000,
+      fillColor: col, fillOpacity: 0.18,
+      color: col, weight: 2, dashArray: '6 4',
+    }).addTo(map);
+    c.bindTooltip(
+      `<strong>${p.proposedName}</strong><br><span style="font-size:11px">${(p.totalBusinessCount||0).toLocaleString()} businesses</span>`,
+      { sticky: true, opacity: 0.92 }
+    );
+    proposalLayers.push(c);
+  });
+}
+
+function clearProposalLayers(){
+  proposalLayers.forEach(l => { try{ map.removeLayer(l); }catch(e){} });
+  proposalLayers = [];
+}
+
+function showProposedUI(){
+  document.getElementById('selectedDetail').classList.remove('visible');
+  document.getElementById('resultsHdr').style.display = 'none';
+  document.getElementById('territoryList').innerHTML = '';
+
+  if(activeProposals.length === 1){
+    selectedClusterIdx = 0;
+    document.getElementById('clusterWrap').style.display = 'none';
+    renderProposalCard(activeProposals[0]);
+  } else {
+    document.getElementById('clusterMsg').textContent =
+      `Your area supports ${activeProposals.length} coverage zones. Pick the one that best fits your market.`;
+    document.getElementById('clusterList').innerHTML = activeProposals.map((p, i) => `
+      <div class="cluster-item${i===0?' sel':''}" id="cli-${i}" onclick="pickCluster(${i})">
+        <div class="cluster-item-name">${p.proposedName}</div>
+        <div class="cluster-item-meta">${(p.totalBusinessCount||0).toLocaleString()} businesses · ${(p.topCities||[]).slice(0,2).join(', ')}</div>
+      </div>
+    `).join('');
+    document.getElementById('clusterWrap').style.display = 'block';
+    selectedClusterIdx = 0;
+    renderProposalCard(activeProposals[0]);
+  }
+}
+
+function pickCluster(idx){
+  selectedClusterIdx = idx;
+  document.querySelectorAll('.cluster-item').forEach((el, i) => el.classList.toggle('sel', i===idx));
+  renderProposalCard(activeProposals[idx]);
+}
+
+function renderProposalCard(p){
+  document.getElementById('pcName').textContent = p.proposedName;
+  document.getElementById('pcCounties').textContent = (p.counties||[]).map(c => c.name).join(' · ');
+  document.getElementById('pcBiz').textContent = (p.totalBusinessCount||0).toLocaleString();
+  document.getElementById('pcZones').textContent = p.estimatedZones || '—';
+  const citEl = document.getElementById('pcCities');
+  if(p.topCities && p.topCities.length){
+    citEl.textContent = 'Key Cities: ' + p.topCities.slice(0,4).join(', ');
+    citEl.style.display = '';
+  } else {
+    citEl.style.display = 'none';
+  }
+  document.getElementById('proposalCard').classList.add('visible');
+}
+
+function showUnavailCard(msg){
+  document.getElementById('unavailBody').innerHTML =
+    (msg || 'Territory not available.') +
+    '<br><br>Contact us at <a href="mailto:hello@mytownpostcard.com" style="color:#991b1b">hello@mytownpostcard.com</a>';
+  document.getElementById('unavailCard').classList.add('visible');
+  document.getElementById('selectedDetail').classList.remove('visible');
+  document.getElementById('resultsHdr').style.display = 'none';
+  document.getElementById('territoryList').innerHTML = '';
+}
+
+function openProposalModal(){
+  if(!activeProposals.length) return;
+  _proposalMode = true;
+  const p = activeProposals[selectedClusterIdx];
+  document.getElementById('modalTerritoryName').textContent = p.proposedName;
+  document.getElementById('modalTerritoryCounties').textContent =
+    (p.counties||[]).map(c => c.name).join(' · ') + ' · ' + (p.totalBusinessCount||0).toLocaleString() + ' businesses';
+  const sp = new URLSearchParams(window.location.search);
+  document.getElementById('claimName').value  = sp.get('name')  || '';
+  document.getElementById('claimEmail').value = sp.get('email') || '';
+  document.getElementById('claimPhone').value = sp.get('phone') || '';
+  const btn = document.getElementById('modalSubmitBtn');
+  btn.textContent = '✦ Reserve This Territory — $99/mo';
+  btn.disabled = false;
+  document.getElementById('modalBg').classList.add('visible');
+}
+
+async function submitProposalClaim(){
+  const name  = document.getElementById('claimName').value.trim();
+  const email = document.getElementById('claimEmail').value.trim();
+  const phone = document.getElementById('claimPhone').value.trim();
+  if(!name||!email||!phone){ showToast('Please fill in all fields'); return; }
+
+  const btn = document.getElementById('modalSubmitBtn');
+  btn.textContent = 'Submitting…';
+  btn.disabled = true;
+
+  try {
+    const resp = await fetch('/api/territories/propose', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        zipCode: activeProposalZip,
+        dealerName: name,
+        dealerEmail: email,
+        dealerPhone: phone,
+      }),
+    });
+    const data = await resp.json();
+    closeModal();
+
+    const p = activeProposals[selectedClusterIdx];
+    document.getElementById('proposalCard').classList.remove('visible');
+    document.getElementById('clusterWrap').style.display = 'none';
+    clearProposalLayers();
+
+    if(data.type === 'proposed' || data.type === 'existing'){
+      document.getElementById('successTitle').textContent = 'Territory Reserved!';
+      document.getElementById('successBody').innerHTML =
+        `<strong>${p.proposedName}</strong> has been reserved for you.<br><br>
+         We'll activate your territory within 24 hours and send setup instructions to <strong>${email}</strong>.<br><br>
+         Questions? <a href="mailto:hello@mytownpostcard.com" style="color:#15803d">hello@mytownpostcard.com</a>`;
+      document.getElementById('successCard').classList.add('visible');
+      showToast('Territory reserved! Check your email for next steps.');
+    } else {
+      showUnavailCard(data.message || 'This territory is no longer available. Please contact us directly.');
+    }
+  } catch(err) {
+    showToast('Error submitting — please try again');
+    btn.textContent = '✦ Reserve This Territory — $99/mo';
     btn.disabled = false;
   }
 }

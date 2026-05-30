@@ -6,7 +6,7 @@
  */
 
 import { db, territoriesTable, territoryProposalsTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNotNull } from "drizzle-orm";
 import {
   getCountyFromZip,
   getAdReadyBusinessCount,
@@ -583,7 +583,9 @@ export async function getTerritoryForZip(
     return { type: "existing", territory: existing as Record<string, unknown> };
   }
 
-  // 3. Check for pending proposals for this county
+  // 3. Check for pending proposals WITH dealer contact for this county.
+  // Anonymous preview proposals (dealerEmail IS NULL) are allowed to be
+  // superseded by a dealer submission — they don't block new submissions.
   const activePending = await db
     .select({ id: territoryProposalsTable.id })
     .from(territoryProposalsTable)
@@ -591,6 +593,7 @@ export async function getTerritoryForZip(
       and(
         eq(territoryProposalsTable.countyFips, countyFips3.padStart(3, "0")),
         eq(territoryProposalsTable.status, "pending_review"),
+        isNotNull(territoryProposalsTable.dealerEmail),
       ),
     );
 
