@@ -1,0 +1,436 @@
+Rebuild the territory builder from scratch using a new city-hub model.
+This replaces the entire Census CBP county-based approach with a simpler,
+more accurate system based on city commercial hubs.
+
+Do not modify Georgia territory data, the MANAGED_STATES guard, the
+territory finder map, the admin territory manager, or any other feature.
+This change is isolated to the territory builder engine and Census API
+module only.
+
+
+════════════════════════════════════════════════
+OVERVIEW — THE NEW MODEL
+════════════════════════════════════════════════
+
+A territory = 4 commercial hub cities, each qualifying independently,
+forming a geographic cluster around the dealer's ZIP code.
+
+A city QUALIFIES as a hub if:
+  households ≥ 5,000  (sum of all ZIP households within 15 miles)
+  businesses ≥ 100    (sum of all ZBP establishments within 10 miles)
+
+A territory is VALID if:
+  It has exactly 4 qualifying hub cities
+  All 4 are within 40 miles of the dealer's ZIP centroid
+  The 4 cities spread in reasonably different directions
+  (not all clustered in one quadrant)
+
+This model works identically in all 50 states with no state-specific
+exceptions, no county adjacency logic, no fringe shifts, and no
+household proxy math.
+
+
+════════════════════════════════════════════════
+STEP 1 — DOWNLOAD THE ZBP FILE
+════════════════════════════════════════════════
+
+Before writing any code, run this in the Replit shell:
+
+  curl -L -o src/data/zbp22totals.zip \
+    "https://www2.census.gov/programs-surveys/cbp/datasets/2022/zbp22totals.zip" \
+    && unzip -o src/data/zbp22totals.zip -d src/data/ \
+    && ls -lh src/data/zbp*
+
+Report the filename and size of the extracted file.
+It should be approximately 2-4MB and contain columns including:
+  zip, estab, emp, qp1, ap, n<5, n5_9, n10_19... etc.
+
+If the above URL fails try:
+  curl -L -o src/data/zbp22totals.csv \
+    "https://www2.census.gov/programs-surveys/cbp/datasets/2022/zbp22totals.txt"
+
+The key columns needed are: zip (5-digit), estab (total establishments).
+
+Do not write any code until the file is confirmed downloaded and
+the zip and estab columns are verified present. Report back first.
+
+
+════════════════════════════════════════════════
+STEP 2 — UPDATE censusApi.ts DATA LOADING
+════════════════════════════════════════════════
+
+Replace the county business patterns loading with ZIP business
+patterns loading. Keep all other existing loaders (zip-county.csv,
+us-cities.csv, county-centroids.csv, county-adjacency.txt) as-is
+since some may still be used by other parts of the system.
+
+Add a new in-memory Map:
+
+  zipBusinessMap: Map<string, number>
+  key = 5-digit ZIP string (e.g. '30528')
+  value = total establishment count from ZBP (estab column)
+
+Load it at startup alongside the other files:
+
+  function loadZipBusinessPatterns(): void {
+    // Read src/data/zbp22totals.csv (or .txt)
+    // Parse CSV — skip header row
+    // For each row: zipBusinessMap.set(zip.trim(), parseInt(estab))
+    // Skip rows where estab is 0, null, or 'D' (suppressed)
+    // For 'D' values: set to 5 (Census minimum disclosure threshold)
+    // Log: "ZBP loaded: X ZIP codes with business data"
+  }
+
+Export this new function:
+
+  export function getZipBusinessCount(zip: string): number {
+    return zipBusinessMap.get(zip) ?? 0;
+  }
+
+Export this new function:
+
+  export function getZipsNearLocation(
+    lat: number,
+    lng: number,
+    radiusMiles: number
+  ): Array<{ zip: string; households: number;
+             businesses: number; distance: number }> {
+    // Iterate all entries in zip-county.csv that have lat/lng
+    // Calculate Haversine distance from (lat,lng) to each ZIP centroid
+    // Return all ZIPs within radiusMiles, sorted by distance
+    // Include households from zip-county.csv
+    // Include businesses from zipBusinessMap
+  }
+
+The zip-county.csv file already has lat/lng columns (or they can be
+derived from the county-centroids.csv). If zip-county.csv does not
+have lat/lng per ZIP, use the ZIP centroid data already available
+in the project from the territory ZIP assignment system.
+
+If no ZIP centroid data is available, download:
+  curl -L -o src/data/zip-centroids.csv \
+    "https://raw.githubusercontent.com/midwire/free_zipcode_data/master/all_us_zipcodes.csv"
+  This has zip, lat, lng columns for all US ZIPs.
+
+
+════════════════════════════════════════════════
+STEP 3 — REWRITE territoryBuilder.ts
+════════════════════════════════════════════════
+
+Replace the entire buildTerritoryProposal() function and all its
+helper functions with the new city-hub model.
+
+Keep these existing pieces unchanged:
+  - MANAGED_STATES constant and guard
+  - BLOCKED_ZIPS constant and guard
+  - ZIP_OVERRIDES lookup
+  - getTerritoryForZip() outer shell
+  - approveTerritory() and rejectTerritory()
+  - territory_proposals table interactions
+
+Replace everything else with the following:
+
+
+── CONSTANTS ──────────────────────────────────
+
+  const HUB_MIN_HOUSEHOLDS = 5000;   // min catchment households
+  const HUB_MIN_BUSINESSES = 100;    // min businesses near city
+  const HUB_HOUSEHOLD_RADIUS = 15;   // miles to sum households
+  const HUB_BUSINESS_RADIUS = 10;    // miles to sum businesses
+  const TERRITORY_SEARCH_RADIUS = 40;// max miles from dealer ZIP
+  const TARGET_HUB_COUNT = 4;        // ideal hubs per territory
+  const MIN_HUB_COUNT = 3;           // accept territory with 3 hubs
+                                     // if 4 not available
+
+
+── STEP A: GET DEALER ZIP LOCATION ────────────
+
+  async function getZipLocation(zip: string): Promise<
+    { lat: number; lng: number } | null
+  >
+
+  Look up lat/lng for the ZIP from zip-centroids.csv or
+  zip-county.csv. Return null if not found.
+
+
+── STEP B: FIND CANDIDATE HUB CITIES ──────────
+
+  async function findCandidateHubs(
+    lat: number,
+    lng: number
+  ): Promise<CityHub[]>
+
+  interface CityHub {
+    cityName: string;
+    stateName: string;
+    stateAbbr: string;
+    lat: number;
+    lng: number;
+    catchmentHouseholds: number;
+    nearbyBusinesses: number;
+    distanceFromDealer: number;
+    qualifies: boolean;
+  }
+
+  Algorithm:
+  1. Load all cities from the Gazetteer Places file (already loaded)
+     that are within TERRITORY_SEARCH_RADIUS (40 miles) of (lat,lng)
+     Filter to same state as the dealer ZIP
+
+  2. For each candidate city:
+     a. Sum households: call getZipsNearLocation(city.lat, city.lng,
+        HUB_HOUSEHOLD_RADIUS) and sum households field
+     b. Sum businesses: call getZipsNearLocation(city.lat, city.lng,
+        HUB_BUSINESS_RADIUS) and sum businesses field
+     c. Set qualifies = households >= HUB_MIN_HOUSEHOLDS
+                     AND businesses >= HUB_MIN_BUSINESSES
+     d. Calculate distance from dealer ZIP centroid
+
+  3. Return all candidates sorted by:
+     - qualifies = true first
+     - then by distanceFromDealer ascending
+
+  PERFORMANCE NOTE: The Gazetteer file has ~30,000 US places.
+  Filtering to within 40 miles before computing catchment areas
+  is critical for performance. Use a bounding box pre-filter:
+    lat ± 0.6 degrees (~40 miles)
+    lng ± 0.8 degrees (~40 miles at mid-latitudes)
+  Then apply precise Haversine check only on the ~50-200 cities
+  that pass the bounding box filter.
+
+
+── STEP C: SELECT 4 BEST HUBS ──────────────────
+
+  function selectBestHubs(
+    candidates: CityHub[],
+    dealerLat: number,
+    dealerLng: number
+  ): CityHub[]
+
+  From the qualified candidates, select TARGET_HUB_COUNT (4) hubs
+  that form a good geographic spread.
+
+  Algorithm:
+  1. Filter to only qualifying candidates
+     (households >= 5000 AND businesses >= 100)
+
+  2. If fewer than MIN_HUB_COUNT (3) qualify:
+     Return all qualifying candidates (territory marked not_viable)
+
+  3. If 3 or 4 qualify: return them all
+
+  4. If more than 4 qualify, select the best 4 using
+     directional spread:
+
+     a. Always include the closest qualifying city (anchor)
+
+     b. Divide the remaining candidates into 4 quadrants
+        relative to the dealer ZIP:
+          NE: lat > dealer_lat AND lng > dealer_lng
+          NW: lat > dealer_lat AND lng < dealer_lng
+          SE: lat < dealer_lat AND lng > dealer_lng
+          SW: lat < dealer_lat AND lng < dealer_lng
+
+     c. Pick the closest qualifying city from each quadrant
+        that hasn't been selected yet
+
+     d. If a quadrant has no qualifying city, pick the next
+        closest qualifying city overall
+
+  This ensures the 4 hubs surround the dealer ZIP rather than
+  clustering in one direction.
+
+
+── STEP D: BUILD THE PROPOSAL ──────────────────
+
+  async function buildCityHubProposal(
+    zip: string,
+    lat: number,
+    lng: number,
+    stateAbbr: string
+  ): Promise<TerritoryProposal>
+
+  interface TerritoryProposal {
+    proposedName: string;
+    slug: string;
+    stateAbbr: string;
+    stateName: string;
+    hubs: CityHub[];           // the 4 selected hub cities
+    totalHouseholds: number;   // sum of all hub catchment households
+    totalBusinesses: number;   // sum of all hub nearby businesses
+    isViable: boolean;         // true if >= MIN_HUB_COUNT hubs qualify
+    hubCount: number;          // actual number of qualifying hubs
+    centroidLat: number;       // average lat of all hubs
+    centroidLng: number;       // average lng of all hubs
+    viabilityMessage: string;  // human-readable assessment
+  }
+
+  Steps:
+  1. findCandidateHubs(lat, lng)
+  2. selectBestHubs(candidates, lat, lng)
+  3. Build name from hub city names:
+       1 hub:  "{City} Area"
+       2 hubs: "{City1} / {City2}"
+       3 hubs: "{City1} / {City2} / {City3}"
+       4 hubs: "{City1} / {City2} / {City3} / {City4}"
+       If name > 50 chars: "{City1} / {City2} / {City3} Area"
+  4. Generate slug (same logic as before)
+  5. Calculate centroid as average lat/lng of all hub cities
+  6. Set viabilityMessage:
+       totalBusinesses >= 600: "Strong market — excellent pipeline
+         for 4+ postcard mailings."
+       totalBusinesses 400-599: "Good market — solid pipeline for
+         4 postcard mailings."
+       totalBusinesses 300-399: "Adequate market — manageable for
+         4 mailings with focused sales effort."
+       totalBusinesses < 300: "⚠ Smaller market — this territory
+         may take longer to fill postcard spots. You'll have a
+         larger exclusive area."
+       hubCount < 4: "⚠ Only {hubCount} mailing areas found near
+         this location. Contact us to discuss territory options."
+
+
+── STEP E: WIRE INTO getTerritoryForZip ────────
+
+  Replace the call to buildTerritoryProposal() with
+  buildCityHubProposal(zip, lat, lng, stateAbbr).
+
+  The rest of getTerritoryForZip() stays the same:
+    - MANAGED_STATES guard runs first
+    - BLOCKED_ZIPS guard runs first
+    - ZIP_OVERRIDES lookup runs first
+    - Conflict check against existing territories runs before building
+    - Duplicate proposal check runs before building
+    - Save to territory_proposals runs after building
+    - Admin email notification runs after building
+
+
+════════════════════════════════════════════════
+STEP 4 — UPDATE THE PROPOSAL DISPLAY
+════════════════════════════════════════════════
+
+The territory proposal card in territory-finder.html currently
+shows counties. Update it to show hub cities instead.
+
+Replace "Counties" label with "Mailing Areas" and list the
+4 hub city names with their individual business and household counts:
+
+  MAILING AREA 1   Cleveland, GA
+                   ~8,200 households · 120 businesses
+
+  MAILING AREA 2   Dahlonega, GA
+                   ~6,400 households · 95 businesses
+
+  MAILING AREA 3   Cornelia, GA
+                   ~7,100 households · 140 businesses
+
+  MAILING AREA 4   Gainesville, GA
+                   ~18,000 households · 340 businesses
+
+This gives dealers a clear picture of exactly what they're buying
+and confirms that each area has a real commercial base.
+
+Update the admin proposals queue to show the same hub breakdown
+in the detail expansion panel.
+
+
+════════════════════════════════════════════════
+STEP 5 — RETIRE OLD CODE
+════════════════════════════════════════════════
+
+After the new system is confirmed working, remove or clearly
+mark as deprecated:
+
+  - getAdReadyBusinessCount() — replaced by ZIP-level ZBP data
+  - getAdReadyBusinessCountBatch() — no longer needed
+  - getNeighboringCounties() — no longer needed
+  - splitLargeCounty() — no longer needed
+  - buildTerritoryProposal() old version — replaced
+  - All MAX_NEIGHBOR_RINGS, MAX_BUNDLE_RADIUS logic — replaced
+  - The fringe-shift logic — replaced
+  - The household proxy math (businessCount × 12) — replaced
+
+Keep but do not remove:
+  - county-adjacency.txt loader (may be used by other features)
+  - county-centroids.csv loader (used for map display)
+  - county-business-patterns.txt (keep as fallback reference)
+  - getCountyFromZip() — still used by MANAGED_STATES flow
+  - STATE_FIPS table — still needed
+  - ZIP_OVERRIDES — still needed
+
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+  MANAGED_STATES = ['GA'] and all Georgia territory data
+  BLOCKED_ZIPS constant
+  ZIP_OVERRIDES constant
+  Territory finder map (territory-finder.html)
+  Admin territory manager
+  Landing page system and ad slot purchases
+  Any ad generator, image library, or payment files
+  Authentication logic
+  Territory proposals table structure
+
+
+════════════════════════════════════════════════
+TEST AFTER BUILDING
+════════════════════════════════════════════════
+
+TEST 1 — Georgia protected
+  POST /api/territories/propose { zipCode: '30528' }
+  Must return type: 'existing' — Georgia hard gate fires
+  Must NOT run the city hub builder
+
+TEST 2 — Small city with commercial hub (Charlottesville VA)
+  POST /api/territories/propose { zipCode: '22901' }
+  Must return type: 'proposed'
+  Must show 3-4 hub cities in the Virginia area
+  Each hub must show household and business counts
+  Total businesses across all hubs must be > 300
+
+TEST 3 — Suburban ZIP (Summerville SC)
+  POST /api/territories/propose { zipCode: '29483' }
+  Must return type: 'proposed'
+  Hub cities should reflect the actual commercial centers
+  near Summerville (North Charleston, Goose Creek, Summerville,
+  possibly Walterboro or Orangeburg as 4th hub)
+  Must NOT show inflated county-level business counts
+
+TEST 4 — Rural ZIP (Yemassee SC)
+  POST /api/territories/propose { zipCode: '29945' }
+  Must return type: 'unavailable' (BLOCKED_ZIPS fires first)
+
+TEST 5 — Large metro (San Antonio TX)
+  POST /api/territories/propose { zipCode: '78201' }
+  Must return type: 'proposed'
+  Should find 4 distinct city hubs within 40 miles
+  Each hub should have strong business and household counts
+
+TEST 6 — Nashville TN
+  POST /api/territories/propose { zipCode: '37201' }
+  Must return type: 'proposed'
+  Nashville itself plus 3 surrounding cities
+  (Brentwood, Murfreesboro, Hendersonville, Franklin etc)
+
+TEST 7 — Verify hub spread
+  For any large metro test, confirm the 4 hubs are in
+  different directions from the dealer ZIP — not all
+  clustered to one side
+
+TEST 8 — Admin queue
+  GET /api/admin/territory-proposals
+  Proposals from Tests 2-6 should appear
+  Each should show hub cities with individual counts
+  Not county names
+
+TEST 9 — Blocked ZIP still works
+  POST /api/territories/propose { zipCode: '29945' }
+  Returns unavailable immediately without running hub finder
+
+LOG OUTPUT EXPECTED:
+  Server startup should show:
+  "ZBP loaded: ~33,000 ZIP codes with business data"
+  "Gazetteer places loaded: ~30,000 cities"
+  "ZIP centroids loaded: ~33,000 entries"

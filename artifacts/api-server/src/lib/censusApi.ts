@@ -144,6 +144,44 @@ interface CountyCentroidRow {
 }
 const countyCentroidsMap = new Map<string, CountyCentroidRow>();
 
+/**
+ * ZIP → total establishment count.
+ * Source: src/data/zbp22totals.txt (ZBP 2022)
+ * Key: 5-digit ZIP string (e.g. "30528")
+ * Value: total establishments; 'D' (suppressed) values stored as 5.
+ */
+const zipBusinessMap = new Map<string, number>();
+
+/**
+ * ZIP → {lat, lng} centroid.
+ * Source: src/data/zip-centroids.csv (Midwire US ZIP centroids)
+ * Key: 5-digit ZIP string (e.g. "30528")
+ */
+const zipCentroidsMap = new Map<string, { lat: number; lng: number }>();
+
+/**
+ * City/place record from the Census 2023 Gazetteer for Places.
+ */
+export interface GazetteerPlace {
+  name: string;      // e.g. "Gainesville"
+  stateAbbr: string; // e.g. "GA"
+  lat: number;
+  lng: number;
+}
+
+/**
+ * State abbreviation → array of Gazetteer places with coordinates.
+ * Source: src/data/gazetteer-places.txt
+ * Key: 2-letter state abbreviation (e.g. "GA")
+ */
+const gazetteerByState = new Map<string, GazetteerPlace[]>();
+
+// Legal-suffix pattern for stripping Gazetteer place name suffixes.
+// Handles city/town/village/borough, consolidated/metro/charter governments.
+// Also strips parenthetical qualifiers like "(balance)" at end of name.
+const PLACE_SUFFIX_RE =
+  /(\s*\([^)]*\)\s*$|\s+(city|town|village|CDP|borough|township|charter township|municipality|city and borough|unified government|metro government|metropolitan government|consolidated government|urban county government|charter county government|balance of county)$)/gi;
+
 // Strip legal suffixes before uppercasing to get nameShort
 const COUNTY_SUFFIX_RE =
   / (County|Parish|Borough|Census Area|City and Borough|Municipality|Municipio|District|City)$/i;
@@ -152,6 +190,41 @@ const COUNTY_SUFFIX_RE =
 const AD_READY_SET = new Set<string>(AD_READY_NAICS);
 
 // ─── Static Data Loader ───────────────────────────────────────────────────────
+
+/**
+ * RFC 4180-compatible CSV parser for ZBP lines.
+ * Handles the mixed-quoting style in zbp22totals.txt where string fields are
+ * double-quoted (and may contain embedded commas) while numeric fields are bare.
+ */
+function parseZbpCsvLine(line: string): string[] {
+  const result: string[] = [];
+  let i = 0;
+  while (i <= line.length) {
+    if (line[i] === '"') {
+      let field = "";
+      i++; // skip opening quote
+      while (i < line.length) {
+        if (line[i] === '"' && line[i + 1] === '"') {
+          field += '"'; i += 2; // escaped double-quote
+        } else if (line[i] === '"') {
+          i++; break; // closing quote
+        } else {
+          field += line[i++];
+        }
+      }
+      result.push(field);
+    } else {
+      // Bare (unquoted) field — read until next comma or end
+      const end = line.indexOf(",", i);
+      if (end === -1) { result.push(line.slice(i)); break; }
+      result.push(line.slice(i, end));
+      i = end;
+    }
+    if (i < line.length && line[i] === ",") i++; // advance past comma separator
+    else break;
+  }
+  return result;
+}
 
 function loadStaticData(): void {
   const dataDir = join(__dirname, "../data");
@@ -328,6 +401,95 @@ function loadStaticData(): void {
     logger.error({ err: err instanceof Error ? err.message : String(err) },
       "Census: failed to load county-centroids.csv");
   }
+
+  // ── 6. zbp22totals.txt ────────────────────────────────────────────────────────
+  // ZIP Business Patterns 2022. Mixed-quoting CSV: string fields are quoted,
+  // numeric fields are NOT quoted. The "name" field is "CITY, STATE" and
+  // contains an embedded comma, so simple split(",") shifts columns.
+  // Header: "zip","name","emp_nf",emp,"qp1_nf",qp1,"ap_nf",ap,est,"city","stabbr","cty_name"
+  // After proper parsing: zip=col[0], est=col[8].
+  // 'D' values = suppressed → stored as 5 (minimum floor).
+  try {
+    const text = readFileSync(join(dataDir, "zbp22totals.txt"), "utf-8");
+    let count = 0;
+    for (const raw of text.split("\n")) {
+      const line = raw.trim();
+      if (!line || line.startsWith('"zip"')) continue;
+      const cols = parseZbpCsvLine(line);
+      if (cols.length < 9) continue;
+      const zip    = (cols[0] ?? "").replace(/^"|"$/g, "").trim();
+      const estRaw = (cols[8] ?? "").replace(/^"|"$/g, "").trim();
+      if (!zip || zip.length !== 5) continue;
+      const est = estRaw === "D" ? 5 : parseInt(estRaw, 10);
+      if (isNaN(est) || est <= 0) continue;
+      zipBusinessMap.set(zip, est);
+      count++;
+    }
+    logger.info({ count }, "ZBP loaded: ZIP codes with business data");
+  } catch (err: unknown) {
+    logger.error({ err: err instanceof Error ? err.message : String(err) },
+      "Census: failed to load zbp22totals.txt");
+  }
+
+  // ── 7. zip-centroids.csv ──────────────────────────────────────────────────────
+  // Midwire US ZIP centroids. Header: code,city,state,county,area_code,lat,lon
+  // code = col 0, lat = col 5, lon = col 6.
+  try {
+    const text = readFileSync(join(dataDir, "zip-centroids.csv"), "utf-8");
+    let count = 0;
+    for (const raw of text.split("\n")) {
+      const line = raw.trim();
+      if (!line || line.startsWith("code,")) continue;
+      const cols = line.split(",");
+      if (cols.length < 7) continue;
+      const zip = (cols[0] ?? "").trim();
+      const lat = parseFloat(cols[5] ?? "");
+      const lng = parseFloat(cols[6] ?? "");
+      if (!zip || zip.length !== 5 || isNaN(lat) || isNaN(lng)) continue;
+      zipCentroidsMap.set(zip, { lat, lng });
+      count++;
+    }
+    logger.info({ count }, "ZIP centroids loaded");
+  } catch (err: unknown) {
+    logger.error({ err: err instanceof Error ? err.message : String(err) },
+      "Census: failed to load zip-centroids.csv");
+  }
+
+  // ── 8. gazetteer-places.txt ───────────────────────────────────────────────────
+  // Census 2023 Gazetteer for Incorporated/CDP Places. Tab-delimited.
+  // Columns (0-indexed): USPS[0], GEOID[1], ANSICODE[2], NAME[3], LSAD[4],
+  //   FUNCSTAT[5], ALAND[6], AWATER[7], ALAND_SQMI[8], AWATER_SQMI[9],
+  //   INTPTLAT[10], INTPTLONG[11]
+  // NAME includes legal suffixes (e.g. "Gainesville city") — stripped here.
+  try {
+    const text = readFileSync(join(dataDir, "gazetteer-places.txt"), "utf-8");
+    let count = 0;
+    for (const raw of text.split("\n")) {
+      const line = raw.trim();
+      if (!line || line.startsWith("USPS")) continue;
+      const cols = line.split("\t");
+      if (cols.length < 12) continue;
+      const stateAbbr = (cols[0] ?? "").trim();
+      const rawName   = (cols[3] ?? "").trim();
+      const funcStat  = (cols[5] ?? "").trim(); // FUNCSTAT: 'A'=incorporated, 'S'=statistical CDP
+      const lat       = parseFloat((cols[10] ?? "").trim());
+      const lng       = parseFloat((cols[11] ?? "").trim());
+      if (!stateAbbr || !rawName || isNaN(lat) || isNaN(lng)) continue;
+      // Only include active incorporated places (A=active, B=active consolidated govt).
+      // Exclude FUNCSTAT='S' (CDPs — unincorporated statistical areas) and 'N'/'F' (non-functioning).
+      if (funcStat !== "A" && funcStat !== "B") continue;
+      const name = rawName.replace(PLACE_SUFFIX_RE, "").trim();
+      if (!name) continue;
+      let arr = gazetteerByState.get(stateAbbr);
+      if (!arr) { arr = []; gazetteerByState.set(stateAbbr, arr); }
+      arr.push({ name, stateAbbr, lat, lng });
+      count++;
+    }
+    logger.info({ count, states: gazetteerByState.size }, "Gazetteer places loaded");
+  } catch (err: unknown) {
+    logger.error({ err: err instanceof Error ? err.message : String(err) },
+      "Census: failed to load gazetteer-places.txt");
+  }
 }
 
 loadStaticData();
@@ -502,6 +664,82 @@ export async function getTopCitiesInCounty(
   if (!row) return [];
   const mapKey = `${row.stateAbbr}:${row.nameShort}`;
   return (citiesByCountyKey.get(mapKey) ?? []).slice(0, limit);
+}
+
+// ─── City-Hub Exports ─────────────────────────────────────────────────────────
+
+/**
+ * Returns the establishment count for a ZIP code from ZBP 2022 data.
+ * Returns 0 for ZIPs with no data or suppressed entries stored as 5.
+ */
+export function getZipBusinessCount(zip: string): number {
+  return zipBusinessMap.get(zip) ?? 0;
+}
+
+/**
+ * Returns the lat/lng centroid for a ZIP code from the Midwire centroids dataset.
+ * Returns null if the ZIP is not found.
+ */
+export function getZipLocation(zip: string): { lat: number; lng: number } | null {
+  return zipCentroidsMap.get(zip) ?? null;
+}
+
+/**
+ * Returns all ZIPs within radiusMiles of (lat, lng), sorted by distance ascending.
+ * Each entry includes:
+ *   - households: businesses × 12 (proxy; ~12 households per ad-ready establishment)
+ *   - businesses: raw ZBP establishment count
+ *   - distance: Haversine miles from (lat, lng)
+ *
+ * Uses a bounding-box pre-filter for performance before the precise Haversine check.
+ */
+export function getZipsNearLocation(
+  lat: number,
+  lng: number,
+  radiusMiles: number
+): Array<{ zip: string; households: number; businesses: number; distance: number }> {
+  // Approximate degree deltas for the bounding box
+  const latDelta = radiusMiles / 69.0;
+  const lngDelta = radiusMiles / (69.0 * Math.cos(lat * (Math.PI / 180)));
+  const latMin = lat - latDelta;
+  const latMax = lat + latDelta;
+  const lngMin = lng - lngDelta;
+  const lngMax = lng + lngDelta;
+
+  const R = 3_959; // Earth radius in miles
+  const result: Array<{ zip: string; households: number; businesses: number; distance: number }> = [];
+
+  for (const [zip, centroid] of zipCentroidsMap.entries()) {
+    if (
+      centroid.lat < latMin || centroid.lat > latMax ||
+      centroid.lng < lngMin || centroid.lng > lngMax
+    ) continue;
+
+    const dLat = (centroid.lat - lat) * (Math.PI / 180);
+    const dLng = (centroid.lng - lng) * (Math.PI / 180);
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(lat * (Math.PI / 180)) *
+      Math.cos(centroid.lat * (Math.PI / 180)) *
+      Math.sin(dLng / 2) ** 2;
+    const distance = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    if (distance > radiusMiles) continue;
+
+    const businesses = zipBusinessMap.get(zip) ?? 0;
+    result.push({ zip, households: businesses * 12, businesses, distance });
+  }
+
+  result.sort((a, b) => a.distance - b.distance);
+  return result;
+}
+
+/**
+ * Returns all Gazetteer places for a given state abbreviation.
+ * Used by the city-hub territory builder to enumerate candidate hub cities.
+ */
+export function getCitiesInState(stateAbbr: string): GazetteerPlace[] {
+  return gazetteerByState.get(stateAbbr) ?? [];
 }
 
 // ─── Startup ──────────────────────────────────────────────────────────────────

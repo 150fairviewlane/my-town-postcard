@@ -1086,7 +1086,7 @@ function drawProposalLayers(proposals){
   const tooltipHtml =
     `<div style="font-weight:700">${display.proposedName}</div>
      <div style="font-size:11px;color:#555;margin-top:2px">Proposed Territory</div>
-     <div style="font-size:11px;color:#666;margin-top:1px">${(display.totalBusinessCount||0).toLocaleString()} ad-ready businesses</div>`;
+     <div style="font-size:11px;color:#666;margin-top:1px">${(display.totalBusinesses || display.totalBusinessCount || 0).toLocaleString()} ad-ready businesses</div>`;
 
   // Show amber circle immediately as a placeholder while GeoJSON loads
   const cLat = display.centroidLat || proposals[0]?.centroidLat;
@@ -1168,33 +1168,58 @@ function showProposedUI(){
 function renderProposalCard(p){
   if(!p) return;
   document.getElementById('pcName').textContent = p.proposedName;
-  document.getElementById('pcCounties').textContent = (p.counties||[]).map(c => c.name).join(' · ');
-  document.getElementById('pcBiz').textContent = (p.totalBusinessCount||0).toLocaleString();
 
-  const mailingAreas = p.mailingAreas || [];
+  const hubs = p.hubs || [];
+  const totalBiz = p.totalBusinesses || p.totalBusinessCount || 0;
+
+  // Show hub city names (new model) or fall back to county names (legacy)
+  if(hubs.length > 0){
+    document.getElementById('pcCounties').textContent = hubs.map(h => h.cityName).join(' · ');
+  } else {
+    document.getElementById('pcCounties').textContent = (p.counties||[]).map(c => c.name).join(' · ');
+  }
+  document.getElementById('pcBiz').textContent = totalBiz.toLocaleString();
+
   const zonesRow    = document.getElementById('pcZonesRow');
   const mailingWrap = document.getElementById('pcMailingAreas');
   const mailingList = document.getElementById('pcMailingAreasList');
   const noteEl      = document.getElementById('pcNote');
 
-  if(mailingAreas.length > 1){
-    document.getElementById('pcZones').textContent = mailingAreas.length;
+  if(hubs.length > 0){
+    // City-hub model: show each hub with household and business counts
+    document.getElementById('pcZones').textContent = hubs.length;
     zonesRow.style.display = '';
-    mailingList.innerHTML = mailingAreas
-      .map(name => `<div class="pc-mailing-area-item">${name}</div>`)
-      .join('');
+    mailingList.innerHTML = hubs.map((h, i) =>
+      `<div class="pc-mailing-area-item">
+        <div style="font-weight:600">Mailing Area ${i+1} — ${h.cityName}</div>
+        <div style="font-size:11px;opacity:.7;margin-top:2px">~${h.catchmentHouseholds.toLocaleString()} households · ${h.nearbyBusinesses} businesses</div>
+      </div>`
+    ).join('');
     mailingWrap.style.display = '';
     noteEl.textContent =
-      `This territory gives you exclusive dealer rights across all ${mailingAreas.length} mailing areas above.`;
+      `This territory gives you exclusive dealer rights across all ${hubs.length} mailing areas above.`;
   } else {
-    zonesRow.style.display = 'none';
-    mailingWrap.style.display = 'none';
-    noteEl.textContent = "This territory is being created for your area. Reserve it now and we'll activate it within 24 hours.";
+    // Legacy split-proposal fallback
+    const mailingAreas = p.mailingAreas || [];
+    if(mailingAreas.length > 1){
+      document.getElementById('pcZones').textContent = mailingAreas.length;
+      zonesRow.style.display = '';
+      mailingList.innerHTML = mailingAreas
+        .map(name => `<div class="pc-mailing-area-item">${name}</div>`)
+        .join('');
+      mailingWrap.style.display = '';
+      noteEl.textContent =
+        `This territory gives you exclusive dealer rights across all ${mailingAreas.length} mailing areas above.`;
+    } else {
+      zonesRow.style.display = 'none';
+      mailingWrap.style.display = 'none';
+      noteEl.textContent = "This territory is being created for your area. Reserve it now and we'll activate it within 24 hours.";
+    }
   }
 
-  // Market quality note (Fix 5) — set expectation honestly based on business count
+  // Market quality note — set expectation honestly based on business count
   const mqEl = document.getElementById('pcMarketQuality');
-  const biz = p.totalBusinessCount || 0;
+  const biz = totalBiz;
   if(biz >= 600){
     mqEl.textContent = '★ Strong market — excellent pipeline for 4+ postcard mailings.';
     mqEl.style.background = '#dbeafe'; mqEl.style.color = '#1e40af';
@@ -1254,8 +1279,12 @@ function openProposalModal(){
   _proposalMode = true;
   const p = _activeDisplayProposal || activeProposals[0];
   document.getElementById('modalTerritoryName').textContent = p.proposedName;
+  const hubs = p.hubs || [];
+  const locationStr = hubs.length > 0
+    ? hubs.map(h => h.cityName).join(' · ')
+    : (p.counties||[]).map(c => c.name).join(' · ');
   document.getElementById('modalTerritoryCounties').textContent =
-    (p.counties||[]).map(c => c.name).join(' · ') + ' · ' + (p.totalBusinessCount||0).toLocaleString() + ' businesses';
+    locationStr + ' · ' + (p.totalBusinesses || p.totalBusinessCount || 0).toLocaleString() + ' businesses';
   const sp = new URLSearchParams(window.location.search);
   document.getElementById('claimName').value  = sp.get('name')  || '';
   document.getElementById('claimEmail').value = sp.get('email') || '';

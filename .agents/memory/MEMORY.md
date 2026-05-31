@@ -1,1 +1,3 @@
 - [Grok popup stale-closure pattern](grok-popup-closure.md) — Grok postMessage handler must capture sel/side explicitly at popup-open time; never rely on handleComplete's render-cycle closure after long popup sessions.
+- [ZBP CSV parsing quirk](zbp-csv-parsing.md) — zbp22totals.txt uses mixed quoting; name field "CITY, STATE" contains a comma so naïve split(",") shifts columns; use a proper RFC 4180 parser.
+- [Gazetteer CDP filter](gazetteer-cdp-filter.md) — filter Gazetteer places to FUNCSTAT∈{A,B} only (incorporated); FUNCSTAT=S are CDPs that shadow real cities as hub candidates.
