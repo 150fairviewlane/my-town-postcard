@@ -1,0 +1,105 @@
+The household and business counts are wildly inflated because
+ZIPs within overlapping catchment circles are being counted
+multiple times — once for each hub city within range.
+
+Example: Spartanburg shows 78,480 households but actually has
+only ~15,900 households. The 15-mile catchment circles around
+all 4 hub cities overlap heavily, so every ZIP near Spartanburg
+is counted 3-4 times.
+
+════════════════════════════════════════════════
+THE FIX — VORONOI ZIP ASSIGNMENT
+════════════════════════════════════════════════
+
+After selecting the 4 hub cities, assign each ZIP within the
+territory to its NEAREST hub city only. Each ZIP counts toward
+exactly one hub — no double counting.
+
+Replace the current household/business counting logic in
+buildCityHubProposal() with this approach:
+
+STEP 1 — Get all ZIPs within TERRITORY_SEARCH_RADIUS (40 miles)
+of the dealer ZIP centroid:
+
+  const allNearbyZips = getZipsNearLocation(
+    dealerLat, dealerLng, TERRITORY_SEARCH_RADIUS
+  );
+
+STEP 2 — For each nearby ZIP, find its nearest hub city:
+
+  for each zip in allNearbyZips:
+    nearestHub = the hub city with the smallest Haversine distance
+                 from zip.lat/zip.lng to hub.lat/hub.lng
+    assign zip to nearestHub
+
+STEP 3 — Count households and businesses per hub from
+exclusively assigned ZIPs:
+
+  for each hub:
+    hub.catchmentHouseholds = sum of households for ZIPs
+                              assigned to this hub
+    hub.nearbyBusinesses = sum of businesses for ZIPs
+                           assigned to this hub
+
+STEP 4 — Re-evaluate hub qualification after exclusive assignment:
+
+  A hub still qualifies if:
+    catchmentHouseholds >= HUB_MIN_HOUSEHOLDS (5,000)
+    nearbyBusinesses >= HUB_MIN_BUSINESSES (100)
+
+  If a hub no longer qualifies after exclusive assignment,
+  remove it and try to find a replacement from remaining
+  candidates.
+
+════════════════════════════════════════════════
+ALSO FIX — HUB QUALIFICATION ORDER
+════════════════════════════════════════════════
+
+The current flow qualifies hubs BEFORE knowing which ZIPs will
+be exclusively assigned to them. This causes hubs to qualify
+based on overlapping counts, then fail in practice.
+
+Change the order:
+
+  OLD: qualify hubs → select 4 → count (with overlap)
+  NEW: find candidates → select 4 → assign ZIPs exclusively
+       → recount → re-qualify → if any fail, replace them
+
+This means the 4 selected hubs may need to be re-evaluated
+after exclusive ZIP assignment. If one fails the threshold,
+try the next best candidate from the original sorted list.
+
+════════════════════════════════════════════════
+EXPECTED RESULTS AFTER FIX
+════════════════════════════════════════════════
+
+For 29301 (Spartanburg SC area), expected approximately:
+
+  Spartanburg:  ~15,000-20,000 households  ~800-1,200 businesses
+  Inman:        ~5,000-8,000 households    ~100-200 businesses
+  Cowpens:      ~5,000-7,000 households    ~80-150 businesses
+  Campobello:   ~4,000-6,000 households    ~50-100 businesses
+
+Total territory: ~30,000-40,000 households, ~1,000-1,600 businesses
+This is realistic for the Spartanburg SC market.
+
+════════════════════════════════════════════════
+TEST AFTER FIXING
+════════════════════════════════════════════════
+
+1. POST /api/territories/propose { zipCode: '29301' }
+   Spartanburg hub must show approximately 15,000-20,000
+   households — NOT 78,480
+   Total business count must be under 5,000 — NOT 14,325
+
+2. POST /api/territories/propose { zipCode: '22901' }
+   Charlottesville VA — recount with exclusive assignment
+   Each hub should show realistic household counts for
+   small Virginia cities (~5,000-15,000 per hub)
+
+3. POST /api/territories/propose { zipCode: '37201' }
+   Nashville TN — large city hub should show ~75,000-120,000
+   households exclusively assigned, surrounding smaller hubs
+   showing 10,000-30,000 each
+
+4. Georgia ZIPs still return existing territories unchanged

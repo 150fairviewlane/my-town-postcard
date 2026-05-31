@@ -697,7 +697,7 @@ export function getZipsNearLocation(
   lat: number,
   lng: number,
   radiusMiles: number
-): Array<{ zip: string; households: number; businesses: number; distance: number }> {
+): Array<{ zip: string; lat: number; lng: number; households: number; businesses: number; distance: number }> {
   // Approximate degree deltas for the bounding box
   const latDelta = radiusMiles / 69.0;
   const lngDelta = radiusMiles / (69.0 * Math.cos(lat * (Math.PI / 180)));
@@ -707,7 +707,7 @@ export function getZipsNearLocation(
   const lngMax = lng + lngDelta;
 
   const R = 3_959; // Earth radius in miles
-  const result: Array<{ zip: string; households: number; businesses: number; distance: number }> = [];
+  const result: Array<{ zip: string; lat: number; lng: number; households: number; businesses: number; distance: number }> = [];
 
   for (const [zip, centroid] of zipCentroidsMap.entries()) {
     if (
@@ -727,7 +727,7 @@ export function getZipsNearLocation(
     if (distance > radiusMiles) continue;
 
     const businesses = zipBusinessMap.get(zip) ?? 0;
-    result.push({ zip, households: businesses * 12, businesses, distance });
+    result.push({ zip, lat: centroid.lat, lng: centroid.lng, households: businesses * 12, businesses, distance });
   }
 
   result.sort((a, b) => a.distance - b.distance);
