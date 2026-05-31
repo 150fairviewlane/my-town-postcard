@@ -1,0 +1,109 @@
+Stop investigating. The root cause is confirmed and simple.
+Fix it now.
+
+ROOT CAUSE:
+The ZBP CSV has city names containing commas (e.g. "MOUNT PLEASANT, SC").
+The naive split(',') shifts all column indices by 1 for these rows,
+causing the code to read the annual payroll column (ap) instead of
+the establishments column (estab). This is why ZIP 29464 shows
+1,788,604 businesses instead of 2,917.
+
+THE FIX — TWO PARTS:
+
+PART A — Fix the CSV parser to handle quoted fields:
+
+Replace any line that does:
+  const cols = line.split(',')
+
+With a proper CSV parser that respects quoted fields.
+The simplest approach is to use the 'csv-parse' package if
+already in the project, or this inline parser:
+
+  function parseCSVLine(line: string): string[] {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    for (const char of line) {
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        result.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    result.push(current.trim());
+    return result;
+  }
+
+Use this function instead of split(',') everywhere ZBP or any
+Census CSV file is parsed.
+
+PART B — Verify the correct column index for establishments:
+
+After fixing the parser, log the header row of the ZBP file:
+  console.log('ZBP headers:', parseCSVLine(headerRow))
+
+Then confirm which column index contains 'estab' and hardcode
+that index. Do not assume a fixed index number — read the header
+row to find the correct column by name.
+
+  const headers = parseCSVLine(firstLine);
+  const estabIdx = headers.findIndex(
+    h => h.toLowerCase().replace(/"/g,'') === 'estab'
+  );
+  const zipIdx = headers.findIndex(
+    h => h.toLowerCase().replace(/"/g,'') === 'zip'
+  );
+
+Use estabIdx and zipIdx when parsing data rows instead of
+hardcoded numbers.
+
+PART C — Fix the household proxy while we are here:
+
+Since all external household data URLs are blocked, use this
+formula as the temporary household estimate per ZIP:
+
+  households = Math.round(estab * 3.5)
+
+This is more accurate than × 12. The ratio of households to
+total business establishments in a typical US market is roughly
+3-4 households per business, not 12. The × 12 was designed for
+AD-READY businesses only but is being applied to total
+establishments which is a much larger number.
+
+With 2,917 total establishments in ZIP 29464:
+  Old proxy: 2,917 × 12 = 34,004 (wrong)
+  New proxy: 2,917 × 3.5 = 10,210 (more realistic)
+  Real value: ~15,000-18,000 households
+
+The × 3.5 proxy is not perfect but it is directionally correct
+and will produce reasonable territory sizing until real
+household data can be loaded.
+
+We will continue searching for a downloadable household dataset
+that is not blocked. For now fix the column parsing bug and
+update the multiplier.
+
+════════════════════════════════════════════════
+TEST AFTER FIXING
+════════════════════════════════════════════════
+
+SANITY CHECK — run before full territory test:
+  Log the estab value for ZIP 29464 after parser fix
+  Must be approximately 2,917 — NOT 1,788,604
+  If still showing millions, the parser fix did not work
+
+FULL TEST:
+  POST /api/territories/propose { zipCode: '29464' }
+  Mount Pleasant hub households: approximately 25,000-45,000
+  NOT 63,972 or 75,000
+
+  POST /api/territories/propose { zipCode: '29301' }
+  Spartanburg hub households: approximately 12,000-25,000
+  NOT 78,480
+
+Business counts should also be realistic:
+  Mount Pleasant hub businesses: 500-1,500 NOT 5,331
+  Spartanburg hub businesses: 500-1,200 NOT 5,680

@@ -41,7 +41,7 @@ const TERRITORY_SEARCH_RADIUS = 40; // max miles from dealer ZIP centroid to sea
 const TARGET_HUB_COUNT      = 4;    // ideal hubs per territory
 const MIN_HUB_COUNT         = 3;    // accept territory with ≥ 3 hubs when 4 unavailable
 // Household proxy used for householdsEstimate (backward-compat field)
-const HOUSEHOLDS_PER_BUSINESS = 12;
+const HOUSEHOLDS_PER_BUSINESS = 3.5;
 
 // Minimum city population for hub qualification (proxied by local business density).
 // Filters out tiny resort/barrier-island municipalities that appear in the Gazetteer

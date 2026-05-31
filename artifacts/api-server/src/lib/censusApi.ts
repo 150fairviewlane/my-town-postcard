@@ -405,20 +405,35 @@ function loadStaticData(): void {
   // ── 6. zbp22totals.txt ────────────────────────────────────────────────────────
   // ZIP Business Patterns 2022. Mixed-quoting CSV: string fields are quoted,
   // numeric fields are NOT quoted. The "name" field is "CITY, STATE" and
-  // contains an embedded comma, so simple split(",") shifts columns.
-  // Header: "zip","name","emp_nf",emp,"qp1_nf",qp1,"ap_nf",ap,est,"city","stabbr","cty_name"
-  // After proper parsing: zip=col[0], est=col[8].
-  // 'D' values = suppressed → stored as 5 (minimum floor).
+  // contains an embedded comma, so parseZbpCsvLine() (RFC-4180) is required —
+  // never use simple split(",") here.
+  // Column positions are detected from the header row at startup to guard against
+  // schema changes. Expected column names: zip, est (or estab).
   try {
     const text = readFileSync(join(dataDir, "zbp22totals.txt"), "utf-8");
+    const lines = text.split("\n");
+
+    // Parse header to find column indices by name
+    const headerLine = lines[0]?.trim() ?? "";
+    const headers = parseZbpCsvLine(headerLine).map(h => h.replace(/^"|"$/g, "").toLowerCase().trim());
+    const zipIdx  = headers.findIndex(h => h === "zip");
+    const estIdx  = headers.findIndex(h => h === "est" || h === "estab");
+    if (zipIdx === -1 || estIdx === -1) {
+      logger.error({ headers }, "Census: zbp22totals.txt missing expected columns (zip, est/estab)");
+    } else {
+      logger.info({ zipIdx, estIdx }, "ZBP column indices detected from header");
+    }
+    const resolvedZipIdx = zipIdx === -1 ? 0 : zipIdx;
+    const resolvedEstIdx = estIdx === -1 ? 8 : estIdx; // fallback to known position
+
     let count = 0;
-    for (const raw of text.split("\n")) {
+    for (const raw of lines.slice(1)) {
       const line = raw.trim();
-      if (!line || line.startsWith('"zip"')) continue;
+      if (!line) continue;
       const cols = parseZbpCsvLine(line);
-      if (cols.length < 9) continue;
-      const zip    = (cols[0] ?? "").replace(/^"|"$/g, "").trim();
-      const estRaw = (cols[8] ?? "").replace(/^"|"$/g, "").trim();
+      if (cols.length <= resolvedEstIdx) continue;
+      const zip    = (cols[resolvedZipIdx] ?? "").replace(/^"|"$/g, "").trim();
+      const estRaw = (cols[resolvedEstIdx] ?? "").replace(/^"|"$/g, "").trim();
       if (!zip || zip.length !== 5) continue;
       const est = estRaw === "D" ? 5 : parseInt(estRaw, 10);
       if (isNaN(est) || est <= 0) continue;
@@ -727,7 +742,7 @@ export function getZipsNearLocation(
     if (distance > radiusMiles) continue;
 
     const businesses = zipBusinessMap.get(zip) ?? 0;
-    result.push({ zip, lat: centroid.lat, lng: centroid.lng, households: businesses * 12, businesses, distance });
+    result.push({ zip, lat: centroid.lat, lng: centroid.lng, households: Math.round(businesses * 3.5), businesses, distance });
   }
 
   result.sort((a, b) => a.distance - b.distance);
