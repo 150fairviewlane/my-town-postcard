@@ -18,6 +18,14 @@ import {
 } from "./censusApi";
 import { logger } from "./logger";
 
+// ─── Blocked ZIPs ─────────────────────────────────────────────────────────────
+// ZIPs that are definitively non-residential (wildlife preserves, industrial zones,
+// etc.) and should never be proposed regardless of what the bundling algorithm finds.
+// Add new problem ZIPs here as they are discovered.
+const BLOCKED_ZIPS = new Set([
+  "29945", // Yemassee SC — ACE Basin wildlife preserve, no residential population
+]);
+
 // ─── Thresholds ───────────────────────────────────────────────────────────────
 
 const MIN_BUSINESS_COUNT = 400;    // minimum viable: floor for 4-card mailing cycle
@@ -787,6 +795,13 @@ export async function getTerritoryForZip(
 ): Promise<TerritoryForZipResult> {
   const isTest = options?.isTest ?? false;
   // 1. Resolve ZIP → county
+  if (BLOCKED_ZIPS.has(zipCode)) {
+    return {
+      type: "unavailable",
+      message: "This ZIP code is in a non-residential area. Please try a ZIP code in a nearby town or city.",
+    };
+  }
+
   const county = await getCountyFromZip(zipCode);
   if (!county) {
     return { type: "unavailable", message: "ZIP code not recognized" };

@@ -1,0 +1,81 @@
+Stop investigating. Both issues have simple fixes. Apply them
+directly without further diagnosis.
+
+════════════════════════════════════════════════
+FIX 1 — YEMASSEE: HARDCODE IT AS UNAVAILABLE
+════════════════════════════════════════════════
+
+The fringe-shift logic keeps finding nearby counties no matter
+how the distance cap is tuned. Stop fighting it.
+
+Add 29945 to a BLOCKED_ZIPS list at the top of territoryBuilder.ts:
+
+  const BLOCKED_ZIPS = new Set([
+    '29945', // Yemassee SC — ACE Basin wildlife preserve, no population
+  ]);
+
+At the very top of getTerritoryForZip(), before any other logic:
+
+  if (BLOCKED_ZIPS.has(zipCode)) {
+    return {
+      type: 'unavailable',
+      message: 'This ZIP code is in a non-residential area. Please
+      try a ZIP code in a nearby town or city.'
+    };
+  }
+
+This is the correct solution. The ZIP genuinely has no population.
+No algorithm will ever make it a viable territory. Block it explicitly.
+We can add other problem ZIPs to this list as they are discovered.
+
+
+════════════════════════════════════════════════
+FIX 2 — ROANOKE: ADD ZIP OVERRIDE
+════════════════════════════════════════════════
+
+ZIP 24016 is not in zip-county.csv. Rather than debugging the
+lookup chain, add it to the ZIP_OVERRIDES map that already exists
+in censusApi.ts:
+
+  '24011': { countyFips: '770', countyName: 'Roanoke city',
+             stateFips: '51', stateAbbr: 'VA' },
+  '24012': { countyFips: '770', countyName: 'Roanoke city',
+             stateFips: '51', stateAbbr: 'VA' },
+  '24013': { countyFips: '770', countyName: 'Roanoke city',
+             stateFips: '51', stateAbbr: 'VA' },
+  '24014': { countyFips: '770', countyName: 'Roanoke city',
+             stateFips: '51', stateAbbr: 'VA' },
+  '24015': { countyFips: '770', countyName: 'Roanoke city',
+             stateFips: '51', stateAbbr: 'VA' },
+  '24016': { countyFips: '770', countyName: 'Roanoke city',
+             stateFips: '51', stateAbbr: 'VA' },
+  '24017': { countyFips: '770', countyName: 'Roanoke city',
+             stateFips: '51', stateAbbr: 'VA' },
+  '24018': { countyFips: '770', countyName: 'Roanoke city',
+             stateFips: '51', stateAbbr: 'VA' },
+  '24019': { countyFips: '770', countyName: 'Roanoke city',
+             stateFips: '51', stateAbbr: 'VA' },
+
+Also add Charlottesville city ZIPs while we are here:
+  '22902': { countyFips: '540', countyName: 'Charlottesville city',
+             stateFips: '51', stateAbbr: 'VA' },
+  '22903': { countyFips: '540', countyName: 'Charlottesville city',
+             stateFips: '51', stateAbbr: 'VA' },
+  '22904': { countyFips: '540', countyName: 'Charlottesville city',
+             stateFips: '51', stateAbbr: 'VA' },
+
+Roanoke city FIPS is 51770 (stateFips 51, countyFips 770).
+Charlottesville city FIPS is 51540 (stateFips 51, countyFips 540).
+
+
+════════════════════════════════════════════════
+AFTER BOTH FIXES
+════════════════════════════════════════════════
+
+These are the only two changes needed. Do not investigate further.
+Typecheck and confirm:
+
+  29945 → unavailable (blocked ZIP list)
+  24016 → proposed with Roanoke area territory
+  22901 → proposed with Charlottesville area territory
+  30501 → existing GA-026
