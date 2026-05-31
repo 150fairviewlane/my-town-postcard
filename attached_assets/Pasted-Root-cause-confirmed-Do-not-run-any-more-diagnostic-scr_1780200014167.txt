@@ -1,0 +1,134 @@
+Root cause confirmed. Do not run any more diagnostic scripts.
+
+The household data is entirely fake — it is businesses × 12,
+a proxy that was never replaced with real data. This explains
+every inflated household count we have seen.
+
+ZIP 29464 has 2,917 ZBP establishments × 12 = 34,004 fake
+households. Multiplied across dozens of ZIPs in the Voronoi
+assignment produces numbers like 63,972 and 106,740.
+
+The fix is to replace the proxy with real ZIP-level household
+data. Do not patch the proxy formula. Replace it entirely.
+
+
+════════════════════════════════════════════════
+STEP 1 — DOWNLOAD REAL ZIP HOUSEHOLD DATA
+════════════════════════════════════════════════
+
+Run this in the Replit shell:
+
+  curl -L -o src/data/zcta-households.csv \
+    "https://raw.githubusercontent.com/datamade/usps-zcta/master/data/zcta_households.csv"
+
+If that URL fails try:
+
+  curl -L -o src/data/zcta-households.csv \
+    "https://raw.githubusercontent.com/wireservice/census-data-downloader/master/data/zcta/zcta-households.csv"
+
+If both fail, download the Census ACS ZCTA household file directly
+using the shell (not Node fetch — curl bypasses the network block):
+
+  curl -L -o src/data/zcta-households.zip \
+    "https://www2.census.gov/programs-surveys/acs/summary_file/2022/table-based-SF/data/5YRData/acsdt5y2022-b25001-Data.csv.zip" \
+    && unzip -o src/data/zcta-households.zip -d src/data/
+
+If all Census URLs fail, use this pre-compiled GitHub dataset
+which has ZIP-level housing unit counts from ACS 2022:
+
+  curl -L -o src/data/zcta-households.csv \
+    "https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/zcta_data.csv"
+
+Report the file size and first 3 rows including column names.
+The file must have a ZIP/ZCTA column and a households or
+housing_units column with real per-ZIP counts.
+
+If no URL works after trying all four, report back and we will
+use a different approach. Do not invent or proxy the data.
+
+
+════════════════════════════════════════════════
+STEP 2 — LOAD INTO MEMORY
+════════════════════════════════════════════════
+
+Once the file is confirmed downloaded, add a new Map:
+
+  zipHouseholdMap: Map<string, number>
+  key = 5-digit ZIP string
+  value = real household or housing unit count for that ZIP
+
+Load it at startup alongside the other files. Log:
+  "ZIP households loaded: X entries"
+
+Export this function from censusApi.ts:
+
+  export function getZipHouseholds(zip: string): number {
+    return zipHouseholdMap.get(zip) ?? 0;
+  }
+
+
+════════════════════════════════════════════════
+STEP 3 — REPLACE THE PROXY EVERYWHERE
+════════════════════════════════════════════════
+
+Search the entire codebase for every instance of:
+  businesses × 12
+  businessCount * 12
+  estab * 12
+  ESTAB * 12
+  × 12
+  * 12
+
+For each instance that is calculating households:
+  Replace with getZipHouseholds(zip) or the sum of
+  getZipHouseholds() across the relevant ZIPs.
+
+Remove the proxy formula entirely. If a ZIP has no entry in
+zipHouseholdMap, use 0 — do not fall back to the proxy.
+
+
+════════════════════════════════════════════════
+STEP 4 — UPDATE getZipsNearLocation RETURN VALUE
+════════════════════════════════════════════════
+
+The getZipsNearLocation() function currently returns:
+  { zip, households: businesses × 12, businesses, distance }
+
+Change it to return:
+  { zip, households: getZipHouseholds(zip), businesses, distance }
+
+This is the single change that fixes the Voronoi assignment
+counts automatically since it feeds real household data into
+the existing assignment logic.
+
+
+════════════════════════════════════════════════
+TEST AFTER FIXING
+════════════════════════════════════════════════
+
+Before testing the full territory builder, run this quick
+sanity check first:
+
+  console.log('ZIP 29464 households:', getZipHouseholds('29464'))
+  console.log('ZIP 29201 households:', getZipHouseholds('29201'))
+  console.log('ZIP 37201 households:', getZipHouseholds('37201'))
+
+Expected approximate values:
+  29464 (Mount Pleasant SC): 15,000-20,000
+  29201 (Columbia SC): 8,000-15,000
+  37201 (Nashville TN): 5,000-12,000
+
+If these look reasonable, proceed to full territory test:
+
+  POST /api/territories/propose { zipCode: '29464' }
+  Mount Pleasant hub should show approximately 35,000-42,000
+  households total — NOT 63,972
+  Hanahan hub should show approximately 8,000-12,000
+  households — NOT 106,740
+
+  POST /api/territories/propose { zipCode: '29301' }
+  Spartanburg hub should show approximately 15,000-20,000
+  households — NOT 78,480
+
+Do not mark this complete until the sanity check values
+look realistic.
