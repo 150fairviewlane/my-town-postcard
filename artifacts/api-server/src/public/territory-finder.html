@@ -917,7 +917,7 @@ function showNearbyTerritories(territories, heading){
 
 function selectTerritoryCard(id){
   selectedTerritoryId = id;
-  const t = TERRITORIES.find(t=>t.id===id);
+  const t = TERRITORIES.find(t=>t.id===id) || _nearbyTerritoriesLookup.get(id);
   if(!t) return;
 
   document.querySelectorAll('.tcard').forEach(c=>{
@@ -1044,6 +1044,7 @@ let activeProposalZip = '';
 let proposalLayers = [];
 let _proposalMode = false;
 let _activeDisplayProposal = null;  // merged/single proposal shown to the dealer
+const _nearbyTerritoriesLookup = new Map(); // non-GA territories fetched on demand
 let _proposalDrawGen = 0;           // incremented on each new drawProposalLayers call
 // Per-session GeoJSON cache: stateFips → Promise<FeatureCollection|null>
 const _stateGeoJsonCache = new Map();
@@ -1246,9 +1247,12 @@ async function fetchAndShowNearbyProposals(stateAbbr){
     const res = await fetch(`/api/territories?state=${stateAbbr}`);
     if(!res.ok) return;
     const rows = await res.json();
+    // Exclude the territory whose name matches the active proposal so it isn't listed twice
+    const activeName = (_activeDisplayProposal || activeProposals[0])?.proposedName || '';
     const nearby = rows
       .filter(t => t.status === 'proposed' || t.status === 'available')
       .filter(t => t.centroidLat != null && t.centroidLng != null)
+      .filter(t => !activeName || t.name !== activeName)
       .map(t => ({
         id:         t.id,
         name:       t.name,
@@ -1259,6 +1263,8 @@ async function fetchAndShowNearbyProposals(stateAbbr){
         lat:        t.centroidLat,
         lng:        t.centroidLng,
       }));
+    // Register in lookup so selectTerritoryCard can resolve these non-GA rows
+    nearby.forEach(t => _nearbyTerritoriesLookup.set(t.id, t));
     if(!nearby.length) return;
     showNearbyTerritories(nearby, `Other Territories in ${stateAbbr}`);
   } catch(e) { /* silently ignore */ }
