@@ -1,0 +1,158 @@
+Replace the business count display in territory proposals with
+a simple market tier system. Remove all business count numbers
+from the dealer-facing UI. Keep the underlying business count
+logic for internal hub qualification only — do not display it.
+
+
+════════════════════════════════════════════════
+THE CHANGE
+════════════════════════════════════════════════
+
+REMOVE from the proposal card and mailing area list:
+  - "Ad-Ready Businesses: X,XXX"
+  - "X businesses" under each mailing area
+  - Any reference to a specific business count number
+
+REPLACE with a single market tier badge on the proposal card:
+
+  Determine tier from the hub cities' combined population:
+
+  totalHubPopulation = sum of Gazetteer POPULATION for all 4 hubs
+
+  if totalHubPopulation >= 500,000:
+    tier = 'Metro Market'
+    color = burgundy (#7C1C2E)
+    description = 'High-density market with strong advertiser demand'
+
+  else if totalHubPopulation >= 150,000:
+    tier = 'Strong Market'
+    color = green (#1a5c3a)
+    description = 'Established market with solid advertiser base'
+
+  else if totalHubPopulation >= 50,000:
+    tier = 'Good Market'
+    color = #2563eb (blue)
+    description = 'Growing market with good advertiser opportunities'
+
+  else:
+    tier = 'Developing Market'
+    color = #d97706 (amber)
+    description = 'Smaller market — ideal for a motivated dealer'
+
+The proposal card should show:
+
+  ┌─────────────────────────────────────────┐
+  │ 🗺 PROPOSED TERRITORY                    │
+  │ Hilton Head / Bluffton / Beaufort Area   │
+  │                                          │
+  │ Market Type        ● Strong Market       │
+  │ Mailing Areas      4                     │
+  │ Monthly Fee        $99 / month           │
+  │ Status             Pending Approval      │
+  │                                          │
+  │ KEY MAILING AREAS                        │
+  │ • Hilton Head Island  ~17,000 households │
+  │ • Bluffton            ~12,000 households │
+  │ • Beaufort            ~6,000 households  │
+  │ • Port Royal          ~4,000 households  │
+  │                                          │
+  │ [✦ RESERVE THIS TERRITORY — $99/mo]      │
+  └─────────────────────────────────────────┘
+
+Each mailing area shows ONLY households — no business count.
+Households use the × 3.5 proxy from ZBP estab since real
+household data is unavailable. This is accurate enough for
+display purposes.
+
+
+════════════════════════════════════════════════
+HOUSEHOLD DISPLAY PER MAILING AREA
+════════════════════════════════════════════════
+
+Each hub city shows its exclusive Voronoi-assigned household
+count. Format as "~X,000 households" rounded to nearest 1,000.
+
+If a hub's household count is below 3,000 after Voronoi
+assignment, show "~X,000 households" without the tilde —
+exact is fine for small numbers.
+
+Do not show a business count anywhere in the dealer UI.
+
+
+════════════════════════════════════════════════
+KEEP BUSINESS COUNT INTERNALLY
+════════════════════════════════════════════════
+
+The business count logic (ZBP data, NAICS filtering, Voronoi
+assignment) stays in the codebase for hub qualification:
+  HUB_MIN_BUSINESSES threshold still applies
+  Post-Voronoi business check still applies
+
+Just do not surface any business count number to the dealer.
+It goes into territory_proposals table for admin review only.
+
+In the admin proposals queue, show the raw business count
+in the detail expansion panel with a note:
+  "Est. postcard-relevant businesses (Census ZBP, ±40%
+   margin of error due to ZIP-level data limitations)"
+
+This gives you the data for internal decision-making without
+showing unreliable numbers to dealers.
+
+
+════════════════════════════════════════════════
+ALSO UPDATE NEARBY TERRITORIES LIST
+════════════════════════════════════════════════
+
+The sidebar territory cards for existing Georgia territories
+currently show business counts or household counts.
+Update them to show the market tier badge instead:
+  "● Strong Market" or "● Good Market" etc.
+
+Apply the same population-based tier logic using the
+territory's households field from the territories table
+as a proxy for population (households × 2.5 ≈ population).
+
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+  Hub qualification logic (business counts used internally)
+  Voronoi assignment logic
+  Georgia MANAGED_STATES guard
+  Territory proposals table structure
+  Admin approval queue backend logic
+
+
+════════════════════════════════════════════════
+TEST AFTER BUILDING
+════════════════════════════════════════════════
+
+TEST 1 — Hilton Head SC (29928)
+  Proposal card shows:
+    Market Type: Strong Market (green)
+    4 mailing areas with household counts only
+    NO business count numbers anywhere on the card
+    HHI listed as anchor hub with ~17,000 households
+
+TEST 2 — Nashville TN (37201)
+  Market Type: Metro Market (burgundy)
+  4 hub cities with household counts
+
+TEST 3 — Small rural SC zip
+  Market Type: Developing Market (amber)
+  Honest description shown
+
+TEST 4 — Mount Pleasant SC (29464)
+  Market Type: Strong Market
+  No business count shown
+  Household counts per hub are reasonable
+
+TEST 5 — Georgia existing territory (30528)
+  Sidebar card shows market tier badge
+  No business count shown
+
+TEST 6 — Admin proposals queue
+  Business count visible in detail panel with margin of error note
+  Not visible on the public-facing proposal card

@@ -135,7 +135,7 @@ textarea.form-input{resize:vertical;min-height:72px}
           <th>Proposed Territory</th>
           <th>State</th>
           <th>Counties</th>
-          <th>Businesses</th>
+          <th>Businesses <span style="font-weight:400;opacity:.6">*</span></th>
           <th>Dealer Contact</th>
           <th>Submitted</th>
           <th>Status</th>
@@ -279,9 +279,10 @@ function buildDetail(p){
 
         <div class="det-section">
           <h4>Business Intelligence</h4>
-          <div class="det-row"><span class="det-lbl">Ad-Ready Businesses</span><span class="det-val">${(p.totalBusinessCount||0).toLocaleString()}</span></div>
+          <div class="det-row"><span class="det-lbl">Est. Postcard Businesses*</span><span class="det-val">${(p.totalBusinessCount||0).toLocaleString()}</span></div>
           <div class="det-row"><span class="det-lbl">Counties</span><span class="det-val">${esc(counties)}</span></div>
           ${p.topCities&&p.topCities.length?`<div class="det-row"><span class="det-lbl">Key Cities</span><span class="det-val">${esc(p.topCities.join(', '))}</span></div>`:''}
+          <div style="font-size:11px;color:var(--ink-light);margin-top:8px;line-height:1.5">* Census ZBP 6-digit NAICS leaf codes. Estimate may vary ±40% due to ZIP-level data limitations.</div>
         </div>
 
         <div class="det-section">

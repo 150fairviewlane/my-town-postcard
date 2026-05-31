@@ -386,9 +386,9 @@ if(_sp.get('zip') && /^\d{5}$/.test(_sp.get('zip'))){
         <div class="pc-label">🗺 Proposed Territory</div>
         <div class="pc-name" id="pcName"></div>
         <div class="pc-counties" id="pcCounties"></div>
+        <div id="pcMarketTier" style="display:none;margin:8px 0 4px"></div>
         <div class="sd-rows">
-          <div class="sd-row"><span class="sd-label">Ad-Ready Businesses</span><span class="sd-val" id="pcBiz"></span></div>
-          <div class="sd-row" id="pcZonesRow" style="display:none"><span class="sd-label">Postcard Mailing Areas</span><span class="sd-val" id="pcZones"></span></div>
+          <div class="sd-row" id="pcZonesRow"><span class="sd-label">Mailing Areas</span><span class="sd-val" id="pcZones"></span></div>
           <div class="sd-row"><span class="sd-label">Monthly Fee</span><span class="sd-val">$99 / month</span></div>
           <div class="sd-row"><span class="sd-label">Status</span><span class="sd-val" style="color:#fde68a">Pending Approval</span></div>
         </div>
@@ -396,7 +396,6 @@ if(_sp.get('zip') && /^\d{5}$/.test(_sp.get('zip'))){
           <div class="pc-mailing-areas-label">Key Mailing Areas</div>
           <div id="pcMailingAreasList"></div>
         </div>
-        <div id="pcMarketQuality" style="display:none;font-size:12px;padding:6px 10px;border-radius:4px;margin:6px 0;line-height:1.4"></div>
         <hr class="pc-divider">
         <div class="pc-note" id="pcNote">This territory is being created for your area. Reserve it now and we'll activate it within 24 hours.</div>
         <button class="reserve-btn" onclick="openProposalModal()">✦ Reserve This Territory — $99/mo</button>
@@ -896,7 +895,9 @@ function showNearbyTerritories(territories, heading){
   hdr.style.display = 'flex';
   document.getElementById('resultsCount').textContent = `${avail} available`;
 
-  list.innerHTML = territories.map(t => `
+  list.innerHTML = territories.map(t => {
+    const tier = getMarketTier(t.households || 0);
+    return `
     <div class="tcard${t.status==='taken'?' taken':''}${selectedTerritoryId===t.id?' selected':''}"
          ${t.status!=='taken'?`onclick="selectTerritoryCard('${t.id}')"`:''} 
          id="tcard-${t.id}">
@@ -907,10 +908,10 @@ function showNearbyTerritories(territories, heading){
       <div class="tcard-counties">${t.counties.join(' · ')} Counti${t.counties.length===1?'y':'es'}</div>
       ${filterCities(t.zoneNote) ? `<div class="tcard-cities">${filterCities(t.zoneNote)}</div>` : ''}
       <div class="tcard-meta">
-        <div class="tcard-stat">~<strong>${t.households.toLocaleString()}</strong> households</div>
+        <span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;background:${tier.bg};color:${tier.color}">${tier.label}</span>
       </div>
     </div>
-  `).join('');
+  `}).join('');
 
   list.scrollTop = 0;
 }
@@ -1086,8 +1087,7 @@ function drawProposalLayers(proposals){
   const display = _activeDisplayProposal || proposals[0];
   const tooltipHtml =
     `<div style="font-weight:700">${display.proposedName}</div>
-     <div style="font-size:11px;color:#555;margin-top:2px">Proposed Territory</div>
-     <div style="font-size:11px;color:#666;margin-top:1px">${(display.totalBusinesses || display.totalBusinessCount || 0).toLocaleString()} ad-ready businesses</div>`;
+     <div style="font-size:11px;color:#555;margin-top:2px">Proposed Territory</div>`;
 
   // Show amber circle immediately as a placeholder while GeoJSON loads
   const cLat = display.centroidLat || proposals[0]?.centroidLat;
@@ -1170,12 +1170,19 @@ function showProposedUI(){
   renderProposalCard(merged);
 }
 
+function getMarketTier(totalHouseholds){
+  const pop = totalHouseholds * 2.5;
+  if(pop >= 500000) return { label:'🏙 Metro Market',      bg:'#7C1C2E', color:'#fff' };
+  if(pop >= 150000) return { label:'🌿 Strong Market',     bg:'#1a5c3a', color:'#fff' };
+  if(pop >= 50000)  return { label:'📈 Good Market',       bg:'#2563eb', color:'#fff' };
+  return               { label:'🌱 Developing Market', bg:'#d97706', color:'#fff' };
+}
+
 function renderProposalCard(p){
   if(!p) return;
   document.getElementById('pcName').textContent = p.proposedName;
 
   const hubs = p.hubs || [];
-  const totalBiz = p.totalBusinesses || p.totalBusinessCount || 0;
 
   // Show hub city names (new model) or fall back to county names (legacy)
   if(hubs.length > 0){
@@ -1183,7 +1190,15 @@ function renderProposalCard(p){
   } else {
     document.getElementById('pcCounties').textContent = (p.counties||[]).map(c => c.name).join(' · ');
   }
-  document.getElementById('pcBiz').textContent = totalBiz.toLocaleString();
+
+  // Market tier badge — derived from household count (households × 2.5 ≈ population)
+  const totalHH = hubs.length > 0
+    ? hubs.reduce((s, h) => s + (h.catchmentHouseholds || 0), 0)
+    : (p.householdsEstimate || 0);
+  const tier = getMarketTier(totalHH);
+  const tierEl = document.getElementById('pcMarketTier');
+  tierEl.innerHTML = `<span style="display:inline-block;padding:3px 12px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;background:${tier.bg};color:${tier.color}">${tier.label}</span>`;
+  tierEl.style.display = '';
 
   const zonesRow    = document.getElementById('pcZonesRow');
   const mailingWrap = document.getElementById('pcMailingAreas');
@@ -1191,13 +1206,13 @@ function renderProposalCard(p){
   const noteEl      = document.getElementById('pcNote');
 
   if(hubs.length > 0){
-    // City-hub model: show each hub with household and business counts
+    // City-hub model: show each hub with household count only (no business count exposed to dealer)
     document.getElementById('pcZones').textContent = hubs.length;
     zonesRow.style.display = '';
     mailingList.innerHTML = hubs.map((h, i) =>
       `<div class="pc-mailing-area-item">
         <div style="font-weight:600">Mailing Area ${i+1} — ${h.cityName}</div>
-        <div style="font-size:11px;opacity:.7;margin-top:2px">~${h.catchmentHouseholds.toLocaleString()} households · ${h.nearbyBusinesses} businesses</div>
+        <div style="font-size:11px;opacity:.7;margin-top:2px">~${h.catchmentHouseholds.toLocaleString()} households</div>
       </div>`
     ).join('');
     mailingWrap.style.display = '';
@@ -1216,29 +1231,12 @@ function renderProposalCard(p){
       noteEl.textContent =
         `This territory gives you exclusive dealer rights across all ${mailingAreas.length} mailing areas above.`;
     } else {
-      zonesRow.style.display = 'none';
+      document.getElementById('pcZones').textContent = '1';
+      zonesRow.style.display = '';
       mailingWrap.style.display = 'none';
       noteEl.textContent = "This territory is being created for your area. Reserve it now and we'll activate it within 24 hours.";
     }
   }
-
-  // Market quality note — set expectation honestly based on business count
-  const mqEl = document.getElementById('pcMarketQuality');
-  const biz = totalBiz;
-  if(biz >= 600){
-    mqEl.textContent = '★ Strong market — excellent pipeline for 4+ postcard mailings.';
-    mqEl.style.background = '#dbeafe'; mqEl.style.color = '#1e40af';
-  } else if(biz >= 400){
-    mqEl.textContent = '✓ Good market — solid pipeline for 4 postcard mailings.';
-    mqEl.style.background = '#dcfce7'; mqEl.style.color = '#166534';
-  } else if(biz >= 300){
-    mqEl.textContent = '↗ Adequate market — manageable territory for 4 mailings with focused sales effort.';
-    mqEl.style.background = '#fef9c3'; mqEl.style.color = '#713f12';
-  } else {
-    mqEl.textContent = '⚠ Smaller market — may require additional time to complete 4 full postcard cycles. You\'ll have a larger exclusive area.';
-    mqEl.style.background = '#fef3c7'; mqEl.style.color = '#92400e';
-  }
-  mqEl.style.display = '';
 
   document.getElementById('proposalCard').classList.add('visible');
 }
@@ -1298,8 +1296,7 @@ function openProposalModal(){
   const locationStr = hubs.length > 0
     ? hubs.map(h => h.cityName).join(' · ')
     : (p.counties||[]).map(c => c.name).join(' · ');
-  document.getElementById('modalTerritoryCounties').textContent =
-    locationStr + ' · ' + (p.totalBusinesses || p.totalBusinessCount || 0).toLocaleString() + ' businesses';
+  document.getElementById('modalTerritoryCounties').textContent = locationStr;
   const sp = new URLSearchParams(window.location.search);
   document.getElementById('claimName').value  = sp.get('name')  || '';
   document.getElementById('claimEmail').value = sp.get('email') || '';
