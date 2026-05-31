@@ -1147,10 +1147,14 @@ function mergeProposals(proposals){
     .trim();
   const mergedName = proposals[0].proposedName || (countyShort ? countyShort + ' Area' : '');
 
+  const summedBusinesses = proposals.reduce(
+    (s, p) => s + (p.totalBusinesses || p.totalBusinessCount || 0), 0
+  );
   return {
     ...proposals[0],
     proposedName: mergedName,
-    totalBusinessCount: proposals.reduce((s, p) => s + (p.totalBusinessCount || 0), 0),
+    totalBusinesses:  summedBusinesses,
+    totalBusinessCount: summedBusinesses,
     estimatedZones: proposals.length,
     mailingAreas: proposals.map(p => p.proposedName),
   };
