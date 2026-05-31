@@ -1140,12 +1140,12 @@ function mergeProposals(proposals){
   const allSplit = proposals.every(p => p.isSplit);
   if(!allSplit) return { ...proposals[0], mailingAreas: [] };
 
-  // Derive county-level name: strip legal suffix, append "Area"
+  // Prefer the first proposal's human-readable name; fall back to county-derived label
   const firstCountyName = proposals[0]?.counties?.[0]?.name || '';
   const countyShort = firstCountyName
     .replace(/\s+(County|Parish|Borough|Census Area|City and Borough|Municipality|Municipio|District|City)$/i, '')
     .trim();
-  const mergedName = countyShort ? countyShort + ' Area' : proposals[0].proposedName;
+  const mergedName = proposals[0].proposedName || (countyShort ? countyShort + ' Area' : '');
 
   return {
     ...proposals[0],
@@ -1247,12 +1247,17 @@ async function fetchAndShowNearbyProposals(stateAbbr){
     const res = await fetch(`/api/territories?state=${stateAbbr}`);
     if(!res.ok) return;
     const rows = await res.json();
-    // Exclude the territory whose name matches the active proposal so it isn't listed twice
-    const activeName = (_activeDisplayProposal || activeProposals[0])?.proposedName || '';
+    // Build a stable set of all active proposal names (merged display name + each constituent
+    // proposal's name) so we reliably exclude the current proposal regardless of merge rename
+    const activeNames = new Set([
+      _activeDisplayProposal?.proposedName,
+      ...(_activeDisplayProposal?.mailingAreas || []),
+      ...activeProposals.map(p => p.proposedName),
+    ].filter(Boolean));
     const nearby = rows
       .filter(t => t.status === 'proposed' || t.status === 'available')
       .filter(t => t.centroidLat != null && t.centroidLng != null)
-      .filter(t => !activeName || t.name !== activeName)
+      .filter(t => !activeNames.size || !activeNames.has(t.name))
       .map(t => ({
         id:         t.id,
         name:       t.name,
