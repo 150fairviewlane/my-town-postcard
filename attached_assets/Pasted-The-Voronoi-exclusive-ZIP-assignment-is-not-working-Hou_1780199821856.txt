@@ -1,0 +1,61 @@
+The Voronoi exclusive ZIP assignment is not working. Household
+counts are still massively inflated after the fix was supposedly
+applied. Stop and diagnose before making any more changes.
+
+════════════════════════════════════════════════
+DIAGNOSTIC — RUN AND REPORT ALL OUTPUT
+════════════════════════════════════════════════
+
+For ZIP 29464 (Mount Pleasant SC), run the territory builder
+with verbose logging and report the answers to ALL of these:
+
+1. How many total ZIPs are found within 40 miles of 29464?
+   List the first 10 with their zip code, lat, lng, households,
+   and businesses values.
+
+2. What are the 4 selected hub cities and their lat/lng?
+
+3. For EACH hub city, list:
+   a. How many ZIPs were assigned to it via Voronoi
+   b. The sum of households across those ZIPs
+   c. The sum of businesses across those ZIPs
+   d. The 5 closest ZIPs assigned to it
+
+4. Is the Voronoi assignment function actually being called?
+   Add a console.log("VORONOI: assigning ZIP {zip} to {city}")
+   for the first 10 ZIP assignments and confirm they appear
+   in the server logs.
+
+5. Where does the zip-county.csv file store household counts?
+   What is the exact column name? What value does it store for
+   ZIP 29464 specifically? Report the raw CSV row.
+
+6. What household value does the system show for ZIP 29464 alone?
+   (not the hub total — just the single ZIP's household count)
+
+════════════════════════════════════════════════
+LIKELY ROOT CAUSES TO CHECK
+════════════════════════════════════════════════
+
+CAUSE A — zip-county.csv household column is county-level not ZIP-level
+  If the households column in zip-county.csv stores the total
+  households for the entire county rather than just that ZIP,
+  then every ZIP in Charleston County returns ~140,000 households
+  and multiplying by the number of ZIPs gives absurd totals.
+  CHECK: Compare the households value for ZIP 29464 against the
+  known real value of ~15,000-18,000 for that specific ZIP.
+  If it shows 140,000+ it is county-level data being misused.
+
+CAUSE B — Voronoi function exists but is not being called
+  The old counting logic (sum all ZIPs within radius) may still
+  be running instead of the Voronoi assignment.
+  CHECK: Confirm the Voronoi assignment function is actually
+  invoked in buildCityHubProposal() and not just defined.
+
+CAUSE C — ZIPs have no lat/lng so distance calculation fails
+  If zip-centroids.csv is not loaded or ZIPs have no lat/lng,
+  all ZIPs may be assigned to the first hub by default.
+  CHECK: Does ZIP 29464 have a valid lat/lng in the data?
+
+Report the diagnostic findings before making any code changes.
+Do not attempt to fix anything until the root cause is confirmed.
