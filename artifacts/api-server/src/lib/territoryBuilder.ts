@@ -34,7 +34,7 @@ const MANAGED_STATES = ["GA"];
 
 // ─── City Hub Constants ───────────────────────────────────────────────────────
 const HUB_MIN_HOUSEHOLDS    = 5_000; // min catchment households within HUB_HOUSEHOLD_RADIUS (pre-Voronoi)
-const HUB_MIN_BUSINESSES    = 100;   // min establishments within HUB_BUSINESS_RADIUS
+const HUB_MIN_BUSINESSES    = 25;    // min postcard-industry establishments within HUB_BUSINESS_RADIUS
 // After Voronoi+cap, each hub's exclusive zone is naturally smaller than its full
 // 15mi circle (used in findCandidateHubs). Use a lower household floor here so that
 // legitimate coastal/island anchors (e.g. Hilton Head Island, 4 477 hh) pass while
@@ -54,7 +54,7 @@ const HOUSEHOLDS_PER_BUSINESS = 3.5;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const HUB_MIN_CITY_POPULATION = 8_000; // documented intent; enforcement is via local biz proxy
 const HUB_LOCAL_RADIUS  = 5;  // miles for local business density check
-const HUB_LOCAL_BIZ_MIN = 30; // proxy threshold: fewer than this ≈ population < 8,000
+const HUB_LOCAL_BIZ_MIN = 8;  // postcard-biz proxy: fewer than this ≈ population < 8,000
 
 // Private/gated/ferry-only communities that can slip through the density proxy
 // because their commercial data is misleading (resorts count businesses on paper

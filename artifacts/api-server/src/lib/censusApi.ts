@@ -153,6 +153,16 @@ const countyCentroidsMap = new Map<string, CountyCentroidRow>();
 const zipBusinessMap = new Map<string, number>();
 
 /**
+ * ZIP → postcard-relevant establishment count.
+ * Source: src/data/zbp-postcard.csv (filtered from ZBP 2022 detail file)
+ * Key: 5-digit ZIP string (e.g. "29464")
+ * Value: sum of establishments across the 32 postcard-industry NAICS codes
+ *   (sectors 44-45, 52-53, 62, 71, 72, 81, specialty contractors 2381x-2383x)
+ *   at the 6-digit leaf level only — no double-counting of rollup rows.
+ */
+const zipPostcardBizMap = new Map<string, number>();
+
+/**
  * ZIP → {lat, lng} centroid.
  * Source: src/data/zip-centroids.csv (Midwire US ZIP centroids)
  * Key: 5-digit ZIP string (e.g. "30528")
@@ -446,7 +456,35 @@ function loadStaticData(): void {
       "Census: failed to load zbp22totals.txt");
   }
 
-  // ── 7. zip-centroids.csv ──────────────────────────────────────────────────────
+  // ── 7. zbp-postcard.csv ──────────────────────────────────────────────────────
+  // Pre-filtered ZBP 2022 detail: only 6-digit NAICS leaf codes for the 32
+  // postcard industries (sectors 44-45, 52-53, 62, 71, 72, 81, contractors 238x).
+  // Produced by scripts/filterZbpDetail.ts; committed alongside the server.
+  // Header: zip,naics,estab
+  // estab may be 'D' (suppressed, stored as 5) or a plain integer.
+  try {
+    const text = readFileSync(join(dataDir, "zbp-postcard.csv"), "utf-8");
+    let count = 0;
+    for (const raw of text.split("\n")) {
+      const line = raw.trim();
+      if (!line || line.startsWith("zip,")) continue;
+      const cols = line.split(",");
+      if (cols.length < 3) continue;
+      const zip     = (cols[0] ?? "").trim();
+      const estRaw  = (cols[2] ?? "").trim();
+      if (!zip || zip.length !== 5) continue;
+      const est = estRaw === "D" ? 5 : parseInt(estRaw, 10);
+      if (isNaN(est) || est <= 0) continue;
+      zipPostcardBizMap.set(zip, (zipPostcardBizMap.get(zip) ?? 0) + est);
+      count++;
+    }
+    logger.info({ zips: zipPostcardBizMap.size, rows: count }, "ZBP postcard businesses loaded");
+  } catch (err: unknown) {
+    logger.error({ err: err instanceof Error ? err.message : String(err) },
+      "Census: failed to load zbp-postcard.csv — postcard business counts will be 0");
+  }
+
+  // ── 8. zip-centroids.csv ──────────────────────────────────────────────────────
   // Midwire US ZIP centroids. Header: code,city,state,county,area_code,lat,lon
   // code = col 0, lat = col 5, lon = col 6.
   try {
@@ -684,11 +722,23 @@ export async function getTopCitiesInCounty(
 // ─── City-Hub Exports ─────────────────────────────────────────────────────────
 
 /**
- * Returns the establishment count for a ZIP code from ZBP 2022 data.
+ * Returns the total establishment count for a ZIP code from ZBP 2022 totals.
  * Returns 0 for ZIPs with no data or suppressed entries stored as 5.
  */
 export function getZipBusinessCount(zip: string): number {
   return zipBusinessMap.get(zip) ?? 0;
+}
+
+/**
+ * Returns the postcard-relevant establishment count for a ZIP code.
+ * Sourced from zbp-postcard.csv (ZBP 2022 detail, 6-digit NAICS leaf codes only).
+ * Covers sectors 44-45 (retail), 52-53 (finance/RE), 62 (health care),
+ * 71 (arts/rec), 72 (food service), 81 (other services), and specialty
+ * contractors (238210, 238220, 238320, etc.).
+ * Returns 0 for ZIPs with no postcard-industry data.
+ */
+export function getZipPostcardBusinessCount(zip: string): number {
+  return zipPostcardBizMap.get(zip) ?? 0;
 }
 
 /**
@@ -741,7 +791,7 @@ export function getZipsNearLocation(
 
     if (distance > radiusMiles) continue;
 
-    const businesses = zipBusinessMap.get(zip) ?? 0;
+    const businesses = zipPostcardBizMap.get(zip) ?? 0;
     result.push({ zip, lat: centroid.lat, lng: centroid.lng, households: Math.round(businesses * 3.5), businesses, distance });
   }
 

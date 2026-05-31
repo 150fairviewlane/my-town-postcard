@@ -1,0 +1,211 @@
+Implement Path 2 instead of Path 1. Use ZIP-level NAICS detail
+data for exact postcard-relevant business counts per ZIP.
+Do not implement the county fraction approach.
+
+
+════════════════════════════════════════════════
+STEP 1 — DOWNLOAD AND FILTER THE ZBP DETAIL FILE
+════════════════════════════════════════════════
+
+Run these commands in the Replit shell:
+
+  curl -L -o src/data/zbp22detail.zip \
+    "https://www2.census.gov/programs-surveys/cbp/datasets/2022/zbp22detail.zip"
+
+Report the file size. It will be large (200-400MB compressed).
+If the download succeeds, continue to the next command.
+If it fails or times out, try:
+  curl -L -o src/data/zbp22detail.zip \
+    "https://www2.census.gov/programs-surveys/cbp/datasets/2022/zbp22detail.txt"
+
+Once downloaded, run the filter script below to extract only
+the rows relevant to your 32 postcard industries. This produces
+a small file (~2-5MB) that is what actually gets loaded at runtime.
+
+Create this filter script at src/scripts/filterZbpDetail.ts
+and run it once with: npx ts-node src/scripts/filterZbpDetail.ts
+
+  import fs from 'fs';
+  import readline from 'readline';
+  import path from 'path';
+
+  // Your 32 postcard industries map to these NAICS 2-digit sectors
+  const POSTCARD_SECTORS = new Set([
+    '44','45', // Retail
+    '52','53', // Finance and Real Estate
+    '62',      // Health Care (dentists, chiro, vets, medical)
+    '71',      // Arts/Recreation (gyms, photography)
+    '72',      // Food Services (restaurants, cafes, bars, bakeries)
+    '81',      // Other Services (salons, auto repair, pet, cleaning)
+  ]);
+
+  // Specialty contractors — NAICS codes starting with 238
+  const CONTRACTOR_PREFIXES = ['2381','2382','2383','2389'];
+
+  function isPostcardNaics(naics: string): boolean {
+    const sector = naics.substring(0, 2);
+    if (POSTCARD_SECTORS.has(sector)) return true;
+    if (CONTRACTOR_PREFIXES.some(p => naics.startsWith(p))) return true;
+    return false;
+  }
+
+  const inputPath = path.join(__dirname, '../data/zbp22detail.txt');
+  const outputPath = path.join(__dirname, '../data/zbp-postcard.csv');
+
+  const rl = readline.createInterface({
+    input: fs.createReadStream(inputPath),
+    crlfDelay: Infinity
+  });
+
+  const out = fs.createWriteStream(outputPath);
+  out.write('zip,naics,estab\n');
+
+  let header = true;
+  let kept = 0;
+  let total = 0;
+
+  // Parse header to find column indices
+  let zipIdx = -1, naicsIdx = -1, estabIdx = -1;
+
+  rl.on('line', (line) => {
+    const cols = parseCSVLine(line); // use the quoted-field parser
+    if (header) {
+      zipIdx   = cols.findIndex(h => h.toLowerCase().includes('zip'));
+      naicsIdx = cols.findIndex(h => h.toLowerCase().includes('naics'));
+      estabIdx = cols.findIndex(h => h.toLowerCase() === 'estab');
+      header = false;
+      return;
+    }
+    total++;
+    const zip   = cols[zipIdx]?.trim().replace(/"/g,'');
+    const naics = cols[naicsIdx]?.trim().replace(/"/g,'');
+    const estab = cols[estabIdx]?.trim().replace(/"/g,'');
+    if (!zip || !naics || !estab) return;
+    if (naics === '------' || naics === '------') return; // totals rows
+    if (isPostcardNaics(naics)) {
+      out.write(`${zip},${naics},${estab}\n`);
+      kept++;
+    }
+  });
+
+  rl.on('close', () => {
+    out.end();
+    console.log(`Done. Kept ${kept} of ${total} rows.`);
+    console.log(`Output: ${outputPath}`);
+  });
+
+  // Include the quoted-field CSV parser from the existing codebase
+  function parseCSVLine(line: string): string[] {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    for (const char of line) {
+      if (char === '"') { inQuotes = !inQuotes; }
+      else if (char === ',' && !inQuotes) { result.push(current.trim()); current = ''; }
+      else { current += char; }
+    }
+    result.push(current.trim());
+    return result;
+  }
+
+After the script runs, report:
+  - Size of zbp-postcard.csv
+  - Number of rows kept
+  - Sample: first 5 rows of zbp-postcard.csv
+
+
+════════════════════════════════════════════════
+STEP 2 — LOAD zbp-postcard.csv AT STARTUP
+════════════════════════════════════════════════
+
+Add a new Map to censusApi.ts:
+
+  zipPostcardBizMap: Map<string, number>
+  key = 5-digit ZIP string
+  value = total postcard-relevant establishments for that ZIP
+          (sum of estab across all matching NAICS rows for that ZIP)
+
+Load it at startup:
+
+  function loadZipPostcardBusinesses(): void {
+    // Read src/data/zbp-postcard.csv
+    // For each row: add estab to zipPostcardBizMap[zip]
+    // Skip rows where estab is 'D' — treat as 5 (suppressed)
+    // Skip rows where estab is 0 or empty
+    // Log: "ZIP postcard businesses loaded: X ZIPs"
+  }
+
+Export this function:
+
+  export function getZipPostcardBusinessCount(zip: string): number {
+    return zipPostcardBizMap.get(zip) ?? 0;
+  }
+
+
+════════════════════════════════════════════════
+STEP 3 — REPLACE IN territoryBuilder.ts
+════════════════════════════════════════════════
+
+Find every place that calls getZipBusinessCount(zip) and replace
+with getZipPostcardBusinessCount(zip).
+
+The countyGeoid parameter is NOT needed — the new function works
+at ZIP level directly with no county fraction approximation.
+
+Update HUB_MIN_BUSINESSES threshold:
+  Change from 100 to 25
+  (postcard businesses are a subset of total — lower threshold)
+
+Update VORONOI_HUB_MIN_BUSINESSES if it exists separately:
+  Change from 100 to 10
+
+
+════════════════════════════════════════════════
+STEP 4 — DELETE Path 1 CODE IF WRITTEN
+════════════════════════════════════════════════
+
+If any county fraction logic was already written (countyPostcardEstab,
+countyPostcardFraction maps, POSTCARD_NAICS_SECTORS constant,
+getZipPostcardBusinessCount with countyGeoid parameter), remove it.
+Replace entirely with the ZIP-level approach from Step 2.
+
+
+════════════════════════════════════════════════
+IF zbp22detail.zip DOWNLOAD FAILS
+════════════════════════════════════════════════
+
+If the Census server blocks the download (same issue as before),
+report back immediately. Do not implement Path 1 as a fallback
+without confirming with the user first. The user wants to do
+this correctly, not add another approximation to fix later.
+
+
+════════════════════════════════════════════════
+TEST AFTER BUILDING
+════════════════════════════════════════════════
+
+SANITY CHECK:
+  Log getZipPostcardBusinessCount('29464')
+  Log getZipPostcardBusinessCount('29410')  (Hanahan)
+  Log getZipPostcardBusinessCount('29403')  (Charleston)
+
+  Expected approximate values:
+    29464 (Mount Pleasant): 200-600 postcard businesses
+    29410 (Hanahan): 50-150 postcard businesses
+    29403 (Charleston): 300-800 postcard businesses
+
+  If any value is above 2,000 the NAICS filter is too broad.
+  If any value is 0 the file did not load correctly.
+
+TERRITORY TEST — ZIP 29464:
+  All 4 hub business counts should reflect postcard industries only
+  Mount Pleasant: approximately 400-900
+  Hanahan: approximately 200-500 (trade area includes N. Charleston)
+
+TERRITORY TEST — ZIP 29928 (Hilton Head):
+  HHI remains anchor hub
+  Business counts reflect postcard industries only
+
+GEORGIA TEST:
+  30501 → GA-026 existing, unchanged
+  31401 → GA-034 existing, unchanged

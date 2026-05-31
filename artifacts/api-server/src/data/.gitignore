@@ -1,0 +1,5 @@
+# Raw Census ZBP detail source files — too large for git (275MB uncompressed)
+# Re-download: https://www2.census.gov/programs-surveys/cbp/datasets/2022/zbp22detail.zip
+# Then regenerate zbp-postcard.csv using the Python filter in src/scripts/filterZbpDetail.py
+zbp22detail.txt
+zbp22detail.zip
