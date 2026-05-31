@@ -1,0 +1,226 @@
+Two fixes needed. ZIP 22901 (Charlottesville VA) is generating a
+territory that only supports one postcard mailing. Every territory
+must support at least 4 mailing cards. Also, Virginia independent
+cities are being missed by the county lookup.
+
+
+════════════════════════════════════════════════
+THE CORE PROBLEM — SIZING FOR 4 CARDS NOT 1
+════════════════════════════════════════════════
+
+Each postcard card has 15 ad slots. A dealer needs to sell 60 total
+slots across 4 cards to complete a full mailing cycle. At a
+realistic 15-25% close rate on business outreach, the dealer needs:
+
+  60 slots ÷ 20% close rate = 300 businesses minimum to approach
+  But pipeline gets depleted — businesses that already bought
+  won't buy again immediately. So you need fresh prospects.
+  A healthy territory needs 400-600 businesses to comfortably
+  support 4 cards with pipeline to spare.
+
+The current MIN_BUSINESS_COUNT of 300 is sized for 1 card.
+It needs to be sized for 4 cards with pipeline.
+
+
+════════════════════════════════════════════════
+FIX 1 — UPDATE TERRITORY SIZE CONSTANTS
+════════════════════════════════════════════════
+
+Update these constants in territoryBuilder.ts:
+
+  // Minimum for a 4-card viable territory with healthy pipeline
+  const MIN_BUSINESS_COUNT = 400;
+
+  // Target business count — ideal territory size
+  // Builder keeps bundling until it hits this target even if
+  // MIN_BUSINESS_COUNT is already reached
+  const TARGET_BUSINESS_COUNT = 600;
+
+  // Only stop bundling early (at MIN) if adding more counties
+  // would exceed the distance cap or cross state lines
+  const MAX_BUSINESS_COUNT = 2000;
+
+  // Max bundle radius — keep at 75 miles
+  const MAX_BUNDLE_RADIUS_MILES = 75;
+
+CHANGE THE BUNDLING LOGIC:
+
+Current behavior: bundle neighbors until totalCount >= MIN_BUSINESS_COUNT
+  then stop.
+
+New behavior: bundle neighbors until totalCount >= TARGET_BUSINESS_COUNT
+  (600), but accept the territory if totalCount >= MIN_BUSINESS_COUNT
+  (400) and no more neighbors are available within the radius or
+  same state.
+
+This means the builder keeps adding neighboring counties even after
+reaching 400 businesses, continuing until it hits 600 or runs out
+of viable neighbors. The dealer gets a larger, more comfortable
+territory rather than the minimum viable one.
+
+Example for Charlottesville:
+  Albemarle County alone: ~500 businesses → currently stops here
+  With new logic: continues bundling
+  Add Fluvanna County (~150 businesses) → 650 total → stops, target met
+  Territory name: "Charlottesville / Fluvanna Area"
+  Dealer now has comfortable pipeline for 4+ cards
+
+
+════════════════════════════════════════════════
+FIX 2 — VIRGINIA INDEPENDENT CITIES
+════════════════════════════════════════════════
+
+Virginia has 38 independent cities that exist outside county
+boundaries in the Census data. They have their own FIPS codes
+and their own business count data in county-business-patterns.txt.
+
+When the territory builder processes a Virginia ZIP code, it looks
+up the county and bundles neighboring counties — but it misses
+adjacent independent cities entirely because they don't appear
+in the county adjacency file as counties.
+
+Key Virginia independent city FIPS codes (state FIPS 51):
+  Charlottesville city: 51540
+  Richmond city:        51760
+  Virginia Beach city:  51810
+  Norfolk city:         51710
+  Chesapeake city:      51550
+  Newport News city:    51700
+  Hampton city:         51650
+  Alexandria city:      51510
+  Roanoke city:         51770
+  Lynchburg city:       51680
+  Harrisonburg city:    51660
+  Fredericksburg city:  51630
+
+Fix the bundling logic for Virginia (stateFips = '51'):
+
+When building a territory in Virginia, after getting the initial
+county's neighbors from the adjacency file, also check whether any
+Virginia independent city centroid is within MAX_BUNDLE_RADIUS_MILES
+of the territory's centroid.
+
+Use the county-centroids.csv file — independent cities appear in
+it with their own GEOID (5-digit FIPS). Their STATEFP is '51' and
+COUNTYFP is their 3-digit city FIPS.
+
+If a Virginia independent city centroid is within 75 miles AND
+the city has businesses in county-business-patterns.txt:
+  Include it as a bundling candidate alongside neighboring counties
+  Add its business count to the territory total
+  Include its name in the city list
+
+For ZIP 22901 specifically:
+  Albemarle County (51003) neighbors include Charlottesville city
+  (51540) which is literally surrounded by Albemarle County.
+  The system must include Charlottesville city in any Albemarle
+  County territory.
+
+This same fix applies to all Virginia ZIPs near independent cities.
+The most important pairings:
+  Albemarle + Charlottesville city
+  Fairfax County + Alexandria city + Falls Church city
+  Roanoke County + Roanoke city + Salem city
+  Pittsylvania County + Danville city
+  Augusta County + Staunton city + Waynesboro city
+  Rockingham County + Harrisonburg city
+  Spotsylvania + Fredericksburg city
+
+
+════════════════════════════════════════════════
+FIX 3 — OTHER STATES WITH INDEPENDENT CITIES
+════════════════════════════════════════════════
+
+Virginia is the most extreme case but a few other states have
+similar independent jurisdictions:
+
+Maryland: Baltimore city (FIPS 24510) is independent of
+  Baltimore County (24005). Always bundle them together.
+
+Missouri: St. Louis city (FIPS 29510) is independent of
+  St. Louis County (29189). Always bundle them together.
+
+Nevada: Carson City (FIPS 32510) is an independent city.
+  Bundle with Douglas or Ormsby area.
+
+Add these specific overrides to the bundling logic:
+  If starting county is Baltimore County MD (24005):
+    Always include Baltimore city (24510) in the bundle
+  If starting county is St. Louis County MO (29189):
+    Always include St. Louis city (29510) in the bundle
+  If starting county is Baltimore city MD (24510):
+    Always include Baltimore County (24005) in the bundle
+  If starting county is St. Louis city MO (29510):
+    Always include St. Louis County (29189) in the bundle
+
+
+════════════════════════════════════════════════
+FIX 4 — TERRITORY VIABILITY MESSAGE UPDATE
+════════════════════════════════════════════════
+
+Update the viability messaging to reflect the 4-card standard:
+
+  totalBusinessCount >= 600:
+    "Strong market — excellent pipeline for 4+ postcard mailings."
+
+  totalBusinessCount 400–599:
+    "Good market — solid pipeline for 4 postcard mailings."
+
+  totalBusinessCount 300–399:
+    "Adequate market — manageable territory for 4 mailings with
+    focused sales effort."
+
+  totalBusinessCount < 300:
+    "⚠ Smaller market — may require additional time to complete
+    4 full postcard cycles. You'll have a larger exclusive area."
+
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+  Georgia MANAGED_STATES hard gate
+  South Carolina state filter fix
+  ZIP household minimum check
+  Distance cap logic
+  Metro split logic
+  Existing territory data
+
+
+════════════════════════════════════════════════
+TEST AFTER FIXING
+════════════════════════════════════════════════
+
+TEST 1 — Charlottesville VA
+  Enter zip 22901
+  Territory must include BOTH Albemarle County AND
+  Charlottesville city (not just Albemarle alone)
+  Total business count should be higher than before
+  Territory name should reflect both areas
+  Viability message should show "Good market" or "Strong market"
+
+TEST 2 — Bundling past minimum
+  Find a ZIP where the home county has 350-450 businesses
+  (just over the old 300 minimum but under the new 600 target)
+  The builder should continue bundling neighboring counties
+  until it reaches 600 or runs out of viable neighbors
+  It should NOT stop at 400 like it did before
+
+TEST 3 — Roanoke VA area
+  Enter a Roanoke VA area ZIP
+  Territory should include both Roanoke County AND Roanoke city
+  AND Salem city (all three are distinct FIPS entities that
+  should be bundled together)
+
+TEST 4 — Baltimore MD
+  Enter a Baltimore County MD ZIP
+  Territory must include Baltimore city in the bundle
+  Not just the county alone
+
+TEST 5 — Georgia still protected
+  30501 → GA-026, never proposed
+  31401 → GA-034, never proposed
+
+TEST 6 — Rural ZIP still blocked
+  29945 (Yemassee SC) → unavailable, rural message
+  Not proposed even with more aggressive bundling

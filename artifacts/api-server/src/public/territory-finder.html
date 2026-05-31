@@ -1195,15 +1195,18 @@ function renderProposalCard(p){
   // Market quality note (Fix 5) — set expectation honestly based on business count
   const mqEl = document.getElementById('pcMarketQuality');
   const biz = p.totalBusinessCount || 0;
-  if(biz < 400){
-    mqEl.textContent = '⚠ Smaller market — this territory may take longer to fill all postcard spots. You\'ll have a larger exclusive area.';
-    mqEl.style.background = '#fef3c7'; mqEl.style.color = '#92400e';
-  } else if(biz < 800){
-    mqEl.textContent = '✓ Good market — solid pipeline for postcard sales.';
-    mqEl.style.background = '#dcfce7'; mqEl.style.color = '#166534';
-  } else {
-    mqEl.textContent = '★ Strong market — plenty of businesses to approach.';
+  if(biz >= 600){
+    mqEl.textContent = '★ Strong market — excellent pipeline for 4+ postcard mailings.';
     mqEl.style.background = '#dbeafe'; mqEl.style.color = '#1e40af';
+  } else if(biz >= 400){
+    mqEl.textContent = '✓ Good market — solid pipeline for 4 postcard mailings.';
+    mqEl.style.background = '#dcfce7'; mqEl.style.color = '#166534';
+  } else if(biz >= 300){
+    mqEl.textContent = '↗ Adequate market — manageable territory for 4 mailings with focused sales effort.';
+    mqEl.style.background = '#fef9c3'; mqEl.style.color = '#713f12';
+  } else {
+    mqEl.textContent = '⚠ Smaller market — may require additional time to complete 4 full postcard cycles. You\'ll have a larger exclusive area.';
+    mqEl.style.background = '#fef3c7'; mqEl.style.color = '#92400e';
   }
   mqEl.style.display = '';
 

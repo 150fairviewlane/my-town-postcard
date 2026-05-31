@@ -20,7 +20,8 @@ import { logger } from "./logger";
 
 // ─── Thresholds ───────────────────────────────────────────────────────────────
 
-const MIN_BUSINESS_COUNT = 300;    // minimum businesses to be a viable territory
+const MIN_BUSINESS_COUNT = 400;    // minimum viable: floor for 4-card mailing cycle
+const TARGET_BUSINESS_COUNT = 600; // target: comfortable pipeline for 4+ cards with replenishment
 const MAX_BUSINESS_COUNT = 2000;   // above this, split into sub-territories
 const MIN_PER_CLUSTER = 100;       // minimum businesses per postcard area
 const MAX_NEIGHBOR_RINGS = 5;      // rings of neighbors before giving up on bundling (wider net for rural areas)
@@ -28,6 +29,11 @@ const MAX_NEIGHBOR_RINGS = 5;      // rings of neighbors before giving up on bun
 // Geography cap: never bundle counties more than this far from the starting county.
 // Prevents absurd territories spanning hundreds of miles of desert or mountain wilderness.
 const MAX_BUNDLE_RADIUS_MILES = 75;
+
+// Co-located jurisdiction radius: much tighter than the bundling radius.
+// Virginia independent cities and city-county pairs are always adjacent (<5 miles typically);
+// 25 miles captures all genuine enclave/adjacent-city cases without sweeping in distant cities.
+const MAX_COLOCATED_RADIUS_MILES = 25;
 
 // Metro threshold: counties above this are considered metro-scale and receive finer splits.
 const METRO_THRESHOLD = 5_000;
@@ -38,8 +44,10 @@ const METRO_THRESHOLD = 5_000;
 // we gate at the county level; MIN_ZIP_HOUSEHOLDS documents the intended ZIP-level floor.
 const HOUSEHOLDS_PER_BUSINESS = 12;
 const MIN_ZIP_HOUSEHOLDS = 300;        // floor for ZIP-level check (placeholder — no ZIP data yet)
-const MIN_HOUSEHOLDS = 8_000;          // county-level proxy gate (~667 ad-ready businesses)
-const MIN_HOUSEHOLDS_TO_SPLIT = MIN_HOUSEHOLDS * 3; // 24,000 — need 3× minimum before splitting
+// Anchor-county household minimum scales with MIN_BUSINESS_COUNT so territories at the floor
+// (400 businesses) still pass. Use this for both the anchor pre-check and the post-bundling gate.
+const MIN_HOUSEHOLDS = MIN_BUSINESS_COUNT * HOUSEHOLDS_PER_BUSINESS; // 400 × 12 = 4,800
+const MIN_HOUSEHOLDS_TO_SPLIT = 24_000; // need a large county before splitting (2,000 biz × 12)
 
 // States with manually managed territories — auto-builder never runs here.
 // Add states here as they are hand-seeded; they get the same hard gate automatically.
@@ -80,6 +88,88 @@ const COUNTY_SUFFIX_RE =
 /** Returns the county short name without legal suffix, title-cased. */
 function countyShortName(fullName: string): string {
   return fullName.replace(COUNTY_SUFFIX_RE, "").trim();
+}
+
+// ─── Co-located jurisdiction tables ───────────────────────────────────────────
+
+/**
+ * Virginia independent cities (FIPS ≥ 510): administratively separate from their
+ * surrounding counties but absent from the Census adjacency file.
+ * Wrong/non-existent codes are harmlessly skipped (getCountyInfo returns null).
+ */
+const VA_INDEPENDENT_CITY_GEOIDS: readonly string[] = [
+  "51510", // Alexandria city
+  "51520", // Bristol city
+  "51530", // Buena Vista city
+  "51540", // Charlottesville city
+  "51550", // Chesapeake city
+  "51560", // Colonial Heights city
+  "51570", // Covington city
+  "51580", // Danville city
+  "51590", // Emporia city
+  "51595", // Fairfax city
+  "51600", // Falls Church city
+  "51610", // Franklin city
+  "51630", // Fredericksburg city
+  "51640", // Galax city
+  "51650", // Hampton city
+  "51660", // Harrisonburg city
+  "51670", // Hopewell city
+  "51678", // Lexington city
+  "51680", // Lynchburg city
+  "51683", // Manassas city
+  "51685", // Manassas Park city
+  "51690", // Martinsville city
+  "51700", // Newport News city
+  "51710", // Norfolk city
+  "51720", // Norton city
+  "51730", // Petersburg city
+  "51735", // Poquoson city
+  "51740", // Portsmouth city
+  "51750", // Radford city
+  "51760", // Richmond city
+  "51770", // Roanoke city
+  "51775", // Salem city
+  "51790", // Staunton city
+  "51800", // Suffolk city
+  "51810", // Virginia Beach city
+  "51820", // Waynesboro city
+  "51830", // Williamsburg city
+  "51840", // Winchester city
+];
+
+/**
+ * Returns GEOIDs of jurisdictions that are administratively separate but
+ * geographically co-located with the bundled counties yet absent from (or poorly
+ * represented in) the county adjacency file:
+ *   - All Virginia independent cities (for any VA territory)
+ *   - Maryland: Baltimore city ↔ Baltimore County (hardcoded pair)
+ *   - Missouri: St. Louis city ↔ St. Louis County (hardcoded pair)
+ * Distance filtering is applied by the caller; wrong FIPS are harmlessly skipped.
+ */
+function getColocatedGeoids(stateFips: string, bundledGeoids: string[]): string[] {
+  const result: string[] = [];
+
+  if (stateFips === "51") {
+    // Virginia: always consider all independent cities; distance cap filters non-local ones
+    for (const g of VA_INDEPENDENT_CITY_GEOIDS) {
+      if (!bundledGeoids.includes(g)) result.push(g);
+    }
+  }
+
+  if (stateFips === "24") {
+    // Maryland: Baltimore city ↔ Baltimore County
+    if (bundledGeoids.includes("24005") && !bundledGeoids.includes("24510")) result.push("24510");
+    if (bundledGeoids.includes("24510") && !bundledGeoids.includes("24005")) result.push("24005");
+  }
+
+  if (stateFips === "29") {
+    // Missouri: St. Louis city ↔ St. Louis County
+    if (bundledGeoids.includes("29189") && !bundledGeoids.includes("29510")) result.push("29510");
+    if (bundledGeoids.includes("29510") && !bundledGeoids.includes("29189")) result.push("29189");
+  }
+
+  return result;
 }
 
 /** Haversine distance in miles between two lat/lng points. */
@@ -311,7 +401,36 @@ export async function buildTerritoryProposal(
   if (businessCount >= MAX_BUSINESS_COUNT) {
     const countyHouseholdsEstimate = Math.round(businessCount * HOUSEHOLDS_PER_BUSINESS);
     if (countyHouseholdsEstimate >= MIN_HOUSEHOLDS_TO_SPLIT) {
-      return splitLargeCounty(stateFips, countyFips, businessCount);
+      const splits = await splitLargeCounty(stateFips, countyFips, businessCount);
+      // Inject co-located jurisdictions (VA independent cities, MD/MO city-county pairs)
+      // into the last split so they appear in the merged territory card.
+      // Use MAX_COLOCATED_RADIUS_MILES (25 mi), not the bundling radius, to avoid
+      // sweeping in distant VA cities.
+      const anchorCentroid = getCountyCentroid(geoid);
+      for (const icGeoid of getColocatedGeoids(stateFips, [geoid])) {
+        if (!anchorCentroid) continue;
+        const icCentroid = getCountyCentroid(icGeoid);
+        if (!icCentroid) continue;
+        const dist = haversineDistanceMiles(
+          anchorCentroid.lat, anchorCentroid.lng, icCentroid.lat, icCentroid.lng
+        );
+        if (dist > MAX_COLOCATED_RADIUS_MILES) continue;
+        const icFips3 = icGeoid.slice(2);
+        const icInfo = await getCountyInfo(stateFips, icFips3);
+        if (!icInfo) continue;
+        const icCount = await getAdReadyBusinessCount(stateFips, icFips3);
+        if (icCount <= 0) continue;
+        const lastSplit = splits[splits.length - 1]!;
+        lastSplit.counties.push({
+          fips: icGeoid,
+          name: icInfo.name,
+          shortName: countyShortName(icInfo.name),
+          businessCount: icCount,
+        });
+        lastSplit.totalBusinessCount += icCount;
+        lastSplit.householdsEstimate += Math.round(icCount * HOUSEHOLDS_PER_BUSINESS);
+      }
+      return splits;
     }
     // Enough businesses but too rural to split — continue as single territory
     logger.info(
@@ -337,50 +456,48 @@ export async function buildTerritoryProposal(
   }];
   let totalCount = businessCount;
 
-  // STEP 3 — Already viable as single county
-  if (totalCount < MIN_BUSINESS_COUNT) {
-    // STEP 4 — Ring expansion
-    const seen = new Set<string>([geoid]);
+  // Setup shared state used by ring expansion AND co-located jurisdiction check below.
+  const seen = new Set<string>([geoid]);
+  const startCentroid = getCountyCentroid(geoid);
 
-    // Load existing territory county short names for conflict filtering
-    const existingTerritories = await db
-      .select({ counties: territoriesTable.counties, status: territoriesTable.status })
-      .from(territoriesTable)
-      .where(eq(territoriesTable.state, stateAbbr));
+  // Load existing territory county short names for conflict filtering
+  const existingTerritories = await db
+    .select({ counties: territoriesTable.counties, status: territoriesTable.status })
+    .from(territoriesTable)
+    .where(eq(territoriesTable.state, stateAbbr));
 
-    const claimedShortNames = new Set<string>();
-    for (const terr of existingTerritories) {
-      if (terr.status === "proposed") continue;
-      const arr: string[] = Array.isArray(terr.counties) ? terr.counties : [];
-      arr.forEach(n => claimedShortNames.add(n));
-    }
+  const claimedShortNames = new Set<string>();
+  for (const terr of existingTerritories) {
+    if (terr.status === "proposed") continue;
+    const arr: string[] = Array.isArray(terr.counties) ? terr.counties : [];
+    arr.forEach(n => claimedShortNames.add(n));
+  }
 
-    // Load pending proposal county FIPs (same state only) to avoid double-proposing.
-    // Must filter by stateFips — county FIPS are 3-digit and reused across states.
-    const pendingProposals = await db
-      .select({ proposedCounties: territoryProposalsTable.proposedCounties })
-      .from(territoryProposalsTable)
-      .where(
-        and(
-          eq(territoryProposalsTable.stateFips, stateFips),
-          eq(territoryProposalsTable.status, "pending_review"),
-        ),
-      );
+  // Load pending proposal county GEOIDs (same state only) to avoid double-proposing.
+  // Must filter by stateFips — county FIPS are 3-digit and reused across states.
+  const pendingProposals = await db
+    .select({ proposedCounties: territoryProposalsTable.proposedCounties })
+    .from(territoryProposalsTable)
+    .where(
+      and(
+        eq(territoryProposalsTable.stateFips, stateFips),
+        eq(territoryProposalsTable.status, "pending_review"),
+      ),
+    );
 
-    const pendingGeoids = new Set<string>();
-    for (const p of pendingProposals) {
-      const arr: string[] = Array.isArray(p.proposedCounties) ? p.proposedCounties : [];
-      arr.forEach(g => pendingGeoids.add(g));
-    }
+  const pendingGeoids = new Set<string>();
+  for (const p of pendingProposals) {
+    const arr: string[] = Array.isArray(p.proposedCounties) ? p.proposedCounties : [];
+    arr.forEach(g => pendingGeoids.add(g));
+  }
 
-    // Starting county centroid for the 75-mile distance cap (Fix 2).
-    // Prevents bundling counties that are hundreds of miles apart in rural/western states.
-    const startCentroid = getCountyCentroid(geoid);
-
-    // Current frontier = directly bundled GEOIDs
+  // STEP 3 — Ring expansion: keep bundling neighbors until TARGET_BUSINESS_COUNT.
+  // Accept the territory if totalCount >= MIN_BUSINESS_COUNT when no more suitable
+  // neighbors remain (radius cap, state line, or all claimed).
+  if (totalCount < TARGET_BUSINESS_COUNT) {
     let frontier = [geoid];
 
-    for (let ring = 1; ring <= MAX_NEIGHBOR_RINGS && totalCount < MIN_BUSINESS_COUNT; ring++) {
+    for (let ring = 1; ring <= MAX_NEIGHBOR_RINGS && totalCount < TARGET_BUSINESS_COUNT; ring++) {
       const nextFrontier: string[] = [];
 
       for (const frontierGeoid of frontier) {
@@ -423,13 +540,13 @@ export async function buildTerritoryProposal(
         nextFrontier.map(g => ({ stateFips: g.slice(0, 2), countyFips: g.slice(2) }))
       );
 
-      // Sort by business count descending, add greedily until viable
+      // Sort by business count descending, add greedily until target
       const sorted = nextFrontier
         .map(g => ({ geoid: g, count: countMap.get(g) ?? 0 }))
         .sort((a, b) => b.count - a.count);
 
       for (const { geoid: nGeoid, count: nCount } of sorted) {
-        if (totalCount >= MIN_BUSINESS_COUNT) break;
+        if (totalCount >= TARGET_BUSINESS_COUNT) break;
         const nFips3 = nGeoid.slice(2);
         const nInfo = await getCountyInfo(stateFips, nFips3);
         if (!nInfo) continue;
@@ -445,6 +562,40 @@ export async function buildTerritoryProposal(
 
       frontier = nextFrontier;
     }
+  }
+
+  // STEP 4 — Co-located jurisdiction check (always runs, even when anchor county is large).
+  // Virginia independent cities are absent from the county adjacency file; MD/MO have
+  // city-county splits. Use MAX_COLOCATED_RADIUS_MILES (25 mi) — not the bundling radius —
+  // to avoid sweeping in distant VA cities that happen to be within 75 miles.
+  for (const icGeoid of getColocatedGeoids(stateFips, bundled.map(c => c.geoid))) {
+    if (seen.has(icGeoid)) continue;
+    if (startCentroid) {
+      const icCentroid = getCountyCentroid(icGeoid);
+      if (icCentroid) {
+        const dist = haversineDistanceMiles(
+          startCentroid.lat, startCentroid.lng, icCentroid.lat, icCentroid.lng
+        );
+        if (dist > MAX_COLOCATED_RADIUS_MILES) continue;
+      }
+    }
+    seen.add(icGeoid);
+    const icFips3 = icGeoid.slice(2);
+    const icInfo = await getCountyInfo(stateFips, icFips3);
+    if (!icInfo) continue;
+    const icShort = countyShortName(icInfo.name);
+    if (claimedShortNames.has(icShort)) continue;
+    if (pendingGeoids.has(icGeoid)) continue;
+    const icCount = await getAdReadyBusinessCount(stateFips, icFips3);
+    if (icCount <= 0) continue;
+    bundled.push({
+      geoid: icGeoid,
+      fips3: icFips3,
+      name: icInfo.name,
+      shortName: icShort,
+      businessCount: icCount,
+    });
+    totalCount += icCount;
   }
 
   // STEP 5 — Gather cities for all bundled counties
@@ -673,7 +824,29 @@ export async function getTerritoryForZip(
   // has very few businesses (< 150), it likely falls in a sparse rural edge of
   // that county. Check the 3 nearest same-state neighbors and re-anchor to
   // whichever has the most businesses, so the territory builds from the real hub.
+  //
+  // IMPORTANT: the rural gate (1d, below) uses anchorBizCheck BEFORE the shift.
+  // A truly rural ZIP (< MIN_BUSINESS_COUNT biz) is rejected without ever attempting
+  // the fringe shift, so that a sparse anchor can never be "rescued" by shifting
+  // 15-20 miles to a nearby viable county that is a completely different market.
   const anchorBizCheck = await getAdReadyBusinessCount(stateFips, countyFips3);
+
+  // 1d. Rural anchor gate (pre-shift): if the original anchor county is genuinely too
+  // sparse for any viable territory, reject immediately before fringe-shift logic runs.
+  // MIN_HOUSEHOLDS = MIN_BUSINESS_COUNT × HOUSEHOLDS_PER_BUSINESS = 400 × 12 = 4,800.
+  if (anchorBizCheck * HOUSEHOLDS_PER_BUSINESS < MIN_HOUSEHOLDS) {
+    logger.info(
+      { zipCode, stateFips, countyFips3, anchorBizCheck, threshold: MIN_HOUSEHOLDS / HOUSEHOLDS_PER_BUSINESS },
+      "Territory builder: original anchor county below household minimum — returning unavailable (pre-shift)",
+    );
+    return {
+      type: "unavailable",
+      message:
+        "This ZIP code appears to be in a rural or non-residential area. " +
+        "Please try a nearby ZIP code in a more populated town or city.",
+    };
+  }
+
   if (anchorBizCheck < 150) {
     const anchorNeighborGeoids = await getNeighboringCounties(geoid);
     const anchorCandidates = anchorNeighborGeoids
@@ -689,15 +862,30 @@ export async function getTerritoryForZip(
         if (c > bestAnchorCount) { bestAnchorGeoid = g; bestAnchorCount = c; }
       }
       if (bestAnchorGeoid) {
-        const newAnchorInfo = await getCountyInfo(bestAnchorGeoid.slice(0, 2), bestAnchorGeoid.slice(2));
-        if (newAnchorInfo) {
-          const originalCounty = county.countyFips;
-          countyFips3 = bestAnchorGeoid.slice(2);
-          countyName = newAnchorInfo.name;
-          geoid = bestAnchorGeoid;
+        // Guard: only shift if the new anchor is ≤ 20 miles away. This prevents
+        // genuinely rural ZIPs (e.g. Yemassee SC) from being dragged into a distant
+        // coastal metro simply because the nearest commercial hub is far away.
+        const origCentroid = getCountyCentroid(`${stateFips}${county.countyFips.padStart(3, "0")}`);
+        const newCentroid = getCountyCentroid(bestAnchorGeoid);
+        const shiftDist = (origCentroid && newCentroid)
+          ? haversineDistanceMiles(origCentroid.lat, origCentroid.lng, newCentroid.lat, newCentroid.lng)
+          : 999;
+        if (shiftDist <= 20) {
+          const newAnchorInfo = await getCountyInfo(bestAnchorGeoid.slice(0, 2), bestAnchorGeoid.slice(2));
+          if (newAnchorInfo) {
+            const originalCounty = county.countyFips;
+            countyFips3 = bestAnchorGeoid.slice(2);
+            countyName = newAnchorInfo.name;
+            geoid = bestAnchorGeoid;
+            logger.info(
+              { zipCode, originalCounty, newGeoid: geoid, bestAnchorCount, shiftDist },
+              "Territory builder: shifted anchor county for fringe ZIP"
+            );
+          }
+        } else {
           logger.info(
-            { zipCode, originalCounty, newGeoid: geoid, bestAnchorCount },
-            "Territory builder: shifted anchor county for fringe ZIP"
+            { zipCode, bestAnchorGeoid, shiftDist, threshold: 20 },
+            "Territory builder: fringe-shift suppressed — new anchor too far away"
           );
         }
       }
@@ -748,6 +936,24 @@ export async function getTerritoryForZip(
       message:
         "A territory proposal for this area is already under review. " +
         "Please contact us to be notified when it becomes available.",
+    };
+  }
+
+  // 3.5. Rural anchor gate (pre-build): if the current anchor county has too few businesses
+  // to represent a real commercial area, reject before bundling. This prevents aggressive
+  // bundling from rescuing a genuinely rural ZIP by pairing it with a distant populated county.
+  // Recompute here (post fringe-shift) so the check uses the final anchor, not the original.
+  const preCheckBizCount = await getAdReadyBusinessCount(stateFips, countyFips3);
+  if (preCheckBizCount * HOUSEHOLDS_PER_BUSINESS < MIN_HOUSEHOLDS) {
+    logger.info(
+      { zipCode, stateFips, countyFips3, preCheckBizCount, threshold: MIN_HOUSEHOLDS },
+      "Territory builder: anchor county below household minimum — returning unavailable (pre-build)",
+    );
+    return {
+      type: "unavailable",
+      message:
+        "This ZIP code appears to be in a rural or non-residential area. " +
+        "Please try a nearby ZIP code in a more populated town or city.",
     };
   }
 
