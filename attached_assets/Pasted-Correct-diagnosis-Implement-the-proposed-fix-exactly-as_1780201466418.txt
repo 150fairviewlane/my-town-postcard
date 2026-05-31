@@ -1,0 +1,56 @@
+Correct diagnosis. Implement the proposed fix exactly as described.
+
+After Voronoi assignment, filter each hub's ZIP list to only
+include ZIPs within HUB_HOUSEHOLD_RADIUS (15 miles) of that hub
+before summing households and businesses.
+
+ZIPs outside the 15-mile cap are excluded from all hub tallies.
+Do not change the 40-mile pool logic or the Voronoi assignment
+distance logic — only add the post-assignment radius gate.
+
+════════════════════════════════════════════════
+ONE ADDITIONAL ADJUSTMENT
+════════════════════════════════════════════════
+
+After implementing the cap, the numbers will still show more
+businesses than the city-limits-only figures the user is
+comparing against. That is expected and correct — a 15-mile
+trade area legitimately includes more businesses than the
+city boundary alone.
+
+However, the HUB_MIN_BUSINESSES threshold of 100 should be
+re-evaluated against the capped counts, not the uncapped ones.
+A hub that only qualifies because of ZIPs 20+ miles away
+should not qualify at all.
+
+After implementing the fix, if Hanahan's capped business count
+drops below 100 (the HUB_MIN_BUSINESSES threshold), remove it
+as a qualifying hub and replace it with the next best candidate
+from the original sorted list.
+
+For the 29464 territory this might mean Hanahan gets replaced
+by Goose Creek or Summerville which are more commercially dense.
+That would be a better territory for the dealer.
+
+════════════════════════════════════════════════
+TEST AFTER FIXING
+════════════════════════════════════════════════
+
+For ZIP 29464 (Mount Pleasant SC):
+
+1. Log each hub's capped ZIP count, business sum, and
+   household sum after the 15-mile gate is applied.
+   Hanahan should have approximately 8 ZIPs not 20.
+
+2. If Hanahan's capped business count >= 100, keep it.
+   If below 100, replace with next best candidate and log
+   which city replaced it.
+
+3. Report the final 4 hub cities with their capped counts.
+   Business counts should be in these approximate ranges:
+     Mount Pleasant: 2,000-4,000 (not 5,331)
+     Charleston: 3,000-6,000 (large city, high density)
+     Hanahan or replacement: 500-1,500
+     James Island or replacement: 500-1,500
+
+4. Georgia ZIPs still return existing territories unchanged.

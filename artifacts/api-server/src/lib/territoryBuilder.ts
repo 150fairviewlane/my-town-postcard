@@ -33,8 +33,13 @@ const BLOCKED_ZIPS = new Set([
 const MANAGED_STATES = ["GA"];
 
 // ─── City Hub Constants ───────────────────────────────────────────────────────
-const HUB_MIN_HOUSEHOLDS    = 5_000; // min catchment households within HUB_HOUSEHOLD_RADIUS
+const HUB_MIN_HOUSEHOLDS    = 5_000; // min catchment households within HUB_HOUSEHOLD_RADIUS (pre-Voronoi)
 const HUB_MIN_BUSINESSES    = 100;   // min establishments within HUB_BUSINESS_RADIUS
+// After Voronoi+cap, each hub's exclusive zone is naturally smaller than its full
+// 15mi circle (used in findCandidateHubs). Use a lower household floor here so that
+// legitimate coastal/island anchors (e.g. Hilton Head Island, 4 477 hh) pass while
+// tiny rural overshoot hubs (e.g. Awendaw, 655 hh) are still rejected and replaced.
+const VORONOI_HUB_MIN_HOUSEHOLDS = 2_000;
 const HUB_HOUSEHOLD_RADIUS  = 15;   // miles to sum households around a hub city
 const HUB_BUSINESS_RADIUS   = 10;   // miles to sum businesses around a hub city
 const TERRITORY_SEARCH_RADIUS = 40; // max miles from dealer ZIP centroid to search
@@ -418,12 +423,17 @@ function voronoiAssign(
       const d = haversineDistanceMiles(zip.lat, zip.lng, hub.lat, hub.lng);
       if (d < minDist) { minDist = d; nearestHub = hub; }
     }
+    // Post-assignment radius gate: only count ZIPs within HUB_HOUSEHOLD_RADIUS of
+    // their assigned hub. This prevents boundary hubs from accumulating ZIPs that
+    // are 20-28 miles away simply because no closer hub exists in that sector.
+    if (minDist > HUB_HOUSEHOLD_RADIUS) continue;
+
     hubHH.set(nearestHub.cityName,   (hubHH.get(nearestHub.cityName)   ?? 0) + zip.households);
     hubBiz.set(nearestHub.cityName,  (hubBiz.get(nearestHub.cityName)  ?? 0) + zip.businesses);
     hubZips.set(nearestHub.cityName, (hubZips.get(nearestHub.cityName) ?? 0) + 1);
   }
 
-  // Debug: confirm exclusive assignment counts
+  // Debug: confirm capped assignment counts
   for (const hub of hubs) {
     logger.debug(
       {
@@ -432,7 +442,7 @@ function voronoiAssign(
         households:   hubHH.get(hub.cityName)   ?? 0,
         businesses:   hubBiz.get(hub.cityName)  ?? 0,
       },
-      `Hub ${hub.cityName}: ${hubZips.get(hub.cityName) ?? 0} ZIPs assigned, ` +
+      `Hub ${hub.cityName}: ${hubZips.get(hub.cityName) ?? 0} ZIPs assigned (≤${HUB_HOUSEHOLD_RADIUS}mi cap), ` +
       `${hubHH.get(hub.cityName) ?? 0} households, ${hubBiz.get(hub.cityName) ?? 0} businesses`
     );
   }
@@ -440,11 +450,16 @@ function voronoiAssign(
   return hubs.map(h => {
     const hh  = hubHH.get(h.cityName)  ?? 0;
     const biz = hubBiz.get(h.cityName) ?? 0;
+    // Post-Voronoi qualification uses VORONOI_HUB_MIN_HOUSEHOLDS (lower than the
+    // pre-Voronoi HUB_MIN_HOUSEHOLDS) because the 15mi cap gives each hub a
+    // smaller exclusive zone than its full circle overlap.  The lower floor
+    // keeps real anchors like Hilton Head Island (4 477 hh) while still
+    // rejecting rural overshoot hubs like Awendaw (655 hh).
     return {
       ...h,
       catchmentHouseholds: hh,
       nearbyBusinesses:    biz,
-      qualifies: hh >= HUB_MIN_HOUSEHOLDS && biz >= HUB_MIN_BUSINESSES,
+      qualifies: hh >= VORONOI_HUB_MIN_HOUSEHOLDS && biz >= HUB_MIN_BUSINESSES,
     };
   });
 }

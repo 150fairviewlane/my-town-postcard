@@ -1,0 +1,65 @@
+The numbers are still wrong after the CSV parser fix.
+Real values vs what the system shows for 29464:
+
+  Mount Pleasant: real ~1,500 businesses, system shows 5,331
+  Hanahan: real ~289 businesses, system shows 8,895
+  Hanahan: real ~7,866 households, system shows 31,136
+
+Business counts are 5-30x too high. Household counts are 4x too high.
+The Voronoi fix is not working correctly.
+
+════════════════════════════════════════════════
+DIAGNOSE BEFORE FIXING — REPORT ALL OF THESE
+════════════════════════════════════════════════
+
+1. What is the raw ZBP estab value for these specific ZIPs
+   after the CSV parser fix?
+   Report: ZIP 29464, 29466, 29410, 29403
+   Expected: 29464 ~2,917, 29466 ~1,062, 29410 ~289
+
+2. How many total ZIPs are being included in the 40-mile pool
+   for ZIP 29464? List all of them with their estab values.
+
+3. For the Hanahan hub specifically — which ZIPs are being
+   assigned to it via Voronoi? List every ZIP assigned to
+   Hanahan and its estab and household values.
+   Hanahan should only receive ZIPs physically close to it
+   (ZIP 29410 and maybe 1-2 others). If it is receiving
+   20+ ZIPs something is very wrong with the assignment.
+
+4. Is the Voronoi function using the correct lat/lng for each
+   hub city? Log the lat/lng being used for Hanahan.
+   Real Hanahan coordinates: approximately 32.92, -80.00
+   If the coordinates are wrong the distance calculation fails.
+
+5. What is the hub city lat/lng source? Is it coming from
+   the Gazetteer file or somewhere else?
+
+════════════════════════════════════════════════
+LIKELY ROOT CAUSES
+════════════════════════════════════════════════
+
+CAUSE A — ZBP estab still being read from wrong column for some ZIPs
+  The CSV parser fix may have only partially worked.
+  Some city names without commas parse correctly while others
+  with commas still shift columns.
+  CHECK: Compare the raw parsed estab for ZIP 29410 (Hanahan)
+  against the known real value of 289.
+  If it shows 4,660 that is the employment column not estab.
+  If it shows 240,850 that is the payroll column.
+
+CAUSE B — Voronoi radius is too large
+  If each hub city is claiming ZIPs within 40 miles (the full
+  territory search radius) instead of just the nearest ZIPs,
+  every hub gets the entire pool.
+  The Voronoi assignment should assign each ZIP to its NEAREST
+  hub regardless of distance — not to hubs within a fixed radius.
+  CHECK: Is the Voronoi comparing distance to hub vs distance to
+  other hubs, or is it checking if the hub is within some radius?
+
+CAUSE C — Hub lat/lng is wrong
+  If the Gazetteer lat/lng for Hanahan is wrong, the distance
+  calculation assigns the wrong ZIPs to it.
+  CHECK: Log the exact lat/lng being used for each hub city.
+
+Report findings before making any code changes.
