@@ -1,0 +1,110 @@
+Fix two problems with the city hub territory builder.
+
+
+════════════════════════════════════════════════
+PROBLEM 1 — TINY CITIES BEING SELECTED AS HUBS
+════════════════════════════════════════════════
+
+The Gazetteer file contains every incorporated place in the US
+including tiny towns with a few hundred people. Places like
+Isle of Palms SC (4,347 people) and Sullivan's Island SC (1,893
+people) are being proposed as mailing hub cities. These are tiny
+barrier island resort communities with almost no year-round
+residents or local businesses and should never be hub cities.
+
+FIX: Add a minimum population threshold to the candidate hub filter.
+
+Add this constant:
+  const HUB_MIN_CITY_POPULATION = 8000;
+
+In findCandidateHubs(), filter out any city where population is
+less than HUB_MIN_CITY_POPULATION before calculating catchment
+households or businesses.
+
+Also add a small exclusion set for edge cases that might slip
+through despite low population counts — private gated islands
+and ferry-only communities where population data is misleading:
+
+  const RESORT_CITIES = new Set([
+    "Sullivan's Island", // SC — 1,893 people, tiny barrier island
+    'Isle of Palms',     // SC — 4,347 people, tiny barrier island
+    'Kiawah Island',     // SC — private gated resort
+    'Sea Island',        // GA — private gated resort
+    'Bald Head Island',  // NC — ferry-only island, no businesses
+    'Ocracoke',          // NC — tiny outer banks seasonal community
+  ]);
+
+Do NOT exclude Hilton Head Island — it has 38,158 year-round
+residents, a median household income of $98,961, and a thriving
+local business community. It is a legitimate and desirable
+postcard market. It passes the 8,000 population minimum easily
+and should be proposable as a hub city.
+
+Do NOT exclude Myrtle Beach, Panama City Beach, or any other
+large resort city with significant year-round populations and
+real local business communities.
+
+
+════════════════════════════════════════════════
+PROBLEM 2 — DOUBLE-COUNTING IN HUB CALCULATIONS
+════════════════════════════════════════════════
+
+Household and business counts are inflated because ZIP codes
+within overlapping catchment circles are counted multiple times.
+Mount Pleasant SC shows 75,000 households but actually has
+~39,884. Every ZIP near Mount Pleasant falls within the 15-mile
+catchment radius of multiple nearby hub cities and gets counted
+once for each.
+
+FIX: After selecting the 4 hub cities, assign each nearby ZIP
+to its NEAREST hub city only. Each ZIP counts toward exactly
+one hub — no double counting.
+
+Replace the current counting logic with Voronoi exclusive
+assignment:
+
+STEP 1 — Get all ZIPs within TERRITORY_SEARCH_RADIUS (40 miles)
+of the dealer ZIP centroid.
+
+STEP 2 — For each nearby ZIP, assign it to whichever hub city
+centroid is closest (Haversine distance).
+
+STEP 3 — Count households and businesses per hub using only
+its exclusively assigned ZIPs:
+  hub.catchmentHouseholds = sum of households for assigned ZIPs
+  hub.nearbyBusinesses = sum of businesses for assigned ZIPs
+
+STEP 4 — Re-evaluate hub qualification after exclusive assignment:
+  A hub qualifies if catchmentHouseholds >= 5,000
+                  AND nearbyBusinesses >= 100
+  If a hub no longer qualifies, try the next best candidate.
+
+Add a debug log after assignment:
+  "Hub [city]: [N] ZIPs assigned, [H] households, [B] businesses"
+This confirms the fix is working.
+
+
+════════════════════════════════════════════════
+TEST AFTER FIXING
+════════════════════════════════════════════════
+
+TEST 1 — Mount Pleasant SC (29464)
+  Hub cities must NOT include Isle of Palms or Sullivan's Island
+  Hub cities SHOULD be from: Mount Pleasant, Goose Creek,
+  Hanahan, North Charleston, Summerville — real cities 8,000+
+  Mount Pleasant hub households: approximately 35,000-42,000
+  NOT 75,000
+
+TEST 2 — Hilton Head SC (29926 or 29928)
+  Must return type: 'proposed' — NOT blocked or filtered
+  Hub cities should include Hilton Head Island plus nearby
+  real cities: Bluffton, Beaufort, Port Royal
+  Hilton Head passes the 8,000 population filter easily
+
+TEST 3 — Spartanburg SC (29301)
+  Spartanburg hub households approximately 15,000-20,000
+  NOT 78,480
+
+TEST 4 — Georgia ZIPs unchanged
+  30501 → existing GA-026, never proposed
+  31401 → existing GA-034, never proposed

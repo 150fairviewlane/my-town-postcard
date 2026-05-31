@@ -43,6 +43,28 @@ const MIN_HUB_COUNT         = 3;    // accept territory with ≥ 3 hubs when 4 u
 // Household proxy used for householdsEstimate (backward-compat field)
 const HOUSEHOLDS_PER_BUSINESS = 12;
 
+// Minimum city population for hub qualification (proxied by local business density).
+// Filters out tiny resort/barrier-island municipalities that appear in the Gazetteer
+// but have almost no year-round residents or local businesses.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const HUB_MIN_CITY_POPULATION = 8_000; // documented intent; enforcement is via local biz proxy
+const HUB_LOCAL_RADIUS  = 5;  // miles for local business density check
+const HUB_LOCAL_BIZ_MIN = 30; // proxy threshold: fewer than this ≈ population < 8,000
+
+// Private/gated/ferry-only communities that can slip through the density proxy
+// because their commercial data is misleading (resorts count businesses on paper
+// but have essentially zero year-round residential mailing market).
+// Note: Hilton Head Island (38,158 residents, thriving business community) is
+// intentionally NOT in this list and should be proposable as a hub city.
+const RESORT_CITIES = new Set([
+  "Sullivan's Island", // SC — 1,893 people, tiny barrier island
+  "Isle of Palms",     // SC — 4,347 people, tiny barrier island
+  "Kiawah Island",     // SC — private gated resort
+  "Sea Island",        // GA — private gated resort
+  "Bald Head Island",  // NC — ferry-only island, no businesses
+  "Ocracoke",          // NC — tiny outer banks seasonal community
+]);
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface CityHub {
@@ -274,6 +296,14 @@ async function findCandidateHubs(
     const distance = haversineDistanceMiles(dealerLat, dealerLng, city.lat, city.lng);
     if (distance > TERRITORY_SEARCH_RADIUS) continue;
 
+    // Population filter: skip resort/private-island exclusions and cities that
+    // don't meet the minimum population proxy (< HUB_LOCAL_BIZ_MIN businesses
+    // within HUB_LOCAL_RADIUS miles ≈ population < HUB_MIN_CITY_POPULATION).
+    if (RESORT_CITIES.has(city.name)) continue;
+    const localBiz = getZipsNearLocation(city.lat, city.lng, HUB_LOCAL_RADIUS)
+      .reduce((s, z) => s + z.businesses, 0);
+    if (localBiz < HUB_LOCAL_BIZ_MIN) continue;
+
     const catchmentZips = getZipsNearLocation(city.lat, city.lng, HUB_HOUSEHOLD_RADIUS);
     const businessZips  = getZipsNearLocation(city.lat, city.lng, HUB_BUSINESS_RADIUS);
 
@@ -363,48 +393,48 @@ function selectBestHubs(
 }
 
 /**
- * Voronoi ZIP assignment restricted to each hub's catchment radius.
- *
- * Collects the UNION of ZIPs within HUB_HOUSEHOLD_RADIUS of any selected hub,
- * then assigns each ZIP exclusively to its nearest hub (Voronoi).  ZIPs that
- * fall outside every hub's catchment circle are not counted, which prevents
- * small outer hubs from capturing huge rural wedges of a 40-mile territory.
+ * Voronoi ZIP assignment: assigns each ZIP in `allNearbyZips` (all ZIPs within
+ * TERRITORY_SEARCH_RADIUS of the dealer) to its nearest hub exclusively.
+ * Each ZIP counts toward exactly one hub — no double-counting from overlapping
+ * catchment circles.  Logs per-hub assignment counts for debugging.
  *
  * Returns updated hub objects with exclusive catchmentHouseholds /
  * nearbyBusinesses and re-evaluated `qualifies`.
  */
-function voronoiAssign(hubs: CityHub[]): CityHub[] {
+function voronoiAssign(
+  hubs: CityHub[],
+  allNearbyZips: Array<{ zip: string; lat: number; lng: number; households: number; businesses: number; distance: number }>
+): CityHub[] {
   if (hubs.length === 0) return [];
 
-  // Union of ZIPs within HUB_HOUSEHOLD_RADIUS of any hub (deduplicated by ZIP code)
-  const zipPool = new Map<
-    string,
-    { lat: number; lng: number; households: number; businesses: number }
-  >();
-  for (const hub of hubs) {
-    for (const z of getZipsNearLocation(hub.lat, hub.lng, HUB_HOUSEHOLD_RADIUS)) {
-      if (!zipPool.has(z.zip)) {
-        zipPool.set(z.zip, {
-          lat: z.lat, lng: z.lng,
-          households: z.households,
-          businesses: z.businesses,
-        });
-      }
-    }
-  }
+  const hubHH   = new Map<string, number>(hubs.map(h => [h.cityName, 0]));
+  const hubBiz  = new Map<string, number>(hubs.map(h => [h.cityName, 0]));
+  const hubZips = new Map<string, number>(hubs.map(h => [h.cityName, 0]));
 
-  const hubHH  = new Map<string, number>(hubs.map(h => [h.cityName, 0]));
-  const hubBiz = new Map<string, number>(hubs.map(h => [h.cityName, 0]));
-
-  for (const [, zip] of zipPool) {
+  for (const zip of allNearbyZips) {
     let nearestHub = hubs[0]!;
     let minDist = Infinity;
     for (const hub of hubs) {
       const d = haversineDistanceMiles(zip.lat, zip.lng, hub.lat, hub.lng);
       if (d < minDist) { minDist = d; nearestHub = hub; }
     }
-    hubHH.set(nearestHub.cityName,  (hubHH.get(nearestHub.cityName)  ?? 0) + zip.households);
-    hubBiz.set(nearestHub.cityName, (hubBiz.get(nearestHub.cityName) ?? 0) + zip.businesses);
+    hubHH.set(nearestHub.cityName,   (hubHH.get(nearestHub.cityName)   ?? 0) + zip.households);
+    hubBiz.set(nearestHub.cityName,  (hubBiz.get(nearestHub.cityName)  ?? 0) + zip.businesses);
+    hubZips.set(nearestHub.cityName, (hubZips.get(nearestHub.cityName) ?? 0) + 1);
+  }
+
+  // Debug: confirm exclusive assignment counts
+  for (const hub of hubs) {
+    logger.debug(
+      {
+        hub: hub.cityName,
+        zipsAssigned: hubZips.get(hub.cityName) ?? 0,
+        households:   hubHH.get(hub.cityName)   ?? 0,
+        businesses:   hubBiz.get(hub.cityName)  ?? 0,
+      },
+      `Hub ${hub.cityName}: ${hubZips.get(hub.cityName) ?? 0} ZIPs assigned, ` +
+      `${hubHH.get(hub.cityName) ?? 0} households, ${hubBiz.get(hub.cityName) ?? 0} businesses`
+    );
   }
 
   return hubs.map(h => {
@@ -433,8 +463,11 @@ async function buildCityHubProposal(
   const candidates = await findCandidateHubs(dealerLat, dealerLng, stateAbbr);
   const initialHubs = selectBestHubs(candidates, dealerLat, dealerLng);
 
-  // First Voronoi pass: assign hub-catchment ZIPs exclusively (no double-counting)
-  let hubs = voronoiAssign(initialHubs);
+  // All ZIPs within territory search radius — Voronoi input (40-mile dealer-centered)
+  const allNearbyZips = getZipsNearLocation(dealerLat, dealerLng, TERRITORY_SEARCH_RADIUS);
+
+  // First Voronoi pass: assign each ZIP to its nearest hub exclusively
+  let hubs = voronoiAssign(initialHubs, allNearbyZips);
 
   // Replacement round: if any hub fails qualification after exclusive assignment,
   // swap it for the next best candidate and re-run Voronoi once
@@ -451,7 +484,7 @@ async function buildCityHubProposal(
 
     // Re-run Voronoi only if the hub set actually changed
     if (kept.length !== hubs.filter(h => h.qualifies).length || replacements.length > 0) {
-      hubs = voronoiAssign(kept);
+      hubs = voronoiAssign(kept, allNearbyZips);
     }
   }
 
