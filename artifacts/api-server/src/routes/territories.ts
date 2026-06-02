@@ -272,16 +272,28 @@ router.get("/territories/:id/counties", async (req, res): Promise<void> => {
 type MailingAreaResult = Array<{ cityName: string; lat: number; lng: number; households: number }>;
 const _mailingAreaCache = new Map<string, MailingAreaResult>();
 
-const MAILING_AREA_RADIUS = 15; // miles
+const MAILING_AREA_RADIUS       = 20; // miles — wider net for rural GA territories
+const MAILING_AREA_FLOOR_RADIUS =  5; // miles — "own ZIP" guaranteed minimum
+const MAILING_AREA_MERGE_DIST   =  8; // miles — merge pairs closer than this
+const MAILING_AREA_MAX          =  4; // max mailing areas to display
 
-function voronoiHouseholds(
+function haversineMilesMA(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 3959;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function computeMailingAreas(
   cities: Array<{ name: string; lat: number; lng: number }>
 ): MailingAreaResult {
   if (cities.length === 0) return [];
 
-  // Collect union of ZIPs from all cities, assign each to its nearest city
+  // ── Step 1: Voronoi exclusive ZIP assignment (20-mile radius) ──
   const zipMap = new Map<string, { households: number; nearestIdx: number; nearestDist: number }>();
-
   for (let i = 0; i < cities.length; i++) {
     const city = cities[i]!;
     for (const z of getZipsNearLocation(city.lat, city.lng, MAILING_AREA_RADIUS)) {
@@ -294,30 +306,64 @@ function voronoiHouseholds(
       }
     }
   }
+  const voronoi = cities.map(c => ({ cityName: c.name, lat: c.lat, lng: c.lng, households: 0 }));
+  for (const z of zipMap.values()) voronoi[z.nearestIdx]!.households += z.households;
 
-  // Sum exclusively-assigned households per city
-  const totals: MailingAreaResult = cities.map(c => ({ cityName: c.name, lat: c.lat, lng: c.lng, households: 0 }));
-  for (const z of zipMap.values()) {
-    totals[z.nearestIdx]!.households += z.households;
+  // ── Step 2: Apply guaranteed floor (own ZIPs within 5 miles) ──
+  for (let i = 0; i < cities.length; i++) {
+    const city = cities[i]!;
+    const ownHH = getZipsNearLocation(city.lat, city.lng, MAILING_AREA_FLOOR_RADIUS)
+      .reduce((s, z) => s + z.households, 0);
+    voronoi[i]!.households = Math.max(voronoi[i]!.households, ownHH);
   }
-  return totals;
+
+  // ── Step 3: Greedy merge — merge the closest pair while any pair < 8 miles ──
+  let working = voronoi.map(a => ({ ...a }));
+  while (true) {
+    if (working.length <= 1) break;
+    let minDist = Infinity, minI = 0, minJ = 1;
+    for (let i = 0; i < working.length; i++) {
+      for (let j = i + 1; j < working.length; j++) {
+        const d = haversineMilesMA(working[i]!.lat, working[i]!.lng, working[j]!.lat, working[j]!.lng);
+        if (d < minDist) { minDist = d; minI = i; minJ = j; }
+      }
+    }
+    if (minDist >= MAILING_AREA_MERGE_DIST) break; // no pair close enough
+    const a = working[minI]!;
+    const b = working[minJ]!;
+    const merged = {
+      cityName:   `${a.cityName} / ${b.cityName}`,
+      lat:        (a.lat + b.lat) / 2,
+      lng:        (a.lng + b.lng) / 2,
+      households: a.households + b.households,
+    };
+    // Remove both (higher index first to avoid shifting), then push merged
+    working.splice(minJ, 1);
+    working.splice(minI, 1);
+    working.push(merged);
+  }
+
+  // ── Step 4: If still > 4, keep top 4 by household count ──
+  if (working.length > MAILING_AREA_MAX) {
+    working.sort((a, b) => b.households - a.households);
+    working = working.slice(0, MAILING_AREA_MAX);
+  }
+
+  return working;
 }
 
 router.get("/territories/:id/mailing-areas", async (req, res): Promise<void> => {
   const { id } = req.params;
 
-  // Serve from cache if available
   const cached = _mailingAreaCache.get(id);
   if (cached) { res.json(cached); return; }
 
-  // Fetch territory record
   const [row] = await db
     .select({ zoneNote: territoriesTable.zoneNote, state: territoriesTable.state })
     .from(territoriesTable)
     .where(eq(territoriesTable.id, id));
   if (!row) { res.status(404).json({ error: "Territory not found" }); return; }
 
-  // Parse city names from zone_note, applying same filter as the frontend
   const cityNames = (row.zoneNote ?? "")
     .split(",")
     .map((s: string) => s.trim())
@@ -325,7 +371,6 @@ router.get("/territories/:id/mailing-areas", async (req, res): Promise<void> => 
 
   if (cityNames.length === 0) { res.json([]); return; }
 
-  // Resolve each city name to lat/lng via the Gazetteer
   const stateAbbr = (row.state ?? "GA").toUpperCase();
   const gazetteerPlaces = getCitiesInState(stateAbbr);
 
@@ -338,7 +383,7 @@ router.get("/territories/:id/mailing-areas", async (req, res): Promise<void> => 
 
   if (resolved.length === 0) { res.json([]); return; }
 
-  const result = voronoiHouseholds(resolved);
+  const result = computeMailingAreas(resolved);
   _mailingAreaCache.set(id, result);
   res.json(result);
 });

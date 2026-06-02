@@ -1,0 +1,143 @@
+Fix the Georgia territory mailing areas display. Three problems
+to fix simultaneously.
+
+════════════════════════════════════════════════
+PROBLEM 1 — TOO MANY MAILING AREAS (showing 6, need max 4)
+════════════════════════════════════════════════
+
+Cap the mailing areas at 4. But do not simply truncate —
+combine nearby small cities before truncating so the best
+4 areas are shown.
+
+COMBINING LOGIC:
+After calculating household counts for all zone_note cities,
+merge any two cities whose centroids are within 8 miles of
+each other into a single mailing area:
+
+  - Combined name: "City1 / City2"
+  - Combined households: sum of both
+  - Combined centroid: midpoint of both lat/lng
+
+Apply merging greedily — start with the two closest cities,
+merge them, then recalculate distances with the merged pair
+and repeat until no two remaining areas are within 8 miles
+of each other OR you have 4 or fewer areas.
+
+For Franklin/Hart Counties example:
+  Canon (11 hh) is 4 miles from Carnesville → merge to
+    "Carnesville / Canon"
+  Bowersville (11 hh) is 5 miles from Hartwell → merge to
+    "Hartwell / Bowersville"
+  Result: Carnesville/Canon · Hartwell/Bowersville ·
+          Royston · Lavonia — exactly 4 areas
+
+After merging, if still more than 4 areas, keep the 4 with
+the highest household counts.
+
+════════════════════════════════════════════════
+PROBLEM 2 — HOUSEHOLD COUNTS TOO LOW
+════════════════════════════════════════════════
+
+The Voronoi is cutting small towns down to almost nothing
+because large nearby cities steal their ZIPs.
+
+Hartwell GA has ~4,500 residents (~1,800 households) but
+shows 838 because Lavonia or Anderson SC is stealing most
+of the surrounding ZIPs.
+
+Fix the household calculation to use a minimum guaranteed
+count based on the city's own population from the Gazetteer:
+
+  guaranteedHouseholds = Math.round(city.population * 0.40)
+  // 40% of population = approximate household count
+
+  finalHouseholds = Math.max(
+    voronoiHouseholds,
+    guaranteedHouseholds
+  )
+
+This ensures a city with 4,500 residents shows at least
+~1,800 households regardless of what the Voronoi assigns.
+The Voronoi result is still used when it is higher — this
+only sets a floor.
+
+Also extend the Voronoi radius from 15 miles to 20 miles
+for the Georgia mailing area calculation specifically.
+Georgia's rural territories have more spread-out ZIPs and
+need a wider net to capture the catchment area correctly.
+
+════════════════════════════════════════════════
+PROBLEM 3 — TERRITORY TOTAL SHOWS ~22,000 BUT
+           MAILING AREAS ONLY ADD UP TO ~2,500
+════════════════════════════════════════════════
+
+The territory-level household estimate (~22,000) comes from
+the territories table households field. The per-city counts
+come from the new Voronoi calculation. They use different
+data sources and will not match exactly.
+
+Fix the display so the territory total shown is the SUM of
+the 4 merged mailing area household counts — not the database
+field. This keeps the numbers consistent.
+
+Update the territory detail panel:
+  Remove the separate "Estimated Households" field
+  The implicit total is clear from the 4 mailing area counts
+
+════════════════════════════════════════════════
+IMPLEMENTATION SUMMARY
+════════════════════════════════════════════════
+
+In GET /api/territories/:id/mailing-areas:
+
+1. Get all cities from zone_note (filter "area" suffix)
+2. Look up Gazetteer lat/lng and population for each
+3. Calculate Voronoi households with 20-mile radius
+4. Apply guaranteed minimum: max(voronoi, population × 0.40)
+5. Merge cities within 8 miles of each other
+6. Keep top 4 by household count
+7. Return max 4 mailing areas
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+  Territory data or zone_note values in database
+  Territory builder for non-Georgia proposals
+  Any other page or feature
+
+════════════════════════════════════════════════
+TEST
+════════════════════════════════════════════════
+
+TEST 1 — Franklin / Hart Counties (GA-048)
+  Must show exactly 4 mailing areas
+  Canon merges with Carnesville (within 8 miles)
+  Bowersville merges with Hartwell (within 8 miles)
+  Result: Carnesville/Canon · Hartwell/Bowersville ·
+          Royston · Lavonia
+  Hartwell/Bowersville households: at least 1,800
+    (Hartwell population ~4,500 × 0.40 = 1,800 minimum)
+  Carnesville/Canon households: at least 800
+
+TEST 2 — Cherokee County (GA-011)
+  Canton · Woodstock · Ball Ground · Holly Springs
+  Canton and Ball Ground are ~12 miles apart — do NOT merge
+  Woodstock and Holly Springs are ~6 miles apart — MERGE
+  Result: Canton · Woodstock/Holly Springs · Ball Ground ·
+          Nelson or Waleska
+  Each area shows realistic household count
+
+TEST 3 — Hall County (GA-026)
+  Gainesville · Flowery Branch · Oakwood · Clermont
+  All 4 are spread out — no merging needed
+  Gainesville households: at least 15,000
+    (population ~40,000 × 0.40 = 16,000 minimum)
+
+TEST 4 — Maximum 4 mailing areas for any territory
+  No territory should show more than 4 mailing areas
+  Even if zone_note has 8 cities
+
+TEST 5 — Non-Georgia proposals unchanged
+  Charlottesville VA territory still shows its 4 mailing
+  areas with household counts — no change to that flow

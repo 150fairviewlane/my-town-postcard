@@ -370,7 +370,6 @@ if(_sp.get('zip') && /^\d{5}$/.test(_sp.get('zip'))){
           <div id="sdMailingAreasList"></div>
         </div>
         <div class="sd-rows">
-          <div class="sd-row"><span class="sd-label">Estimated Households</span><span class="sd-val" id="sdHH"></span></div>
           <div class="sd-row"><span class="sd-label">Status</span><span class="sd-val" id="sdStatus"></span></div>
           <div class="sd-row"><span class="sd-label">Monthly Fee</span><span class="sd-val">$99 / month</span></div>
         </div>
@@ -996,7 +995,6 @@ function selectTerritoryOnMap(t){
         if(selectedTerritoryId === tId) mailingAreasWrap.style.display = 'none';
       });
   }
-  document.getElementById('sdHH').textContent = '~' + (t.households ?? 0).toLocaleString();
   const statusEl = document.getElementById('sdStatus');
   statusEl.textContent = t.status.charAt(0).toUpperCase() + t.status.slice(1);
   statusEl.style.color = t.status==='available'?'#86efac':t.status==='taken'?'#fca5a5':'#fde68a';
