@@ -458,6 +458,26 @@ function filterCities(zoneNote) {
     .join(', ');
 }
 
+// Client-side cache: territory ID → mailing area array (or null if fetch failed)
+const _mailingAreaCache = new Map();
+
+function renderMailingAreas(wrap, list, areas) {
+  if(!areas || areas.length === 0){ wrap.style.display='none'; return; }
+  const MAX = 6;
+  const shown = areas.slice(0, MAX);
+  const extra = areas.length - MAX;
+  list.innerHTML = shown.map((a, i) => {
+    const hh = a.households < 3000
+      ? a.households.toLocaleString() + ' households'
+      : '~' + Math.round(a.households / 1000).toLocaleString() + ',000 households';
+    return `<div class="pc-mailing-area-item">
+      <span style="font-weight:600;color:#fff">Mailing Area ${i+1} \u2014 ${a.cityName}</span>
+      <div style="font-size:10.5px;color:rgba(255,255,255,.5);margin-top:1px">${hh}</div>
+    </div>`;
+  }).join('') + (extra > 0 ? `<div class="pc-mailing-area-item" style="opacity:.6">+ ${extra} more</div>` : '');
+  wrap.style.display = '';
+}
+
 async function loadTerritories() {
   const res = await fetch('/api/territories?state=GA');
   if (!res.ok) throw new Error('Failed to load territories');
@@ -959,19 +979,22 @@ function selectTerritoryOnMap(t){
   document.getElementById('sdCounties').textContent = t.counties.join(' · ');
   const mailingAreasWrap = document.getElementById('sdMailingAreas');
   const mailingAreasList = document.getElementById('sdMailingAreasList');
-  const cities = (t.zoneNote || '').split(',')
-    .map(s => s.trim())
-    .filter(s => s && !/\barea$/i.test(s));
-  const MAX_CITIES = 6;
-  if(cities.length > 0){
-    const shown = cities.slice(0, MAX_CITIES);
-    const extra = cities.length - MAX_CITIES;
-    mailingAreasList.innerHTML = shown.map(city =>
-      `<div class="pc-mailing-area-item">${city}</div>`
-    ).join('') + (extra > 0 ? `<div class="pc-mailing-area-item" style="opacity:.6">+ ${extra} more</div>` : '');
-    mailingAreasWrap.style.display = '';
+  const tId = t.id;
+  if(_mailingAreaCache.has(tId)){
+    renderMailingAreas(mailingAreasWrap, mailingAreasList, _mailingAreaCache.get(tId));
   } else {
-    mailingAreasWrap.style.display = 'none';
+    // Show loading state immediately
+    mailingAreasWrap.style.display = '';
+    mailingAreasList.innerHTML = '<div class="pc-mailing-area-item" style="opacity:.6;padding-left:0">Loading mailing areas\u2026</div>';
+    fetch(`/api/territories/${tId}/mailing-areas`)
+      .then(r => r.ok ? r.json() : [])
+      .then(data => {
+        _mailingAreaCache.set(tId, data);
+        if(selectedTerritoryId === tId) renderMailingAreas(mailingAreasWrap, mailingAreasList, data);
+      })
+      .catch(() => {
+        if(selectedTerritoryId === tId) mailingAreasWrap.style.display = 'none';
+      });
   }
   document.getElementById('sdHH').textContent = '~' + (t.households ?? 0).toLocaleString();
   const statusEl = document.getElementById('sdStatus');
