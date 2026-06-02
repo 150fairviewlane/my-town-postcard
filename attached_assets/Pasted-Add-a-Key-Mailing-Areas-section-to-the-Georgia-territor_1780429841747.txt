@@ -1,0 +1,84 @@
+Add a Key Mailing Areas section to the Georgia territory detail
+panel on /find-territory. It currently shows for auto-generated
+proposals but not for pre-defined Georgia territories.
+
+════════════════════════════════════════════════
+THE FIX
+════════════════════════════════════════════════
+
+Georgia territories already have a zone_note field in the
+territories table containing comma-separated city names.
+Example: "Canton, Woodstock, Ball Ground, Holly Springs"
+
+These cities ARE the mailing areas — display them as the
+Key Mailing Areas section in the left panel detail view.
+
+When a Georgia territory is selected (via map click or
+sidebar card click), add this section to the detail panel
+below the territory name and counties line:
+
+  KEY MAILING AREAS
+  • Canton
+  • Woodstock
+  • Ball Ground
+  • Holly Springs
+
+Display rules:
+  - Split zone_note by comma
+  - Trim whitespace from each city name
+  - Filter out any entry ending in the word "area"
+    (case insensitive) — these are proximity notes not
+    distinct mailing communities
+  - Display each remaining city as a bullet point
+  - If zone_note is empty or null, hide the section entirely
+  - Show a maximum of 6 cities — if more exist, show the
+    first 6 and add "+ X more" at the bottom
+
+Do not show household counts per city for Georgia territories
+since we do not have that data broken out by city — only
+show the city names as bullet points.
+
+The section header and styling should match exactly what
+is shown for proposal territories so the UI is consistent
+across both Georgia and non-Georgia territories.
+
+════════════════════════════════════════════════
+ALSO UPDATE THE SIDEBAR TERRITORY CARDS
+════════════════════════════════════════════════
+
+The sidebar territory list cards for Georgia territories
+currently show county names as a subtitle. Add the first
+3 cities from zone_note as a third line in smaller lighter
+text, applying the same "area" filter above.
+
+Example card:
+  Hall County                    AVAILABLE
+  Hall County
+  Gainesville · Flowery Branch · Oakwood
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+  Territory data or zone_note values in the database
+  Territory builder engine or API routes
+  Non-Georgia proposal display
+  Any other page or feature
+
+════════════════════════════════════════════════
+TEST
+════════════════════════════════════════════════
+
+1. Go to /find-territory
+2. Click any Georgia territory polygon or sidebar card
+3. Left panel must show KEY MAILING AREAS section with
+   city names from that territory's zone_note field
+4. Cities ending in "area" must not appear in the list
+5. Enter zip 30501 (Gainesville / Hall County)
+   Key Mailing Areas should show:
+   • Gainesville
+   • Flowery Branch
+   • Oakwood
+   • Clermont
+   (not "Buford area" or any "X area" entries)
+6. Sidebar cards show city names as third line

@@ -365,8 +365,11 @@ if(_sp.get('zip') && /^\d{5}$/.test(_sp.get('zip'))){
       <div class="selected-detail" id="selectedDetail">
         <div class="sd-title" id="sdName"></div>
         <div class="sd-counties" id="sdCounties"></div>
+        <div class="pc-mailing-areas" id="sdMailingAreas" style="display:none">
+          <div class="pc-mailing-areas-label">Key Mailing Areas</div>
+          <div id="sdMailingAreasList"></div>
+        </div>
         <div class="sd-rows">
-          <div class="sd-row" id="sdCitiesRow" style="display:none"><span class="sd-label">Key Cities</span><span class="sd-val" id="sdCities"></span></div>
           <div class="sd-row"><span class="sd-label">Estimated Households</span><span class="sd-val" id="sdHH"></span></div>
           <div class="sd-row"><span class="sd-label">Status</span><span class="sd-val" id="sdStatus"></span></div>
           <div class="sd-row"><span class="sd-label">Monthly Fee</span><span class="sd-val">$99 / month</span></div>
@@ -910,7 +913,7 @@ function showNearbyTerritories(territories, heading){
         <div class="tcard-badge badge-${t.status}">${t.status}</div>
       </div>
       <div class="tcard-counties">${t.counties.join(' · ')} Counti${t.counties.length===1?'y':'es'}</div>
-      ${filterCities(t.zoneNote) ? `<div class="tcard-cities">${filterCities(t.zoneNote)}</div>` : ''}
+      ${(() => { const cs = (t.zoneNote||'').split(',').map(s=>s.trim()).filter(s=>s&&!/\barea$/i.test(s)).slice(0,3).join(' · '); return cs ? `<div class="tcard-cities">${cs}</div>` : ''; })()}
       <div class="tcard-meta">
         <span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;background:${tier.bg};color:${tier.color}">${tier.label}</span>
       </div>
@@ -954,11 +957,22 @@ function selectTerritoryOnMap(t){
   detail.classList.add('visible');
   document.getElementById('sdName').textContent = t.name;
   document.getElementById('sdCounties').textContent = t.counties.join(' · ');
-  const citiesEl = document.getElementById('sdCities');
-  const citiesRow = document.getElementById('sdCitiesRow');
-  const filteredCities = filterCities(t.zoneNote);
-  if(filteredCities){ citiesEl.textContent = filteredCities; citiesRow.style.display='flex'; }
-  else { citiesRow.style.display='none'; }
+  const mailingAreasWrap = document.getElementById('sdMailingAreas');
+  const mailingAreasList = document.getElementById('sdMailingAreasList');
+  const cities = (t.zoneNote || '').split(',')
+    .map(s => s.trim())
+    .filter(s => s && !/\barea$/i.test(s));
+  const MAX_CITIES = 6;
+  if(cities.length > 0){
+    const shown = cities.slice(0, MAX_CITIES);
+    const extra = cities.length - MAX_CITIES;
+    mailingAreasList.innerHTML = shown.map(city =>
+      `<div class="pc-mailing-area-item">${city}</div>`
+    ).join('') + (extra > 0 ? `<div class="pc-mailing-area-item" style="opacity:.6">+ ${extra} more</div>` : '');
+    mailingAreasWrap.style.display = '';
+  } else {
+    mailingAreasWrap.style.display = 'none';
+  }
   document.getElementById('sdHH').textContent = '~' + (t.households ?? 0).toLocaleString();
   const statusEl = document.getElementById('sdStatus');
   statusEl.textContent = t.status.charAt(0).toUpperCase() + t.status.slice(1);
