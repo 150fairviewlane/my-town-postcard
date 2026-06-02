@@ -40,7 +40,7 @@ const HUB_MIN_BUSINESSES    = 25;    // min postcard-industry establishments wit
 // legitimate coastal/island anchors (e.g. Hilton Head Island, 4 477 hh) pass while
 // tiny rural overshoot hubs (e.g. Awendaw, 655 hh) are still rejected and replaced.
 const VORONOI_HUB_MIN_HOUSEHOLDS = 2_000;
-const HUB_HOUSEHOLD_RADIUS  = 15;   // miles to sum households around a hub city
+const HUB_HOUSEHOLD_RADIUS  = 25;   // miles to sum households around a hub city
 const HUB_BUSINESS_RADIUS   = 10;   // miles to sum businesses around a hub city
 const TERRITORY_SEARCH_RADIUS = 40; // max miles from dealer ZIP centroid to search
 const TARGET_HUB_COUNT      = 4;    // ideal hubs per territory

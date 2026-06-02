@@ -1,0 +1,76 @@
+The household counts for Georgia mailing areas are too low
+because the catchment radius is too tight. Dealers mail to
+the surrounding area — not just city limits.
+
+Blairsville GA city limits: ~336 households
+Blairsville greater area (Union County): ~11,490 households
+The system is showing ~1,100 — closer to city limits than
+the real catchment area dealers will actually mail to.
+
+════════════════════════════════════════════════
+THE FIX — WIDER CATCHMENT RADIUS
+════════════════════════════════════════════════
+
+In GET /api/territories/:id/mailing-areas, make these changes:
+
+1. Increase the Voronoi assignment radius from 20 miles to 30 miles
+   This captures the full county catchment area around each city
+
+2. Change the guaranteed floor from "own ZIPs within 5 miles"
+   to "own ZIPs within 15 miles" — this matches the territory
+   builder's HUB_HOUSEHOLD_RADIUS and ensures small mountain
+   towns like Blairsville capture their full county area
+
+3. The Voronoi exclusive assignment still applies — each ZIP
+   goes to its nearest city only — so there is no double
+   counting even with the wider radius
+
+With a 15-mile floor radius, Blairsville captures all Union
+County ZIPs (which have a Blairsville mailing address) and
+shows approximately 10,000-12,000 households — accurate for
+what a dealer would actually mail to.
+
+════════════════════════════════════════════════
+ALSO INCREASE FOR NON-GEORGIA PROPOSALS
+════════════════════════════════════════════════
+
+Apply the same 30-mile Voronoi radius to the territory builder
+for non-Georgia proposals as well. The current 15-mile
+HUB_HOUSEHOLD_RADIUS is too tight for rural areas.
+
+Update in territoryBuilder.ts:
+  HUB_HOUSEHOLD_RADIUS: change from 15 to 25
+
+This means each hub city claims ZIPs within 25 miles
+(exclusive Voronoi assignment), giving dealers a realistic
+picture of their full mailing catchment.
+
+════════════════════════════════════════════════
+GUIDING PRINCIPLE
+════════════════════════════════════════════════
+
+When in doubt, show MORE households not fewer. Dealers are
+marketing to the surrounding community that drives into town
+to shop and eat — not just people who live within the city
+limits. A larger household count is more accurate and makes
+the territory more attractive to potential dealers.
+
+════════════════════════════════════════════════
+TEST
+════════════════════════════════════════════════
+
+1. Click Rabun/Towns/Union territory (GA-049)
+   Blairsville mailing area must show approximately
+   10,000-12,000 households — NOT 1,100
+
+2. Click Franklin/Hart Counties (GA-048)
+   Hartwell mailing area must show approximately
+   4,000-6,000 households — NOT 838
+
+3. Click Hall County (GA-026)
+   Gainesville mailing area must show approximately
+   40,000-60,000 households — the full Hall County catchment
+
+4. Non-Georgia proposal (29464 Mount Pleasant SC)
+   Household counts should be similar or slightly higher
+   than before — not dramatically different

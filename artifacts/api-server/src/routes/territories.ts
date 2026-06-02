@@ -272,8 +272,8 @@ router.get("/territories/:id/counties", async (req, res): Promise<void> => {
 type MailingAreaResult = Array<{ cityName: string; lat: number; lng: number; households: number }>;
 const _mailingAreaCache = new Map<string, MailingAreaResult>();
 
-const MAILING_AREA_RADIUS       = 20; // miles — wider net for rural GA territories
-const MAILING_AREA_FLOOR_RADIUS =  5; // miles — "own ZIP" guaranteed minimum
+const MAILING_AREA_RADIUS       = 30; // miles — full county catchment for rural GA
+const MAILING_AREA_FLOOR_RADIUS = 15; // miles — matches HUB_HOUSEHOLD_RADIUS for county-level floor
 const MAILING_AREA_MERGE_DIST   =  8; // miles — merge pairs closer than this
 const MAILING_AREA_MAX          =  4; // max mailing areas to display
 
