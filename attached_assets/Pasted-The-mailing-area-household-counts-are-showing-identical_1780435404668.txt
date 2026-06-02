@@ -1,0 +1,113 @@
+The mailing area household counts are showing identical numbers
+for nearby cities. Port Royal and Hilton Head Island both show
+~74,847 because they are 8 miles apart and share the same
+15-mile radius ZIPs almost entirely.
+
+The pure radius approach (no Voronoi) overcorrected — now
+everything overlaps. Need a middle ground.
+
+════════════════════════════════════════════════
+THE FIX — DISTANCE-WEIGHTED HOUSEHOLD COUNT
+════════════════════════════════════════════════
+
+For each mailing area city, calculate households using a
+weighted sum where closer ZIPs count more than distant ones:
+
+  weight = 1.0 for ZIPs within 8 miles  (core market)
+  weight = 0.5 for ZIPs 8-15 miles away (fringe market)
+  weight = 0   for ZIPs beyond 15 miles
+
+  weightedHouseholds = sum of (zip.households × weight)
+    for all ZIPs within 15 miles of the city centroid
+
+This gives each city full credit for its nearby ZIPs and
+partial credit for shared fringe ZIPs. Two cities 8 miles
+apart will share some fringe ZIPs but their core markets
+will differ because each has different nearby ZIPs.
+
+For Port Royal vs Hilton Head Island (8 miles apart):
+  Port Royal core (within 8mi): mainland ZIPs near Port Royal
+  HHI core (within 8mi): island ZIPs 29926, 29928, 29909
+  Shared fringe (8-15mi): ZIPs between them at 0.5 weight
+  Result: different numbers reflecting different core markets
+
+For Ridgeland vs Hardeeville (close together):
+  Each gets full weight for its own ZIPs
+  Shared ZIPs at 0.5 weight
+  Result: similar but not identical numbers
+
+════════════════════════════════════════════════
+MINIMUM 5,000 RULE APPLIED TO WEIGHTED COUNT
+════════════════════════════════════════════════
+
+After calculating weighted household counts:
+
+If any area's weighted count < 5,000:
+  Merge with nearest neighboring area (same logic as before)
+  Combined name: "City1 / City2"
+  Combined households: use the LARGER of the two weighted
+    counts (not sum, not average — the larger one represents
+    the shared catchment area they cover together)
+
+Cap at 4 areas maximum after merging.
+
+════════════════════════════════════════════════
+IMPLEMENTATION
+════════════════════════════════════════════════
+
+Replace the current radius sum in getMailingAreaHouseholds()
+with this weighted version:
+
+  function getWeightedHouseholds(
+    cityLat: number,
+    cityLng: number
+  ): number {
+    const nearbyZips = getZipsNearLocation(cityLat, cityLng, 15);
+    let total = 0;
+    for (const zip of nearbyZips) {
+      const weight = zip.distance <= 8 ? 1.0 : 0.5;
+      total += zip.households * weight;
+    }
+    return Math.round(total);
+  }
+
+Apply this function in both:
+  GET /api/territories/:id/mailing-areas (Georgia territories)
+  buildCityHubProposal() display counts (non-Georgia proposals)
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+  Voronoi logic used for hub qualification and selection
+  Territory minimum 20,000 unique household qualification
+  Georgia MANAGED_STATES guard
+  Any other feature
+
+════════════════════════════════════════════════
+TEST
+════════════════════════════════════════════════
+
+TEST 1 — Hilton Head area (29928)
+  Port Royal and HHI must show DIFFERENT household counts
+  HHI should be higher (larger island population)
+  Neither should match the other exactly
+  Ridgeland and Hardeeville should also differ from each other
+
+TEST 2 — Rabun/Towns/Union GA (GA-049)
+  Blairsville: >= 5,000 weighted households
+  Hiawassee: >= 5,000 weighted households
+  Clayton: >= 5,000 weighted households
+  All three should show different numbers
+
+TEST 3 — Hall County GA (GA-026)
+  Gainesville shows its weighted catchment
+  All 4 areas show different numbers >= 5,000
+
+TEST 4 — Two cities very close together (< 5 miles)
+  Should merge into one combined area
+  Combined household count = larger of the two
+
+TEST 5 — Georgia ZIP 30501
+  Left panel mailing areas all show different counts
+  All >= 5,000 households

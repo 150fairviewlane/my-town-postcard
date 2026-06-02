@@ -47,9 +47,12 @@ const TERRITORY_SEARCH_RADIUS = 40; // max miles from dealer ZIP centroid to sea
 const TARGET_HUB_COUNT      = 4;    // ideal hubs per territory
 const MIN_HUB_COUNT         = 3;    // accept territory with ≥ 3 hubs when 4 unavailable
 const MIN_TERRITORY_HOUSEHOLDS = 20_000; // min unique (Voronoi) households for viability
-// Mailing area display constants — radius sum, no Voronoi, same as territories route
-const DISPLAY_MAILING_RADIUS = 15; // miles for per-hub radius sum shown to dealers
-const DISPLAY_MIN_HH         = 5_000; // merge display areas below this threshold
+// Mailing area display constants — distance-weighted, no Voronoi, same as territories route
+const DISPLAY_MAILING_RADIUS  = 15;    // miles — weighted radius per hub
+const DISPLAY_CORE_RADIUS     = 8;     // miles — full-weight core market
+const DISPLAY_MIN_HH          = 5_000; // merge display areas below this threshold
+// County floor only applied when weighted sum is below this threshold (sparse rural areas)
+const DISPLAY_FLOOR_THRESHOLD = 3_000;
 // Household proxy used for householdsEstimate (backward-compat field)
 const HOUSEHOLDS_PER_BUSINESS = 3.5;
 
@@ -523,18 +526,26 @@ async function buildCityHubProposal(
   const hasEnoughHouseholds  = voronoiTotalHH >= MIN_TERRITORY_HOUSEHOLDS;
   const isViable = hasEnoughHubs && hasEnoughHouseholds;
 
-  // ── Display transform: overwrite catchmentHouseholds with radius-based counts ──
-  // Dealers see ALL households within 15 miles — overlapping between areas is correct.
-  // A rural household between two hub cities could receive either mailing.
-  hubs = hubs.map(h => ({
-    ...h,
-    // Floor: county population × 0.40 so rural hubs show county-level catchment.
-    catchmentHouseholds: Math.max(
-      getZipsNearLocation(h.lat, h.lng, DISPLAY_MAILING_RADIUS)
-        .reduce((s, z) => s + z.households, 0),
-      Math.round(getCountyPopulationNearLocation(h.lat, h.lng) * 0.40)
-    ),
-  }));
+  // ── Display transform: distance-weighted household count per hub ──
+  // ZIPs within 8 miles: full weight (1.0) — core market.
+  // ZIPs 8-15 miles: half weight (0.5) — fringe/shared market.
+  // Adjacent hubs share fringe ZIPs but have different core ZIPs, so their
+  // counts naturally differ — avoids the identical-numbers problem.
+  // Floor: county population × 0.40 for rural hubs with sparse ZIP data.
+  hubs = hubs.map(h => {
+    const zips = getZipsNearLocation(h.lat, h.lng, DISPLAY_MAILING_RADIUS);
+    const weighted = Math.round(
+      zips.reduce((s, z) => s + z.households * (z.distance <= DISPLAY_CORE_RADIUS ? 1.0 : 0.5), 0)
+    );
+    // County floor only applies when the ZIP proxy is genuinely sparse (< 3k).
+    // Above the threshold each hub keeps its own weighted count — adjacent hubs
+    // in the same county will naturally diverge because their core ZIPs differ.
+    const floor = Math.round(getCountyPopulationNearLocation(h.lat, h.lng) * 0.40);
+    return {
+      ...h,
+      catchmentHouseholds: weighted < DISPLAY_FLOOR_THRESHOLD ? Math.max(weighted, floor) : weighted,
+    };
+  });
   // Merge any display area below 5,000 HH into its nearest neighbor.
   // Combined HH = max(a, b) — overlapping catchments, not additive.
   let displayMerged = true;

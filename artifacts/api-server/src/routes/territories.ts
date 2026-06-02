@@ -272,9 +272,15 @@ router.get("/territories/:id/counties", async (req, res): Promise<void> => {
 type MailingAreaResult = Array<{ cityName: string; lat: number; lng: number; households: number }>;
 const _mailingAreaCache = new Map<string, MailingAreaResult>();
 
-const MAILING_AREA_DISPLAY_RADIUS = 15; // miles — radius sum per city (overlapping OK; no Voronoi)
-const MAILING_AREA_MIN_HH         = 5_000; // merge any area below this into its nearest neighbor
-const MAILING_AREA_MAX            = 4;     // cap displayed mailing areas
+const MAILING_AREA_DISPLAY_RADIUS   = 15;    // miles — weighted radius per city
+const MAILING_AREA_CORE_RADIUS      = 8;     // miles — full-weight core market
+const MAILING_AREA_MIN_HH           = 5_000; // merge any area below this into its nearest neighbor
+const MAILING_AREA_MAX              = 4;     // cap displayed mailing areas
+// County-population floor is only applied when the weighted ZIP sum is below this
+// threshold — prevents spuriously-sparse proxy counts for isolated rural towns.
+// Cities with a meaningful business presence keep their weighted count (which
+// naturally differs between adjacent cities sharing only fringe ZIPs).
+const MAILING_AREA_FLOOR_THRESHOLD  = 3_000;
 
 function haversineMilesMA(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 3959;
@@ -291,21 +297,29 @@ function computeMailingAreas(
 ): MailingAreaResult {
   if (cities.length === 0) return [];
 
-  // ── Step 1: Simple radius sum — ALL ZIPs within 15 miles per city (overlapping OK) ──
-  // Each city captures its full catchment area; a rural ZIP between two cities
-  // can appear in both — that is correct (it could receive either mailing).
-  let working: MailingAreaResult = cities.map(c => ({
-    cityName:   c.name,
-    lat:        c.lat,
-    lng:        c.lng,
-    // Floor: county population × 0.40 ensures small towns show their full
-    // county catchment rather than near-zero business-proxy counts.
-    households: Math.max(
-      getZipsNearLocation(c.lat, c.lng, MAILING_AREA_DISPLAY_RADIUS)
-        .reduce((s, z) => s + z.households, 0),
-      Math.round(getCountyPopulationNearLocation(c.lat, c.lng) * 0.40)
-    ),
-  }));
+  // ── Step 1: Distance-weighted household count per city ──
+  // ZIPs within 8 miles: full weight (1.0) — core market.
+  // ZIPs 8-15 miles: half weight (0.5) — fringe/shared market.
+  // Two cities 8 miles apart will have different core ZIPs and share
+  // only fringe ZIPs, so their counts naturally diverge.
+  // Floor: county population × 0.40 prevents near-zero results for
+  // rural towns whose ZIPs have few businesses in the proxy dataset.
+  let working: MailingAreaResult = cities.map(c => {
+    const zips = getZipsNearLocation(c.lat, c.lng, MAILING_AREA_DISPLAY_RADIUS);
+    const weighted = Math.round(
+      zips.reduce((s, z) => s + z.households * (z.distance <= MAILING_AREA_CORE_RADIUS ? 1.0 : 0.5), 0)
+    );
+    // County floor only applies when the ZIP proxy is genuinely sparse (< 3k).
+    // Above the threshold each city keeps its own weighted count — adjacent cities
+    // in the same county will naturally diverge because their core ZIPs differ.
+    const floor = Math.round(getCountyPopulationNearLocation(c.lat, c.lng) * 0.40);
+    return {
+      cityName:   c.name,
+      lat:        c.lat,
+      lng:        c.lng,
+      households: weighted < MAILING_AREA_FLOOR_THRESHOLD ? Math.max(weighted, floor) : weighted,
+    };
+  });
 
   // ── Step 2: Merge any area below 5,000 HH into its nearest neighbor ──
   // Combined HH = max(a, b) — catchments overlap so don't sum them.

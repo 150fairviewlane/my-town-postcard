@@ -1,0 +1,85 @@
+Stop investigating. You have enough information. Fix these
+two specific issues directly.
+
+════════════════════════════════════════════════
+ISSUE 1 — GAINESVILLE DOMINATES HALL COUNTY
+════════════════════════════════════════════════
+
+Gainesville, Flowery Branch, and Oakwood all get the same
+county floor value because they are all in Hall County.
+
+The county floor should never be used when cities are close
+together in the same county — the floor was designed for
+isolated rural towns with sparse ZIPs, not suburban cities
+sharing a dense county.
+
+Fix: Only apply the county floor if the city has fewer than
+3 ZIPs within 8 miles of its centroid. If a city has 3 or
+more ZIPs within 8 miles, it is not sparse — use the raw
+weighted ZIP sum without any floor override.
+
+  if (zipsWithin8Miles.length < 3) {
+    // sparse — apply county floor
+    households = Math.max(weightedSum, countyFloor);
+  } else {
+    // not sparse — use weighted sum only
+    households = weightedSum;
+  }
+
+════════════════════════════════════════════════
+ISSUE 2 — GA-049 CITIES SHOWING IDENTICAL NUMBERS
+════════════════════════════════════════════════
+
+Blairsville, Hiawassee, and Clayton in Rabun/Towns/Union
+are each in their own separate small county (Union, Towns,
+Rabun). The county floor for each small county is being
+applied and may be producing coincidentally similar values.
+
+Same fix applies — check ZIP density first:
+  If fewer than 3 ZIPs within 8 miles → apply county floor
+  If 3 or more ZIPs within 8 miles → use weighted sum only
+
+For small mountain towns like Hiawassee and Blairsville,
+there may genuinely be fewer than 3 ZIPs within 8 miles.
+In that case extend to 12 miles for the density check:
+
+  const nearZips8 = zipsWithin8Miles.length;
+  const nearZips12 = zipsWithin12Miles.length;
+
+  if (nearZips8 >= 3 || nearZips12 >= 5) {
+    // sufficient density — use weighted sum only
+    households = weightedSum;
+  } else {
+    // sparse — apply county floor
+    households = Math.max(weightedSum, countyFloor);
+  }
+
+════════════════════════════════════════════════
+APPLY TO BOTH FILES
+════════════════════════════════════════════════
+
+Apply this fix in both:
+  GET /api/territories/:id/mailing-areas
+  buildCityHubProposal() in territoryBuilder.ts
+
+════════════════════════════════════════════════
+TEST — CONFIRM THESE SPECIFIC RESULTS
+════════════════════════════════════════════════
+
+Hall County GA (GA-026):
+  Gainesville: highest count (most ZIPs nearby)
+  Flowery Branch: second highest
+  Oakwood: lower than Flowery Branch
+  Clermont: lowest
+  ALL FOUR must be different numbers
+
+Rabun/Towns/Union (GA-049):
+  Clayton: highest (Rabun County, largest)
+  Blairsville: middle
+  Hiawassee: lowest (Towns County, smallest)
+  ALL must be different numbers, all >= 5,000
+
+Hilton Head area (29928):
+  HHI: higher than Port Royal
+  Port Royal: lower than HHI
+  Both different numbers — confirmed working already
