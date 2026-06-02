@@ -672,7 +672,11 @@ function renderZipLayer(geojson){
            <div style="font-size:11px;color:#666">ZIP ${zip}</div>`,
           { sticky:true, opacity:0.92 }
         );
-        layer.on('click', () => selectTerritoryOnMap(t));
+        layer.on('click', () => {
+          clearProposalUI();
+          findNearbyTerritories(t.lat, t.lng, t.counties[0] || '');
+          setTimeout(() => selectTerritoryOnMap(t), 120);
+        });
         layer.on('mouseover', () => {
           // Highlight the territory's merged base layer (not just this ZIP)
           if(selectedTerritoryId !== t.id){
@@ -955,11 +959,15 @@ function selectTerritoryOnMap(t){
   const filteredCities = filterCities(t.zoneNote);
   if(filteredCities){ citiesEl.textContent = filteredCities; citiesRow.style.display='flex'; }
   else { citiesRow.style.display='none'; }
-  document.getElementById('sdHH').textContent = '~' + t.households.toLocaleString();
+  document.getElementById('sdHH').textContent = '~' + (t.households ?? 0).toLocaleString();
   const statusEl = document.getElementById('sdStatus');
   statusEl.textContent = t.status.charAt(0).toUpperCase() + t.status.slice(1);
   statusEl.style.color = t.status==='available'?'#86efac':t.status==='taken'?'#fca5a5':'#fde68a';
   document.getElementById('claimBtn').style.display = t.status==='available'?'flex':'none';
+
+  // Scroll the sidebar to show the detail panel
+  const rp = document.querySelector('.results-panel');
+  if(rp) rp.scrollTop = 0;
 
   if(t.lat && t.lng) map.setView([t.lat, t.lng], 9, {animate:true});
 

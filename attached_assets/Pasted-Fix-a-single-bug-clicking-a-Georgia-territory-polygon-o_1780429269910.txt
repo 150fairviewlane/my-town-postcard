@@ -1,0 +1,84 @@
+Fix a single bug: clicking a Georgia territory polygon on the
+map does not update the left panel with that territory's details.
+
+════════════════════════════════════════════════
+THE BUG
+════════════════════════════════════════════════
+
+On /find-territory, the Georgia territory polygons are clickable
+and the map highlights them correctly. But the left panel
+(territory name, key cities, market tier, claim button) does
+not update when a polygon is clicked.
+
+The sidebar cards DO update the left panel correctly when clicked.
+The map polygon click handler is missing the call to update
+the left panel.
+
+════════════════════════════════════════════════
+THE FIX
+════════════════════════════════════════════════
+
+Find the click event handler attached to the Georgia GeoJSON
+layer in territory-finder.html or the relevant frontend file.
+
+Inside that click handler, after any existing highlight logic,
+add a call to the same function that handles sidebar card clicks.
+
+The territory object to pass should be looked up by matching
+the clicked GeoJSON feature's properties against the territories
+array already loaded in the frontend. Match on territory ID,
+county name, or whatever identifier is available in the
+GeoJSON feature properties.
+
+If the lookup function does not exist yet, create a simple one:
+
+  function getTerritoryForFeature(feature): territory | null {
+    const countyName = feature.properties.NAME; // or whatever field
+    return territories.find(t =>
+      t.counties.some(c =>
+        c.toLowerCase() === countyName.toLowerCase()
+      )
+    ) ?? null;
+  }
+
+Then in the click handler:
+
+  layer.on('click', () => {
+    const territory = getTerritoryForFeature(feature);
+    if (territory) selectTerritoryOnMap(territory);
+  });
+
+The selectTerritoryOnMap() function already exists and handles
+updating the left panel, highlighting the sidebar card, and
+zooming the map. Just call it with the matched territory object.
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+  Territory builder engine or API routes
+  Any other map behavior
+  Sidebar card click handlers (already working)
+  Georgia territory data
+  Any other page or feature
+
+════════════════════════════════════════════════
+TEST
+════════════════════════════════════════════════
+
+Go to /find-territory without entering a ZIP code.
+Click any green Georgia territory polygon on the map.
+
+The left panel must immediately update showing:
+  Territory name
+  Key cities / zone note
+  Market tier badge
+  Households
+  Claim This Territory button
+
+Click several different Georgia polygons and confirm
+each one updates the left panel with the correct
+territory information for that specific polygon.
+
+The sidebar card for the clicked territory should also
+highlight to match.
