@@ -57,7 +57,7 @@ const HOUSEHOLDS_PER_BUSINESS = 3.5;
 // but have almost no year-round residents or local businesses.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const HUB_MIN_CITY_POPULATION = 8_000; // documented intent; enforcement is via local biz proxy
-const HUB_LOCAL_RADIUS  = 5;  // miles for local business density check
+const HUB_LOCAL_RADIUS  = 8;  // miles for local business density check (wider to capture commercial corridors offset from gazetteer centroid)
 const HUB_LOCAL_BIZ_MIN = 8;  // postcard-biz proxy: fewer than this ≈ population < 8,000
 
 // Private/gated/ferry-only communities that can slip through the density proxy
