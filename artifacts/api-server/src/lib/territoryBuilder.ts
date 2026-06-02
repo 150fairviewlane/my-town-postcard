@@ -17,7 +17,6 @@ import {
   getZipLocation,
   getZipsNearLocation,
   getCitiesInState,
-  getCountyPopulationNearLocation,
 } from "./censusApi";
 import { logger } from "./logger";
 
@@ -47,12 +46,9 @@ const TERRITORY_SEARCH_RADIUS = 40; // max miles from dealer ZIP centroid to sea
 const TARGET_HUB_COUNT      = 4;    // ideal hubs per territory
 const MIN_HUB_COUNT         = 3;    // accept territory with ≥ 3 hubs when 4 unavailable
 const MIN_TERRITORY_HOUSEHOLDS = 20_000; // min unique (Voronoi) households for viability
-// Mailing area display constants — distance-weighted, no Voronoi, same as territories route
-const DISPLAY_MAILING_RADIUS  = 15;    // miles — weighted radius per hub
-const DISPLAY_CORE_RADIUS     = 8;     // miles — full-weight core market
-const DISPLAY_MIN_HH          = 5_000; // merge display areas below this threshold
-// County floor skipped when a hub has ≥3 ZIPs within 8 miles (not sparse).
-const DISPLAY_CORE_ZIP_MIN    = 3;     // ZIPs within 8mi required to skip floor
+// Mailing area display — flat 15-mile radius, same rule as territories route
+const DISPLAY_MAILING_RADIUS  = 15;    // miles — flat radius, every ZIP counts equally
+const DISPLAY_MIN_HH          = 5_000; // minimum to appear as a standalone mailing area
 // Household proxy used for householdsEstimate (backward-compat field)
 const HOUSEHOLDS_PER_BUSINESS = 3.5;
 
@@ -526,60 +522,21 @@ async function buildCityHubProposal(
   const hasEnoughHouseholds  = voronoiTotalHH >= MIN_TERRITORY_HOUSEHOLDS;
   const isViable = hasEnoughHubs && hasEnoughHouseholds;
 
-  // ── Display transform: distance-weighted household count per hub ──
-  // ZIPs within 8 miles: full weight (1.0) — core market.
-  // ZIPs 8-15 miles: half weight (0.5) — fringe/shared market.
-  // Adjacent hubs share fringe ZIPs but have different core ZIPs, so their
-  // counts naturally differ — avoids the identical-numbers problem.
-  // Floor: county population × 0.40 for rural hubs with sparse ZIP data.
-  hubs = hubs.map(h => {
-    const zips = getZipsNearLocation(h.lat, h.lng, DISPLAY_MAILING_RADIUS);
-    const weighted = Math.round(
-      zips.reduce((s, z) => s + z.households * (z.distance <= DISPLAY_CORE_RADIUS ? 1.0 : 0.5), 0)
-    );
-    // ZIP density test: ≥3 ZIPs within 8 miles = not sparse.
-    // Dense hubs get distinct weighted counts; sparse rural hubs get the county floor.
-    const isDense = zips.filter(z => z.distance <= DISPLAY_CORE_RADIUS).length >= DISPLAY_CORE_ZIP_MIN;
-    const floor = Math.round(getCountyPopulationNearLocation(h.lat, h.lng) * 0.40);
-    return {
+  // ── Display transform: flat 15-mile household count per hub ──
+  // Each hub stands on its own. Overlap between hubs is fine — EDDM allows it.
+  // No weighting, no county floors, no merging. Hubs below 5,000 are dropped.
+  hubs = hubs
+    .map(h => ({
       ...h,
-      catchmentHouseholds: isDense ? weighted : Math.max(weighted, floor),
-    };
-  });
-  // Merge any display area below 5,000 HH into its nearest neighbor.
-  // Combined HH = max(a, b) — overlapping catchments, not additive.
-  let displayMerged = true;
-  while (displayMerged) {
-    displayMerged = false;
-    if (hubs.length <= 1) break;
-    const belowIdx = hubs.findIndex(h => h.catchmentHouseholds < DISPLAY_MIN_HH);
-    if (belowIdx === -1) break;
-    let nearestIdx = -1, nearestDist = Infinity;
-    for (let j = 0; j < hubs.length; j++) {
-      if (j === belowIdx) continue;
-      const d = haversineDistanceMiles(
-        hubs[belowIdx]!.lat, hubs[belowIdx]!.lng,
-        hubs[j]!.lat,        hubs[j]!.lng
-      );
-      if (d < nearestDist) { nearestDist = d; nearestIdx = j; }
-    }
-    if (nearestIdx === -1) break;
-    const a = hubs[belowIdx]!;
-    const b = hubs[nearestIdx]!;
-    const merged: CityHub = {
-      ...a,
-      cityName:             `${a.cityName} / ${b.cityName}`,
-      lat:                  (a.lat + b.lat) / 2,
-      lng:                  (a.lng + b.lng) / 2,
-      catchmentHouseholds:  Math.max(a.catchmentHouseholds, b.catchmentHouseholds),
-      nearbyBusinesses:     a.nearbyBusinesses + b.nearbyBusinesses,
-    };
-    const hi = Math.max(belowIdx, nearestIdx);
-    const lo = Math.min(belowIdx, nearestIdx);
-    hubs.splice(hi, 1);
-    hubs.splice(lo, 1);
-    hubs.push(merged);
-    displayMerged = true;
+      catchmentHouseholds: getZipsNearLocation(h.lat, h.lng, DISPLAY_MAILING_RADIUS)
+        .reduce((s, z) => s + z.households, 0),
+    }))
+    .filter(h => h.catchmentHouseholds >= DISPLAY_MIN_HH);
+
+  // Cap at 4 display areas, keeping highest-count hubs.
+  if (hubs.length > 4) {
+    hubs.sort((a, b) => b.catchmentHouseholds - a.catchmentHouseholds);
+    hubs = hubs.slice(0, 4);
   }
 
   const totalHouseholds = hubs.reduce((s, h) => s + h.catchmentHouseholds, 0);

@@ -11,7 +11,7 @@ import {
   approveTerritory,
   rejectTerritory,
 } from "../lib/territoryBuilder";
-import { getZipsNearLocation, getCitiesInState, getCountyPopulationNearLocation } from "../lib/censusApi";
+import { getZipsNearLocation, getCitiesInState } from "../lib/censusApi";
 
 // Works in both ESM dev (tsx watch) and the esbuild production bundle.
 // In prod, esbuild's banner sets globalThis.__dirname = dist/, so the
@@ -272,95 +272,31 @@ router.get("/territories/:id/counties", async (req, res): Promise<void> => {
 type MailingAreaResult = Array<{ cityName: string; lat: number; lng: number; households: number }>;
 const _mailingAreaCache = new Map<string, MailingAreaResult>();
 
-const MAILING_AREA_DISPLAY_RADIUS   = 15;    // miles — weighted radius per city
-const MAILING_AREA_CORE_RADIUS      = 8;     // miles — full-weight core market
-const MAILING_AREA_MIN_HH           = 5_000; // merge any area below this into its nearest neighbor
-const MAILING_AREA_MAX              = 4;     // cap displayed mailing areas
-// County floor skipped when a city has ≥3 ZIPs within 8 miles (not sparse).
-// Dense suburban cities get distinct weighted counts; isolated rural towns get
-// the county floor so they show a realistic catchment rather than near-zero.
-const MAILING_AREA_CORE_ZIP_MIN     = 3;     // ZIPs within 8mi required to skip floor
-
-function haversineMilesMA(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 3959;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLng = (lng2 - lng1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
+const MAILING_AREA_RADIUS = 15; // miles — flat radius, every ZIP counts equally
+const MAILING_AREA_MIN_HH = 5_000; // minimum to appear as a standalone mailing area
+const MAILING_AREA_MAX    = 4;     // cap displayed mailing areas
 
 function computeMailingAreas(
   cities: Array<{ name: string; lat: number; lng: number }>
 ): MailingAreaResult {
   if (cities.length === 0) return [];
 
-  // ── Step 1: Distance-weighted household count per city ──
-  // ZIPs within 8 miles: full weight (1.0) — core market.
-  // ZIPs 8-15 miles: half weight (0.5) — fringe/shared market.
-  // Two cities 8 miles apart will have different core ZIPs and share
-  // only fringe ZIPs, so their counts naturally diverge.
-  // Floor: county population × 0.40 prevents near-zero results for
-  // rural towns whose ZIPs have few businesses in the proxy dataset.
-  let working: MailingAreaResult = cities.map(c => {
-    const zips = getZipsNearLocation(c.lat, c.lng, MAILING_AREA_DISPLAY_RADIUS);
-    const weighted = Math.round(
-      zips.reduce((s, z) => s + z.households * (z.distance <= MAILING_AREA_CORE_RADIUS ? 1.0 : 0.5), 0)
-    );
-    // ZIP density test: ≥3 ZIPs within 8 miles = not sparse.
-    // Dense cities get distinct weighted counts; sparse rural towns get the county floor.
-    const isDense = zips.filter(z => z.distance <= MAILING_AREA_CORE_RADIUS).length >= MAILING_AREA_CORE_ZIP_MIN;
-    const floor = Math.round(getCountyPopulationNearLocation(c.lat, c.lng) * 0.40);
-    return {
-      cityName:   c.name,
-      lat:        c.lat,
-      lng:        c.lng,
-      households: isDense ? weighted : Math.max(weighted, floor),
-    };
-  });
+  // Each city stands on its own: sum ALL households within 15 miles, flat.
+  // Overlap between cities is allowed — a household near two hubs can receive
+  // either mailing, which is how EDDM works. No weighting, no floors, no merging.
+  const all: MailingAreaResult = cities.map(c => ({
+    cityName:   c.name,
+    lat:        c.lat,
+    lng:        c.lng,
+    households: getZipsNearLocation(c.lat, c.lng, MAILING_AREA_RADIUS)
+                  .reduce((s, z) => s + z.households, 0),
+  }));
 
-  // ── Step 2: Merge any area below 5,000 HH into its nearest neighbor ──
-  // Combined HH = max(a, b) — catchments overlap so don't sum them.
-  let anyMerged = true;
-  while (anyMerged) {
-    anyMerged = false;
-    if (working.length <= 1) break;
-    const belowIdx = working.findIndex(a => a.households < MAILING_AREA_MIN_HH);
-    if (belowIdx === -1) break;
-    let nearestIdx = -1, nearestDist = Infinity;
-    for (let j = 0; j < working.length; j++) {
-      if (j === belowIdx) continue;
-      const d = haversineMilesMA(
-        working[belowIdx]!.lat, working[belowIdx]!.lng,
-        working[j]!.lat,        working[j]!.lng
-      );
-      if (d < nearestDist) { nearestDist = d; nearestIdx = j; }
-    }
-    if (nearestIdx === -1) break;
-    const a = working[belowIdx]!;
-    const b = working[nearestIdx]!;
-    const merged: MailingAreaResult[0] = {
-      cityName:   `${a.cityName} / ${b.cityName}`,
-      lat:        (a.lat + b.lat) / 2,
-      lng:        (a.lng + b.lng) / 2,
-      households: Math.max(a.households, b.households),
-    };
-    const hi = Math.max(belowIdx, nearestIdx);
-    const lo = Math.min(belowIdx, nearestIdx);
-    working.splice(hi, 1);
-    working.splice(lo, 1);
-    working.push(merged);
-    anyMerged = true;
-  }
-
-  // ── Step 3: Cap at 4 — keep highest-HH areas ──
-  if (working.length > MAILING_AREA_MAX) {
-    working.sort((a, b) => b.households - a.households);
-    working = working.slice(0, MAILING_AREA_MAX);
-  }
-
-  return working;
+  // Show all cities — this is an admin-approved stored territory, so every hub
+  // is displayed regardless of count. Cap at 4, highest count first.
+  if (all.length <= MAILING_AREA_MAX) return all.sort((a, b) => b.households - a.households);
+  all.sort((a, b) => b.households - a.households);
+  return all.slice(0, MAILING_AREA_MAX);
 }
 
 router.get("/territories/:id/mailing-areas", async (req, res): Promise<void> => {
