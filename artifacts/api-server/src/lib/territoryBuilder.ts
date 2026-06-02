@@ -50,11 +50,9 @@ const MIN_TERRITORY_HOUSEHOLDS = 20_000; // min unique (Voronoi) households for 
 // Mailing area display constants — distance-weighted, no Voronoi, same as territories route
 const DISPLAY_MAILING_RADIUS  = 15;    // miles — weighted radius per hub
 const DISPLAY_CORE_RADIUS     = 8;     // miles — full-weight core market
-const DISPLAY_EXT_RADIUS      = 12;    // miles — extended density check
 const DISPLAY_MIN_HH          = 5_000; // merge display areas below this threshold
-// County floor is applied only when the hub is ZIP-sparse (rural/isolated town).
+// County floor skipped when a hub has ≥3 ZIPs within 8 miles (not sparse).
 const DISPLAY_CORE_ZIP_MIN    = 3;     // ZIPs within 8mi required to skip floor
-const DISPLAY_EXT_ZIP_MIN     = 5;     // ZIPs within 12mi (alternative density test)
 // Household proxy used for householdsEstimate (backward-compat field)
 const HOUSEHOLDS_PER_BUSINESS = 3.5;
 
@@ -539,12 +537,9 @@ async function buildCityHubProposal(
     const weighted = Math.round(
       zips.reduce((s, z) => s + z.households * (z.distance <= DISPLAY_CORE_RADIUS ? 1.0 : 0.5), 0)
     );
-    // ZIP density test: a hub with ≥3 ZIPs within 8 miles (or ≥5 within 12 miles)
-    // is not sparse — use weighted count only (differentiates adjacent same-county hubs).
-    // Apply county floor only for genuinely isolated rural towns with few ZIPs.
-    const core8  = zips.filter(z => z.distance <= DISPLAY_CORE_RADIUS).length;
-    const core12 = zips.filter(z => z.distance <= DISPLAY_EXT_RADIUS).length;
-    const isDense = core8 >= DISPLAY_CORE_ZIP_MIN || core12 >= DISPLAY_EXT_ZIP_MIN;
+    // ZIP density test: ≥3 ZIPs within 8 miles = not sparse.
+    // Dense hubs get distinct weighted counts; sparse rural hubs get the county floor.
+    const isDense = zips.filter(z => z.distance <= DISPLAY_CORE_RADIUS).length >= DISPLAY_CORE_ZIP_MIN;
     const floor = Math.round(getCountyPopulationNearLocation(h.lat, h.lng) * 0.40);
     return {
       ...h,

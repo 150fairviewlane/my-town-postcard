@@ -274,14 +274,12 @@ const _mailingAreaCache = new Map<string, MailingAreaResult>();
 
 const MAILING_AREA_DISPLAY_RADIUS   = 15;    // miles — weighted radius per city
 const MAILING_AREA_CORE_RADIUS      = 8;     // miles — full-weight core market
-const MAILING_AREA_EXT_RADIUS       = 12;    // miles — extended density check
 const MAILING_AREA_MIN_HH           = 5_000; // merge any area below this into its nearest neighbor
 const MAILING_AREA_MAX              = 4;     // cap displayed mailing areas
-// County floor is applied only when the city is genuinely ZIP-sparse.
-// Dense/suburban cities already have distinct weighted counts — applying the
-// county floor would make all same-county cities show the same number.
+// County floor skipped when a city has ≥3 ZIPs within 8 miles (not sparse).
+// Dense suburban cities get distinct weighted counts; isolated rural towns get
+// the county floor so they show a realistic catchment rather than near-zero.
 const MAILING_AREA_CORE_ZIP_MIN     = 3;     // ZIPs within 8mi required to skip floor
-const MAILING_AREA_EXT_ZIP_MIN      = 5;     // ZIPs within 12mi (alternative density test)
 
 function haversineMilesMA(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 3959;
@@ -310,12 +308,9 @@ function computeMailingAreas(
     const weighted = Math.round(
       zips.reduce((s, z) => s + z.households * (z.distance <= MAILING_AREA_CORE_RADIUS ? 1.0 : 0.5), 0)
     );
-    // ZIP density test: a city with ≥3 ZIPs within 8 miles (or ≥5 within 12 miles)
-    // is not sparse — its weighted count already differentiates it from nearby cities.
-    // Only apply the county floor for genuinely isolated rural towns with few ZIPs.
-    const core8  = zips.filter(z => z.distance <= MAILING_AREA_CORE_RADIUS).length;
-    const core12 = zips.filter(z => z.distance <= MAILING_AREA_EXT_RADIUS).length;
-    const isDense = core8 >= MAILING_AREA_CORE_ZIP_MIN || core12 >= MAILING_AREA_EXT_ZIP_MIN;
+    // ZIP density test: ≥3 ZIPs within 8 miles = not sparse.
+    // Dense cities get distinct weighted counts; sparse rural towns get the county floor.
+    const isDense = zips.filter(z => z.distance <= MAILING_AREA_CORE_RADIUS).length >= MAILING_AREA_CORE_ZIP_MIN;
     const floor = Math.round(getCountyPopulationNearLocation(c.lat, c.lng) * 0.40);
     return {
       cityName:   c.name,
