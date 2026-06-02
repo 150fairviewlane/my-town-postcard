@@ -1,0 +1,111 @@
+Add household counts to Georgia territory mailing areas so they
+display in the same format as auto-generated proposal territories.
+
+════════════════════════════════════════════════
+THE APPROACH
+════════════════════════════════════════════════
+
+Georgia territories have city names in zone_note but no
+per-city household counts. Calculate them on demand using
+the same ZIP-level data already loaded in the territory builder.
+
+For each city in a Georgia territory's zone_note:
+1. Look up the city's lat/lng from the Gazetteer Places file
+   already loaded in censusApi.ts
+2. Sum ZIP households within 15 miles of that city centroid
+   using the Voronoi exclusive assignment approach — assign
+   each nearby ZIP to its nearest city, then sum
+3. Return the household count per city
+
+════════════════════════════════════════════════
+CHANGE 1 — NEW API ENDPOINT
+════════════════════════════════════════════════
+
+Add a new route:
+  GET /api/territories/:id/mailing-areas
+
+This endpoint:
+1. Fetches the territory record by ID from the database
+2. Splits zone_note by comma, trims each city name, filters
+   out entries ending in "area" (case insensitive)
+3. For each city name:
+   a. Looks up lat/lng from the Gazetteer using city name
+      and state abbreviation from the territory record
+   b. If city not found in Gazetteer, skip it
+4. Runs Voronoi exclusive household assignment across all
+   found cities using getZipsNearLocation() already in
+   censusApi.ts — same 15-mile radius, same exclusive
+   assignment logic as the territory builder
+5. Returns array of:
+   {
+     cityName: string,
+     lat: number,
+     lng: number,
+     households: number  // exclusive Voronoi-assigned ZIPs
+   }
+
+Cache the result per territory ID in memory — this calculation
+runs once and is cached. No need to recalculate on every click.
+
+════════════════════════════════════════════════
+CHANGE 2 — UPDATE FRONTEND
+════════════════════════════════════════════════
+
+When a Georgia territory is selected on the map or sidebar:
+
+1. Call GET /api/territories/:id/mailing-areas
+2. Show a brief loading state: "Loading mailing areas..."
+3. When response arrives, render the Key Mailing Areas section
+   in the same format as proposal territories:
+
+   KEY MAILING AREAS
+   Mailing Area 1 — Gainesville
+   ~82,000 households
+   Mailing Area 2 — Flowery Branch
+   ~12,000 households
+   Mailing Area 3 — Oakwood
+   ~8,000 households
+   Mailing Area 4 — Clermont
+   ~5,000 households
+
+Format household count as "~X,000 households" rounded to
+nearest 1,000. Use exact number if under 3,000.
+
+If the API returns no cities (zone_note empty or no Gazetteer
+matches), hide the Key Mailing Areas section entirely rather
+than showing an empty list.
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+  Georgia territory data or zone_note values
+  Territory builder engine
+  Non-Georgia proposal display
+  Admin territory manager
+  Any other page or feature
+
+════════════════════════════════════════════════
+TEST
+════════════════════════════════════════════════
+
+1. Click Hall County GA territory (zip 30501)
+   Key Mailing Areas must show:
+   Mailing Area 1 — Gainesville  ~X,000 households
+   Mailing Area 2 — Flowery Branch  ~X,000 households
+   Mailing Area 3 — Oakwood  ~X,000 households
+   Mailing Area 4 — Clermont  ~X,000 households
+   Format must match non-Georgia territories exactly
+
+2. Click White/Habersham Counties GA territory
+   Must show Cleveland, Cornelia, Demorest etc with
+   household counts
+
+3. Click a Georgia territory with only 2-3 cities in zone_note
+   Shows only those cities — no empty mailing area slots
+
+4. Non-Georgia proposal territories unchanged
+   Still show household counts as before
+
+5. Loading state appears briefly while API call completes
+   No blank flash or layout shift
