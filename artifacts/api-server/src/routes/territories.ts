@@ -11,7 +11,7 @@ import {
   approveTerritory,
   rejectTerritory,
 } from "../lib/territoryBuilder";
-import { getZipsNearLocation, getCitiesInState } from "../lib/censusApi";
+import { getZipsNearLocation, getCitiesInState, getCountyPopulationNearLocation } from "../lib/censusApi";
 
 // Works in both ESM dev (tsx watch) and the esbuild production bundle.
 // In prod, esbuild's banner sets globalThis.__dirname = dist/, so the
@@ -272,10 +272,9 @@ router.get("/territories/:id/counties", async (req, res): Promise<void> => {
 type MailingAreaResult = Array<{ cityName: string; lat: number; lng: number; households: number }>;
 const _mailingAreaCache = new Map<string, MailingAreaResult>();
 
-const MAILING_AREA_RADIUS       = 30; // miles — full county catchment for rural GA
-const MAILING_AREA_FLOOR_RADIUS = 15; // miles — matches HUB_HOUSEHOLD_RADIUS for county-level floor
-const MAILING_AREA_MERGE_DIST   =  8; // miles — merge pairs closer than this
-const MAILING_AREA_MAX          =  4; // max mailing areas to display
+const MAILING_AREA_DISPLAY_RADIUS = 15; // miles — radius sum per city (overlapping OK; no Voronoi)
+const MAILING_AREA_MIN_HH         = 5_000; // merge any area below this into its nearest neighbor
+const MAILING_AREA_MAX            = 4;     // cap displayed mailing areas
 
 function haversineMilesMA(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 3959;
@@ -292,58 +291,57 @@ function computeMailingAreas(
 ): MailingAreaResult {
   if (cities.length === 0) return [];
 
-  // ── Step 1: Voronoi exclusive ZIP assignment (20-mile radius) ──
-  const zipMap = new Map<string, { households: number; nearestIdx: number; nearestDist: number }>();
-  for (let i = 0; i < cities.length; i++) {
-    const city = cities[i]!;
-    for (const z of getZipsNearLocation(city.lat, city.lng, MAILING_AREA_RADIUS)) {
-      const existing = zipMap.get(z.zip);
-      if (!existing) {
-        zipMap.set(z.zip, { households: z.households, nearestIdx: i, nearestDist: z.distance });
-      } else if (z.distance < existing.nearestDist) {
-        existing.nearestIdx = i;
-        existing.nearestDist = z.distance;
-      }
-    }
-  }
-  const voronoi = cities.map(c => ({ cityName: c.name, lat: c.lat, lng: c.lng, households: 0 }));
-  for (const z of zipMap.values()) voronoi[z.nearestIdx]!.households += z.households;
+  // ── Step 1: Simple radius sum — ALL ZIPs within 15 miles per city (overlapping OK) ──
+  // Each city captures its full catchment area; a rural ZIP between two cities
+  // can appear in both — that is correct (it could receive either mailing).
+  let working: MailingAreaResult = cities.map(c => ({
+    cityName:   c.name,
+    lat:        c.lat,
+    lng:        c.lng,
+    // Floor: county population × 0.40 ensures small towns show their full
+    // county catchment rather than near-zero business-proxy counts.
+    households: Math.max(
+      getZipsNearLocation(c.lat, c.lng, MAILING_AREA_DISPLAY_RADIUS)
+        .reduce((s, z) => s + z.households, 0),
+      Math.round(getCountyPopulationNearLocation(c.lat, c.lng) * 0.40)
+    ),
+  }));
 
-  // ── Step 2: Apply guaranteed floor (own ZIPs within 5 miles) ──
-  for (let i = 0; i < cities.length; i++) {
-    const city = cities[i]!;
-    const ownHH = getZipsNearLocation(city.lat, city.lng, MAILING_AREA_FLOOR_RADIUS)
-      .reduce((s, z) => s + z.households, 0);
-    voronoi[i]!.households = Math.max(voronoi[i]!.households, ownHH);
-  }
-
-  // ── Step 3: Greedy merge — merge the closest pair while any pair < 8 miles ──
-  let working = voronoi.map(a => ({ ...a }));
-  while (true) {
+  // ── Step 2: Merge any area below 5,000 HH into its nearest neighbor ──
+  // Combined HH = max(a, b) — catchments overlap so don't sum them.
+  let anyMerged = true;
+  while (anyMerged) {
+    anyMerged = false;
     if (working.length <= 1) break;
-    let minDist = Infinity, minI = 0, minJ = 1;
-    for (let i = 0; i < working.length; i++) {
-      for (let j = i + 1; j < working.length; j++) {
-        const d = haversineMilesMA(working[i]!.lat, working[i]!.lng, working[j]!.lat, working[j]!.lng);
-        if (d < minDist) { minDist = d; minI = i; minJ = j; }
-      }
+    const belowIdx = working.findIndex(a => a.households < MAILING_AREA_MIN_HH);
+    if (belowIdx === -1) break;
+    let nearestIdx = -1, nearestDist = Infinity;
+    for (let j = 0; j < working.length; j++) {
+      if (j === belowIdx) continue;
+      const d = haversineMilesMA(
+        working[belowIdx]!.lat, working[belowIdx]!.lng,
+        working[j]!.lat,        working[j]!.lng
+      );
+      if (d < nearestDist) { nearestDist = d; nearestIdx = j; }
     }
-    if (minDist >= MAILING_AREA_MERGE_DIST) break; // no pair close enough
-    const a = working[minI]!;
-    const b = working[minJ]!;
-    const merged = {
+    if (nearestIdx === -1) break;
+    const a = working[belowIdx]!;
+    const b = working[nearestIdx]!;
+    const merged: MailingAreaResult[0] = {
       cityName:   `${a.cityName} / ${b.cityName}`,
       lat:        (a.lat + b.lat) / 2,
       lng:        (a.lng + b.lng) / 2,
-      households: a.households + b.households,
+      households: Math.max(a.households, b.households),
     };
-    // Remove both (higher index first to avoid shifting), then push merged
-    working.splice(minJ, 1);
-    working.splice(minI, 1);
+    const hi = Math.max(belowIdx, nearestIdx);
+    const lo = Math.min(belowIdx, nearestIdx);
+    working.splice(hi, 1);
+    working.splice(lo, 1);
     working.push(merged);
+    anyMerged = true;
   }
 
-  // ── Step 4: If still > 4, keep top 4 by household count ──
+  // ── Step 3: Cap at 4 — keep highest-HH areas ──
   if (working.length > MAILING_AREA_MAX) {
     working.sort((a, b) => b.households - a.households);
     working = working.slice(0, MAILING_AREA_MAX);

@@ -141,6 +141,7 @@ const countyFipsByShortName = new Map<string, string>();
 interface CountyCentroidRow {
   lat: number;
   lng: number;
+  population: number; // Census 2020 county population
 }
 const countyCentroidsMap = new Map<string, CountyCentroidRow>();
 
@@ -400,10 +401,11 @@ function loadStaticData(): void {
       if (cols.length < 7) continue;
       const stateFp  = (cols[0]?.trim() ?? "").padStart(2, "0");
       const countyFp = (cols[1]?.trim() ?? "").padStart(3, "0");
+      const pop      = parseInt(cols[4]?.trim() ?? "0", 10);
       const lat      = parseFloat(cols[5]?.trim() ?? "");
       const lng      = parseFloat(cols[6]?.trim() ?? "");
       if (!stateFp || !countyFp || isNaN(lat) || isNaN(lng)) continue;
-      countyCentroidsMap.set(`${stateFp}${countyFp}`, { lat, lng });
+      countyCentroidsMap.set(`${stateFp}${countyFp}`, { lat, lng, population: isNaN(pop) ? 0 : pop });
       count++;
     }
     logger.info({ count }, "Census: loaded county-centroids.csv");
@@ -556,6 +558,26 @@ loadStaticData();
  */
 export function getCountyCentroid(geoid: string): { lat: number; lng: number } | null {
   return countyCentroidsMap.get(geoid) ?? null;
+}
+
+/**
+ * Returns the 2020 Census population of the county whose population-weighted
+ * centroid is nearest to the given lat/lng.  Used to compute a household floor
+ * for mailing-area display: `Math.round(pop * 0.40)`.
+ * Returns 0 when no county centroid is loaded (data not available).
+ */
+export function getCountyPopulationNearLocation(lat: number, lng: number): number {
+  const toRad = (d: number) => d * Math.PI / 180;
+  let minDist = Infinity, bestPop = 0;
+  for (const centroid of countyCentroidsMap.values()) {
+    const dLat = toRad(centroid.lat - lat);
+    const dLng = toRad(centroid.lng - lng);
+    const a = Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(lat)) * Math.cos(toRad(centroid.lat)) * Math.sin(dLng / 2) ** 2;
+    const d = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); // radians
+    if (d < minDist) { minDist = d; bestPop = centroid.population; }
+  }
+  return bestPop;
 }
 
 export interface CountyFromZipResult {

@@ -17,6 +17,7 @@ import {
   getZipLocation,
   getZipsNearLocation,
   getCitiesInState,
+  getCountyPopulationNearLocation,
 } from "./censusApi";
 import { logger } from "./logger";
 
@@ -45,6 +46,10 @@ const HUB_BUSINESS_RADIUS   = 10;   // miles to sum businesses around a hub city
 const TERRITORY_SEARCH_RADIUS = 40; // max miles from dealer ZIP centroid to search
 const TARGET_HUB_COUNT      = 4;    // ideal hubs per territory
 const MIN_HUB_COUNT         = 3;    // accept territory with ≥ 3 hubs when 4 unavailable
+const MIN_TERRITORY_HOUSEHOLDS = 20_000; // min unique (Voronoi) households for viability
+// Mailing area display constants — radius sum, no Voronoi, same as territories route
+const DISPLAY_MAILING_RADIUS = 15; // miles for per-hub radius sum shown to dealers
+const DISPLAY_MIN_HH         = 5_000; // merge display areas below this threshold
 // Household proxy used for householdsEstimate (backward-compat field)
 const HOUSEHOLDS_PER_BUSINESS = 3.5;
 
@@ -510,11 +515,63 @@ async function buildCityHubProposal(
     .slice(0, TARGET_HUB_COUNT);
 
   const hubCount = hubs.length;
-  const isViable = hubCount >= MIN_HUB_COUNT;
-
-  const totalHouseholds = hubs.reduce((s, h) => s + h.catchmentHouseholds, 0);
   const totalBusinesses = hubs.reduce((s, h) => s + h.nearbyBusinesses, 0);
 
+  // Qualification uses Voronoi-exclusive household count (no double-counting)
+  const voronoiTotalHH = hubs.reduce((s, h) => s + h.catchmentHouseholds, 0);
+  const hasEnoughHubs        = hubCount >= MIN_HUB_COUNT;
+  const hasEnoughHouseholds  = voronoiTotalHH >= MIN_TERRITORY_HOUSEHOLDS;
+  const isViable = hasEnoughHubs && hasEnoughHouseholds;
+
+  // ── Display transform: overwrite catchmentHouseholds with radius-based counts ──
+  // Dealers see ALL households within 15 miles — overlapping between areas is correct.
+  // A rural household between two hub cities could receive either mailing.
+  hubs = hubs.map(h => ({
+    ...h,
+    // Floor: county population × 0.40 so rural hubs show county-level catchment.
+    catchmentHouseholds: Math.max(
+      getZipsNearLocation(h.lat, h.lng, DISPLAY_MAILING_RADIUS)
+        .reduce((s, z) => s + z.households, 0),
+      Math.round(getCountyPopulationNearLocation(h.lat, h.lng) * 0.40)
+    ),
+  }));
+  // Merge any display area below 5,000 HH into its nearest neighbor.
+  // Combined HH = max(a, b) — overlapping catchments, not additive.
+  let displayMerged = true;
+  while (displayMerged) {
+    displayMerged = false;
+    if (hubs.length <= 1) break;
+    const belowIdx = hubs.findIndex(h => h.catchmentHouseholds < DISPLAY_MIN_HH);
+    if (belowIdx === -1) break;
+    let nearestIdx = -1, nearestDist = Infinity;
+    for (let j = 0; j < hubs.length; j++) {
+      if (j === belowIdx) continue;
+      const d = haversineDistanceMiles(
+        hubs[belowIdx]!.lat, hubs[belowIdx]!.lng,
+        hubs[j]!.lat,        hubs[j]!.lng
+      );
+      if (d < nearestDist) { nearestDist = d; nearestIdx = j; }
+    }
+    if (nearestIdx === -1) break;
+    const a = hubs[belowIdx]!;
+    const b = hubs[nearestIdx]!;
+    const merged: CityHub = {
+      ...a,
+      cityName:             `${a.cityName} / ${b.cityName}`,
+      lat:                  (a.lat + b.lat) / 2,
+      lng:                  (a.lng + b.lng) / 2,
+      catchmentHouseholds:  Math.max(a.catchmentHouseholds, b.catchmentHouseholds),
+      nearbyBusinesses:     a.nearbyBusinesses + b.nearbyBusinesses,
+    };
+    const hi = Math.max(belowIdx, nearestIdx);
+    const lo = Math.min(belowIdx, nearestIdx);
+    hubs.splice(hi, 1);
+    hubs.splice(lo, 1);
+    hubs.push(merged);
+    displayMerged = true;
+  }
+
+  const totalHouseholds = hubs.reduce((s, h) => s + h.catchmentHouseholds, 0);
   const cityNames = hubs.map(h => h.cityName);
   const proposedName = generateTerritoryName(cityNames, [], stateAbbr);
   const slug = await generateSlug(proposedName);
@@ -527,10 +584,14 @@ async function buildCityHubProposal(
     : dealerLng;
 
   let viabilityMessage: string;
-  if (!isViable) {
+  if (!hasEnoughHubs) {
     viabilityMessage =
       `⚠ Only ${hubCount} mailing area${hubCount === 1 ? "" : "s"} found near this location. ` +
       `Contact us to discuss territory options.`;
+  } else if (!hasEnoughHouseholds) {
+    viabilityMessage =
+      "⚠ This area may not have enough households for 4 full postcard mailings of 5,000 each. " +
+      "Contact us to discuss options.";
   } else if (totalBusinesses >= 600) {
     viabilityMessage = "★ Strong market — excellent pipeline for 4+ postcard mailings.";
   } else if (totalBusinesses >= 400) {
@@ -562,7 +623,7 @@ async function buildCityHubProposal(
     viabilityMessage,
     topCities: cityNames,
     counties: [],
-    estimatedZones: Math.max(1, Math.min(4, hubCount)),
+    estimatedZones: Math.max(1, Math.min(4, hubs.length)),
     isSplit: false,
   };
 }

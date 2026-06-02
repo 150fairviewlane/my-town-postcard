@@ -1,0 +1,184 @@
+Two related fixes to the territory builder and mailing area display.
+The core principle: err toward giving dealers MORE territory, not less.
+
+
+════════════════════════════════════════════════
+THE MODEL — TWO DIFFERENT HOUSEHOLD COUNTS
+════════════════════════════════════════════════
+
+There are two distinct uses of household data:
+
+USE 1 — TERRITORY QUALIFICATION (unique, non-overlapping)
+  Used to determine if a territory is viable.
+  Each household counted once across the whole territory.
+  Minimum: 20,000 unique households.
+  This uses the existing Voronoi exclusive assignment.
+
+USE 2 — MAILING AREA DISPLAY (overlapping catchment radius)
+  Used to show dealers and advertisers how many homes
+  each mailing reaches.
+  Each mailing area shows ALL households within 15 miles
+  of the city center — regardless of whether those same
+  households appear in an adjacent mailing area.
+  A rural household between Cleveland and Helen can appear
+  in both areas. That is correct — it could receive either
+  mailing depending on which EDDM routes are selected.
+  Minimum per area: 5,000 households.
+
+These are different numbers serving different purposes.
+Do not conflate them.
+
+
+════════════════════════════════════════════════
+FIX 1 — TERRITORY BUILDER MINIMUM HOUSEHOLDS
+════════════════════════════════════════════════
+
+In territoryBuilder.ts, update the minimum threshold:
+
+  const MIN_TERRITORY_HOUSEHOLDS = 20000;
+
+After Voronoi assignment, calculate total unique territory
+households (sum of exclusive Voronoi-assigned households
+across all hubs — no double counting).
+
+If total unique households < 20,000:
+  Continue bundling neighboring counties until >= 20,000
+  Use the same neighbor bundling logic already in place
+  Apply the same 75-mile distance cap
+  Same state only
+
+Only stop bundling when BOTH conditions are met:
+  unique households >= 20,000
+  AND business count >= MIN_BUSINESS_COUNT
+
+If after MAX_NEIGHBOR_RINGS rings still under 20,000:
+  Return proposal with isViable = false
+  viabilityMessage = 'This area may not have enough
+  households for 4 full postcard mailings of 5,000 each.
+  Contact us to discuss options.'
+
+Remove or update any previous MIN_BUSINESS_COUNT-only
+stopping condition — household minimum is now equally
+important.
+
+
+════════════════════════════════════════════════
+FIX 2 — MAILING AREA DISPLAY USES RADIUS NOT VORONOI
+════════════════════════════════════════════════
+
+In GET /api/territories/:id/mailing-areas, change the
+household calculation for display purposes:
+
+CURRENT (wrong for display):
+  Voronoi exclusive assignment — each ZIP goes to nearest
+  city only. Small cities get very few ZIPs.
+
+NEW (correct for display):
+  For each mailing area city, count ALL households within
+  15 miles of that city centroid regardless of whether
+  those households are also within 15 miles of another city.
+
+  mailingAreaHouseholds = sum of zip.households for all
+    ZIPs where distance(zip.centroid, city.centroid) <= 15 miles
+
+This is a simple radius sum — no Voronoi, no exclusivity.
+
+With this approach:
+  Blairsville captures all Union County ZIPs within 15 miles
+    → approximately 10,000-12,000 households
+  Hiawassee captures all Towns County ZIPs within 15 miles
+    → approximately 5,000-7,000 households
+  Clayton captures all Rabun County ZIPs within 15 miles
+    → approximately 15,000-18,000 households
+
+Some households appear in multiple areas. That is correct
+and expected — they are in the catchment zone of both cities
+and could receive either mailing.
+
+
+════════════════════════════════════════════════
+FIX 3 — MERGE MAILING AREAS BELOW 5,000 HOUSEHOLDS
+════════════════════════════════════════════════
+
+After calculating radius-based household counts for each city:
+
+If any mailing area has fewer than 5,000 households:
+  Find the nearest other mailing area (by city centroid distance)
+  Merge them:
+    Combined name: "City1 / City2"
+    Combined households: larger of the two radius counts
+      (not sum — they overlap, so use the larger one as
+      representative of the combined area)
+    Combined centroid: midpoint
+
+Keep merging until all areas have >= 5,000 households
+or only 1 area remains.
+
+After merging, cap at 4 areas maximum.
+If more than 4 areas all have >= 5,000 households,
+keep the 4 with the highest household counts.
+
+
+════════════════════════════════════════════════
+FIX 4 — ALSO APPLY TO NON-GEORGIA PROPOSALS
+════════════════════════════════════════════════
+
+The same mailing area display logic (radius-based, not Voronoi,
+5,000 minimum, 4 maximum) should apply to auto-generated
+territory proposals for all states.
+
+Update buildCityHubProposal() to calculate display households
+using the radius approach rather than exclusive Voronoi counts.
+
+Keep Voronoi for QUALIFICATION (determining which hubs to select)
+but use radius for DISPLAY (showing household counts to dealers).
+
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+  Georgia MANAGED_STATES guard
+  Voronoi logic used for hub qualification and selection
+  Admin territory manager
+  Landing page system
+  Any ad generator, image library, or payment files
+
+
+════════════════════════════════════════════════
+TEST
+════════════════════════════════════════════════
+
+TEST 1 — Rabun/Towns/Union (GA-049)
+  Must show exactly 3-4 mailing areas
+  Each area must show >= 5,000 households
+  Blairsville: approximately 10,000-12,000 households
+  Hiawassee: approximately 5,000-7,000 households
+  Clayton: approximately 15,000-18,000 households
+  Any area under 5,000 must be merged with nearest neighbor
+
+TEST 2 — Franklin/Hart Counties (GA-048)
+  Hartwell area: >= 5,000 households
+  Carnesville area: >= 5,000 (may need to merge with Canon)
+  If any area still under 5,000 after radius approach,
+  merge it with nearest area
+
+TEST 3 — Hall County (GA-026)
+  Gainesville: approximately 40,000-60,000 households
+  All 4 areas >= 5,000 households easily
+
+TEST 4 — Territory builder new territory (non-Georgia)
+  POST /api/territories/propose with a rural zip
+  Territory must have >= 20,000 unique households to qualify
+  If home county is too small, builder bundles neighbors
+  until 20,000 reached
+
+TEST 5 — Non-Georgia proposal mailing areas
+  Each of the 4 hub mailing areas shows radius-based
+  household count (overlapping allowed)
+  Each area >= 5,000 households
+  Areas below 5,000 merged with nearest neighbor
+
+TEST 6 — Georgia ZIP search
+  30501 (Gainesville) → existing GA-026
+  Left panel shows 4 mailing areas all >= 5,000 households
