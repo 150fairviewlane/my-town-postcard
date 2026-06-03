@@ -1,0 +1,70 @@
+Stop investigating. The root cause is confirmed.
+
+The zip-centroids.csv parser is reading the wrong columns
+for lat/lng. The file format is:
+  code, city, state, county, area_code, lat, lon
+  col 0, col 1, col 2, col 3,  col 4,   col 5, col 6
+
+The parser is likely reading col 2 and col 3 (state, county)
+instead of col 5 and col 6 (lat, lon).
+
+This means every ZIP has wrong coordinates — so no ZIPs
+are found within 8 miles of any city, so business counts
+return zero, so every city fails the business count check.
+
+This is why Toccoa and Clarkesville show zero businesses
+and get excluded. It is also likely affecting hub selection
+for all territories and proposals.
+
+════════════════════════════════════════════════
+THE FIX
+════════════════════════════════════════════════
+
+In censusApi.ts, find where zip-centroids.csv is parsed.
+
+Fix the column indices to read:
+  zip = cols[0]
+  lat = parseFloat(cols[5])
+  lng = parseFloat(cols[6])
+
+Not cols[2] and cols[3].
+
+After fixing, rebuild the zipCentroidMap with correct
+lat/lng values.
+
+════════════════════════════════════════════════
+THIS IS LIKELY THE ROOT CAUSE OF MANY PROBLEMS
+════════════════════════════════════════════════
+
+If ZIP coordinates have been wrong this entire time:
+  - Business counts per city have been wrong
+  - Hub qualification has been unreliable
+  - Voronoi assignment used wrong ZIP positions
+  - Household catchment calculations were wrong
+
+Fixing the column indices may significantly change which
+hubs qualify and what business counts look like across
+all territories and proposals.
+
+After fixing the parser, run these tests and report
+the actual numbers — do not assume anything:
+
+  1. Business count within 8 miles of Toccoa GA
+     (Gazetteer lat/lng: approximately 34.577, -83.332)
+     Expected: 50-200 businesses
+
+  2. Business count within 8 miles of Clarkesville GA
+     (approximately 34.617, -83.524)
+     Expected: 50-150 businesses
+
+  3. GET /api/territories/GA-047/mailing-areas
+     Must now include Toccoa and/or Clarkesville
+
+  4. POST /api/territories/propose { zipCode: '29301' }
+     Spartanburg SC proposal — report hub cities and
+     whether they changed from before
+
+  5. POST /api/territories/propose { zipCode: '29928' }
+     Hilton Head SC — report hub cities
+
+Report all results before making any other changes.

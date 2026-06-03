@@ -919,8 +919,13 @@ export function getCountyGeoidForLocation(lat: number, lng: number): string | nu
   // ±0.5° ≈ ±34 miles — wide enough to find a ZIP centroid for any populated area.
   const latDelta = 0.5;
   const lngDelta = 0.6;
-  let nearestZip: string | null = null;
-  let minDist2 = Infinity;
+
+  // Collect all candidate ZIPs within the bounding box, sorted by ascending distance.
+  // Some ZIPs appear in zip-centroids.csv but not in zip-county.csv (e.g. PO Box
+  // ZIPs, rural free-delivery ZIPs, or small satellite ZIPs that are missing from
+  // the county assignment table). Walking the sorted list lets us fall back to the
+  // next-nearest ZIP that actually has a county assignment instead of returning null.
+  const nearby: Array<{ zip: string; dist2: number }> = [];
 
   for (const [zip, centroid] of zipCentroidsMap.entries()) {
     if (
@@ -929,18 +934,23 @@ export function getCountyGeoidForLocation(lat: number, lng: number): string | nu
     ) continue;
     const dLat = centroid.lat - lat;
     const dLng = centroid.lng - lng;
-    const dist2 = dLat * dLat + dLng * dLng;
-    if (dist2 < minDist2) { minDist2 = dist2; nearestZip = zip; }
+    nearby.push({ zip, dist2: dLat * dLat + dLng * dLng });
   }
 
-  if (!nearestZip) return null;
-  const row = zipCountyMap.get(nearestZip);
-  if (!row) return null;
-  const countyFips3 = countyFipsByShortName.get(
-    `${row.stateFips}:${row.countyShort.toUpperCase().trim()}`
-  );
-  if (!countyFips3) return null;
-  return `${row.stateFips}${countyFips3.padStart(3, "0")}`;
+  if (nearby.length === 0) return null;
+  nearby.sort((a, b) => a.dist2 - b.dist2);
+
+  for (const { zip } of nearby) {
+    const row = zipCountyMap.get(zip);
+    if (!row) continue;
+    const countyFips3 = countyFipsByShortName.get(
+      `${row.stateFips}:${row.countyShort.toUpperCase().trim()}`
+    );
+    if (!countyFips3) continue;
+    return `${row.stateFips}${countyFips3.padStart(3, "0")}`;
+  }
+
+  return null;
 }
 
 /**
