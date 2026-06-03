@@ -11,7 +11,7 @@ import {
   approveTerritory,
   rejectTerritory,
 } from "../lib/territoryBuilder";
-import { getZipsNearLocation, getCitiesInState } from "../lib/censusApi";
+import { getCitiesInState, getCountyHouseholds, getCountyGeoidForLocation } from "../lib/censusApi";
 
 // Works in both ESM dev (tsx watch) and the esbuild production bundle.
 // In prod, esbuild's banner sets globalThis.__dirname = dist/, so the
@@ -266,43 +266,106 @@ router.get("/territories/:id/counties", async (req, res): Promise<void> => {
 });
 
 // ─── GET /api/territories/:id/mailing-areas ───────────────────────────────────
-// Calculates per-city household counts using Voronoi exclusive ZIP assignment.
-// Results are cached in memory per territory ID (calculated once, never stale).
+// Household counts are derived from county-level totals (Census 2020), not from
+// radius-based ZIP sums. Three rules govern how counts are displayed:
+//   Rule 1 — county total < 15k: all hubs in that county merge into one area,
+//             showing the full county total.
+//   Rule 2/3 — county total ≥ 15k: each hub stands alone, showing
+//             county_total ÷ hub_count, capped at 25,000 per area.
+// After grouping: top 4 by households kept; areas < 5k merged with nearest.
 
 type MailingAreaResult = Array<{ cityName: string; lat: number; lng: number; households: number }>;
 const _mailingAreaCache = new Map<string, MailingAreaResult>();
 
-const MAILING_AREA_RADIUS = 15; // miles — flat radius, every ZIP counts equally
-const MAILING_AREA_MIN_HH = 5_000; // minimum to appear as a standalone mailing area
-const MAILING_AREA_MAX    = 4;     // cap displayed mailing areas
+const MAILING_AREA_MIN_HH    = 5_000;  // merge areas below this into nearest neighbor
+const MAILING_AREA_MAX       = 4;      // cap displayed mailing areas
+const SMALL_COUNTY_THRESHOLD = 15_000; // Rule 1 threshold
+const PER_HUB_CAP            = 25_000; // Rule 3 cap per mailing area
 
 function computeMailingAreas(
   cities: Array<{ name: string; lat: number; lng: number }>
 ): MailingAreaResult {
   if (cities.length === 0) return [];
 
-  // Each city stands on its own: sum ALL households within 15 miles, flat.
-  // Overlap between cities is allowed — a household near two hubs can receive
-  // either mailing, which is how EDDM works. No weighting, no floors, no merging.
-  const all: MailingAreaResult = cities.map(c => ({
-    cityName:   c.name,
-    lat:        c.lat,
-    lng:        c.lng,
-    households: getZipsNearLocation(c.lat, c.lng, MAILING_AREA_RADIUS)
-                  .reduce((s, z) => s + z.households, 0),
+  // Step 1 — county GEOID for each city (nearest-ZIP lookup)
+  type City = { name: string; lat: number; lng: number; countyGeoid: string };
+  const withCounty: City[] = cities.map(c => ({
+    ...c,
+    countyGeoid: getCountyGeoidForLocation(c.lat, c.lng) ?? `__unknown__${c.name}`,
   }));
 
-  // Apply 5,000 minimum floor — each mailing area represents a 5,000-postcard
-  // EDDM run, so showing below that would be misleading.
-  const floored = all.map(a => ({
-    ...a,
-    households: Math.max(a.households, MAILING_AREA_MIN_HH),
-  }));
+  // Step 2 — group by county
+  const byCounty = new Map<string, City[]>();
+  for (const c of withCounty) {
+    if (!byCounty.has(c.countyGeoid)) byCounty.set(c.countyGeoid, []);
+    byCounty.get(c.countyGeoid)!.push(c);
+  }
 
-  // Cap at 4, highest count first.
-  if (floored.length <= MAILING_AREA_MAX) return floored.sort((a, b) => b.households - a.households);
-  floored.sort((a, b) => b.households - a.households);
-  return floored.slice(0, MAILING_AREA_MAX);
+  // Step 3 — apply display rules
+  const areas: Array<{ cityName: string; lat: number; lng: number; households: number }> = [];
+
+  for (const [geoid, hubs] of byCounty.entries()) {
+    const countyTotal = geoid.startsWith("__unknown__")
+      ? 0
+      : getCountyHouseholds(geoid);
+
+    if (countyTotal < SMALL_COUNTY_THRESHOLD) {
+      // Rule 1: merge all hubs in this county — one area with the county total
+      const names = hubs.map(h => h.name).sort();
+      const cityName =
+        names.length === 1 ? names[0] :
+        names.length === 2 ? `${names[0]} / ${names[1]}` :
+        `${names[0]} / ${names[1]} / ${names[2]}`;
+      const lat = hubs.reduce((s, h) => s + h.lat, 0) / hubs.length;
+      const lng = hubs.reduce((s, h) => s + h.lng, 0) / hubs.length;
+      areas.push({ cityName, lat, lng, households: countyTotal });
+    } else {
+      // Rules 2 & 3: separate areas, divide evenly, cap at 25k
+      const perHub = Math.min(Math.round(countyTotal / hubs.length), PER_HUB_CAP);
+      for (const hub of hubs) {
+        areas.push({ cityName: hub.name, lat: hub.lat, lng: hub.lng, households: perHub });
+      }
+    }
+  }
+
+  // Step 4 — keep top 4 by households
+  areas.sort((a, b) => b.households - a.households);
+  const top = areas.slice(0, MAILING_AREA_MAX);
+
+  // Step 5 — merge any area below 5k with its nearest unmerged neighbor.
+  // Two-pass: first identify and execute all merges, then emit survivors.
+  const merged = new Set<number>();
+  const result: MailingAreaResult = [];
+
+  // Iterate smallest → largest (reverse of sorted order) so tiny areas are
+  // handled before larger neighbors have been consumed.
+  for (let i = top.length - 1; i >= 0; i--) {
+    if (merged.has(i) || top[i].households >= MAILING_AREA_MIN_HH) continue;
+    // Find nearest unmerged area
+    let nearestIdx = -1, nearestDist = Infinity;
+    for (let j = 0; j < top.length; j++) {
+      if (j === i || merged.has(j)) continue;
+      const d = (top[j].lat - top[i].lat) ** 2 + (top[j].lng - top[i].lng) ** 2;
+      if (d < nearestDist) { nearestDist = d; nearestIdx = j; }
+    }
+    if (nearestIdx >= 0) {
+      merged.add(i);
+      merged.add(nearestIdx);
+      result.push({
+        cityName:   `${top[i].cityName} / ${top[nearestIdx].cityName}`,
+        lat:        (top[i].lat + top[nearestIdx].lat) / 2,
+        lng:        (top[i].lng + top[nearestIdx].lng) / 2,
+        households: Math.max(top[i].households, top[nearestIdx].households),
+      });
+    }
+  }
+
+  // Emit all areas that were NOT merged
+  for (let i = 0; i < top.length; i++) {
+    if (!merged.has(i)) result.push(top[i]);
+  }
+
+  return result.sort((a, b) => b.households - a.households);
 }
 
 router.get("/territories/:id/mailing-areas", async (req, res): Promise<void> => {

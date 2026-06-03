@@ -164,6 +164,32 @@ const zipBusinessMap = new Map<string, number>();
 const zipPostcardBizMap = new Map<string, number>();
 
 /**
+ * 5-digit county GEOID → total occupied housing units (sum of all ZIP estimates
+ * within that county from zip-housing-units.csv).
+ * Built in loadStaticData() after both zip-county.csv and zip-housing-units.csv load.
+ * Key: "STATEFIPS(2)COUNTYFIPS(3)" — e.g. "13241" (Rabun County GA)
+ */
+const countyHouseholdsMap = new Map<string, number>();
+
+/**
+ * ZIP → housing unit estimate derived from Census 2020 county populations.
+ * Source: src/data/zip-housing-units.csv
+ *
+ * Generation method (run once from disk data, committed to repo):
+ *   county_housing_units = Census2020_county_population / 2.53 (2020 avg HH size)
+ *   Each ZIP receives a share proportional to its ZBP employer-establishment count
+ *   within the county (70% proportional + 30% even split), so ZIPs with no
+ *   business data still receive a non-zero allocation from the county total.
+ *
+ * Only strict 5-digit numeric ZIPs are loaded; non-numeric ZCTA group codes
+ * (e.g. 350HH, 350XX) that appear in zip-county.csv are silently skipped.
+ *
+ * Key: 5-digit numeric ZIP string (e.g. "30537")
+ * Value: estimated occupied housing units in that ZIP/ZCTA
+ */
+const zipHousingUnitsMap = new Map<string, number>();
+
+/**
  * ZIP → {lat, lng} centroid.
  * Source: src/data/zip-centroids.csv (Midwire US ZIP centroids)
  * Key: 5-digit ZIP string (e.g. "30528")
@@ -545,6 +571,50 @@ function loadStaticData(): void {
     logger.error({ err: err instanceof Error ? err.message : String(err) },
       "Census: failed to load gazetteer-places.txt");
   }
+
+  // ── 9. zip-housing-units.csv ──────────────────────────────────────────────────
+  // Census 2020 county population distributed proportionally to ZIPs via ZBP
+  // establishment density. Replaces the inflated employer-estabs × 22 proxy.
+  // Header: zip,housing_units
+  try {
+    const text = readFileSync(join(dataDir, "zip-housing-units.csv"), "utf-8");
+    let count = 0;
+    for (const raw of text.split("\n")) {
+      const line = raw.trim();
+      if (!line || line.startsWith("zip,")) continue;
+      const cols = line.split(",");
+      if (cols.length < 2) continue;
+      const zip = (cols[0] ?? "").trim();
+      const hu  = parseInt(cols[1] ?? "0", 10);
+      if (!zip || !/^\d{5}$/.test(zip) || isNaN(hu) || hu <= 0) continue;
+      zipHousingUnitsMap.set(zip, hu);
+      count++;
+    }
+    logger.info({ count }, "Census: loaded zip-housing-units.csv");
+  } catch (err: unknown) {
+    logger.error({ err: err instanceof Error ? err.message : String(err) },
+      "Census: failed to load zip-housing-units.csv — household counts will fall back to estab proxy");
+  }
+
+  // ── 10. Build county households map ─────────────────────────────────────────
+  // Sum all ZIP housing unit estimates within each county → county GEOID total.
+  // Requires both zipHousingUnitsMap (section 9) and zipCountyMap (section 1).
+  try {
+    for (const [zip, hu] of zipHousingUnitsMap.entries()) {
+      const row = zipCountyMap.get(zip);
+      if (!row) continue;
+      const countyFips3 = countyFipsByShortName.get(
+        `${row.stateFips}:${row.countyShort.toUpperCase().trim()}`
+      );
+      if (!countyFips3) continue;
+      const geoid = `${row.stateFips}${countyFips3.padStart(3, "0")}`;
+      countyHouseholdsMap.set(geoid, (countyHouseholdsMap.get(geoid) ?? 0) + hu);
+    }
+    logger.info({ counties: countyHouseholdsMap.size }, "Census: built county households map");
+  } catch (err: unknown) {
+    logger.error({ err: err instanceof Error ? err.message : String(err) },
+      "Census: failed to build county households map");
+  }
 }
 
 loadStaticData();
@@ -774,16 +844,16 @@ export function getZipLocation(zip: string): { lat: number; lng: number } | null
 /**
  * Returns all ZIPs within radiusMiles of (lat, lng), sorted by distance ascending.
  * Each entry includes:
- *   - households: total employer establishments × 22 (national avg ~22 HH per employer)
- *                 Falls back to postcard-filtered establishments × 22 if ZBP totals missing.
- *                 This gives realistic counts for rural areas where postcard-filtered
- *                 businesses alone are far too sparse.
+ *   - households: occupied housing units from zip-housing-units.csv (Census 2020
+ *                 county population distributed proportionally by ZBP establishment
+ *                 density). Falls back to totalEstabs × HH_PER_ESTAB for ZIPs not
+ *                 in the housing-units dataset.
  *   - businesses: postcard-industry ZBP establishment count (used for hub qualification)
  *   - distance: Haversine miles from (lat, lng)
  *
  * Uses a bounding-box pre-filter for performance before the precise Haversine check.
  */
-// National average: ~130M US households / ~6M employer establishments ≈ 22 HH/estab.
+// Fallback only — used for ZIPs absent from zip-housing-units.csv (rare).
 const HH_PER_ESTAB = 22;
 
 export function getZipsNearLocation(
@@ -819,17 +889,58 @@ export function getZipsNearLocation(
 
     if (distance > radiusMiles) continue;
 
-    // Total employer estabs (zbp22totals) give realistic HH estimates for both
-    // urban and rural ZIPs. Postcard-filtered estabs are kept separately for the
-    // hub-qualification business-density check in the territory builder.
+    // households: use real Census-derived housing unit counts; fall back to the
+    // estab-based proxy only for ZIPs absent from the housing-units dataset.
     const totalEstabs   = zipBusinessMap.get(zip) ?? zipPostcardBizMap.get(zip) ?? 0;
     const businesses    = zipPostcardBizMap.get(zip) ?? 0;
-    const households    = Math.round(totalEstabs * HH_PER_ESTAB);
+    const households    = zipHousingUnitsMap.get(zip) ?? Math.round(totalEstabs * HH_PER_ESTAB);
     result.push({ zip, lat: centroid.lat, lng: centroid.lng, households, businesses, distance });
   }
 
   result.sort((a, b) => a.distance - b.distance);
   return result;
+}
+
+/**
+ * Returns the total occupied housing units for a county, derived from the
+ * zip-housing-units.csv dataset summed to the county level.
+ * @param geoid — 5-digit county GEOID (state FIPS 2 + county FIPS 3), e.g. "13241"
+ */
+export function getCountyHouseholds(geoid: string): number {
+  return countyHouseholdsMap.get(geoid) ?? 0;
+}
+
+/**
+ * Returns the 5-digit county GEOID for the county whose ZIP centroid is nearest
+ * to (lat, lng). Uses a bounding-box pre-filter for speed (O(n) with early exit).
+ * Returns null if no matching ZIP or county can be found.
+ */
+export function getCountyGeoidForLocation(lat: number, lng: number): string | null {
+  // ±0.5° ≈ ±34 miles — wide enough to find a ZIP centroid for any populated area.
+  const latDelta = 0.5;
+  const lngDelta = 0.6;
+  let nearestZip: string | null = null;
+  let minDist2 = Infinity;
+
+  for (const [zip, centroid] of zipCentroidsMap.entries()) {
+    if (
+      Math.abs(centroid.lat - lat) > latDelta ||
+      Math.abs(centroid.lng - lng) > lngDelta
+    ) continue;
+    const dLat = centroid.lat - lat;
+    const dLng = centroid.lng - lng;
+    const dist2 = dLat * dLat + dLng * dLng;
+    if (dist2 < minDist2) { minDist2 = dist2; nearestZip = zip; }
+  }
+
+  if (!nearestZip) return null;
+  const row = zipCountyMap.get(nearestZip);
+  if (!row) return null;
+  const countyFips3 = countyFipsByShortName.get(
+    `${row.stateFips}:${row.countyShort.toUpperCase().trim()}`
+  );
+  if (!countyFips3) return null;
+  return `${row.stateFips}${countyFips3.padStart(3, "0")}`;
 }
 
 /**

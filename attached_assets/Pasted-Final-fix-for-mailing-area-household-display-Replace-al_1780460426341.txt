@@ -1,0 +1,188 @@
+Final fix for mailing area household display. Replace all
+radius-based household calculations with county-total-based
+calculations. This is the permanent solution.
+
+
+════════════════════════════════════════════════
+THE MODEL
+════════════════════════════════════════════════
+
+Each mailing area's household count is derived from its
+county's total households (sum of zip-housing-units.csv
+for all ZIPs in that county).
+
+How the count is displayed depends on how many hub cities
+share the same county:
+
+RULE 1 — County total < 15,000 households (small county):
+  All hub cities in this county merge into ONE mailing area.
+  Combined name: "City1 / City2" (alphabetical if 3+: "City1 / City2 / City3")
+  Displayed households: full county total
+  Example: White County (10,729 HH) → "Cleveland / Helen" → 10,729
+
+RULE 2 — County total 15,000-50,000 (mid-size county):
+  Keep hub cities as separate mailing areas.
+  Each city shows: county total ÷ number of same-county hubs
+  Example: Spartanburg County (120,000 HH), 3 hubs
+    Wait — 120,000 > 50,000, see Rule 3.
+  Example: Laurens County SC (30,000 HH), 2 hubs → 15,000 each
+
+RULE 3 — County total > 50,000 (large county):
+  Keep hub cities as separate mailing areas.
+  Each city shows: county total ÷ number of same-county hubs
+  Cap the displayed value at 25,000 per area maximum.
+  Example: Hall County (82,000 HH), 4 hubs → 20,500 each ✓
+  Example: Spartanburg County (120,000 HH), 3 hubs →
+    40,000 each but capped → 25,000 each
+
+The 25,000 cap exists because showing 40,000 households
+for a single mailing area implies you can reach 40,000
+homes in one 5,000-card mailing — which is not true.
+The cap keeps expectations honest.
+
+
+════════════════════════════════════════════════
+IMPLEMENTATION
+════════════════════════════════════════════════
+
+STEP 1 — Build county households map at startup in censusApi.ts
+
+  Build this Map when zip-housing-units.csv and zip-county.csv
+  are both loaded:
+
+  countyHouseholdsMap: Map<string, number>
+  key = 5-digit GEOID (stateFips zero-padded to 2 +
+        countyFips zero-padded to 3)
+  value = sum of housing_units for all ZIPs in that county
+
+  Export this function:
+    export function getCountyHouseholds(geoid: string): number {
+      return countyHouseholdsMap.get(geoid) ?? 0;
+    }
+
+STEP 2 — Get county FIPS for each hub city
+
+  Each hub city needs a county FIPS to look up its county total.
+
+  For Georgia territories (zone_note cities):
+    Look up each city in the Gazetteer Places file which has
+    STATEFP and COUNTYFP columns. Match on city name and
+    state abbreviation. Build the 5-digit GEOID from these.
+
+  For auto-generated proposal hubs:
+    The CityHub object should already have countyFips from
+    the Gazetteer. If not, add it now — it's available in
+    the Gazetteer COUNTYFP column.
+
+STEP 3 — Apply the three rules in getMailingAreas()
+
+  function calculateMailingAreaHouseholds(
+    hubs: Array<{ cityName: string; countyGeoid: string }>,
+    stateAbbr: string
+  ): Array<{ name: string; households: number }>
+
+  1. Group hubs by countyGeoid
+
+  2. For each county group:
+     countyTotal = getCountyHouseholds(countyGeoid)
+     hubCount = number of cities in this county group
+
+     if countyTotal < 15000:
+       // Rule 1 — merge all cities in this county
+       name = cities joined by " / "
+       households = countyTotal
+       → one mailing area for this county
+
+     else:
+       // Rules 2 and 3 — keep separate, divide equally
+       perHub = Math.round(countyTotal / hubCount)
+       households = Math.min(perHub, 25000)  // cap at 25k
+       → one mailing area per city
+
+  3. After grouping, enforce 4-area maximum:
+     If more than 4 areas, keep the 4 with highest households
+
+  4. Enforce 5,000 minimum per area:
+     If any area < 5,000:
+       Merge it with the nearest area (by city centroid distance)
+       Combined name: "Area1 / Area2"
+       Combined households: larger of the two values
+
+  5. Return final list of mailing areas
+
+
+════════════════════════════════════════════════
+REMOVE OLD CODE
+════════════════════════════════════════════════
+
+Delete or disable:
+  - All radius-based household sum logic in mailing areas
+  - The weighted sum (1.0 within 8mi, 0.5 for 8-15mi)
+  - The county floor override logic
+  - The sparse ZIP check (zipsWithin8Miles < 3)
+  - HH_PER_ESTAB proxy constant
+  - Any reference to getZipsNearLocation for household display
+
+Keep for hub QUALIFICATION only (not display):
+  - Voronoi exclusive assignment (determines which hubs to select)
+  - HUB_MIN_HOUSEHOLDS threshold check
+
+The qualification logic (which hubs qualify) stays unchanged.
+Only the display calculation changes.
+
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+  Georgia MANAGED_STATES guard
+  Hub selection and qualification logic
+  Business count calculations
+  Territory builder engine flow
+  Admin territory manager
+  Landing page system
+
+
+════════════════════════════════════════════════
+TEST
+════════════════════════════════════════════════
+
+TEST 1 — GA-049 Rabun/Towns/Union
+  GET /api/territories/GA-049/mailing-areas
+  Clayton area (Rabun County ~7,615 HH):
+    If Dillard also in Rabun → merge → "Clayton / Dillard"
+    → ~7,615 households
+  Blairsville (Union County ~11,490 HH) → ~11,490
+  Hiawassee (Towns County ~5,200 HH) → ~5,200
+  All three match Census QuickFacts county totals ✓
+  Any area under 5,000 merged with nearest ✓
+
+TEST 2 — GA-026 Hall County
+  GET /api/territories/GA-026/mailing-areas
+  All 4 cities in Hall County (82,000 HH)
+  4 hubs → 82,000 ÷ 4 = 20,500 each (under 25k cap) ✓
+  All 4 show 20,500 — consistent, honest, verifiable ✓
+
+TEST 3 — GA-039 Lumpkin/White Counties
+  Cleveland and Helen both in White County (10,729 HH)
+  Rule 1 applies → merge → "Cleveland / Helen" → 10,729 ✓
+  Dahlonega in Lumpkin County → separate area ✓
+
+TEST 4 — Spartanburg SC (29301 proposal)
+  POST /api/territories/propose { zipCode: '29301' }
+  Spartanburg County (~120,000 HH), multiple hubs
+  Each Spartanburg County hub → capped at 25,000 ✓
+  Other county hubs → their county total ÷ their hub count ✓
+
+TEST 5 — Hilton Head SC (29928 proposal)
+  HHI is in Beaufort County (~75,000 HH)
+  Port Royal also in Beaufort County
+  2 hubs in Beaufort → 75,000 ÷ 2 = 37,500 → capped at 25,000
+  Bluffton in Beaufort too? → 75,000 ÷ 3 = 25,000 → at cap
+  Hardeeville in Jasper County (~15,000 HH) → ~15,000 ✓
+  Different numbers for different counties ✓
+
+TEST 6 — Verify against Census QuickFacts
+  After running tests, check 2-3 counties on
+  census.gov/quickfacts and confirm the numbers match
+  what the app displays.

@@ -17,6 +17,8 @@ import {
   getZipLocation,
   getZipsNearLocation,
   getCitiesInState,
+  getCountyHouseholds,
+  getCountyGeoidForLocation,
 } from "./censusApi";
 import { logger } from "./logger";
 
@@ -42,9 +44,10 @@ const TERRITORY_SEARCH_RADIUS = 40; // max miles from dealer ZIP centroid to sea
 const TARGET_HUB_COUNT      = 4;    // ideal hubs per territory
 const MIN_HUB_COUNT         = 3;    // accept territory with ≥ 3 hubs when 4 unavailable
 const MIN_TERRITORY_HOUSEHOLDS = 20_000; // min unique (Voronoi) households for viability
-// Mailing area display — flat 15-mile radius, same rule as territories route
-const DISPLAY_MAILING_RADIUS  = 15;    // miles — flat radius, every ZIP counts equally
 const DISPLAY_MIN_HH          = 5_000; // minimum to appear as a standalone mailing area
+// County-based display thresholds (mirrors computeMailingAreas in territories.ts)
+const DISPLAY_SMALL_COUNTY    = 15_000; // Rule 1: counties below this merge all their hubs
+const DISPLAY_PER_HUB_CAP     = 25_000; // Rule 3: per-hub cap for large counties
 // Household proxy used for householdsEstimate (backward-compat field)
 const HOUSEHOLDS_PER_BUSINESS = 3.5;
 
@@ -77,6 +80,8 @@ export interface CityHub {
   stateAbbr: string;
   lat: number;
   lng: number;
+  /** 5-digit county GEOID (stateFips2 + countyFips3). Used for county-based display. */
+  countyGeoid: string;
   catchmentHouseholds: number;
   nearbyBusinesses: number;
   distanceFromDealer: number;
@@ -322,6 +327,7 @@ async function findCandidateHubs(
       stateAbbr: city.stateAbbr,
       lat: city.lat,
       lng: city.lng,
+      countyGeoid: getCountyGeoidForLocation(city.lat, city.lng) ?? "",
       catchmentHouseholds,
       nearbyBusinesses,
       distanceFromDealer: distance,
@@ -518,16 +524,56 @@ async function buildCityHubProposal(
   const hasEnoughHouseholds  = voronoiTotalHH >= MIN_TERRITORY_HOUSEHOLDS;
   const isViable = hasEnoughHubs && hasEnoughHouseholds;
 
-  // ── Display transform: flat 15-mile household count per hub ──
-  // Each hub stands on its own. Overlap between hubs is fine — EDDM allows it.
-  // No weighting, no county floors, no merging. Hubs below 5,000 are dropped.
-  hubs = hubs
-    .map(h => ({
-      ...h,
-      catchmentHouseholds: getZipsNearLocation(h.lat, h.lng, DISPLAY_MAILING_RADIUS)
-        .reduce((s, z) => s + z.households, 0),
-    }))
-    .filter(h => h.catchmentHouseholds >= DISPLAY_MIN_HH);
+  // ── Display transform: county-based household count per hub ──
+  // Groups hubs by county GEOID and applies the three display rules:
+  //   Rule 1 (county < 15k): merge all hubs in that county → one entry, county total
+  //   Rules 2/3 (county ≥ 15k): per-hub share = county_total ÷ hub_count, capped at 25k
+  // Hubs below DISPLAY_MIN_HH (5k) are dropped after the county split.
+  {
+    // Count hubs per county so we can divide correctly
+    const countyHubCounts = new Map<string, number>();
+    for (const h of hubs) {
+      const g = h.countyGeoid;
+      countyHubCounts.set(g, (countyHubCounts.get(g) ?? 0) + 1);
+    }
+
+    const displayHubs: CityHub[] = [];
+    const mergedCounties = new Set<string>();
+
+    for (const h of hubs) {
+      const geoid = h.countyGeoid;
+      const countyTotal = geoid ? getCountyHouseholds(geoid) : 0;
+      const hubsInCounty = countyHubCounts.get(geoid) ?? 1;
+
+      if (countyTotal < DISPLAY_SMALL_COUNTY) {
+        // Rule 1 — emit one merged entry for the whole county group
+        if (!mergedCounties.has(geoid)) {
+          mergedCounties.add(geoid);
+          const countyHubs = hubs.filter(x => x.countyGeoid === geoid);
+          const names = countyHubs.map(x => x.cityName).sort();
+          const mergedName =
+            names.length === 1 ? names[0] :
+            names.length === 2 ? `${names[0]} / ${names[1]}` :
+            `${names[0]} / ${names[1]} / ${names[2]}`;
+          const centLat = countyHubs.reduce((s, x) => s + x.lat, 0) / countyHubs.length;
+          const centLng = countyHubs.reduce((s, x) => s + x.lng, 0) / countyHubs.length;
+          displayHubs.push({
+            ...h,
+            cityName: mergedName,
+            lat: centLat,
+            lng: centLng,
+            catchmentHouseholds: countyTotal,
+          });
+        }
+      } else {
+        // Rules 2 & 3 — keep separate, divide by hub count, cap at 25k
+        const perHub = Math.min(Math.round(countyTotal / hubsInCounty), DISPLAY_PER_HUB_CAP);
+        displayHubs.push({ ...h, catchmentHouseholds: perHub });
+      }
+    }
+
+    hubs = displayHubs.filter(h => h.catchmentHouseholds >= DISPLAY_MIN_HH);
+  }
 
   // Cap at 4 display areas, keeping highest-count hubs.
   if (hubs.length > 4) {

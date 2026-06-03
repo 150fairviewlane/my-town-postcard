@@ -1,0 +1,43 @@
+Try these downloads in order. Stop at the first one that succeeds
+and report the file size and first 3 rows.
+
+ATTEMPT D — Census ZCTA population/housing CSV (direct FTP):
+  curl -L --max-time 60 -o artifacts/api-server/src/data/zip-housing-units.csv \
+    "https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2022_Gazetteer/2022_gaz_zcta_national.txt"
+
+  This file has columns including GEOID (ZIP), ALAND, AWATER,
+  ALAND_SQMI, AWATER_SQMI, INTPTLAT, INTPTLONG — it is the
+  Gazetteer file for ZCTAs. It does NOT have housing units
+  directly but confirms the file download path works.
+
+ATTEMPT E — NHGIS pre-compiled housing units CSV (GitHub):
+  curl -L --max-time 60 -o artifacts/api-server/src/data/zip-housing-units.csv \
+    "https://raw.githubusercontent.com/censusreporter/censusreporter/master/censusreporter/apps/census/static/data/zcta_housing.csv"
+
+ATTEMPT F — Simple pre-compiled ZCTA housing CSV (GitHub):
+  curl -L --max-time 60 -o artifacts/api-server/src/data/zip-housing-units.csv \
+    "https://raw.githubusercontent.com/jasonong/List-of-US-States/master/zcta_housing_units.csv"
+
+ATTEMPT G — Download via the zbp approach (shell unzip):
+  curl -L --max-time 120 -o artifacts/api-server/src/data/acs-housing.zip \
+    "https://www2.census.gov/programs-surveys/acs/summary_file/2022/table-based-SF/data/5YRData/acsdt5y2022-b25001.zip"
+
+  If download succeeds: unzip and report column names.
+  Table B25001 is "Housing Units" — simpler than B25003
+  and more likely to have a direct ZIP-level file.
+
+ATTEMPT H — If all above fail, generate the file from
+data already on disk:
+
+  The zbp22totals.csv file already loaded has one row per ZIP.
+  The county-centroids.csv has county household proxies.
+  The zip-county.csv maps ZIP to county.
+
+  As a last resort, generate zip-housing-units.csv by:
+  1. Loading zip-county.csv to get each ZIP's county FIPS
+  2. Using county-level ACS housing unit data from
+     county-business-patterns context if available
+  3. Writing a CSV with zip, housing_units columns
+
+  Only do Attempt H if ALL network downloads fail.
+  Report which attempt succeeded before writing any code.
