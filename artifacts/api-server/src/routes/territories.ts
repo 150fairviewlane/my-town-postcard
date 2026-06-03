@@ -13,6 +13,7 @@ import {
   findCandidateHubs,
   selectBestHubs,
 } from "../lib/territoryBuilder";
+import { getCountyGeoidsByShortNames } from "../lib/censusApi";
 
 // Works in both ESM dev (tsx watch) and the esbuild production bundle.
 // In prod, esbuild's banner sets globalThis.__dirname = dist/, so the
@@ -286,6 +287,7 @@ router.get("/territories/:id/mailing-areas", async (req, res): Promise<void> => 
       centroidLat: territoriesTable.centroidLat,
       centroidLng: territoriesTable.centroidLng,
       state: territoriesTable.state,
+      counties: territoriesTable.counties,
     })
     .from(territoriesTable)
     .where(eq(territoriesTable.id, id));
@@ -297,7 +299,18 @@ router.get("/territories/:id/mailing-areas", async (req, res): Promise<void> => 
   }
 
   const stateAbbr = (row.state ?? "GA").toUpperCase();
-  const candidates = await findCandidateHubs(row.centroidLat, row.centroidLng, stateAbbr);
+  const allCandidates = await findCandidateHubs(row.centroidLat, row.centroidLng, stateAbbr);
+
+  // Filter candidates to hubs that lie within the territory's own counties.
+  // This prevents adjacent territory bleed (e.g. Cleveland/White County
+  // appearing in a Habersham/Stephens territory whose centroid is nearby).
+  // Fall back to all candidates if the county filter yields nothing (edge case
+  // for territories whose commercial centres straddle county lines).
+  const allowedGeoids = getCountyGeoidsByShortNames(stateAbbr, row.counties ?? []);
+  const inTerritory = allowedGeoids.size > 0
+    ? allCandidates.filter(c => allowedGeoids.has(c.countyGeoid))
+    : allCandidates;
+  const candidates = inTerritory.length > 0 ? inTerritory : allCandidates;
   const hubs = selectBestHubs(candidates, row.centroidLat, row.centroidLng);
 
   const result: MailingAreaResult = hubs.map(h => ({ name: h.cityName }));

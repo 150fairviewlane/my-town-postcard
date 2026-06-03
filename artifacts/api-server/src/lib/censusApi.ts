@@ -956,3 +956,22 @@ export function getCitiesInState(stateAbbr: string): GazetteerPlace[] {
 logger.info(
   "Census API module loaded — adjacency file will be fetched on first territory request"
 );
+
+/**
+ * Resolves a list of county short names (e.g. ["Habersham", "Stephens"]) for a
+ * given state into their 5-digit GEOID strings (e.g. {"13137", "13257"}).
+ * Comparison is case-insensitive. Unknown names are silently skipped.
+ */
+export function getCountyGeoidsByShortNames(
+  stateAbbr: string,
+  shortNames: string[]
+): Set<string> {
+  const upper = new Set(shortNames.map(n => n.toUpperCase()));
+  const result = new Set<string>();
+  for (const [geoid, row] of countyInfoByGeoid) {
+    if (row.stateAbbr.toUpperCase() === stateAbbr.toUpperCase() && upper.has(row.nameShort)) {
+      result.add(geoid);
+    }
+  }
+  return result;
+}
