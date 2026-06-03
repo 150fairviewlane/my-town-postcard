@@ -466,14 +466,11 @@ function renderMailingAreas(wrap, list, areas) {
   const shown = areas.slice(0, MAX);
   const extra = areas.length - MAX;
   list.innerHTML = shown.map((a, i) => {
-    const hh = a.households < 3000
-      ? a.households.toLocaleString() + ' households'
-      : '~' + Math.round(a.households / 1000).toLocaleString() + ',000 households';
     return `<div class="pc-mailing-area-item">
-      <span style="font-weight:600;color:#fff">Mailing Area ${i+1} \u2014 ${a.cityName}</span>
-      <div style="font-size:10.5px;color:rgba(255,255,255,.5);margin-top:1px">${hh}</div>
+      <span style="font-weight:600;color:#fff">Mailing Area ${i+1} \u2014 ${a.name}</span>
     </div>`;
-  }).join('') + (extra > 0 ? `<div class="pc-mailing-area-item" style="opacity:.6">+ ${extra} more</div>` : '');
+  }).join('') + (extra > 0 ? `<div class="pc-mailing-area-item" style="opacity:.6">+ ${extra} more</div>` : '')
+  + '<div style="font-size:10.5px;color:rgba(255,255,255,.5);margin-top:6px">Each mailing area reaches approximately 5,000 local households via USPS EDDM.</div>';
   wrap.style.display = '';
 }
 
