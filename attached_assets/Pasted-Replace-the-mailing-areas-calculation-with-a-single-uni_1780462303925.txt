@@ -1,0 +1,143 @@
+Replace the mailing areas calculation with a single unified
+approach that works identically for Georgia and all other
+states. No special cases, no zone_note parsing, no county
+lookups, no radius math.
+
+
+════════════════════════════════════════════════
+THE CHANGE
+════════════════════════════════════════════════
+
+In GET /api/territories/:id/mailing-areas:
+
+Replace ALL existing logic with this:
+
+  1. Fetch the territory record by ID
+     Get centroid_lat and centroid_lng
+
+  2. Call findCandidateHubs(centroid_lat, centroid_lng)
+     This function already exists in territoryBuilder.ts
+     It finds qualifying commercial hub cities near a location
+
+  3. Call selectBestHubs(candidates, centroid_lat, centroid_lng)
+     This function already exists in territoryBuilder.ts
+     It selects the best 4 hubs with good geographic spread
+
+  4. Return the hub city names as mailing areas:
+     [
+       { name: "Dahlonega" },
+       { name: "Cleveland" },
+       { name: "Helen" },
+       { name: "Cornelia" }
+     ]
+
+That is the entire implementation. No other logic needed.
+
+The frontend displays city names with the existing footer:
+"Each mailing area reaches 5,000 local
+households via USPS EDDM."
+
+
+════════════════════════════════════════════════
+MOVE findCandidateHubs AND selectBestHubs
+════════════════════════════════════════════════
+
+These two functions currently live in territoryBuilder.ts.
+To use them in the territories route handler, either:
+
+  Option A — Import them directly from territoryBuilder.ts
+    (simplest if the route handler can import from there)
+
+  Option B — Move them to censusApi.ts and import from both
+    places
+
+Use whichever option requires fewer changes to the existing
+file structure.
+
+
+════════════════════════════════════════════════
+SAME-STATE FILTER
+════════════════════════════════════════════════
+
+findCandidateHubs already filters to the same state as
+the dealer ZIP. For territory mailing areas, filter to
+the same state as the territory record (territory.state).
+
+Pass the territory's state abbreviation to findCandidateHubs
+so it doesn't return hub cities across state lines.
+
+
+════════════════════════════════════════════════
+REMOVE ALL OF THIS
+════════════════════════════════════════════════
+
+Delete from the mailing areas endpoint:
+  - zone_note parsing
+  - city name splitting and filtering
+  - "area" suffix filter
+  - County household lookups
+  - Radius-based household sums
+  - Weighted household calculations
+  - County floor overrides
+  - Merge logic
+  - 25,000 cap
+  - 5,000 minimum enforcement
+  - Business count filter on zone_note cities
+  - Any Gazetteer population lookups for display
+
+Keep zone_note in the database — it is still useful as
+a human-readable label in the admin territory manager.
+Just don't use it for mailing area calculations.
+
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+  findCandidateHubs() logic — use it as-is
+  selectBestHubs() logic — use it as-is
+  HUB_MIN_BUSINESSES threshold — unchanged
+  HUB_MIN_CITY_POPULATION threshold — unchanged
+  RESORT_CITIES exclusion set — unchanged
+  MANAGED_STATES guard — unchanged
+  Territory builder proposal flow — unchanged
+  Landing page system — unchanged
+  Admin territory manager — unchanged
+
+
+════════════════════════════════════════════════
+TEST
+════════════════════════════════════════════════
+
+TEST 1 — Lumpkin/White Counties (GA-039)
+  centroid approximately 34.60, -83.85
+  Must return 3-4 real commercial hub cities
+  Must NOT return Suches, Turnersville, Neel Gap
+  Should return Dahlonega, Cleveland, Helen, and possibly
+  Cornelia or Clarkesville
+
+TEST 2 — Hall County (GA-026)
+  centroid approximately 34.30, -83.82
+  Must return 4 hub cities
+  Gainesville must be one of them (largest commercial hub)
+
+TEST 3 — Rabun/Towns/Union (GA-049)
+  centroid approximately 34.88, -83.70
+  Must return 3-4 hub cities
+  Clayton, Blairsville, Hiawassee expected
+  No tiny unincorporated communities
+
+TEST 4 — Jackson County (GA-025)
+  centroid approximately 34.13, -83.56
+  Must return 4 hub cities from the Jackson County area
+  Jefferson, Commerce, Braselton, Hoschton expected
+
+TEST 5 — Non-Georgia territory still works
+  POST /api/territories/propose { zipCode: '29301' }
+  Still returns 4 hub cities for Spartanburg SC area
+  Proposal flow unchanged
+
+TEST 6 — All returned cities are real commercial hubs
+  No unincorporated communities
+  No mountain passes or geographic features
+  No cities with fewer than 100 businesses nearby
