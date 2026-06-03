@@ -292,11 +292,17 @@ function computeMailingAreas(
                   .reduce((s, z) => s + z.households, 0),
   }));
 
-  // Show all cities — this is an admin-approved stored territory, so every hub
-  // is displayed regardless of count. Cap at 4, highest count first.
-  if (all.length <= MAILING_AREA_MAX) return all.sort((a, b) => b.households - a.households);
-  all.sort((a, b) => b.households - a.households);
-  return all.slice(0, MAILING_AREA_MAX);
+  // Apply 5,000 minimum floor — each mailing area represents a 5,000-postcard
+  // EDDM run, so showing below that would be misleading.
+  const floored = all.map(a => ({
+    ...a,
+    households: Math.max(a.households, MAILING_AREA_MIN_HH),
+  }));
+
+  // Cap at 4, highest count first.
+  if (floored.length <= MAILING_AREA_MAX) return floored.sort((a, b) => b.households - a.households);
+  floored.sort((a, b) => b.households - a.households);
+  return floored.slice(0, MAILING_AREA_MAX);
 }
 
 router.get("/territories/:id/mailing-areas", async (req, res): Promise<void> => {

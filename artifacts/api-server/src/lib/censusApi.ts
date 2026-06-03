@@ -774,12 +774,18 @@ export function getZipLocation(zip: string): { lat: number; lng: number } | null
 /**
  * Returns all ZIPs within radiusMiles of (lat, lng), sorted by distance ascending.
  * Each entry includes:
- *   - households: businesses × 12 (proxy; ~12 households per ad-ready establishment)
- *   - businesses: raw ZBP establishment count
+ *   - households: total employer establishments × 22 (national avg ~22 HH per employer)
+ *                 Falls back to postcard-filtered establishments × 22 if ZBP totals missing.
+ *                 This gives realistic counts for rural areas where postcard-filtered
+ *                 businesses alone are far too sparse.
+ *   - businesses: postcard-industry ZBP establishment count (used for hub qualification)
  *   - distance: Haversine miles from (lat, lng)
  *
  * Uses a bounding-box pre-filter for performance before the precise Haversine check.
  */
+// National average: ~130M US households / ~6M employer establishments ≈ 22 HH/estab.
+const HH_PER_ESTAB = 22;
+
 export function getZipsNearLocation(
   lat: number,
   lng: number,
@@ -813,8 +819,13 @@ export function getZipsNearLocation(
 
     if (distance > radiusMiles) continue;
 
-    const businesses = zipPostcardBizMap.get(zip) ?? 0;
-    result.push({ zip, lat: centroid.lat, lng: centroid.lng, households: Math.round(businesses * 3.5), businesses, distance });
+    // Total employer estabs (zbp22totals) give realistic HH estimates for both
+    // urban and rural ZIPs. Postcard-filtered estabs are kept separately for the
+    // hub-qualification business-density check in the territory builder.
+    const totalEstabs   = zipBusinessMap.get(zip) ?? zipPostcardBizMap.get(zip) ?? 0;
+    const businesses    = zipPostcardBizMap.get(zip) ?? 0;
+    const households    = Math.round(totalEstabs * HH_PER_ESTAB);
+    result.push({ zip, lat: centroid.lat, lng: centroid.lng, households, businesses, distance });
   }
 
   result.sort((a, b) => a.distance - b.distance);
