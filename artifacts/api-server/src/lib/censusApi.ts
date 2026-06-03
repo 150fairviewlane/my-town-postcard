@@ -958,6 +958,14 @@ logger.info(
 );
 
 /**
+ * Returns the full county name (e.g. "Charlottesville city") for a 5-digit GEOID,
+ * or null when the GEOID is not in the adjacency dataset.
+ */
+export function getCountyNameByGeoid(geoid: string): string | null {
+  return countyInfoByGeoid.get(geoid)?.countyName ?? null;
+}
+
+/**
  * Resolves a list of county short names (e.g. ["Habersham", "Stephens"]) for a
  * given state into their 5-digit GEOID strings (e.g. {"13137", "13257"}).
  * Comparison is case-insensitive. Unknown names are silently skipped.

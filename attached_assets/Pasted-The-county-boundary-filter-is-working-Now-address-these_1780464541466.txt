@@ -1,0 +1,113 @@
+The county boundary filter is working. Now address these
+remaining edge cases. All in one prompt.
+
+
+════════════════════════════════════════════════
+EDGE CASE 1 — METRO SPLIT TERRITORIES
+════════════════════════════════════════════════
+
+Territories GA-001 through GA-010 are partial-county splits
+(e.g. "Fulton County — North", "Cobb County — South").
+Their counties array contains just ['Fulton'] or ['Cobb']
+but the territory only covers PART of that county.
+
+The county filter will return hubs from the entire county —
+meaning Fulton North and Fulton Central could show the
+same hub cities.
+
+Fix: Detect metro split territories by checking if the
+territory name contains " — " (space dash dash space).
+
+For these territories ONLY:
+  Skip the county filter entirely.
+  Instead filter hubs to within 15 miles of the territory
+  centroid only (no county boundary check).
+  The centroid is already correctly placed in the sub-area.
+
+This ensures Fulton North gets northern Fulton hubs and
+Fulton Central gets central Fulton hubs.
+
+
+════════════════════════════════════════════════
+EDGE CASE 2 — TERRITORIES WITH FEWER THAN 3
+IN-COUNTY QUALIFYING HUBS
+════════════════════════════════════════════════
+
+Some small rural territories may have fewer than 3 cities
+that pass HUB_MIN_BUSINESSES within their county boundaries.
+
+The current fallback returns ALL candidates if zero in-county
+hubs found. Improve this:
+
+  If in-county hubs >= 3: use them (current behavior)
+  If in-county hubs == 2: use them, show 2 mailing areas
+  If in-county hubs == 1: use it, show 1 mailing area
+  If in-county hubs == 0: fall back to nearest 2 candidates
+    regardless of county (current fallback)
+
+Never show fewer than 1 or more than 4 mailing areas.
+Never show "undefined" — if no hub name found, skip that hub.
+
+
+════════════════════════════════════════════════
+EDGE CASE 3 — VIRGINIA INDEPENDENT CITIES
+════════════════════════════════════════════════
+
+Virginia independent cities (Charlottesville, Roanoke,
+Richmond etc) have their own county FIPS codes separate
+from their surrounding counties. A territory covering
+"Albemarle" county won't match "Charlottesville city"
+hub even though they're the same market.
+
+Fix: When filtering hubs for Virginia territories
+(stateAbbr === 'VA'), also include hubs whose county
+name ends in " city" as valid matches for any territory
+whose centroid is within 10 miles of that city.
+
+This ensures Charlottesville city hub appears in the
+Albemarle County territory mailing areas.
+
+
+════════════════════════════════════════════════
+EDGE CASE 4 — CONFIRM PROPOSALS UNAFFECTED
+════════════════════════════════════════════════
+
+The county filter only runs in GET /api/territories/:id/mailing-areas.
+Auto-generated proposals (POST /api/territories/propose) use
+buildCityHubProposal() which has its own hub selection logic.
+
+Confirm the county filter code was NOT added to
+buildCityHubProposal(). Proposals should still find hubs
+based on proximity to the dealer ZIP, not county boundaries.
+
+If the filter was accidentally added to proposals, remove it.
+
+
+════════════════════════════════════════════════
+TEST
+════════════════════════════════════════════════
+
+TEST 1 — Metro split territory
+  GET /api/territories/GA-001/mailing-areas
+  (Fulton County — North, centroid ~34.07, -84.29)
+  Must return hubs in the Alpharetta/Roswell/Johns Creek area
+  Must NOT return Atlanta Midtown or Sandy Springs hubs
+  (those belong to GA-002 and GA-003)
+
+TEST 2 — Small rural territory with few hubs
+  Find a small GA territory with only 2 qualifying cities
+  Must show 2 mailing areas — not crash, not show undefined
+
+TEST 3 — Virginia territory (if any exist)
+  Any VA territory should include independent city hubs
+  Albemarle County territory should include Charlottesville
+
+TEST 4 — Proposal still works
+  POST /api/territories/propose { zipCode: '29301' }
+  Still returns 4 hub cities unaffected by county filter
+  Spartanburg SC proposal unchanged
+
+TEST 5 — Previously fixed territories still correct
+  GA-047 Habersham/Stephens: no Cleveland ✓
+  GA-039 Lumpkin/White: Cleveland present ✓
+  GA-026 Hall County: 4 Hall County hubs ✓

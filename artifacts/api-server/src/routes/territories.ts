@@ -13,7 +13,7 @@ import {
   findCandidateHubs,
   selectBestHubs,
 } from "../lib/territoryBuilder";
-import { getCountyGeoidsByShortNames } from "../lib/censusApi";
+import { getCountyGeoidsByShortNames, getCountyNameByGeoid } from "../lib/censusApi";
 
 // Works in both ESM dev (tsx watch) and the esbuild production bundle.
 // In prod, esbuild's banner sets globalThis.__dirname = dist/, so the
@@ -284,6 +284,7 @@ router.get("/territories/:id/mailing-areas", async (req, res): Promise<void> => 
 
   const [row] = await db
     .select({
+      name: territoriesTable.name,
       centroidLat: territoriesTable.centroidLat,
       centroidLng: territoriesTable.centroidLng,
       state: territoriesTable.state,
@@ -301,16 +302,50 @@ router.get("/territories/:id/mailing-areas", async (req, res): Promise<void> => 
   const stateAbbr = (row.state ?? "GA").toUpperCase();
   const allCandidates = await findCandidateHubs(row.centroidLat, row.centroidLng, stateAbbr);
 
-  // Filter candidates to hubs that lie within the territory's own counties.
-  // This prevents adjacent territory bleed (e.g. Cleveland/White County
-  // appearing in a Habersham/Stephens territory whose centroid is nearby).
-  // Fall back to all candidates if the county filter yields nothing (edge case
-  // for territories whose commercial centres straddle county lines).
-  const allowedGeoids = getCountyGeoidsByShortNames(stateAbbr, row.counties ?? []);
-  const inTerritory = allowedGeoids.size > 0
-    ? allCandidates.filter(c => allowedGeoids.has(c.countyGeoid))
-    : allCandidates;
-  const candidates = inTerritory.length > 0 ? inTerritory : allCandidates;
+  // ── Edge case 1: metro split territories (name contains " — ") ──────────────
+  // These are partial-county splits (e.g. "Fulton County — North"). The county
+  // array covers the whole county, so county filtering would bleed hubs across
+  // sub-territories. Instead, limit by 15-mile radius from the (correctly
+  // placed) centroid so each sub-area gets its own local hubs.
+  const isMetroSplit = (row.name ?? "").includes(" \u2014 ");
+  let candidates;
+  if (isMetroSplit) {
+    const METRO_SPLIT_RADIUS_MI = 15;
+    candidates = allCandidates.filter(c => c.distanceFromDealer <= METRO_SPLIT_RADIUS_MI);
+    if (candidates.length === 0) candidates = allCandidates; // safety fallback
+  } else {
+    // ── Standard county-boundary filter ────────────────────────────────────────
+    const allowedGeoids = getCountyGeoidsByShortNames(stateAbbr, row.counties ?? []);
+
+    const inTerritory = allowedGeoids.size > 0
+      ? allCandidates.filter(c => {
+          if (allowedGeoids.has(c.countyGeoid)) return true;
+          // ── Edge case 3: Virginia independent cities ──────────────────────────
+          // VA independent cities have their own county FIPS codes separate from
+          // surrounding counties (e.g. "Charlottesville city" is distinct from
+          // Albemarle County). Include them when within 10 miles of the centroid.
+          if (stateAbbr === "VA") {
+            const countyName = getCountyNameByGeoid(c.countyGeoid) ?? "";
+            if (countyName.toLowerCase().endsWith(" city") && c.distanceFromDealer <= 10) {
+              return true;
+            }
+          }
+          return false;
+        })
+      : allCandidates;
+
+    // ── Edge case 2: small rural territories with few in-county hubs ───────────
+    // Use whatever in-county hubs exist (even just 1 or 2).
+    // Only fall back to unfiltered nearest-2 when zero in-county hubs found.
+    if (inTerritory.length > 0) {
+      candidates = inTerritory;
+    } else {
+      candidates = [...allCandidates]
+        .sort((a, b) => a.distanceFromDealer - b.distanceFromDealer)
+        .slice(0, 2);
+    }
+  }
+
   const hubs = selectBestHubs(candidates, row.centroidLat, row.centroidLng);
 
   const result: MailingAreaResult = hubs.map(h => ({ name: h.cityName }));
