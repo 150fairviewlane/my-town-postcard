@@ -674,34 +674,7 @@ export interface CountyInfo {
  *   adjacency-derived countyFips3 (via countyFipsByShortName map).
  * Returns null if the ZIP is not in the local dataset.
  */
-// ZIP codes not in zip-county.csv that require manual overrides.
-// Primarily VA independent cities whose ZIPs aren't in the census crosswalk.
-const ZIP_OVERRIDES: Record<string, { countyFips: string; countyName: string; stateFips: string; stateAbbr: string }> = {
-  // Roanoke city (FIPS 51770)
-  "24011": { countyFips: "770", countyName: "Roanoke city", stateFips: "51", stateAbbr: "VA" },
-  "24012": { countyFips: "770", countyName: "Roanoke city", stateFips: "51", stateAbbr: "VA" },
-  "24013": { countyFips: "770", countyName: "Roanoke city", stateFips: "51", stateAbbr: "VA" },
-  "24014": { countyFips: "770", countyName: "Roanoke city", stateFips: "51", stateAbbr: "VA" },
-  "24015": { countyFips: "770", countyName: "Roanoke city", stateFips: "51", stateAbbr: "VA" },
-  "24016": { countyFips: "770", countyName: "Roanoke city", stateFips: "51", stateAbbr: "VA" },
-  "24017": { countyFips: "770", countyName: "Roanoke city", stateFips: "51", stateAbbr: "VA" },
-  "24018": { countyFips: "770", countyName: "Roanoke city", stateFips: "51", stateAbbr: "VA" },
-  "24019": { countyFips: "770", countyName: "Roanoke city", stateFips: "51", stateAbbr: "VA" },
-  // Charlottesville city (FIPS 51540)
-  "22902": { countyFips: "540", countyName: "Charlottesville city", stateFips: "51", stateAbbr: "VA" },
-  "22903": { countyFips: "540", countyName: "Charlottesville city", stateFips: "51", stateAbbr: "VA" },
-  "22904": { countyFips: "540", countyName: "Charlottesville city", stateFips: "51", stateAbbr: "VA" },
-};
-
 export async function getCountyFromZip(zip: string): Promise<CountyFromZipResult | null> {
-  // Check manual overrides first (VA independent cities not in zip-county.csv)
-  const override = ZIP_OVERRIDES[zip];
-  if (override) {
-    const { countyFips, countyName, stateFips, stateAbbr } = override;
-    const stateName = STATE_NAME_BY_ABBR[stateAbbr] ?? stateAbbr;
-    return { countyFips, countyName, stateFips, stateName, stateAbbr };
-  }
-
   const row = zipCountyMap.get(zip);
   if (!row) {
     logger.warn({ zip }, "ZIP not found in local dataset");

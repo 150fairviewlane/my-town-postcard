@@ -352,7 +352,7 @@ router.post("/dealers", async (req, res): Promise<void> => {
 // Unified claim flow for an in-memory territory proposal returned by
 // POST /api/territories/propose. Persists the proposal (pending_payment),
 // creates/updates the dealer (pending_payment), and opens a Stripe Checkout
-// subscription session whose metadata references ONLY {proposalId, dealerId}.
+// subscription session whose metadata references ONLY {proposal_id}.
 // The territory row is materialized later, by the webhook, on payment success.
 const ClaimProposalProposalSchema = z.object({
   proposedName:     z.string().min(1).max(160),
@@ -456,7 +456,7 @@ router.post("/dealers/claim-proposal", async (req, res): Promise<void> => {
 
   const stripe = await getStripeClient();
   const origin = getOrigin(req);
-  const meta = { kind: "territory", proposalId: String(proposalId), dealerId: String(dealerId) };
+  const meta = { proposal_id: String(proposalId) };
 
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
@@ -840,9 +840,13 @@ export default router;
  * carries dealer metadata (kind=dealer). Kept here so all dealer-state
  * transitions live in one file.
  */
-export async function activateDealerFromCheckoutSession(session: any): Promise<number | null> {
+export async function activateDealerFromCheckoutSession(
+  session: any,
+  explicitDealerId?: number | null,
+): Promise<number | null> {
   const dealerIdStr = (session?.metadata as any)?.dealerId;
-  const dealerId = dealerIdStr ? parseInt(String(dealerIdStr), 10) : null;
+  const dealerId =
+    explicitDealerId ?? (dealerIdStr ? parseInt(String(dealerIdStr), 10) : null);
   if (!dealerId || !Number.isFinite(dealerId)) return null;
 
   const [dealer] = await db.select().from(dealersTable).where(eq(dealersTable.id, dealerId));
@@ -946,10 +950,9 @@ async function refundAndCancelTerritoryClaim(
  */
 export async function activateTerritoryClaimFromCheckoutSession(session: any): Promise<void> {
   const meta = (session?.metadata ?? {}) as Record<string, string>;
-  const proposalId = meta.proposalId ? parseInt(String(meta.proposalId), 10) : null;
-  const dealerId = meta.dealerId ? parseInt(String(meta.dealerId), 10) : null;
+  const proposalId = meta.proposal_id ? parseInt(String(meta.proposal_id), 10) : null;
   if (!proposalId || !Number.isFinite(proposalId)) {
-    logger.warn({ sessionId: session?.id }, "territory checkout.session.completed missing proposalId — skipping");
+    logger.warn({ sessionId: session?.id }, "territory checkout.session.completed missing proposal_id — skipping");
     return;
   }
 
@@ -961,6 +964,9 @@ export async function activateTerritoryClaimFromCheckoutSession(session: any): P
     logger.warn({ proposalId }, "territory claim: proposal not found — skipping");
     return;
   }
+  // Dealer is recovered from the proposal record — Stripe metadata carries ONLY
+  // proposal_id, never the dealer id.
+  const dealerId = proposal.dealerId ?? null;
 
   // Idempotency: a territory already materialized from this proposal means a
   // prior (possibly retried) webhook already handled it. Just ensure the dealer
@@ -970,7 +976,7 @@ export async function activateTerritoryClaimFromCheckoutSession(session: any): P
     .from(territoriesTable)
     .where(eq(territoriesTable.sourceProposalId, proposalId));
   if (existingTerritory) {
-    await activateDealerFromCheckoutSession(session);
+    await activateDealerFromCheckoutSession(session, dealerId);
     return;
   }
   if (proposal.status === "claimed") return; // defensive
@@ -1012,7 +1018,7 @@ export async function activateTerritoryClaimFromCheckoutSession(session: any): P
     .update(territoryProposalsTable)
     .set({ status: "claimed", territoryId, reviewedAt: new Date() })
     .where(eq(territoryProposalsTable.id, proposalId));
-  await activateDealerFromCheckoutSession(session);
+  await activateDealerFromCheckoutSession(session, dealerId);
 
   let portalToken: string | null = null;
   if (dealerId) {

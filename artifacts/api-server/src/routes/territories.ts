@@ -349,125 +349,6 @@ router.get("/dealer/claim-territory", (_req, res): void => {
   res.sendFile(HTML_FILE_PATH);
 });
 
-// ─── GET /api/zip-to-county?zip= ──────────────────────────────────────────────
-// Resolves a 5-digit US zip code to the nearest Georgia county by proxying
-// zippopotam.us for the lat/lng, then computing haversine distance to the
-// 159-county centroid table. Returns {zip, county, state, lat, lng} on success
-// or {zip, county:null, state:null} when the zip is outside GA or not found.
-const GA_COUNTY_CENTROIDS: Record<string, { lat: number; lng: number }> = {
-  Appling:{lat:31.75,lng:-82.29},Atkinson:{lat:31.30,lng:-82.88},Bacon:{lat:31.55,lng:-82.45},
-  Baker:{lat:31.33,lng:-84.43},Baldwin:{lat:33.07,lng:-83.25},Banks:{lat:34.37,lng:-83.49},
-  Barrow:{lat:33.99,lng:-83.72},Bartow:{lat:34.24,lng:-84.84},"Ben Hill":{lat:31.77,lng:-83.22},
-  Berrien:{lat:31.28,lng:-83.24},Bibb:{lat:32.84,lng:-83.64},Bleckley:{lat:32.43,lng:-83.33},
-  Brantley:{lat:31.19,lng:-81.98},Brooks:{lat:30.83,lng:-83.58},Bryan:{lat:32.03,lng:-81.43},
-  Bulloch:{lat:32.41,lng:-81.78},Burke:{lat:33.05,lng:-82.00},Butts:{lat:33.30,lng:-84.00},
-  Calhoun:{lat:31.53,lng:-84.74},Camden:{lat:30.88,lng:-81.65},Candler:{lat:32.40,lng:-82.07},
-  Carroll:{lat:33.58,lng:-85.08},Catoosa:{lat:34.90,lng:-85.12},Charlton:{lat:30.78,lng:-82.13},
-  Chatham:{lat:32.03,lng:-81.10},Chattahoochee:{lat:32.35,lng:-84.79},Cherokee:{lat:34.24,lng:-84.47},
-  Clarke:{lat:33.95,lng:-83.37},Clay:{lat:31.63,lng:-84.99},Clayton:{lat:33.55,lng:-84.37},
-  Clinch:{lat:31.00,lng:-82.70},Cobb:{lat:33.92,lng:-84.58},Coffee:{lat:31.55,lng:-82.85},
-  Colquitt:{lat:31.17,lng:-83.77},Columbia:{lat:33.55,lng:-82.18},Cook:{lat:31.15,lng:-83.43},
-  Coweta:{lat:33.35,lng:-84.77},Crawford:{lat:32.73,lng:-84.00},Crisp:{lat:31.93,lng:-83.77},
-  Dade:{lat:34.85,lng:-85.49},Dawson:{lat:34.44,lng:-84.17},Decatur:{lat:30.87,lng:-84.58},
-  DeKalb:{lat:33.77,lng:-84.22},Dodge:{lat:32.17,lng:-83.17},Dooly:{lat:32.17,lng:-83.73},
-  Dougherty:{lat:31.52,lng:-84.19},Douglas:{lat:33.70,lng:-84.77},Early:{lat:31.32,lng:-84.89},
-  Echols:{lat:30.70,lng:-82.88},Effingham:{lat:32.37,lng:-81.33},Elbert:{lat:34.12,lng:-82.87},
-  Emanuel:{lat:32.60,lng:-82.31},Evans:{lat:32.19,lng:-81.89},Fannin:{lat:34.86,lng:-84.32},
-  Fayette:{lat:33.42,lng:-84.47},Floyd:{lat:34.27,lng:-85.22},Forsyth:{lat:34.21,lng:-84.12},
-  Franklin:{lat:34.38,lng:-83.22},Fulton:{lat:33.79,lng:-84.47},Gilmer:{lat:34.68,lng:-84.47},
-  Glascock:{lat:33.23,lng:-82.62},Glynn:{lat:31.21,lng:-81.49},Gordon:{lat:34.50,lng:-84.87},
-  Grady:{lat:30.87,lng:-84.19},Greene:{lat:33.58,lng:-83.15},Gwinnett:{lat:33.96,lng:-84.02},
-  Habersham:{lat:34.63,lng:-83.53},Hall:{lat:34.30,lng:-83.82},Hancock:{lat:33.27,lng:-83.00},
-  Haralson:{lat:33.79,lng:-85.22},Harris:{lat:32.83,lng:-84.91},Hart:{lat:34.35,lng:-82.97},
-  Heard:{lat:33.30,lng:-85.13},Henry:{lat:33.45,lng:-84.15},Houston:{lat:32.47,lng:-83.65},
-  Irwin:{lat:31.60,lng:-83.29},Jackson:{lat:34.13,lng:-83.56},Jasper:{lat:33.32,lng:-84.00},
-  "Jeff Davis":{lat:31.80,lng:-82.63},Jefferson:{lat:33.05,lng:-82.42},Jenkins:{lat:32.80,lng:-81.97},
-  Johnson:{lat:32.70,lng:-82.65},Jones:{lat:33.02,lng:-83.57},Lamar:{lat:33.07,lng:-84.14},
-  Lanier:{lat:31.03,lng:-83.06},Laurens:{lat:32.47,lng:-82.93},Lee:{lat:31.77,lng:-84.14},
-  Lincoln:{lat:33.79,lng:-82.48},Long:{lat:31.77,lng:-81.73},Lowndes:{lat:30.83,lng:-83.28},
-  Lumpkin:{lat:34.56,lng:-83.98},McDuffie:{lat:33.46,lng:-82.47},McIntosh:{lat:31.53,lng:-81.40},
-  Macon:{lat:32.35,lng:-84.04},Madison:{lat:33.84,lng:-83.22},Marion:{lat:32.35,lng:-84.53},
-  Meriwether:{lat:33.07,lng:-84.68},Miller:{lat:31.17,lng:-84.73},Mitchell:{lat:31.24,lng:-84.18},
-  Monroe:{lat:33.03,lng:-83.90},Montgomery:{lat:32.18,lng:-82.54},Morgan:{lat:33.59,lng:-83.49},
-  Murray:{lat:34.79,lng:-84.75},Muscogee:{lat:32.51,lng:-84.97},Newton:{lat:33.55,lng:-83.85},
-  Oconee:{lat:33.81,lng:-83.43},Oglethorpe:{lat:33.88,lng:-83.07},Paulding:{lat:33.92,lng:-84.87},
-  Peach:{lat:32.56,lng:-83.83},Pickens:{lat:34.46,lng:-84.47},Pierce:{lat:31.35,lng:-82.21},
-  Pike:{lat:33.09,lng:-84.38},Polk:{lat:34.00,lng:-85.19},Pulaski:{lat:32.23,lng:-83.47},
-  Putnam:{lat:33.32,lng:-83.37},Quitman:{lat:31.87,lng:-85.03},Rabun:{lat:34.88,lng:-83.40},
-  Randolph:{lat:31.78,lng:-84.74},Richmond:{lat:33.37,lng:-82.07},Rockdale:{lat:33.65,lng:-84.02},
-  Schley:{lat:32.27,lng:-84.31},Screven:{lat:32.77,lng:-81.62},Seminole:{lat:30.93,lng:-84.88},
-  Spalding:{lat:33.25,lng:-84.27},Stephens:{lat:34.56,lng:-83.47},Stewart:{lat:32.08,lng:-84.83},
-  Sumter:{lat:32.07,lng:-84.19},Talbot:{lat:32.70,lng:-84.53},Taliaferro:{lat:33.57,lng:-82.88},
-  Tattnall:{lat:32.05,lng:-82.07},Taylor:{lat:32.55,lng:-84.25},Telfair:{lat:31.90,lng:-82.95},
-  Terrell:{lat:31.77,lng:-84.43},Thomas:{lat:30.85,lng:-83.92},Tift:{lat:31.45,lng:-83.52},
-  Toombs:{lat:32.12,lng:-82.32},Towns:{lat:34.92,lng:-83.73},Treutlen:{lat:32.40,lng:-82.56},
-  Troup:{lat:33.03,lng:-85.03},Turner:{lat:31.72,lng:-83.62},Twiggs:{lat:32.67,lng:-83.42},
-  Union:{lat:34.83,lng:-83.99},Upson:{lat:32.89,lng:-84.28},Walker:{lat:34.74,lng:-85.38},
-  Walton:{lat:33.77,lng:-83.72},Ware:{lat:31.05,lng:-82.45},Warren:{lat:33.41,lng:-82.68},
-  Washington:{lat:32.97,lng:-82.82},Wayne:{lat:31.55,lng:-81.93},Webster:{lat:32.05,lng:-84.55},
-  Wheeler:{lat:32.10,lng:-82.73},White:{lat:34.64,lng:-83.73},Whitfield:{lat:34.76,lng:-84.97},
-  Wilcox:{lat:31.97,lng:-83.43},Wilkes:{lat:33.78,lng:-82.73},Wilkinson:{lat:32.80,lng:-83.18},
-  Worth:{lat:31.55,lng:-83.87},
-};
-
-function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLng = (lng2 - lng1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-// Georgia FIPS prefix is "13". Bounds: lat 30.36–35.00, lng -85.61 – -80.84
-const GA_LAT_MIN = 30.0, GA_LAT_MAX = 35.1, GA_LNG_MIN = -86.0, GA_LNG_MAX = -80.0;
-
-router.get("/zip-to-county", async (req, res): Promise<void> => {
-  const zip = typeof req.query.zip === "string" ? req.query.zip.trim() : "";
-  if (!/^\d{5}$/.test(zip)) {
-    res.status(400).json({ error: "zip must be a 5-digit string" });
-    return;
-  }
-  try {
-    const upstream = await fetch(`https://api.zippopotam.us/us/${zip}`, {
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!upstream.ok) {
-      res.json({ zip, county: null, state: null });
-      return;
-    }
-    const data = await upstream.json() as any;
-    const place = data.places?.[0];
-    if (!place) { res.json({ zip, county: null, state: null }); return; }
-
-    const lat = parseFloat(place.latitude);
-    const lng = parseFloat(place.longitude);
-    const stateAbbr: string = (data["post code"] ? (data as any)["country abbreviation"] : place["state abbreviation"] ?? "").toUpperCase();
-    const placeState: string = (place["state abbreviation"] ?? "").toUpperCase();
-
-    // Only serve GA results
-    if (placeState !== "GA" || lat < GA_LAT_MIN || lat > GA_LAT_MAX || lng < GA_LNG_MIN || lng > GA_LNG_MAX) {
-      res.json({ zip, county: null, state: placeState || stateAbbr });
-      return;
-    }
-
-    // Find nearest county centroid by haversine
-    let nearestCounty = "";
-    let nearestDist = Infinity;
-    for (const [countyName, centroid] of Object.entries(GA_COUNTY_CENTROIDS)) {
-      const dist = haversineKm(lat, lng, centroid.lat, centroid.lng);
-      if (dist < nearestDist) {
-        nearestDist = dist;
-        nearestCounty = countyName;
-      }
-    }
-
-    res.json({ zip, county: nearestCounty, state: "GA", lat, lng });
-  } catch (err: any) {
-    req.log.warn({ zip, err: err?.message }, "zip-to-county lookup failed");
-    res.json({ zip, county: null, state: null });
-  }
-});
-
 // ─── GET /api/territories/zip-assignments ─────────────────────────────────────
 // Returns ZIP→territory assignments.
 // Optional ?state=GA filters to only assignments whose territory belongs to that state.
@@ -549,7 +430,7 @@ function checkProposeRateLimit(ip: string): boolean {
 const ProposeSchema = z.object({
   zip:   z.string().trim().regex(/^\d{5}$/, "Enter a valid 5-digit ZIP code"),
   city:  z.string().trim().min(1, "City is required").max(120),
-  state: z.string().trim().min(2, "State is required").max(40),
+  state: z.string().trim().regex(/^[A-Za-z]{2}$/, "Select a state"),
 });
 
 /** Unique, non-empty county GEOIDs across a proposal's hubs. */
@@ -573,9 +454,10 @@ router.post("/territories/propose", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" });
     return;
   }
-  const { zip, city } = parsed.data;
+  const { zip, city, state } = parsed.data;
+  const submittedAbbr = state.trim().toUpperCase();
 
-  // ZIP is authoritative for state + primary county.
+  // ZIP resolves the primary county and the canonical state metadata.
   const fromZip = await getCountyFromZip(zip);
   if (!fromZip) {
     res.status(404).json({ error: "We couldn't find that ZIP code. Please double-check it." });
@@ -583,14 +465,25 @@ router.post("/territories/propose", async (req, res): Promise<void> => {
   }
   const { stateFips, stateName, stateAbbr, countyFips, countyName } = fromZip;
 
-  // Resolve a location: prefer the named city's centroid, fall back to the ZIP.
+  // State is authoritative and must agree with the ZIP — it is never silently
+  // ignored. A mismatched ZIP/state combination is rejected.
+  if (submittedAbbr !== stateAbbr) {
+    res.status(400).json({
+      error: `ZIP ${zip} is in ${stateName} (${stateAbbr}), not ${submittedAbbr}. Please check your ZIP and state.`,
+    });
+    return;
+  }
+
+  // City + State → lat/lng via the Gazetteer (authoritative geocoder). Only fall
+  // back to the ZIP centroid for small towns missing from the Gazetteer, and
+  // that ZIP is already validated to be within the submitted state.
   const cityNorm = city.toLowerCase();
   const cityMatch = getCitiesInState(stateAbbr).find(c => c.name.toLowerCase() === cityNorm);
   const loc = cityMatch
     ? { lat: cityMatch.lat, lng: cityMatch.lng }
     : getZipLocation(zip);
   if (!loc) {
-    res.status(404).json({ error: "We couldn't locate that city/ZIP. Try a nearby larger town." });
+    res.status(404).json({ error: `We couldn't locate "${city}, ${stateAbbr}". Try a nearby larger town.` });
     return;
   }
 
