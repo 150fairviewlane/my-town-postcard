@@ -277,7 +277,7 @@ export async function checkTerritoryConflicts(
  * dealer ZIP centroid, computing household catchment and business count for each.
  * Uses a bounding-box pre-filter to avoid iterating all 30k US places.
  */
-async function findCandidateHubs(
+export async function findCandidateHubs(
   dealerLat: number,
   dealerLng: number,
   stateAbbr: string
@@ -359,7 +359,7 @@ async function findCandidateHubs(
  * spread around the dealer ZIP centroid. Uses quadrant-based selection when
  * more than 4 hubs qualify.
  */
-function selectBestHubs(
+export function selectBestHubs(
   candidates: CityHub[],
   dealerLat: number,
   dealerLng: number
