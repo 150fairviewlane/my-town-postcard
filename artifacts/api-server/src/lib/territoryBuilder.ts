@@ -27,10 +27,6 @@ const BLOCKED_ZIPS = new Set([
   "29945", // Yemassee SC — ACE Basin wildlife preserve, no residential population
 ]);
 
-// ─── Managed States ───────────────────────────────────────────────────────────
-// States with manually managed territories — auto-builder never runs here.
-// Add states here as they are hand-seeded.
-const MANAGED_STATES = ["GA"];
 
 // ─── City Hub Constants ───────────────────────────────────────────────────────
 const HUB_MIN_HOUSEHOLDS    = 5_000; // min catchment households within HUB_HOUSEHOLD_RADIUS (pre-Voronoi)
@@ -733,8 +729,7 @@ export async function getTerritoryForZip(
   }
   const { lat, lng } = location;
 
-  // 3. Resolve ZIP → state/county info (still needed for managed-state gate,
-  //    dup-proposal check, and DB insert)
+  // 3. Resolve ZIP → state/county info (needed for conflict check and DB insert)
   const county = await getCountyFromZip(zipCode);
   if (!county) {
     return { type: "unavailable", message: "ZIP code not recognized" };
@@ -742,27 +737,7 @@ export async function getTerritoryForZip(
   const { stateFips, stateAbbr, stateName, countyFips: countyFips3, countyName } = county;
   const geoid = `${stateFips}${countyFips3.padStart(3, "0")}`;
 
-  // 4. Managed-state hard gate — auto-builder never runs for these states.
-  if (MANAGED_STATES.includes(stateAbbr)) {
-    const managedConflict = await checkTerritoryConflicts([geoid], stateAbbr);
-    if (managedConflict.hasConflict && managedConflict.conflictingTerritoryId) {
-      const managedStatus = managedConflict.conflictingTerritoryStatus ?? "available";
-      if (managedStatus === "available") {
-        const [existing] = await db
-          .select()
-          .from(territoriesTable)
-          .where(eq(territoriesTable.id, managedConflict.conflictingTerritoryId));
-        return { type: "existing", territory: existing as Record<string, unknown> };
-      }
-    }
-    return {
-      type: "unavailable",
-      message:
-        "Territory finder is not available for this area. Please contact us directly.",
-    };
-  }
-
-  // 5. Conflict check against existing territories (non-managed states)
+  // 4. Conflict check — return existing territory if this county is already covered.
   const conflict = await checkTerritoryConflicts([geoid], stateAbbr);
   if (conflict.hasConflict && conflict.conflictingTerritoryId) {
     const status = conflict.conflictingTerritoryStatus ?? "available";
@@ -777,29 +752,6 @@ export async function getTerritoryForZip(
       .from(territoriesTable)
       .where(eq(territoriesTable.id, conflict.conflictingTerritoryId));
     return { type: "existing", territory: existing as Record<string, unknown> };
-  }
-
-  // 6. Duplicate proposal check — same county + contact info within 48 hours
-  const activePending = await db
-    .select({ id: territoryProposalsTable.id })
-    .from(territoryProposalsTable)
-    .where(
-      and(
-        eq(territoryProposalsTable.stateFips, stateFips),
-        eq(territoryProposalsTable.countyFips, countyFips3.padStart(3, "0")),
-        eq(territoryProposalsTable.status, "pending_review"),
-        isNotNull(territoryProposalsTable.dealerEmail),
-        gt(territoryProposalsTable.createdAt, sql`NOW() - INTERVAL '48 hours'`),
-      ),
-    );
-
-  if (activePending.length > 0) {
-    return {
-      type: "unavailable",
-      message:
-        "A territory proposal for this area is already under review. " +
-        "Please contact us to be notified when it becomes available.",
-    };
   }
 
   // 7. Build city-hub proposal
@@ -821,30 +773,68 @@ export async function getTerritoryForZip(
     };
   }
 
-  // 9. Save proposal to DB (skipped for test/smoke-test requests)
-  const savedIds: number[] = [];
+  // 9. Auto-create territory directly — no admin review needed.
+  //    Territory is immediately available for purchase.
+  let newTerritory: Record<string, unknown> | undefined;
   if (!isTest) {
-    const [saved] = await db
-      .insert(territoryProposalsTable)
-      .values({
-        zipCode,
-        stateFips,
-        stateAbbr,
-        countyFips: countyFips3.padStart(3, "0"),
-        countyName,
-        proposedName: proposal.proposedName,
-        proposedCounties: proposal.topCities,  // hub city names stored here
-        proposedCities: proposal.topCities,
-        businessCount: proposal.totalBusinesses,
-        isSplit: false,
-        splitIndex: null,
-        splitTotal: null,
-        dealerName: dealerInfo?.name ?? null,
-        dealerEmail: dealerInfo?.email ?? null,
-        dealerPhone: dealerInfo?.phone ?? null,
-      })
-      .returning({ id: territoryProposalsTable.id });
-    if (saved) savedIds.push(saved.id);
+    // Generate next sequential ID for this state (e.g. GA-097, SC-012).
+    const existingRows = await db
+      .select({ id: territoriesTable.id })
+      .from(territoriesTable)
+      .where(eq(territoriesTable.state, stateAbbr));
+    const nums = existingRows
+      .map(r => parseInt(r.id.replace(`${stateAbbr}-`, ""), 10))
+      .filter(n => !isNaN(n));
+    const nextNum = nums.length > 0 ? Math.max(...nums) + 1 : 1;
+    const territoryId = `${stateAbbr}-${String(nextNum).padStart(3, "0")}`;
+
+    // Primary county short name — used by checkTerritoryConflicts so future
+    // ZIP lookups in the same county find this territory.
+    const primaryCountyShort = countyShortName(countyName);
+
+    try {
+      const [inserted] = await db
+        .insert(territoriesTable)
+        .values({
+          id: territoryId,
+          name: proposal.proposedName,
+          state: stateAbbr,
+          counties: [primaryCountyShort],
+          households: proposal.totalHouseholds,
+          zones: proposal.estimatedZones,
+          status: "available",
+          zoneNote: proposal.topCities.join(", "),
+          centroidLat: proposal.centroidLat ?? undefined,
+          centroidLng: proposal.centroidLng ?? undefined,
+          businessCount: proposal.totalBusinesses,
+          source: "auto-generated",
+          proposedByZip: zipCode,
+        })
+        .returning();
+      newTerritory = inserted as Record<string, unknown>;
+      logger.info(
+        { territoryId, stateAbbr, zipCode, hubCount: proposal.hubCount },
+        "Territory auto-created and immediately available"
+      );
+    } catch (err: unknown) {
+      // Race condition: another request created this territory first.
+      // Fall back to the conflict check to return the existing one.
+      logger.warn(
+        { err: err instanceof Error ? err.message : String(err), zipCode },
+        "Territory insert conflict — fetching existing"
+      );
+      const fallback = await checkTerritoryConflicts([geoid], stateAbbr);
+      if (fallback.hasConflict && fallback.conflictingTerritoryId) {
+        const [existing] = await db
+          .select()
+          .from(territoriesTable)
+          .where(eq(territoriesTable.id, fallback.conflictingTerritoryId));
+        if (existing) return { type: "existing", territory: existing as Record<string, unknown> };
+      }
+      // Could not recover — surface the proposal in-memory so the user still
+      // sees something useful (no DB row, but map renders correctly).
+      return { type: "proposed", proposals: [proposal], proposalIds: [] };
+    }
   }
 
   // 10. Admin notification (fire-and-forget; skipped for test requests)
@@ -855,7 +845,7 @@ export async function getTerritoryForZip(
         proposedName: proposal.proposedName,
         stateAbbr,
         stateName,
-        countyNames: proposal.topCities,           // hub city names as "county" labels
+        countyNames: proposal.topCities,
         totalBusinessCount: proposal.totalBusinesses,
         estimatedZones: proposal.estimatedZones,
         topCities: proposal.topCities,
@@ -873,5 +863,11 @@ export async function getTerritoryForZip(
     }
   }
 
-  return { type: "proposed", proposals: [proposal], proposalIds: savedIds };
+  // Return the newly created territory row so the frontend treats it exactly
+  // like a pre-seeded territory (immediately purchasable, no 24h wait).
+  if (newTerritory) {
+    return { type: "existing", territory: newTerritory };
+  }
+  // isTest path — return proposal in-memory for smoke-test inspection.
+  return { type: "proposed", proposals: [proposal], proposalIds: [] };
 }
