@@ -1,0 +1,70 @@
+Plan approved. One decision to lock in before you start, plus
+two small additions.
+
+════════════════════════════════════════════════
+DECISION — PROPOSAL CARRY MECHANISM
+════════════════════════════════════════════════
+
+Use the REFERENCED RECORD approach, not raw Stripe metadata
+serialization. The hub list with county data will exceed
+Stripe's metadata limits and metadata serialization is fragile.
+
+Specifically:
+  1. When a dealer clicks Claim on a proposal, save the full
+     proposal to the territory_proposals table with a generated
+     proposal_id and status = 'pending_payment'
+  2. Put ONLY that proposal_id in the Stripe session metadata
+  3. On checkout.session.completed, read proposal_id from
+     metadata, load the full proposal from territory_proposals,
+     materialize it into territories with status='taken',
+     then update the proposal row to status='claimed'
+
+This keeps the webhook deterministic and idempotent:
+  - If the webhook fires twice, check if a territory already
+    exists for that proposal_id before creating — skip if so
+  - The proposal record is the single source of truth
+
+Note: this means territory_proposals is NOT fully removed —
+it becomes the pending-payment holding table. That is correct.
+Remove only the ADMIN REVIEW workflow (approve/reject/notify),
+not the table itself.
+
+════════════════════════════════════════════════
+ADDITION 1 — IDEMPOTENCY CHECK
+════════════════════════════════════════════════
+
+In the webhook activation, before creating the territory:
+  Check if a territory already exists where
+  source_proposal_id = the proposal_id from metadata
+  If it exists, return success without creating a duplicate.
+
+This prevents double-activation if Stripe retries the webhook.
+
+Add a source_proposal_id column to the territories table to
+support this check.
+
+════════════════════════════════════════════════
+ADDITION 2 — CONFIRM CONFLICT CHECK AFTER PAYMENT
+════════════════════════════════════════════════
+
+Between proposal creation and payment completion, another
+dealer could claim an overlapping territory. In the webhook,
+before materializing:
+  Re-run the 25-mile existing-territory check.
+  If an overlapping taken territory now exists:
+    Do NOT create the territory.
+    Flag the proposal as status='conflict'.
+    Send the dealer an email explaining the territory was
+    claimed during checkout and they will be refunded.
+    Trigger a Stripe refund.
+
+This is an edge case but prevents two dealers owning
+overlapping territory if they check out simultaneously.
+
+════════════════════════════════════════════════
+EVERYTHING ELSE APPROVED
+════════════════════════════════════════════════
+
+The rest of the plan is correct as written. Proceed with
+all 9 steps. Report completion of each step before moving
+to the next so we can catch issues early.

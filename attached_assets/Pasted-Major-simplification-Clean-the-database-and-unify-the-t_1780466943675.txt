@@ -1,0 +1,272 @@
+Major simplification. Clean the database and unify the
+territory system into a single flow for all 50 states.
+No special cases, no managed states, no approval queue.
+Same experience everywhere.
+
+
+════════════════════════════════════════════════
+STEP 1 — CLEAN THE DATABASE
+════════════════════════════════════════════════
+
+Delete ALL existing territory data:
+
+  DELETE FROM territory_zip_assignments;
+  DELETE FROM territory_proposals;
+  DELETE FROM landing_pages;
+  DELETE FROM ad_slots;
+  DELETE FROM territories;
+
+The product has not launched. There are no real dealers.
+Start fresh.
+
+
+════════════════════════════════════════════════
+STEP 2 — REMOVE ALL SPECIAL CASES
+════════════════════════════════════════════════
+
+In territoryBuilder.ts:
+
+  REMOVE MANAGED_STATES entirely
+  REMOVE BLOCKED_ZIPS
+  REMOVE the admin approval queue flow
+  REMOVE ZIP_OVERRIDES
+
+
+════════════════════════════════════════════════
+STEP 3 — SIMPLIFIED TERRITORY BUILDER
+════════════════════════════════════════════════
+
+Replace getTerritoryForZip() with:
+
+  async function getTerritoryForLocation(
+    lat: number,
+    lng: number,
+    stateAbbr: string,
+    zipCode?: string
+  ): Promise<{
+    type: 'existing' | 'proposed' | 'unavailable'
+    territory?: any
+    proposal?: TerritoryProposal
+    message?: string
+  }>
+
+  STEP A — Check for existing territory near this location
+    Query territories table for any territory whose centroid
+    is within 25 miles of (lat, lng) AND state = stateAbbr
+    If found and status = 'available' or 'taken':
+      return { type: 'existing', territory }
+
+  STEP B — Find 4 hub cities
+    Call findCandidateHubs(lat, lng, stateAbbr)
+    Call selectBestHubs(candidates, lat, lng)
+
+  STEP C — If fewer than 4 hubs qualify, expand radius
+    Increase search radius by 15 miles and try again
+    Keep expanding up to 3 times (max 85 mile radius)
+    Accept territory with minimum 3 qualifying hubs
+    If still fewer than 3: return { type: 'unavailable',
+      message: 'No viable territory found in this area.' }
+
+  STEP D — Build and return proposal
+    Generate territory name from hub city names
+    Generate slug
+    Calculate centroid as average lat/lng of all hubs
+    return { type: 'proposed', proposal }
+
+    Do NOT save to territories table yet.
+    Save only when dealer completes Stripe payment.
+
+
+════════════════════════════════════════════════
+STEP 4 — INSTANT ACTIVATION ON PAYMENT
+════════════════════════════════════════════════
+
+When dealer completes Stripe payment (webhook
+checkout.session.completed):
+
+  1. Save territory to territories table:
+       id = generated (state abbreviation + sequential number
+            e.g. TN-001, OH-001)
+       name = proposal.proposedName
+       state = stateAbbr
+       counties = hub city county names array
+       zone_note = hub city names joined by ', '
+       households = sum of hub catchment households
+       centroid_lat, centroid_lng from proposal
+       status = 'taken'
+       dealer_id = paying dealer's id
+
+  2. Create landing_pages record, is_published = true
+  3. Create 15 ad_slots with status = 'available'
+  4. Send dealer confirmation email
+  5. Done — no approval needed, no waiting
+
+Remove all pending_review logic.
+Remove the admin approval queue routes and page.
+Remove the admin notification email for new proposals.
+
+
+════════════════════════════════════════════════
+STEP 5 — UPDATE THE FIND TERRITORY PAGE
+════════════════════════════════════════════════
+
+Update /find-territory:
+
+INPUT FIELDS:
+  ZIP Code (pre-filled from previous page, optional)
+  City * (required)
+  State * (required, all 50 states dropdown)
+
+REMOVE:
+  The Georgia county dropdown — gone entirely
+  Any "pending approval" or "within 24 hours" messaging
+  The ZIP-only search path
+
+SEARCH: when dealer clicks Find:
+  Look up city + state in Gazetteer → get lat/lng
+  Call getTerritoryForLocation(lat, lng, stateAbbr, zip)
+
+  type='existing', status='available':
+    Show territory on map in green
+    Show detail panel and Claim button → Stripe
+
+  type='existing', status='taken':
+    Show territory on map in red
+    Show "This territory has been claimed"
+    Show nearby available territories if any exist
+
+  type='proposed':
+    Show 4 hub county polygons on map in amber
+    Show detail panel with hub cities listed
+    Show Claim button → Stripe directly
+    No "pending approval" language
+
+  type='unavailable':
+    Show "No territory available in this area"
+
+
+════════════════════════════════════════════════
+STEP 6 — MAP DISPLAY — SAME FOR ALL 50 STATES
+════════════════════════════════════════════════
+
+The map must work identically for every state.
+No Georgia-specific code. No special cases.
+
+ON PAGE LOAD:
+  Load all territories from the territories table
+  (initially empty — map starts with no colored polygons)
+
+  For each territory in the table:
+    Load county GeoJSON for that territory's state
+    using the existing /api/counties-geojson?state=XX endpoint
+    Find the county features matching the territory's counties
+    Color them: green (available) or red (taken)
+    Make them clickable
+
+  Cache GeoJSON per state in memory — only fetch each
+  state's GeoJSON once per session
+
+WHEN A PROPOSAL IS RETURNED (type='proposed'):
+  Load county GeoJSON for the proposal state if not cached
+  Find the 4 hub county features by county FIPS
+  Color them amber (#F59E0B)
+  Make each polygon clickable
+  Clicking a polygon selects that hub in the left panel
+
+CLICKING ANY TERRITORY POLYGON (existing or proposed):
+  Updates the left panel with that territory's details
+  Shows name, hub cities, market tier, claim button
+  Same behavior for every state — no special cases
+
+POLYGON COLORS:
+  Green (#86efac border #16a34a) — available territory
+  Red (#fca5a5 border #dc2626) — taken territory
+  Amber (#fde68a border #d97706) — current proposal
+  Grey (default) — no territory assigned
+
+REMOVE:
+  All Georgia-specific GeoJSON loading code
+  Any code that treats Georgia differently from other states
+  The radius circle fallback — never show circles, always
+  show county polygons
+
+
+════════════════════════════════════════════════
+STEP 7 — MAILING AREAS DISPLAY
+════════════════════════════════════════════════
+
+For any territory (existing or proposed), mailing areas
+are the hub cities returned by findCandidateHubs() centered
+on the territory centroid, filtered to the territory's
+own counties.
+
+Display city names only:
+  Mailing Area 1 — Toccoa
+  Mailing Area 2 — Clarkesville
+  Mailing Area 3 — Clayton
+  Mailing Area 4 — Hiawassee
+
+  Each mailing area reaches approximately 5,000
+  local households via USPS EDDM.
+
+No household numbers. No business counts.
+Same display for every state.
+
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+  The landing page ad slot purchase flow
+  Stripe payment integration
+  Ad generator and image library
+  Authentication
+  findCandidateHubs() and selectBestHubs() logic
+  The one-hub-per-county guarantee
+
+
+════════════════════════════════════════════════
+TEST AFTER BUILDING
+════════════════════════════════════════════════
+
+TEST 1 — Georgia works like every other state
+  Enter City: Toccoa, State: Georgia
+  Returns 4 hub cities in NE Georgia
+  Map shows amber county polygons — NOT Georgia-specific layer
+  Claim button goes straight to Stripe
+  No special Georgia behavior
+
+TEST 2 — Other states work the same way
+  Enter City: Nashville, State: Tennessee
+  Enter City: Columbus, State: Ohio
+  Enter City: Spokane, State: Washington
+  All return 4 hub city proposals
+  All show county polygons on map
+  All same UI, same flow
+
+TEST 3 — Claimed territory shows correctly
+  After a dealer claims Nashville territory
+  Enter City: Nashville again
+  Map shows red polygon for claimed territory
+  "Already claimed" message shown
+  Nearby available territories shown if any
+
+TEST 4 — Map polygons are clickable everywhere
+  Click any colored polygon on the map
+  Left panel updates with that territory's details
+  Works for green, red, and amber polygons
+  Works for any state
+
+TEST 5 — Database is clean before starting
+  SELECT COUNT(*) FROM territories → 0
+  SELECT COUNT(*) FROM territory_proposals → 0
+  SELECT COUNT(*) FROM landing_pages → 0
+
+TEST 6 — Small market expands radius
+  Enter a genuinely rural city in any state
+  System expands search radius automatically
+  Returns minimum 3 hubs rather than failing
+
+TEST 7 — No radius circles anywhere
+  No circular overlays on the map at any point
+  Only county polygon shapes
