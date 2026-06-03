@@ -1,0 +1,120 @@
+Two changes needed.
+
+════════════════════════════════════════════════
+CHANGE 1 — ONE HUB PER COUNTY GUARANTEE
+════════════════════════════════════════════════
+
+For GET /api/territories/:id/mailing-areas, when a territory
+spans multiple counties, guarantee at least one hub per county.
+
+Current behavior: quadrant-based selectBestHubs picks the 4
+closest hubs overall, so one county can dominate all 4 slots
+while another county gets none.
+
+New behavior:
+  1. Group qualifying hubs by county
+  2. For each county in territory.counties, pick the BEST
+     hub in that county (highest business count)
+  3. Fill remaining slots (up to 4 total) with the next
+     best hubs by business count across all counties
+  4. Cap at 4 total mailing areas
+
+For GA-047 (Habersham + Stephens):
+  Habersham best hub: Clarkesville (341 businesses)
+  Stephens best hub: Toccoa (218 businesses)
+  Remaining 2 slots: next best from either county
+  Result: Clarkesville, Toccoa, Cornelia, Demorest ✓
+
+This logic only applies to the mailing-areas endpoint.
+Do not change selectBestHubs in the territory builder —
+proposals still use the existing quadrant spread logic.
+
+
+════════════════════════════════════════════════
+CHANGE 2 — REPLACE COUNTY DROPDOWN WITH CITY/STATE
+════════════════════════════════════════════════
+
+On the /find-territory page:
+
+REMOVE:
+  The "Browse by County" dropdown (Georgia-only, no longer needed)
+
+ADD:
+  Two new fields below the ZIP code input:
+    City name text input — placeholder "e.g. Toccoa"
+    State dropdown — all 50 states, alphabetical
+
+  These fields are optional when ZIP is entered but help
+  improve territory lookup accuracy.
+
+SEARCH BEHAVIOR:
+  When dealer clicks Find:
+
+  If ZIP + City + State all provided:
+    Use city+state for Gazetteer lookup → get lat/lng directly
+    Use ZIP only for existing territory conflict check
+    Pass Gazetteer lat/lng to findCandidateHubs()
+    This bypasses the ZIP→county chain entirely
+
+  If ZIP only provided (city/state left blank):
+    Existing behavior unchanged — use ZIP centroid lookup
+
+  If City + State only (no ZIP):
+    Look up city in Gazetteer → get lat/lng
+    Use lat/lng for territory search
+    Skip existing territory ZIP conflict check
+    (show auto-proposal only)
+
+LABEL THE FIELDS:
+  ZIP Code (pre-filled from previous page)
+  City
+  State
+
+Keep the existing ZIP pre-population from the previous page.
+City and state default to empty — dealer fills them in.
+
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+  Territory builder proposal flow
+  MANAGED_STATES guard (confirm it still exists first —
+  if removed, reinstate it for Georgia)
+  Landing page system
+  Admin territory manager
+  Any other page or feature
+
+
+════════════════════════════════════════════════
+TEST
+════════════════════════════════════════════════
+
+TEST 1 — One hub per county
+  GET /api/territories/GA-047/mailing-areas
+  Must include both Clarkesville (Habersham) AND
+  Toccoa (Stephens) — one per county guaranteed
+  Result should be: Clarkesville, Toccoa, Cornelia, Demorest
+  or similar with both counties represented
+
+TEST 2 — Single county territory unaffected
+  GET /api/territories/GA-026/mailing-areas (Hall County)
+  Still returns 4 Hall County hubs — no change
+
+TEST 3 — City/state search
+  Go to /find-territory
+  County dropdown is gone
+  City and state fields are present
+  Enter ZIP 30577, City "Toccoa", State "Georgia"
+  Territory search uses Toccoa Gazetteer coordinates
+  Returns correct northeast Georgia territory
+
+TEST 4 — ZIP only still works
+  Enter ZIP 30577 with city/state left blank
+  Existing behavior unchanged
+
+TEST 5 — MANAGED_STATES check
+  POST /api/territories/propose { zipCode: '30501' }
+  Must return type: 'existing' with GA-026
+  If returns type: 'proposed' then MANAGED_STATES was
+  removed — reinstate it immediately
