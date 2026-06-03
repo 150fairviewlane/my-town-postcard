@@ -9,26 +9,16 @@
  * No external API calls anywhere in this module.
  */
 
-import { db, territoriesTable, territoryProposalsTable } from "@workspace/db";
-import { eq, and, isNotNull, gt, sql } from "drizzle-orm";
+import { db, territoriesTable, territoryProposalsTable, type TerritoryProposalRow } from "@workspace/db";
+import { eq } from "drizzle-orm";
 import {
-  getCountyFromZip,
   getCountyInfo,
-  getZipLocation,
   getZipsNearLocation,
   getCitiesInState,
   getCountyHouseholds,
   getCountyGeoidForLocation,
 } from "./censusApi";
 import { logger } from "./logger";
-
-// ─── Blocked ZIPs ─────────────────────────────────────────────────────────────
-// ZIPs that are definitively non-residential (wildlife preserves, industrial
-// zones, etc.) and should never be proposed.
-const BLOCKED_ZIPS = new Set([
-  "29945", // Yemassee SC — ACE Basin wildlife preserve, no residential population
-]);
-
 
 // ─── City Hub Constants ───────────────────────────────────────────────────────
 const HUB_MIN_HOUSEHOLDS    = 5_000; // min catchment households within HUB_HOUSEHOLD_RADIUS (pre-Voronoi)
@@ -195,8 +185,7 @@ export async function generateSlug(name: string): Promise<string> {
 
   const existing = await db
     .select({ proposedName: territoryProposalsTable.proposedName })
-    .from(territoryProposalsTable)
-    .where(eq(territoryProposalsTable.status, "pending_review"));
+    .from(territoryProposalsTable);
 
   const existingSlugs = new Set(
     existing.map(r =>
@@ -280,7 +269,8 @@ export async function checkTerritoryConflicts(
 export async function findCandidateHubs(
   dealerLat: number,
   dealerLng: number,
-  stateAbbr: string
+  stateAbbr: string,
+  searchRadius: number = TERRITORY_SEARCH_RADIUS
 ): Promise<CityHub[]> {
   const allCities = getCitiesInState(stateAbbr);
   if (!allCities.length) {
@@ -288,9 +278,11 @@ export async function findCandidateHubs(
     return [];
   }
 
-  // Bounding box pre-filter — ~45 miles in each direction
-  const LAT_DELTA = 0.65;
-  const LNG_DELTA = 0.80;
+  // Bounding box pre-filter — scales with the search radius (~45mi at the
+  // default 40mi radius), widened proportionally when the radius expands.
+  const boxFactor = searchRadius / TERRITORY_SEARCH_RADIUS;
+  const LAT_DELTA = 0.65 * boxFactor;
+  const LNG_DELTA = 0.80 * boxFactor;
   const latMin = dealerLat - LAT_DELTA;
   const latMax = dealerLat + LAT_DELTA;
   const lngMin = dealerLng - LNG_DELTA;
@@ -304,7 +296,7 @@ export async function findCandidateHubs(
 
   for (const city of boxFiltered) {
     const distance = haversineDistanceMiles(dealerLat, dealerLng, city.lat, city.lng);
-    if (distance > TERRITORY_SEARCH_RADIUS) continue;
+    if (distance > searchRadius) continue;
 
     // Population filter: skip resort/private-island exclusions and cities that
     // don't meet the minimum population proxy (< HUB_LOCAL_BIZ_MIN businesses
@@ -479,13 +471,14 @@ async function buildCityHubProposal(
   dealerLng: number,
   stateAbbr: string,
   stateFips: string,
-  stateName: string
+  stateName: string,
+  searchRadius: number = TERRITORY_SEARCH_RADIUS
 ): Promise<TerritoryProposal> {
-  const candidates = await findCandidateHubs(dealerLat, dealerLng, stateAbbr);
+  const candidates = await findCandidateHubs(dealerLat, dealerLng, stateAbbr, searchRadius);
   const initialHubs = selectBestHubs(candidates, dealerLat, dealerLng);
 
-  // All ZIPs within territory search radius — Voronoi input (40-mile dealer-centered)
-  const allNearbyZips = getZipsNearLocation(dealerLat, dealerLng, TERRITORY_SEARCH_RADIUS);
+  // All ZIPs within territory search radius — Voronoi input (dealer-centered)
+  const allNearbyZips = getZipsNearLocation(dealerLat, dealerLng, searchRadius);
 
   // First Voronoi pass: assign each ZIP to its nearest hub exclusively
   let hubs = voronoiAssign(initialHubs, allNearbyZips);
@@ -638,282 +631,149 @@ async function buildCityHubProposal(
   };
 }
 
-// ─── Approve / Reject ─────────────────────────────────────────────────────────
+// ─── Existing-territory proximity check ──────────────────────────────────────
 
-export async function approveTerritory(
-  proposalId: number,
-  adminUser: string,
-  overrides?: { name?: string; status?: string }
-): Promise<{ territoryId: string; slug: string }> {
-  const [proposal] = await db
+const EXISTING_TERRITORY_RADIUS_MI = 25;
+// Expand the hub search radius in 15-mile steps (max 85mi) until we reach
+// TARGET_HUB_COUNT hubs. A proposal is accepted with as few as MIN_HUB_COUNT.
+const HUB_SEARCH_RADII = [40, 55, 70, 85];
+
+/**
+ * Returns the closest existing territory in `stateAbbr` whose centroid is
+ * within `miles` of the given location, or null. Optionally filter by status.
+ */
+export async function findExistingTerritoryWithinMiles(
+  lat: number,
+  lng: number,
+  stateAbbr: string,
+  miles: number,
+  opts?: { statuses?: string[] }
+): Promise<Record<string, unknown> | null> {
+  const rows = await db
     .select()
-    .from(territoryProposalsTable)
-    .where(eq(territoryProposalsTable.id, proposalId));
+    .from(territoriesTable)
+    .where(eq(territoriesTable.state, stateAbbr));
 
-  if (!proposal) throw new Error(`Proposal ${proposalId} not found`);
+  let best: Record<string, unknown> | null = null;
+  let bestDist = Infinity;
+  for (const r of rows) {
+    if (opts?.statuses && !opts.statuses.includes(r.status)) continue;
+    if (r.centroidLat == null || r.centroidLng == null) continue;
+    const d = haversineDistanceMiles(lat, lng, r.centroidLat, r.centroidLng);
+    if (d <= miles && d < bestDist) {
+      best = r as Record<string, unknown>;
+      bestDist = d;
+    }
+  }
+  return best;
+}
 
-  const state = proposal.stateAbbr;
-  const finalName = overrides?.name ?? proposal.proposedName;
-  const finalStatus = (overrides?.status ?? "available") as "available" | "pending" | "taken";
-
-  const existingRows = await db
+/** Generates the next sequential territory id for a state (e.g. "GA-001"). */
+export async function generateNextTerritoryId(stateAbbr: string): Promise<string> {
+  const rows = await db
     .select({ id: territoriesTable.id })
     .from(territoriesTable)
-    .where(eq(territoriesTable.state, state));
-
-  const nums = existingRows
-    .map(r => parseInt(r.id.replace(`${state}-`, ""), 10))
+    .where(eq(territoriesTable.state, stateAbbr));
+  const nums = rows
+    .map(r => parseInt(r.id.replace(`${stateAbbr}-`, ""), 10))
     .filter(n => !isNaN(n));
   const next = nums.length > 0 ? Math.max(...nums) + 1 : 1;
-  const territoryId = `${state}-${String(next).padStart(3, "0")}`;
+  return `${stateAbbr}-${String(next).padStart(3, "0")}`;
+}
 
-  const proposedEntries: string[] = Array.isArray(proposal.proposedCounties)
-    ? (proposal.proposedCounties as string[])
-    : [];
-
-  // Detect whether stored entries are legacy county GEOIDs (5-digit numeric)
-  // or city names from the new city-hub model.
-  const isLegacyGeoids =
-    proposedEntries.length > 0 && /^\d{5}$/.test(proposedEntries[0] ?? "");
-
-  let countyShortNames: string[];
-  if (isLegacyGeoids) {
-    countyShortNames = [];
-    for (const geoid of proposedEntries) {
-      const sf = geoid.slice(0, 2);
-      const cf = geoid.slice(2);
-      const cInfo = await getCountyInfo(sf, cf);
-      if (cInfo) countyShortNames.push(countyShortName(cInfo.name));
-    }
-  } else {
-    // City-hub model: use hub city names directly as the territory's counties list
-    countyShortNames = proposedEntries;
-  }
-
-  const topCities: string[] = Array.isArray(proposal.proposedCities)
-    ? (proposal.proposedCities as string[])
-    : [];
-
-  const households = Math.round((proposal.businessCount ?? 0) * HOUSEHOLDS_PER_BUSINESS);
+/**
+ * Materializes a pending-payment proposal row into a live `territories` row
+ * with status `taken`, stamped with `source_proposal_id` for idempotency and
+ * linked to the claiming dealer. Returns the new territory id.
+ */
+export async function materializeTerritoryFromProposal(
+  proposal: TerritoryProposalRow,
+  dealerId: number | null
+): Promise<string> {
+  const stateAbbr = proposal.stateAbbr;
+  const territoryId = await generateNextTerritoryId(stateAbbr);
+  const counties = Array.isArray(proposal.proposedCounties) ? proposal.proposedCounties : [];
+  const cities = Array.isArray(proposal.proposedCities) ? proposal.proposedCities : [];
 
   await db.insert(territoriesTable).values({
     id: territoryId,
-    name: finalName,
-    state,
-    counties: countyShortNames,
-    households,
-    zones: proposal.splitTotal ?? 4,
-    status: finalStatus,
-    zoneNote: topCities.join(", "),
-    businessCount: proposal.businessCount,
+    name: proposal.proposedName,
+    state: stateAbbr,
+    counties,
+    households: proposal.households ?? 0,
+    zones: 4,
+    status: "taken",
+    zoneNote: cities.join(", "),
+    centroidLat: proposal.centroidLat ?? undefined,
+    centroidLng: proposal.centroidLng ?? undefined,
+    businessCount: proposal.businessCount ?? 0,
     source: "auto-generated",
     proposedByZip: proposal.zipCode,
-    approvedBy: adminUser,
-    approvedAt: new Date(),
+    dealerId: dealerId ?? undefined,
+    sourceProposalId: proposal.id,
   });
 
-  await db
-    .update(territoryProposalsTable)
-    .set({
-      status: "approved",
-      territoryId,
-      reviewedAt: new Date(),
-      reviewedBy: adminUser,
-    })
-    .where(eq(territoryProposalsTable.id, proposalId));
-
-  logger.info({ territoryId, proposalId, adminUser }, "Territory approved");
-  const slug = territoryId.toLowerCase().replace(/-/g, "-");
-  return { territoryId, slug };
-}
-
-export async function rejectTerritory(
-  proposalId: number,
-  adminUser: string,
-  reason: string
-): Promise<void> {
-  await db
-    .update(territoryProposalsTable)
-    .set({
-      status: "rejected",
-      reviewedAt: new Date(),
-      reviewedBy: adminUser,
-      notes: reason,
-    })
-    .where(eq(territoryProposalsTable.id, proposalId));
-
-  logger.info({ proposalId, adminUser }, "Territory rejected");
+  logger.info(
+    { territoryId, proposalId: proposal.id, dealerId, stateAbbr },
+    "Territory materialized from proposal"
+  );
+  return territoryId;
 }
 
 // ─── Main Entry Point ─────────────────────────────────────────────────────────
 
 /**
- * Top-level orchestrator: resolves a ZIP to a location, checks for conflicts,
- * builds city-hub proposals, saves them, and notifies admin.
+ * Unified territory resolver for all 50 states. Given a location (lat/lng) and
+ * its state, returns either:
+ *   - an existing same-state territory whose centroid is within 25 miles, or
+ *   - a fresh in-memory hub proposal (NOT persisted), expanding the search
+ *     radius up to 85 miles to reach 4 hubs (min 3 for viability), or
+ *   - `unavailable` when no viable territory can be built.
+ *
+ * The proposal is never written to the database here — it is persisted only
+ * when the dealer clicks Claim (see the propose/claim routes).
  */
-export async function getTerritoryForZip(
-  zipCode: string,
-  dealerInfo?: { name: string; email: string; phone: string },
-  options?: { isTest?: boolean }
+export async function getTerritoryForLocation(
+  lat: number,
+  lng: number,
+  stateAbbr: string,
+  stateFips: string,
+  stateName: string,
+  zip?: string
 ): Promise<TerritoryForZipResult> {
-  const isTest = options?.isTest ?? false;
-
-  // 1. Blocked ZIP gate
-  if (BLOCKED_ZIPS.has(zipCode)) {
-    return {
-      type: "unavailable",
-      message:
-        "This ZIP code is in a non-residential area. " +
-        "Please try a ZIP code in a nearby town or city.",
-    };
-  }
-
-  // 2. Resolve ZIP → lat/lng centroid
-  const location = getZipLocation(zipCode);
-  if (!location) {
-    return { type: "unavailable", message: "ZIP code not recognized" };
-  }
-  const { lat, lng } = location;
-
-  // 3. Resolve ZIP → state/county info (needed for conflict check and DB insert)
-  const county = await getCountyFromZip(zipCode);
-  if (!county) {
-    return { type: "unavailable", message: "ZIP code not recognized" };
-  }
-  const { stateFips, stateAbbr, stateName, countyFips: countyFips3, countyName } = county;
-  const geoid = `${stateFips}${countyFips3.padStart(3, "0")}`;
-
-  // 4. Conflict check — return existing territory if this county is already covered.
-  const conflict = await checkTerritoryConflicts([geoid], stateAbbr);
-  if (conflict.hasConflict && conflict.conflictingTerritoryId) {
-    const status = conflict.conflictingTerritoryStatus ?? "available";
-    if (status === "taken" || status === "pending") {
-      return {
-        type: "unavailable",
-        message: "This territory has already been claimed",
-      };
-    }
-    const [existing] = await db
-      .select()
-      .from(territoriesTable)
-      .where(eq(territoriesTable.id, conflict.conflictingTerritoryId));
-    return { type: "existing", territory: existing as Record<string, unknown> };
-  }
-
-  // 7. Build city-hub proposal
-  const proposal = await buildCityHubProposal(
-    zipCode, lat, lng, stateAbbr, stateFips, stateName
+  // (A) Existing same-state territory within 25 miles of this location.
+  const existing = await findExistingTerritoryWithinMiles(
+    lat, lng, stateAbbr, EXISTING_TERRITORY_RADIUS_MI
   );
+  if (existing) {
+    return { type: "existing", territory: existing };
+  }
 
-  // 8. Viability gate — if fewer than MIN_HUB_COUNT hubs qualify, reject
-  if (!proposal.isViable) {
-    logger.info(
-      { zipCode, stateAbbr, hubCount: proposal.hubCount, totalBusinesses: proposal.totalBusinesses },
-      "Territory builder: insufficient hub cities — returning unavailable"
+  // (B + C) Build a proposal, expanding the radius until we reach the target
+  // hub count (or exhaust the radius ladder). Keep the best attempt seen.
+  let best: TerritoryProposal | null = null;
+  for (const radius of HUB_SEARCH_RADII) {
+    const proposal = await buildCityHubProposal(
+      zip ?? "", lat, lng, stateAbbr, stateFips, stateName, radius
     );
-    return {
-      type: "unavailable",
-      message:
-        "This ZIP code does not have enough nearby commercial centers for a viable territory. " +
-        "Please try a ZIP code in a larger town or city.",
-    };
+    if (!best || proposal.hubCount > best.hubCount) best = proposal;
+    if (proposal.hubCount >= TARGET_HUB_COUNT) break;
   }
 
-  // 9. Auto-create territory directly — no admin review needed.
-  //    Territory is immediately available for purchase.
-  let newTerritory: Record<string, unknown> | undefined;
-  if (!isTest) {
-    // Generate next sequential ID for this state (e.g. GA-097, SC-012).
-    const existingRows = await db
-      .select({ id: territoriesTable.id })
-      .from(territoriesTable)
-      .where(eq(territoriesTable.state, stateAbbr));
-    const nums = existingRows
-      .map(r => parseInt(r.id.replace(`${stateAbbr}-`, ""), 10))
-      .filter(n => !isNaN(n));
-    const nextNum = nums.length > 0 ? Math.max(...nums) + 1 : 1;
-    const territoryId = `${stateAbbr}-${String(nextNum).padStart(3, "0")}`;
-
-    // Primary county short name — used by checkTerritoryConflicts so future
-    // ZIP lookups in the same county find this territory.
-    const primaryCountyShort = countyShortName(countyName);
-
-    try {
-      const [inserted] = await db
-        .insert(territoriesTable)
-        .values({
-          id: territoryId,
-          name: proposal.proposedName,
-          state: stateAbbr,
-          counties: [primaryCountyShort],
-          households: proposal.totalHouseholds,
-          zones: proposal.estimatedZones,
-          status: "available",
-          zoneNote: proposal.topCities.join(", "),
-          centroidLat: proposal.centroidLat ?? undefined,
-          centroidLng: proposal.centroidLng ?? undefined,
-          businessCount: proposal.totalBusinesses,
-          source: "auto-generated",
-          proposedByZip: zipCode,
-        })
-        .returning();
-      newTerritory = inserted as Record<string, unknown>;
-      logger.info(
-        { territoryId, stateAbbr, zipCode, hubCount: proposal.hubCount },
-        "Territory auto-created and immediately available"
-      );
-    } catch (err: unknown) {
-      // Race condition: another request created this territory first.
-      // Fall back to the conflict check to return the existing one.
-      logger.warn(
-        { err: err instanceof Error ? err.message : String(err), zipCode },
-        "Territory insert conflict — fetching existing"
-      );
-      const fallback = await checkTerritoryConflicts([geoid], stateAbbr);
-      if (fallback.hasConflict && fallback.conflictingTerritoryId) {
-        const [existing] = await db
-          .select()
-          .from(territoriesTable)
-          .where(eq(territoriesTable.id, fallback.conflictingTerritoryId));
-        if (existing) return { type: "existing", territory: existing as Record<string, unknown> };
-      }
-      // Could not recover — surface the proposal in-memory so the user still
-      // sees something useful (no DB row, but map renders correctly).
-      return { type: "proposed", proposals: [proposal], proposalIds: [] };
-    }
+  // (D) Accept the best proposal if it is viable (>= MIN_HUB_COUNT hubs and
+  // enough households); otherwise the location is unavailable.
+  if (best && best.isViable) {
+    return { type: "proposed", proposals: [best], proposalIds: [] };
   }
 
-  // 10. Admin notification (fire-and-forget; skipped for test requests)
-  if (!isTest) {
-    try {
-      const { sendTerritoryProposalEmail } = await import("./emails");
-      await sendTerritoryProposalEmail({
-        proposedName: proposal.proposedName,
-        stateAbbr,
-        stateName,
-        countyNames: proposal.topCities,
-        totalBusinessCount: proposal.totalBusinesses,
-        estimatedZones: proposal.estimatedZones,
-        topCities: proposal.topCities,
-        isViable: proposal.isViable,
-        dealerName: dealerInfo?.name,
-        dealerEmail: dealerInfo?.email,
-        dealerPhone: dealerInfo?.phone,
-        zipCode,
-      });
-    } catch (err: unknown) {
-      logger.warn(
-        { err: err instanceof Error ? err.message : String(err) },
-        "Territory proposal email failed — continuing"
-      );
-    }
-  }
-
-  // Return the newly created territory row so the frontend treats it exactly
-  // like a pre-seeded territory (immediately purchasable, no 24h wait).
-  if (newTerritory) {
-    return { type: "existing", territory: newTerritory };
-  }
-  // isTest path — return proposal in-memory for smoke-test inspection.
-  return { type: "proposed", proposals: [proposal], proposalIds: [] };
+  logger.info(
+    { stateAbbr, zip, hubCount: best?.hubCount ?? 0 },
+    "Territory builder: no viable territory near location"
+  );
+  return {
+    type: "unavailable",
+    message:
+      "This area doesn't have enough nearby commercial centers for a viable territory. " +
+      "Try a larger nearby town or city.",
+  };
 }

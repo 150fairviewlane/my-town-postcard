@@ -8,6 +8,7 @@ import { logger } from "../lib/logger";
 import { getStripeClient } from "../lib/stripeClient";
 import {
   activateDealerFromCheckoutSession,
+  activateTerritoryClaimFromCheckoutSession,
   cancelDealerFromSubscription,
   releaseDealerPendingTerritory,
 } from "./dealers";
@@ -119,6 +120,9 @@ export async function stripeWebhookHandler(
         if (meta.kind === "dealer") {
           const dealerId = await activateDealerFromCheckoutSession(event.data.object);
           req.log.info({ dealerId, sessionId: event.data.object?.id }, "Dealer activated via webhook");
+        } else if (meta.kind === "territory") {
+          await activateTerritoryClaimFromCheckoutSession(event.data.object);
+          req.log.info({ sessionId: event.data.object?.id }, "Territory claim processed via webhook");
         } else if (meta.kind === "spot_subscription") {
           await handleSpotSubscriptionCheckoutCompleted(event.data.object, req);
         } else {
@@ -213,6 +217,14 @@ export async function stripeWebhookHandler(
               "Released pending dealer territory after checkout.session.expired",
             );
           }
+        } else if (expiredMeta.kind === "territory") {
+          // No territory row is materialized until payment succeeds, and no
+          // subscription exists yet, so there's nothing to release. The
+          // pending_payment proposal + dealer stay reusable on a retry.
+          req.log.info(
+            { proposalId: expiredMeta.proposalId, sessionId: event.data.object?.id },
+            "Territory claim checkout expired — no state to release",
+          );
         } else {
           await handleCheckoutSessionExpired(event.data.object, req);
         }

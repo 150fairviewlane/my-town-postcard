@@ -976,6 +976,21 @@ export function getCountyNameByGeoid(geoid: string): string | null {
 }
 
 /**
+ * Returns the short (suffix-stripped, title-cased) county name for a 5-digit
+ * GEOID, e.g. "13137" → "Habersham". Internally the adjacency dataset stores
+ * `nameShort` uppercased; this re-title-cases it for display + storage in
+ * territory.counties (which mailing-areas resolves back via
+ * getCountyGeoidsByShortNames).
+ */
+export function getCountyShortNameByGeoid(geoid: string): string | null {
+  const row = countyInfoByGeoid.get(geoid);
+  if (!row) return null;
+  return row.nameShort
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/**
  * Resolves a list of county short names (e.g. ["Habersham", "Stephens"]) for a
  * given state into their 5-digit GEOID strings (e.g. {"13137", "13257"}).
  * Comparison is case-insensitive. Unknown names are silently skipped.

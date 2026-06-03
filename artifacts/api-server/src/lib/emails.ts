@@ -473,71 +473,97 @@ export async function sendAdminNewOrder(order: OrderInfo): Promise<void> {
   }
 }
 
-// ─── Territory Proposal Notification ─────────────────────────────────────────
+// ─── Territory Claim Emails (dealer-facing) ──────────────────────────────────
 
-export interface TerritoryProposalEmailInfo {
-  proposedName: string;
-  stateAbbr: string;
-  stateName: string;
-  countyNames: string[];
-  totalBusinessCount: number;
-  estimatedZones: number;
-  topCities: string[];
-  isViable: boolean;
-  dealerName?: string;
-  dealerEmail?: string;
-  dealerPhone?: string;
-  zipCode: string;
+export interface TerritoryClaimedEmailInfo {
+  dealerName: string;
+  dealerEmail: string;
+  territoryName: string;
+  cities: string[];
+  portalToken?: string | null;
 }
 
-export async function sendTerritoryProposalEmail(
-  info: TerritoryProposalEmailInfo
+/**
+ * Sent to a dealer the moment their territory is activated (Stripe payment
+ * cleared + territory materialized). No admin approval step exists anymore.
+ */
+export async function sendTerritoryClaimedEmail(
+  info: TerritoryClaimedEmailInfo
 ): Promise<void> {
   const resend = getResendClient();
   if (!resend) {
     logger.info(
-      {
-        proposedName: info.proposedName,
-        state: info.stateAbbr,
-        businessCount: info.totalBusinessCount,
-        zip: info.zipCode,
-        dealer: info.dealerName ?? "Anonymous",
-      },
-      "Territory proposal (email skipped — RESEND_API_KEY not set)"
+      { territory: info.territoryName, dealer: info.dealerEmail },
+      "Territory claimed (email skipped — RESEND_API_KEY not set)"
     );
     return;
   }
-
+  const portalUrl = info.portalToken
+    ? `${APP_URL}/my-territory?token=${encodeURIComponent(info.portalToken)}`
+    : `${APP_URL}/my-territory`;
   try {
     await resend.emails.send({
       from: FROM_EMAIL,
-      to: ADMIN_EMAIL,
-      subject: `New Territory Proposal — ${escapeHtml(info.proposedName)}, ${info.stateAbbr}`,
+      to: info.dealerEmail,
+      subject: `Your territory is live — ${escapeHtml(info.territoryName)}`,
       html: `
         <div style="font-family:sans-serif;max-width:560px;margin:0 auto;">
-          <h2 style="color:#1a1a1a;">New Territory Proposal</h2>
-          <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
-            <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;"><strong>Territory</strong></td><td style="padding:8px;border-bottom:1px solid #e5e7eb;">${escapeHtml(info.proposedName)}</td></tr>
-            <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;"><strong>State</strong></td><td style="padding:8px;border-bottom:1px solid #e5e7eb;">${escapeHtml(info.stateName)}</td></tr>
-            <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;"><strong>Counties</strong></td><td style="padding:8px;border-bottom:1px solid #e5e7eb;">${escapeHtml(info.countyNames.join(", "))}</td></tr>
-            <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;"><strong>Ad-Ready Businesses</strong></td><td style="padding:8px;border-bottom:1px solid #e5e7eb;">${info.totalBusinessCount.toLocaleString()}</td></tr>
-            <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;"><strong>Estimated Zones</strong></td><td style="padding:8px;border-bottom:1px solid #e5e7eb;">${info.estimatedZones}</td></tr>
-            <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;"><strong>Top Cities</strong></td><td style="padding:8px;border-bottom:1px solid #e5e7eb;">${escapeHtml(info.topCities.join(", "))}</td></tr>
-            <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;"><strong>Viable</strong></td><td style="padding:8px;border-bottom:1px solid #e5e7eb;">${info.isViable ? "Yes" : "No (too rural)"}</td></tr>
-          </table>
-          <h3 style="color:#1a1a1a;">Submitted By</h3>
-          <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
-            <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;"><strong>Name</strong></td><td style="padding:8px;border-bottom:1px solid #e5e7eb;">${escapeHtml(info.dealerName ?? "Anonymous")}</td></tr>
-            <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;"><strong>Email</strong></td><td style="padding:8px;border-bottom:1px solid #e5e7eb;">${escapeHtml(info.dealerEmail ?? "not provided")}</td></tr>
-            <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;"><strong>Phone</strong></td><td style="padding:8px;border-bottom:1px solid #e5e7eb;">${escapeHtml(info.dealerPhone ?? "not provided")}</td></tr>
-            <tr><td style="padding:8px;"><strong>ZIP Code</strong></td><td style="padding:8px;">${escapeHtml(info.zipCode)}</td></tr>
-          </table>
-          <p><a href="${APP_URL}/admin/territory-proposals">Review and approve →</a></p>
+          <h2 style="color:#1a1a1a;">Welcome aboard, ${escapeHtml(info.dealerName)}! 🎉</h2>
+          <p>Your exclusive territory <strong>${escapeHtml(info.territoryName)}</strong> is now active.</p>
+          ${info.cities.length > 0 ? `<p><strong>Mailing areas:</strong> ${escapeHtml(info.cities.join(", "))}</p>` : ""}
+          <p>Each postcard mailing reaches ≈5,000 households via USPS EDDM.</p>
+          <p><a href="${portalUrl}" style="display:inline-block;background:#16a34a;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;">Open your dealer portal →</a></p>
         </div>
       `,
     });
-    logger.info({ proposedName: info.proposedName }, "Territory proposal email sent");
+    logger.info({ territory: info.territoryName }, "Territory claimed email sent");
   } catch (err) {
-    logger.error({ err, proposedName: info.proposedName }, "Failed to send territory proposal email");
+    logger.error({ err, territory: info.territoryName }, "Failed to send territory claimed email");
+  }
+}
+
+export interface TerritoryConflictEmailInfo {
+  dealerName: string;
+  dealerEmail: string;
+  territoryName: string;
+}
+
+/**
+ * Sent when a territory claim is refunded because an overlapping territory was
+ * taken during checkout (the post-payment 25-mile conflict re-check failed).
+ */
+export async function sendTerritoryConflictEmail(
+  info: TerritoryConflictEmailInfo
+): Promise<void> {
+  const resend = getResendClient();
+  if (!resend) {
+    logger.info(
+      { territory: info.territoryName, dealer: info.dealerEmail },
+      "Territory conflict refund (email skipped — RESEND_API_KEY not set)"
+    );
+    return;
+  }
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: info.dealerEmail,
+      subject: `Refund issued — ${escapeHtml(info.territoryName)} was just claimed`,
+      html: `
+        <div style="font-family:sans-serif;max-width:560px;margin:0 auto;">
+          <h2 style="color:#1a1a1a;">We're sorry, ${escapeHtml(info.dealerName)}</h2>
+          <p>Another dealer claimed an overlapping area for
+          <strong>${escapeHtml(info.territoryName)}</strong> moments before your
+          payment finished processing, so we could not activate it.</p>
+          <p><strong>Your payment has been fully refunded</strong> and your
+          subscription cancelled — you will not be charged.</p>
+          <p>Please pick a different nearby area on the territory finder, or reply
+          to this email and we'll help you find one.</p>
+          <p><a href="${APP_URL}/find-territory">Find another territory →</a></p>
+        </div>
+      `,
+    });
+    logger.info({ territory: info.territoryName }, "Territory conflict email sent");
+  } catch (err) {
+    logger.error({ err, territory: info.territoryName }, "Failed to send territory conflict email");
   }
 }

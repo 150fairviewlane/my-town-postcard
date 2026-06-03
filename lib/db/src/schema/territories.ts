@@ -34,6 +34,9 @@ export const territoriesTable = pgTable("territories", {
   proposedByZip: text("proposed_by_zip"),
   approvedBy: text("approved_by"),
   approvedAt: timestamp("approved_at"),
+  // The territory_proposals.id this territory was materialized from (webhook
+  // idempotency key — a retried Stripe event won't create a duplicate).
+  sourceProposalId: integer("source_proposal_id"),
 });
 
 // Records each dealer's territory claim. Created when the dealer submits the
@@ -87,12 +90,26 @@ export const territoryProposalsTable = pgTable("territory_proposals", {
   proposedCounties: jsonb("proposed_counties").$type<string[]>().notNull(),
   proposedCities: jsonb("proposed_cities").$type<string[]>().notNull(),
   businessCount: integer("business_count").notNull(),
+  // Materialization payload — stored so the Stripe webhook can build the
+  // territory row without recomputing hubs (and so the 25-mile post-payment
+  // conflict re-check has a centroid to test).
+  households: integer("households").notNull().default(0),
+  centroidLat: doublePrecision("centroid_lat"),
+  centroidLng: doublePrecision("centroid_lng"),
   isSplit: boolean("is_split").default(false),
   splitIndex: integer("split_index"),
   splitTotal: integer("split_total"),
-  status: text("status", { enum: ["pending_review", "approved", "rejected"] })
+  // Pending-payment holding table for the unified claim flow:
+  //   pending_payment → claimed (territory materialized on Stripe payment)
+  //                   → conflict (overlap appeared during checkout; refunded)
+  status: text("status", { enum: ["pending_payment", "claimed", "conflict"] })
     .notNull()
-    .default("pending_review"),
+    .default("pending_payment"),
+  // Dealer created up front (pending_payment) when Claim is clicked; the
+  // webhook links + activates this dealer when payment completes.
+  dealerId: integer("dealer_id").references(() => dealersTable.id, {
+    onDelete: "set null",
+  }),
   dealerName: text("dealer_name"),
   dealerEmail: text("dealer_email"),
   dealerPhone: text("dealer_phone"),

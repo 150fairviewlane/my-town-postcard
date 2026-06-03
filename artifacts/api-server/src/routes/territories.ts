@@ -7,13 +7,18 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import { db, territoriesTable, dealerTerritoryClaimsTable, territoryZipAssignmentsTable, territoryProposalsTable } from "@workspace/db";
 import {
-  getTerritoryForZip,
-  approveTerritory,
-  rejectTerritory,
+  getTerritoryForLocation,
   findCandidateHubs,
   selectBestHubs,
 } from "../lib/territoryBuilder";
-import { getCountyGeoidsByShortNames, getCountyNameByGeoid } from "../lib/censusApi";
+import {
+  getCountyGeoidsByShortNames,
+  getCountyNameByGeoid,
+  getCountyShortNameByGeoid,
+  getCountyFromZip,
+  getCitiesInState,
+  getZipLocation,
+} from "../lib/censusApi";
 
 // Works in both ESM dev (tsx watch) and the esbuild production bundle.
 // In prod, esbuild's banner sets globalThis.__dirname = dist/, so the
@@ -69,157 +74,6 @@ function resolveHtmlPath(): string {
 
 const HTML_FILE_PATH = resolveHtmlPath();
 
-// ─── Seed Data ────────────────────────────────────────────────────────────────
-type TerritoryStatus = "available" | "pending" | "taken";
-interface SeedRow {
-  id: string; name: string; state: string; counties: string[];
-  zoneNote: string; households: number; status: TerritoryStatus;
-}
-
-// 95-territory production dataset — all 159 Georgia counties.
-// Canonical source of truth; also mirrored in scripts/src/georgia-territories-seed.ts.
-const GA_SEED: SeedRow[] = [
-  // ── TIER 1 — METRO ATLANTA CITY CLUSTERS ─────────────────────────────────────
-  // Metro ZIPs are assigned via the explicit curated map in seed-zip-assignments.ts
-  // (county-centroid logic cannot split a single county across these sub-territories).
-  { id:"GA-001", name:"Alpharetta / Milton / Roswell",        state:"GA", counties:["Fulton"],          zoneNote:"Alpharetta, Milton, Roswell, Johns Creek, Mountain Park",        households:95000, status:"available" },
-  { id:"GA-002", name:"Sandy Springs / Buckhead / Dunwoody",  state:"GA", counties:["Fulton","DeKalb"],  zoneNote:"Sandy Springs, Buckhead, Dunwoody, Brookhaven, Chamblee",        households:92000, status:"available" },
-  { id:"GA-003", name:"Atlanta / Midtown / Inman Park",       state:"GA", counties:["Fulton","DeKalb"],  zoneNote:"Atlanta city core, Midtown, Inman Park, Grant Park, Va-Highland", households:88000, status:"available" },
-  { id:"GA-004", name:"Duluth / Peachtree Corners / Norcross", state:"GA", counties:["Gwinnett"],        zoneNote:"Duluth, Peachtree Corners, Norcross, Berkeley Lake",             households:88000, status:"available" },
-  { id:"GA-005", name:"Lawrenceville / Snellville / Lilburn", state:"GA", counties:["Gwinnett"],         zoneNote:"Lawrenceville, Snellville, Lilburn, Grayson",                    households:95000, status:"available" },
-  { id:"GA-006", name:"Buford / Sugar Hill / Braselton",      state:"GA", counties:["Gwinnett"],         zoneNote:"Buford, Sugar Hill, Dacula, Braselton, Loganville",              households:86000, status:"available" },
-  { id:"GA-007", name:"Marietta / Kennesaw / Acworth",        state:"GA", counties:["Cobb"],             zoneNote:"Marietta, Kennesaw, Acworth, Powder Springs area",               households:92000, status:"available" },
-  { id:"GA-008", name:"Smyrna / Mableton / Powder Springs",   state:"GA", counties:["Cobb"],             zoneNote:"Smyrna, Mableton, Powder Springs, Austell, Vinings",             households:88000, status:"available" },
-  { id:"GA-009", name:"Decatur / Tucker / Clarkston",         state:"GA", counties:["DeKalb"],           zoneNote:"Decatur, Tucker, Clarkston, Avondale Estates, Pine Lake",        households:82000, status:"available" },
-  { id:"GA-010", name:"Stonecrest / Lithonia / South DeKalb", state:"GA", counties:["DeKalb"],           zoneNote:"Stonecrest, Lithonia, South DeKalb, East Atlanta",               households:78000, status:"available" },
-  // ── TIER 2 — SINGLE COUNTY (Atlanta suburbs) ─────────────────────────────────
-  { id:"GA-011", name:"Cherokee County",               state:"GA", counties:["Cherokee"],                            zoneNote:"Canton, Ball Ground, Holly Springs, Woodstock",         households:105000, status:"available" },
-  { id:"GA-012", name:"Forsyth County",                state:"GA", counties:["Forsyth"],                             zoneNote:"Cumming, South Forsyth",                                households:100000, status:"available" },
-  { id:"GA-013", name:"Henry County",                  state:"GA", counties:["Henry"],                               zoneNote:"McDonough, Stockbridge, Hampton, Locust Grove",         households:95000,  status:"available" },
-  { id:"GA-014", name:"Clayton County",                state:"GA", counties:["Clayton"],                             zoneNote:"Jonesboro, Riverdale, Forest Park, College Park",       households:105000, status:"available" },
-  { id:"GA-015", name:"Paulding County",               state:"GA", counties:["Paulding"],                            zoneNote:"Dallas, Hiram, Powder Springs area",                    households:58000,  status:"available" },
-  { id:"GA-016", name:"Douglas County",                state:"GA", counties:["Douglas"],                             zoneNote:"Douglasville, Lithia Springs, Villa Rica area",         households:50000,  status:"available" },
-  { id:"GA-017", name:"Coweta County",                 state:"GA", counties:["Coweta"],                              zoneNote:"Newnan, Senoia, Sharpsburg",                            households:55000,  status:"available" },
-  { id:"GA-018", name:"Fayette County",                state:"GA", counties:["Fayette"],                             zoneNote:"Fayetteville, Peachtree City, Tyrone, Brooks",          households:48000,  status:"available" },
-  { id:"GA-019", name:"Carroll County",                state:"GA", counties:["Carroll"],                             zoneNote:"Carrollton, Villa Rica, Whitesburg, Temple",            households:45000,  status:"available" },
-  { id:"GA-020", name:"Barrow County",                 state:"GA", counties:["Barrow"],                              zoneNote:"Winder, Auburn, Bethlehem, Carl",                       households:32000,  status:"available" },
-  { id:"GA-021", name:"Rockdale County",               state:"GA", counties:["Rockdale"],                            zoneNote:"Conyers, Milstead",                                     households:34000,  status:"available" },
-  { id:"GA-022", name:"Newton County",                 state:"GA", counties:["Newton"],                              zoneNote:"Covington, Oxford, Mansfield, Porterdale",              households:40000,  status:"available" },
-  { id:"GA-023", name:"Walton County",                 state:"GA", counties:["Walton"],                              zoneNote:"Monroe, Social Circle, Loganville, Good Hope",          households:38000,  status:"available" },
-  { id:"GA-024", name:"Spalding County",               state:"GA", counties:["Spalding"],                            zoneNote:"Griffin, Orchard Hill, Sunny Side",                     households:28000,  status:"available" },
-  { id:"GA-025", name:"Jackson County",                state:"GA", counties:["Jackson"],                             zoneNote:"Jefferson, Commerce, Braselton, Hoschton",              households:42000,  status:"available" },
-  // ── TIER 2 — SINGLE COUNTY (North Georgia) ───────────────────────────────────
-  { id:"GA-026", name:"Hall County",                   state:"GA", counties:["Hall"],                                zoneNote:"Gainesville, Flowery Branch, Oakwood, Buford area",    households:82000,  status:"available" },
-  { id:"GA-027", name:"Whitfield County",              state:"GA", counties:["Whitfield"],                           zoneNote:"Dalton, Tunnel Hill, Cohutta, Varnell",                 households:38000,  status:"available" },
-  { id:"GA-028", name:"Bartow County",                 state:"GA", counties:["Bartow"],                              zoneNote:"Cartersville, Adairsville, Emerson, Euharlee",          households:42000,  status:"available" },
-  { id:"GA-029", name:"Floyd County",                  state:"GA", counties:["Floyd"],                               zoneNote:"Rome, Cave Spring, Armuchee, Shannon",                  households:38000,  status:"available" },
-  { id:"GA-030", name:"Catoosa County",                state:"GA", counties:["Catoosa"],                             zoneNote:"Ringgold, Fort Oglethorpe, Tunnel Hill area",           households:25000,  status:"available" },
-  { id:"GA-031", name:"Walker / Dade / Chattooga Counties",        state:"GA", counties:["Walker","Dade","Chattooga"],                       zoneNote:"LaFayette, Rock Spring, Chickamauga, Trenton, Summerville",          households:30000,  status:"available" },
-  { id:"GA-032", name:"Gordon County",                 state:"GA", counties:["Gordon"],                              zoneNote:"Calhoun, Resaca, Fairmount, Plainville",                households:26000,  status:"available" },
-  { id:"GA-033", name:"Clarke County",                 state:"GA", counties:["Clarke"],                              zoneNote:"Athens, Winterville, Bogart",                           households:48000,  status:"available" },
-  // ── TIER 2 — SINGLE COUNTY (Other major cities) ──────────────────────────────
-  { id:"GA-034", name:"Chatham County",                state:"GA", counties:["Chatham"],                             zoneNote:"Savannah, Pooler, Garden City, Port Wentworth",        households:108000, status:"available" },
-  { id:"GA-035", name:"Richmond County",               state:"GA", counties:["Richmond"],                            zoneNote:"Augusta, Hephzibah, Blythe",                            households:75000,  status:"available" },
-  { id:"GA-036", name:"Muscogee County",               state:"GA", counties:["Muscogee"],                            zoneNote:"Columbus, Midland, Upatoi",                             households:72000,  status:"available" },
-  { id:"GA-037", name:"Bibb County",                   state:"GA", counties:["Bibb"],                                zoneNote:"Macon, Lizella, Payne City",                            households:55000,  status:"available" },
-  { id:"GA-038", name:"Houston County",                state:"GA", counties:["Houston"],                             zoneNote:"Warner Robins, Perry, Centerville, Byron",              households:60000,  status:"available" },
-  { id:"GA-039", name:"Columbia County",               state:"GA", counties:["Columbia"],                            zoneNote:"Evans, Grovetown, Harlem, Martinez",                    households:55000,  status:"available" },
-  { id:"GA-040", name:"Lowndes County",                state:"GA", counties:["Lowndes"],                             zoneNote:"Valdosta, Hahira, Lake Park, Remerton",                 households:45000,  status:"available" },
-  { id:"GA-041", name:"Bulloch County",                state:"GA", counties:["Bulloch"],                             zoneNote:"Statesboro, Brooklet, Portal, Register",                households:32000,  status:"available" },
-  { id:"GA-042", name:"Effingham County",              state:"GA", counties:["Effingham"],                           zoneNote:"Springfield, Guyton, Rincon, Pooler area",              households:30000,  status:"available" },
-  { id:"GA-043", name:"Glynn County",                  state:"GA", counties:["Glynn"],                               zoneNote:"Brunswick, St. Simons Island, Jekyll Island",           households:48000,  status:"available" },
-  { id:"GA-044", name:"Tift County",                   state:"GA", counties:["Tift"],                                zoneNote:"Tifton, Omega, Ty Ty",                                  households:28000,  status:"available" },
-  { id:"GA-045", name:"Coffee County",                 state:"GA", counties:["Coffee"],                              zoneNote:"Douglas, Nicholls, Broxton, Ambrose",                   households:34000,  status:"available" },
-  { id:"GA-046", name:"Troup County",                  state:"GA", counties:["Troup"],                               zoneNote:"LaGrange, West Point, Hogansville",                     households:28000,  status:"available" },
-  // ── TIER 3 — COMBINED COUNTIES (NE Georgia Mountains) ────────────────────────
-  { id:"GA-047", name:"Habersham / Stephens Counties",       state:"GA", counties:["Habersham","Stephens"],          zoneNote:"Clarkesville, Cornelia, Demorest, Toccoa, Baldwin",     households:30000, status:"available" },
-  { id:"GA-048", name:"Franklin / Hart Counties",            state:"GA", counties:["Franklin","Hart"],               zoneNote:"Carnesville, Hartwell, Canon, Royston, Bowersville",    households:22000, status:"available" },
-  { id:"GA-049", name:"Rabun / Towns / Union Counties",      state:"GA", counties:["Rabun","Towns","Union"],         zoneNote:"Clayton, Hiawassee, Blairsville",                       households:22000, status:"available" },
-  { id:"GA-050", name:"Fannin / Gilmer Counties",            state:"GA", counties:["Fannin","Gilmer"],               zoneNote:"Blue Ridge, Ellijay",                                   households:28000, status:"available" },
-  { id:"GA-051", name:"Pickens / Dawson Counties",           state:"GA", counties:["Pickens","Dawson"],              zoneNote:"Jasper, Dawsonville",                                   households:24000, status:"available" },
-  { id:"GA-052", name:"Lumpkin / White Counties",            state:"GA", counties:["Lumpkin","White"],               zoneNote:"Dahlonega, Cleveland, Helen, Turnersville, Auraria",    households:22000, status:"available" },
-  { id:"GA-053", name:"Murray County",                       state:"GA", counties:["Murray"],                        zoneNote:"Chatsworth, Eton, Crandall, Cisco",                     households:18000, status:"available" },
-  { id:"GA-054", name:"Haralson / Polk Counties",            state:"GA", counties:["Haralson","Polk"],               zoneNote:"Buchanan, Bremen, Cedartown, Rockmart",                 households:26000, status:"available" },
-  // ── TIER 3 — COMBINED COUNTIES (Northeast Georgia) ───────────────────────────
-  { id:"GA-055", name:"Oglethorpe / Elbert Counties",        state:"GA", counties:["Oglethorpe","Elbert"],           zoneNote:"Lexington, Elberton, Crawford, Bowman",                 households:20000, status:"available" },
-  { id:"GA-056", name:"Banks / Madison Counties",            state:"GA", counties:["Banks","Madison"],               zoneNote:"Homer, Danielsville, Maysville, Commerce area",         households:20000, status:"available" },
-  { id:"GA-057", name:"Oconee / Greene Counties",            state:"GA", counties:["Oconee","Greene"],               zoneNote:"Watkinsville, Greensboro, Union Point",                 households:30000, status:"available" },
-  { id:"GA-058", name:"Morgan / Putnam Counties",            state:"GA", counties:["Morgan","Putnam"],               zoneNote:"Madison, Eatonton",                                     households:22000, status:"available" },
-  { id:"GA-059", name:"Jasper / Jones Counties",             state:"GA", counties:["Jasper","Jones"],                zoneNote:"Monticello, Gray, Juliette",                            households:20000, status:"available" },
-  { id:"GA-060", name:"McDuffie / Warren / Jefferson",       state:"GA", counties:["McDuffie","Warren","Jefferson"], zoneNote:"Thomson, Warrenton, Louisville",                        households:24000, status:"available" },
-  { id:"GA-061", name:"Wilkes / Lincoln / Taliaferro / Glascock", state:"GA", counties:["Wilkes","Lincoln","Taliaferro","Glascock"], zoneNote:"Washington, Lincolnton, Crawfordville, Gibson", households:18000, status:"available" },
-  // ── TIER 3 — COMBINED COUNTIES (Atlanta south / west) ────────────────────────
-  { id:"GA-062", name:"Pike / Lamar / Upson Counties",       state:"GA", counties:["Pike","Lamar","Upson"],          zoneNote:"Zebulon, Barnesville, Thomaston",                       households:28000, status:"available" },
-  { id:"GA-063", name:"Monroe / Butts Counties",             state:"GA", counties:["Monroe","Butts"],                zoneNote:"Forsyth, Jackson",                                      households:26000, status:"available" },
-  { id:"GA-064", name:"Harris County",                       state:"GA", counties:["Harris"],                        zoneNote:"Hamilton, Pine Mountain, Waverly Hall",                 households:20000, status:"available" },
-  { id:"GA-065", name:"Heard / Meriwether / Talbot Counties",state:"GA", counties:["Heard","Meriwether","Talbot"],   zoneNote:"Franklin, Greenville, Warm Springs, Talbotton",         households:20000, status:"available" },
-  // ── TIER 3 — COMBINED COUNTIES (Coastal Georgia) ─────────────────────────────
-  { id:"GA-066", name:"Bryan / Liberty Counties",            state:"GA", counties:["Bryan","Liberty"],               zoneNote:"Richmond Hill, Pemberton, Hinesville, Midway",          households:42000, status:"available" },
-  { id:"GA-067", name:"Camden County",                       state:"GA", counties:["Camden"],                        zoneNote:"Kingsland, St. Marys, Woodbine",                        households:24000, status:"available" },
-  { id:"GA-068", name:"Long / McIntosh / Charlton Counties", state:"GA", counties:["Long","McIntosh","Charlton"],    zoneNote:"Ludowici, Darien, Folkston",                            households:20000, status:"available" },
-  // ── TIER 3 — COMBINED COUNTIES (Central Georgia) ─────────────────────────────
-  { id:"GA-069", name:"Peach / Crawford Counties",           state:"GA", counties:["Peach","Crawford"],              zoneNote:"Fort Valley, Roberta, Byron area",                      households:22000, status:"available" },
-  { id:"GA-070", name:"Baldwin / Johnson / Washington / Hancock", state:"GA", counties:["Baldwin","Johnson","Washington","Hancock"], zoneNote:"Milledgeville, Wrightsville, Sandersville, Sparta", households:36000, status:"available" },
-  { id:"GA-071", name:"Twiggs / Bleckley / Laurens Counties",state:"GA", counties:["Twiggs","Bleckley","Laurens"],  zoneNote:"Jeffersonville, Cochran, Dublin",                       households:28000, status:"available" },
-  { id:"GA-072", name:"Dooly / Crisp Counties",              state:"GA", counties:["Dooly","Crisp"],                 zoneNote:"Vienna, Cordele",                                       households:22000, status:"available" },
-  { id:"GA-073", name:"Dodge / Montgomery / Telfair Counties",state:"GA", counties:["Dodge","Montgomery","Telfair"],zoneNote:"Eastman, Mount Vernon, McRae-Helena",                   households:22000, status:"available" },
-  { id:"GA-074", name:"Wheeler / Treutlen / Toombs Counties",state:"GA", counties:["Wheeler","Treutlen","Toombs"],  zoneNote:"Alamo, Soperton, Lyons, Vidalia",                       households:22000, status:"available" },
-  { id:"GA-075", name:"Wilcox / Pulaski / Wilkinson Counties",state:"GA", counties:["Wilcox","Pulaski","Wilkinson"],zoneNote:"Rochelle, Hawkinsville, Irwinton",                      households:20000, status:"available" },
-  { id:"GA-076", name:"Macon / Taylor / Marion Counties",    state:"GA", counties:["Macon","Taylor","Marion"],        zoneNote:"Oglethorpe, Butler, Buena Vista, Ideal",               households:16000, status:"available" },
-  // ── TIER 3 — COMBINED COUNTIES (Southwest Georgia) ───────────────────────────
-  { id:"GA-077", name:"Baker / Dougherty Counties",          state:"GA", counties:["Baker","Dougherty"],             zoneNote:"Albany, Newton, Leesburg",                              households:37000, status:"available" },
-  { id:"GA-078", name:"Sumter / Schley Counties",            state:"GA", counties:["Sumter","Schley"],               zoneNote:"Americus, Ellaville",                                   households:24000, status:"available" },
-  { id:"GA-079", name:"Terrell / Lee Counties",              state:"GA", counties:["Terrell","Lee"],                  zoneNote:"Dawson, Leesburg, Smithville",                          households:20000, status:"available" },
-  { id:"GA-080", name:"Randolph / Calhoun / Clay / Quitman", state:"GA", counties:["Randolph","Calhoun","Clay","Quitman"], zoneNote:"Cuthbert, Morgan, Fort Gaines, Georgetown",       households:14000, status:"available" },
-  { id:"GA-081", name:"Stewart / Webster / Chattahoochee",   state:"GA", counties:["Stewart","Webster","Chattahoochee"], zoneNote:"Lumpkin, Preston, Cusseta",                       households:12000, status:"available" },
-  { id:"GA-082", name:"Early / Seminole / Miller Counties",  state:"GA", counties:["Early","Seminole","Miller"],     zoneNote:"Blakely, Donalsonville, Colquitt",                      households:22000, status:"available" },
-  { id:"GA-083", name:"Decatur County",                      state:"GA", counties:["Decatur"],                        zoneNote:"Bainbridge, Attapulgus, Climax",                        households:22000, status:"available" },
-  { id:"GA-084", name:"Mitchell / Colquitt Counties",        state:"GA", counties:["Mitchell","Colquitt"],            zoneNote:"Camilla, Moultrie, Berlin",                             households:34000, status:"available" },
-  { id:"GA-085", name:"Worth / Turner Counties",             state:"GA", counties:["Worth","Turner"],                 zoneNote:"Sylvester, Ashburn, Isabella",                          households:22000, status:"available" },
-  { id:"GA-086", name:"Thomas / Brooks / Grady Counties",    state:"GA", counties:["Thomas","Brooks","Grady"],        zoneNote:"Thomasville, Quitman, Cairo",                           households:46000, status:"available" },
-  // ── TIER 3 — COMBINED COUNTIES (South Central / Southeast Georgia) ───────────
-  { id:"GA-087", name:"Ben Hill / Irwin / Berrien Counties", state:"GA", counties:["Ben Hill","Irwin","Berrien"],    zoneNote:"Fitzgerald, Ocilla, Nashville",                         households:28000, status:"available" },
-  { id:"GA-088", name:"Cook / Atkinson / Lanier Counties",   state:"GA", counties:["Cook","Atkinson","Lanier"],      zoneNote:"Adel, Pearson, Lakeland",                               households:20000, status:"available" },
-  { id:"GA-089", name:"Echols / Clinch Counties",            state:"GA", counties:["Echols","Clinch"],               zoneNote:"Statenville, Homerville",                               households:12000, status:"available" },
-  { id:"GA-090", name:"Emanuel / Candler Counties",          state:"GA", counties:["Emanuel","Candler"],             zoneNote:"Swainsboro, Metter",                                    households:20000, status:"available" },
-  { id:"GA-091", name:"Screven / Jenkins / Burke Counties",          state:"GA", counties:["Screven","Jenkins","Burke"],             zoneNote:"Sylvania, Millen, Waynesboro",                                      households:16000, status:"available" },
-  { id:"GA-092", name:"Evans / Tattnall Counties",           state:"GA", counties:["Evans","Tattnall"],              zoneNote:"Claxton, Reidsville, Collins",                           households:20000, status:"available" },
-  { id:"GA-093", name:"Appling / Jeff Davis Counties",       state:"GA", counties:["Appling","Jeff Davis"],          zoneNote:"Baxley, Hazlehurst",                                    households:22000, status:"available" },
-  { id:"GA-094", name:"Wayne / Brantley Counties",           state:"GA", counties:["Wayne","Brantley"],              zoneNote:"Jesup, Nahunta, Odum",                                  households:20000, status:"available" },
-  { id:"GA-095", name:"Ware / Pierce / Bacon Counties",      state:"GA", counties:["Ware","Pierce","Bacon"],         zoneNote:"Waycross, Blackshear, Alma",                            households:28000, status:"available" },
-  // ── METRO ADDITION — South Fulton (replaces the old Fulton-South split) ───────
-  { id:"GA-096", name:"South Fulton / Fairburn / Union City", state:"GA", counties:["Fulton"],          zoneNote:"Union City, Fairburn, Palmetto, South Fulton, Chattahoochee Hills", households:72000, status:"available" },
-];
-
-// Production seed: 95 territories covering all 159 GA counties.
-// Idempotent: if GA count is already ≥ 95, the seed is skipped.
-// On first run it clears stale placeholder rows before inserting the full set.
-async function seedStarterTerritories(): Promise<void> {
-  const [{ count }] = await db
-    .select({ count: rawSql<number>`count(*)::int` })
-    .from(territoriesTable)
-    .where(eq(territoriesTable.state, "GA"));
-
-  if (Number(count) >= 96) return; // already seeded — nothing to do
-
-  await db.delete(territoriesTable).where(eq(territoriesTable.state, "GA"));
-  await db.insert(territoriesTable).values(
-    GA_SEED.map(t => ({
-      id:         t.id,
-      name:       t.name,
-      state:      t.state,
-      counties:   t.counties,
-      zoneNote:   t.zoneNote,
-      households: t.households,
-      zones:      4,
-      status:     t.status,
-    })),
-  );
-}
-
-// Run seed once on startup (non-blocking; silently skips if table doesn't exist
-// yet — first `pnpm --filter @workspace/db run push` creates it).
-seedStarterTerritories().catch(() => {});
 
 // ─── Zod Schemas ──────────────────────────────────────────────────────────────
 const CreateTerritorySchema = z.object({
@@ -246,10 +100,8 @@ const ClaimSchema = z.object({
   dealer_phone:  z.string().max(40).optional().nullable(),
 });
 
-// ─── GET /api/territories?state=GA ────────────────────────────────────────────
+// ─── GET /api/territories ─────────────────────────────────────────────────────
 router.get("/territories", async (req, res): Promise<void> => {
-  // Ensure starter territories exist before serving the list
-  await seedStarterTerritories().catch(() => {});
   const state = typeof req.query.state === "string" ? req.query.state.toUpperCase() : null;
   const rows = state
     ? await db.select().from(territoriesTable).where(eq(territoriesTable.state, state))
@@ -616,34 +468,6 @@ router.get("/zip-to-county", async (req, res): Promise<void> => {
   }
 });
 
-// ─── Local data file resolver ─────────────────────────────────────────────────
-function resolveDataPath(filename: string): string {
-  // In production (esbuild bundle), _dirname = dist/
-  const prodPath = path.resolve(_dirname, "data", filename);
-  if (fs.existsSync(prodPath)) return prodPath;
-  // In development (tsx watch), _dirname = src/routes/
-  const devPath = path.resolve(_dirname, "..", "data", filename);
-  if (fs.existsSync(devPath)) return devPath;
-  throw new Error(`${filename} not found (checked dist/data/ and src/data/)`);
-}
-
-// ─── GET /api/georgia-zip-geojson ─────────────────────────────────────────────
-// Serves the local ga-zips.geojson file with in-memory cache.
-let gaZipGeoJsonCache: object | null = null;
-
-router.get("/georgia-zip-geojson", (req, res): void => {
-  if (gaZipGeoJsonCache) { res.json(gaZipGeoJsonCache); return; }
-  try {
-    const filePath = resolveDataPath("ga-zips.geojson");
-    gaZipGeoJsonCache = JSON.parse(fs.readFileSync(filePath, "utf-8"));
-    req.log.info("Cached GA ZIP GeoJSON");
-    res.json(gaZipGeoJsonCache);
-  } catch (err: any) {
-    req.log.error({ err: err?.message }, "Failed to serve GA ZIP GeoJSON");
-    res.status(500).json({ error: "Could not load ZIP GeoJSON" });
-  }
-});
-
 // ─── GET /api/territories/zip-assignments ─────────────────────────────────────
 // Returns ZIP→territory assignments.
 // Optional ?state=GA filters to only assignments whose territory belongs to that state.
@@ -723,14 +547,20 @@ function checkProposeRateLimit(ip: string): boolean {
 }
 
 const ProposeSchema = z.object({
-  zipCode:     z.string().min(5).max(10),
-  dealerName:  z.string().max(120).optional(),
-  dealerEmail: z.string().email().max(180).optional(),
-  dealerPhone: z.string().max(40).optional(),
-  isTest:      z.boolean().optional(),
+  zip:   z.string().trim().regex(/^\d{5}$/, "Enter a valid 5-digit ZIP code"),
+  city:  z.string().trim().min(1, "City is required").max(120),
+  state: z.string().trim().min(2, "State is required").max(40),
 });
 
+/** Unique, non-empty county GEOIDs across a proposal's hubs. */
+function proposalCountyGeoids(hubs: Array<{ countyGeoid: string }>): string[] {
+  return [...new Set(hubs.map(h => h.countyGeoid).filter(Boolean))];
+}
+
 // ── POST /api/territories/propose (public, rate-limited) ─────────────────────
+// Unified resolver for all 50 states. Requires ZIP + City + State. Returns one
+// of: an existing territory within 25mi, a fresh in-memory proposal (NOT saved
+// to the DB — persisted only when the dealer claims), or unavailable.
 router.post("/territories/propose", async (req, res): Promise<void> => {
   const ip = (req.ip ?? req.socket.remoteAddress ?? "unknown").split(",")[0]!.trim();
   if (!checkProposeRateLimit(ip)) {
@@ -740,90 +570,85 @@ router.post("/territories/propose", async (req, res): Promise<void> => {
 
   const parsed = ProposeSchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" });
+    return;
+  }
+  const { zip, city } = parsed.data;
+
+  // ZIP is authoritative for state + primary county.
+  const fromZip = await getCountyFromZip(zip);
+  if (!fromZip) {
+    res.status(404).json({ error: "We couldn't find that ZIP code. Please double-check it." });
+    return;
+  }
+  const { stateFips, stateName, stateAbbr, countyFips, countyName } = fromZip;
+
+  // Resolve a location: prefer the named city's centroid, fall back to the ZIP.
+  const cityNorm = city.toLowerCase();
+  const cityMatch = getCitiesInState(stateAbbr).find(c => c.name.toLowerCase() === cityNorm);
+  const loc = cityMatch
+    ? { lat: cityMatch.lat, lng: cityMatch.lng }
+    : getZipLocation(zip);
+  if (!loc) {
+    res.status(404).json({ error: "We couldn't locate that city/ZIP. Try a nearby larger town." });
     return;
   }
 
-  const { zipCode, dealerName, dealerEmail, dealerPhone, isTest } = parsed.data;
-  const dealerInfo =
-    dealerName && dealerEmail
-      ? { name: dealerName, email: dealerEmail, phone: dealerPhone ?? "" }
-      : undefined;
+  const result = await getTerritoryForLocation(
+    loc.lat, loc.lng, stateAbbr, stateFips, stateName, zip,
+  );
 
-  const result = await getTerritoryForZip(zipCode, dealerInfo, { isTest: isTest ?? false });
-  res.json(result);
-});
+  if (result.type === "existing" && result.territory) {
+    const t = result.territory as Record<string, any>;
+    const counties: string[] = Array.isArray(t.counties) ? t.counties : [];
+    res.json({
+      type: "existing",
+      territory: {
+        id: t.id,
+        name: t.name,
+        status: t.status,
+        state: t.state,
+        counties,
+        countyGeoids: [...getCountyGeoidsByShortNames(stateAbbr, counties)],
+        households: t.households ?? 0,
+        businessCount: t.businessCount ?? 0,
+        centroidLat: t.centroidLat ?? null,
+        centroidLng: t.centroidLng ?? null,
+      },
+    });
+    return;
+  }
 
-// ── GET /api/admin/territory-proposals ───────────────────────────────────────
-router.get("/admin/territory-proposals", requireAdmin, async (req, res): Promise<void> => {
-  const status = typeof req.query.status === "string" ? req.query.status : "pending_review";
-  const page  = Math.max(1, parseInt(String(req.query.page ?? "1"), 10));
-  const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit ?? "20"), 10)));
-  const offset = (page - 1) * limit;
+  if (result.type === "proposed" && result.proposals && result.proposals[0]) {
+    const p = result.proposals[0];
+    const countyGeoids = proposalCountyGeoids(p.hubs);
+    const countyShortNames = countyGeoids
+      .map(g => getCountyShortNameByGeoid(g))
+      .filter((n): n is string => !!n);
+    res.json({
+      type: "proposed",
+      proposal: {
+        proposedName: p.proposedName,
+        stateAbbr,
+        stateFips,
+        stateName,
+        zipCode: zip,
+        countyFips,
+        countyName,
+        centroidLat: p.centroidLat,
+        centroidLng: p.centroidLng,
+        households: p.totalHouseholds,
+        businessCount: p.totalBusinesses,
+        cities: p.topCities,
+        countyGeoids,
+        countyShortNames,
+        viabilityMessage: p.viabilityMessage,
+      },
+    });
+    return;
+  }
 
-  const rows = await db
-    .select()
-    .from(territoryProposalsTable)
-    .where(eq(territoryProposalsTable.status, status as "pending_review" | "approved" | "rejected"))
-    .orderBy(rawSql`created_at desc`)
-    .limit(limit)
-    .offset(offset);
-
-  const [{ total }] = await db
-    .select({ total: rawSql<number>`count(*)::int` })
-    .from(territoryProposalsTable)
-    .where(eq(territoryProposalsTable.status, status as "pending_review" | "approved" | "rejected"));
-
-  res.json({ proposals: rows, total, page, limit });
-});
-
-// ── GET /api/admin/territory-proposals/:id ───────────────────────────────────
-router.get("/admin/territory-proposals/:id", requireAdmin, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
-  const [row] = await db
-    .select()
-    .from(territoryProposalsTable)
-    .where(eq(territoryProposalsTable.id, id));
-  if (!row) { res.status(404).json({ error: "Proposal not found" }); return; }
-  res.json(row);
-});
-
-// ── POST /api/admin/territory-proposals/:id/approve ──────────────────────────
-router.post("/admin/territory-proposals/:id/approve", requireAdmin, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
-
-  const overrides = req.body?.overrides as { name?: string; status?: string } | undefined;
-  // Extract admin username from JWT (payload.sub or sub)
-  const auth = req.headers.authorization ?? "";
-  let adminUser = "admin";
-  try {
-    const payload = JSON.parse(
-      Buffer.from(auth.split(".")[1] ?? "", "base64url").toString()
-    );
-    adminUser = payload.sub ?? payload.email ?? "admin";
-  } catch { /* ignore */ }
-
-  const result = await approveTerritory(id, adminUser, overrides);
-  res.json({ ...result, message: "Territory approved and live" });
-});
-
-// ── POST /api/admin/territory-proposals/:id/reject ───────────────────────────
-router.post("/admin/territory-proposals/:id/reject", requireAdmin, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
-  const reason = typeof req.body?.reason === "string" ? req.body.reason : "No reason provided";
-
-  let adminUser = "admin";
-  try {
-    const auth = req.headers.authorization ?? "";
-    const payload = JSON.parse(Buffer.from(auth.split(".")[1] ?? "", "base64url").toString());
-    adminUser = payload.sub ?? payload.email ?? "admin";
-  } catch { /* ignore */ }
-
-  await rejectTerritory(id, adminUser, reason);
-  res.json({ ok: true });
+  res.json({ type: "unavailable", message: result.message ?? "No viable territory near this location." });
 });
 
 // ── GET /api/admin/census/county-score ───────────────────────────────────────
@@ -838,35 +663,6 @@ router.get("/admin/census/county-score", requireAdmin, async (req, res): Promise
     (await import("../lib/censusApi")).getTopCitiesInCounty(stateFips, countyFips),
   ]);
   res.json({ stateFips, countyFips, adReadyBusinessCount: count, topCities: cities });
-});
-
-// ─── GET /api/georgia-counties-geojson ────────────────────────────────────────
-// On first request, fetches the full Plotly counties GeoJSON, filters to Georgia
-// (FIPS prefix "13"), caches in memory, and serves all subsequent requests from
-// the cache without re-fetching. This prevents every page load from hitting
-// the external CDN and keeps the map load fast even if the CDN is slow.
-let gaGeoJsonCache: object | null = null;
-
-router.get("/georgia-counties-geojson", async (req, res): Promise<void> => {
-  if (gaGeoJsonCache) {
-    res.json(gaGeoJsonCache);
-    return;
-  }
-  try {
-    const upstream = await fetch(
-      "https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json",
-      { signal: AbortSignal.timeout(15000) },
-    );
-    if (!upstream.ok) throw new Error(`Upstream ${upstream.status}`);
-    const allCounties = await upstream.json() as any;
-    const gaFeatures = allCounties.features.filter((f: any) => f.id && String(f.id).startsWith("13"));
-    gaGeoJsonCache = { type: "FeatureCollection", features: gaFeatures };
-    req.log.info({ featureCount: gaFeatures.length }, "Cached Georgia GeoJSON");
-    res.json(gaGeoJsonCache);
-  } catch (err: any) {
-    req.log.error({ err: err?.message }, "Failed to fetch Georgia counties GeoJSON");
-    res.status(502).json({ error: "Could not load county GeoJSON" });
-  }
 });
 
 // ─── GET /api/counties-geojson?stateFips=XX ───────────────────────────────────

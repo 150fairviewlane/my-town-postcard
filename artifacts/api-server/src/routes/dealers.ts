@@ -9,9 +9,18 @@ import {
   campaignsTable,
   spotsTable,
   territoriesTable,
+  territoryProposalsTable,
 } from "@workspace/db";
 import { getStripeClient, isStripeConfigured } from "../lib/stripeClient";
 import { ensureDealerLandingPage } from "../lib/dealerLandingPage";
+import {
+  materializeTerritoryFromProposal,
+  findExistingTerritoryWithinMiles,
+} from "../lib/territoryBuilder";
+import {
+  sendTerritoryClaimedEmail,
+  sendTerritoryConflictEmail,
+} from "../lib/emails";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -337,6 +346,157 @@ router.post("/dealers", async (req, res): Promise<void> => {
   );
 
   res.json({ dealerId, checkoutUrl: session.url });
+});
+
+// ─── POST /api/dealers/claim-proposal ────────────────────────────────────────
+// Unified claim flow for an in-memory territory proposal returned by
+// POST /api/territories/propose. Persists the proposal (pending_payment),
+// creates/updates the dealer (pending_payment), and opens a Stripe Checkout
+// subscription session whose metadata references ONLY {proposalId, dealerId}.
+// The territory row is materialized later, by the webhook, on payment success.
+const ClaimProposalProposalSchema = z.object({
+  proposedName:     z.string().min(1).max(160),
+  stateAbbr:        z.string().min(2).max(2),
+  stateFips:        z.string().min(1).max(2),
+  stateName:        z.string().min(1).max(60),
+  zipCode:          z.string().regex(/^\d{5}$/),
+  countyFips:       z.string().min(1).max(5),
+  countyName:       z.string().min(1).max(120),
+  centroidLat:      z.number(),
+  centroidLng:      z.number(),
+  households:       z.number().int().nonnegative(),
+  businessCount:    z.number().int().nonnegative(),
+  cities:           z.array(z.string()).default([]),
+  countyShortNames: z.array(z.string()).default([]),
+});
+const ClaimProposalBodySchema = z.object({
+  name:     z.string().min(1).max(120),
+  email:    z.string().email().max(180),
+  phone:    z.string().max(40).optional(),
+  proposal: ClaimProposalProposalSchema,
+});
+
+router.post("/dealers/claim-proposal", async (req, res): Promise<void> => {
+  const parsed = ClaimProposalBodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    req.log.warn({ zodError: parsed.error.issues }, "POST /dealers/claim-proposal validation failed");
+    res.status(400).json({ error: "Please fill in all required fields and pick a valid territory." });
+    return;
+  }
+
+  if (!(await isStripeConfigured())) {
+    res.status(503).json({
+      error:
+        "Payments are not configured for this environment. Connect the Stripe integration to enable dealer signups.",
+    });
+    return;
+  }
+
+  const { name, email, phone, proposal } = parsed.data;
+
+  const [existing] = await db.select().from(dealersTable).where(eq(dealersTable.email, email));
+  if (existing && existing.status === "active") {
+    res.status(409).json({ error: "A dealer account with this email is already active." });
+    return;
+  }
+  if (existing && existing.status === "cancelled") {
+    res.status(409).json({
+      error:
+        "An earlier dealer account with this email was cancelled. Please contact support to reinstate it.",
+    });
+    return;
+  }
+
+  // Upsert dealer (pending_payment) + persist the proposal (pending_payment),
+  // linked together, in one transaction.
+  const { dealerId, portalToken, proposalId } = await db.transaction(async (tx) => {
+    let txDealerId: number;
+    let txPortalToken: string;
+    if (existing) {
+      txDealerId = existing.id;
+      txPortalToken = existing.portalToken ?? crypto.randomUUID();
+      await tx
+        .update(dealersTable)
+        .set({ name, phone: phone ?? null, homeZip: proposal.zipCode, portalToken: txPortalToken })
+        .where(eq(dealersTable.id, txDealerId));
+    } else {
+      const [created] = await tx
+        .insert(dealersTable)
+        .values({ name, email, phone: phone ?? null, homeZip: proposal.zipCode, status: "pending_payment" })
+        .returning({ id: dealersTable.id, portalToken: dealersTable.portalToken });
+      txDealerId = created.id;
+      txPortalToken = created.portalToken ?? crypto.randomUUID();
+    }
+
+    const [insertedProposal] = await tx
+      .insert(territoryProposalsTable)
+      .values({
+        zipCode:          proposal.zipCode,
+        stateFips:        proposal.stateFips,
+        stateAbbr:        proposal.stateAbbr,
+        countyFips:       proposal.countyFips,
+        countyName:       proposal.countyName,
+        proposedName:     proposal.proposedName,
+        proposedCounties: proposal.countyShortNames,
+        proposedCities:   proposal.cities,
+        businessCount:    proposal.businessCount,
+        households:       proposal.households,
+        centroidLat:      proposal.centroidLat,
+        centroidLng:      proposal.centroidLng,
+        status:           "pending_payment",
+        dealerId:         txDealerId,
+        dealerName:       name,
+        dealerEmail:      email,
+        dealerPhone:      phone ?? null,
+      })
+      .returning({ id: territoryProposalsTable.id });
+
+    return { dealerId: txDealerId, portalToken: txPortalToken, proposalId: insertedProposal.id };
+  });
+
+  const stripe = await getStripeClient();
+  const origin = getOrigin(req);
+  const meta = { kind: "territory", proposalId: String(proposalId), dealerId: String(dealerId) };
+
+  const session = await stripe.checkout.sessions.create({
+    mode: "subscription",
+    customer_email: email,
+    line_items: [
+      {
+        price_data: {
+          currency: "usd",
+          product_data: { name: "My Town Postcard — Dealer Setup Fee" },
+          unit_amount: SETUP_FEE_CENTS,
+        },
+        quantity: 1,
+      },
+      {
+        price_data: {
+          currency: "usd",
+          product_data: { name: `My Town Postcard — Dealer Subscription (${proposal.proposedName})` },
+          unit_amount: MONTHLY_FEE_CENTS,
+          recurring: { interval: "month" },
+        },
+        quantity: 1,
+      },
+    ],
+    metadata: meta,
+    subscription_data: { metadata: meta },
+    success_url: `${origin}/my-territory?token=${portalToken}&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${origin}/find-territory?cancelled=1`,
+  });
+
+  await db
+    .update(dealersTable)
+    .set({ stripeCheckoutSessionId: session.id })
+    .where(eq(dealersTable.id, dealerId));
+
+  req.log.info(
+    { dealerId, proposalId, sessionId: session.id, email },
+    "Created dealer + territory proposal claim + Stripe Checkout session",
+  );
+
+  res.json({ dealerId, proposalId, checkoutUrl: session.url });
 });
 
 router.get("/dealers/confirm", async (req, res): Promise<void> => {
@@ -739,4 +899,137 @@ export async function cancelDealerFromSubscription(subscription: any): Promise<n
   await setTerritoryStatusForDealer(dealer.id, "available");
 
   return dealer.id;
+}
+
+/**
+ * Refunds the most recent invoice and cancels the subscription for a territory
+ * claim that could not be honored (post-payment conflict). Also flips the
+ * dealer to "cancelled". Best-effort — logs but never throws on Stripe errors.
+ */
+async function refundAndCancelTerritoryClaim(
+  session: any,
+  dealerId: number | null,
+): Promise<void> {
+  const stripe = await getStripeClient();
+  const subId =
+    typeof session.subscription === "string"
+      ? session.subscription
+      : session.subscription?.id ?? null;
+  if (subId) {
+    try {
+      const sub = await stripe.subscriptions.retrieve(subId, {
+        expand: ["latest_invoice.payment_intent"],
+      });
+      const pi = (sub as any).latest_invoice?.payment_intent;
+      const piId = typeof pi === "string" ? pi : pi?.id ?? null;
+      if (piId) {
+        await stripe.refunds.create({ payment_intent: piId });
+      }
+      await stripe.subscriptions.cancel(subId);
+    } catch (err: any) {
+      logger.error({ err: err?.message, subId }, "Failed to refund/cancel territory claim subscription");
+    }
+  }
+  if (dealerId) {
+    await db
+      .update(dealersTable)
+      .set({ status: "cancelled", cancelledAt: new Date() })
+      .where(eq(dealersTable.id, dealerId));
+  }
+}
+
+/**
+ * Webhook activation for the unified territory-claim flow (metadata
+ * kind=territory). Idempotent. Materializes the territory from the referenced
+ * proposal on payment success, unless an overlapping territory appeared during
+ * checkout — in which case the claim is refunded and the dealer notified.
+ */
+export async function activateTerritoryClaimFromCheckoutSession(session: any): Promise<void> {
+  const meta = (session?.metadata ?? {}) as Record<string, string>;
+  const proposalId = meta.proposalId ? parseInt(String(meta.proposalId), 10) : null;
+  const dealerId = meta.dealerId ? parseInt(String(meta.dealerId), 10) : null;
+  if (!proposalId || !Number.isFinite(proposalId)) {
+    logger.warn({ sessionId: session?.id }, "territory checkout.session.completed missing proposalId — skipping");
+    return;
+  }
+
+  const [proposal] = await db
+    .select()
+    .from(territoryProposalsTable)
+    .where(eq(territoryProposalsTable.id, proposalId));
+  if (!proposal) {
+    logger.warn({ proposalId }, "territory claim: proposal not found — skipping");
+    return;
+  }
+
+  // Idempotency: a territory already materialized from this proposal means a
+  // prior (possibly retried) webhook already handled it. Just ensure the dealer
+  // is active and exit.
+  const [existingTerritory] = await db
+    .select({ id: territoriesTable.id })
+    .from(territoriesTable)
+    .where(eq(territoriesTable.sourceProposalId, proposalId));
+  if (existingTerritory) {
+    await activateDealerFromCheckoutSession(session);
+    return;
+  }
+  if (proposal.status === "claimed") return; // defensive
+
+  // Post-payment 25-mile conflict re-check against taken/pending territories.
+  if (proposal.centroidLat != null && proposal.centroidLng != null) {
+    const conflict = await findExistingTerritoryWithinMiles(
+      proposal.centroidLat,
+      proposal.centroidLng,
+      proposal.stateAbbr,
+      25,
+      { statuses: ["taken", "pending"] },
+    );
+    if (conflict) {
+      await db
+        .update(territoryProposalsTable)
+        .set({ status: "conflict", reviewedAt: new Date(), notes: `Conflict with ${String(conflict.id)}` })
+        .where(eq(territoryProposalsTable.id, proposalId));
+      await refundAndCancelTerritoryClaim(session, dealerId);
+      if (proposal.dealerEmail) {
+        await sendTerritoryConflictEmail({
+          dealerName: proposal.dealerName ?? "Dealer",
+          dealerEmail: proposal.dealerEmail,
+          territoryName: proposal.proposedName,
+        });
+      }
+      logger.info(
+        { proposalId, dealerId, conflictTerritoryId: String(conflict.id) },
+        "Territory claim refunded — overlap appeared during checkout",
+      );
+      return;
+    }
+  }
+
+  // No conflict — materialize the territory, mark the proposal claimed, and
+  // activate the dealer (flips active, stores Stripe ids, builds landing page).
+  const territoryId = await materializeTerritoryFromProposal(proposal, dealerId);
+  await db
+    .update(territoryProposalsTable)
+    .set({ status: "claimed", territoryId, reviewedAt: new Date() })
+    .where(eq(territoryProposalsTable.id, proposalId));
+  await activateDealerFromCheckoutSession(session);
+
+  let portalToken: string | null = null;
+  if (dealerId) {
+    const [d] = await db
+      .select({ portalToken: dealersTable.portalToken })
+      .from(dealersTable)
+      .where(eq(dealersTable.id, dealerId));
+    portalToken = d?.portalToken ?? null;
+  }
+  if (proposal.dealerEmail) {
+    await sendTerritoryClaimedEmail({
+      dealerName: proposal.dealerName ?? "Dealer",
+      dealerEmail: proposal.dealerEmail,
+      territoryName: proposal.proposedName,
+      cities: Array.isArray(proposal.proposedCities) ? proposal.proposedCities : [],
+      portalToken,
+    });
+  }
+  logger.info({ proposalId, dealerId, territoryId }, "Territory claim activated from checkout session");
 }

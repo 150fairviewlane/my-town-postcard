@@ -339,68 +339,69 @@ if(_sp.get('zip') && /^\d{5}$/.test(_sp.get('zip'))){
   <div class="sidebar">
     <div class="sidebar-hdr">
       <div class="sidebar-title">Find Your Territory</div>
-      <div class="sidebar-sub">Enter your zip code or county to see available territories near you</div>
+      <div class="sidebar-sub">Enter your ZIP, city, and state to see what's available in your area</div>
     </div>
 
     <div class="search-panel">
-      <span class="search-label">Search by Zip Code</span>
+      <span class="search-label">Your Location</span>
       <div class="search-row">
         <input type="text" class="search-input" id="zipInput"
-          placeholder="e.g. 30523"
-          maxlength="5"
-          onkeypress="if(event.key==='Enter') searchByZip()">
-        <button class="search-btn" onclick="searchByZip()">Find</button>
+          placeholder="ZIP (e.g. 30523)" maxlength="5" style="flex:0 0 120px"
+          onkeypress="if(event.key==='Enter') runSearch()">
+        <input type="text" class="search-input" id="cityInput"
+          placeholder="City (e.g. Clarkesville)"
+          onkeypress="if(event.key==='Enter') runSearch()">
       </div>
-
-      <div class="divider-txt">or browse by county</div>
-
-      <select class="county-select" id="countySelect" onchange="searchByCounty()">
-        <option value="">— Select a Georgia County —</option>
-        <!-- Populated by JS -->
-      </select>
+      <div class="search-row">
+        <select class="county-select" id="stateSelect" style="flex:1;margin:0">
+          <option value="">— Select state —</option>
+        </select>
+        <button class="search-btn" id="searchBtn" onclick="runSearch()">Find</button>
+      </div>
     </div>
 
-    <!-- Selected territory detail -->
     <div class="results-panel">
+
+      <!-- Loading -->
+      <div class="sidebar-load" id="sidebarLoad">
+        <div class="sidebar-load-spin"></div>
+        <div class="sidebar-load-lbl">Analyzing Your Area</div>
+        <div class="sidebar-load-sub">Checking territory availability…</div>
+      </div>
+
+      <!-- Existing territory detail -->
       <div class="selected-detail" id="selectedDetail">
         <div class="sd-title" id="sdName"></div>
         <div class="sd-counties" id="sdCounties"></div>
-        <div class="pc-mailing-areas" id="sdMailingAreas" style="display:none">
-          <div class="pc-mailing-areas-label">Key Mailing Areas</div>
-          <div id="sdMailingAreasList"></div>
+        <div class="pc-mailing-areas" id="sdMailing" style="display:none">
+          <div class="pc-mailing-areas-label">Mailing Areas</div>
+          <div id="sdMailingList"></div>
+          <div class="eddm-footer">≈5,000 households via USPS EDDM</div>
         </div>
         <div class="sd-rows">
           <div class="sd-row"><span class="sd-label">Status</span><span class="sd-val" id="sdStatus"></span></div>
           <div class="sd-row"><span class="sd-label">Monthly Fee</span><span class="sd-val">$99 / month</span></div>
         </div>
-        <button class="claim-btn" id="claimBtn" onclick="openModal()">✦ Claim This Territory</button>
+        <button class="claim-btn" id="claimBtn" onclick="openExistingModal()">✦ Claim This Territory — $99/mo</button>
+        <div class="taken-msg" id="takenMsg" style="display:none"></div>
       </div>
 
-      <!-- Sidebar loading (proposal analysis) -->
-      <div class="sidebar-load" id="sidebarLoad">
-        <div class="sidebar-load-spin"></div>
-        <div class="sidebar-load-lbl">Analyzing Your Area</div>
-        <div class="sidebar-load-sub">Checking business density &amp; availability…</div>
-      </div>
-
-      <!-- Proposal card (unified — splits are merged, zones shown as bullets) -->
+      <!-- Proposed territory -->
       <div class="proposal-card" id="proposalCard">
         <div class="pc-label">🗺 Proposed Territory</div>
         <div class="pc-name" id="pcName"></div>
         <div class="pc-counties" id="pcCounties"></div>
-        <div id="pcMarketTier" style="display:none;margin:8px 0 4px"></div>
-        <div class="sd-rows">
-          <div class="sd-row" id="pcZonesRow"><span class="sd-label">Mailing Areas</span><span class="sd-val" id="pcZones"></span></div>
-          <div class="sd-row"><span class="sd-label">Monthly Fee</span><span class="sd-val">$99 / month</span></div>
-          <div class="sd-row"><span class="sd-label">Status</span><span class="sd-val" style="color:#fde68a">Pending Approval</span></div>
+        <div class="pc-mailing-areas" id="pcMailing" style="display:none">
+          <div class="pc-mailing-areas-label">Mailing Areas</div>
+          <div id="pcMailingList"></div>
+          <div class="eddm-footer">≈5,000 households via USPS EDDM</div>
         </div>
-        <div class="pc-mailing-areas" id="pcMailingAreas" style="display:none">
-          <div class="pc-mailing-areas-label">Key Mailing Areas</div>
-          <div id="pcMailingAreasList"></div>
+        <div class="sd-rows">
+          <div class="sd-row"><span class="sd-label">Monthly Fee</span><span class="sd-val">$99 / month</span></div>
         </div>
         <hr class="pc-divider">
-        <div class="pc-note" id="pcNote">This territory is being created for your area. Reserve it now and we'll activate it within 24 hours.</div>
-        <button class="reserve-btn" onclick="openProposalModal()">✦ Reserve This Territory — $99/mo</button>
+        <div class="pc-note">Exclusive dealer rights across every mailing area above. Claim now and your territory goes live the moment payment is confirmed — no waiting, no approvals.</div>
+        <button class="reserve-btn" onclick="openProposalModal()">✦ Claim This Territory — $99/mo</button>
       </div>
 
       <!-- Unavailable -->
@@ -416,1015 +417,452 @@ if(_sp.get('zip') && /^\d{5}$/.test(_sp.get('zip'))){
         <div class="success-body" id="successBody"></div>
       </div>
 
-      <div class="results-hdr" id="resultsHdr" style="display:none">
-        <div class="results-title">Nearby Territories</div>
-        <div class="results-count" id="resultsCount"></div>
-      </div>
-
+      <!-- Idle / list -->
       <div id="territoryList">
-        <div class="no-results">Enter your zip code above or select a county to find available territories near you.</div>
+        <div class="no-results">Enter your ZIP, city, and state above, then press Find to see your territory.</div>
       </div>
     </div>
 
     <div class="legend">
       <div class="legend-item"><div class="legend-dot" style="background:#86efac;border:1px solid #16a34a"></div>Available</div>
       <div class="legend-item"><div class="legend-dot" style="background:#fca5a5;border:1px solid #dc2626"></div>Taken</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#fde68a;border:1px solid #d97706"></div>Pending</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#fde68a;border:1px solid #d97706"></div>Proposed</div>
     </div>
   </div>
 
   <!-- ══ MAP ══ -->
   <div class="map-wrap">
     <div id="map"></div>
-    <div class="map-tip" id="mapTip">Enter your zip code or select a county to find territories</div>
+    <div class="map-tip" id="mapTip">Enter your ZIP, city, and state to find your territory</div>
   </div>
-
 </div>
 
+<style>
+  .eddm-footer{font-size:11px;color:rgba(255,255,255,.55);font-style:italic;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.08)}
+  .taken-msg{text-align:center;font-size:12px;color:#fca5a5;margin-top:4px;line-height:1.5}
+  #stateSelect{height:38px}
+</style>
+
 <script>
-// ══════════════════════════════════════════════════════════════
-// TERRITORY DATA — loaded from API on init
-// ══════════════════════════════════════════════════════════════
-let TERRITORIES = [];
-// zip (string) → territoryId (string) — populated by loadZipGeoJSON
-let zipAssignments = {};
-
-function filterCities(zoneNote) {
-  if(!zoneNote) return '';
-  return zoneNote.split(',')
-    .map(s => s.trim())
-    .filter(s => !/\barea$/i.test(s))
-    .join(', ');
-}
-
-// Client-side cache: territory ID → mailing area array (or null if fetch failed)
-const _mailingAreaCache = new Map();
-
-function renderMailingAreas(wrap, list, areas) {
-  if(!areas || areas.length === 0){ wrap.style.display='none'; return; }
-  const MAX = 6;
-  const shown = areas.slice(0, MAX);
-  const extra = areas.length - MAX;
-  list.innerHTML = shown.map((a, i) => {
-    return `<div class="pc-mailing-area-item">
-      <span style="font-weight:600;color:#fff">Mailing Area ${i+1} \u2014 ${a.name}</span>
-    </div>`;
-  }).join('') + (extra > 0 ? `<div class="pc-mailing-area-item" style="opacity:.6">+ ${extra} more</div>` : '')
-  + '<div style="font-size:10.5px;color:rgba(255,255,255,.5);margin-top:6px">Each mailing area reaches approximately 5,000 local households via USPS EDDM.</div>';
-  wrap.style.display = '';
-}
-
-async function loadTerritories() {
-  const res = await fetch('/api/territories?state=GA');
-  if (!res.ok) throw new Error('Failed to load territories');
-  const rows = await res.json();
-  TERRITORIES = rows
-    .filter(t => t.centroidLat != null && t.centroidLng != null)
-    .map(t => ({
-      id:         t.id,
-      name:       t.name,
-      counties:   Array.isArray(t.counties) ? t.counties : [],
-      households: t.households,
-      status:     t.status,
-      zoneNote:   t.zoneNote || '',
-      lat:        t.centroidLat,
-      lng:        t.centroidLng,
-    }));
-}
-
-// All Georgia counties for dropdown (alphabetical)
-const GA_COUNTIES = [
-  'Appling','Atkinson','Bacon','Baker','Baldwin','Banks','Barrow','Bartow',
-  'Ben Hill','Berrien','Bibb','Bleckley','Brantley','Brooks','Bryan','Bulloch',
-  'Burke','Butts','Calhoun','Camden','Candler','Carroll','Catoosa','Charlton',
-  'Chatham','Chattahoochee','Cherokee','Clarke','Clay','Clayton','Clinch',
-  'Cobb','Coffee','Colquitt','Columbia','Cook','Coweta','Crawford','Crisp',
-  'Dade','Dawson','Decatur','DeKalb','Dodge','Dooly','Dougherty','Douglas',
-  'Early','Echols','Effingham','Elbert','Emanuel','Evans','Fannin','Fayette',
-  'Floyd','Forsyth','Franklin','Fulton','Gilmer','Glascock','Glynn','Gordon',
-  'Grady','Greene','Gwinnett','Habersham','Hall','Hancock','Haralson','Harris',
-  'Hart','Heard','Henry','Houston','Irwin','Jackson','Jasper','Jeff Davis',
-  'Jefferson','Jenkins','Johnson','Jones','Lamar','Lanier','Laurens','Lee',
-  'Lincoln','Long','Lowndes','Lumpkin','McDuffie','McIntosh','Macon','Madison',
-  'Marion','Meriwether','Miller','Mitchell','Monroe','Montgomery','Morgan',
-  'Murray','Muscogee','Newton','Oconee','Oglethorpe','Paulding','Peach',
-  'Pickens','Pierce','Pike','Polk','Pulaski','Putnam','Quitman','Rabun',
-  'Randolph','Richmond','Rockdale','Schley','Screven','Seminole','Spalding',
-  'Stephens','Stewart','Sumter','Talbot','Taliaferro','Tattnall','Taylor',
-  'Telfair','Terrell','Thomas','Tift','Toombs','Towns','Treutlen','Troup',
-  'Turner','Twiggs','Union','Upson','Walker','Walton','Ware','Warren',
-  'Washington','Wayne','Webster','Wheeler','White','Whitfield','Wilcox',
-  'Wilkes','Wilkinson','Worth'
-];
-
-// Georgia county centroids (lat/lng) for proximity lookup
-const COUNTY_CENTROIDS = {
-  'Appling':{lat:31.75,lng:-82.29},'Atkinson':{lat:31.30,lng:-82.88},'Bacon':{lat:31.55,lng:-82.45},
-  'Baker':{lat:31.33,lng:-84.43},'Baldwin':{lat:33.07,lng:-83.25},'Banks':{lat:34.37,lng:-83.49},
-  'Barrow':{lat:33.99,lng:-83.72},'Bartow':{lat:34.24,lng:-84.84},'Ben Hill':{lat:31.77,lng:-83.22},
-  'Berrien':{lat:31.28,lng:-83.24},'Bibb':{lat:32.84,lng:-83.64},'Bleckley':{lat:32.43,lng:-83.33},
-  'Brantley':{lat:31.19,lng:-81.98},'Brooks':{lat:30.83,lng:-83.58},'Bryan':{lat:32.03,lng:-81.43},
-  'Bulloch':{lat:32.41,lng:-81.78},'Burke':{lat:33.05,lng:-82.00},'Butts':{lat:33.30,lng:-84.00},
-  'Calhoun':{lat:31.53,lng:-84.74},'Camden':{lat:30.88,lng:-81.65},'Candler':{lat:32.40,lng:-82.07},
-  'Carroll':{lat:33.58,lng:-85.08},'Catoosa':{lat:34.90,lng:-85.12},'Charlton':{lat:30.78,lng:-82.13},
-  'Chatham':{lat:32.03,lng:-81.10},'Chattahoochee':{lat:32.35,lng:-84.79},'Cherokee':{lat:34.24,lng:-84.47},
-  'Clarke':{lat:33.95,lng:-83.37},'Clay':{lat:31.63,lng:-84.99},'Clayton':{lat:33.55,lng:-84.37},
-  'Clinch':{lat:31.00,lng:-82.70},'Cobb':{lat:33.92,lng:-84.58},'Coffee':{lat:31.55,lng:-82.85},
-  'Colquitt':{lat:31.17,lng:-83.77},'Columbia':{lat:33.55,lng:-82.18},'Cook':{lat:31.15,lng:-83.43},
-  'Coweta':{lat:33.35,lng:-84.77},'Crawford':{lat:32.73,lng:-84.00},'Crisp':{lat:31.93,lng:-83.77},
-  'Dade':{lat:34.85,lng:-85.49},'Dawson':{lat:34.44,lng:-84.17},'Decatur':{lat:30.87,lng:-84.58},
-  'DeKalb':{lat:33.77,lng:-84.22},'Dodge':{lat:32.17,lng:-83.17},'Dooly':{lat:32.17,lng:-83.73},
-  'Dougherty':{lat:31.52,lng:-84.19},'Douglas':{lat:33.70,lng:-84.77},'Early':{lat:31.32,lng:-84.89},
-  'Echols':{lat:30.70,lng:-82.88},'Effingham':{lat:32.37,lng:-81.33},'Elbert':{lat:34.12,lng:-82.87},
-  'Emanuel':{lat:32.60,lng:-82.31},'Evans':{lat:32.19,lng:-81.89},'Fannin':{lat:34.86,lng:-84.32},
-  'Fayette':{lat:33.42,lng:-84.47},'Floyd':{lat:34.27,lng:-85.22},'Forsyth':{lat:34.21,lng:-84.12},
-  'Franklin':{lat:34.38,lng:-83.22},'Fulton':{lat:33.79,lng:-84.47},'Gilmer':{lat:34.68,lng:-84.47},
-  'Glascock':{lat:33.23,lng:-82.62},'Glynn':{lat:31.21,lng:-81.49},'Gordon':{lat:34.50,lng:-84.87},
-  'Grady':{lat:30.87,lng:-84.19},'Greene':{lat:33.58,lng:-83.15},'Gwinnett':{lat:33.96,lng:-84.02},
-  'Habersham':{lat:34.63,lng:-83.53},'Hall':{lat:34.30,lng:-83.82},'Hancock':{lat:33.27,lng:-83.00},
-  'Haralson':{lat:33.79,lng:-85.22},'Harris':{lat:32.83,lng:-84.91},'Hart':{lat:34.35,lng:-82.97},
-  'Heard':{lat:33.30,lng:-85.13},'Henry':{lat:33.45,lng:-84.15},'Houston':{lat:32.47,lng:-83.65},
-  'Irwin':{lat:31.60,lng:-83.29},'Jackson':{lat:34.13,lng:-83.56},'Jasper':{lat:33.32,lng:-84.00},
-  'Jeff Davis':{lat:31.80,lng:-82.63},'Jefferson':{lat:33.05,lng:-82.42},'Jenkins':{lat:32.80,lng:-81.97},
-  'Johnson':{lat:32.70,lng:-82.65},'Jones':{lat:33.02,lng:-83.57},'Lamar':{lat:33.07,lng:-84.14},
-  'Lanier':{lat:31.03,lng:-83.06},'Laurens':{lat:32.47,lng:-82.93},'Lee':{lat:31.77,lng:-84.14},
-  'Lincoln':{lat:33.79,lng:-82.48},'Long':{lat:31.77,lng:-81.73},'Lowndes':{lat:30.83,lng:-83.28},
-  'Lumpkin':{lat:34.56,lng:-83.98},'McDuffie':{lat:33.46,lng:-82.47},'McIntosh':{lat:31.53,lng:-81.40},
-  'Macon':{lat:32.35,lng:-84.04},'Madison':{lat:33.84,lng:-83.22},'Marion':{lat:32.35,lng:-84.53},
-  'Meriwether':{lat:33.07,lng:-84.68},'Miller':{lat:31.17,lng:-84.73},'Mitchell':{lat:31.24,lng:-84.18},
-  'Monroe':{lat:33.03,lng:-83.90},'Montgomery':{lat:32.18,lng:-82.54},'Morgan':{lat:33.59,lng:-83.49},
-  'Murray':{lat:34.79,lng:-84.75},'Muscogee':{lat:32.51,lng:-84.97},'Newton':{lat:33.55,lng:-83.85},
-  'Oconee':{lat:33.81,lng:-83.43},'Oglethorpe':{lat:33.88,lng:-83.07},'Paulding':{lat:33.92,lng:-84.87},
-  'Peach':{lat:32.56,lng:-83.83},'Pickens':{lat:34.46,lng:-84.47},'Pierce':{lat:31.35,lng:-82.21},
-  'Pike':{lat:33.09,lng:-84.38},'Polk':{lat:34.00,lng:-85.19},'Pulaski':{lat:32.23,lng:-83.47},
-  'Putnam':{lat:33.32,lng:-83.37},'Quitman':{lat:31.87,lng:-85.03},'Rabun':{lat:34.88,lng:-83.40},
-  'Randolph':{lat:31.78,lng:-84.74},'Richmond':{lat:33.37,lng:-82.07},'Rockdale':{lat:33.65,lng:-84.02},
-  'Schley':{lat:32.27,lng:-84.31},'Screven':{lat:32.77,lng:-81.62},'Seminole':{lat:30.93,lng:-84.88},
-  'Spalding':{lat:33.25,lng:-84.27},'Stephens':{lat:34.56,lng:-83.47},'Stewart':{lat:32.08,lng:-84.83},
-  'Sumter':{lat:32.07,lng:-84.19},'Talbot':{lat:32.70,lng:-84.53},'Taliaferro':{lat:33.57,lng:-82.88},
-  'Tattnall':{lat:32.05,lng:-82.07},'Taylor':{lat:32.55,lng:-84.25},'Telfair':{lat:31.90,lng:-82.95},
-  'Terrell':{lat:31.77,lng:-84.43},'Thomas':{lat:30.85,lng:-83.92},'Tift':{lat:31.45,lng:-83.52},
-  'Toombs':{lat:32.12,lng:-82.32},'Towns':{lat:34.92,lng:-83.73},'Treutlen':{lat:32.40,lng:-82.56},
-  'Troup':{lat:33.03,lng:-85.03},'Turner':{lat:31.72,lng:-83.62},'Twiggs':{lat:32.67,lng:-83.42},
-  'Union':{lat:34.83,lng:-83.99},'Upson':{lat:32.89,lng:-84.28},'Walker':{lat:34.74,lng:-85.38},
-  'Walton':{lat:33.77,lng:-83.72},'Ware':{lat:31.05,lng:-82.45},'Warren':{lat:33.41,lng:-82.68},
-  'Washington':{lat:32.97,lng:-82.82},'Wayne':{lat:31.55,lng:-81.93},'Webster':{lat:32.05,lng:-84.55},
-  'Wheeler':{lat:32.10,lng:-82.73},'White':{lat:34.64,lng:-83.73},'Whitfield':{lat:34.76,lng:-84.97},
-  'Wilcox':{lat:31.97,lng:-83.43},'Wilkes':{lat:33.78,lng:-82.73},'Wilkinson':{lat:32.80,lng:-83.18},
-  'Worth':{lat:31.55,lng:-83.87}
+// ─── State reference: abbr → [name, FIPS] (50 states + DC) ────────────────────
+const STATES = {
+  AL:["Alabama","01"],AK:["Alaska","02"],AZ:["Arizona","04"],AR:["Arkansas","05"],
+  CA:["California","06"],CO:["Colorado","08"],CT:["Connecticut","09"],DE:["Delaware","10"],
+  DC:["District of Columbia","11"],FL:["Florida","12"],GA:["Georgia","13"],HI:["Hawaii","15"],
+  ID:["Idaho","16"],IL:["Illinois","17"],IN:["Indiana","18"],IA:["Iowa","19"],
+  KS:["Kansas","20"],KY:["Kentucky","21"],LA:["Louisiana","22"],ME:["Maine","23"],
+  MD:["Maryland","24"],MA:["Massachusetts","25"],MI:["Michigan","26"],MN:["Minnesota","27"],
+  MS:["Mississippi","28"],MO:["Missouri","29"],MT:["Montana","30"],NE:["Nebraska","31"],
+  NV:["Nevada","32"],NH:["New Hampshire","33"],NJ:["New Jersey","34"],NM:["New Mexico","35"],
+  NY:["New York","36"],NC:["North Carolina","37"],ND:["North Dakota","38"],OH:["Ohio","39"],
+  OK:["Oklahoma","40"],OR:["Oregon","41"],PA:["Pennsylvania","42"],RI:["Rhode Island","44"],
+  SC:["South Carolina","45"],SD:["South Dakota","46"],TN:["Tennessee","47"],TX:["Texas","48"],
+  UT:["Utah","49"],VT:["Vermont","50"],VA:["Virginia","51"],WA:["Washington","53"],
+  WV:["West Virginia","54"],WI:["Wisconsin","55"],WY:["Wyoming","56"],
 };
 
-// ══════════════════════════════════════════════════════════════
-// MAP SETUP
-// ══════════════════════════════════════════════════════════════
-let map, userMarker, selectedTerritoryId = null;
-// territoryLayers: Map<territoryId, {layers: L.GeoJSON[], territory: object}>
-const territoryLayers = new Map();
-// ZIP interaction overlay — kept on top so per-ZIP tooltips work after bringToFront
-let zipInteractionLayer = null;
+let map;
+let selectedClaim = null;            // {mode:'existing'|'proposed', ...}
+const _geoCache  = new Map();        // stateFips → Promise<FeatureCollection|null>
+let searchLayers = [];               // polygons drawn for the active search result
 
-async function initMap(){
-  // Load territories from API first so the GeoJSON layer can color them
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function $(id){ return document.getElementById(id); }
+
+function hideLoadingOverlay(){
+  const o = $('loadingOverlay');
+  if(o) o.style.display = 'none';
+}
+
+function showToast(msg){
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._h);
+  t._h = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+function hideAllCards(){
+  ['selectedDetail','proposalCard','unavailCard','successCard'].forEach(id => {
+    const el = $(id);
+    el.classList.remove('visible');
+    el.style.display = '';   // let CSS .visible toggle handle display
+  });
+  $('territoryList').innerHTML = '';
+}
+
+function clearSearchLayers(){
+  searchLayers.forEach(l => { try { map.removeLayer(l); } catch(e){} });
+  searchLayers = [];
+}
+
+function stateGeo(stateFips){
+  if(_geoCache.has(stateFips)) return _geoCache.get(stateFips);
+  const p = fetch(`/api/counties-geojson?stateFips=${stateFips}`)
+    .then(r => r.ok ? r.json() : null)
+    .catch(() => null);
+  _geoCache.set(stateFips, p);
+  return p;
+}
+
+function countyStyle(status){
+  const styles = {
+    available:{fillColor:'#86efac',fillOpacity:.50,color:'#16a34a',weight:1},
+    taken:    {fillColor:'#fca5a5',fillOpacity:.50,color:'#dc2626',weight:1},
+    proposed: {fillColor:'#fde68a',fillOpacity:.60,color:'#d97706',weight:2},
+    none:     {fillColor:'#d4c9ba',fillOpacity:.20,color:'#9ca3af',weight:.5},
+  };
+  return styles[status] || styles.none;
+}
+
+// Match GeoJSON county features for a state by FIPS geoid and/or county short name.
+function pickFeatures(geo, stateFips, geoids, names){
+  const gset = new Set((geoids || []).map(g => String(g)));
+  const nset = new Set((names || []).map(n => String(n).toLowerCase()));
+  return geo.features.filter(f => {
+    if(!String(f.id).startsWith(stateFips)) return false;
+    if(gset.size && gset.has(String(f.id))) return true;
+    const nm = String((f.properties && f.properties.NAME) || '').toLowerCase();
+    if(nset.size && nset.has(nm)) return true;
+    return false;
+  });
+}
+
+function fitTo(layer){
   try {
-    await loadTerritories();
-  } catch(e) {
-    console.warn('Territory load failed, map will show uncolored counties', e);
-  }
+    const b = layer.getBounds();
+    if(b.isValid()) map.fitBounds(b.pad(0.25));
+  } catch(e){}
+}
 
-  map = L.map('map', { zoomControl:true }).setView([32.8, -83.4], 7);
+// ─── Map init + draw all existing territories ─────────────────────────────────
+async function initMap(){
+  // Populate state dropdown
+  const sel = $('stateSelect');
+  Object.keys(STATES).sort((a,b) => STATES[a][0].localeCompare(STATES[b][0]))
+    .forEach(abbr => {
+      const o = document.createElement('option');
+      o.value = abbr; o.textContent = STATES[abbr][0];
+      sel.appendChild(o);
+    });
 
+  map = L.map('map', { zoomControl:true }).setView([39.5, -98.35], 4);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     maxZoom:18,
   }).addTo(map);
 
-  // Load Georgia ZIP GeoJSON and assignments from our backend endpoints
-  loadZipGeoJSON();
-}
+  await loadAllTerritories();
 
-async function loadZipGeoJSON(){
-  try {
-    const [geoRes, assignRes] = await Promise.all([
-      fetch('/api/georgia-zip-geojson'),
-      fetch('/api/territories/zip-assignments'),
-    ]);
-    if(!geoRes.ok || !assignRes.ok) throw new Error('Fetch failed');
-    const [gaZipGeoJSON, assignRows] = await Promise.all([
-      geoRes.json(),
-      assignRes.json(),
-    ]);
-    // Populate global zip→territoryId lookup
-    zipAssignments = {};
-    assignRows.forEach(r => { zipAssignments[r.zip] = r.territoryId; });
-    renderZipLayer(gaZipGeoJSON);
-    // Auto-search if ?zip= was passed from the dealer signup flow
-    const urlZip = new URLSearchParams(window.location.search).get('zip');
-    if(urlZip && /^\d{5}$/.test(urlZip)){
-      document.getElementById('zipInput').value = urlZip;
-      await searchByZip();
-    }
-  } catch(e) {
-    console.warn('ZIP GeoJSON load failed, using marker-based display', e);
-    renderMarkersOnly();
-  }
-}
+  // Pre-fill from query params and auto-search if complete
+  const sp = new URLSearchParams(location.search);
+  if(sp.get('zip'))   $('zipInput').value  = sp.get('zip');
+  if(sp.get('city'))  $('cityInput').value = sp.get('city');
+  const st = (sp.get('state') || '').toUpperCase();
+  if(st && STATES[st]) $('stateSelect').value = st;
 
-function renderZipLayer(geojson){
-  const territoryMap = {};
-  TERRITORIES.forEach(t => { territoryMap[t.id] = t; });
-
-  // Group ZIP features by territory
-  const byTerritory = {};   // territoryId → Feature[]
-  const unassignedFeatures = [];
-
-  geojson.features.forEach(f => {
-    const tId = zipAssignments[f.properties.ZCTA5CE10];
-    if(tId && territoryMap[tId]){
-      if(!byTerritory[tId]) byTerritory[tId] = [];
-      byTerritory[tId].push(f);
-    } else {
-      unassignedFeatures.push(f);
-    }
-  });
-
-  // ── Pass 1: Merged territory base shapes (visual, non-interactive) ─────────
-  // Dissolve each territory's ZIPs into one merged polygon so each territory
-  // shows as a clean unified region with no internal ZIP grid lines.
-  // Interaction (hover tooltip + click) is handled by the ZIP overlay below.
-  Object.entries(byTerritory).forEach(([tId, features]) => {
-    const t = territoryMap[tId];
-    let merged = features[0];
-    for(let i = 1; i < features.length; i++){
-      try { merged = turf.union(merged, features[i]); }
-      catch(e) { /* skip geometrically invalid ZIP */ }
-    }
-    const layer = L.geoJSON(merged, {
-      style: () => getCountyStyle(t.status, false),
-      interactive: false,   // interaction handled by ZIP overlay
-    });
-    layer.addTo(map);
-    territoryLayers.set(t.id, { layers:[layer], territory:t });
-  });
-
-  // ── Pass 2: Per-ZIP transparent interaction overlay ────────────────────────
-  // Transparent polygons cover every assigned ZIP. SVG hit detection works with
-  // fillOpacity:0 (fill is present, just invisible) — do NOT use fill:false which
-  // removes the hit area. Hovering a ZIP shows territory name + ZIP code in the
-  // tooltip and highlights the territory's merged base shape; clicking selects
-  // the territory in the sidebar.
-  const assignedFeatures = geojson.features.filter(
-    f => zipAssignments[f.properties.ZCTA5CE10] &&
-         territoryMap[zipAssignments[f.properties.ZCTA5CE10]]
-  );
-
-  zipInteractionLayer = L.geoJSON(
-    { type:'FeatureCollection', features: assignedFeatures },
-    {
-      style: { fillOpacity: 0, weight: 0 },
-      onEachFeature: (feature, layer) => {
-        const zip = feature.properties.ZCTA5CE10;
-        const t = territoryMap[zipAssignments[zip]];
-        if(!t) return;
-
-        layer.bindTooltip(
-          `<div style="font-weight:700">${t.name}</div>
-           <div style="font-size:11px;color:#666">ZIP ${zip}</div>`,
-          { sticky:true, opacity:0.92 }
-        );
-        layer.on('click', () => {
-          clearProposalUI();
-          findNearbyTerritories(t.lat, t.lng, t.counties[0] || '');
-          setTimeout(() => selectTerritoryOnMap(t), 120);
-        });
-        layer.on('mouseover', () => {
-          // Highlight the territory's merged base layer (not just this ZIP)
-          if(selectedTerritoryId !== t.id){
-            const entry = territoryLayers.get(t.id);
-            if(entry) entry.layers.forEach(l => l.setStyle({ weight:2, fillOpacity:0.8 }));
-          }
-        });
-        layer.on('mouseout', () => {
-          if(selectedTerritoryId !== t.id){
-            const entry = territoryLayers.get(t.id);
-            if(entry) entry.layers.forEach(l => l.setStyle(getCountyStyle(t.status, false)));
-          }
-        });
-      },
-    }
-  ).addTo(map);
-
-  // ── Pass 3: Unassigned ZIPs ───────────────────────────────────────────────
-  if(unassignedFeatures.length){
-    L.geoJSON(
-      { type:'FeatureCollection', features: unassignedFeatures },
-      { style: getCountyStyle('unassigned', false), interactive: false }
-    ).addTo(map);
-  }
-}
-
-function getCountyStyle(status, highlighted){
-  const styles = {
-    available: { fillColor:'#86efac', fillOpacity:.55, color:'#16a34a', weight: highlighted?2:0.8 },
-    taken:     { fillColor:'#fca5a5', fillOpacity:.55, color:'#dc2626', weight: highlighted?2:0.8 },
-    pending:   { fillColor:'#fde68a', fillOpacity:.55, color:'#d97706', weight: highlighted?2:0.8 },
-    selected:  { fillColor:'#bfdbfe', fillOpacity:.75, color:'#2563eb', weight:2.5 },
-    unassigned:{ fillColor:'#d4c9ba', fillOpacity:.4,  color:'#9ca3af', weight:0.5 },
-  };
-  return styles[status] || styles.unassigned;
-}
-
-function renderMarkersOnly(){
-  TERRITORIES.forEach(t => {
-    if(!t.lat || !t.lng) return;
-    const color = t.status==='available'?'#16a34a':t.status==='taken'?'#dc2626':'#d97706';
-    const circle = L.circleMarker([t.lat, t.lng], {
-      radius:12, fillColor:color, color:'#fff', weight:2, fillOpacity:.8
-    }).addTo(map);
-    circle.on('click', () => selectTerritoryOnMap(t));
-    circle.bindTooltip(`<strong>${t.name}</strong><br>${t.status}`, {sticky:true});
-  });
-}
-
-// ══════════════════════════════════════════════════════════════
-// SEARCH
-// ══════════════════════════════════════════════════════════════
-async function searchByZip(){
-  const zip = document.getElementById('zipInput').value.trim();
-  if(zip.length < 5){ showToast('Please enter a 5-digit zip code'); return; }
-
-  clearProposalUI();
-
-  const btn = document.querySelector('.search-btn');
-  btn.textContent = '…';
-  btn.disabled = true;
-  document.getElementById('sidebarLoad').style.display = 'block';
-
-  try {
-    // Run geo lookup and territory proposal in parallel
-    const [geoResp, propResp] = await Promise.all([
-      fetch(`/api/zip-to-county?zip=${zip}`),
-      fetch('/api/territories/propose', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ zipCode: zip }),
-      }),
-    ]);
-    const [geo, propData] = await Promise.all([geoResp.json(), propResp.json()]);
-
-    const lat = geo.lat;
-    const lng = geo.lng;
-    const county = geo.county;
-
-    if(!county && propData.type === 'unavailable'){
-      showUnavailCard(propData.message || `Zip code ${zip} not found — try selecting your county below`);
-      return;
-    }
-
-    // Place user marker
-    if(lat && lng){
-      if(userMarker) map.removeLayer(userMarker);
-      userMarker = L.marker([lat, lng], {
-        icon: L.divIcon({
-          html:'<div style="background:#7C1C2E;width:14px;height:14px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4)"></div>',
-          iconSize:[14,14], iconAnchor:[7,7]
-        })
-      }).addTo(map).bindPopup(`<strong>${county||zip}</strong><br>ZIP: ${zip}`).openPopup();
-    }
-
-    document.getElementById('mapTip').classList.add('hidden');
-
-    if(propData.type === 'existing'){
-      const terr = propData.territory;
-      const tLat = terr.centroidLat ?? lat;
-      const tLng = terr.centroidLng ?? lng;
-      const tObj = {
-        id: terr.id, name: terr.name,
-        counties: Array.isArray(terr.counties) ? terr.counties : [],
-        households: terr.households || 0,
-        status: terr.status,
-        zoneNote: terr.zoneNote || '',
-        lat: tLat, lng: tLng,
-      };
-      const inLocal = TERRITORIES.find(x => x.id === tObj.id);
-      if(inLocal){
-        if(lat && lng) findNearbyTerritories(lat, lng, county || tObj.counties[0] || '');
-        setTimeout(() => selectTerritoryOnMap(inLocal), 120);
-      } else {
-        selectTerritoryOnMap(tObj);
-        if(tLat && tLng) map.setView([tLat, tLng], 9, { animate: true });
-      }
-
-    } else if(propData.type === 'proposed'){
-      activeProposals = propData.proposals || [];
-      activeProposalZip = zip;
-
-      // showProposedUI first so _activeDisplayProposal is set before drawProposalLayers
-      // builds its tooltip (uses the merged county-level name, not a raw zone name)
-      showProposedUI();
-      drawProposalLayers(activeProposals);
-
-      // Zoom to the proposal centroid; fall back to geo lat/lng for unlisted states
-      const validCentroids = activeProposals
-        .filter(p => p.centroidLat && p.centroidLng)
-        .map(p => [p.centroidLat, p.centroidLng]);
-      if(validCentroids.length >= 1){
-        // All split proposals share the same county centroid — setView on the first
-        map.setView(validCentroids[0], 8, { animate: true });
-      } else if(lat && lng){
-        map.setView([lat, lng], 9, { animate: true });
-      }
-
-      // Show other territories in the same state below the proposal card
-      const proposalStateAbbr = (activeProposals[0]?.stateAbbr || '').toUpperCase();
-      fetchAndShowNearbyProposals(proposalStateAbbr);
-
-    } else {
-      // unavailable
-      showUnavailCard(propData.message || 'This territory is not currently available. Please contact us directly.');
-      if(lat && lng) map.setView([lat, lng], 9, { animate: true });
-    }
-
-  } catch(e) {
-    showToast('Could not look up territory — please try again');
-  } finally {
-    btn.textContent = 'Find';
-    btn.disabled = false;
-    document.getElementById('sidebarLoad').style.display = 'none';
+  if($('zipInput').value && $('cityInput').value && $('stateSelect').value){
+    runSearch();
+  } else {
     hideLoadingOverlay();
   }
 }
 
-function hideLoadingOverlay(){
-  const ov = document.getElementById('loadingOverlay');
-  if(!ov || ov.style.display==='none') return;
-  ov.classList.add('hidden');
-  setTimeout(() => { ov.style.display='none'; ov.classList.remove('hidden'); }, 420);
-}
-
-function searchByCounty(){
-  const county = document.getElementById('countySelect').value;
-  if(!county) return;
-
-  const centroid = COUNTY_CENTROIDS[county];
-  if(!centroid){ showToast('County location not found'); return; }
-
-  // Place user marker
-  if(userMarker) map.removeLayer(userMarker);
-  userMarker = L.marker([centroid.lat, centroid.lng], {
-    icon: L.divIcon({
-      html:'<div style="background:#7C1C2E;width:14px;height:14px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4)"></div>',
-      iconSize:[14,14], iconAnchor:[7,7]
-    })
-  }).addTo(map).bindPopup(`<strong>${county} County</strong>`).openPopup();
-
-  findNearbyTerritories(centroid.lat, centroid.lng, county);
-}
-
-function findNearbyTerritories(lat, lng, homeCounty){
-  const withDistance = TERRITORIES.map(t => ({
-    ...t,
-    distance: haversineDistance(lat, lng, t.lat, t.lng)
-  }));
-
-  withDistance.sort((a,b) => a.distance - b.distance);
-
-  // Take nearest 10, deduplicate by id
-  const seen = new Set();
-  const nearby = [];
-  for(const t of withDistance){
-    if(!seen.has(t.id)){
-      seen.add(t.id);
-      nearby.push(t);
-    }
-    if(nearby.length >= 10) break;
-  }
-
-  // Zoom map to show user location and nearby territories
-  const bounds = L.latLngBounds([[lat, lng]]);
-  nearby.forEach(t => { if(t.lat && t.lng) bounds.extend([t.lat, t.lng]); });
-  map.fitBounds(bounds.pad(0.15));
-
-  // Hide map tip
-  document.getElementById('mapTip').classList.add('hidden');
-
-  showNearbyTerritories(nearby, `Territories near ${homeCounty} County`);
-}
-
-function showNearbyTerritories(territories, heading){
-  const list = document.getElementById('territoryList');
-  const hdr  = document.getElementById('resultsHdr');
-  const avail = territories.filter(t=>t.status==='available').length;
-
-  hdr.style.display = 'flex';
-  document.getElementById('resultsCount').textContent = `${avail} available`;
-
-  list.innerHTML = territories.map(t => {
-    const tier = getMarketTier(t.households || 0);
-    return `
-    <div class="tcard${t.status==='taken'?' taken':''}${selectedTerritoryId===t.id?' selected':''}"
-         ${t.status!=='taken'?`onclick="selectTerritoryCard('${t.id}')"`:''} 
-         id="tcard-${t.id}">
-      <div class="tcard-top">
-        <div class="tcard-name">${t.name}</div>
-        <div class="tcard-badge badge-${t.status}">${t.status}</div>
-      </div>
-      <div class="tcard-counties">${t.counties.join(' · ')} Counti${t.counties.length===1?'y':'es'}</div>
-      ${(() => { const cs = (t.zoneNote||'').split(',').map(s=>s.trim()).filter(s=>s&&!/\barea$/i.test(s)).slice(0,3).join(' · '); return cs ? `<div class="tcard-cities">${cs}</div>` : ''; })()}
-      <div class="tcard-meta">
-        <span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;background:${tier.bg};color:${tier.color}">${tier.label}</span>
-      </div>
-    </div>
-  `}).join('');
-
-  list.scrollTop = 0;
-}
-
-function selectTerritoryCard(id){
-  selectedTerritoryId = id;
-  const t = TERRITORIES.find(t=>t.id===id) || _nearbyTerritoriesLookup.get(id);
-  if(!t) return;
-
-  document.querySelectorAll('.tcard').forEach(c=>{
-    c.classList.remove('selected');
-    if(c.id===`tcard-${id}`) c.classList.add('selected');
-  });
-
-  selectTerritoryOnMap(t);
-}
-
-function selectTerritoryOnMap(t){
-  selectedTerritoryId = t.id;
-
-  // Reset all territory layers to their status style, then highlight the selected one
-  territoryLayers.forEach(({ layers, territory }) => {
-    layers.forEach(l => l.setStyle(getCountyStyle(territory.status, false)));
-  });
-  const entry = territoryLayers.get(t.id);
-  if(entry){
-    entry.layers.forEach(l => {
-      l.setStyle(getCountyStyle('selected', false));
-      l.bringToFront();
-    });
-    // Keep the ZIP interaction overlay on top so per-ZIP tooltips remain reachable
-    if(zipInteractionLayer) zipInteractionLayer.bringToFront();
-  }
-
-  const detail = document.getElementById('selectedDetail');
-  detail.classList.add('visible');
-  document.getElementById('sdName').textContent = t.name;
-  document.getElementById('sdCounties').textContent = t.counties.join(' · ');
-  const mailingAreasWrap = document.getElementById('sdMailingAreas');
-  const mailingAreasList = document.getElementById('sdMailingAreasList');
-  const tId = t.id;
-  if(_mailingAreaCache.has(tId)){
-    renderMailingAreas(mailingAreasWrap, mailingAreasList, _mailingAreaCache.get(tId));
-  } else {
-    // Show loading state immediately
-    mailingAreasWrap.style.display = '';
-    mailingAreasList.innerHTML = '<div class="pc-mailing-area-item" style="opacity:.6;padding-left:0">Loading mailing areas\u2026</div>';
-    fetch(`/api/territories/${tId}/mailing-areas`)
-      .then(r => r.ok ? r.json() : [])
-      .then(data => {
-        _mailingAreaCache.set(tId, data);
-        if(selectedTerritoryId === tId) renderMailingAreas(mailingAreasWrap, mailingAreasList, data);
-      })
-      .catch(() => {
-        if(selectedTerritoryId === tId) mailingAreasWrap.style.display = 'none';
-      });
-  }
-  const statusEl = document.getElementById('sdStatus');
-  statusEl.textContent = t.status.charAt(0).toUpperCase() + t.status.slice(1);
-  statusEl.style.color = t.status==='available'?'#86efac':t.status==='taken'?'#fca5a5':'#fde68a';
-  document.getElementById('claimBtn').style.display = t.status==='available'?'flex':'none';
-
-  // Scroll the sidebar to show the detail panel
-  const rp = document.querySelector('.results-panel');
-  if(rp) rp.scrollTop = 0;
-
-  if(t.lat && t.lng) map.setView([t.lat, t.lng], 9, {animate:true});
-
-  document.querySelectorAll('.tcard').forEach(c=>{
-    c.classList.remove('selected');
-    if(c.id===`tcard-${t.id}`) c.classList.add('selected');
-  });
-}
-
-// ══════════════════════════════════════════════════════════════
-// CLAIM MODAL
-// ══════════════════════════════════════════════════════════════
-function openModal(){
-  if(!selectedTerritoryId) return;
-  const t = TERRITORIES.find(t=>t.id===selectedTerritoryId);
-  if(!t||t.status!=='available') return;
-
-  document.getElementById('modalTerritoryName').textContent = t.name;
-  document.getElementById('modalTerritoryCounties').textContent =
-    t.counties.join(' · ') + ' Counti' + (t.counties.length===1?'y':'es') +
-    ' · ~' + t.households.toLocaleString() + ' households';
-
-  // Pre-fill from URL params if dealer came from the signup form
-  const sp = new URLSearchParams(window.location.search);
-  document.getElementById('claimName').value  = sp.get('name')  || '';
-  document.getElementById('claimEmail').value = sp.get('email') || '';
-  document.getElementById('claimPhone').value = sp.get('phone') || '';
-
-  const btn = document.getElementById('modalSubmitBtn');
-  btn.textContent = '✦ Claim It — $99/mo';
-  btn.disabled = false;
-
-  document.getElementById('modalBg').classList.add('visible');
-}
-
-function closeModal(){
-  _proposalMode = false;
-  document.getElementById('modalBg').classList.remove('visible');
-}
-
-async function submitClaim(){
-  if(_proposalMode){ await submitProposalClaim(); return; }
-  const name  = document.getElementById('claimName').value.trim();
-  const email = document.getElementById('claimEmail').value.trim();
-  const phone = document.getElementById('claimPhone').value.trim();
-
-  if(!name||!email||!phone){ showToast('Please fill in all fields'); return; }
-
-  const t = TERRITORIES.find(t=>t.id===selectedTerritoryId);
-  if(!t) return;
-
-  const btn = document.getElementById('modalSubmitBtn');
-  btn.textContent = 'Processing…';
-  btn.disabled = true;
-
+async function loadAllTerritories(){
+  let rows = [];
   try {
-    const resp = await fetch('/api/dealers', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name,
-        email,
-        phone,
-        territoryId: t.id,
-        territoryName: t.name,
-      }),
-    });
-    const result = await resp.json();
-    if(!resp.ok) throw new Error(result.error || 'Request failed');
-    window.location.href = result.checkoutUrl;
-  } catch(err) {
-    showToast('Error: ' + err.message);
-    btn.textContent = '✦ Claim It — $99/mo';
-    btn.disabled = false;
-  }
-}
+    const res = await fetch('/api/territories');
+    if(res.ok) rows = await res.json();
+  } catch(e){ /* DB may be empty — fine */ }
 
-// ══════════════════════════════════════════════════════════════
-// PROPOSAL FLOW
-// ══════════════════════════════════════════════════════════════
-let activeProposals = [];
-let activeProposalZip = '';
-let proposalLayers = [];
-let _proposalMode = false;
-let _activeDisplayProposal = null;  // merged/single proposal shown to the dealer
-const _nearbyTerritoriesLookup = new Map(); // non-GA territories fetched on demand
-let _proposalDrawGen = 0;           // incremented on each new drawProposalLayers call
-// Per-session GeoJSON cache: stateFips → Promise<FeatureCollection|null>
-const _stateGeoJsonCache = new Map();
+  const byState = {};
+  rows.forEach(t => {
+    if(!t || !t.state) return;
+    (byState[String(t.state).toUpperCase()] ??= []).push(t);
+  });
 
-function clearProposalUI(){
-  document.getElementById('proposalCard').classList.remove('visible');
-  document.getElementById('unavailCard').classList.remove('visible');
-  document.getElementById('successCard').classList.remove('visible');
-  clearProposalLayers();
-  activeProposals = [];
-  activeProposalZip = '';
-  _activeDisplayProposal = null;
-}
-
-function fetchStateCountiesGeoJson(stateFips){
-  if(_stateGeoJsonCache.has(stateFips)) return _stateGeoJsonCache.get(stateFips);
-  const p = fetch(`/api/counties-geojson?stateFips=${stateFips}`)
-    .then(r => r.ok ? r.json() : null)
-    .catch(() => null);
-  _stateGeoJsonCache.set(stateFips, p);
-  return p;
-}
-
-function drawProposalLayers(proposals){
-  clearProposalLayers();
-  if(!proposals.length) return;
-
-  const myGen = ++_proposalDrawGen;
-
-  // Collect all county 5-digit FIPS across all proposals
-  const countyFipsSet = new Set();
-  proposals.forEach(p => (p.counties||[]).forEach(c => { if(c.fips) countyFipsSet.add(String(c.fips)); }));
-
-  // State FIPS from first county (first 2 chars of the 5-digit GEOID)
-  const firstFips = [...countyFipsSet][0];
-  const stateFips = firstFips ? firstFips.slice(0, 2) : null;
-
-  // Build tooltip using the merged/display proposal
-  const display = _activeDisplayProposal || proposals[0];
-  const tooltipHtml =
-    `<div style="font-weight:700">${display.proposedName}</div>
-     <div style="font-size:11px;color:#555;margin-top:2px">Proposed Territory</div>`;
-
-  // Show amber circle immediately as a placeholder while GeoJSON loads
-  const cLat = display.centroidLat || proposals[0]?.centroidLat;
-  const cLng = display.centroidLng || proposals[0]?.centroidLng;
-  if(cLat && cLng){
-    const circle = L.circle([cLat, cLng], {
-      radius: 55000,
-      fillColor: '#F59E0B', fillOpacity: 0.2,
-      color: '#D97706', weight: 2, dashArray: '6 4',
-    }).addTo(map);
-    circle.bindTooltip(tooltipHtml, { sticky: true, opacity: 0.95 });
-    proposalLayers.push(circle);
-  }
-
-  if(!stateFips || !countyFipsSet.size) return;
-
-  // Async: fetch county polygons, then replace the circle with the real shape
-  fetchStateCountiesGeoJson(stateFips).then(geoJson => {
-    if(!geoJson || _proposalDrawGen !== myGen) return;  // stale or cleared
-
-    const features = geoJson.features.filter(f => countyFipsSet.has(String(f.id)));
-    if(!features.length) return;
-
-    clearProposalLayers();   // remove placeholder circle
-
-    const layer = L.geoJSON(
-      { type: 'FeatureCollection', features },
-      {
-        style: { fillColor: '#F59E0B', fillOpacity: 0.5, color: '#D97706', weight: 2.5 },
+  for(const [abbr, list] of Object.entries(byState)){
+    const meta = STATES[abbr];
+    if(!meta) continue;
+    const geo = await stateGeo(meta[1]);
+    if(!geo) continue;
+    list.forEach(t => {
+      const features = pickFeatures(geo, meta[1], [], Array.isArray(t.counties) ? t.counties : []);
+      if(!features.length) return;
+      const status = t.status === 'taken' ? 'taken' : 'available';
+      L.geoJSON({ type:'FeatureCollection', features }, {
+        style: countyStyle(status),
         onEachFeature: (_, lyr) => {
-          lyr.bindTooltip(tooltipHtml, { sticky: true, opacity: 0.95 });
-        }
-      }
-    ).addTo(map);
-    proposalLayers.push(layer);
-  });
-}
-
-function clearProposalLayers(){
-  proposalLayers.forEach(l => { try{ map.removeLayer(l); }catch(e){} });
-  proposalLayers = [];
-}
-
-// Merge split proposals into one unified display object.
-// Single proposals pass through unchanged (mailingAreas = []).
-function mergeProposals(proposals){
-  if(!proposals.length) return null;
-  if(proposals.length === 1) return { ...proposals[0], mailingAreas: [] };
-
-  const allSplit = proposals.every(p => p.isSplit);
-  if(!allSplit) return { ...proposals[0], mailingAreas: [] };
-
-  // Prefer the first proposal's human-readable name; fall back to county-derived label
-  const firstCountyName = proposals[0]?.counties?.[0]?.name || '';
-  const countyShort = firstCountyName
-    .replace(/\s+(County|Parish|Borough|Census Area|City and Borough|Municipality|Municipio|District|City)$/i, '')
-    .trim();
-  const mergedName = proposals[0].proposedName || (countyShort ? countyShort + ' Area' : '');
-
-  const summedBusinesses = proposals.reduce(
-    (s, p) => s + (p.totalBusinesses || p.totalBusinessCount || 0), 0
-  );
-  return {
-    ...proposals[0],
-    proposedName: mergedName,
-    totalBusinesses:  summedBusinesses,
-    totalBusinessCount: summedBusinesses,
-    estimatedZones: proposals.length,
-    mailingAreas: proposals.map(p => p.proposedName),
-  };
-}
-
-function showProposedUI(){
-  document.getElementById('selectedDetail').classList.remove('visible');
-  document.getElementById('resultsHdr').style.display = 'none';
-  document.getElementById('territoryList').innerHTML = '';
-
-  const merged = mergeProposals(activeProposals);
-  _activeDisplayProposal = merged;
-  renderProposalCard(merged);
-}
-
-function getMarketTier(totalHouseholds){
-  const pop = totalHouseholds * 2.5;
-  if(pop >= 500000) return { label:'🏙 Metro Market',      bg:'#7C1C2E', color:'#fff' };
-  if(pop >= 150000) return { label:'🌿 Strong Market',     bg:'#1a5c3a', color:'#fff' };
-  if(pop >= 50000)  return { label:'📈 Good Market',       bg:'#2563eb', color:'#fff' };
-  return               { label:'🌱 Developing Market', bg:'#d97706', color:'#fff' };
-}
-
-function renderProposalCard(p){
-  if(!p) return;
-  document.getElementById('pcName').textContent = p.proposedName;
-
-  const hubs = p.hubs || [];
-
-  // Show hub city names (new model) or fall back to county names (legacy)
-  if(hubs.length > 0){
-    document.getElementById('pcCounties').textContent = hubs.map(h => h.cityName).join(' · ');
-  } else {
-    document.getElementById('pcCounties').textContent = (p.counties||[]).map(c => c.name).join(' · ');
+          lyr.bindTooltip(
+            `<div style="font-weight:700">${t.name}</div>` +
+            `<div style="font-size:11px;color:#555">${status==='taken'?'Claimed':'Available'}</div>`,
+            { sticky:true });
+          lyr.on('click', () => renderExisting(t, abbr));
+        },
+      }).addTo(map);
+    });
   }
-
-  // Market tier badge — derived from household count (households × 2.5 ≈ population)
-  const totalHH = hubs.length > 0
-    ? hubs.reduce((s, h) => s + (h.catchmentHouseholds || 0), 0)
-    : (p.householdsEstimate || 0);
-  const tier = getMarketTier(totalHH);
-  const tierEl = document.getElementById('pcMarketTier');
-  tierEl.innerHTML = `<span style="display:inline-block;padding:3px 12px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;background:${tier.bg};color:${tier.color}">${tier.label}</span>`;
-  tierEl.style.display = '';
-
-  const zonesRow    = document.getElementById('pcZonesRow');
-  const mailingWrap = document.getElementById('pcMailingAreas');
-  const mailingList = document.getElementById('pcMailingAreasList');
-  const noteEl      = document.getElementById('pcNote');
-
-  if(hubs.length > 0){
-    // City-hub model: show each hub with household count only (no business count exposed to dealer)
-    document.getElementById('pcZones').textContent = hubs.length;
-    zonesRow.style.display = '';
-    mailingList.innerHTML = hubs.map((h, i) =>
-      `<div class="pc-mailing-area-item">
-        <div style="font-weight:600">Mailing Area ${i+1} — ${h.cityName}</div>
-        <div style="font-size:11px;opacity:.7;margin-top:2px">~${h.catchmentHouseholds.toLocaleString()} households</div>
-      </div>`
-    ).join('');
-    mailingWrap.style.display = '';
-    noteEl.textContent =
-      `This territory gives you exclusive dealer rights across all ${hubs.length} mailing areas above.`;
-  } else {
-    // Legacy split-proposal fallback
-    const mailingAreas = p.mailingAreas || [];
-    if(mailingAreas.length > 1){
-      document.getElementById('pcZones').textContent = mailingAreas.length;
-      zonesRow.style.display = '';
-      mailingList.innerHTML = mailingAreas
-        .map(name => `<div class="pc-mailing-area-item">${name}</div>`)
-        .join('');
-      mailingWrap.style.display = '';
-      noteEl.textContent =
-        `This territory gives you exclusive dealer rights across all ${mailingAreas.length} mailing areas above.`;
-    } else {
-      document.getElementById('pcZones').textContent = '1';
-      zonesRow.style.display = '';
-      mailingWrap.style.display = 'none';
-      noteEl.textContent = "This territory is being created for your area. Reserve it now and we'll activate it within 24 hours.";
-    }
-  }
-
-  document.getElementById('proposalCard').classList.add('visible');
 }
 
-// Fetch and display DB territories in the same state so the dealer can browse
-// alternatives. Only used for non-GA proposed results; GA uses findNearbyTerritories().
-async function fetchAndShowNearbyProposals(stateAbbr){
-  if(!stateAbbr || stateAbbr === 'GA') return;
-  try {
-    const res = await fetch(`/api/territories?state=${stateAbbr}`);
-    if(!res.ok) return;
-    const rows = await res.json();
-    // Build a stable set of all active proposal names (merged display name + each constituent
-    // proposal's name) so we reliably exclude the current proposal regardless of merge rename
-    const activeNames = new Set([
-      _activeDisplayProposal?.proposedName,
-      ...(_activeDisplayProposal?.mailingAreas || []),
-      ...activeProposals.map(p => p.proposedName),
-    ].filter(Boolean));
-    const nearby = rows
-      .filter(t => t.status === 'proposed' || t.status === 'available')
-      .filter(t => t.centroidLat != null && t.centroidLng != null)
-      .filter(t => !activeNames.size || !activeNames.has(t.name))
-      .map(t => ({
-        id:         t.id,
-        name:       t.name,
-        counties:   Array.isArray(t.counties) ? t.counties : [],
-        households: t.households || 0,
-        status:     t.status,
-        zoneNote:   t.zoneNote || '',
-        lat:        t.centroidLat,
-        lng:        t.centroidLng,
-      }));
-    // Register in lookup so selectTerritoryCard can resolve these non-GA rows
-    nearby.forEach(t => _nearbyTerritoriesLookup.set(t.id, t));
-    if(!nearby.length) return;
-    showNearbyTerritories(nearby, `Other Territories in ${stateAbbr}`);
-  } catch(e) { /* silently ignore */ }
-}
+// ─── Search ───────────────────────────────────────────────────────────────────
+async function runSearch(){
+  const zip   = $('zipInput').value.trim();
+  const city  = $('cityInput').value.trim();
+  const state = $('stateSelect').value;
 
-function showUnavailCard(msg){
-  document.getElementById('unavailBody').innerHTML =
-    (msg || 'Territory not available.') +
-    '<br><br>Contact us at <a href="mailto:hello@mytownpostcard.com" style="color:#991b1b">hello@mytownpostcard.com</a>';
-  document.getElementById('unavailCard').classList.add('visible');
-  document.getElementById('selectedDetail').classList.remove('visible');
-  document.getElementById('resultsHdr').style.display = 'none';
-  document.getElementById('territoryList').innerHTML = '';
-}
+  if(!/^\d{5}$/.test(zip)){ showToast('Enter a valid 5-digit ZIP code'); return; }
+  if(!city){ showToast('Enter your city'); return; }
+  if(!state){ showToast('Select your state'); return; }
 
-function openProposalModal(){
-  if(!activeProposals.length) return;
-  _proposalMode = true;
-  const p = _activeDisplayProposal || activeProposals[0];
-  document.getElementById('modalTerritoryName').textContent = p.proposedName;
-  const hubs = p.hubs || [];
-  const locationStr = hubs.length > 0
-    ? hubs.map(h => h.cityName).join(' · ')
-    : (p.counties||[]).map(c => c.name).join(' · ');
-  document.getElementById('modalTerritoryCounties').textContent = locationStr;
-  const sp = new URLSearchParams(window.location.search);
-  document.getElementById('claimName').value  = sp.get('name')  || '';
-  document.getElementById('claimEmail').value = sp.get('email') || '';
-  document.getElementById('claimPhone').value = sp.get('phone') || '';
-  const btn = document.getElementById('modalSubmitBtn');
-  btn.textContent = '✦ Reserve This Territory — $99/mo';
-  btn.disabled = false;
-  document.getElementById('modalBg').classList.add('visible');
-}
-
-async function submitProposalClaim(){
-  const name  = document.getElementById('claimName').value.trim();
-  const email = document.getElementById('claimEmail').value.trim();
-  const phone = document.getElementById('claimPhone').value.trim();
-  if(!name||!email||!phone){ showToast('Please fill in all fields'); return; }
-
-  const btn = document.getElementById('modalSubmitBtn');
-  btn.textContent = 'Submitting…';
-  btn.disabled = true;
+  const btn = $('searchBtn');
+  btn.disabled = true; btn.textContent = '…';
+  hideAllCards();
+  $('sidebarLoad').style.display = 'block';
+  $('mapTip').classList.add('hidden');
 
   try {
     const resp = await fetch('/api/territories/propose', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        zipCode: activeProposalZip,
-        dealerName: name,
-        dealerEmail: email,
-        dealerPhone: phone,
-      }),
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({ zip, city, state }),
     });
-    const data = await resp.json();
-    closeModal();
+    const data = await resp.json().catch(() => ({}));
 
-    const p = _activeDisplayProposal || activeProposals[0];
-    document.getElementById('proposalCard').classList.remove('visible');
-    clearProposalLayers();
+    if(resp.status === 429){ showUnavail(data.error || 'Too many lookups — please wait a moment and try again.'); return; }
+    if(!resp.ok){ showUnavail(data.error || 'We could not look up that location. Check your city and state.'); return; }
 
-    if(data.type === 'proposed' || data.type === 'existing'){
-      document.getElementById('successTitle').textContent = 'Territory Reserved!';
-      document.getElementById('successBody').innerHTML =
-        `<strong>${p.proposedName}</strong> has been reserved for you.<br><br>
-         Your territory is now active. We'll send setup instructions to <strong>${email}</strong>.<br><br>
-         Questions? <a href="mailto:hello@mytownpostcard.com" style="color:#15803d">hello@mytownpostcard.com</a>`;
-      document.getElementById('successCard').classList.add('visible');
-      showToast('Territory reserved! Check your email for next steps.');
+    if(data.type === 'existing' && data.territory){
+      await renderExisting(data.territory, (data.territory.state || state || '').toUpperCase());
+    } else if(data.type === 'proposed' && data.proposal){
+      await renderProposed(data.proposal);
     } else {
-      showUnavailCard(data.message || 'This territory is no longer available. Please contact us directly.');
+      showUnavail(data.message || 'No territory is available for this location yet.');
     }
-  } catch(err) {
-    showToast('Error submitting — please try again');
-    btn.textContent = '✦ Reserve This Territory — $99/mo';
-    btn.disabled = false;
+  } catch(e){
+    showToast('Something went wrong — please try again');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Find';
+    $('sidebarLoad').style.display = 'none';
+    hideLoadingOverlay();
   }
 }
 
-// ══════════════════════════════════════════════════════════════
-// UTILITIES
-// ══════════════════════════════════════════════════════════════
-function haversineDistance(lat1, lng1, lat2, lng2){
-  const R = 3959; // miles
-  const dLat = (lat2-lat1) * Math.PI/180;
-  const dLng = (lng2-lng1) * Math.PI/180;
-  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+// ─── Render: existing territory ───────────────────────────────────────────────
+async function renderExisting(terr, stateAbbr){
+  clearSearchLayers();
+  hideAllCards();
+
+  const meta = STATES[(stateAbbr || '').toUpperCase()] || STATES[(terr.state || '').toUpperCase()];
+  let stateFips = meta ? meta[1] : null;
+  if(!stateFips && Array.isArray(terr.countyGeoids) && terr.countyGeoids[0]){
+    stateFips = String(terr.countyGeoids[0]).slice(0,2);
+  }
+
+  const status = terr.status === 'taken' ? 'taken' : 'available';
+
+  if(stateFips){
+    const geo = await stateGeo(stateFips);
+    if(geo){
+      const features = pickFeatures(geo, stateFips, terr.countyGeoids, terr.counties);
+      if(features.length){
+        const layer = L.geoJSON({ type:'FeatureCollection', features }, {
+          style: countyStyle(status),
+          onEachFeature: (_, lyr) => lyr.bindTooltip(
+            `<div style="font-weight:700">${terr.name}</div>` +
+            `<div style="font-size:11px;color:#555">${status==='taken'?'Claimed':'Available'}</div>`,
+            { sticky:true }),
+        }).addTo(map);
+        searchLayers.push(layer);
+        fitTo(layer);
+      } else if(terr.centroidLat != null && terr.centroidLng != null){
+        map.setView([terr.centroidLat, terr.centroidLng], 9);
+      }
+    }
+  }
+
+  $('sdName').textContent = terr.name;
+  $('sdCounties').textContent = (Array.isArray(terr.counties) ? terr.counties : []).join(' · ');
+  $('sdStatus').textContent = status === 'taken' ? 'Already claimed' : 'Available';
+
+  const claimBtn = $('claimBtn');
+  const takenMsg = $('takenMsg');
+  if(status === 'available'){
+    selectedClaim = { mode:'existing', territoryId: terr.id, name: terr.name };
+    claimBtn.style.display = 'flex';
+    takenMsg.style.display = 'none';
+  } else {
+    selectedClaim = null;
+    claimBtn.style.display = 'none';
+    takenMsg.style.display = 'block';
+    takenMsg.textContent = 'This territory has already been claimed. Try a nearby city to find available territory.';
+  }
+
+  loadExistingMailingAreas(terr.id);
+  $('selectedDetail').classList.add('visible');
 }
 
-function showToast(msg){
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), 2800);
+async function loadExistingMailingAreas(id){
+  const wrap = $('sdMailing');
+  const list = $('sdMailingList');
+  wrap.style.display = 'none';
+  list.innerHTML = '';
+  try {
+    const res = await fetch(`/api/territories/${encodeURIComponent(id)}/mailing-areas`);
+    if(!res.ok) return;
+    const areas = await res.json();
+    if(Array.isArray(areas) && areas.length){
+      list.innerHTML = areas
+        .map((a, i) => `<div class="pc-mailing-area-item">Mailing Area ${i+1} — ${a.name}</div>`)
+        .join('');
+      wrap.style.display = 'block';
+    }
+  } catch(e){ /* ignore */ }
 }
 
-// ══════════════════════════════════════════════════════════════
-// INIT
-// ══════════════════════════════════════════════════════════════
-// Populate county dropdown
-const sel = document.getElementById('countySelect');
-GA_COUNTIES.forEach(c=>{
-  const opt = document.createElement('option');
-  opt.value = c; opt.textContent = c + ' County';
-  sel.appendChild(opt);
-});
+// ─── Render: proposed territory ───────────────────────────────────────────────
+async function renderProposed(p){
+  clearSearchLayers();
+  hideAllCards();
+  selectedClaim = { mode:'proposed', proposal: p };
 
-// Close modal on background click
-document.getElementById('modalBg').addEventListener('click', e=>{
-  if(e.target===document.getElementById('modalBg')) closeModal();
+  let stateFips = p.stateFips || null;
+  if(!stateFips && Array.isArray(p.countyGeoids) && p.countyGeoids[0]){
+    stateFips = String(p.countyGeoids[0]).slice(0,2);
+  }
+
+  if(stateFips){
+    const geo = await stateGeo(stateFips);
+    if(geo){
+      const features = pickFeatures(geo, stateFips, p.countyGeoids, p.countyShortNames);
+      if(features.length){
+        const layer = L.geoJSON({ type:'FeatureCollection', features }, {
+          style: countyStyle('proposed'),
+          onEachFeature: (_, lyr) => lyr.bindTooltip(
+            `<div style="font-weight:700">${p.proposedName}</div>` +
+            `<div style="font-size:11px;color:#555">Proposed Territory</div>`,
+            { sticky:true }),
+        }).addTo(map);
+        searchLayers.push(layer);
+        fitTo(layer);
+      } else if(p.centroidLat != null && p.centroidLng != null){
+        map.setView([p.centroidLat, p.centroidLng], 9);
+      }
+    }
+  }
+
+  $('pcName').textContent = p.proposedName;
+  const cities = Array.isArray(p.cities) ? p.cities : [];
+  $('pcCounties').textContent = cities.join(' · ');
+
+  const wrap = $('pcMailing');
+  const list = $('pcMailingList');
+  if(cities.length){
+    list.innerHTML = cities
+      .map((c, i) => `<div class="pc-mailing-area-item">Mailing Area ${i+1} — ${c}</div>`)
+      .join('');
+    wrap.style.display = 'block';
+  } else {
+    wrap.style.display = 'none';
+  }
+
+  $('proposalCard').classList.add('visible');
+}
+
+function showUnavail(msg){
+  clearSearchLayers();
+  hideAllCards();
+  selectedClaim = null;
+  $('unavailBody').textContent = msg;
+  $('unavailCard').classList.add('visible');
+}
+
+// ─── Claim modal ──────────────────────────────────────────────────────────────
+function openModal(name, sub){
+  $('modalTerritoryName').textContent = name;
+  $('modalTerritoryCounties').textContent = sub || '';
+  // Pre-fill from query params
+  const sp = new URLSearchParams(location.search);
+  if(sp.get('name')  && !$('claimName').value)  $('claimName').value  = sp.get('name');
+  if(sp.get('email') && !$('claimEmail').value) $('claimEmail').value = sp.get('email');
+  if(sp.get('phone') && !$('claimPhone').value) $('claimPhone').value = sp.get('phone');
+  $('modalBg').classList.add('visible');
+}
+
+function openExistingModal(){
+  if(!selectedClaim || selectedClaim.mode !== 'existing'){ showToast('Select an available territory first'); return; }
+  openModal(selectedClaim.name, $('sdCounties').textContent);
+}
+
+function openProposalModal(){
+  if(!selectedClaim || selectedClaim.mode !== 'proposed'){ showToast('Search for a territory first'); return; }
+  openModal(selectedClaim.proposal.proposedName, (selectedClaim.proposal.cities || []).join(' · '));
+}
+
+function closeModal(){
+  $('modalBg').classList.remove('visible');
+}
+
+async function submitClaim(){
+  if(!selectedClaim){ closeModal(); return; }
+  const name  = $('claimName').value.trim();
+  const email = $('claimEmail').value.trim();
+  const phone = $('claimPhone').value.trim();
+  if(!name){ showToast('Enter your full name'); return; }
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ showToast('Enter a valid email'); return; }
+  if(!phone){ showToast('Enter your phone number'); return; }
+
+  const btn = $('modalSubmitBtn');
+  btn.disabled = true; btn.textContent = 'Redirecting…';
+
+  try {
+    let url, body;
+    if(selectedClaim.mode === 'proposed'){
+      const p = selectedClaim.proposal;
+      url = '/api/dealers/claim-proposal';
+      body = {
+        name, email, phone,
+        proposal: {
+          proposedName: p.proposedName,
+          stateAbbr:    p.stateAbbr,
+          stateFips:    p.stateFips,
+          stateName:    p.stateName,
+          zipCode:      p.zipCode,
+          countyFips:   p.countyFips,
+          countyName:   p.countyName,
+          centroidLat:  p.centroidLat,
+          centroidLng:  p.centroidLng,
+          households:   p.households,
+          businessCount:p.businessCount,
+          cities:       p.cities,
+          countyShortNames: p.countyShortNames,
+        },
+      };
+    } else {
+      url = '/api/dealers';
+      body = { name, email, phone, territoryId: selectedClaim.territoryId, territoryName: selectedClaim.name };
+    }
+
+    const res = await fetch(url, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if(!res.ok || !data.checkoutUrl){
+      showToast(data.error || 'Could not start checkout — please try again');
+      btn.disabled = false; btn.textContent = '✦ Claim It — $99/mo';
+      return;
+    }
+    window.location.href = data.checkoutUrl;
+  } catch(e){
+    showToast('Something went wrong — please try again');
+    btn.disabled = false; btn.textContent = '✦ Claim It — $99/mo';
+  }
+}
+
+// Close modal on backdrop click
+document.addEventListener('click', e => {
+  if(e.target && e.target.id === 'modalBg') closeModal();
 });
 
 initMap();

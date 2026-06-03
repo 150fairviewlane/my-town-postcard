@@ -24,7 +24,6 @@ function resolveHtml(filename: string): string {
 const MANAGER_HTML      = resolveHtml("territory-manager.html");
 const FINDER_HTML       = resolveHtml("territory-finder.html");
 const ZIP_MANAGER_HTML  = resolveHtml("territory-zip-manager.html");
-const PROPOSALS_HTML    = resolveHtml("territory-proposals.html");
 
 function verifyQueryToken(token: string): boolean {
   try { jwt.verify(token, JWT_SECRET); return true; } catch { return false; }
@@ -50,13 +49,6 @@ router.get("/admin/territories/zip-manager", (req, res): void => {
   const token = typeof req.query.token === "string" ? req.query.token : null;
   if (!token || !verifyQueryToken(token)) { res.redirect("/admin"); return; }
   res.sendFile(ZIP_MANAGER_HTML);
-});
-
-// GET /admin/territory-proposals — admin proposal review queue (JWT required)
-router.get("/admin/territory-proposals", (req, res): void => {
-  const token = typeof req.query.token === "string" ? req.query.token : null;
-  if (!token || !verifyQueryToken(token)) { res.redirect("/admin"); return; }
-  res.sendFile(PROPOSALS_HTML);
 });
 
 // GET /find-territory — public interactive territory finder map

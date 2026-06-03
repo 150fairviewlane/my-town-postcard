@@ -180,7 +180,6 @@ function Dashboard({ token }) {
   const [approving, setApproving] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [showNewForm, setShowNewForm] = useState(false);
-  const [pendingProposalCount, setPendingProposalCount] = useState(0);
 
   const authOpts = {
     meta: { headers: { Authorization: `Bearer ${token}` } },
@@ -197,21 +196,6 @@ function Dashboard({ token }) {
     });
 
   const campaigns = listData?.campaigns || [];
-
-  useEffect(() => {
-    if (!token) return;
-    async function fetchBadge() {
-      try {
-        const r = await fetch("/api/admin/territory-proposals?status=pending_review&limit=1", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (r.ok) { const d = await r.json(); setPendingProposalCount(d.total || 0); }
-      } catch { /* silent */ }
-    }
-    fetchBadge();
-    const iv = setInterval(fetchBadge, 60000);
-    return () => clearInterval(iv);
-  }, [token]);
 
   // Auto-select the active campaign on first load (or fall back to the
   // most recently created one). Once the admin picks something explicitly
@@ -380,27 +364,6 @@ function Dashboard({ token }) {
             }}
           >
             🗺 ZIP Manager
-          </a>
-          <a
-            href={`/admin/territory-proposals?token=${encodeURIComponent(token)}`}
-            style={{
-              fontSize: 13, fontWeight: 700, color: "#374151",
-              background: "#fff", border: "1px solid #d1d5db",
-              borderRadius: 8, padding: "7px 12px", textDecoration: "none",
-              position: "relative", display: "inline-flex", alignItems: "center", gap: 6,
-            }}
-          >
-            📋 Territory Proposals
-            {pendingProposalCount > 0 && (
-              <span style={{
-                background: "#dc2626", color: "#fff", borderRadius: "50%",
-                width: 18, height: 18, fontSize: 10, fontWeight: 900,
-                display: "inline-flex", alignItems: "center", justifyContent: "center",
-                lineHeight: 1, flexShrink: 0,
-              }}>
-                {pendingProposalCount > 99 ? "99+" : pendingProposalCount}
-              </span>
-            )}
           </a>
           <a
             href={`${import.meta.env.BASE_URL}admin/ai-test`}
