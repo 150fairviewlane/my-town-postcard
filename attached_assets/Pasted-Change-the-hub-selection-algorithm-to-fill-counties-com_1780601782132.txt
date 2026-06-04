@@ -1,0 +1,118 @@
+Change the hub selection algorithm to fill counties
+completely before moving to the next county.
+
+════════════════════════════════════════════════
+THE MODEL
+════════════════════════════════════════════════
+
+A territory is built county by county, starting with the
+dealer's home county and expanding to neighbors only when
+the current county is exhausted.
+
+ALGORITHM:
+
+1. Start with the dealer's home county
+   Add ALL qualifying hub cities from that county
+   sorted by business count descending
+
+2. If total hubs < 4:
+   Find the nearest neighboring county with qualifying hubs
+   Add ALL qualifying hub cities from that county
+   sorted by business count descending
+
+3. Repeat step 2 until 4 hubs reached or no more
+   neighboring counties within 85 miles
+
+4. If more than 4 hubs found, cap at 4 keeping the
+   highest business count cities
+
+EXAMPLE — Cleveland GA (White County):
+  White County hubs: Cleveland, Helen → 2 hubs
+  Still need 2 more → expand to nearest neighbor
+  Habersham County hubs: Cornelia, Clarkesville → 2 hubs
+  Total: 4 hubs across 2 counties → done
+
+  Result: Cleveland · Helen · Cornelia · Clarkesville
+  A coherent local mountain market a dealer can drive
+  in an afternoon.
+
+NOT this (current behavior):
+  Cleveland (White) · Dahlonega (Lumpkin) ·
+  Cornelia (Habersham) · Blairsville (Union)
+  Four different counties, scattered market.
+
+════════════════════════════════════════════════
+QUALIFYING HUB CRITERIA (unchanged)
+════════════════════════════════════════════════
+
+A city qualifies as a hub if:
+  nearbyBusinesses >= 50 (within 5 miles)
+  City is not already claimed by another territory
+
+════════════════════════════════════════════════
+COUNTY NEIGHBOR ORDER
+════════════════════════════════════════════════
+
+When expanding to neighboring counties, prioritize by:
+  Distance from the territory centroid (average of
+  hubs selected so far) — closest neighboring county first
+
+This ensures the territory grows outward naturally
+rather than jumping to a distant county.
+
+════════════════════════════════════════════════
+REPLACE selectBestHubs ENTIRELY
+════════════════════════════════════════════════
+
+The current selectBestHubs function with quadrant spread,
+one-hub-per-county rules, and distance sorting should be
+replaced with this county-fill approach.
+
+The new function signature:
+
+  async function selectHubsByCountyFill(
+    dealerLat: number,
+    dealerLng: number,
+    dealerCountyGeoid: string,
+    stateAbbr: string,
+    targetCount: number = 4
+  ): Promise<CityHub[]>
+
+This function:
+  1. Gets all qualifying cities in the dealer's county
+  2. Sorts by business count descending
+  3. Adds them to selected hubs
+  4. If still under target, finds nearest neighboring
+     county and repeats
+  5. Stops when target reached or no more counties
+
+════════════════════════════════════════════════
+TEST
+════════════════════════════════════════════════
+
+TEST 1 — Cleveland GA (White County)
+  Expected: Cleveland, Helen (White County)
+             + Cornelia, Clarkesville (Habersham County)
+  All 4 from just 2 neighboring counties
+  Coherent mountain market
+
+TEST 2 — Toccoa GA (Stephens County)
+  Expected: Toccoa (Stephens County)
+             + Cornelia, Clarkesville, Demorest (Habersham)
+  OR Toccoa + Lavonia (Franklin) + Cornelia + Clarkesville
+  depending on which county is nearest neighbor
+
+TEST 3 — Spartanburg SC
+  Expected: All Spartanburg County hubs first
+             then expand to neighboring county if needed
+
+TEST 4 — Dense metro (Nashville TN)
+  Davidson County alone likely has 4+ qualifying hubs
+  Territory stays within Davidson County
+  Does not expand to neighboring counties unnecessarily
+
+TEST 5 — Rural area with small counties
+  If home county has only 1 qualifying hub
+  Expand to neighbor, then next neighbor
+  Territory may span 3-4 counties but each county
+  contributes all its qualifying hubs before moving on

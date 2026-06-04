@@ -10,6 +10,7 @@ import {
   getTerritoryForLocation,
   findCandidateHubs,
   selectBestHubs,
+  selectHubsByCountyFill,
   getFootprintCountyGeoids,
 } from "../lib/territoryBuilder";
 import {
@@ -20,6 +21,7 @@ import {
   getCitiesInState,
   getZipLocation,
   getCountyGeoidFromZip,
+  getCountyGeoidForLocation,
 } from "../lib/censusApi";
 
 // Works in both ESM dev (tsx watch) and the esbuild production bundle.
@@ -200,7 +202,8 @@ router.get("/territories/:id/mailing-areas", async (req, res): Promise<void> => 
     }
   }
 
-  const hubs = selectBestHubs(candidates, row.centroidLat, row.centroidLng);
+  const centCounty = getCountyGeoidForLocation(row.centroidLat, row.centroidLng) ?? "";
+  const hubs = selectHubsByCountyFill(candidates, row.centroidLat, row.centroidLng, centCounty);
 
   const result: MailingAreaResult = hubs.map(h => ({ name: h.cityName }));
   _mailingAreaCache.set(id, result);
