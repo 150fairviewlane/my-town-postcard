@@ -1,0 +1,190 @@
+Add a county-based territory path that runs alongside the
+existing AI hub selection. Both paths use the same city/state
+input and the same frontend display. The county path replaces
+the AI call with a server-side county lookup.
+
+This is implemented as a feature flag so both paths can be
+tested without removing either.
+
+
+════════════════════════════════════════════════
+FEATURE FLAG
+════════════════════════════════════════════════
+
+Add this constant near the top of territoryBuilder.ts:
+
+  const USE_COUNTY_TERRITORY_MODEL = true;
+
+When true: use the new county-based path (described below)
+When false: use the existing AI hub selection path
+
+This lets you switch between approaches instantly by
+changing one line.
+
+
+════════════════════════════════════════════════
+THE COUNTY-BASED TERRITORY MODEL
+════════════════════════════════════════════════
+
+When USE_COUNTY_TERRITORY_MODEL is true, replace the
+getAITerritoryHubs() call in buildCityHubProposal() with
+this new function:
+
+  async function getCountyTerritoryHubs(
+    city: string,
+    stateAbbr: string,
+    excludedCities: string[]
+  ): Promise<CityHub[]>
+
+ALGORITHM:
+
+STEP 1 — Derive the dealer's county from city + state:
+  Use the existing findGazetteerCity(city, stateAbbr)
+  to get the city's countyFips and stateFips.
+  Build the 5-digit home county GEOID.
+  Get the county name from county-centroids.csv.
+
+STEP 2 — Find all qualifying hub cities in home county:
+  Call getCitiesInState(stateAbbr)
+  Filter to cities where:
+    countyFips === homeCountyFips
+    AND population >= 4000
+    AND city name NOT in excludedCities
+  Sort by business count descending
+    (use getZipBusinessCount for ZIPs near each city)
+  Take up to 6 cities (MAX_HUBS_PER_TERRITORY = 6)
+
+STEP 3 — If fewer than 2 qualifying hub cities found:
+  The home county is too rural to stand alone.
+  Find neighboring counties using getNeighborCountyNames()
+  sorted by distance (already implemented).
+
+  For each neighbor county in order:
+    Get qualifying cities in that county
+    (same filters: population >= 4000, not excluded)
+    If adding this county's cities brings total to >= 2:
+      Add ALL qualifying cities from this neighbor county
+      Mark territory as spanning 2 counties
+      Stop — do not add more counties
+
+  If still fewer than 2 after checking all neighbors:
+    Return whatever qualifies (1 hub is acceptable)
+
+STEP 4 — Apply excluded cities filter:
+  After collecting all candidate hubs, remove any city
+  whose name appears in excludedCities.
+  If this drops below 2 hubs, add the next best city
+  from the same counties that isn't excluded.
+
+STEP 5 — Return the hub array:
+  Each hub must have: cityName, lat, lng, countyFips,
+  stateAbbr populated from Gazetteer data.
+  Business count from ZBP data for display.
+
+
+════════════════════════════════════════════════
+TERRITORY NAME GENERATION
+════════════════════════════════════════════════
+
+For single-county territory:
+  Name = "[County Name] County"
+  e.g. "White County" or "Cherokee County"
+
+For 2-county territory:
+  Name = "[County1] / [County2] Counties"
+  e.g. "White / Habersham Counties"
+
+Mailing areas still list individual hub city names
+as before — same display format.
+
+
+════════════════════════════════════════════════
+WHAT STAYS THE SAME
+════════════════════════════════════════════════
+
+Everything downstream of hub selection is unchanged:
+  - Voronoi ZIP assignment still runs
+  - Household and business tallies still compute
+  - Territory proposal response format unchanged
+  - Frontend display unchanged
+  - Stripe payment and activation unchanged
+  - Exclusion logic (getClaimedHubCities) unchanged
+  - zone_note storage unchanged
+
+The only change is HOW hub cities are selected.
+
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+  The existing getAITerritoryHubs() function — keep it
+  The feature flag switching logic only
+  Frontend territory-finder.html
+  Stripe payment flow
+  Landing page / ad slot creation
+  Admin territory manager
+
+
+════════════════════════════════════════════════
+TEST
+════════════════════════════════════════════════
+
+TEST 1 — Cleveland GA (White County)
+  White County has 2 cities: Cleveland, Helen
+  Both qualify (population >= 4000? verify)
+  Expected: Cleveland + Helen
+  Territory name: "White County"
+  Note: if Helen population < 4000 in Gazetteer,
+  lower population threshold to 1000 for this path
+  since commercial activity matters more than residents
+
+TEST 2 — Dahlonega GA (Lumpkin County)
+  Lumpkin County has 1 qualifying city: Dahlonega
+  Fewer than 2 → expand to nearest neighbor
+  Nearest neighbor: Dawson County (Dawsonville)
+  Dawsonville qualifies → bundle
+  Expected: Dahlonega + Dawsonville
+  Territory name: "Lumpkin / Dawson Counties"
+
+TEST 3 — Woodstock GA (Cherokee County)
+  Cherokee has many cities: Woodstock, Canton,
+  Kennesaw, Acworth, Holly Springs, Ball Ground
+  All qualify → take top 6 by business count
+  Expected: Woodstock + Canton + Kennesaw + Acworth
+    + Holly Springs + Ball Ground (up to 6)
+  Territory name: "Cherokee County"
+  No Roswell, no Marietta — different county ✓
+
+TEST 4 — Marietta GA (Cobb County)
+  Cobb has: Marietta, Kennesaw, Smyrna, Acworth,
+    Mableton, Powder Springs, Austell
+  Take top 6 by business count
+  Territory name: "Cobb County"
+  No overlap with Cherokee territory ✓
+
+TEST 5 — Nashville TN (Davidson County)
+  Davidson has Nashville plus smaller cities
+  Take top 6 qualifying cities
+  No Berry Hill, Belle Meade (population too small)
+  Territory name: "Davidson County"
+
+TEST 6 — Athens GA (Clarke County)
+  Athens-Clarke is consolidated — may only have
+  Athens as a qualifying city
+  Fewer than 2 → expand to nearest neighbor Oconee
+  Oconee has Watkinsville
+  Expected: Athens + Watkinsville
+  Territory name: "Clarke / Oconee Counties"
+
+TEST 7 — Exclusion still works
+  If Woodstock + Canton + Kennesaw + Acworth are excluded:
+  Cherokee County search returns Holly Springs +
+  Ball Ground + other Cherokee cities
+  No cities from outside Cherokee County appear
+
+TEST 8 — Feature flag toggle
+  Set USE_COUNTY_TERRITORY_MODEL = false
+  Cleveland GA should return to AI-based results
+  Set back to true — county model resumes
+  Confirm both paths work without errors
