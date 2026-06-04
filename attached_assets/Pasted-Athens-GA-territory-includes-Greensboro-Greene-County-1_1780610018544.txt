@@ -1,0 +1,94 @@
+Athens GA territory includes Greensboro (Greene County,
+~1 hour away) when much closer cities exist in Jackson
+County (Jefferson, Commerce) and Oglethorpe County
+(Lexington). The neighbor county list is returning counties
+in the wrong order.
+
+════════════════════════════════════════════════
+DIAGNOSE FIRST
+════════════════════════════════════════════════
+
+1. Log the full neighbor county list being injected
+   into the AI prompt for Athens GA.
+   Report the exact array returned by getNeighborCountyNames()
+   for Clarke County GA (GEOID: 13059).
+
+   Expected order by proximity:
+     1. Oconee County (Watkinsville) — immediately west
+     2. Jackson County (Jefferson, Commerce) — north
+     3. Madison County (Danielsville) — northeast
+     4. Oglethorpe County (Lexington) — east
+     5. Morgan County (Madison city) — southeast
+     6. Greene County (Greensboro) — farther east
+
+   If the list shows Morgan or Greene before Jackson or
+   Oglethorpe, the distance sort is wrong.
+
+2. Check how getNeighborCountyNames() calculates distance.
+   Is it measuring centroid-to-centroid distance between
+   Clarke County and each neighbor?
+   Or is it using some other metric?
+
+3. Log the centroid coordinates being used for Clarke County
+   and for each neighboring county.
+   Clarke County centroid should be approximately:
+     33.96, -83.38 (Athens area)
+
+════════════════════════════════════════════════
+LIKELY CAUSE
+════════════════════════════════════════════════
+
+The distance sort may be measuring from the wrong centroid.
+Athens-Clarke County is a consolidated city-county with
+FUNCSTAT='F'. Its GEOID in county-centroids.csv may be
+different from what getNeighborCountyNames() is looking up.
+
+Or the adjacency file may list neighbors in a different
+order and the distance sort is not actually running.
+
+════════════════════════════════════════════════
+FIX
+════════════════════════════════════════════════
+
+Confirm that getNeighborCountyNames() sorts neighbor
+counties by straight-line distance from the HOME county
+centroid to each NEIGHBOR county centroid.
+
+The sort should be:
+  neighbors.sort((a, b) => {
+    const distA = haversineDistance(
+      homeCountyCentroid.lat, homeCountyCentroid.lng,
+      a.centroid.lat, a.centroid.lng
+    );
+    const distB = haversineDistance(
+      homeCountyCentroid.lat, homeCountyCentroid.lng,
+      b.centroid.lat, b.centroid.lng
+    );
+    return distA - distB;
+  });
+
+If this sort is already in place, check whether the
+centroid data is correct for Clarke County and its neighbors.
+
+════════════════════════════════════════════════
+TEST AFTER FIXING
+════════════════════════════════════════════════
+
+Athens GA territory:
+  Must include Jackson County cities (Jefferson or Commerce)
+  OR Oglethorpe County (Lexington) before reaching
+  Morgan County (Madison) or Greene County (Greensboro)
+
+  Acceptable result:
+    Athens + Watkinsville (Oconee) + Jefferson (Jackson)
+    + Commerce (Jackson) or Danielsville (Madison County)
+
+  NOT acceptable:
+    Athens + Watkinsville + Madison + Greensboro
+    (skips closer Jackson and Oglethorpe counties)
+
+Cleveland GA must still work correctly:
+  Cleveland + Helen + Cornelia + Clarkesville
+
+Dahlonega GA must still work correctly:
+  Dahlonega + Dawsonville + Cleveland or similar
