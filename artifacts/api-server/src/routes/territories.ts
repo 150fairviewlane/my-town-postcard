@@ -493,7 +493,7 @@ router.post("/territories/propose", async (req, res): Promise<void> => {
   }
 
   const result = await getTerritoryForLocation(
-    loc.lat, loc.lng, stateAbbr, stateFips, stateName, zip,
+    loc.lat, loc.lng, stateAbbr, stateFips, stateName, zip, city, stateAbbr,
   );
 
   if (result.type === "existing" && result.territory) {
