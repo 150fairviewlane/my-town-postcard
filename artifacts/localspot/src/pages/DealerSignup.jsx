@@ -11,8 +11,21 @@ const inputStyle = {
   fontFamily: "sans-serif",
 };
 
+const US_STATES = [
+  ["AL","Alabama"],["AK","Alaska"],["AZ","Arizona"],["AR","Arkansas"],["CA","California"],
+  ["CO","Colorado"],["CT","Connecticut"],["DE","Delaware"],["FL","Florida"],["GA","Georgia"],
+  ["HI","Hawaii"],["ID","Idaho"],["IL","Illinois"],["IN","Indiana"],["IA","Iowa"],
+  ["KS","Kansas"],["KY","Kentucky"],["LA","Louisiana"],["ME","Maine"],["MD","Maryland"],
+  ["MA","Massachusetts"],["MI","Michigan"],["MN","Minnesota"],["MS","Mississippi"],["MO","Missouri"],
+  ["MT","Montana"],["NE","Nebraska"],["NV","Nevada"],["NH","New Hampshire"],["NJ","New Jersey"],
+  ["NM","New Mexico"],["NY","New York"],["NC","North Carolina"],["ND","North Dakota"],["OH","Ohio"],
+  ["OK","Oklahoma"],["OR","Oregon"],["PA","Pennsylvania"],["RI","Rhode Island"],["SC","South Carolina"],
+  ["SD","South Dakota"],["TN","Tennessee"],["TX","Texas"],["UT","Utah"],["VT","Vermont"],
+  ["VA","Virginia"],["WA","Washington"],["WV","West Virginia"],["WI","Wisconsin"],["WY","Wyoming"],
+];
+
 export default function DealerSignup() {
-  const [form, setForm] = useState({ name: "", email: "", phone: "", zip: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", city: "", state: "", zip: "" });
   const [error, setError] = useState(null);
 
   const cancelled = useMemo(
@@ -34,6 +47,14 @@ export default function DealerSignup() {
       setError("Please enter a valid email address.");
       return;
     }
+    if (!form.city.trim()) {
+      setError("Please enter your city.");
+      return;
+    }
+    if (!form.state) {
+      setError("Please select your state.");
+      return;
+    }
     if (!form.zip.trim() || !/^\d{5}$/.test(form.zip.trim())) {
       setError("Please enter a valid 5-digit ZIP code.");
       return;
@@ -42,6 +63,8 @@ export default function DealerSignup() {
     const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
     const params = new URLSearchParams({
       zip:   form.zip.trim(),
+      city:  form.city.trim(),
+      state: form.state,
       name:  form.name.trim(),
       email: form.email.trim().toLowerCase(),
       ref:   "signup",
@@ -85,7 +108,7 @@ export default function DealerSignup() {
             Tell us about yourself
           </h2>
           <p style={{ color: "#666", fontSize: 14, marginBottom: 24 }}>
-            Enter your ZIP code and we'll show you the available territories on the map.
+            Enter your location and we'll show you the available territories on the map.
           </p>
 
           <form onSubmit={handleNext}
@@ -104,10 +127,29 @@ export default function DealerSignup() {
             </div>
             <div>
               <label style={{ fontSize: 12.5, fontWeight: 600, color: "#374151",
-                display: "block", marginBottom: 4 }}>Your ZIP code *</label>
-              <input style={inputStyle} required type="text" inputMode="numeric"
-                maxLength={5} value={form.zip} onChange={set("zip")}
-                placeholder="e.g. 30523" />
+                display: "block", marginBottom: 4 }}>City *</label>
+              <input style={inputStyle} required value={form.city} onChange={set("city")}
+                placeholder="e.g. Clarkesville" />
+            </div>
+            <div style={{ display: "flex", gap: 12 }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: 12.5, fontWeight: 600, color: "#374151",
+                  display: "block", marginBottom: 4 }}>State *</label>
+                <select style={{ ...inputStyle, appearance: "auto", cursor: "pointer" }}
+                  required value={form.state} onChange={set("state")}>
+                  <option value="">— Select —</option>
+                  {US_STATES.map(([abbr, name]) => (
+                    <option key={abbr} value={abbr}>{abbr} — {name}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ flex: "0 0 130px" }}>
+                <label style={{ fontSize: 12.5, fontWeight: 600, color: "#374151",
+                  display: "block", marginBottom: 4 }}>ZIP code *</label>
+                <input style={inputStyle} required type="text" inputMode="numeric"
+                  maxLength={5} value={form.zip} onChange={set("zip")}
+                  placeholder="e.g. 30523" />
+              </div>
             </div>
             <div>
               <label style={{ fontSize: 12.5, fontWeight: 600, color: "#374151",
