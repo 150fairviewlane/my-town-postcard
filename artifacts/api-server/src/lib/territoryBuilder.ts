@@ -19,6 +19,8 @@ import {
   getCountyHouseholds,
   getCountyGeoidForLocation,
   getCountyGeoidFromZip,
+  findGazetteerCity,
+  getNeighborCountyNames,
 } from "./censusApi";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import { logger } from "./logger";
@@ -58,6 +60,11 @@ const HUB_LOCAL_BIZ_MIN = 8;  // postcard-biz proxy: fewer than this ≈ populat
 // when a larger neighbor (Cornelia, Gainesville) exists in an adjacent county.
 const HUB_MIN_COUNTY_REP_BIZ = 50;
 const MAX_HUB_DISTANCE_MILES = 22; // server-side hard cap on AI hub suggestions
+
+// ─── County Territory Model ───────────────────────────────────────────────────
+const USE_COUNTY_TERRITORY_MODEL = true; // feature flag: county-based vs AI hub selection
+const COUNTY_MIN_LOCAL_BIZ = 3;  // minimum local businesses for county path (lower than AI path)
+const COUNTY_MAX_HUBS = 6;       // max hubs collected before Voronoi caps at TARGET_HUB_COUNT
 
 // Private/gated/ferry-only communities that can slip through the density proxy
 // because their commercial data is misleading (resorts count businesses on paper
@@ -952,6 +959,133 @@ Return ONLY valid JSON with no explanation or markdown:
 }
 
 /**
+ * County-based hub selection — deterministic, no AI call.
+ *
+ * Returns cities in the dealer's home county (sorted by local business density),
+ * expanding to the nearest neighbour county if the home county has fewer than 2
+ * qualifying cities. Also returns a county-based territory label for display.
+ */
+async function getCountyTerritoryHubs(
+  city: string,
+  stateAbbr: string,
+  dealerLat: number,
+  dealerLng: number,
+  excludedCities: string[]
+): Promise<{ hubs: CityHub[]; countyLabel: string }> {
+  const excludedSet = new Set(excludedCities.map(c => c.toLowerCase().trim()));
+
+  // Step 1: Resolve home city → county GEOID
+  const homePlace = findGazetteerCity(city, stateAbbr);
+  if (!homePlace) {
+    logger.warn({ city, stateAbbr }, "County territory: city not found in Gazetteer");
+    return { hubs: [], countyLabel: "" };
+  }
+  const homeGeoid = getCountyGeoidForLocation(homePlace.lat, homePlace.lng);
+  if (!homeGeoid) {
+    logger.warn({ city, stateAbbr }, "County territory: could not resolve home county GEOID");
+    return { hubs: [], countyLabel: "" };
+  }
+  const homeCountyInfo = await getCountyInfo(homeGeoid.slice(0, 2), homeGeoid.slice(2));
+  const homeCountyShort = homeCountyInfo?.name.replace(/\s+County$/i, "").trim() ?? city;
+
+  // Helper: build CityHub from a Gazetteer-resolved place
+  function buildHub(c: { name: string; stateAbbr: string; lat: number; lng: number }): CityHub {
+    const geoid = getCountyGeoidForLocation(c.lat, c.lng) ?? "";
+    const nearbyZips = getZipsNearLocation(c.lat, c.lng, HUB_HOUSEHOLD_RADIUS);
+    const bizZips    = getZipsNearLocation(c.lat, c.lng, HUB_BUSINESS_RADIUS);
+    const localZips  = getZipsNearLocation(c.lat, c.lng, HUB_LOCAL_RADIUS);
+    return {
+      cityName: c.name,
+      stateAbbr: c.stateAbbr,
+      lat: c.lat,
+      lng: c.lng,
+      countyGeoid: geoid,
+      catchmentHouseholds: nearbyZips.reduce((s, z) => s + z.households, 0),
+      nearbyBusinesses:    bizZips.reduce((s, z) => s + z.businesses, 0),
+      localBiz:            localZips.reduce((s, z) => s + z.businesses, 0),
+      distanceFromDealer:  haversineDistanceMiles(dealerLat, dealerLng, c.lat, c.lng),
+      qualifies: true,
+    };
+  }
+
+  const allStateCities = getCitiesInState(stateAbbr);
+
+  // Step 2: Qualifying cities in home county
+  const homeHubs = allStateCities
+    .filter(c =>
+      !excludedSet.has(c.name.toLowerCase().trim()) &&
+      !RESORT_CITIES.has(c.name) &&
+      getCountyGeoidForLocation(c.lat, c.lng) === homeGeoid
+    )
+    .map(c => buildHub(c))
+    .filter(h => h.localBiz >= COUNTY_MIN_LOCAL_BIZ)
+    .sort((a, b) => b.localBiz - a.localBiz)
+    .slice(0, COUNTY_MAX_HUBS);
+
+  let hubs = homeHubs;
+  let countyShortNames = [homeCountyShort];
+
+  // Step 3: If fewer than MIN_HUB_COUNT hubs in home county, expand to nearest neighbour.
+  // Even a county with 2 qualifying cities (e.g. White County → Cleveland + Helen)
+  // needs a neighbour to reach the 3-hub viability floor.
+  if (hubs.length < MIN_HUB_COUNT) {
+    // Pre-build geoid → short county name map so the filter below stays sync
+    const geoidToShortName = new Map<string, string>();
+    const uniqueGeoids = new Set(
+      allStateCities
+        .map(c => getCountyGeoidForLocation(c.lat, c.lng))
+        .filter((g): g is string => g != null && g !== homeGeoid)
+    );
+    for (const geoid of uniqueGeoids) {
+      const info = await getCountyInfo(geoid.slice(0, 2), geoid.slice(2));
+      if (info) {
+        geoidToShortName.set(geoid, info.name.replace(/\s+County$/i, "").trim());
+      }
+    }
+
+    // Walk neighbours by proximity until we reach MIN_HUB_COUNT hubs or run out.
+    // Sparse mountain counties (e.g. Lumpkin) may need hubs from two neighbours
+    // (Dawson + White) to pass the viability floor. We record the first neighbour
+    // county that contributed hubs in the label; a second silent expansion is fine.
+    const neighborShortNames = getNeighborCountyNames(homeGeoid);
+    const alreadyAddedGeoids = new Set<string>(); // prevent double-counting a county
+    for (const neighborShort of neighborShortNames) {
+      if (hubs.length >= MIN_HUB_COUNT) break; // viability floor reached
+      const neighborHubs = allStateCities
+        .filter(c => {
+          if (excludedSet.has(c.name.toLowerCase().trim())) return false;
+          if (RESORT_CITIES.has(c.name)) return false;
+          const geoid = getCountyGeoidForLocation(c.lat, c.lng);
+          if (!geoid || geoid === homeGeoid) return false;
+          if (alreadyAddedGeoids.has(geoid)) return false;
+          return geoidToShortName.get(geoid)?.toLowerCase() === neighborShort.toLowerCase();
+        })
+        .map(c => buildHub(c))
+        .filter(h => h.localBiz >= COUNTY_MIN_LOCAL_BIZ)
+        .sort((a, b) => b.localBiz - a.localBiz);
+
+      if (neighborHubs.length > 0) {
+        hubs = [...hubs, ...neighborHubs].slice(0, COUNTY_MAX_HUBS);
+        // Track county geoids we've added so no city gets re-evaluated
+        for (const h of neighborHubs) { if (h.countyGeoid) alreadyAddedGeoids.add(h.countyGeoid); }
+        // Only name the first expansion county in the territory label
+        if (countyShortNames.length === 1) countyShortNames.push(neighborShort);
+      }
+    }
+  }
+
+  const countyLabel = countyShortNames.length === 1
+    ? `${countyShortNames[0]} County`
+    : `${countyShortNames[0]} / ${countyShortNames[1]} Counties`;
+
+  logger.info(
+    { city, stateAbbr, hubCount: hubs.length, countyLabel },
+    "County territory: hubs resolved"
+  );
+  return { hubs, countyLabel };
+}
+
+/**
  * Builds a territory proposal using the city-hub model.
  */
 async function buildCityHubProposal(
@@ -965,13 +1099,23 @@ async function buildCityHubProposal(
   searchRadius: number = TERRITORY_SEARCH_RADIUS
 ): Promise<TerritoryProposal> {
   const excludedCities = await getClaimedHubCities(dealerLat, dealerLng, stateAbbr);
-  const rawHubs = await getAITerritoryHubs(
-    city, dealerState || stateAbbr, dealerLat, dealerLng, excludedCities
-  );
+  let countyLabel = "";
+  let rawHubs: CityHub[];
+  if (USE_COUNTY_TERRITORY_MODEL) {
+    const result = await getCountyTerritoryHubs(
+      city, dealerState || stateAbbr, dealerLat, dealerLng, excludedCities
+    );
+    rawHubs = result.hubs;
+    countyLabel = result.countyLabel;
+  } else {
+    rawHubs = await getAITerritoryHubs(
+      city, dealerState || stateAbbr, dealerLat, dealerLng, excludedCities
+    );
+  }
 
   if (rawHubs.length < 2) {
     return {
-      proposedName: generateTerritoryName([], [], stateAbbr),
+      proposedName: countyLabel || generateTerritoryName([], [], stateAbbr),
       slug: await generateSlug("territory"),
       stateFips,
       stateAbbr,
@@ -1108,7 +1252,7 @@ async function buildCityHubProposal(
 
   const totalHouseholds = hubs.reduce((s, h) => s + h.catchmentHouseholds, 0);
   const cityNames = hubs.map(h => h.cityName);
-  const proposedName = generateTerritoryName(cityNames, [], stateAbbr);
+  const proposedName = countyLabel || generateTerritoryName(cityNames, [], stateAbbr);
   const slug = await generateSlug(proposedName);
 
   const centroidLat = hubs.length > 0
