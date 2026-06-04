@@ -16,6 +16,8 @@ import { ensureDealerLandingPage } from "../lib/dealerLandingPage";
 import {
   materializeTerritoryFromProposal,
   findExistingTerritoryWithinMiles,
+  resolveProposalHubs,
+  checkZipFootprintConflict,
 } from "../lib/territoryBuilder";
 import {
   sendTerritoryClaimedEmail,
@@ -981,7 +983,9 @@ export async function activateTerritoryClaimFromCheckoutSession(session: any): P
   }
   if (proposal.status === "claimed") return; // defensive
 
-  // Post-payment 25-mile conflict re-check against taken/pending territories.
+  // Post-payment conflict re-check — two layers:
+  //   (A) 25-mile centroid proximity (fast, catches obvious overlaps)
+  //   (B) ZIP footprint overlap against territory_zip_assignments (precise)
   if (proposal.centroidLat != null && proposal.centroidLng != null) {
     const conflict = await findExistingTerritoryWithinMiles(
       proposal.centroidLat,
@@ -1005,9 +1009,47 @@ export async function activateTerritoryClaimFromCheckoutSession(session: any): P
       }
       logger.info(
         { proposalId, dealerId, conflictTerritoryId: String(conflict.id) },
-        "Territory claim refunded — overlap appeared during checkout",
+        "Territory claim refunded — centroid overlap appeared during checkout",
       );
       return;
+    }
+  }
+
+  // (B) ZIP footprint overlap: catches conflicts where centroids are >25 mi
+  // apart but 15-mile catchment circles still share ZIP codes.
+  {
+    const cities = Array.isArray(proposal.proposedCities) ? proposal.proposedCities : [];
+    const hubs = resolveProposalHubs(
+      cities,
+      proposal.stateAbbr,
+      proposal.centroidLat,
+      proposal.centroidLng,
+    );
+    if (hubs.length > 0) {
+      const zipConflictId = await checkZipFootprintConflict(hubs);
+      if (zipConflictId) {
+        await db
+          .update(territoryProposalsTable)
+          .set({
+            status: "conflict",
+            reviewedAt: new Date(),
+            notes: `ZIP footprint conflict with territory ${zipConflictId}`,
+          })
+          .where(eq(territoryProposalsTable.id, proposalId));
+        await refundAndCancelTerritoryClaim(session, dealerId);
+        if (proposal.dealerEmail) {
+          await sendTerritoryConflictEmail({
+            dealerName: proposal.dealerName ?? "Dealer",
+            dealerEmail: proposal.dealerEmail,
+            territoryName: proposal.proposedName,
+          });
+        }
+        logger.info(
+          { proposalId, dealerId, zipConflictTerritoryId: zipConflictId },
+          "Territory claim refunded — ZIP footprint overlap appeared during checkout",
+        );
+        return;
+      }
     }
   }
 

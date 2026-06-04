@@ -444,18 +444,17 @@ export async function checkZipFootprintConflict(
 }
 
 /**
- * Resolves each city name to coordinates via the Gazetteer, computes the 15-mile
- * ZIP footprint around each hub, and bulk-inserts into territory_zip_assignments.
- * Uses onConflictDoNothing so the first territory to claim a ZIP keeps it.
- * Exported so the synchronous confirm path can also call it.
+ * Resolves proposal city names to hub coordinates via the Gazetteer.
+ * Shared by the ZIP conflict-check and footprint-storage paths so resolution
+ * logic is defined in one place.
+ * Falls back to the centroid point when no city names resolve.
  */
-export async function storeZipFootprintForTerritory(
-  territoryId: string,
+export function resolveProposalHubs(
   cities: string[],
   stateAbbr: string,
   fallbackLat?: number | null,
   fallbackLng?: number | null
-): Promise<void> {
+): Array<{ cityName: string; lat: number; lng: number }> {
   const gazCities = getCitiesInState(stateAbbr);
   const hubs: Array<{ cityName: string; lat: number; lng: number }> = [];
 
@@ -469,11 +468,26 @@ export async function storeZipFootprintForTerritory(
     if (match) hubs.push({ cityName, lat: match.lat, lng: match.lng });
   }
 
-  // Fall back to centroid when no cities resolve
   if (hubs.length === 0 && fallbackLat != null && fallbackLng != null) {
     hubs.push({ cityName: "center", lat: fallbackLat, lng: fallbackLng });
   }
+  return hubs;
+}
 
+/**
+ * Resolves each city name to coordinates via the Gazetteer, computes the 15-mile
+ * ZIP footprint around each hub, and bulk-inserts into territory_zip_assignments.
+ * Uses onConflictDoNothing so the first territory to claim a ZIP keeps it.
+ * Exported so the synchronous confirm path can also call it.
+ */
+export async function storeZipFootprintForTerritory(
+  territoryId: string,
+  cities: string[],
+  stateAbbr: string,
+  fallbackLat?: number | null,
+  fallbackLng?: number | null
+): Promise<void> {
+  const hubs = resolveProposalHubs(cities, stateAbbr, fallbackLat, fallbackLng);
   if (hubs.length === 0) return;
 
   const zips = computeHubZipFootprint(hubs);
@@ -579,16 +593,20 @@ async function buildCityHubProposal(
   let hubs = voronoiAssign(initialHubs, allNearbyZips);
 
   // Replacement round: if any hub fails qualification after exclusive assignment,
-  // swap it for the next best candidate and re-run Voronoi once
+  // swap it for the next best candidate and re-run Voronoi once.
+  // Preserves the one-hub-per-county rule when picking replacements.
   const failedNames = new Set(hubs.filter(h => !h.qualifies).map(h => h.cityName));
   if (failedNames.size > 0) {
     const usedNames = new Set(hubs.map(h => h.cityName));
     const replacements = candidates.filter(c => !usedNames.has(c.cityName) && c.qualifies);
 
     const kept = hubs.filter(h => h.qualifies);
+    const keptCounties = new Set(kept.map(h => h.countyGeoid).filter(Boolean));
     for (const rep of replacements) {
       if (kept.length >= TARGET_HUB_COUNT) break;
+      if (rep.countyGeoid && keptCounties.has(rep.countyGeoid)) continue;
       kept.push(rep);
+      if (rep.countyGeoid) keptCounties.add(rep.countyGeoid);
     }
 
     // Re-run Voronoi only if the hub set actually changed
