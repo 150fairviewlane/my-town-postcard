@@ -1,0 +1,83 @@
+The AI territory prompt needs one targeted fix. The AI is
+selecting distant neighboring counties (Lumpkin/Union)
+instead of the nearest neighboring county (Habersham) when
+expanding beyond the home county.
+
+Cleveland GA result is:
+  Cleveland + Helen (White County) ✓
+  Dahlonega (Lumpkin County) ✗ — wrong neighbor
+  Blairsville (Union County) ✗ — wrong neighbor, 1 hour away
+
+Expected result:
+  Cleveland + Helen (White County) ✓
+  Cornelia + Clarkesville (Habersham County) ✓ — nearest neighbor
+
+════════════════════════════════════════════════
+THE FIX — UPDATE THE PROMPT
+════════════════════════════════════════════════
+
+In getAITerritoryHubs(), find the SELECTION RULES section
+of the prompt and replace rule #2 with this more explicit
+version:
+
+OLD rule 2:
+"Only expand to a neighboring county when the home county
+has fewer than 4 qualifying cities. Fill that neighbor
+county completely before moving to a third."
+
+NEW rule 2:
+"Only expand to a neighboring county when the home county
+has fewer than 4 qualifying cities. When expanding, choose
+the GEOGRAPHICALLY NEAREST neighboring county to the dealer's
+home city — not the county with the most well-known city.
+Measure by driving distance or straight-line distance between
+county seats. Fill that nearest neighbor county completely
+(add all its qualifying cities) before considering a third
+county. Only move to a third county if the nearest two
+counties together still have fewer than 4 qualifying cities."
+
+Also add this as a new rule #8:
+"PROXIMITY IS THE PRIMARY CRITERION for neighbor county
+selection. Example: if a dealer is in Cleveland GA (White
+County), the neighboring counties in order of proximity are:
+Habersham (east, ~15 miles), Lumpkin (west, ~20 miles),
+Hall (south, ~20 miles), Towns (north, ~25 miles), Union
+(northwest, ~30 miles). Habersham County must be the first
+expansion county — not Lumpkin or Union which are farther."
+
+════════════════════════════════════════════════
+ALSO ADD — EXPLICIT COUNTY INSTRUCTION
+════════════════════════════════════════════════
+
+At the end of the prompt, just before the JSON schema,
+add this geographic anchor:
+
+"For ${city}, ${state}: The home county is [resolve from
+ZIP or city name]. List the neighboring counties in order
+of proximity to ${city}, then fill from the closest one."
+
+This forces the AI to explicitly reason about proximity
+before selecting neighbor counties.
+
+════════════════════════════════════════════════
+TEST
+════════════════════════════════════════════════
+
+TEST 1 — Cleveland GA
+  Expected: Cleveland + Helen (White County)
+            + Cornelia + Clarkesville (Habersham County)
+  Must NOT include Dahlonega or Blairsville
+
+TEST 2 — Toccoa GA (Stephens County)
+  Nearest neighbor to Stephens County is Habersham (west)
+  and Franklin (south)
+  Expected: Toccoa + [any other Stephens city if exists]
+            + Cornelia or Clarkesville (Habersham)
+            + Lavonia or Carnesville (Franklin)
+  Must NOT include Hart County or Madison County
+  which are farther away
+
+TEST 3 — Woodstock GA (Cherokee County)
+  Cherokee has many cities — should never leave home county
+  Expected: Woodstock + Canton + Kennesaw + Acworth
+  All Cherokee County, unchanged from before
