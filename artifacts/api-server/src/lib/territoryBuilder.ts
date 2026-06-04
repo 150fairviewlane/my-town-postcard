@@ -731,22 +731,21 @@ async function getClaimedHubCities(
 
 /**
  * Calls Claude Haiku to select up to 4 hub cities for a territory.
- * Results are cached in-memory for 5 minutes per (city, stateAbbr, zip, excludedCities) key.
+ * Results are cached in-memory for 5 minutes per (city, stateAbbr, excludedCities) key.
  * Returns [] on any failure (timeout, parse error, too few hubs) — never throws.
  */
 async function getAITerritoryHubs(
   city: string,
   stateAbbr: string,
-  zip: string,
   dealerLat: number,
   dealerLng: number,
   excludedCities: string[]
 ): Promise<CityHub[]> {
-  const cacheKey = [city, stateAbbr, zip, ...excludedCities.sort()].join("|").toLowerCase();
+  const cacheKey = [city, stateAbbr, ...excludedCities.sort()].join("|").toLowerCase();
   const now = Date.now();
   const cached = aiHubCache.get(cacheKey);
   if (cached && cached.expiresAt > now) {
-    logger.info({ city, stateAbbr, zip }, "AI hub selection: cache hit");
+    logger.info({ city, stateAbbr }, "AI hub selection: cache hit");
     return cached.hubs;
   }
 
@@ -757,7 +756,7 @@ async function getAITerritoryHubs(
   const prompt = `You are a direct-mail territory planning assistant. Identify exactly 4 hub cities for a territory centered near ${city}, ${stateAbbr}.
 
 Hub cities are commercial centers where local businesses advertise on a direct-mail postcard delivered to 5,000 homes. Choose cities that:
-1. Are within 40 miles of ${city}, ${stateAbbr} (ZIP: ${zip || "unknown"})
+1. Are within 40 miles of ${city}, ${stateAbbr}
 2. Have significant local business communities (restaurants, retail, services, healthcare)
 3. Together form a geographically coherent, compact area
 4. Represent distinct communities — not suburbs of the same city
@@ -878,12 +877,12 @@ Return a JSON object with exactly 4 hub cities. Include one representative 5-dig
   }
 
   logger.info(
-    { city, stateAbbr, zip, model: "claude-haiku-4-5", hubsResolved: hubs.length, hubsRaw: rawHubs.length },
+    { city, stateAbbr, model: "claude-haiku-4-5", hubsResolved: hubs.length, hubsRaw: rawHubs.length },
     "AI hub selection: complete"
   );
 
   if (hubs.length < 2) {
-    logger.warn({ city, stateAbbr, rawText }, "AI hub selection: < 2 hubs resolved, returning []");
+    logger.warn({ city, stateAbbr }, "AI hub selection: < 2 hubs resolved, returning []");
     return [];
   }
 
@@ -895,7 +894,6 @@ Return a JSON object with exactly 4 hub cities. Include one representative 5-dig
  * Builds a territory proposal using the city-hub model.
  */
 async function buildCityHubProposal(
-  _zip: string,
   dealerLat: number,
   dealerLng: number,
   stateAbbr: string,
@@ -907,7 +905,7 @@ async function buildCityHubProposal(
 ): Promise<TerritoryProposal> {
   const excludedCities = await getClaimedHubCities(dealerLat, dealerLng, stateAbbr);
   const rawHubs = await getAITerritoryHubs(
-    city, dealerState || stateAbbr, _zip, dealerLat, dealerLng, excludedCities
+    city, dealerState || stateAbbr, dealerLat, dealerLng, excludedCities
   );
 
   if (rawHubs.length < 2) {
@@ -1309,7 +1307,7 @@ export async function getTerritoryForLocation(
   // (B) Single AI-powered proposal — no radius ladder needed because hub
   // selection is delegated to Claude Haiku, which knows geographic context.
   const best = await buildCityHubProposal(
-    zip ?? "", lat, lng, stateAbbr, stateFips, stateName,
+    lat, lng, stateAbbr, stateFips, stateName,
     city, dealerState || stateAbbr
   );
 

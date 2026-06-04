@@ -339,15 +339,12 @@ if(_sp.get('zip') && /^\d{5}$/.test(_sp.get('zip'))){
   <div class="sidebar">
     <div class="sidebar-hdr">
       <div class="sidebar-title">Find Your Territory</div>
-      <div class="sidebar-sub">Enter your ZIP, city, and state to see what's available in your area</div>
+      <div class="sidebar-sub">Enter your city and state to see what's available in your area</div>
     </div>
 
     <div class="search-panel">
       <span class="search-label">Your Location</span>
       <div class="search-row">
-        <input type="text" class="search-input" id="zipInput"
-          placeholder="ZIP (e.g. 30523)" maxlength="5" style="flex:0 0 120px"
-          onkeypress="if(event.key==='Enter') runSearch()">
         <input type="text" class="search-input" id="cityInput"
           placeholder="City (e.g. Clarkesville)"
           onkeypress="if(event.key==='Enter') runSearch()">
@@ -419,7 +416,7 @@ if(_sp.get('zip') && /^\d{5}$/.test(_sp.get('zip'))){
 
       <!-- Idle / list -->
       <div id="territoryList">
-        <div class="no-results">Enter your ZIP, city, and state above, then press Find to see your territory.</div>
+        <div class="no-results">Enter your city and state above, then press Find to see your territory.</div>
       </div>
     </div>
 
@@ -433,7 +430,7 @@ if(_sp.get('zip') && /^\d{5}$/.test(_sp.get('zip'))){
   <!-- ══ MAP ══ -->
   <div class="map-wrap">
     <div id="map"></div>
-    <div class="map-tip" id="mapTip">Enter your ZIP, city, and state to find your territory</div>
+    <div class="map-tip" id="mapTip">Enter your city and state to find your territory</div>
   </div>
 </div>
 
@@ -560,12 +557,11 @@ async function initMap(){
 
   // Pre-fill from query params and auto-search if complete
   const sp = new URLSearchParams(location.search);
-  if(sp.get('zip'))   $('zipInput').value  = sp.get('zip');
   if(sp.get('city'))  $('cityInput').value = sp.get('city');
   const st = (sp.get('state') || '').toUpperCase();
   if(st && STATES[st]) $('stateSelect').value = st;
 
-  if($('zipInput').value && $('cityInput').value && $('stateSelect').value){
+  if($('cityInput').value && $('stateSelect').value){
     runSearch();
   } else {
     hideLoadingOverlay();
@@ -660,11 +656,9 @@ async function loadAllTerritories(){
 
 // ─── Search ───────────────────────────────────────────────────────────────────
 async function runSearch(){
-  const zip   = $('zipInput').value.trim();
   const city  = $('cityInput').value.trim();
   const state = $('stateSelect').value;
 
-  if(!/^\d{5}$/.test(zip)){ showToast('Enter a valid 5-digit ZIP code'); return; }
   if(!city){ showToast('Enter your city'); return; }
   if(!state){ showToast('Select your state'); return; }
 
@@ -678,7 +672,7 @@ async function runSearch(){
     const resp = await fetch('/api/territories/propose', {
       method:'POST',
       headers:{ 'Content-Type':'application/json' },
-      body: JSON.stringify({ zip, city, state }),
+      body: JSON.stringify({ city, state }),
     });
     const data = await resp.json().catch(() => ({}));
 

@@ -25,7 +25,7 @@ const US_STATES = [
 ];
 
 export default function DealerSignup() {
-  const [form, setForm] = useState({ name: "", email: "", phone: "", city: "", state: "", zip: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", city: "", state: "" });
   const [error, setError] = useState(null);
 
   const cancelled = useMemo(
@@ -55,14 +55,9 @@ export default function DealerSignup() {
       setError("Please select your state.");
       return;
     }
-    if (!form.zip.trim() || !/^\d{5}$/.test(form.zip.trim())) {
-      setError("Please enter a valid 5-digit ZIP code.");
-      return;
-    }
 
     const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
     const params = new URLSearchParams({
-      zip:   form.zip.trim(),
       city:  form.city.trim(),
       state: form.state,
       name:  form.name.trim(),
@@ -108,7 +103,7 @@ export default function DealerSignup() {
             Tell us about yourself
           </h2>
           <p style={{ color: "#666", fontSize: 14, marginBottom: 24 }}>
-            Enter your location and we'll show you the available territories on the map.
+            Enter your city and state and we'll show you the available territories on the map.
           </p>
 
           <form onSubmit={handleNext}
@@ -131,25 +126,16 @@ export default function DealerSignup() {
               <input style={inputStyle} required value={form.city} onChange={set("city")}
                 placeholder="e.g. Clarkesville" />
             </div>
-            <div style={{ display: "flex", gap: 12 }}>
-              <div style={{ flex: 1 }}>
-                <label style={{ fontSize: 12.5, fontWeight: 600, color: "#374151",
-                  display: "block", marginBottom: 4 }}>State *</label>
-                <select style={{ ...inputStyle, appearance: "auto", cursor: "pointer" }}
-                  required value={form.state} onChange={set("state")}>
-                  <option value="">— Select —</option>
-                  {US_STATES.map(([abbr, name]) => (
-                    <option key={abbr} value={abbr}>{abbr} — {name}</option>
-                  ))}
-                </select>
-              </div>
-              <div style={{ flex: "0 0 130px" }}>
-                <label style={{ fontSize: 12.5, fontWeight: 600, color: "#374151",
-                  display: "block", marginBottom: 4 }}>ZIP code *</label>
-                <input style={inputStyle} required type="text" inputMode="numeric"
-                  maxLength={5} value={form.zip} onChange={set("zip")}
-                  placeholder="e.g. 30523" />
-              </div>
+            <div>
+              <label style={{ fontSize: 12.5, fontWeight: 600, color: "#374151",
+                display: "block", marginBottom: 4 }}>State *</label>
+              <select style={{ ...inputStyle, appearance: "auto", cursor: "pointer" }}
+                required value={form.state} onChange={set("state")}>
+                <option value="">— Select your state —</option>
+                {US_STATES.map(([abbr, name]) => (
+                  <option key={abbr} value={abbr}>{abbr} — {name}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label style={{ fontSize: 12.5, fontWeight: 600, color: "#374151",

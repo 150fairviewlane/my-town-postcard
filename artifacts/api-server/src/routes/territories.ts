@@ -17,9 +17,7 @@ import {
   getCountyGeoidsByShortNames,
   getCountyNameByGeoid,
   getCountyShortNameByGeoid,
-  getCountyFromZip,
   getCitiesInState,
-  getZipLocation,
   getCountyGeoidFromZip,
   getCountyGeoidForLocation,
 } from "../lib/censusApi";
@@ -433,10 +431,39 @@ function checkProposeRateLimit(ip: string): boolean {
 }
 
 const ProposeSchema = z.object({
-  zip:   z.string().trim().regex(/^\d{5}$/, "Enter a valid 5-digit ZIP code"),
   city:  z.string().trim().min(1, "City is required").max(120),
   state: z.string().trim().regex(/^[A-Za-z]{2}$/, "Select a state"),
 });
+
+/** State abbreviation → [name, FIPS 2-digit string] */
+const STATE_META: Record<string, { stateName: string; stateFips: string }> = {
+  AL:{stateName:"Alabama",stateFips:"01"},AK:{stateName:"Alaska",stateFips:"02"},
+  AZ:{stateName:"Arizona",stateFips:"04"},AR:{stateName:"Arkansas",stateFips:"05"},
+  CA:{stateName:"California",stateFips:"06"},CO:{stateName:"Colorado",stateFips:"08"},
+  CT:{stateName:"Connecticut",stateFips:"09"},DE:{stateName:"Delaware",stateFips:"10"},
+  DC:{stateName:"District of Columbia",stateFips:"11"},FL:{stateName:"Florida",stateFips:"12"},
+  GA:{stateName:"Georgia",stateFips:"13"},HI:{stateName:"Hawaii",stateFips:"15"},
+  ID:{stateName:"Idaho",stateFips:"16"},IL:{stateName:"Illinois",stateFips:"17"},
+  IN:{stateName:"Indiana",stateFips:"18"},IA:{stateName:"Iowa",stateFips:"19"},
+  KS:{stateName:"Kansas",stateFips:"20"},KY:{stateName:"Kentucky",stateFips:"21"},
+  LA:{stateName:"Louisiana",stateFips:"22"},ME:{stateName:"Maine",stateFips:"23"},
+  MD:{stateName:"Maryland",stateFips:"24"},MA:{stateName:"Massachusetts",stateFips:"25"},
+  MI:{stateName:"Michigan",stateFips:"26"},MN:{stateName:"Minnesota",stateFips:"27"},
+  MS:{stateName:"Mississippi",stateFips:"28"},MO:{stateName:"Missouri",stateFips:"29"},
+  MT:{stateName:"Montana",stateFips:"30"},NE:{stateName:"Nebraska",stateFips:"31"},
+  NV:{stateName:"Nevada",stateFips:"32"},NH:{stateName:"New Hampshire",stateFips:"33"},
+  NJ:{stateName:"New Jersey",stateFips:"34"},NM:{stateName:"New Mexico",stateFips:"35"},
+  NY:{stateName:"New York",stateFips:"36"},NC:{stateName:"North Carolina",stateFips:"37"},
+  ND:{stateName:"North Dakota",stateFips:"38"},OH:{stateName:"Ohio",stateFips:"39"},
+  OK:{stateName:"Oklahoma",stateFips:"40"},OR:{stateName:"Oregon",stateFips:"41"},
+  PA:{stateName:"Pennsylvania",stateFips:"42"},RI:{stateName:"Rhode Island",stateFips:"44"},
+  SC:{stateName:"South Carolina",stateFips:"45"},SD:{stateName:"South Dakota",stateFips:"46"},
+  TN:{stateName:"Tennessee",stateFips:"47"},TX:{stateName:"Texas",stateFips:"48"},
+  UT:{stateName:"Utah",stateFips:"49"},VT:{stateName:"Vermont",stateFips:"50"},
+  VA:{stateName:"Virginia",stateFips:"51"},WA:{stateName:"Washington",stateFips:"53"},
+  WV:{stateName:"West Virginia",stateFips:"54"},WI:{stateName:"Wisconsin",stateFips:"55"},
+  WY:{stateName:"Wyoming",stateFips:"56"},
+};
 
 /** Unique, non-empty county GEOIDs across a proposal's hubs. */
 function proposalCountyGeoids(hubs: Array<{ countyGeoid: string }>): string[] {
@@ -459,41 +486,29 @@ router.post("/territories/propose", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" });
     return;
   }
-  const { zip, city, state } = parsed.data;
-  const submittedAbbr = state.trim().toUpperCase();
+  const { city, state } = parsed.data;
+  const stateAbbr = state.trim().toUpperCase();
 
-  // ZIP resolves the primary county and the canonical state metadata.
-  const fromZip = await getCountyFromZip(zip);
-  if (!fromZip) {
-    res.status(404).json({ error: "We couldn't find that ZIP code. Please double-check it." });
+  // Resolve stateFips and stateName from the 2-letter abbreviation.
+  const stateMeta = STATE_META[stateAbbr];
+  if (!stateMeta) {
+    res.status(400).json({ error: "Unrecognized state abbreviation." });
     return;
   }
-  const { stateFips, stateName, stateAbbr, countyFips, countyName } = fromZip;
+  const { stateFips, stateName } = stateMeta;
 
-  // State is authoritative and must agree with the ZIP — it is never silently
-  // ignored. A mismatched ZIP/state combination is rejected.
-  if (submittedAbbr !== stateAbbr) {
-    res.status(400).json({
-      error: `ZIP ${zip} is in ${stateName} (${stateAbbr}), not ${submittedAbbr}. Please check your ZIP and state.`,
-    });
-    return;
-  }
-
-  // City + State → lat/lng via the Gazetteer (authoritative geocoder). Only fall
-  // back to the ZIP centroid for small towns missing from the Gazetteer, and
-  // that ZIP is already validated to be within the submitted state.
+  // City + State → lat/lng via the Gazetteer (authoritative geocoder).
+  // No ZIP fallback — if the city is not in the Gazetteer, ask for a nearby larger town.
   const cityNorm = city.toLowerCase();
   const cityMatch = getCitiesInState(stateAbbr).find(c => c.name.toLowerCase() === cityNorm);
-  const loc = cityMatch
-    ? { lat: cityMatch.lat, lng: cityMatch.lng }
-    : getZipLocation(zip);
-  if (!loc) {
+  if (!cityMatch) {
     res.status(404).json({ error: `We couldn't locate "${city}, ${stateAbbr}". Try a nearby larger town.` });
     return;
   }
+  const loc = { lat: cityMatch.lat, lng: cityMatch.lng };
 
   const result = await getTerritoryForLocation(
-    loc.lat, loc.lng, stateAbbr, stateFips, stateName, zip, city, stateAbbr,
+    loc.lat, loc.lng, stateAbbr, stateFips, stateName, undefined, city, stateAbbr,
   );
 
   if (result.type === "existing" && result.territory) {
@@ -531,9 +546,9 @@ router.post("/territories/propose", async (req, res): Promise<void> => {
         stateAbbr,
         stateFips,
         stateName,
-        zipCode: zip,
-        countyFips,
-        countyName,
+        zipCode: null,
+        countyFips: null,
+        countyName: null,
         centroidLat: p.centroidLat,
         centroidLng: p.centroidLng,
         households: p.totalHouseholds,
