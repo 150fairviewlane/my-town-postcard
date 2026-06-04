@@ -10,7 +10,7 @@
  */
 
 import { db, territoriesTable, territoryProposalsTable, territoryZipAssignmentsTable, type TerritoryProposalRow } from "@workspace/db";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, ne } from "drizzle-orm";
 import {
   getCountyInfo,
   getZipsNearLocation,
@@ -795,13 +795,33 @@ export async function generateNextTerritoryId(stateAbbr: string): Promise<string
 }
 
 /**
+ * Thrown by materializeTerritoryFromProposal when intra-transaction
+ * verification finds that one or more footprint ZIPs are already owned by a
+ * different taken territory. The transaction rolls back automatically.
+ * Callers (dealers.ts webhook handler) catch this to trigger a Stripe refund.
+ */
+export class ZipFootprintConflictError extends Error {
+  constructor(
+    public readonly conflictingTerritoryId: string,
+    public readonly conflictingZip: string,
+  ) {
+    super(
+      `ZIP footprint conflict: ${conflictingZip} already belongs to territory ${conflictingTerritoryId}`,
+    );
+    this.name = "ZipFootprintConflictError";
+  }
+}
+
+/**
  * Materializes a pending-payment proposal row into a live `territories` row
  * with status `taken`, stamped with `source_proposal_id` for idempotency and
  * linked to the claiming dealer. Returns the new territory id.
  *
  * The territory insert and its ZIP footprint are written in a single DB
- * transaction so conflict checks against territory_zip_assignments are
- * accurate immediately — no fire-and-forget race window.
+ * transaction. After ZIP inserts a verification query checks whether any of
+ * our footprint ZIPs are now owned by a DIFFERENT territory (meaning we lost a
+ * concurrent race). If so, a ZipFootprintConflictError is thrown inside the
+ * transaction, rolling back both the territory row and ZIP assignments.
  */
 export async function materializeTerritoryFromProposal(
   proposal: TerritoryProposalRow,
@@ -854,6 +874,34 @@ export async function materializeTerritoryFromProposal(
       await tx.insert(territoryZipAssignmentsTable)
         .values(chunk.map(({ zip }) => ({ zip, territoryId: id })))
         .onConflictDoNothing();
+    }
+
+    // Verify we actually own all of our footprint ZIPs: if any are now owned
+    // by a DIFFERENT territory, a concurrent checkout won the race. Throw to
+    // roll back both the territory row and ZIP assignments.
+    const ourZips = footprintZips.map(z => z.zip);
+    const VCHUNK = 500;
+    for (let i = 0; i < ourZips.length; i += VCHUNK) {
+      const chunk = ourZips.slice(i, i + VCHUNK);
+      const stolen = await tx
+        .select({
+          zip: territoryZipAssignmentsTable.zip,
+          ownerTerritoryId: territoryZipAssignmentsTable.territoryId,
+        })
+        .from(territoryZipAssignmentsTable)
+        .where(
+          and(
+            inArray(territoryZipAssignmentsTable.zip, chunk),
+            ne(territoryZipAssignmentsTable.territoryId, id),
+          )
+        )
+        .limit(1);
+      if (stolen.length > 0) {
+        throw new ZipFootprintConflictError(
+          stolen[0].ownerTerritoryId,
+          stolen[0].zip,
+        );
+      }
     }
 
     return id;

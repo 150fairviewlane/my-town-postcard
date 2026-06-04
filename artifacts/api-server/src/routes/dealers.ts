@@ -18,6 +18,7 @@ import {
   findExistingTerritoryWithinMiles,
   resolveProposalHubs,
   checkZipFootprintConflict,
+  ZipFootprintConflictError,
 } from "../lib/territoryBuilder";
 import {
   sendTerritoryClaimedEmail,
@@ -1053,9 +1054,42 @@ export async function activateTerritoryClaimFromCheckoutSession(session: any): P
     }
   }
 
-  // No conflict — materialize the territory, mark the proposal claimed, and
-  // activate the dealer (flips active, stores Stripe ids, builds landing page).
-  const territoryId = await materializeTerritoryFromProposal(proposal, dealerId);
+  // No conflict (pre-checks passed) — materialize the territory.
+  // materializeTerritoryFromProposal runs territory insert + ZIP footprint in
+  // one transaction and throws ZipFootprintConflictError if a concurrent
+  // checkout won the same ZIPs between our pre-check and the DB write.
+  let territoryId: string;
+  try {
+    territoryId = await materializeTerritoryFromProposal(proposal, dealerId);
+  } catch (err) {
+    if (err instanceof ZipFootprintConflictError) {
+      await db
+        .update(territoryProposalsTable)
+        .set({
+          status: "conflict",
+          reviewedAt: new Date(),
+          notes: `Concurrent ZIP footprint conflict: ${err.conflictingZip} claimed by ${err.conflictingTerritoryId}`,
+        })
+        .where(eq(territoryProposalsTable.id, proposalId));
+      await refundAndCancelTerritoryClaim(session, dealerId);
+      if (proposal.dealerEmail) {
+        await sendTerritoryConflictEmail({
+          dealerName: proposal.dealerName ?? "Dealer",
+          dealerEmail: proposal.dealerEmail,
+          territoryName: proposal.proposedName,
+        });
+      }
+      logger.info(
+        { proposalId, dealerId, conflictZip: err.conflictingZip, winnerTerritoryId: err.conflictingTerritoryId },
+        "Territory claim refunded — concurrent ZIP footprint race lost during materialization",
+      );
+      return;
+    }
+    throw err;
+  }
+
+  // Mark the proposal claimed and activate the dealer
+  // (flips active, stores Stripe ids, builds landing page).
   await db
     .update(territoryProposalsTable)
     .set({ status: "claimed", territoryId, reviewedAt: new Date() })
