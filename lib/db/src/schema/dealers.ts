@@ -12,7 +12,7 @@ export const dealersTable = pgTable(
     name: text("name").notNull(),
     email: text("email").notNull(),
     phone: text("phone"),
-    homeZip: text("home_zip").notNull(),
+    homeZip: text("home_zip"),
     status: text("status", {
       enum: ["pending_payment", "active", "cancelled"],
     })

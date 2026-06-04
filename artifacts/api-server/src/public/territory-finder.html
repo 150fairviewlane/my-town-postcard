@@ -308,10 +308,7 @@ const _sp = new URLSearchParams(window.location.search);
 if(_sp.get('ref')==='signup'){
   document.getElementById('backLink').style.display='block';
 }
-// Show loading overlay immediately if a ZIP was passed so the page doesn't look frozen
-if(_sp.get('zip') && /^\d{5}$/.test(_sp.get('zip'))){
-  document.getElementById('loadingOverlay').style.display='flex';
-}
+
 </script>
 
 <!-- CLAIM MODAL -->

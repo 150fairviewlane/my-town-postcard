@@ -86,7 +86,7 @@ export async function ensureDealerLandingPage(dealerId: number): Promise<number 
     .from(dealersTable)
     .where(eq(dealersTable.id, dealerId))
     .limit(1);
-  const info = await resolveTerritoryInfo(dealerId, meta.name, meta.homeZip);
+  const info = await resolveTerritoryInfo(dealerId, meta.name, meta.homeZip ?? "");
   const candidateSlug = await generateUniqueCampaignSlug(info.territoryName);
 
   // Serialize concurrent callers (Stripe webhook + synchronous /dealers/confirm)

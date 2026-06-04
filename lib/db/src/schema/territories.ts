@@ -79,12 +79,12 @@ export const territoryProposalsTable = pgTable("territory_proposals", {
   id: serial("id").primaryKey(),
   // Populated after admin approves and the territory row is inserted
   territoryId: text("territory_id"),
-  zipCode: text("zip_code").notNull(),
+  zipCode: text("zip_code"),
   stateFips: text("state_fips").notNull(),
   stateAbbr: text("state_abbr").notNull(),
-  // Primary county (the one containing the dealer's ZIP)
-  countyFips: text("county_fips").notNull(),
-  countyName: text("county_name").notNull(),
+  // Primary county — null when the proposal was built from city+state only (no ZIP)
+  countyFips: text("county_fips"),
+  countyName: text("county_name"),
   proposedName: text("proposed_name").notNull(),
   // JSONB arrays — proposed_counties: 5-digit GEOID strings; proposed_cities: city names
   proposedCounties: jsonb("proposed_counties").$type<string[]>().notNull(),

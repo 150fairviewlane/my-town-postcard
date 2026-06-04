@@ -362,9 +362,9 @@ const ClaimProposalProposalSchema = z.object({
   stateAbbr:        z.string().min(2).max(2),
   stateFips:        z.string().min(1).max(2),
   stateName:        z.string().min(1).max(60),
-  zipCode:          z.string().regex(/^\d{5}$/),
-  countyFips:       z.string().min(1).max(5),
-  countyName:       z.string().min(1).max(120),
+  zipCode:          z.string().regex(/^\d{5}$/).nullable().optional(),
+  countyFips:       z.string().min(1).max(5).nullable().optional(),
+  countyName:       z.string().min(1).max(120).nullable().optional(),
   centroidLat:      z.number(),
   centroidLng:      z.number(),
   households:       z.number().int().nonnegative(),
@@ -420,12 +420,12 @@ router.post("/dealers/claim-proposal", async (req, res): Promise<void> => {
       txPortalToken = existing.portalToken ?? crypto.randomUUID();
       await tx
         .update(dealersTable)
-        .set({ name, phone: phone ?? null, homeZip: proposal.zipCode, portalToken: txPortalToken })
+        .set({ name, phone: phone ?? null, homeZip: proposal.zipCode ?? null, portalToken: txPortalToken })
         .where(eq(dealersTable.id, txDealerId));
     } else {
       const [created] = await tx
         .insert(dealersTable)
-        .values({ name, email, phone: phone ?? null, homeZip: proposal.zipCode, status: "pending_payment" })
+        .values({ name, email, phone: phone ?? null, homeZip: proposal.zipCode ?? null, status: "pending_payment" })
         .returning({ id: dealersTable.id, portalToken: dealersTable.portalToken });
       txDealerId = created.id;
       txPortalToken = created.portalToken ?? crypto.randomUUID();
@@ -434,11 +434,11 @@ router.post("/dealers/claim-proposal", async (req, res): Promise<void> => {
     const [insertedProposal] = await tx
       .insert(territoryProposalsTable)
       .values({
-        zipCode:          proposal.zipCode,
+        zipCode:          proposal.zipCode ?? null,
         stateFips:        proposal.stateFips,
         stateAbbr:        proposal.stateAbbr,
-        countyFips:       proposal.countyFips,
-        countyName:       proposal.countyName,
+        countyFips:       proposal.countyFips ?? null,
+        countyName:       proposal.countyName ?? null,
         proposedName:     proposal.proposedName,
         proposedCounties: proposal.countyShortNames,
         proposedCities:   proposal.cities,
