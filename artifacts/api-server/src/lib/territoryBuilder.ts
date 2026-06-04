@@ -760,13 +760,13 @@ Any city NOT on this list is available and may be suggested. Do not avoid cities
 CRITERIA for each hub city:
   - At least 100 local businesses (restaurants, salons, dentists, HVAC companies, auto repair, retail shops, gyms, veterinarians, insurance agents, etc.)
   - Serves a residential population of at least 5,000 households in the surrounding area
-  - Within 25 miles of ${city}
+  - Within 20 miles of ${city}
   - A real city or town with its own recognizable commercial district — not a subdivision, gated community, military base, or tiny enclave surrounded by a larger city
 
 SELECTION RULES:
   1. Return the 4 CLOSEST qualifying cities to ${city} by driving distance. Do not skip closer cities in favor of larger or more well-known cities farther away.
   2. Include ${city} itself as hub #1 if it qualifies.
-  3. If fewer than 4 cities qualify within 25 miles, expand to 35 miles only. Do not expand beyond 35 miles.
+  3. If fewer than 4 cities qualify within 20 miles, return however many do qualify. Do not expand beyond 20 miles.
   4. Small towns and villages (under 2,000 residents with fewer than 50 businesses) do not qualify as hubs even if they are close. Skip them and find the next closest qualifying city.
   5. Do not bias toward cities in the direction of a major metro area (Atlanta, Nashville, Charlotte, etc.) over equally close or closer cities in other directions. A city 12 miles north is preferable to a city 15 miles south toward a major metro.
 
