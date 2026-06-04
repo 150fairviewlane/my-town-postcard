@@ -764,6 +764,15 @@ Hub cities are commercial centers where local businesses advertise on a direct-m
 5. Include ${city} itself if it qualifies as a commercial hub
 ${exclusionClause}
 
+SELECTION RULES — follow these in order, without exception:
+1. Home county first: Fill as many of the 4 hub slots as possible with qualifying cities from the same county as ${city}. Do not look at neighboring counties until the home county is exhausted.
+2. Nearest neighbor expansion: When you must expand beyond the home county, choose the geographically nearest neighboring county by straight-line distance between county seats — not the most well-known or most populous county. Fill that nearest county completely before considering a third county.
+3. Third county only as a last resort: Only consider a third county if the home county and the nearest neighbor together cannot supply 4 qualifying cities.
+4. Never skip closer counties for famous ones: A well-known city in a distant county (e.g., a college town or tourist destination 25+ miles away) must never displace a qualifying city in a closer county. Distance beats name recognition.
+5. Proximity example — Cleveland, GA (White County): The neighboring counties in order of distance from Cleveland are Habersham (~15 mi), Lumpkin (~20 mi), Hall (~20 mi), Towns (~25 mi), Union (~30 mi). Therefore Habersham County cities (Cornelia, Clarkesville, Alto) must be selected before any city in Lumpkin, Hall, Towns, or Union County. Dahlonega (Lumpkin) and Blairsville (Union) must NOT appear if Habersham has qualifying cities available.
+
+For ${city}, ${stateAbbr}: Identify the home county, then list neighboring counties in strict order of proximity to ${city} before choosing any expansion cities.
+
 Return a JSON object with exactly 4 hub cities. Include one representative 5-digit ZIP code per hub to assist with geocoding accuracy.
 
 {
