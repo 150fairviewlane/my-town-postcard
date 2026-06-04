@@ -790,7 +790,7 @@ Return ONLY valid JSON with no explanation or markdown:
     try {
       const response = await anthropic.messages.create(
         {
-          model: "claude-haiku-4-5",
+          model: "claude-sonnet-4-5",
           max_tokens: 8192,
           temperature: 0,
           messages: [{ role: "user", content: prompt }],
@@ -889,7 +889,7 @@ Return ONLY valid JSON with no explanation or markdown:
   }
 
   logger.info(
-    { city, stateAbbr, model: "claude-haiku-4-5", hubsResolved: hubs.length, hubsRaw: rawHubs.length },
+    { city, stateAbbr, model: "claude-sonnet-4-5", hubsResolved: hubs.length, hubsRaw: rawHubs.length },
     "AI hub selection: complete"
   );
 
