@@ -57,6 +57,7 @@ const HUB_LOCAL_BIZ_MIN = 8;  // postcard-biz proxy: fewer than this ≈ populat
 // Prevents tiny places like Demorest (~1,800) or Clermont from being selected
 // when a larger neighbor (Cornelia, Gainesville) exists in an adjacent county.
 const HUB_MIN_COUNTY_REP_BIZ = 50;
+const MAX_HUB_DISTANCE_MILES = 20; // server-side hard cap on AI hub suggestions
 
 // Private/gated/ferry-only communities that can slip through the density proxy
 // because their commercial data is misleading (resorts count businesses on paper
@@ -755,20 +756,18 @@ ${excludedCities.join(", ")}
 Any city NOT on this list is available and may be suggested. Do not avoid cities simply because they are near an excluded city — only avoid the specific cities named above.`
     : "";
 
-  const prompt = `Find the 4 closest cities to ${city}, ${stateAbbr} that would make good postcard mailing hubs for a local advertising business.
+  const prompt = `Suggest cities near ${city}, ${stateAbbr} that would make good postcard mailing hubs for a local advertising business.
 
 CRITERIA for each hub city:
   - At least 100 local businesses (restaurants, salons, dentists, HVAC companies, auto repair, retail shops, gyms, veterinarians, insurance agents, etc.)
   - Serves a residential population of at least 5,000 households in the surrounding area
-  - Within 20 miles of ${city}
   - A real city or town with its own recognizable commercial district — not a subdivision, gated community, military base, or tiny enclave surrounded by a larger city
 
 SELECTION RULES:
   1. Return the 4 CLOSEST qualifying cities to ${city} by driving distance. Do not skip closer cities in favor of larger or more well-known cities farther away.
   2. Include ${city} itself as hub #1 if it qualifies.
-  3. If fewer than 4 cities qualify within 20 miles, return however many do qualify. Do not expand beyond 20 miles.
-  4. Small towns and villages (under 2,000 residents with fewer than 50 businesses) do not qualify as hubs even if they are close. Skip them and find the next closest qualifying city.
-  5. Do not bias toward cities in the direction of a major metro area (Atlanta, Nashville, Charlotte, etc.) over equally close or closer cities in other directions. A city 12 miles north is preferable to a city 15 miles south toward a major metro.
+  3. Small towns and villages (under 2,000 residents with fewer than 50 businesses) do not qualify as hubs even if they are close. Skip them and find the next closest qualifying city.
+  4. Do not bias toward cities in the direction of a major metro area (Atlanta, Nashville, Charlotte, etc.) over equally close or closer cities in other directions. A city 12 miles north is preferable to a city 15 miles south toward a major metro.
 
 ${excludedLine}
 
@@ -836,70 +835,120 @@ Return ONLY valid JSON with no explanation or markdown:
   }
 
   const rawHubs: AIHubResponse["hubs"] = parsed?.hubs ?? [];
-  const hubs: CityHub[] = [];
 
-  for (const h of rawHubs) {
-    if (!h.city || !h.zip) continue;
+  // Server-side distance filter — enforces the MAX_HUB_DISTANCE_MILES cap regardless
+  // of what the AI estimated. The AI suggests freely; we filter with real coordinates.
+  async function resolveAndFilter(rawList: NonNullable<AIHubResponse["hubs"]>): Promise<CityHub[]> {
+    const resolved: CityHub[] = [];
+    for (const h of rawList) {
+      if (!h.city || !h.zip) continue;
+      let lat: number | undefined;
+      let lng: number | undefined;
+      const zipLoc = getZipLocation(h.zip);
+      if (zipLoc) {
+        lat = zipLoc.lat;
+        lng = zipLoc.lng;
+      } else {
+        const gazMatch = getCitiesInState(stateAbbr).find(
+          c => c.name.toLowerCase() === h.city.toLowerCase()
+        );
+        if (gazMatch) { lat = gazMatch.lat; lng = gazMatch.lng; }
+      }
+      if (lat == null || lng == null) {
+        logger.warn({ city: h.city, zip: h.zip }, "AI hub selection: could not resolve location, skipping hub");
+        continue;
+      }
+      const dist = haversineDistanceMiles(dealerLat, dealerLng, lat, lng);
+      if (dist > MAX_HUB_DISTANCE_MILES) {
+        logger.info(
+          { hub: h.city, distanceMiles: parseFloat(dist.toFixed(1)), maxMiles: MAX_HUB_DISTANCE_MILES },
+          `AI hub selection: filtered out ${h.city} — ${dist.toFixed(1)}mi > ${MAX_HUB_DISTANCE_MILES}mi`
+        );
+        continue;
+      }
+      const nearbyZips = getZipsNearLocation(lat, lng, HUB_HOUSEHOLD_RADIUS);
+      const bizZips    = getZipsNearLocation(lat, lng, HUB_BUSINESS_RADIUS);
+      const localZips  = getZipsNearLocation(lat, lng, HUB_LOCAL_RADIUS);
+      resolved.push({
+        cityName: h.city,
+        stateAbbr,
+        lat,
+        lng,
+        countyGeoid: getCountyGeoidForLocation(lat, lng) ?? "",
+        catchmentHouseholds: nearbyZips.reduce((s, z) => s + z.households, 0),
+        nearbyBusinesses:    bizZips.reduce((s, z) => s + z.businesses, 0),
+        localBiz:            localZips.reduce((s, z) => s + z.businesses, 0),
+        distanceFromDealer:  dist,
+        qualifies: true,
+      });
+    }
+    return resolved;
+  }
 
-    // Resolve lat/lng: ZIP centroid first, then Gazetteer name match
-    let lat: number | undefined;
-    let lng: number | undefined;
+  let filteredHubs = await resolveAndFilter(rawHubs);
 
-    const zipLoc = getZipLocation(h.zip);
-    if (zipLoc) {
-      lat = zipLoc.lat;
-      lng = zipLoc.lng;
-    } else {
-      const gazMatch = getCitiesInState(stateAbbr).find(
-        c => c.name.toLowerCase() === h.city.toLowerCase()
-      );
-      if (gazMatch) {
-        lat = gazMatch.lat;
-        lng = gazMatch.lng;
+  // Retry once with a tighter prompt if fewer than 3 hubs survived the filter
+  if (filteredHubs.length < 3) {
+    logger.warn(
+      { city, stateAbbr, hubsAfterFilter: filteredHubs.length },
+      "AI hub selection: < 3 hubs within distance cap, retrying with proximity hint"
+    );
+    const retryPrompt = prompt +
+      `\n\nIMPORTANT: Focus only on cities within a short drive of ${city}. Do not suggest any city more than 20 miles away.`;
+    let retryRaw = "";
+    try {
+      const controller2 = new AbortController();
+      const timeoutId2 = setTimeout(() => controller2.abort(), 10_000);
+      try {
+        const resp2 = await anthropic.messages.create(
+          { model: "claude-sonnet-4-5", max_tokens: 8192, temperature: 0,
+            messages: [{ role: "user", content: retryPrompt }] },
+          { signal: controller2.signal }
+        );
+        const block2 = resp2.content[0];
+        retryRaw = block2?.type === "text" ? block2.text : "";
+      } finally {
+        clearTimeout(timeoutId2);
+      }
+    } catch (err: unknown) {
+      logger.warn({ city, stateAbbr, err: err instanceof Error ? err.message : String(err) },
+        "AI hub selection: retry API error");
+    }
+    if (retryRaw) {
+      let parsedRetry: AIHubResponse | null = null;
+      try {
+        const start = retryRaw.indexOf("{");
+        if (start !== -1) {
+          let depth = 0; let end = -1;
+          for (let i = start; i < retryRaw.length; i++) {
+            if (retryRaw[i] === "{") depth++;
+            else if (retryRaw[i] === "}") { depth--; if (depth === 0) { end = i; break; } }
+          }
+          if (end !== -1) parsedRetry = JSON.parse(retryRaw.slice(start, end + 1)) as AIHubResponse;
+        }
+      } catch { /* ignore parse errors on retry */ }
+      if (parsedRetry?.hubs) {
+        const retryFiltered = await resolveAndFilter(parsedRetry.hubs);
+        if (retryFiltered.length > filteredHubs.length) {
+          logger.info({ city, stateAbbr, retryHubs: retryFiltered.length }, "AI hub selection: retry improved results");
+          filteredHubs = retryFiltered;
+        }
       }
     }
-
-    if (lat == null || lng == null) {
-      logger.warn({ city: h.city, zip: h.zip }, "AI hub selection: could not resolve location, skipping hub");
-      continue;
-    }
-
-    const nearbyZips = getZipsNearLocation(lat, lng, HUB_HOUSEHOLD_RADIUS);
-    const bizZips    = getZipsNearLocation(lat, lng, HUB_BUSINESS_RADIUS);
-    const localZips  = getZipsNearLocation(lat, lng, HUB_LOCAL_RADIUS);
-
-    const catchmentHouseholds = nearbyZips.reduce((s, z) => s + z.households, 0);
-    const nearbyBusinesses    = bizZips.reduce((s, z) => s + z.businesses, 0);
-    const localBiz            = localZips.reduce((s, z) => s + z.businesses, 0);
-    const countyGeoid         = getCountyGeoidForLocation(lat, lng) ?? "";
-    const distanceFromDealer  = haversineDistanceMiles(dealerLat, dealerLng, lat, lng);
-
-    hubs.push({
-      cityName: h.city,
-      stateAbbr,
-      lat,
-      lng,
-      countyGeoid,
-      catchmentHouseholds,
-      nearbyBusinesses,
-      localBiz,
-      distanceFromDealer,
-      qualifies: true,
-    });
   }
 
   logger.info(
-    { city, stateAbbr, model: "claude-sonnet-4-5", hubsResolved: hubs.length, hubsRaw: rawHubs.length },
+    { city, stateAbbr, model: "claude-sonnet-4-5", hubsResolved: filteredHubs.length, hubsRaw: rawHubs.length },
     "AI hub selection: complete"
   );
 
-  if (hubs.length < 2) {
+  if (filteredHubs.length < 2) {
     logger.warn({ city, stateAbbr }, "AI hub selection: < 2 hubs resolved, returning []");
     return [];
   }
 
-  aiHubCache.set(cacheKey, { hubs, expiresAt: now + AI_CACHE_TTL_MS });
-  return hubs;
+  aiHubCache.set(cacheKey, { hubs: filteredHubs, expiresAt: now + AI_CACHE_TTL_MS });
+  return filteredHubs;
 }
 
 /**

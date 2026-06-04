@@ -1,0 +1,137 @@
+The AI cannot reliably enforce distance limits from internal
+knowledge. Filter AI hub suggestions server-side using real
+Gazetteer coordinates after the AI responds.
+
+════════════════════════════════════════════════
+THE FIX — POST-AI DISTANCE FILTER
+════════════════════════════════════════════════
+
+In getAITerritoryHubs(), after parsing the AI JSON response
+and looking up each hub's lat/lng from the Gazetteer:
+
+Add this filter before returning the hubs array:
+
+  const MAX_HUB_DISTANCE_MILES = 20;
+
+  const filteredHubs = resolvedHubs.filter(hub => {
+    const distance = haversineDistance(
+      dealerLat, dealerLng,
+      hub.lat, hub.lng
+    );
+    if (distance > MAX_HUB_DISTANCE_MILES) {
+      console.log(`Filtered out ${hub.city} — ${distance.toFixed(1)}mi > ${MAX_HUB_DISTANCE_MILES}mi`);
+      return false;
+    }
+    return true;
+  });
+
+  return filteredHubs;
+
+The haversineDistance function already exists in the
+codebase — use the existing one.
+
+The dealerLat and dealerLng come from the Gazetteer
+lookup of the dealer's city (already resolved earlier
+in getAITerritoryHubs or its caller).
+
+Pass dealerLat and dealerLng into getAITerritoryHubs()
+as parameters if not already available there.
+
+════════════════════════════════════════════════
+ALSO REMOVE DISTANCE INSTRUCTIONS FROM PROMPT
+════════════════════════════════════════════════
+
+Since the server now enforces distance, remove the
+distance constraint from the AI prompt entirely.
+The prompt no longer needs:
+  "Within 20 miles of ${city}"
+  "Do not expand beyond 20 miles"
+
+Replace with simply:
+  "Suggest cities near ${city}, ${state} that would
+  make good postcard mailing hubs."
+
+Let the AI suggest freely. The server filters anything
+beyond 20 miles. This produces better results because
+the AI isn't trying to estimate distances.
+
+Keep all other prompt rules:
+  - 100+ businesses minimum
+  - 5,000+ households
+  - Real commercial district
+  - No tiny enclaves
+  - No metro-direction bias
+  - Excluded cities list
+
+════════════════════════════════════════════════
+IF FEWER THAN 3 HUBS PASS THE FILTER
+════════════════════════════════════════════════
+
+If the AI suggests cities but fewer than 3 pass the
+20-mile filter:
+
+  1. Log a warning with the city name and filtered results
+  2. Make a second AI call with this addition to the prompt:
+     "Focus only on cities within a short drive of ${city}.
+     Do not suggest any city more than 20 miles away."
+  3. Filter the second response the same way
+  4. If still fewer than 3: return whatever qualifies
+     (the server handles 2-3 hubs gracefully)
+
+Do not return 'unavailable' just because the AI
+suggested distant cities — retry once first.
+
+════════════════════════════════════════════════
+TEST
+════════════════════════════════════════════════
+
+TEST 1 — Dahlonega GA
+  AI may still suggest Gainesville and Cumming
+  Server filters them out (both > 20 miles)
+  Log should show:
+    "Filtered out Gainesville — 22.3mi > 20mi"
+    "Filtered out Cumming — 38.1mi > 20mi"
+  Returned hubs: Dahlonega + Dawsonville + whatever
+  else the AI suggested within 20 miles
+
+TEST 2 — Cleveland GA
+  Helen (~11mi) passes filter ✓
+  Cornelia (~16mi) passes filter ✓
+  Clarkesville (~15mi) passes filter ✓
+  Dahlonega (~25mi) filtered out ✓
+  Expected: Cleveland + Helen + Cornelia + Clarkesville
+
+TEST 3 — Woodstock GA
+  Roswell distance from Woodstock center: ~18-20 miles
+  If Roswell centroid > 20mi: filtered out ✓
+  If Roswell centroid < 20mi: still appears
+  Canton (~12mi) passes ✓
+  Kennesaw (~10mi) passes ✓
+  Acworth (~14mi) passes ✓
+  Report what the 4th hub is after filtering
+
+TEST 4 — Nashville TN
+  Brentwood, Franklin, Murfreesboro all within 20 miles ✓
+  Must still pass
+
+TEST 5 — Athens GA
+  Jefferson (~22mi) — check if filtered
+  Winder (~24mi) — check if filtered
+  Report actual distances for each returned hub
+  Note: Athens territory may need 25 miles since
+  qualifying cities are more spread out there —
+  adjust MAX_HUB_DISTANCE_MILES to 25 if Athens
+  loses too many good cities at 20 miles
+
+════════════════════════════════════════════════
+TUNABLE CONSTANT
+════════════════════════════════════════════════
+
+Make MAX_HUB_DISTANCE_MILES a named constant at the
+top of territoryBuilder.ts so it can be easily adjusted:
+
+  const MAX_HUB_DISTANCE_MILES = 20;
+
+After testing all 5 cities, report the actual distances
+for every hub in every test. This lets us tune the
+constant based on real data rather than estimates.
