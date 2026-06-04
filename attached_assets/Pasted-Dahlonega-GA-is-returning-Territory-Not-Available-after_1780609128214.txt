@@ -1,0 +1,100 @@
+Dahlonega GA is returning "Territory Not Available" after
+the neighbor county injection. The city lookup is likely
+failing. Diagnose and fix before anything else.
+
+════════════════════════════════════════════════
+DIAGNOSE — RUN AND REPORT
+════════════════════════════════════════════════
+
+1. Search the Gazetteer for Dahlonega:
+   getCitiesInState('GA').filter(c =>
+     c.name.toLowerCase().includes('dahlonega')
+   )
+   Report: found yes/no, exact name, countyFips, lat, lng
+
+2. If not found, search more broadly:
+   getCitiesInState('GA').filter(c =>
+     c.name.toLowerCase().includes('dahl')
+   )
+   Report all results.
+
+3. Check what homeCountyGeoid is set to when city is
+   'Dahlonega' and state is 'Georgia'.
+   Log: console.log('homeCountyGeoid:', homeCountyGeoid)
+   Report the value — is it null or a valid GEOID?
+
+4. Check what neighborCounties returns for Lumpkin County
+   GEOID (13187):
+   getNeighborCountyNames('13187')
+   Report the returned array.
+
+5. Check what the AI actually returned in its JSON response.
+   Log the raw AI response text for the Dahlonega call.
+   Report it here.
+
+════════════════════════════════════════════════
+LIKELY CAUSES
+════════════════════════════════════════════════
+
+CAUSE A — Dahlonega not in Gazetteer or name mismatch
+  The Gazetteer may have it spelled differently or it may
+  be missing entirely. Lumpkin County GA is rural and small.
+  Fix: Add a fuzzy name match — try contains() instead of
+  exact match, or try matching on first word only.
+
+  Fuzzy lookup:
+    getCitiesInState(stateAbbr).find(c =>
+      c.name.toLowerCase().startsWith(
+        city.toLowerCase().split(' ')[0]
+      )
+    )
+
+CAUSE B — homeCountyGeoid is null so neighborCounties is empty
+  If city lookup fails, homeCountyGeoid is null, neighbor
+  list is empty string, AI has no county guidance.
+  The AI then returns cities from distant counties or fails
+  to find 3 qualifying hubs.
+  Fix: If city not found in Gazetteer, fall back to asking
+  the AI WITHOUT the neighbor list — let it do its best
+  with just the city/state. This is better than returning
+  unavailable.
+
+CAUSE C — getNeighborCountyNames not returning correct data
+  The adjacency file format may use county names differently
+  than expected. Check if Lumpkin County appears in the
+  adjacency data at all.
+
+════════════════════════════════════════════════
+FIX AFTER DIAGNOSING
+════════════════════════════════════════════════
+
+Once root cause is confirmed, apply the appropriate fix.
+
+Then add this fallback to getAITerritoryHubs():
+
+  let neighborSection = '';
+  if (neighborCounties.length > 0) {
+    neighborSection = `The neighboring counties in order
+    of proximity to ${city} are:
+    ${neighborCounties.map((n,i) => `${i+1}. ${n} County`).join('\n')}
+    Use this list in order when expanding beyond home county.`;
+  } else {
+    // Fallback — no neighbor data available
+    neighborSection = `Expand to the nearest neighboring
+    counties if the home county has fewer than 4 qualifying
+    cities. Prioritize geographic proximity.`;
+  }
+
+This ensures the AI always gets called even when the
+city lookup or neighbor lookup fails — it just gets
+less precise guidance.
+
+════════════════════════════════════════════════
+TEST AFTER FIXING
+════════════════════════════════════════════════
+
+  { city: 'Dahlonega', state: 'Georgia' }
+  Must return a proposed territory — NOT "unavailable"
+  Must include Dawsonville if neighbor lookup works
+  Must include SOME reasonable nearby cities even if
+  neighbor lookup fails

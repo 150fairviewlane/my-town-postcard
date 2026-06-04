@@ -848,13 +848,25 @@ Return a JSON object with exactly 4 hub cities. Include one representative 5-dig
     return [];
   }
 
-  // Robust JSON extraction — find outermost { ... }
+  // Robust JSON extraction — find the FIRST complete balanced { ... } object.
+  // Using lastIndexOf("}") is wrong when the AI returns two JSON blocks separated
+  // by rationale text; depth-tracking finds the matching close brace for the
+  // first open brace and ignores everything after it.
   type AIHubResponse = { hubs?: Array<{ city: string; county: string; state: string; zip: string; population?: number }> };
   let parsed: AIHubResponse | null = null;
   try {
     const start = rawText.indexOf("{");
-    const end = rawText.lastIndexOf("}");
-    if (start === -1 || end === -1 || end <= start) throw new Error("no JSON found");
+    if (start === -1) throw new Error("no JSON found");
+    let depth = 0;
+    let end = -1;
+    for (let i = start; i < rawText.length; i++) {
+      if (rawText[i] === "{") depth++;
+      else if (rawText[i] === "}") {
+        depth--;
+        if (depth === 0) { end = i; break; }
+      }
+    }
+    if (end === -1) throw new Error("unbalanced JSON braces");
     parsed = JSON.parse(rawText.slice(start, end + 1)) as AIHubResponse;
   } catch (err: unknown) {
     logger.warn({ city, stateAbbr, rawText, err: err instanceof Error ? err.message : String(err) },
