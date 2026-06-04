@@ -556,9 +556,13 @@ function loadStaticData(): void {
       const lat       = parseFloat((cols[10] ?? "").trim());
       const lng       = parseFloat((cols[11] ?? "").trim());
       if (!stateAbbr || !rawName || isNaN(lat) || isNaN(lng)) continue;
-      // Only include active incorporated places (A=active, B=active consolidated govt).
-      // Exclude FUNCSTAT='S' (CDPs — unincorporated statistical areas) and 'N'/'F' (non-functioning).
-      if (funcStat !== "A" && funcStat !== "B") continue;
+      // Include active incorporated places (A) and consolidated city-counties (B).
+      // Also include FUNCSTAT='F' entries whose name contains "(balance)" — these are the
+      // balance portions of consolidated city-county governments like Nashville-Davidson and
+      // Louisville/Jefferson County, which are real population centers despite the Census
+      // classification. Exclude all other F, S (CDPs), N, I, etc.
+      const isBalance = funcStat === "F" && rawName.includes("(balance)");
+      if (funcStat !== "A" && funcStat !== "B" && !isBalance) continue;
       const name = rawName.replace(PLACE_SUFFIX_RE, "").trim();
       if (!name) continue;
       let arr = gazetteerByState.get(stateAbbr);
@@ -979,6 +983,38 @@ export function getCountyGeoidForLocation(lat: number, lng: number): string | nu
  */
 export function getCitiesInState(stateAbbr: string): GazetteerPlace[] {
   return gazetteerByState.get(stateAbbr) ?? [];
+}
+
+/**
+ * Finds a Gazetteer place by city name with a fuzzy fallback for consolidated
+ * city-counties whose Gazetteer name includes a hyphen or slash qualifier
+ * (e.g. "Nashville-Davidson", "Louisville/Jefferson County metro government").
+ *
+ * Lookup order:
+ *  1. Exact case-insensitive match.
+ *  2. Fuzzy: first word/segment of the city name as a startsWith prefix
+ *     (catches "Nashville-Davidson" when the user types "Nashville").
+ */
+export function findGazetteerCity(city: string, stateAbbr: string): GazetteerPlace | undefined {
+  const cities = getCitiesInState(stateAbbr);
+  const needle = city.toLowerCase().trim();
+
+  // 1. Exact match
+  const exact = cities.find(c => c.name.toLowerCase() === needle);
+  if (exact) return exact;
+
+  // 2. Fuzzy — first alphanumeric segment (split on space, hyphen, slash, comma)
+  const firstSegment = needle.split(/[\s\-/,]+/)[0] ?? "";
+  if (firstSegment.length < 3) return undefined;
+  return cities.find(c => {
+    const cn = c.name.toLowerCase();
+    return (
+      cn === firstSegment ||
+      cn.startsWith(firstSegment + "-") ||
+      cn.startsWith(firstSegment + " ") ||
+      cn.startsWith(firstSegment + "/")
+    );
+  });
 }
 
 /**

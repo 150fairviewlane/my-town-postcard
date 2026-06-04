@@ -18,6 +18,7 @@ import {
   getCountyNameByGeoid,
   getCountyShortNameByGeoid,
   getCitiesInState,
+  findGazetteerCity,
   getCountyGeoidFromZip,
   getCountyGeoidForLocation,
 } from "../lib/censusApi";
@@ -511,8 +512,7 @@ router.post("/territories/propose", async (req, res): Promise<void> => {
 
   // City + State → lat/lng via the Gazetteer (authoritative geocoder).
   // No ZIP fallback — if the city is not in the Gazetteer, ask for a nearby larger town.
-  const cityNorm = city.toLowerCase();
-  const cityMatch = getCitiesInState(stateAbbr).find(c => c.name.toLowerCase() === cityNorm);
+  const cityMatch = findGazetteerCity(city, stateAbbr);
   if (!cityMatch) {
     res.status(404).json({ error: `We couldn't locate "${city}, ${stateAbbr}". Try a nearby larger town.` });
     return;

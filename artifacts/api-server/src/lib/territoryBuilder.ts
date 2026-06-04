@@ -15,6 +15,7 @@ import {
   getCountyInfo,
   getZipsNearLocation,
   getCitiesInState,
+  findGazetteerCity,
   getZipLocation,
   getCountyHouseholds,
   getCountyGeoidForLocation,
@@ -762,9 +763,7 @@ async function getAITerritoryHubs(
   let homeCountyGeoid: string | null = null;
   let neighborCounties: string[] = [];
 
-  const cityEntry = getCitiesInState(stateAbbr).find(
-    (c) => c.name.toLowerCase() === city.toLowerCase()
-  );
+  const cityEntry = findGazetteerCity(city, stateAbbr);
   if (cityEntry) {
     homeCountyGeoid = getCountyGeoidForLocation(cityEntry.lat, cityEntry.lng);
     if (homeCountyGeoid) {
