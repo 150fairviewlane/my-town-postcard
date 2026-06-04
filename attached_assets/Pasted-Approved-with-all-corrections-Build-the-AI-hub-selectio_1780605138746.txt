@@ -1,0 +1,197 @@
+Approved with all corrections. Build the AI hub selection
+with every item from the review applied. Here is the
+corrected specification:
+
+
+════════════════════════════════════════════════
+WHAT THE AI REPLACES
+════════════════════════════════════════════════
+
+The AI replaces ONLY the hub city selection step inside
+buildCityHubProposal(). Specifically, replace the calls
+to findCandidateHubs() and selectBestHubs() with a single
+call to getAITerritoryHubs().
+
+Everything else in buildCityHubProposal() stays unchanged:
+  - voronoiAssign() still runs on the returned hubs
+  - Household and business tallies still compute
+  - Display transform (small-county merge) still runs
+  - Viability check still runs
+  - zone_note write at line 969 stays as-is
+
+Do NOT change getTerritoryForLocation()'s public signature.
+Thread city and state as parameters into buildCityHubProposal()
+instead.
+
+
+════════════════════════════════════════════════
+COLLAPSE THE RADIUS LADDER
+════════════════════════════════════════════════
+
+The current radius ladder calls buildCityHubProposal up to
+4 times with increasing radii [40, 55, 70, 85] miles.
+
+With AI hub selection, Claude returns 4 cities in one call
+regardless of radius. Collapse to a single call. Remove
+the loop entirely.
+
+
+════════════════════════════════════════════════
+MODEL AND API
+════════════════════════════════════════════════
+
+Use claude-haiku-4-5-20251001 not Sonnet.
+Use the Replit AI integrations proxy rather than calling
+api.anthropic.com directly with ANTHROPIC_API_KEY.
+Check .local/skills/ai-integrations-anthropic for the
+correct proxy URL and headers for this project.
+
+Add temperature: 0 for deterministic results.
+Add AbortController with 10-second timeout.
+
+
+════════════════════════════════════════════════
+PROMPT — ASK FOR ZIP CODES NOT JUST CITY NAMES
+════════════════════════════════════════════════
+
+Ask Claude to include a representative ZIP code for each
+hub city. This bypasses fragile name matching ("St. Augustine"
+vs "Saint Augustine") and uses the reliable getZipLocation()
+lookup instead.
+
+Update the JSON schema in the prompt:
+  "hubs": [
+    {
+      "city": "Cleveland",
+      "county": "White County",
+      "state": "Georgia",
+      "zip": "30528",
+      "population": 3500
+    },
+    ...
+  ]
+
+In getAITerritoryHubs(), after parsing the response:
+  For each hub, call getZipLocation(hub.zip) to get lat/lng.
+  If ZIP not found, fall back to Gazetteer name lookup.
+  If both fail, log warning and skip that hub.
+
+
+════════════════════════════════════════════════
+JSON PARSING — ROBUST EXTRACTION
+════════════════════════════════════════════════
+
+Replace the simple replace/parse approach with robust
+first-brace / last-brace extraction:
+
+  const firstBrace = text.indexOf('{');
+  const lastBrace = text.lastIndexOf('}');
+  if (firstBrace === -1 || lastBrace === -1) {
+    throw new Error('No JSON object found in AI response');
+  }
+  const jsonStr = text.slice(firstBrace, lastBrace + 1);
+  const parsed = JSON.parse(jsonStr);
+
+Wrap entire parsing in try/catch. On failure:
+  Log the raw response for debugging
+  Return empty array (not a 500 error)
+  getTerritoryForLocation handles empty array as unavailable
+
+
+════════════════════════════════════════════════
+IN-MEMORY CACHE
+════════════════════════════════════════════════
+
+Add a simple cache to avoid duplicate Claude calls:
+
+  const hubCache = new Map<string, {
+    hubs: CityHub[],
+    expires: number
+  }>();
+
+  const cacheKey = [city, state, zip,
+    [...excludedCities].sort().join(',')
+  ].join('|').toLowerCase();
+
+  // Check cache
+  const cached = hubCache.get(cacheKey);
+  if (cached && cached.expires > Date.now()) {
+    return cached.hubs;
+  }
+
+  // ... make API call ...
+
+  // Store in cache with 5-minute TTL
+  hubCache.set(cacheKey, {
+    hubs: result,
+    expires: Date.now() + 5 * 60 * 1000
+  });
+
+
+════════════════════════════════════════════════
+getClaimedHubCities() CORRECTIONS
+════════════════════════════════════════════════
+
+  1. Use 25-mile radius (not 60)
+
+  2. Split zone_note safely:
+     .split(',').map(s => s.trim()).filter(Boolean)
+
+  3. Deduplicate with Set before applying cap:
+     const unique = [...new Set(allCities)];
+
+  4. Cap at 100 after deduplication:
+     return unique.slice(0, 100);
+
+  5. Sort by territory CENTROID distance from dealer
+     (not by individual city distance — cities in
+     zone_note have no coordinates of their own)
+
+
+════════════════════════════════════════════════
+STEP 4 — DO NOT IMPLEMENT
+════════════════════════════════════════════════
+
+zone_note is already written at line 969. Do not add
+any new code for this. Confirm the AI-returned city
+names flow through proposedCities correctly so the
+existing write works without changes.
+
+
+════════════════════════════════════════════════
+TEST
+════════════════════════════════════════════════
+
+TEST 1 — Cleveland GA
+  POST /api/territories/propose
+  { city: 'Cleveland', state: 'Georgia', zip: '30528' }
+  Expected hubs: Cleveland, Helen, Cornelia, Clarkesville
+  Voronoi runs, household counts present in response
+  zone_note written as "Cleveland, Helen, Cornelia, Clarkesville"
+
+TEST 2 — Woodstock GA
+  { city: 'Woodstock', state: 'Georgia', zip: '30188' }
+  Expected: Woodstock, Canton, Kennesaw, Acworth
+  All Cherokee County
+
+TEST 3 — Marietta AFTER Woodstock claimed
+  Insert test territory:
+    zone_note = 'Woodstock, Canton, Kennesaw, Acworth'
+    status = 'taken', centroid near Woodstock
+  Then propose Marietta GA
+  Must NOT include Kennesaw or Acworth
+  Expected: Marietta, Smyrna, Mableton, Powder Springs
+
+TEST 4 — Cache works
+  Call Cleveland GA proposal twice in quick succession
+  Second call returns instantly (no Claude API call)
+  Both return identical hub cities
+
+TEST 5 — Timeout handling
+  If Claude takes > 10 seconds, request returns
+  type: 'unavailable' with a clear error message
+  Not a hanging request or 500 error
+
+TEST 6 — Haiku model confirmed
+  Log the model name from the API response
+  Must show claude-haiku not claude-sonnet

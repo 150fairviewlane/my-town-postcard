@@ -1,0 +1,322 @@
+Replace the findCandidateHubs() and selectBestHubs() functions
+with a single AI-powered territory suggestion. This is a backend
+change only — all existing frontend, Stripe, and landing page
+code stays exactly as-is.
+
+
+════════════════════════════════════════════════
+OVERVIEW
+════════════════════════════════════════════════
+
+Instead of using Census data, radius math, and qualification
+algorithms to find hub cities, make a single Claude API call
+that returns 4 hub cities using real geographic and commercial
+knowledge.
+
+The AI approach handles edge cases correctly by default:
+  - Helen GA qualifies despite small population (tourist hub)
+  - Berry Hill TN is excluded (enclave inside Nashville)
+  - County-fill order is applied naturally
+  - Claimed cities are excluded via the prompt
+
+
+════════════════════════════════════════════════
+STEP 1 — NEW FUNCTION: getAITerritoryHubs()
+════════════════════════════════════════════════
+
+Add this function to territoryBuilder.ts:
+
+  async function getAITerritoryHubs(
+    city: string,
+    state: string,
+    zip: string,
+    excludedCities: string[]  // already claimed hub cities
+  ): Promise<Array<{
+    city: string,
+    county: string,
+    state: string,
+    lat: number,
+    lng: number
+  }>>
+
+IMPLEMENTATION:
+
+1. Build the exclusion string:
+   const exclusionLine = excludedCities.length > 0
+     ? `The following cities are already assigned to existing
+        territories and must NOT be included under any
+        circumstances: ${excludedCities.join(', ')}. If these
+        would normally be your top choices, skip them and
+        select the next best available cities.`
+     : '';
+
+2. Build the prompt:
+
+const prompt = `A dealer wants to start a postcard advertising
+business based in ${city}, ${state}${zip ? ` (ZIP: ${zip})` : ''}.
+
+Suggest exactly 4 nearby cities for their USPS EDDM postcard
+territory. Each city needs enough local businesses (restaurants,
+salons, dentists, HVAC, retail, auto repair, etc.) to fill
+15 ad slots on a postcard mailing.
+
+${exclusionLine}
+
+SELECTION RULES:
+1. Fill the dealer's HOME COUNTY completely first. Add ALL
+   qualifying cities from that county before moving to a
+   neighboring county.
+2. Only expand to a neighboring county when the home county
+   has fewer than 4 qualifying cities. Fill that neighbor
+   county completely before moving to a third.
+3. Each city must be a real commercial hub with its own
+   recognizable downtown or commercial strip — not a tiny
+   enclave inside a larger city, unincorporated area, or
+   suburb without its own commercial identity.
+4. Minimum ~4,000 permanent residents UNLESS the city is
+   a well-known tourist or commercial destination (like
+   Helen GA which has hundreds of tourist businesses).
+5. Do NOT include: tiny municipalities surrounded by a
+   larger city (like Berry Hill or Belle Meade inside
+   Nashville), wildlife areas, military bases, or
+   geographic features.
+6. All 4 cities must be geographically adjacent — a dealer
+   should be able to drive between all 4 in an afternoon.
+7. For large metro counties with many qualifying cities
+   (Cobb, Fulton, Davidson, Harris, etc.), stay entirely
+   within the home county — there is no need to expand.
+
+Return ONLY valid JSON with no markdown, no explanation
+outside the JSON:
+{
+  "territory_name": "City1 / City2 / City3 Area",
+  "counties_used": ["County1 County", "County2 County"],
+  "reasoning": "One sentence explaining this territory",
+  "hubs": [
+    {
+      "city": "City1",
+      "county": "County Name County",
+      "state": "${state}",
+      "population": 12000
+    },
+    {
+      "city": "City2",
+      "county": "County Name County",
+      "state": "${state}",
+      "population": 8000
+    },
+    {
+      "city": "City3",
+      "county": "County Name County",
+      "state": "${state}",
+      "population": 6000
+    },
+    {
+      "city": "City4",
+      "county": "County Name County",
+      "state": "${state}",
+      "population": 5000
+    }
+  ]
+}`;
+
+3. Call the Anthropic API:
+
+   const response = await fetch(
+     'https://api.anthropic.com/v1/messages',
+     {
+       method: 'POST',
+       headers: {
+         'Content-Type': 'application/json',
+         'x-api-key': process.env.ANTHROPIC_API_KEY || '',
+         'anthropic-version': '2023-06-01'
+       },
+       body: JSON.stringify({
+         model: 'claude-sonnet-4-20250514',
+         max_tokens: 1000,
+         messages: [{ role: 'user', content: prompt }]
+       })
+     }
+   );
+
+   const data = await response.json();
+   const text = data.content?.[0]?.text || '';
+   const clean = text.replace(/```json\s*/gi, '')
+                     .replace(/```\s*/g, '').trim();
+   const parsed = JSON.parse(clean);
+
+4. For each hub city in the response, look up lat/lng
+   from the Gazetteer Places data already loaded in
+   censusApi.ts:
+
+   getCitiesInState(stateAbbr).find(
+     c => c.name.toLowerCase() === hub.city.toLowerCase()
+   )
+
+   If a city is not found in the Gazetteer, log a warning
+   and skip it. Do not fail — just return fewer hubs.
+
+5. Return the array of hubs with lat/lng populated.
+
+
+════════════════════════════════════════════════
+STEP 2 — GET EXCLUDED CITIES FROM DATABASE
+════════════════════════════════════════════════
+
+Add a helper function:
+
+  async function getClaimedHubCities(
+    lat: number,
+    lng: number,
+    stateAbbr: string,
+    radiusMiles: number = 60
+  ): Promise<string[]>
+
+  Query the territories table for all territories where:
+    state = stateAbbr
+    status = 'taken'
+    centroid is within radiusMiles of (lat, lng)
+
+  For each found territory, split zone_note by comma
+  to get the hub city names.
+
+  Return a flat array of all hub city names.
+  Example: ['Woodstock', 'Canton', 'Kennesaw', 'Acworth']
+
+
+════════════════════════════════════════════════
+STEP 3 — WIRE INTO getTerritoryForLocation()
+════════════════════════════════════════════════
+
+In getTerritoryForLocation(), replace the calls to
+findCandidateHubs() and selectBestHubs() with:
+
+  // Get already-claimed cities to exclude
+  const excludedCities = await getClaimedHubCities(
+    lat, lng, stateAbbr
+  );
+
+  // Get AI hub suggestions
+  const hubs = await getAITerritoryHubs(
+    city, state, zip, excludedCities
+  );
+
+  if (hubs.length < 3) {
+    return {
+      type: 'unavailable',
+      message: 'No viable territory found in this area.'
+    };
+  }
+
+Note: getTerritoryForLocation() will need city and state
+parameters added since they are now passed to the AI.
+Update the function signature:
+
+  async function getTerritoryForLocation(
+    lat: number,
+    lng: number,
+    stateAbbr: string,
+    city: string,      // ADD
+    state: string,     // ADD
+    zip?: string
+  )
+
+Update the propose endpoint to pass city and state through.
+
+
+════════════════════════════════════════════════
+STEP 4 — STORE HUB CITIES IN zone_note
+════════════════════════════════════════════════
+
+When saving a territory to the database on Stripe payment,
+store the hub city names in the zone_note field as a
+comma-separated list:
+
+  zone_note = hubs.map(h => h.city).join(', ')
+  // e.g. "Woodstock, Canton, Kennesaw, Acworth"
+
+This is what getClaimedHubCities() reads when building
+the exclusion list for future territory searches.
+
+
+════════════════════════════════════════════════
+STEP 5 — KEEP CENSUS DATA FOR CONFLICT DETECTION
+════════════════════════════════════════════════
+
+The existing ZIP footprint conflict detection (territory_zip_assignments)
+stays in place. The AI suggestion is for hub SELECTION only.
+Conflict detection still uses ZIP-level geography.
+
+The Census data files (ZBP, Gazetteer, zip-county.csv etc.)
+stay loaded — the Gazetteer is still used for lat/lng lookup
+in Step 1 above.
+
+
+════════════════════════════════════════════════
+ENVIRONMENT VARIABLE
+════════════════════════════════════════════════
+
+The Anthropic API key must be available as:
+  process.env.ANTHROPIC_API_KEY
+
+This should already be set in the Replit environment
+since the project uses Claude. Confirm it exists:
+  console.log('API key present:', !!process.env.ANTHROPIC_API_KEY)
+
+If not set, add it to the Replit Secrets tab.
+
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+  Frontend territory-finder.html
+  Stripe payment flow
+  Landing page / ad slot creation
+  Authentication
+  Admin territory manager
+  The mailing areas display endpoint
+
+
+════════════════════════════════════════════════
+TEST AFTER BUILDING
+════════════════════════════════════════════════
+
+TEST 1 — Cleveland GA (no claimed territories)
+  POST /api/territories/propose
+  { city: 'Cleveland', state: 'Georgia', zip: '30528' }
+  Expected: Cleveland + Helen (White County)
+            + Cornelia + Clarkesville (Habersham County)
+  Must NOT include: Dahlonega, Blairsville, Gainesville
+
+TEST 2 — Woodstock GA (no claimed territories)
+  { city: 'Woodstock', state: 'Georgia', zip: '30188' }
+  Expected: Woodstock + Canton + Kennesaw + Acworth
+  All Cherokee County, never leaves home county
+
+TEST 3 — Marietta GA AFTER Woodstock is claimed
+  First claim Woodstock territory (or insert a test
+  territory with zone_note = 'Woodstock, Canton, Kennesaw,
+  Acworth' and status = 'taken')
+  Then: { city: 'Marietta', state: 'Georgia', zip: '30060' }
+  Expected: Marietta + Smyrna + Mableton + Powder Springs
+  Must NOT include: Kennesaw or Acworth (already claimed)
+
+TEST 4 — Nashville TN
+  { city: 'Nashville', state: 'Tennessee', zip: '37201' }
+  Expected: 4 Davidson County cities
+  Must NOT include: Berry Hill, Belle Meade, Oak Hill
+  Should include: Nashville + Brentwood + Franklin +
+  Murfreesboro (or similar real commercial hubs)
+
+TEST 5 — Cartersville GA
+  { city: 'Cartersville', state: 'Georgia', zip: '30120' }
+  Bartow County is small — should expand to neighbor
+  Expected: Cartersville + Adairsville (Bartow)
+            + Acworth + Kennesaw (Cobb) if not claimed
+
+TEST 6 — Confirm zone_note stored correctly
+  After claiming any territory, check the database:
+  SELECT zone_note FROM territories WHERE status='taken'
+  Should show comma-separated city names
+  e.g. "Cleveland, Helen, Cornelia, Clarkesville"
