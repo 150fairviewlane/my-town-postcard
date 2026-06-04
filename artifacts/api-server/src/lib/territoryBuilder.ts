@@ -798,49 +798,70 @@ export async function generateNextTerritoryId(stateAbbr: string): Promise<string
  * Materializes a pending-payment proposal row into a live `territories` row
  * with status `taken`, stamped with `source_proposal_id` for idempotency and
  * linked to the claiming dealer. Returns the new territory id.
+ *
+ * The territory insert and its ZIP footprint are written in a single DB
+ * transaction so conflict checks against territory_zip_assignments are
+ * accurate immediately — no fire-and-forget race window.
  */
 export async function materializeTerritoryFromProposal(
   proposal: TerritoryProposalRow,
   dealerId: number | null
 ): Promise<string> {
   const stateAbbr = proposal.stateAbbr;
-  const territoryId = await generateNextTerritoryId(stateAbbr);
   const counties = Array.isArray(proposal.proposedCounties) ? proposal.proposedCounties : [];
   const cities = Array.isArray(proposal.proposedCities) ? proposal.proposedCities : [];
 
-  await db.insert(territoriesTable).values({
-    id: territoryId,
-    name: proposal.proposedName,
-    state: stateAbbr,
-    counties,
-    households: proposal.households ?? 0,
-    zones: 4,
-    status: "taken",
-    zoneNote: cities.join(", "),
-    centroidLat: proposal.centroidLat ?? undefined,
-    centroidLng: proposal.centroidLng ?? undefined,
-    businessCount: proposal.businessCount ?? 0,
-    source: "auto-generated",
-    proposedByZip: proposal.zipCode,
-    dealerId: dealerId ?? undefined,
-    sourceProposalId: proposal.id,
+  // Compute footprint before the transaction (pure in-memory, no DB I/O).
+  const hubs = resolveProposalHubs(cities, stateAbbr, proposal.centroidLat, proposal.centroidLng);
+  const footprintZips = hubs.length > 0 ? computeHubZipFootprint(hubs) : [];
+
+  const territoryId = await db.transaction(async (tx) => {
+    // Generate the sequential territory ID inside the transaction so the
+    // read-then-write is protected against concurrent materialization.
+    const existing = await tx
+      .select({ id: territoriesTable.id })
+      .from(territoriesTable)
+      .where(eq(territoriesTable.state, stateAbbr));
+    const nums = existing
+      .map(r => parseInt(r.id.replace(`${stateAbbr}-`, ""), 10))
+      .filter(n => !isNaN(n));
+    const next = nums.length > 0 ? Math.max(...nums) + 1 : 1;
+    const id = `${stateAbbr}-${String(next).padStart(3, "0")}`;
+
+    await tx.insert(territoriesTable).values({
+      id,
+      name: proposal.proposedName,
+      state: stateAbbr,
+      counties,
+      households: proposal.households ?? 0,
+      zones: 4,
+      status: "taken",
+      zoneNote: cities.join(", "),
+      centroidLat: proposal.centroidLat ?? undefined,
+      centroidLng: proposal.centroidLng ?? undefined,
+      businessCount: proposal.businessCount ?? 0,
+      source: "auto-generated",
+      proposedByZip: proposal.zipCode,
+      dealerId: dealerId ?? undefined,
+      sourceProposalId: proposal.id,
+    });
+
+    // Write ZIP footprint in the same transaction — no race window between
+    // territory creation and footprint availability for conflict checks.
+    const CHUNK = 200;
+    for (let i = 0; i < footprintZips.length; i += CHUNK) {
+      const chunk = footprintZips.slice(i, i + CHUNK);
+      await tx.insert(territoryZipAssignmentsTable)
+        .values(chunk.map(({ zip }) => ({ zip, territoryId: id })))
+        .onConflictDoNothing();
+    }
+
+    return id;
   });
 
   logger.info(
-    { territoryId, proposalId: proposal.id, dealerId, stateAbbr },
-    "Territory materialized from proposal"
-  );
-
-  // Store the ZIP footprint asynchronously (fire-and-forget; errors are logged,
-  // not fatal — the territory row is already committed and the dealer is active).
-  storeZipFootprintForTerritory(
-    territoryId,
-    cities,
-    stateAbbr,
-    proposal.centroidLat,
-    proposal.centroidLng
-  ).catch(err =>
-    logger.error({ err: err?.message, territoryId }, "Failed to store ZIP footprint")
+    { territoryId, proposalId: proposal.id, dealerId, stateAbbr, zipCount: footprintZips.length },
+    "Territory materialized from proposal (territory + ZIP footprint committed atomically)"
   );
 
   return territoryId;
