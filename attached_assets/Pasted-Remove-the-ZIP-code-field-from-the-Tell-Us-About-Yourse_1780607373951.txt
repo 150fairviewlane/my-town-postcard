@@ -1,0 +1,118 @@
+Remove the ZIP code field from the Tell Us About Yourself
+page and simplify the territory flow to use city and state only.
+
+════════════════════════════════════════════════
+CHANGE 1 — TELL US ABOUT YOURSELF PAGE
+════════════════════════════════════════════════
+
+Remove the ZIP code input field entirely from the
+Tell Us About Yourself form.
+
+The form now collects:
+  - Dealer name
+  - Email
+  - Phone
+  - City *
+  - State *
+  - (any other existing fields)
+
+Do NOT collect ZIP code on this form.
+Do NOT pass ZIP code to the territory finder page.
+
+════════════════════════════════════════════════
+CHANGE 2 — TERRITORY FINDER PAGE
+════════════════════════════════════════════════
+
+Remove the ZIP code input field from /find-territory.
+
+The search form on /find-territory now shows:
+  City (pre-filled from Tell Us About Yourself)
+  State (pre-filled from Tell Us About Yourself)
+  Find button
+
+No ZIP code field. No ZIP code input anywhere on this page.
+
+════════════════════════════════════════════════
+CHANGE 3 — BACKEND TERRITORY PROPOSAL
+════════════════════════════════════════════════
+
+In the POST /api/territories/propose endpoint:
+  Remove zip from the request body schema
+  Remove zip from validation
+  Pass zip: undefined or zip: '' to getTerritoryForLocation
+
+In getTerritoryForLocation():
+  zip parameter becomes optional and can be undefined
+  No logic should depend on zip being present
+
+In getAITerritoryHubs():
+  Remove zip from the prompt if undefined
+  The prompt reads:
+    "A dealer wants to start a postcard advertising
+    business based in ${city}, ${state}."
+  Not: "...based in ${city}, ${state} (ZIP: ${zip})."
+
+In getClaimedHubCities():
+  This function uses lat/lng from the Gazetteer city lookup
+  not from a ZIP code — confirm it still works without ZIP.
+  The Gazetteer lookup getCitiesInState(stateAbbr).find(...)
+  returns lat/lng from city name alone — no ZIP needed.
+
+════════════════════════════════════════════════
+CHANGE 4 — HUB LAT/LNG LOOKUP
+════════════════════════════════════════════════
+
+Currently hub lat/lng is resolved by:
+  1. AI returns a ZIP for each hub city
+  2. getZipLocation(hub.zip) gets the coordinates
+
+Since ZIP is now removed from user input, we still need
+hub coordinates for Voronoi and map display. The AI still
+returns ZIP codes for each HUB CITY in its response —
+this is fine and should stay. The AI-suggested hub ZIP
+codes are different from the dealer's home ZIP.
+
+Confirm the hub ZIP lookup still works:
+  AI suggests hub city "Cornelia" with zip "30531"
+  getZipLocation('30531') returns lat/lng for Cornelia ✓
+  This is unaffected by removing the dealer's home ZIP
+
+The only change is: the DEALER'S home location is now
+resolved from city + state via Gazetteer lookup only,
+not from a ZIP code.
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+  Stripe payment flow
+  Landing page / ad slot creation
+  Authentication
+  Admin territory manager
+  Any other form fields on Tell Us About Yourself
+  The AI hub selection prompt (keep hub ZIP codes in response)
+
+════════════════════════════════════════════════
+TEST
+════════════════════════════════════════════════
+
+TEST 1 — Tell Us About Yourself
+  ZIP field is gone from the form
+  City and State fields present
+  Submitting form passes only city and state to next page
+
+TEST 2 — Territory finder page
+  ZIP field is gone
+  City pre-filled from previous page
+  State pre-filled from previous page
+  Clicking Find triggers territory search with city + state only
+
+TEST 3 — Territory proposal works without ZIP
+  POST /api/territories/propose
+  { city: 'Cleveland', state: 'Georgia' }  ← no zip
+  Returns valid territory proposal
+  Hub cities still have coordinates from AI-returned ZIPs
+
+TEST 4 — No ZIP mismatch possible
+  There is no ZIP field anywhere in the dealer signup flow
+  A dealer cannot enter mismatched city/state/zip
