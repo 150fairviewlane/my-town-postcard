@@ -1,0 +1,88 @@
+The one-hub-per-county rule is selecting the wrong city
+from each county. It's picking the closest city in the
+county rather than the most commercially significant one.
+
+For Cleveland GA (30528):
+  Hall County contains both Clermont AND Gainesville.
+  Clermont (~1,500 people) is closer to Cleveland.
+  Gainesville (~45,000 people) is the county seat and
+  commercial hub.
+  The system is selecting Clermont — wrong.
+  It should select Gainesville.
+
+  Habersham County contains Demorest, Clarkesville, Cornelia.
+  Demorest (~1,800 people) is closest to Cleveland.
+  Cornelia (~4,500) and Clarkesville are larger commercial hubs.
+  The system is selecting Demorest — wrong.
+
+════════════════════════════════════════════════
+THE FIX
+════════════════════════════════════════════════
+
+In selectBestHubs(), change the within-county selection:
+
+CURRENT (wrong):
+  Sort all candidates by distance, pick first one per county
+
+NEW (correct):
+  1. Group all qualifying candidates by county
+  2. For each county, select the candidate with the HIGHEST
+     business count (not the closest)
+  3. Then sort the selected per-county winners by distance
+     from the dealer to determine county order
+  4. Take the 4 closest counties (by their winning hub's
+     distance from dealer)
+
+In plain terms:
+  - WHICH county gets selected = closest county
+  - WHICH city represents that county = most businesses
+
+This ensures Gainesville represents Hall County (most
+businesses) even though Clermont is closer to Cleveland.
+And Cornelia or Clarkesville represents Habersham County
+rather than Demorest.
+
+════════════════════════════════════════════════
+ALSO FIX — MINIMUM CITY SIZE
+════════════════════════════════════════════════
+
+Even with the above fix, add a hard minimum:
+If the best city in a county has fewer than 5,000 people
+OR fewer than 50 postcard-relevant businesses within 5 miles:
+  Skip that county entirely — do not force a hub from it
+  Let the next closest county fill the slot instead
+
+This prevents forcing Demorest or Clermont as a hub even
+if they happen to be the only city in their county that
+passes other filters.
+
+════════════════════════════════════════════════
+TEST
+════════════════════════════════════════════════
+
+Enter City: Cleveland, State: Georgia, ZIP: 30528
+
+Expected hubs — most commercially significant city
+per county, sorted by county proximity to Cleveland:
+
+  White County → Cleveland (home county, largest nearby city)
+  Habersham County → Cornelia or Clarkesville
+    (NOT Demorest — too small)
+  Lumpkin County → Dahlonega
+    (if within search radius)
+  Stephens County → Toccoa
+    (if within search radius)
+
+Must NOT include:
+  Clermont (too small, Gainesville is Hall County's hub)
+  Demorest (too small, Cornelia/Clarkesville are better)
+  Gainesville (Hall County is too far south — the territory
+    should stay in the mountains near Cleveland, not extend
+    into the Gainesville metro)
+
+Note on Gainesville: if Hall County is the closest county
+with qualifying businesses, Gainesville SHOULD be selected
+as the Hall County hub. But the territory should not extend
+south to include the Gainesville metro footprint on the map.
+The ZIP footprint radius should be centered on Cleveland,
+not on Gainesville.

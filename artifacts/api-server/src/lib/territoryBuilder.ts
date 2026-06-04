@@ -49,6 +49,12 @@ const HOUSEHOLDS_PER_BUSINESS = 3.5;
 const HUB_MIN_CITY_POPULATION = 8_000; // documented intent; enforcement is via local biz proxy
 const HUB_LOCAL_RADIUS  = 8;  // miles for local business density check (wider to capture commercial corridors offset from gazetteer centroid)
 const HUB_LOCAL_BIZ_MIN = 8;  // postcard-biz proxy: fewer than this ≈ population < 8,000
+// Minimum local-business count for a city to serve as the representative of its
+// county hub slot. Cities below this threshold are skipped even if they are the
+// only city in their county — the next closest county fills the slot instead.
+// Prevents tiny places like Demorest (~1,800) or Clermont from being selected
+// when a larger neighbor (Cornelia, Gainesville) exists in an adjacent county.
+const HUB_MIN_COUNTY_REP_BIZ = 50;
 
 // Private/gated/ferry-only communities that can slip through the density proxy
 // because their commercial data is misleading (resorts count businesses on paper
@@ -75,6 +81,8 @@ export interface CityHub {
   countyGeoid: string;
   catchmentHouseholds: number;
   nearbyBusinesses: number;
+  /** Businesses within HUB_LOCAL_RADIUS miles (~8 mi). Used as city-size proxy. */
+  localBiz: number;
   distanceFromDealer: number;
   qualifies: boolean;
 }
@@ -323,6 +331,7 @@ export async function findCandidateHubs(
       countyGeoid: getCountyGeoidForLocation(city.lat, city.lng) ?? "",
       catchmentHouseholds,
       nearbyBusinesses,
+      localBiz,
       distanceFromDealer: distance,
       qualifies,
     });
@@ -353,6 +362,17 @@ export async function findCandidateHubs(
  * sorted list and skip any candidate whose county GEOID is already represented.
  * This replaces the old quadrant-spread logic so that nearby towns in the same county
  * don't consume multiple slots at the expense of real coverage in adjacent counties.
+ *
+ * Selection algorithm (two-stage):
+ *   1. Group qualifying candidates by county. Within each county, elect the city
+ *      with the HIGHEST nearbyBusinesses as the county representative — this
+ *      ensures Gainesville beats Clermont in Hall County, and Cornelia beats
+ *      Demorest in Habersham County.
+ *   2. Apply a minimum size gate: if the elected representative has fewer than
+ *      HUB_MIN_COUNTY_REP_BIZ local businesses, skip that county entirely so a
+ *      tiny city never blocks a slot that a closer large city could fill.
+ *   3. Sort the surviving county representatives by their distance from the dealer
+ *      and take the closest TARGET_HUB_COUNT counties.
  */
 export function selectBestHubs(
   candidates: CityHub[],
@@ -360,18 +380,25 @@ export function selectBestHubs(
   _dealerLng: number
 ): CityHub[] {
   const qualified = candidates.filter(c => c.qualifies);
-  const sorted = [...qualified].sort((a, b) => a.distanceFromDealer - b.distanceFromDealer);
 
-  const selected: CityHub[] = [];
-  const usedCounties = new Set<string>();
-
-  for (const hub of sorted) {
-    if (selected.length >= TARGET_HUB_COUNT) break;
-    if (hub.countyGeoid && usedCounties.has(hub.countyGeoid)) continue;
-    selected.push(hub);
-    if (hub.countyGeoid) usedCounties.add(hub.countyGeoid);
+  // Step 1: elect the most commercially significant city per county
+  const byCounty = new Map<string, CityHub>();
+  for (const hub of qualified) {
+    const key = hub.countyGeoid || `no-county-${hub.cityName}`;
+    const current = byCounty.get(key);
+    if (!current || hub.nearbyBusinesses > current.nearbyBusinesses) {
+      byCounty.set(key, hub);
+    }
   }
-  return selected;
+
+  // Step 2: skip counties whose elected representative is too small
+  const countyReps = [...byCounty.values()].filter(
+    hub => hub.localBiz >= HUB_MIN_COUNTY_REP_BIZ
+  );
+
+  // Step 3: sort by distance from dealer, take up to TARGET_HUB_COUNT
+  countyReps.sort((a, b) => a.distanceFromDealer - b.distanceFromDealer);
+  return countyReps.slice(0, TARGET_HUB_COUNT);
 }
 
 // ─── ZIP Footprint helpers ────────────────────────────────────────────────────
@@ -593,24 +620,36 @@ async function buildCityHubProposal(
   let hubs = voronoiAssign(initialHubs, allNearbyZips);
 
   // Replacement round: if any hub fails qualification after exclusive assignment,
-  // swap it for the next best candidate and re-run Voronoi once.
-  // Preserves the one-hub-per-county rule when picking replacements.
+  // swap it for the best unused candidate and re-run Voronoi once.
+  // Mirrors selectBestHubs: pick the highest-nearbyBusinesses city per county,
+  // skip counties whose best city is below HUB_MIN_COUNTY_REP_BIZ.
   const failedNames = new Set(hubs.filter(h => !h.qualifies).map(h => h.cityName));
   if (failedNames.size > 0) {
-    const usedNames = new Set(hubs.map(h => h.cityName));
-    const replacements = candidates.filter(c => !usedNames.has(c.cityName) && c.qualifies);
-
+    const usedCityNames = new Set(hubs.map(h => h.cityName));
     const kept = hubs.filter(h => h.qualifies);
     const keptCounties = new Set(kept.map(h => h.countyGeoid).filter(Boolean));
+
+    // Elect best city per unused county from remaining candidates
+    const unusedByCounty = new Map<string, CityHub>();
+    for (const c of candidates) {
+      if (usedCityNames.has(c.cityName) || !c.qualifies) continue;
+      const key = c.countyGeoid || `no-county-${c.cityName}`;
+      if (c.countyGeoid && keptCounties.has(c.countyGeoid)) continue;
+      const cur = unusedByCounty.get(key);
+      if (!cur || c.nearbyBusinesses > cur.nearbyBusinesses) unusedByCounty.set(key, c);
+    }
+    const replacements = [...unusedByCounty.values()]
+      .filter(c => c.localBiz >= HUB_MIN_COUNTY_REP_BIZ)
+      .sort((a, b) => a.distanceFromDealer - b.distanceFromDealer);
+
     for (const rep of replacements) {
       if (kept.length >= TARGET_HUB_COUNT) break;
-      if (rep.countyGeoid && keptCounties.has(rep.countyGeoid)) continue;
       kept.push(rep);
       if (rep.countyGeoid) keptCounties.add(rep.countyGeoid);
     }
 
     // Re-run Voronoi only if the hub set actually changed
-    if (kept.length !== hubs.filter(h => h.qualifies).length || replacements.length > 0) {
+    if (kept.length > hubs.filter(h => h.qualifies).length) {
       hubs = voronoiAssign(kept, allNearbyZips);
     }
   }
