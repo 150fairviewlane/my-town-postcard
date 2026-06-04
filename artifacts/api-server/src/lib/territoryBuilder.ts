@@ -748,7 +748,6 @@ async function getAITerritoryHubs(
     logger.info({ city, stateAbbr }, "AI hub selection: cache hit");
     return cached.hubs;
   }
-
   const excludedLine = excludedCities.length > 0
     ? `EXCLUDED CITIES (already claimed by other dealers — do NOT suggest these under any circumstances):
 ${excludedCities.join(", ")}
