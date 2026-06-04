@@ -749,6 +749,53 @@ export async function getNeighboringCounties(countyGeoid: string): Promise<strin
   return [...neighbors].sort();
 }
 
+/**
+ * Returns the short county names (e.g. "Dawson", not "Dawson County") for the
+ * neighbors of `homeGeoid`, sorted ascending by straight-line haversine distance
+ * from the home county centroid to each neighbor centroid.
+ *
+ * Synchronous — reads from the already-loaded in-memory maps.
+ * Returns [] if the home county centroid is missing from the dataset.
+ * @param homeGeoid — 5-digit county GEOID of the dealer's home county
+ * @param maxCount  — maximum neighbors to return (default 6)
+ */
+export function getNeighborCountyNames(homeGeoid: string, maxCount = 6): string[] {
+  const homeCentroid = countyCentroidsMap.get(homeGeoid);
+  if (!homeCentroid) return [];
+
+  const neighborGeoids = adjacencyMap.get(homeGeoid) ?? [];
+  if (neighborGeoids.length === 0) return [];
+
+  const toRad = (d: number) => d * Math.PI / 180;
+  const R = 3_959; // Earth radius miles
+
+  const withDistance: Array<{ geoid: string; dist: number }> = [];
+  for (const geoid of neighborGeoids) {
+    const c = countyCentroidsMap.get(geoid);
+    if (!c) continue;
+    const dLat = toRad(c.lat - homeCentroid.lat);
+    const dLng = toRad(c.lng - homeCentroid.lng);
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(homeCentroid.lat)) * Math.cos(toRad(c.lat)) * Math.sin(dLng / 2) ** 2;
+    const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    withDistance.push({ geoid, dist });
+  }
+
+  withDistance.sort((a, b) => a.dist - b.dist);
+
+  const result: string[] = [];
+  for (const { geoid } of withDistance.slice(0, maxCount)) {
+    const row = countyInfoByGeoid.get(geoid);
+    if (!row) continue;
+    const short = row.nameShort
+      .toLowerCase()
+      .replace(/\b\w/g, (ch) => ch.toUpperCase());
+    result.push(short);
+  }
+  return result;
+}
+
 // ─── getCountyInfo ────────────────────────────────────────────────────────────
 
 /**
