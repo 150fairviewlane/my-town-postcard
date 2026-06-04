@@ -547,6 +547,10 @@ async function initMap(){
     });
 
   map = L.map('map', { zoomControl:true }).setView([39.5, -98.35], 4);
+  // Grey county pane sits below the default overlay pane (400) so territory
+  // layers always intercept clicks on their own counties first.
+  map.createPane('greyCountyPane');
+  map.getPane('greyCountyPane').style.zIndex = '350';
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     maxZoom:18,
@@ -584,23 +588,72 @@ async function loadAllTerritories(){
   for(const [abbr, list] of Object.entries(byState)){
     const meta = STATES[abbr];
     if(!meta) continue;
+
+    // Fetch ZIP footprints for this state — single batched call
+    let footprints = [];
+    try {
+      const fp = await fetch(`/api/territories/footprints?state=${abbr}`);
+      if(fp.ok) footprints = await fp.json();
+    } catch(e){ /* fall through to county-name fallback */ }
+
     const geo = await stateGeo(meta[1]);
     if(!geo) continue;
-    list.forEach(t => {
-      const features = pickFeatures(geo, meta[1], [], Array.isArray(t.counties) ? t.counties : []);
-      if(!features.length) return;
-      const status = t.status === 'taken' ? 'taken' : 'available';
-      L.geoJSON({ type:'FeatureCollection', features }, {
-        style: countyStyle(status),
-        onEachFeature: (_, lyr) => {
-          lyr.bindTooltip(
-            `<div style="font-weight:700">${t.name}</div>` +
-            `<div style="font-size:11px;color:#555">${status==='taken'?'Claimed':'Available'}</div>`,
-            { sticky:true });
-          lyr.on('click', () => renderExisting(t, abbr));
-        },
-      }).addTo(map);
-    });
+
+    if(footprints.length > 0){
+      // Build geoid → {territoryId, status} lookup
+      const geoidMap = new Map();
+      for(const fp of footprints){
+        for(const geoid of (fp.countyFips || [])){
+          geoidMap.set(String(geoid), { id: fp.id, status: fp.status });
+        }
+      }
+      // Build territory id → row for tooltip data
+      const terrById = new Map(list.map(t => [t.id, t]));
+
+      // Group GeoJSON features by territory via geoid lookup
+      const byTerritory = new Map();
+      for(const f of geo.features){
+        const geoid = String(f.id);
+        if(!geoid.startsWith(meta[1])) continue;
+        const entry = geoidMap.get(geoid);
+        if(!entry) continue;
+        if(!byTerritory.has(entry.id)) byTerritory.set(entry.id, { status: entry.status, features: [] });
+        byTerritory.get(entry.id).features.push(f);
+      }
+
+      for(const [tid, { status, features }] of byTerritory){
+        if(!features.length) continue;
+        const t = terrById.get(tid) || { name: tid };
+        const mapStatus = status === 'taken' ? 'taken' : 'available';
+        L.geoJSON({ type:'FeatureCollection', features }, {
+          style: countyStyle(mapStatus),
+          onEachFeature: (_, lyr) => {
+            lyr.bindTooltip(
+              `<div style="font-weight:700">${t.name}</div>` +
+              `<div style="font-size:11px;color:#555">${mapStatus==='taken'?'Claimed':'Available'}</div>`,
+              { sticky:true });
+            lyr.on('click', () => renderExisting(t, abbr));
+          },
+        }).addTo(map);
+      }
+    } else {
+      // Fallback: county short-name matching (before any footprints are stored)
+      list.forEach(t => {
+        const features = pickFeatures(geo, meta[1], [], Array.isArray(t.counties) ? t.counties : []);
+        if(!features.length) return;
+        const status = t.status === 'taken' ? 'taken' : 'available';
+        L.geoJSON({ type:'FeatureCollection', features }, {
+          style: countyStyle(status),
+          onEachFeature: (_, lyr) => {
+            lyr.bindTooltip(
+              `<div style="font-weight:700">${t.name}</div>` +
+              `<div style="font-size:11px;color:#555">${status==='taken'?'Claimed':'Available'}</div>`,
+              { sticky:true });
+            lyr.on('click', () => renderExisting(t, abbr));
+          },
+        }).addTo(map);
+      });
+    }
   }
 }
 
@@ -647,6 +700,31 @@ async function runSearch(){
   }
 }
 
+// Helper — adds all state counties as a clickable grey background layer.
+// Counties already colored by territory layers are covered visually, so only
+// truly unassigned counties respond to clicks on the grey pane.
+async function addGreyCountyLayer(stateFips){
+  if(!stateFips || !map) return;
+  const geo = await stateGeo(stateFips);
+  if(!geo) return;
+  const features = geo.features.filter(f => String(f.id).startsWith(stateFips));
+  if(!features.length) return;
+  const layer = L.geoJSON({ type:'FeatureCollection', features }, {
+    pane: 'greyCountyPane',
+    style: countyStyle('none'),
+    onEachFeature: (_, lyr) => {
+      lyr.bindTooltip('No territory here yet', { sticky:true });
+      lyr.on('click', () => {
+        hideAllCards();
+        selectedClaim = null;
+        $('unavailBody').textContent = 'No territory here yet — search above to create one in your area.';
+        $('unavailCard').classList.add('visible');
+      });
+    },
+  }).addTo(map);
+  searchLayers.push(layer);
+}
+
 // ─── Render: existing territory ───────────────────────────────────────────────
 async function renderExisting(terr, stateAbbr){
   clearSearchLayers();
@@ -661,6 +739,9 @@ async function renderExisting(terr, stateAbbr){
   const status = terr.status === 'taken' ? 'taken' : 'available';
 
   if(stateFips){
+    // Add grey background layer first (below territory layers via greyCountyPane)
+    addGreyCountyLayer(stateFips);
+
     const geo = await stateGeo(stateFips);
     if(geo){
       const features = pickFeatures(geo, stateFips, terr.countyGeoids, terr.counties);
@@ -731,9 +812,17 @@ async function renderProposed(p){
   }
 
   if(stateFips){
+    // Add grey background layer first so unassigned counties show the click hint
+    addGreyCountyLayer(stateFips);
+
     const geo = await stateGeo(stateFips);
     if(geo){
-      const features = pickFeatures(geo, stateFips, p.countyGeoids, p.countyShortNames);
+      // Use the fuller footprint geoids (15-mile radius around each hub) when
+      // available; fall back to the hub-county geoids returned by older responses.
+      const geoids = (Array.isArray(p.footprintCountyGeoids) && p.footprintCountyGeoids.length)
+        ? p.footprintCountyGeoids
+        : (p.countyGeoids || []);
+      const features = pickFeatures(geo, stateFips, geoids, p.countyShortNames);
       if(features.length){
         const layer = L.geoJSON({ type:'FeatureCollection', features }, {
           style: countyStyle('proposed'),

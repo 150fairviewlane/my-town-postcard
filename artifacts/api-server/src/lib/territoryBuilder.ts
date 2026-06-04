@@ -9,14 +9,15 @@
  * No external API calls anywhere in this module.
  */
 
-import { db, territoriesTable, territoryProposalsTable, type TerritoryProposalRow } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, territoriesTable, territoryProposalsTable, territoryZipAssignmentsTable, type TerritoryProposalRow } from "@workspace/db";
+import { eq, and, inArray } from "drizzle-orm";
 import {
   getCountyInfo,
   getZipsNearLocation,
   getCitiesInState,
   getCountyHouseholds,
   getCountyGeoidForLocation,
+  getCountyGeoidFromZip,
 } from "./censusApi";
 import { logger } from "./logger";
 
@@ -347,52 +348,146 @@ export async function findCandidateHubs(
 }
 
 /**
- * Selects up to TARGET_HUB_COUNT qualifying hubs that form a good geographic
- * spread around the dealer ZIP centroid. Uses quadrant-based selection when
- * more than 4 hubs qualify.
+ * Selects up to TARGET_HUB_COUNT qualifying hubs using a compact, one-hub-per-county
+ * strategy: sort qualifying candidates by distance (closest first), then walk the
+ * sorted list and skip any candidate whose county GEOID is already represented.
+ * This replaces the old quadrant-spread logic so that nearby towns in the same county
+ * don't consume multiple slots at the expense of real coverage in adjacent counties.
  */
 export function selectBestHubs(
   candidates: CityHub[],
-  dealerLat: number,
-  dealerLng: number
+  _dealerLat: number,
+  _dealerLng: number
 ): CityHub[] {
   const qualified = candidates.filter(c => c.qualifies);
-
-  if (qualified.length <= TARGET_HUB_COUNT) {
-    return qualified;
-  }
-
-  // More than 4 qualify: use quadrant-based spread selection
-  type Quadrant = "NE" | "NW" | "SE" | "SW";
-  const getQuadrant = (hub: CityHub): Quadrant => {
-    const n = hub.lat >= dealerLat;
-    const e = hub.lng >= dealerLng;
-    return ((n ? "N" : "S") + (e ? "E" : "W")) as Quadrant;
-  };
-
-  // Always include the closest qualifying city (anchor)
   const sorted = [...qualified].sort((a, b) => a.distanceFromDealer - b.distanceFromDealer);
-  const anchor = sorted[0]!;
-  const selected = new Set<CityHub>([anchor]);
 
-  // Pick the closest qualifying city from each quadrant
-  const quadrants: Quadrant[] = ["NE", "NW", "SE", "SW"];
-  const remaining = sorted.filter(h => h !== anchor);
+  const selected: CityHub[] = [];
+  const usedCounties = new Set<string>();
 
-  for (const quad of quadrants) {
-    if (selected.size >= TARGET_HUB_COUNT) break;
-    const fromQuad = remaining.filter(h => !selected.has(h) && getQuadrant(h) === quad);
-    if (fromQuad.length > 0) selected.add(fromQuad[0]!);
+  for (const hub of sorted) {
+    if (selected.length >= TARGET_HUB_COUNT) break;
+    if (hub.countyGeoid && usedCounties.has(hub.countyGeoid)) continue;
+    selected.push(hub);
+    if (hub.countyGeoid) usedCounties.add(hub.countyGeoid);
+  }
+  return selected;
+}
+
+// ─── ZIP Footprint helpers ────────────────────────────────────────────────────
+
+const ZIP_FOOTPRINT_RADIUS_MI = 15;
+
+/**
+ * Computes the ZIP footprint for a set of hub cities: all ZIPs within
+ * ZIP_FOOTPRINT_RADIUS_MI of any hub, each ZIP assigned to its nearest hub.
+ * Used to write territory_zip_assignments rows and for conflict detection.
+ */
+export function computeHubZipFootprint(
+  hubs: Array<{ cityName: string; lat: number; lng: number }>
+): Array<{ zip: string; hubCity: string }> {
+  if (hubs.length === 0) return [];
+  const zipMap = new Map<string, { hubCity: string; dist: number }>();
+  for (const hub of hubs) {
+    const nearbyZips = getZipsNearLocation(hub.lat, hub.lng, ZIP_FOOTPRINT_RADIUS_MI);
+    for (const z of nearbyZips) {
+      const existing = zipMap.get(z.zip);
+      if (!existing || z.distance < existing.dist) {
+        zipMap.set(z.zip, { hubCity: hub.cityName, dist: z.distance });
+      }
+    }
+  }
+  return [...zipMap.entries()].map(([zip, { hubCity }]) => ({ zip, hubCity }));
+}
+
+/**
+ * Returns all unique county GEOIDs covered by the hub ZIP footprint.
+ */
+export function getFootprintCountyGeoids(
+  hubs: Array<{ cityName: string; lat: number; lng: number }>
+): string[] {
+  const zips = computeHubZipFootprint(hubs);
+  const geoids = new Set<string>();
+  for (const { zip } of zips) {
+    const geoid = getCountyGeoidFromZip(zip);
+    if (geoid) geoids.add(geoid);
+  }
+  return [...geoids];
+}
+
+/**
+ * Checks whether the proposed hub ZIP footprint overlaps any TAKEN territory's
+ * stored ZIP footprint in territory_zip_assignments. Returns the first conflicting
+ * territory id, or null when there is no overlap.
+ */
+export async function checkZipFootprintConflict(
+  hubs: Array<{ cityName: string; lat: number; lng: number }>
+): Promise<string | null> {
+  const footprintZips = computeHubZipFootprint(hubs).map(z => z.zip);
+  if (footprintZips.length === 0) return null;
+
+  const CHUNK = 500;
+  for (let i = 0; i < footprintZips.length; i += CHUNK) {
+    const chunk = footprintZips.slice(i, i + CHUNK);
+    const rows = await db
+      .select({ territoryId: territoryZipAssignmentsTable.territoryId })
+      .from(territoryZipAssignmentsTable)
+      .innerJoin(territoriesTable, eq(territoryZipAssignmentsTable.territoryId, territoriesTable.id))
+      .where(and(
+        eq(territoriesTable.status, "taken"),
+        inArray(territoryZipAssignmentsTable.zip, chunk)
+      ))
+      .limit(1);
+    if (rows.length > 0) return rows[0].territoryId;
+  }
+  return null;
+}
+
+/**
+ * Resolves each city name to coordinates via the Gazetteer, computes the 15-mile
+ * ZIP footprint around each hub, and bulk-inserts into territory_zip_assignments.
+ * Uses onConflictDoNothing so the first territory to claim a ZIP keeps it.
+ * Exported so the synchronous confirm path can also call it.
+ */
+export async function storeZipFootprintForTerritory(
+  territoryId: string,
+  cities: string[],
+  stateAbbr: string,
+  fallbackLat?: number | null,
+  fallbackLng?: number | null
+): Promise<void> {
+  const gazCities = getCitiesInState(stateAbbr);
+  const hubs: Array<{ cityName: string; lat: number; lng: number }> = [];
+
+  for (const cityName of cities) {
+    const upper = cityName.toUpperCase();
+    const match = gazCities.find(c =>
+      c.name.toUpperCase() === upper ||
+      c.name.toUpperCase().startsWith(upper) ||
+      upper.startsWith(c.name.toUpperCase())
+    );
+    if (match) hubs.push({ cityName, lat: match.lat, lng: match.lng });
   }
 
-  // Fill any remaining slots with closest unselected qualified cities
-  for (const hub of remaining) {
-    if (selected.size >= TARGET_HUB_COUNT) break;
-    if (!selected.has(hub)) selected.add(hub);
+  // Fall back to centroid when no cities resolve
+  if (hubs.length === 0 && fallbackLat != null && fallbackLng != null) {
+    hubs.push({ cityName: "center", lat: fallbackLat, lng: fallbackLng });
   }
 
-  // Return sorted by distance for consistent display order
-  return [...selected].sort((a, b) => a.distanceFromDealer - b.distanceFromDealer);
+  if (hubs.length === 0) return;
+
+  const zips = computeHubZipFootprint(hubs);
+  if (zips.length === 0) return;
+
+  const CHUNK = 200;
+  for (let i = 0; i < zips.length; i += CHUNK) {
+    const chunk = zips.slice(i, i + CHUNK);
+    await db.insert(territoryZipAssignmentsTable)
+      .values(chunk.map(({ zip }) => ({ zip, territoryId })))
+      .onConflictDoNothing();
+  }
+
+  logger.info({ territoryId, zipCount: zips.length }, "ZIP footprint stored for territory");
 }
 
 /**
@@ -717,6 +812,19 @@ export async function materializeTerritoryFromProposal(
     { territoryId, proposalId: proposal.id, dealerId, stateAbbr },
     "Territory materialized from proposal"
   );
+
+  // Store the ZIP footprint asynchronously (fire-and-forget; errors are logged,
+  // not fatal — the territory row is already committed and the dealer is active).
+  storeZipFootprintForTerritory(
+    territoryId,
+    cities,
+    stateAbbr,
+    proposal.centroidLat,
+    proposal.centroidLng
+  ).catch(err =>
+    logger.error({ err: err?.message, territoryId }, "Failed to store ZIP footprint")
+  );
+
   return territoryId;
 }
 
@@ -763,6 +871,19 @@ export async function getTerritoryForLocation(
   // (D) Accept the best proposal if it is viable (>= MIN_HUB_COUNT hubs and
   // enough households); otherwise the location is unavailable.
   if (best && best.isViable) {
+    // ZIP footprint conflict re-check: if any hub's 15-mile footprint already
+    // belongs to a taken territory, surface that territory as "existing" so the
+    // picker shows it as claimed rather than erroneously offering a new proposal.
+    const conflictTerritoryId = await checkZipFootprintConflict(best.hubs);
+    if (conflictTerritoryId) {
+      const [conflictTerritory] = await db
+        .select()
+        .from(territoriesTable)
+        .where(eq(territoriesTable.id, conflictTerritoryId));
+      if (conflictTerritory) {
+        return { type: "existing", territory: conflictTerritory as Record<string, unknown> };
+      }
+    }
     return { type: "proposed", proposals: [best], proposalIds: [] };
   }
 

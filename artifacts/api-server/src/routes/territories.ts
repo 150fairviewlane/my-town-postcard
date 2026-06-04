@@ -10,6 +10,7 @@ import {
   getTerritoryForLocation,
   findCandidateHubs,
   selectBestHubs,
+  getFootprintCountyGeoids,
 } from "../lib/territoryBuilder";
 import {
   getCountyGeoidsByShortNames,
@@ -18,6 +19,7 @@ import {
   getCountyFromZip,
   getCitiesInState,
   getZipLocation,
+  getCountyGeoidFromZip,
 } from "../lib/censusApi";
 
 // Works in both ESM dev (tsx watch) and the esbuild production bundle.
@@ -518,6 +520,7 @@ router.post("/territories/propose", async (req, res): Promise<void> => {
     const countyShortNames = countyGeoids
       .map(g => getCountyShortNameByGeoid(g))
       .filter((n): n is string => !!n);
+    const footprintCountyGeoids = getFootprintCountyGeoids(p.hubs);
     res.json({
       type: "proposed",
       proposal: {
@@ -535,6 +538,7 @@ router.post("/territories/propose", async (req, res): Promise<void> => {
         cities: p.topCities,
         countyGeoids,
         countyShortNames,
+        footprintCountyGeoids,
         viabilityMessage: p.viabilityMessage,
       },
     });
@@ -556,6 +560,52 @@ router.get("/admin/census/county-score", requireAdmin, async (req, res): Promise
     (await import("../lib/censusApi")).getTopCitiesInCounty(stateFips, countyFips),
   ]);
   res.json({ stateFips, countyFips, adReadyBusinessCount: count, topCities: cities });
+});
+
+// ─── GET /api/territories/footprints?state=XX ────────────────────────────────
+// Returns an array of { id, status, countyFips: string[] } for every territory
+// in the given state that has ZIP footprint data. Used by the map to color
+// counties from a single batched call rather than per-territory requests.
+router.get("/territories/footprints", async (req, res): Promise<void> => {
+  const stateAbbr = typeof req.query.state === "string"
+    ? req.query.state.toUpperCase().trim()
+    : "";
+  if (!stateAbbr || stateAbbr.length !== 2) {
+    res.status(400).json({ error: "?state=XX required (2-letter abbreviation)" });
+    return;
+  }
+
+  const rows = await db
+    .select({
+      territoryId: territoryZipAssignmentsTable.territoryId,
+      zip: territoryZipAssignmentsTable.zip,
+      status: territoriesTable.status,
+    })
+    .from(territoryZipAssignmentsTable)
+    .innerJoin(
+      territoriesTable,
+      eq(territoryZipAssignmentsTable.territoryId, territoriesTable.id)
+    )
+    .where(eq(territoriesTable.state, stateAbbr));
+
+  const byTerritory = new Map<string, { status: string; geoids: Set<string> }>();
+  for (const r of rows) {
+    let entry = byTerritory.get(r.territoryId);
+    if (!entry) {
+      entry = { status: r.status, geoids: new Set() };
+      byTerritory.set(r.territoryId, entry);
+    }
+    const geoid = getCountyGeoidFromZip(r.zip);
+    if (geoid) entry.geoids.add(geoid);
+  }
+
+  const result = [...byTerritory.entries()].map(([id, { status, geoids }]) => ({
+    id,
+    status,
+    countyFips: [...geoids],
+  }));
+
+  res.json(result);
 });
 
 // ─── GET /api/counties-geojson?stateFips=XX ───────────────────────────────────

@@ -934,6 +934,21 @@ export function getCitiesInState(stateAbbr: string): GazetteerPlace[] {
   return gazetteerByState.get(stateAbbr) ?? [];
 }
 
+/**
+ * Resolves a US ZIP code to its 5-digit county GEOID using local static data.
+ * Synchronous, in-memory lookup (zipCountyMap + countyFipsByShortName).
+ * Returns null if the ZIP is not in the local dataset.
+ */
+export function getCountyGeoidFromZip(zip: string): string | null {
+  const row = zipCountyMap.get(zip);
+  if (!row) return null;
+  const countyFips3 = countyFipsByShortName.get(
+    `${row.stateFips}:${row.countyShort.toUpperCase().trim()}`
+  );
+  if (!countyFips3) return null;
+  return `${row.stateFips}${countyFips3.padStart(3, "0")}`;
+}
+
 // ─── Startup ──────────────────────────────────────────────────────────────────
 
 logger.info(
