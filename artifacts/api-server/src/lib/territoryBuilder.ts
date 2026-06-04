@@ -1025,11 +1025,13 @@ async function getCountyTerritoryHubs(
   let hubs = homeHubs;
   let countyShortNames = [homeCountyShort];
 
-  // Step 3: If fewer than MIN_HUB_COUNT hubs in home county, expand to nearest neighbour.
-  // Even a county with 2 qualifying cities (e.g. White County → Cleveland + Helen)
-  // needs a neighbour to reach the 3-hub viability floor.
-  if (hubs.length < MIN_HUB_COUNT) {
-    // Pre-build geoid → short county name map so the filter below stays sync
+  // Step 3: If the home county yielded fewer than 2 qualifying hubs, pull in the
+  // nearest qualifying neighbour county. Sparse mountain counties (e.g. Lumpkin GA,
+  // which only has Dahlonega) need this to form a viable territory.
+  // We stop after the FIRST neighbour that contributes hubs so the territory stays
+  // geographically coherent and the county label stays accurate (≤ 2 counties).
+  if (hubs.length < 2) {
+    // Pre-build geoid → short county name map so the filter below stays sync.
     const geoidToShortName = new Map<string, string>();
     const uniqueGeoids = new Set(
       allStateCities
@@ -1043,21 +1045,14 @@ async function getCountyTerritoryHubs(
       }
     }
 
-    // Walk neighbours by proximity until we reach MIN_HUB_COUNT hubs or run out.
-    // Sparse mountain counties (e.g. Lumpkin) may need hubs from two neighbours
-    // (Dawson + White) to pass the viability floor. We record the first neighbour
-    // county that contributed hubs in the label; a second silent expansion is fine.
     const neighborShortNames = getNeighborCountyNames(homeGeoid);
-    const alreadyAddedGeoids = new Set<string>(); // prevent double-counting a county
     for (const neighborShort of neighborShortNames) {
-      if (hubs.length >= MIN_HUB_COUNT) break; // viability floor reached
       const neighborHubs = allStateCities
         .filter(c => {
           if (excludedSet.has(c.name.toLowerCase().trim())) return false;
           if (RESORT_CITIES.has(c.name)) return false;
           const geoid = getCountyGeoidForLocation(c.lat, c.lng);
           if (!geoid || geoid === homeGeoid) return false;
-          if (alreadyAddedGeoids.has(geoid)) return false;
           return geoidToShortName.get(geoid)?.toLowerCase() === neighborShort.toLowerCase();
         })
         .map(c => buildHub(c))
@@ -1066,10 +1061,8 @@ async function getCountyTerritoryHubs(
 
       if (neighborHubs.length > 0) {
         hubs = [...hubs, ...neighborHubs].slice(0, COUNTY_MAX_HUBS);
-        // Track county geoids we've added so no city gets re-evaluated
-        for (const h of neighborHubs) { if (h.countyGeoid) alreadyAddedGeoids.add(h.countyGeoid); }
-        // Only name the first expansion county in the territory label
-        if (countyShortNames.length === 1) countyShortNames.push(neighborShort);
+        countyShortNames.push(neighborShort); // exactly one neighbour recorded
+        break; // stop after first useful neighbour — label stays accurate
       }
     }
   }
@@ -1189,7 +1182,11 @@ async function buildCityHubProposal(
 
   // Qualification uses Voronoi-exclusive household count (no double-counting)
   const voronoiTotalHH = hubs.reduce((s, h) => s + h.catchmentHouseholds, 0);
-  const hasEnoughHubs        = hubCount >= MIN_HUB_COUNT;
+  // County mode uses a lower viability floor (2 hubs) because home + one neighbour
+  // county is a coherent territory even when both counties are small/rural.
+  // AI mode keeps the original MIN_HUB_COUNT (3) to guard against AI hallucinations.
+  const minHubs = USE_COUNTY_TERRITORY_MODEL ? 2 : MIN_HUB_COUNT;
+  const hasEnoughHubs        = hubCount >= minHubs;
   const hasEnoughHouseholds  = voronoiTotalHH >= MIN_TERRITORY_HOUSEHOLDS;
   const isViable = hasEnoughHubs && hasEnoughHouseholds;
 
