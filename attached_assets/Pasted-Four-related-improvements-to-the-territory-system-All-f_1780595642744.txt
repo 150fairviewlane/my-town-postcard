@@ -1,0 +1,236 @@
+Four related improvements to the territory system.
+All four work together as a cohesive update.
+
+
+════════════════════════════════════════════════
+CHANGE 1 — CLOSEST 4 HUBS (replace quadrant spread)
+════════════════════════════════════════════════
+
+In selectBestHubs() in territoryBuilder.ts:
+
+REMOVE the quadrant logic entirely:
+  - The NE/NW/SE/SW quadrant division
+  - The directional spread selection
+  - Any code that picks cities in different directions
+
+REPLACE with sort-by-distance:
+
+  const selectBestHubs = (
+    candidates: CityHub[],
+    dealerLat: number,
+    dealerLng: number
+  ): CityHub[] => {
+    return candidates
+      .filter(c => c.qualifies)
+      .sort((a, b) => a.distanceFromDealer - b.distanceFromDealer)
+      .slice(0, TARGET_HUB_COUNT);
+  };
+
+Closest 4 qualifying cities wins. No directional logic.
+The one-hub-per-county guarantee already handles county
+representation without needing quadrant spread.
+
+
+════════════════════════════════════════════════
+CHANGE 2 — EXCLUDE ALREADY-CLAIMED HUB CITIES
+════════════════════════════════════════════════
+
+In findCandidateHubs(), before scoring candidates:
+
+  1. Query the territories table for all taken territories
+     whose centroid is within 60 miles of the dealer location
+     and same state
+
+  2. Collect all hub city names from those taken territories
+     (stored in zone_note as comma-separated city names)
+
+  3. Filter out any candidate city whose name appears in
+     that claimed-hubs set
+
+This ensures each hub city can only belong to one territory.
+When Cleveland and Helen are claimed, the next dealer nearby
+gets Clarkesville, Cornelia, Demorest, Toccoa — not the
+same cities again.
+
+
+════════════════════════════════════════════════
+CHANGE 3 — FULL TERRITORY ZIP FOOTPRINT
+════════════════════════════════════════════════
+
+When a territory is created (on Stripe payment success),
+after saving to territories table:
+
+  Store all ZIP codes within 15 miles of ANY hub city
+  as territory_zip_assignments:
+
+    For each of the 4 hub cities:
+      Get all ZIPs within 15 miles using getZipsNearLocation()
+    Deduplicate (a ZIP within 15 miles of multiple hubs
+      is assigned to the nearest hub)
+    Insert all into territory_zip_assignments:
+      territory_id, zip, hub_city (nearest hub name)
+
+This captures Demorest, Sautee, and every small town
+between the hubs as part of the territory footprint.
+
+USE THIS FOR CONFLICT DETECTION:
+  When checking if a new proposal conflicts with existing
+  territories, also check territory_zip_assignments:
+
+    If any of the proposed territory's ZIPs (within 15 miles
+    of its hub cities) already appear in territory_zip_assignments
+    for a taken territory → return type: 'conflict'
+
+  This prevents overlapping territories even when hub cities
+  are different but ZIP catchments overlap.
+
+USE THIS FOR MAP DISPLAY:
+  When drawing a territory polygon on the map, include ALL
+  counties that contain at least one of the territory's
+  assigned ZIPs — not just the 4 hub counties.
+  This shows the full territory footprint including small
+  towns between the hubs.
+
+  Add a new endpoint:
+    GET /api/territories/:id/zip-footprint
+    Returns: array of county FIPS codes derived from
+    territory_zip_assignments for that territory
+    (look up each ZIP's county from zip-county.csv)
+
+  The map uses this to color all relevant counties,
+  giving a more accurate territory boundary than just
+  the 4 hub counties alone.
+
+
+════════════════════════════════════════════════
+CHANGE 4 — CLICKABLE MAP GENERATES TERRITORY
+════════════════════════════════════════════════
+
+On /find-territory, make the map fully interactive:
+
+CLICKING AN UNCOLORED (grey) COUNTY:
+  1. Get the county centroid lat/lng from the GeoJSON
+     feature properties or from county-centroids.csv
+  2. Get the state from the GeoJSON feature (FIPS prefix)
+  3. Call getTerritoryForLocation(lat, lng, stateAbbr)
+  4. Display the result in the left panel:
+     - If proposed: show the 4 hub cities, claim button
+     - If existing available: show territory, claim button
+     - If taken: show "claimed" message
+  5. Highlight the relevant county polygons on the map
+     (amber for proposal, green for available, red for taken)
+
+CLICKING AN AMBER (proposed) COUNTY:
+  Show the current proposal in the left panel
+  Same as if the dealer had searched for that area
+
+CLICKING A GREEN (available) COUNTY:
+  Show that territory's details in the left panel
+  Show the Claim button
+
+CLICKING A RED (taken) COUNTY:
+  Show "This territory has been claimed"
+  Show nearby available territories if any
+
+SHOW A LOADING INDICATOR:
+  While getTerritoryForLocation is running (may take 2-3
+  seconds), show a spinner on the clicked county and
+  "Finding territory..." in the left panel
+
+CITY/STATE SEARCH STILL WORKS:
+  The existing City + State + ZIP search fields remain
+  Map click is an additional way to trigger a territory search
+  Both paths call the same getTerritoryForLocation function
+
+STATE DETECTION FROM MAP CLICK:
+  The GeoJSON feature ID is the 5-digit county FIPS
+  First 2 digits = state FIPS
+  Use the existing STATE_FIPS map (already in censusApi.ts)
+  to convert state FIPS to state abbreviation
+
+
+════════════════════════════════════════════════
+MAP DISPLAY UPDATE FOR FULL FOOTPRINT
+════════════════════════════════════════════════
+
+When rendering territories on the map at page load:
+
+  For each taken/available territory in the database:
+    Call GET /api/territories/:id/zip-footprint
+    Get all county FIPS from the ZIP assignments
+    Color ALL those counties (not just hub counties)
+    Green = available, Red = taken
+
+  For a proposed territory after search or map click:
+    Get all ZIPs within 15 miles of each proposed hub
+    Get their county FIPS
+    Color ALL those counties amber
+
+  This means clicking "rural Georgia" near Cleveland shows
+  a territory footprint that includes Sautee, Demorest,
+  and other small communities — not just the 4 hub counties
+
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+  findCandidateHubs() internal scoring logic
+  The one-hub-per-county guarantee
+  Stripe payment integration
+  Landing page / ad slot creation
+  Authentication
+  Admin territory manager
+
+
+════════════════════════════════════════════════
+TEST AFTER BUILDING
+════════════════════════════════════════════════
+
+TEST 1 — Closest hubs for Cleveland GA
+  Enter City: Cleveland, State: Georgia, ZIP: 30528
+  Must return 4 closest qualifying hubs:
+    Cleveland, Helen, Clarkesville, Cornelia (approx)
+  Must NOT include Blairsville (45 miles away)
+
+TEST 2 — Full territory footprint
+  After claiming a Cleveland area territory:
+    Map shows ALL counties in the ZIP footprint colored green
+    Not just the 4 hub counties
+    Sautee/Demorest area counties should be colored
+
+TEST 3 — Excluded claimed hubs
+  After Cleveland territory is claimed:
+    Search for nearby city (e.g. Cornelia or Clarkesville)
+    Those cities must NOT appear as hubs in the new proposal
+    (they're already claimed)
+    New proposal uses next closest qualifying cities
+
+TEST 4 — Clickable map generates territory
+  Without entering any search fields:
+    Click a grey county on the map (e.g. Stephens County GA)
+    Left panel shows proposed territory for that area
+    Toccoa appears as a hub (Stephens County seat)
+    Amber polygons highlight the territory footprint
+    Claim button visible
+
+TEST 5 — Click existing territory
+  Click a green or red county polygon
+  Left panel shows that territory's details immediately
+  No new territory search triggered
+
+TEST 6 — Click generates correct state
+  Click a county in Tennessee
+  Territory proposal is for TN cities, not GA cities
+  State correctly detected from county FIPS prefix
+
+TEST 7 — ZIP conflict prevention
+  Two dealers claim adjacent territories
+  Their ZIP footprints must not overlap
+  If overlap detected during second claim: show conflict
+  message and do not create territory
+
+TEST 8 — All states work
+  Click counties in Ohio, Washington, Texas
+  Each generates a local territory proposal
+  Same behavior as Georgia
