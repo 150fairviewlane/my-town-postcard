@@ -57,7 +57,7 @@ const HUB_LOCAL_BIZ_MIN = 8;  // postcard-biz proxy: fewer than this ≈ populat
 // Prevents tiny places like Demorest (~1,800) or Clermont from being selected
 // when a larger neighbor (Cornelia, Gainesville) exists in an adjacent county.
 const HUB_MIN_COUNTY_REP_BIZ = 50;
-const MAX_HUB_DISTANCE_MILES = 20; // server-side hard cap on AI hub suggestions
+const MAX_HUB_DISTANCE_MILES = 22; // server-side hard cap on AI hub suggestions
 
 // Private/gated/ferry-only communities that can slip through the density proxy
 // because their commercial data is misleading (resorts count businesses on paper
