@@ -1,0 +1,171 @@
+Completely simplify the AI territory prompt. Remove all
+county logic, neighbor lists, and two-step selection.
+Replace with a single simple instruction.
+
+════════════════════════════════════════════════
+REMOVE ALL OF THIS FROM getAITerritoryHubs()
+════════════════════════════════════════════════
+
+Remove:
+  - selectTerritoryCounties() function and all calls to it
+  - getNeighborCountyNames() call and neighbor list injection
+  - All county-based prompt instructions
+  - The "fill home county first" rule
+  - The "neighboring counties in order" section
+  - Any reference to county adjacency in the territory prompt
+
+Keep:
+  - The excluded cities list (claimed hub cities)
+  - The ZIP-based hub lat/lng lookup after AI response
+  - The Voronoi pipeline downstream
+  - getNeighborCountyNames() function itself
+    (may be used elsewhere — just stop calling it here)
+
+
+════════════════════════════════════════════════
+NEW PROMPT — SIMPLE AND DIRECT
+════════════════════════════════════════════════
+
+Replace the entire prompt with this:
+
+const excludedLine = excludedCities.length > 0
+  ? `EXCLUDED CITIES (already claimed by other dealers —
+     do NOT suggest these under any circumstances):
+     ${excludedCities.join(', ')}
+
+     Any city NOT on this list is available and may be
+     suggested. Do not avoid cities simply because they
+     are near an excluded city — only avoid the specific
+     cities named above.`
+  : '';
+
+const prompt = `Find the 4 closest cities to ${city},
+${state} that would make good postcard mailing hubs for
+a local advertising business.
+
+CRITERIA for each hub city:
+  - At least 100 local businesses (restaurants, salons,
+    dentists, HVAC companies, auto repair, retail shops,
+    gyms, veterinarians, insurance agents, etc.)
+  - Serves a residential population of at least 5,000
+    households in the surrounding area
+  - Within 30 miles of ${city}
+  - A real city or town with its own recognizable commercial
+    district — not a subdivision, gated community, military
+    base, or tiny enclave surrounded by a larger city
+
+SELECTION RULES:
+  1. Return the 4 CLOSEST qualifying cities to ${city}
+     by driving distance. Do not skip closer cities in
+     favor of larger or more well-known cities farther away.
+  2. Include ${city} itself as hub #1 if it qualifies.
+  3. If fewer than 4 cities qualify within 30 miles,
+     expand the search to 40 miles, then 50 miles.
+  4. Small towns and villages (under 2,000 residents with
+     fewer than 50 businesses) do not qualify as hubs even
+     if they are close. Skip them and find the next closest
+     qualifying city.
+
+${excludedLine}
+
+Return ONLY valid JSON with no explanation or markdown:
+{
+  "territory_name": "City1 / City2 / City3 Area",
+  "hubs": [
+    { "city": "City1", "county": "County Name County",
+      "state": "${state}", "zip": "00000",
+      "population": 0 },
+    { "city": "City2", "county": "County Name County",
+      "state": "${state}", "zip": "00000",
+      "population": 0 },
+    { "city": "City3", "county": "County Name County",
+      "state": "${state}", "zip": "00000",
+      "population": 0 },
+    { "city": "City4", "county": "County Name County",
+      "state": "${state}", "zip": "00000",
+      "population": 0 }
+  ]
+}`;
+
+
+════════════════════════════════════════════════
+SMALL TOWNS IN TERRITORY FOOTPRINT
+════════════════════════════════════════════════
+
+Small towns like Suches GA and Mount Airy GA are correctly
+excluded from hub selection by the 100-business / 5,000
+household minimums. They do NOT need to appear in the
+hub list.
+
+They ARE included in the territory's mailing footprint
+automatically because the ZIP footprint system assigns
+all ZIPs within 15 miles of any hub city to the territory.
+Suches and Mount Airy fall within the Cleveland/Helen
+15-mile catchment and are captured in territory_zip_assignments
+without any extra code.
+
+No change needed for small town inclusion — the ZIP
+footprint already handles this correctly.
+
+
+════════════════════════════════════════════════
+EXCLUSION LOGIC CONFIRMATION
+════════════════════════════════════════════════
+
+The excluded cities flow works as follows — confirm
+this is still in place after removing county logic:
+
+  1. Before calling getAITerritoryHubs(), call
+     getClaimedHubCities(lat, lng, stateAbbr, 25)
+     to get all hub city names from taken territories
+     within 25 miles
+
+  2. Pass the returned array as excludedCities to
+     getAITerritoryHubs()
+
+  3. The excludedLine above injects them into the prompt
+
+  4. After a territory is claimed, its hub cities are
+     stored in zone_note as comma-separated names
+     (already implemented at line 969)
+
+  5. Future searches within 25 miles will exclude those
+     cities automatically
+
+This chain must remain intact. Confirm it still works
+after removing the county logic.
+
+
+════════════════════════════════════════════════
+TEST
+════════════════════════════════════════════════
+
+TEST 1 — Cleveland GA (no claimed territories)
+  Expected: Cleveland + Helen + Cornelia + Clarkesville
+  All within 20 miles, all 100+ businesses
+  Must NOT include Cumming (35 miles) or Dahlonega (25 miles)
+  when Cornelia (15 miles) and Clarkesville (16 miles) qualify
+
+TEST 2 — Dahlonega GA
+  Expected: Dahlonega + Dawsonville + Cleveland + Helen
+  All within 25 miles
+  Must NOT include Cumming (35+ miles away)
+
+TEST 3 — Woodstock GA
+  Expected: Woodstock + Canton + Kennesaw + Acworth
+  All within 15 miles of each other
+
+TEST 4 — Nashville TN
+  Expected: Nashville + 3 nearby cities within 30 miles
+  No tiny enclaves (Berry Hill, Belle Meade, Oak Hill)
+
+TEST 5 — Athens GA
+  Expected: Athens + Watkinsville + Jefferson or Commerce
+  Closest qualifying cities first
+
+TEST 6 — Exclusion logic works
+  Insert a test taken territory with zone_note =
+  'Cornelia, Clarkesville, Toccoa, Lavonia'
+  Then search Cleveland GA
+  Cornelia and Clarkesville must NOT appear
+  System must find next closest qualifying cities instead

@@ -15,13 +15,10 @@ import {
   getCountyInfo,
   getZipsNearLocation,
   getCitiesInState,
-  findGazetteerCity,
   getZipLocation,
   getCountyHouseholds,
   getCountyGeoidForLocation,
   getCountyGeoidFromZip,
-  getNeighborCountyNames,
-  getCountyShortNameByGeoid,
 } from "./censusApi";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import { logger } from "./logger";
@@ -752,72 +749,37 @@ async function getAITerritoryHubs(
     return cached.hubs;
   }
 
-  const exclusionClause = excludedCities.length > 0
-    ? `Do NOT include any of these already-claimed cities: ${excludedCities.join(", ")}.`
+  const excludedLine = excludedCities.length > 0
+    ? `EXCLUDED CITIES (already claimed by other dealers — do NOT suggest these under any circumstances):
+${excludedCities.join(", ")}
+
+Any city NOT on this list is available and may be suggested. Do not avoid cities simply because they are near an excluded city — only avoid the specific cities named above.`
     : "";
 
-  // Resolve home county and distance-ordered neighbor list from server data so
-  // the AI has no discretion left in proximity judgments.
-  let homeCountyClause = "";
-  let neighborClause = "";
-  let homeCountyGeoid: string | null = null;
-  let neighborCounties: string[] = [];
+  const prompt = `Find the 4 closest cities to ${city}, ${stateAbbr} that would make good postcard mailing hubs for a local advertising business.
 
-  const cityEntry = findGazetteerCity(city, stateAbbr);
-  if (cityEntry) {
-    homeCountyGeoid = getCountyGeoidForLocation(cityEntry.lat, cityEntry.lng);
-    if (homeCountyGeoid) {
-      const homeCountyShort = getCountyShortNameByGeoid(homeCountyGeoid);
-      const homeCountyName = homeCountyShort ? `${homeCountyShort} County` : null;
-      neighborCounties = getNeighborCountyNames(homeCountyGeoid);
+CRITERIA for each hub city:
+  - At least 100 local businesses (restaurants, salons, dentists, HVAC companies, auto repair, retail shops, gyms, veterinarians, insurance agents, etc.)
+  - Serves a residential population of at least 5,000 households in the surrounding area
+  - Within 30 miles of ${city}
+  - A real city or town with its own recognizable commercial district — not a subdivision, gated community, military base, or tiny enclave surrounded by a larger city
 
-      if (homeCountyName) {
-        homeCountyClause = `The dealer's home county is ${homeCountyName}.`;
-      }
-      if (neighborCounties.length > 0) {
-        const numberedList = neighborCounties
-          .map((n, i) => `${i + 1}. ${n} County`)
-          .join(" ");
-        neighborClause = `The neighboring counties in order of proximity to ${city} are: ${numberedList}`;
-      }
-    }
-  }
+SELECTION RULES:
+  1. Return the 4 CLOSEST qualifying cities to ${city} by driving distance. Do not skip closer cities in favor of larger or more well-known cities farther away.
+  2. Include ${city} itself as hub #1 if it qualifies.
+  3. If fewer than 4 cities qualify within 30 miles, expand the search to 40 miles, then 50 miles.
+  4. Small towns and villages (under 2,000 residents with fewer than 50 businesses) do not qualify as hubs even if they are close. Skip them and find the next closest qualifying city.
 
-  logger.info(
-    { city, stateAbbr, homeCountyGeoid, neighborCounties },
-    "AI hub selection: neighbor counties resolved"
-  );
+${excludedLine}
 
-  const proximityRules = homeCountyClause && neighborClause
-    ? `${homeCountyClause}
-${neighborClause}
-When expanding beyond the home county, you MUST use this list in order. Fill all qualifying cities from county #1 before considering county #2. Do not skip to a more well-known county further down the list. Distance beats name recognition — a famous city 30 miles away must never displace a qualifying city 15 miles away.`
-    : `Nearest neighbor expansion: When you must expand beyond the home county, choose the geographically nearest neighboring county by straight-line distance — not the most well-known or most populous county. Fill that nearest county completely before considering a third county. Distance beats name recognition.`;
-
-  const prompt = `You are a direct-mail territory planning assistant. Identify exactly 4 hub cities for a territory centered near ${city}, ${stateAbbr}.
-
-Hub cities are commercial centers where local businesses advertise on a direct-mail postcard delivered to 5,000 homes. Choose cities that:
-1. Are within 40 miles of ${city}, ${stateAbbr}
-2. Have significant local business communities (restaurants, retail, services, healthcare)
-3. Together form a geographically coherent, compact area
-4. Represent distinct communities — not suburbs of the same city
-5. Include ${city} itself if it qualifies as a commercial hub
-${exclusionClause}
-
-SELECTION RULES — follow these in order, without exception:
-1. Home county first: Fill as many of the 4 hub slots as possible with qualifying cities from the same county as ${city}. Do not look at neighboring counties until the home county is exhausted.
-2. ${proximityRules}
-3. Third county only as a last resort: Only consider a third county if the home county and the nearest neighbor together cannot supply 4 qualifying cities.
-4. Never skip closer counties for famous ones: A well-known city in a distant county (e.g., a college town or tourist destination 25+ miles away) must never displace a qualifying city in a closer county.
-
-Return a JSON object with exactly 4 hub cities. Include one representative 5-digit ZIP code per hub to assist with geocoding accuracy.
-
+Return ONLY valid JSON with no explanation or markdown:
 {
+  "territory_name": "City1 / City2 / City3 Area",
   "hubs": [
-    {"city": "City Name", "county": "County Name", "state": "${stateAbbr}", "zip": "12345", "population": 15000},
-    {"city": "City Name", "county": "County Name", "state": "${stateAbbr}", "zip": "12346", "population": 8000},
-    {"city": "City Name", "county": "County Name", "state": "${stateAbbr}", "zip": "12347", "population": 6000},
-    {"city": "City Name", "county": "County Name", "state": "${stateAbbr}", "zip": "12348", "population": 5000}
+    { "city": "City1", "county": "County Name County", "state": "${stateAbbr}", "zip": "00000", "population": 0 },
+    { "city": "City2", "county": "County Name County", "state": "${stateAbbr}", "zip": "00000", "population": 0 },
+    { "city": "City3", "county": "County Name County", "state": "${stateAbbr}", "zip": "00000", "population": 0 },
+    { "city": "City4", "county": "County Name County", "state": "${stateAbbr}", "zip": "00000", "population": 0 }
   ]
 }`;
 
@@ -851,7 +813,7 @@ Return a JSON object with exactly 4 hub cities. Include one representative 5-dig
   // Using lastIndexOf("}") is wrong when the AI returns two JSON blocks separated
   // by rationale text; depth-tracking finds the matching close brace for the
   // first open brace and ignores everything after it.
-  type AIHubResponse = { hubs?: Array<{ city: string; county: string; state: string; zip: string; population?: number }> };
+  type AIHubResponse = { territory_name?: string; hubs?: Array<{ city: string; county: string; state: string; zip: string; population?: number }> };
   let parsed: AIHubResponse | null = null;
   try {
     const start = rawText.indexOf("{");
