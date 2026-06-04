@@ -1,0 +1,131 @@
+The AI is ignoring the proximity rule and selecting distant
+well-known cities instead of nearest neighbors.
+
+Dahlonega GA (Lumpkin County) result:
+  Dahlonega (Lumpkin) ✓
+  Cumming (Forsyth) ✗ — 35 miles away, different market
+  Canton (Cherokee) ✗ — 30 miles away, different market
+  Marietta (Cobb) ✗ — 50 miles away, completely different market
+
+Expected:
+  Dahlonega (Lumpkin) ✓
+  Dawsonville (Dawson) ✓ — nearest neighbor, 15 miles south
+  Cleveland or Helen (White) ✓ — nearest neighbor, 20 miles east
+  Suches area or next closest ✓
+
+The AI cannot reliably determine "nearest neighbor county"
+from geographic knowledge alone. It defaults to recognizable
+large cities instead.
+
+════════════════════════════════════════════════
+THE FIX — INJECT NEIGHBOR COUNTIES FROM SERVER DATA
+════════════════════════════════════════════════
+
+The server already has county-adjacency.txt loaded in
+censusApi.ts. Use it to find the actual neighboring counties
+for the dealer's home county, then inject them explicitly
+into the AI prompt.
+
+STEP 1 — Get home county GEOID from city lookup:
+
+  In getAITerritoryHubs(), before building the prompt:
+
+  const cityEntry = getCitiesInState(stateAbbr)
+    .find(c => c.name.toLowerCase() === city.toLowerCase());
+
+  if (cityEntry) {
+    homeCountyGeoid = cityEntry.stateFips + cityEntry.countyFips;
+  }
+
+STEP 2 — Get neighboring county names:
+
+  Export a new function from censusApi.ts:
+
+  export function getNeighborCountyNames(
+    geoid: string  // 5-digit county GEOID
+  ): string[]
+
+  This function:
+  1. Looks up the county in the adjacency map
+  2. Returns the names of all neighboring counties
+     sorted by distance from the home county centroid
+     (use county-centroids.csv for centroid distance calc)
+  3. Returns at most 6 nearest neighbors
+
+  Example for Lumpkin County GA (13187):
+    Returns: ['Dawson', 'White', 'Union', 'Cherokee',
+              'Forsyth', 'Hall']
+    In order of proximity to Lumpkin County centroid
+
+STEP 3 — Inject into the AI prompt:
+
+  Replace the vague proximity rule with explicit data:
+
+  const neighborList = neighborCounties
+    .map((n, i) => `${i + 1}. ${n} County`)
+    .join('\n');
+
+  Add this to the prompt after the home county statement:
+
+  "The neighboring counties in order of proximity to
+  ${city} are:
+  ${neighborList}
+
+  When expanding beyond the home county, you MUST use
+  this list in order. Start with county #1 on this list.
+  Fill all qualifying cities from county #1 before
+  considering county #2. Do not skip to a more
+  well-known county further down the list."
+
+STEP 4 — Also add the home county name explicitly:
+
+  Look up the home county name from county-centroids.csv
+  using the GEOID, and state it explicitly in the prompt:
+
+  "The dealer's home county is ${homeCountyName} County.
+  Fill all qualifying cities in ${homeCountyName} County
+  first before expanding to any neighbor."
+
+════════════════════════════════════════════════
+EXPECTED RESULTS AFTER FIX
+════════════════════════════════════════════════
+
+Dahlonega GA (Lumpkin County):
+  Neighbor list injected: Dawson, White, Union, Cherokee...
+  AI must use Dawson County first (Dawsonville)
+  Then White County (Cleveland, Helen) if still under 4
+  Result: Dahlonega + Dawsonville + Cleveland + Helen ✓
+
+Cleveland GA (White County):
+  Neighbor list injected: Habersham, Lumpkin, Hall, Towns...
+  AI must use Habersham first (Cornelia, Clarkesville)
+  Result: Cleveland + Helen + Cornelia + Clarkesville ✓
+
+Woodstock GA (Cherokee County):
+  Cherokee has many cities — never needs neighbors
+  Neighbor list still injected but never used
+  Result: Woodstock + Canton + Kennesaw + Acworth ✓
+
+════════════════════════════════════════════════
+TEST
+════════════════════════════════════════════════
+
+TEST 1 — Dahlonega GA
+  Proposed territory must include Dawsonville
+  Must NOT include Cumming, Canton, or Marietta
+  Must stay within Lumpkin + nearest 1-2 neighbor counties
+
+TEST 2 — Cleveland GA
+  Must include Cornelia or Clarkesville (Habersham)
+  Must NOT include Dahlonega or Blairsville
+  White + Habersham counties only
+
+TEST 3 — Log the neighbor list
+  Console.log the neighborCounties array for each search
+  Confirm Dahlonega shows Dawson as #1 neighbor
+  Confirm Cleveland shows Habersham as #1 neighbor
+
+TEST 4 — Woodstock GA
+  Still returns Cherokee County cities only
+  Neighbor list present but unused since 4 hubs found
+  in home county

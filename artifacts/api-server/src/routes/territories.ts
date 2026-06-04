@@ -432,7 +432,7 @@ function checkProposeRateLimit(ip: string): boolean {
 
 const ProposeSchema = z.object({
   city:  z.string().trim().min(1, "City is required").max(120),
-  state: z.string().trim().regex(/^[A-Za-z]{2}$/, "Select a state"),
+  state: z.string().trim().min(2, "Select a state").max(60),
 });
 
 /** State abbreviation → [name, FIPS 2-digit string] */
@@ -471,9 +471,10 @@ function proposalCountyGeoids(hubs: Array<{ countyGeoid: string }>): string[] {
 }
 
 // ── POST /api/territories/propose (public, rate-limited) ─────────────────────
-// Unified resolver for all 50 states. Requires ZIP + City + State. Returns one
-// of: an existing territory within 25mi, a fresh in-memory proposal (NOT saved
-// to the DB — persisted only when the dealer claims), or unavailable.
+// Unified resolver for all 50 states. Accepts { city, state } where state may
+// be a 2-letter abbreviation ("GA") or full name ("Georgia"). Returns one of:
+// an existing territory within 25mi, a fresh in-memory proposal (NOT saved to
+// the DB — persisted only when the dealer claims), or unavailable.
 router.post("/territories/propose", async (req, res): Promise<void> => {
   const ip = (req.ip ?? req.socket.remoteAddress ?? "unknown").split(",")[0]!.trim();
   if (!checkProposeRateLimit(ip)) {
@@ -487,12 +488,23 @@ router.post("/territories/propose", async (req, res): Promise<void> => {
     return;
   }
   const { city, state } = parsed.data;
-  const stateAbbr = state.trim().toUpperCase();
 
-  // Resolve stateFips and stateName from the 2-letter abbreviation.
+  // Accept both 2-letter abbreviations ("GA") and full names ("Georgia").
+  const stateInput = state.trim();
+  let stateAbbr = stateInput.toUpperCase();
+  if (stateInput.length > 2) {
+    // Reverse-lookup: find the abbreviation whose stateName matches case-insensitively.
+    const stateNameLower = stateInput.toLowerCase();
+    const match = Object.entries(STATE_META).find(
+      ([, v]) => v.stateName.toLowerCase() === stateNameLower
+    );
+    if (match) stateAbbr = match[0];
+  }
+
+  // Resolve stateFips and stateName from the (now-normalized) 2-letter abbreviation.
   const stateMeta = STATE_META[stateAbbr];
   if (!stateMeta) {
-    res.status(400).json({ error: "Unrecognized state abbreviation." });
+    res.status(400).json({ error: "Unrecognized state. Please provide a valid US state name or 2-letter abbreviation." });
     return;
   }
   const { stateFips, stateName } = stateMeta;
