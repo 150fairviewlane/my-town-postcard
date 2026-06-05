@@ -459,7 +459,9 @@ router.post("/dealers/claim-proposal", async (req, res): Promise<void> => {
 
   const stripe = await getStripeClient();
   const origin = getOrigin(req);
-  const meta = { proposal_id: String(proposalId) };
+  // Include dealerId so /dealers/confirm can locate the dealer as a synchronous
+  // fallback when the webhook hasn't fired yet.
+  const meta = { proposal_id: String(proposalId), dealerId: String(dealerId) };
 
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
@@ -524,7 +526,79 @@ router.get("/dealers/confirm", async (req, res): Promise<void> => {
     return;
   }
 
-  const dealerIdStr = (session.metadata as any)?.dealerId;
+  const sessionMeta = (session.metadata as any) ?? {};
+  const isPaid = session.payment_status === "paid" || session.payment_status === "no_payment_required";
+
+  // ── Proposal-based territory claim (new flow) ───────────────────────────────
+  // claim-proposal sessions carry `proposal_id` (and `dealerId`) in metadata.
+  // The full materialization (territory rows, ZIP assignments, conflict checks)
+  // must go through activateTerritoryClaimFromCheckoutSession, not the simpler
+  // dealer-only path below.
+  const proposalIdStr = sessionMeta.proposal_id;
+  const proposalIdNum = proposalIdStr ? parseInt(String(proposalIdStr), 10) : null;
+
+  if (proposalIdNum && Number.isFinite(proposalIdNum)) {
+    if (isPaid) {
+      try {
+        await activateTerritoryClaimFromCheckoutSession(session);
+        req.log.info({ proposalId: proposalIdNum, sessionId }, "Territory claim activated via /confirm");
+      } catch (err: any) {
+        req.log.error(
+          { err: err?.message, proposalId: proposalIdNum },
+          "activateTerritoryClaimFromCheckoutSession failed in /confirm — webhook will retry",
+        );
+      }
+    }
+
+    // Recover dealer from the proposal record (the function already stores dealerId there).
+    const dealerIdFromMeta = sessionMeta.dealerId ? parseInt(String(sessionMeta.dealerId), 10) : null;
+    let claimDealerId: number | null = dealerIdFromMeta && Number.isFinite(dealerIdFromMeta) ? dealerIdFromMeta : null;
+    if (!claimDealerId) {
+      const [prop] = await db
+        .select({ dealerId: territoryProposalsTable.dealerId })
+        .from(territoryProposalsTable)
+        .where(eq(territoryProposalsTable.id, proposalIdNum));
+      claimDealerId = prop?.dealerId ?? null;
+    }
+    if (!claimDealerId) {
+      res.status(400).json({ error: "Session is not linked to a dealer signup." });
+      return;
+    }
+
+    const [claimDealer] = await db.select().from(dealersTable).where(eq(dealersTable.id, claimDealerId));
+    if (!claimDealer) {
+      res.status(404).json({ error: "Dealer not found." });
+      return;
+    }
+
+    const origin = getOrigin(req);
+    const portalToken = claimDealer.portalToken;
+    const portalUrl = portalToken ? `${origin}/my-territory?token=${portalToken}` : null;
+    const territories = await db
+      .select()
+      .from(dealerTerritoriesTable)
+      .where(eq(dealerTerritoriesTable.dealerId, claimDealerId));
+
+    res.json({
+      dealerId: claimDealerId,
+      name: claimDealer.name,
+      email: claimDealer.email,
+      status: claimDealer.status,
+      paymentStatus: session.payment_status,
+      portalToken,
+      portalUrl,
+      territories: territories.map((t) => ({
+        territoryIndex: t.territoryIndex,
+        cityLabel: t.cityLabel,
+        zipCount: t.zipCodes.length,
+        estimatedHouseholds: t.estimatedHouseholds,
+      })),
+    });
+    return;
+  }
+
+  // ── Legacy dealer signup flow (kind=dealer in metadata) ────────────────────
+  const dealerIdStr = sessionMeta.dealerId;
   const dealerId = dealerIdStr ? parseInt(String(dealerIdStr), 10) : null;
   if (!dealerId || !Number.isFinite(dealerId)) {
     res.status(400).json({ error: "Session is not linked to a dealer signup." });
@@ -537,7 +611,6 @@ router.get("/dealers/confirm", async (req, res): Promise<void> => {
     return;
   }
 
-  const isPaid = session.payment_status === "paid" || session.payment_status === "no_payment_required";
   if (isPaid && dealer.status === "pending_payment") {
     await db
       .update(dealersTable)
