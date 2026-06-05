@@ -25,6 +25,11 @@ export type LandingCopy = {
   faqMailboxes: string; // FAQ "when will my ad hit mailboxes" full answer
   faqGoodFit: string; // FAQ "is my business good for this" full answer
   citiesListAmp: string; // footer city list, comma + "&"
+  // Optional overrides for single-city dealer area pages. When `heroCity` is
+  // set the Hero renders "Advertise in [City]" instead of the standard headline.
+  heroCity?: string;     // e.g. "Woodstock" — triggers the single-city hero
+  heroSubhead?: string;  // e.g. "Reach 5,000 local households via USPS EDDM"
+  heroContext?: string;  // e.g. "Part of the Cherokee County dealer territory"
 };
 
 export const DEFAULT_COPY: LandingCopy = {
@@ -177,16 +182,36 @@ export function Hero({ copy = DEFAULT_COPY }: { copy?: LandingCopy }) {
     <section style={{ background: "#fff", padding: "72px 32px 80px", maxWidth: 1180, margin: "0 auto",
       display: "flex", alignItems: "center", gap: 64, flexWrap: "wrap" }}>
       <div style={{ flex: "1 1 420px", minWidth: 300 }}>
-        <h1 style={{ fontSize: "clamp(32px, 4vw, 50px)", fontWeight: 900, color: "#111",
-          fontFamily: "Georgia,serif", lineHeight: 1.18, margin: "0 0 18px" }}>
-          Save Your Spot on<br />
-          <span style={{ color: RED }}>{copy.countyPossessive}</span> 9×12<br />
-          Postcard
-        </h1>
-        <p style={{ fontSize: 17, color: "#444", lineHeight: 1.6, margin: "0 0 24px", maxWidth: 460 }}>
-          Reaching <strong>5,000 {copy.heroCities} homes</strong> this {copy.heroSeason}.
-          Will it feature you — or your competitor?
-        </p>
+        {copy.heroCity ? (
+          <>
+            <h1 style={{ fontSize: "clamp(30px, 4vw, 48px)", fontWeight: 900, color: "#111",
+              fontFamily: "Georgia,serif", lineHeight: 1.18, margin: "0 0 12px" }}>
+              Advertise in{" "}
+              <span style={{ color: RED }}>{copy.heroCity}</span>
+            </h1>
+            <p style={{ fontSize: 17, color: "#444", lineHeight: 1.6, margin: "0 0 8px", maxWidth: 460 }}>
+              {copy.heroSubhead ?? "Reach 5,000 local households via USPS EDDM"}
+            </p>
+            {copy.heroContext && (
+              <p style={{ fontSize: 13, color: "#9ca3af", margin: "0 0 24px", maxWidth: 460 }}>
+                {copy.heroContext}
+              </p>
+            )}
+          </>
+        ) : (
+          <>
+            <h1 style={{ fontSize: "clamp(32px, 4vw, 50px)", fontWeight: 900, color: "#111",
+              fontFamily: "Georgia,serif", lineHeight: 1.18, margin: "0 0 18px" }}>
+              Save Your Spot on<br />
+              <span style={{ color: RED }}>{copy.countyPossessive}</span> 9×12<br />
+              Postcard
+            </h1>
+            <p style={{ fontSize: 17, color: "#444", lineHeight: 1.6, margin: "0 0 24px", maxWidth: 460 }}>
+              Reaching <strong>5,000 {copy.heroCities} homes</strong> this {copy.heroSeason}.
+              Will it feature you — or your competitor?
+            </p>
+          </>
+        )}
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 24px", marginBottom: 32 }}>
           {[

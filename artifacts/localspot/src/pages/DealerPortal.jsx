@@ -4,10 +4,90 @@ import { Link } from "wouter";
 const RED = "#7B1418";
 const GOLD = "#d4a017";
 
-// How long to keep polling when the dealer is still pending_payment.
-// The Stripe webhook usually fires within a few seconds of redirect.
 const POLL_INTERVAL_MS = 3000;
 const MAX_POLLS = 10;
+
+function MailingAreaCard({ c, money, baseUrl }) {
+  const sold = c.soldSpots ?? 0;
+  const total = c.totalSpots ?? 15;
+  const pct = total > 0 ? Math.round((sold / total) * 100) : 0;
+  const isFullySold = sold >= total && total > 0;
+  const cityName = c.cityList || c.campaignName;
+
+  return (
+    <div style={{
+      background: "#fff", borderRadius: 14, padding: "22px 24px",
+      boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: "1.5px solid #e5e7eb",
+      display: "flex", flexDirection: "column",
+    }}>
+      <div style={{ fontSize: 10, fontWeight: 800, color: "#9ca3af",
+        textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 4 }}>
+        Mailing Area
+      </div>
+      <div style={{ fontWeight: 900, fontSize: 20, color: "#111",
+        fontFamily: "Georgia,serif", marginBottom: 16 }}>
+        {cityName}
+      </div>
+
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between",
+          fontSize: 12.5, fontWeight: 600, color: "#6b7280", marginBottom: 5 }}>
+          <span>Slots Filled</span>
+          <span style={{ fontWeight: 800, color: "#111" }}>{sold} of {total}</span>
+        </div>
+        <div style={{ background: "#e5e7eb", borderRadius: 999, height: 10, overflow: "hidden" }}>
+          <div style={{
+            width: `${pct}%`, height: "100%", borderRadius: 999,
+            background: isFullySold ? GOLD : pct >= 50 ? "#16a34a" : RED,
+            transition: "width 0.6s ease",
+          }} />
+        </div>
+      </div>
+
+      <div style={{ fontSize: 13.5, color: "#374151", marginBottom: 12 }}>
+        <span style={{ fontWeight: 700 }}>Revenue</span>{" "}
+        <span style={{ color: "#15803d", fontWeight: 800 }}>{money(c.revenueCents)}</span>
+        <span style={{ color: "#9ca3af" }}> collected</span>
+      </div>
+
+      <div style={{ marginBottom: 18 }}>
+        <span style={{
+          fontSize: 12, fontWeight: 800, padding: "4px 12px", borderRadius: 999,
+          background: isFullySold ? "#fffbeb" : "#f0fdf4",
+          color: isFullySold ? "#92400e" : "#15803d",
+          display: "inline-block",
+        }}>
+          {isFullySold ? "🟡 Ready to Print" : "🟢 Selling"}
+        </span>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: "auto" }}>
+        {c.pageUrl && (
+          <a href={c.pageUrl} target="_blank" rel="noreferrer"
+            style={{
+              fontSize: 13, fontWeight: 700, color: RED,
+              border: `1.5px solid ${RED}`, borderRadius: 8,
+              padding: "8px 14px", textDecoration: "none", background: "#fff",
+              whiteSpace: "nowrap",
+            }}>
+            View Advertiser Page ↗
+          </a>
+        )}
+        {c.pageUrl && (
+          <a href={`${c.pageUrl}#book`} target="_blank" rel="noreferrer"
+            style={{
+              fontSize: 13, fontWeight: 700, color: "#374151",
+              border: "1.5px solid #d1d5db", borderRadius: 8,
+              padding: "8px 14px", textDecoration: "none", background: "#fff",
+              whiteSpace: "nowrap",
+            }}>
+            Ad Generator
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function StatCard({ label, value, sub, color = "#111" }) {
   return (
@@ -23,26 +103,6 @@ function StatCard({ label, value, sub, color = "#111" }) {
         {value}
       </div>
       {sub && <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>{sub}</div>}
-    </div>
-  );
-}
-
-function SellThroughBar({ sold, total }) {
-  const pct = total > 0 ? Math.round((sold / total) * 100) : 0;
-  return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between",
-        fontSize: 12.5, fontWeight: 600, color: "#6b7280", marginBottom: 6 }}>
-        <span>Sell-through</span>
-        <span>{pct}%</span>
-      </div>
-      <div style={{ background: "#e5e7eb", borderRadius: 999, height: 8, overflow: "hidden" }}>
-        <div style={{
-          width: `${pct}%`, height: "100%", borderRadius: 999,
-          background: pct >= 80 ? "#16a34a" : pct >= 40 ? GOLD : RED,
-          transition: "width 0.6s ease",
-        }} />
-      </div>
     </div>
   );
 }
@@ -73,11 +133,6 @@ export default function DealerPortal() {
     }
   }, [token, baseUrl]);
 
-  // On first load: if Stripe redirected here with a session_id, call the
-  // confirm endpoint synchronously. This activates the account even if the
-  // webhook hasn't fired yet. Errors are swallowed — fetchPortal() below
-  // will still show the current state (worst case: still pending_payment,
-  // which the polling loop will retry).
   useEffect(() => {
     async function initPortal() {
       if (sessionId && sessionId.startsWith("cs_")) {
@@ -93,14 +148,12 @@ export default function DealerPortal() {
     }
     initPortal();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // run once on mount only
+  }, []);
 
-  // Poll while pending_payment — fallback if confirm couldn't activate yet.
   useEffect(() => {
     if (state.status !== "ok") return;
     if (state.data?.status !== "pending_payment") return;
     if (pollCount >= MAX_POLLS) return;
-
     const timer = setTimeout(() => {
       setPollCount((c) => c + 1);
       fetchPortal();
@@ -113,7 +166,7 @@ export default function DealerPortal() {
       fontFamily: "sans-serif", paddingBottom: 64 }}>
       <header style={{ background: "#fff", borderBottom: "1px solid #e5e7eb",
         padding: "16px 24px", marginBottom: 32 }}>
-        <div style={{ maxWidth: 860, margin: "0 auto",
+        <div style={{ maxWidth: 960, margin: "0 auto",
           display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 26 }}>📮</span>
           <div style={{ fontWeight: 900, fontSize: 20, color: "#111",
@@ -126,7 +179,7 @@ export default function DealerPortal() {
         </div>
       </header>
 
-      <div style={{ maxWidth: 860, margin: "0 auto", padding: "0 16px" }}>
+      <div style={{ maxWidth: 960, margin: "0 auto", padding: "0 16px" }}>
         {state.status === "loading" && (
           <div style={{ textAlign: "center", padding: 80, color: "#666" }}>
             <div style={{ fontSize: 32, marginBottom: 12 }}>⏳</div>
@@ -156,13 +209,17 @@ export default function DealerPortal() {
         )}
 
         {state.status === "ok" && (() => {
-          const { name, email, status, territory, campaign } = state.data;
+          const { name, email, status, territory, campaign, campaigns } = state.data;
           const firstName = name?.split(" ")[0] || "there";
           const money = (cents) =>
             `$${((cents || 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 0 })}`;
 
-          // Payment received but webhook hasn't fired yet — show an activating
-          // banner and keep polling until status flips to "active".
+          // Use the `campaigns` array if present; fall back to wrapping the legacy
+          // singular `campaign` so the card grid always has something to render.
+          const campaignList = Array.isArray(campaigns) && campaigns.length > 0
+            ? campaigns
+            : (campaign ? [campaign] : []);
+
           if (status === "pending_payment") {
             return (
               <div style={{ background: "#fff", borderRadius: 14, padding: 40,
@@ -201,6 +258,11 @@ export default function DealerPortal() {
             );
           }
 
+          // Summary totals across all mailing areas
+          const totalSlots = campaignList.reduce((s, c) => s + (c.totalSpots ?? 15), 0);
+          const totalSold = campaignList.reduce((s, c) => s + (c.soldSpots ?? 0), 0);
+          const totalRevenue = campaignList.reduce((s, c) => s + (c.revenueCents ?? 0), 0);
+
           return (
             <>
               {/* Welcome banner */}
@@ -231,26 +293,24 @@ export default function DealerPortal() {
                 <div style={{ background: `${GOLD}10`, border: `1.5px solid ${GOLD}55`,
                   borderRadius: 14, padding: "20px 24px", marginBottom: 20 }}>
                   <div style={{ fontSize: 11, fontWeight: 800, color: "#8a6d11",
-                    textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>
+                    textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>
                     Your Exclusive Territory
                   </div>
-                  <div style={{ fontWeight: 900, fontSize: 18, color: "#111",
-                    fontFamily: "Georgia,serif", marginBottom: 4 }}>
-                    {territory.name}
+                  <div style={{ display: "flex", alignItems: "baseline",
+                    justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                    <div style={{ fontWeight: 900, fontSize: 18, color: "#111",
+                      fontFamily: "Georgia,serif" }}>
+                      {territory.name}
+                    </div>
+                    <div style={{ fontSize: 13, color: "#8a6d11", fontWeight: 700 }}>
+                      ~{Number(territory.households).toLocaleString()} households
+                    </div>
                   </div>
                   {territory.counties?.length > 0 && (
-                    <div style={{ fontSize: 13, color: "#5a4708", marginBottom: 4 }}>
+                    <div style={{ fontSize: 13, color: "#5a4708", marginTop: 6 }}>
                       <strong>Counties:</strong> {territory.counties.join(", ")}
                     </div>
                   )}
-                  {territory.zoneNote && (
-                    <div style={{ fontSize: 13, color: "#5a4708", marginBottom: 4 }}>
-                      <strong>Communities:</strong> {territory.zoneNote}
-                    </div>
-                  )}
-                  <div style={{ fontSize: 13, color: "#5a4708" }}>
-                    ~{Number(territory.households).toLocaleString()} households in your territory
-                  </div>
                 </div>
               ) : (
                 <div style={{ background: "#fff", borderRadius: 14, padding: "20px 24px",
@@ -265,75 +325,64 @@ export default function DealerPortal() {
                 </div>
               )}
 
-              {/* Campaign stats */}
-              {campaign ? (
-                <div style={{ background: "#fff", borderRadius: 14, padding: "24px 28px",
-                  boxShadow: "0 2px 12px rgba(0,0,0,0.05)", marginBottom: 20 }}>
-                  <div style={{ display: "flex", alignItems: "center",
-                    justifyContent: "space-between", flexWrap: "wrap", gap: 12,
-                    marginBottom: 20 }}>
-                    <div>
-                      <div style={{ fontSize: 11, fontWeight: 800, color: "#9ca3af",
-                        textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>
-                        Your Campaign
-                      </div>
-                      <div style={{ fontWeight: 800, fontSize: 16, color: "#111" }}>
-                        {campaign.campaignName}
-                      </div>
+              {/* ── Mailing Areas ─────────────────────────────────────────── */}
+              {campaignList.length > 0 ? (
+                <>
+                  {/* Summary bar */}
+                  <div style={{ background: "#fff", borderRadius: 14, padding: "20px 24px",
+                    boxShadow: "0 2px 12px rgba(0,0,0,0.05)", marginBottom: 16 }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: "#9ca3af",
+                      textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 14 }}>
+                      Your Territory — {territory?.name || "All Areas"}
                     </div>
-                    <div style={{ display: "flex", gap: 10, alignItems: "center",
-                      flexWrap: "wrap" }}>
-                      <span style={{
-                        background: campaign.isPublished ? "#f0fdf4" : "#fffbeb",
-                        color: campaign.isPublished ? "#15803d" : "#92400e",
-                        borderRadius: 999, padding: "4px 12px",
-                        fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.4,
-                      }}>
-                        {campaign.isPublished ? "Published" : "Unpublished"}
-                      </span>
-                      {campaign.pageUrl && (
-                        <a href={campaign.pageUrl} target="_blank" rel="noreferrer"
-                          style={{ fontSize: 13, fontWeight: 800, color: RED,
-                            textDecoration: "none",
-                            background: "#fff", border: `1.5px solid ${RED}`,
-                            borderRadius: 8, padding: "6px 12px" }}>
-                          View My Page ↗
-                        </a>
-                      )}
+                    <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                      <StatCard
+                        label="Total Slots"
+                        value={totalSlots}
+                        sub={`across ${campaignList.length} area${campaignList.length !== 1 ? "s" : ""}`}
+                      />
+                      <StatCard
+                        label="Slots Filled"
+                        value={totalSold}
+                        sub={`${totalSlots > 0 ? Math.round((totalSold / totalSlots) * 100) : 0}% sell-through`}
+                        color={totalSold > 0 ? "#15803d" : "#111"}
+                      />
+                      <StatCard
+                        label="Total Revenue"
+                        value={money(totalRevenue)}
+                        sub="from ad sales"
+                        color="#15803d"
+                      />
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
-                    <StatCard
-                      label="Spots Sold"
-                      value={`${campaign.soldSpots}/${campaign.totalSpots}`}
-                      sub="ad slots"
-                    />
-                    <StatCard
-                      label="Available"
-                      value={campaign.availableSpots}
-                      sub="still open"
-                    />
-                    <StatCard
-                      label="Revenue"
-                      value={money(campaign.revenueCents)}
-                      color="#15803d"
-                      sub="from ad sales"
-                    />
+                  {/* Mailing area cards — 2-column grid on desktop */}
+                  <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+                    gap: 16,
+                    marginBottom: 24,
+                  }}>
+                    {campaignList.map((c) => (
+                      <MailingAreaCard
+                        key={c.campaignId}
+                        c={c}
+                        money={money}
+                        baseUrl={baseUrl}
+                      />
+                    ))}
                   </div>
-
-                  <SellThroughBar sold={campaign.soldSpots} total={campaign.totalSpots} />
-                </div>
+                </>
               ) : (
                 <div style={{ background: "#fff", borderRadius: 14, padding: "24px 28px",
                   boxShadow: "0 2px 12px rgba(0,0,0,0.05)", marginBottom: 20 }}>
                   <div style={{ fontSize: 11, fontWeight: 800, color: "#9ca3af",
                     textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>
-                    Your Campaign
+                    Your Mailing Areas
                   </div>
                   <div style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.6 }}>
-                    Your campaign page will appear here once it's set up by our team —
-                    usually within 1 business day of your signup.
+                    Your campaign pages will appear here once they're set up — usually
+                    within 1 business day of your signup.
                   </div>
                 </div>
               )}
@@ -352,8 +401,8 @@ export default function DealerPortal() {
                     to <strong>{email}</strong> within 1 business day.
                   </li>
                   <li>
-                    Once your campaign page is live, share it with local businesses
-                    in your territory to sell ad spots.
+                    Once your campaign pages are live, share them with local businesses
+                    in each mailing area to sell ad spots.
                   </li>
                   <li>
                     Bookmark this page to track your ad sales and revenue.

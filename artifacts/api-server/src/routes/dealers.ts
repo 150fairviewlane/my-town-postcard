@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request } from "express";
-import { eq, sql, desc, and, or, isNull } from "drizzle-orm";
+import { eq, sql, desc, asc, and, or, isNull } from "drizzle-orm";
 import { z } from "zod/v4";
 import jwt from "jsonwebtoken";
 import {
@@ -691,44 +691,39 @@ router.get("/dealer-portal", async (req, res): Promise<void> => {
     .from(territoriesTable)
     .where(eq(territoriesTable.dealerId, dealer.id));
 
-  let campaign;
-  if (dealer.landingPageCampaignId) {
-    [campaign] = await db
-      .select()
-      .from(campaignsTable)
-      .where(eq(campaignsTable.id, dealer.landingPageCampaignId));
-  }
-  if (!campaign) {
-    [campaign] = await db
-      .select()
-      .from(campaignsTable)
-      .where(eq(campaignsTable.dealerId, dealer.id))
-      .limit(1);
-  }
+  // Fetch ALL campaigns for this dealer, ordered oldest-first so the UI always
+  // shows them in the creation order (matches the zoneNote hub-city order).
+  const allCampaigns = await db
+    .select()
+    .from(campaignsTable)
+    .where(eq(campaignsTable.dealerId, dealer.id))
+    .orderBy(asc(campaignsTable.id));
 
   const origin = getOrigin(req);
-  let campaignSummary = null;
 
-  if (campaign) {
-    const spots = await db
-      .select()
-      .from(spotsTable)
-      .where(eq(spotsTable.campaignId, campaign.id));
-
-    const sold = spots.filter((s) => s.status === "paid");
-    const revenueCents = sold.reduce((sum, s) => sum + (s.price || 0), 0);
-
-    campaignSummary = {
-      campaignId: campaign.id,
-      campaignName: campaign.name,
-      pageUrl: campaign.slug ? `${origin}/${campaign.slug}` : null,
-      isPublished: campaign.isPublished,
-      totalSpots: spots.length,
-      soldSpots: sold.length,
-      availableSpots: spots.filter((s) => s.status === "available").length,
-      revenueCents,
-    };
-  }
+  // Build per-campaign summaries including live sell-through stats.
+  const campaignSummaries = await Promise.all(
+    allCampaigns.map(async (c) => {
+      const spots = await db
+        .select()
+        .from(spotsTable)
+        .where(eq(spotsTable.campaignId, c.id));
+      const sold = spots.filter((s) => s.status === "paid");
+      const revenueCents = sold.reduce((sum, s) => sum + (s.price || 0), 0);
+      return {
+        campaignId: c.id,
+        campaignName: c.name,
+        cityList: c.cityList,
+        slug: c.slug,
+        pageUrl: c.slug ? `${origin}/${c.slug}` : null,
+        isPublished: c.isPublished,
+        totalSpots: spots.length,
+        soldSpots: sold.length,
+        availableSpots: spots.filter((s) => s.status === "available").length,
+        revenueCents,
+      };
+    }),
+  );
 
   res.json({
     dealerId: dealer.id,
@@ -744,7 +739,10 @@ router.get("/dealer-portal", async (req, res): Promise<void> => {
           zoneNote: territory.zoneNote,
         }
       : null,
-    campaign: campaignSummary,
+    // `campaigns` is the authoritative multi-area array. `campaign` (singular)
+    // is kept for any legacy consumers still reading the old field.
+    campaigns: campaignSummaries,
+    campaign: campaignSummaries[0] ?? null,
   });
 });
 

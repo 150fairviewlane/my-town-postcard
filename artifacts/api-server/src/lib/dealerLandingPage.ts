@@ -6,8 +6,8 @@ import {
   territoriesTable,
   dealerTerritoriesTable,
 } from "@workspace/db";
-import { eq } from "drizzle-orm";
-import { generateUniqueCampaignSlug } from "./slugify";
+import { and, eq } from "drizzle-orm";
+import { generateSlug, generateUniqueCampaignSlug } from "./slugify";
 import { STANDARD_SPOT_LAYOUT } from "./standardLayout";
 import { logger } from "./logger";
 
@@ -63,102 +63,195 @@ async function resolveTerritoryInfo(
   };
 }
 
-// Idempotently create (once) a published landing-page campaign for a dealer and
-// generate the standard sellable spot layout. Safe to call from both the Stripe
-// webhook and the synchronous /dealers/confirm path — a second call is a no-op.
+// Idempotently create published landing-page campaigns for a dealer — one per
+// hub city in the territory's zoneNote. Safe to call from both the Stripe webhook
+// and the synchronous /dealers/confirm path; repeated calls are no-ops.
 //
-// The auto-created campaign is `isPublished:true` (so its slug page is live +
-// purchasable) but `status:"draft"` so it never collides with the single-active
-// rule that the house homepage (`/api/campaigns/active`) depends on.
-export async function ensureDealerLandingPage(dealerId: number): Promise<number | null> {
+// When the territory has N hub cities (comma-separated in zoneNote), N campaigns
+// are created, each with `city_list = hubCityName` and a slug of the form
+// `{territorySlug}-{citySlug}` (e.g. "cherokee-woodstock").
+//
+// Fallback: if no hub cities are present (legacy dealers / no zoneNote), the
+// original single-campaign behavior is preserved for backwards compatibility.
+//
+// All auto-created campaigns are `isPublished:true` / `status:"draft"` so slug
+// pages are live immediately but never collide with the single-active-campaign
+// rule that the house homepage depends on.
+export async function ensureDealerLandingPage(dealerId: number): Promise<number[]> {
   const [dealerExists] = await db
     .select({ id: dealersTable.id })
     .from(dealersTable)
     .where(eq(dealersTable.id, dealerId))
     .limit(1);
-  if (!dealerExists) return null;
+  if (!dealerExists) return [];
 
-  // Resolve territory metadata + a candidate slug OUTSIDE the lock — these are
-  // read-only and slug generation is best-effort unique. The authoritative
-  // existence check + insert happen inside the transaction below.
   const [meta] = await db
     .select({ name: dealersTable.name, homeZip: dealersTable.homeZip })
     .from(dealersTable)
     .where(eq(dealersTable.id, dealerId))
     .limit(1);
   const info = await resolveTerritoryInfo(dealerId, meta.name, meta.homeZip ?? "");
-  const candidateSlug = await generateUniqueCampaignSlug(info.territoryName);
 
-  // Serialize concurrent callers (Stripe webhook + synchronous /dealers/confirm)
-  // on the dealer row. `SELECT ... FOR UPDATE` blocks the second caller until
-  // the first commits, so the re-checks below see any campaign the first run
-  // created — guaranteeing we never create two landing pages for one dealer.
-  const campaignId = await db.transaction(async (tx) => {
+  // Parse hub cities from zoneNote (comma-separated, e.g. "Woodstock, Canton, Kennesaw")
+  const hubCities = info.cityList
+    ? info.cityList.split(",").map((s) => s.trim()).filter(Boolean)
+    : [];
+
+  // ── Legacy / no-hub-city fallback: create a single territory campaign ───────
+  if (hubCities.length === 0) {
+    const candidateSlug = await generateUniqueCampaignSlug(info.territoryName);
+
+    const campaignId = await db.transaction(async (tx) => {
+      const [dealer] = await tx
+        .select()
+        .from(dealersTable)
+        .where(eq(dealersTable.id, dealerId))
+        .for("update");
+      if (!dealer) return null;
+
+      if (dealer.landingPageCampaignId) {
+        const [existing] = await tx
+          .select({ id: campaignsTable.id })
+          .from(campaignsTable)
+          .where(eq(campaignsTable.id, dealer.landingPageCampaignId))
+          .limit(1);
+        if (existing) return existing.id;
+      }
+
+      const [byDealer] = await tx
+        .select({ id: campaignsTable.id })
+        .from(campaignsTable)
+        .where(eq(campaignsTable.dealerId, dealerId))
+        .limit(1);
+      if (byDealer) {
+        await tx
+          .update(dealersTable)
+          .set({ landingPageCampaignId: byDealer.id })
+          .where(eq(dealersTable.id, dealerId));
+        return byDealer.id;
+      }
+
+      const [campaign] = await tx
+        .insert(campaignsTable)
+        .values({
+          name: `${info.territoryName} — Postcard`,
+          territory: info.territoryName,
+          zipCode: info.zipCode,
+          homesCount: info.homesCount,
+          status: "draft",
+          slug: candidateSlug,
+          dealerId,
+          isPublished: true,
+          cityList: info.cityList,
+        })
+        .returning({ id: campaignsTable.id });
+
+      await tx.insert(spotsTable).values(
+        STANDARD_SPOT_LAYOUT.map((s) => ({
+          campaignId: campaign.id,
+          side: s.side,
+          size: s.size,
+          gridArea: s.gridArea,
+          price: s.price,
+        })),
+      );
+
+      await tx
+        .update(dealersTable)
+        .set({ landingPageCampaignId: campaign.id })
+        .where(eq(dealersTable.id, dealerId));
+
+      logger.info({ dealerId, campaignId: campaign.id, slug: candidateSlug }, "Auto-created dealer landing page (legacy)");
+      return campaign.id;
+    });
+
+    return campaignId ? [campaignId] : [];
+  }
+
+  // ── Multi-city path: one campaign per hub city ──────────────────────────────
+  // Pre-generate unique slugs outside the transaction (best-effort; the UNIQUE
+  // constraint on campaigns.slug is the authoritative guard). Each slug combines
+  // the territory slug with the city slug, e.g. "cherokee-woodstock".
+  const territorySlugBase = generateSlug(info.territoryName);
+  const candidateSlugs: string[] = [];
+  for (const city of hubCities) {
+    // Pass the raw territory name + city name together so generateSlug can strip
+    // "County"/"Counties" and "/" separators from both parts in one pass.
+    const slug = await generateUniqueCampaignSlug(`${info.territoryName} ${city}`);
+    candidateSlugs.push(slug);
+  }
+
+  // Serialize concurrent callers on the dealer row so the idempotency checks
+  // below see any campaigns a concurrent first-run already created.
+  const campaignIds = await db.transaction(async (tx) => {
     const [dealer] = await tx
       .select()
       .from(dealersTable)
       .where(eq(dealersTable.id, dealerId))
       .for("update");
-    if (!dealer) return null;
+    if (!dealer) return [];
 
-    // Already linked + the campaign still exists → nothing to do.
-    if (dealer.landingPageCampaignId) {
+    const ids: number[] = [];
+
+    for (let i = 0; i < hubCities.length; i++) {
+      const hubCity = hubCities[i];
+
+      // Idempotency: a campaign for this dealer + city already exists → reuse it.
       const [existing] = await tx
         .select({ id: campaignsTable.id })
         .from(campaignsTable)
-        .where(eq(campaignsTable.id, dealer.landingPageCampaignId))
+        .where(and(eq(campaignsTable.dealerId, dealerId), eq(campaignsTable.cityList, hubCity)))
         .limit(1);
-      if (existing) return existing.id;
+
+      if (existing) {
+        ids.push(existing.id);
+        continue;
+      }
+
+      const [campaign] = await tx
+        .insert(campaignsTable)
+        .values({
+          name: `${hubCity} — Postcard Advertising`,
+          territory: info.territoryName,
+          zipCode: info.zipCode,
+          homesCount: 5000,
+          status: "draft",
+          slug: candidateSlugs[i],
+          dealerId,
+          isPublished: true,
+          cityList: hubCity,
+        })
+        .returning({ id: campaignsTable.id });
+
+      await tx.insert(spotsTable).values(
+        STANDARD_SPOT_LAYOUT.map((s) => ({
+          campaignId: campaign.id,
+          side: s.side,
+          size: s.size,
+          gridArea: s.gridArea,
+          price: s.price,
+        })),
+      );
+
+      ids.push(campaign.id);
+      logger.info(
+        { dealerId, campaignId: campaign.id, hubCity, slug: candidateSlugs[i] },
+        "Auto-created dealer landing page for hub city",
+      );
     }
 
-    // A campaign may already be linked by dealerId even if the back-reference on
-    // the dealer row wasn't written (e.g. a partial earlier run).
-    const [byDealer] = await tx
-      .select({ id: campaignsTable.id })
-      .from(campaignsTable)
-      .where(eq(campaignsTable.dealerId, dealerId))
-      .limit(1);
-    if (byDealer) {
+    // Backwards compat: set landingPageCampaignId to the first campaign so that
+    // any code still reading that field continues to work.
+    if (ids.length > 0 && !dealer.landingPageCampaignId) {
       await tx
         .update(dealersTable)
-        .set({ landingPageCampaignId: byDealer.id })
+        .set({ landingPageCampaignId: ids[0] })
         .where(eq(dealersTable.id, dealerId));
-      return byDealer.id;
     }
 
-    const [campaign] = await tx
-      .insert(campaignsTable)
-      .values({
-        name: `${info.territoryName} — Postcard`,
-        territory: info.territoryName,
-        zipCode: info.zipCode,
-        homesCount: info.homesCount,
-        status: "draft",
-        slug: candidateSlug,
-        dealerId,
-        isPublished: true,
-        cityList: info.cityList,
-      })
-      .returning({ id: campaignsTable.id });
-
-    await tx.insert(spotsTable).values(
-      STANDARD_SPOT_LAYOUT.map((s) => ({
-        campaignId: campaign.id,
-        side: s.side,
-        size: s.size,
-        gridArea: s.gridArea,
-        price: s.price,
-      })),
-    );
-
-    await tx
-      .update(dealersTable)
-      .set({ landingPageCampaignId: campaign.id })
-      .where(eq(dealersTable.id, dealerId));
-
-    logger.info({ dealerId, campaignId: campaign.id, slug: candidateSlug }, "Auto-created dealer landing page");
-    return campaign.id;
+    return ids;
   });
 
-  return campaignId;
+  logger.info({ dealerId, count: campaignIds.length, territorySlugBase }, "ensureDealerLandingPage complete");
+  return campaignIds;
 }
