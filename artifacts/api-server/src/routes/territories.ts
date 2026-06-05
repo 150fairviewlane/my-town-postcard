@@ -466,10 +466,6 @@ const STATE_META: Record<string, { stateName: string; stateFips: string }> = {
   WY:{stateName:"Wyoming",stateFips:"56"},
 };
 
-/** Unique, non-empty county GEOIDs across a proposal's hubs. */
-function proposalCountyGeoids(hubs: Array<{ countyGeoid: string }>): string[] {
-  return [...new Set(hubs.map(h => h.countyGeoid).filter(Boolean))];
-}
 
 // ── POST /api/territories/propose (public, rate-limited) ─────────────────────
 // Unified resolver for all 50 states. Accepts { city, state } where state may
@@ -546,7 +542,11 @@ router.post("/territories/propose", async (req, res): Promise<void> => {
 
   if (result.type === "proposed" && result.proposals && result.proposals[0]) {
     const p = result.proposals[0];
-    const countyGeoids = proposalCountyGeoids(p.hubs);
+    // Use the county GEOIDs resolved by buildCityHubProposal from getCountyTerritoryHubs —
+    // these cover ALL counties in the territory (e.g. Union + Towns for Blairsville GA).
+    // The old approach recomputed from display hubs, which drops small counties that fall
+    // below DISPLAY_MIN_HH, causing the map to highlight only the home county.
+    const countyGeoids = p.countyGeoids;
     const countyShortNames = countyGeoids
       .map(g => getCountyShortNameByGeoid(g))
       .filter((n): n is string => !!n);
