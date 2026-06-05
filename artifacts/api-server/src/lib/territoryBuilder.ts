@@ -19,6 +19,7 @@ import {
   getCountyHouseholds,
   getCountyGeoidForLocation,
   getCountyGeoidFromZip,
+  getCountyShortNameByGeoid,
   findGazetteerCity,
   getNeighborCountyNames,
   getCityZipBusinessCount,
@@ -1288,6 +1289,29 @@ export async function materializeTerritoryFromProposal(
  * @param city  City name (from Gazetteer or form input) used to resolve the home county.
  * @param dealerState  Optional state abbreviation override (defaults to stateAbbr).
  */
+/**
+ * Returns true when the searched location (lat/lng) is within one of the
+ * territory's officially declared counties. Used to gate "existing" matches
+ * so that ZIP codes in neighboring counties don't bleed into adjacent searches.
+ *
+ * If the territory has no `counties` array (legacy/manual rows), we conservatively
+ * return true so the old centroid-radius behavior is preserved.
+ */
+function locationIsInTerritoryCounties(
+  lat: number,
+  lng: number,
+  territory: Record<string, unknown>
+): boolean {
+  const declared: string[] = Array.isArray(territory.counties)
+    ? (territory.counties as string[]).map((c) => String(c).toLowerCase())
+    : [];
+  if (declared.length === 0) return true; // legacy territory — no county filter
+  const geoid = getCountyGeoidForLocation(lat, lng);
+  if (!geoid) return false;
+  const countyName = getCountyShortNameByGeoid(geoid);
+  return !!countyName && declared.includes(countyName.toLowerCase());
+}
+
 export async function getTerritoryForLocation(
   lat: number,
   lng: number,
@@ -1298,11 +1322,15 @@ export async function getTerritoryForLocation(
   city: string = "",
   dealerState: string = ""
 ): Promise<TerritoryForZipResult> {
-  // (A) Existing same-state territory within 25 miles of this location.
+  // (A) Existing same-state territory within 25 miles — but only when the
+  // searched city actually falls inside one of that territory's declared counties.
+  // Without this guard, territories whose ZIP footprint bleeds into neighboring
+  // counties (e.g. White/Habersham has Rabun-county ZIPs) would swallow searches
+  // from those neighboring counties and report them as already claimed.
   const existing = await findExistingTerritoryWithinMiles(
     lat, lng, stateAbbr, EXISTING_TERRITORY_RADIUS_MI
   );
-  if (existing) {
+  if (existing && locationIsInTerritoryCounties(lat, lng, existing)) {
     return { type: "existing", territory: existing };
   }
 
@@ -1319,13 +1347,15 @@ export async function getTerritoryForLocation(
     // ZIP footprint conflict re-check: if any hub's 15-mile footprint already
     // belongs to a taken territory, surface that territory as "existing" so the
     // picker shows it as claimed rather than erroneously offering a new proposal.
+    // Apply the same county-membership guard so neighboring-county ZIP bleed
+    // doesn't block proposals for genuinely unclaimed counties.
     const conflictTerritoryId = await checkZipFootprintConflict(best.hubs);
     if (conflictTerritoryId) {
       const [conflictTerritory] = await db
         .select()
         .from(territoriesTable)
         .where(eq(territoriesTable.id, conflictTerritoryId));
-      if (conflictTerritory) {
+      if (conflictTerritory && locationIsInTerritoryCounties(lat, lng, conflictTerritory as Record<string, unknown>)) {
         return { type: "existing", territory: conflictTerritory as Record<string, unknown> };
       }
     }
