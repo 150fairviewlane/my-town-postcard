@@ -809,11 +809,10 @@ async function renderProposed(p){
 
     const geo = await stateGeo(stateFips);
     if(geo){
-      // Use the fuller footprint geoids (15-mile radius around each hub) when
-      // available; fall back to the hub-county geoids returned by older responses.
-      const geoids = (Array.isArray(p.footprintCountyGeoids) && p.footprintCountyGeoids.length)
-        ? p.footprintCountyGeoids
-        : (p.countyGeoids || []);
+      // Use the exact territory county geoids so the amber highlight matches
+      // only the counties that are actually part of the territory (not a 15-mile
+      // radius footprint that bleeds into adjacent counties like Chattanooga/Hamilton).
+      const geoids = p.countyGeoids || [];
       const features = pickFeatures(geo, stateFips, geoids, p.countyShortNames);
       if(features.length){
         const layer = L.geoJSON({ type:'FeatureCollection', features }, {

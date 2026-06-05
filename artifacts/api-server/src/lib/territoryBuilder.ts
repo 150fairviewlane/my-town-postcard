@@ -22,7 +22,6 @@ import {
   findGazetteerCity,
   getNeighborCountyNames,
 } from "./censusApi";
-import { anthropic } from "@workspace/integrations-anthropic-ai";
 import { logger } from "./logger";
 
 // ─── City Hub Constants ───────────────────────────────────────────────────────
@@ -59,11 +58,10 @@ const HUB_LOCAL_BIZ_MIN = 8;  // postcard-biz proxy: fewer than this ≈ populat
 // Prevents tiny places like Demorest (~1,800) or Clermont from being selected
 // when a larger neighbor (Cornelia, Gainesville) exists in an adjacent county.
 const HUB_MIN_COUNTY_REP_BIZ = 50;
-const MAX_HUB_DISTANCE_MILES = 22; // server-side hard cap on AI hub suggestions
+const MAX_HUB_DISTANCE_MILES = 22; // hard cap on hub distance from dealer
 
 // ─── County Territory Model ───────────────────────────────────────────────────
-const USE_COUNTY_TERRITORY_MODEL = true; // feature flag: county-based vs AI hub selection
-const COUNTY_MIN_LOCAL_BIZ = 3;  // minimum local businesses for county path (lower than AI path)
+const COUNTY_MIN_LOCAL_BIZ = 3;  // minimum local businesses per city to qualify as a hub
 const COUNTY_MAX_HUBS = 6;       // max hubs collected before Voronoi caps at TARGET_HUB_COUNT
 
 // Private/gated/ferry-only communities that can slip through the density proxy
@@ -123,6 +121,9 @@ export interface TerritoryProposal {
   counties: Array<{ fips: string; name: string; shortName: string; businessCount: number }>;
   estimatedZones: number;
   isSplit: boolean;
+  /** Exact county GEOIDs (state+county FIPS) for every county in this territory.
+   *  Used by the map renderer to draw county-boundary polygons. */
+  countyGeoids: string[];
 }
 
 export interface ConflictResult {
@@ -685,13 +686,6 @@ function voronoiAssign(
 
 // ─── AI Hub Selection ─────────────────────────────────────────────────────────
 
-const AI_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-
-interface AICacheEntry {
-  hubs: CityHub[];
-  expiresAt: number;
-}
-const aiHubCache = new Map<string, AICacheEntry>();
 
 /**
  * Returns up to 100 unique hub city names from territories already taken within
@@ -737,226 +731,6 @@ async function getClaimedHubCities(
   return [...seen].slice(0, 100);
 }
 
-/**
- * Calls Claude Haiku to select up to 4 hub cities for a territory.
- * Results are cached in-memory for 5 minutes per (city, stateAbbr, excludedCities) key.
- * Returns [] on any failure (timeout, parse error, too few hubs) — never throws.
- */
-async function getAITerritoryHubs(
-  city: string,
-  stateAbbr: string,
-  dealerLat: number,
-  dealerLng: number,
-  excludedCities: string[]
-): Promise<CityHub[]> {
-  const cacheKey = [city, stateAbbr, ...excludedCities.sort()].join("|").toLowerCase();
-  const now = Date.now();
-  const cached = aiHubCache.get(cacheKey);
-  if (cached && cached.expiresAt > now) {
-    logger.info({ city, stateAbbr }, "AI hub selection: cache hit");
-    return cached.hubs;
-  }
-  const excludedLine = excludedCities.length > 0
-    ? `EXCLUDED CITIES (already claimed by other dealers — do NOT suggest these under any circumstances):
-${excludedCities.join(", ")}
-
-Any city NOT on this list is available and may be suggested. Do not avoid cities simply because they are near an excluded city — only avoid the specific cities named above.`
-    : "";
-
-  const prompt = `Suggest cities near ${city}, ${stateAbbr} that would make good postcard mailing hubs for a local advertising business.
-
-CRITERIA for each hub city:
-  - At least 100 local businesses (restaurants, salons, dentists, HVAC companies, auto repair, retail shops, gyms, veterinarians, insurance agents, etc.)
-  - Serves a residential population of at least 5,000 households in the surrounding area
-  - A real city or town with its own recognizable commercial district — not a subdivision, gated community, military base, or tiny enclave surrounded by a larger city
-
-SELECTION RULES:
-  1. Return the 4 CLOSEST qualifying cities to ${city} by driving distance. Do not skip closer cities in favor of larger or more well-known cities farther away.
-  2. Include ${city} itself as hub #1 if it qualifies.
-  3. Small towns and villages (under 2,000 residents with fewer than 50 businesses) do not qualify as hubs even if they are close. Skip them and find the next closest qualifying city.
-  4. Do not bias toward cities in the direction of a major metro area (Atlanta, Nashville, Charlotte, etc.) over equally close or closer cities in other directions. A city 12 miles north is preferable to a city 15 miles south toward a major metro.
-
-${excludedLine}
-
-Return ONLY valid JSON with no explanation or markdown:
-{
-  "territory_name": "City1 / City2 / City3 Area",
-  "hubs": [
-    { "city": "City1", "county": "County Name County", "state": "${stateAbbr}", "zip": "00000", "population": 0 },
-    { "city": "City2", "county": "County Name County", "state": "${stateAbbr}", "zip": "00000", "population": 0 },
-    { "city": "City3", "county": "County Name County", "state": "${stateAbbr}", "zip": "00000", "population": 0 },
-    { "city": "City4", "county": "County Name County", "state": "${stateAbbr}", "zip": "00000", "population": 0 }
-  ]
-}`;
-
-  let rawText = "";
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10_000);
-    try {
-      const response = await anthropic.messages.create(
-        {
-          model: "claude-sonnet-4-5",
-          max_tokens: 8192,
-          temperature: 0,
-          messages: [{ role: "user", content: prompt }],
-        },
-        { signal: controller.signal }
-      );
-      const block = response.content[0];
-      rawText = block?.type === "text" ? block.text : "";
-    } finally {
-      clearTimeout(timeoutId);
-    }
-  } catch (err: unknown) {
-    const isTimeout = err instanceof Error && err.name === "AbortError";
-    logger.warn({ city, stateAbbr, err: err instanceof Error ? err.message : String(err) },
-      isTimeout ? "AI hub selection: timeout" : "AI hub selection: API error");
-    return [];
-  }
-
-  // Robust JSON extraction — find the FIRST complete balanced { ... } object.
-  // Using lastIndexOf("}") is wrong when the AI returns two JSON blocks separated
-  // by rationale text; depth-tracking finds the matching close brace for the
-  // first open brace and ignores everything after it.
-  type AIHubResponse = { territory_name?: string; hubs?: Array<{ city: string; county: string; state: string; zip: string; population?: number }> };
-  let parsed: AIHubResponse | null = null;
-  try {
-    const start = rawText.indexOf("{");
-    if (start === -1) throw new Error("no JSON found");
-    let depth = 0;
-    let end = -1;
-    for (let i = start; i < rawText.length; i++) {
-      if (rawText[i] === "{") depth++;
-      else if (rawText[i] === "}") {
-        depth--;
-        if (depth === 0) { end = i; break; }
-      }
-    }
-    if (end === -1) throw new Error("unbalanced JSON braces");
-    parsed = JSON.parse(rawText.slice(start, end + 1)) as AIHubResponse;
-  } catch (err: unknown) {
-    logger.warn({ city, stateAbbr, rawText, err: err instanceof Error ? err.message : String(err) },
-      "AI hub selection: JSON parse failed");
-    return [];
-  }
-
-  const rawHubs: AIHubResponse["hubs"] = parsed?.hubs ?? [];
-
-  // Server-side distance filter — enforces the MAX_HUB_DISTANCE_MILES cap regardless
-  // of what the AI estimated. The AI suggests freely; we filter with real coordinates.
-  async function resolveAndFilter(rawList: NonNullable<AIHubResponse["hubs"]>): Promise<CityHub[]> {
-    const resolved: CityHub[] = [];
-    for (const h of rawList) {
-      if (!h.city || !h.zip) continue;
-      let lat: number | undefined;
-      let lng: number | undefined;
-      const zipLoc = getZipLocation(h.zip);
-      if (zipLoc) {
-        lat = zipLoc.lat;
-        lng = zipLoc.lng;
-      } else {
-        const gazMatch = getCitiesInState(stateAbbr).find(
-          c => c.name.toLowerCase() === h.city.toLowerCase()
-        );
-        if (gazMatch) { lat = gazMatch.lat; lng = gazMatch.lng; }
-      }
-      if (lat == null || lng == null) {
-        logger.warn({ city: h.city, zip: h.zip }, "AI hub selection: could not resolve location, skipping hub");
-        continue;
-      }
-      const dist = haversineDistanceMiles(dealerLat, dealerLng, lat, lng);
-      if (dist > MAX_HUB_DISTANCE_MILES) {
-        logger.info(
-          { hub: h.city, distanceMiles: parseFloat(dist.toFixed(1)), maxMiles: MAX_HUB_DISTANCE_MILES },
-          `AI hub selection: filtered out ${h.city} — ${dist.toFixed(1)}mi > ${MAX_HUB_DISTANCE_MILES}mi`
-        );
-        continue;
-      }
-      const nearbyZips = getZipsNearLocation(lat, lng, HUB_HOUSEHOLD_RADIUS);
-      const bizZips    = getZipsNearLocation(lat, lng, HUB_BUSINESS_RADIUS);
-      const localZips  = getZipsNearLocation(lat, lng, HUB_LOCAL_RADIUS);
-      resolved.push({
-        cityName: h.city,
-        stateAbbr,
-        lat,
-        lng,
-        countyGeoid: getCountyGeoidForLocation(lat, lng) ?? "",
-        catchmentHouseholds: nearbyZips.reduce((s, z) => s + z.households, 0),
-        nearbyBusinesses:    bizZips.reduce((s, z) => s + z.businesses, 0),
-        localBiz:            localZips.reduce((s, z) => s + z.businesses, 0),
-        distanceFromDealer:  dist,
-        qualifies: true,
-      });
-    }
-    return resolved;
-  }
-
-  let filteredHubs = await resolveAndFilter(rawHubs);
-
-  // Retry once with a tighter prompt if fewer than 3 hubs survived the filter
-  if (filteredHubs.length < 3) {
-    logger.warn(
-      { city, stateAbbr, hubsAfterFilter: filteredHubs.length },
-      "AI hub selection: < 3 hubs within distance cap, retrying with proximity hint"
-    );
-    const retryPrompt = prompt +
-      `\n\nIMPORTANT: Focus only on cities within a short drive of ${city}. Do not suggest any city more than 20 miles away.`;
-    let retryRaw = "";
-    try {
-      const controller2 = new AbortController();
-      const timeoutId2 = setTimeout(() => controller2.abort(), 10_000);
-      try {
-        const resp2 = await anthropic.messages.create(
-          { model: "claude-sonnet-4-5", max_tokens: 8192, temperature: 0,
-            messages: [{ role: "user", content: retryPrompt }] },
-          { signal: controller2.signal }
-        );
-        const block2 = resp2.content[0];
-        retryRaw = block2?.type === "text" ? block2.text : "";
-      } finally {
-        clearTimeout(timeoutId2);
-      }
-    } catch (err: unknown) {
-      logger.warn({ city, stateAbbr, err: err instanceof Error ? err.message : String(err) },
-        "AI hub selection: retry API error");
-    }
-    if (retryRaw) {
-      let parsedRetry: AIHubResponse | null = null;
-      try {
-        const start = retryRaw.indexOf("{");
-        if (start !== -1) {
-          let depth = 0; let end = -1;
-          for (let i = start; i < retryRaw.length; i++) {
-            if (retryRaw[i] === "{") depth++;
-            else if (retryRaw[i] === "}") { depth--; if (depth === 0) { end = i; break; } }
-          }
-          if (end !== -1) parsedRetry = JSON.parse(retryRaw.slice(start, end + 1)) as AIHubResponse;
-        }
-      } catch { /* ignore parse errors on retry */ }
-      if (parsedRetry?.hubs) {
-        const retryFiltered = await resolveAndFilter(parsedRetry.hubs);
-        if (retryFiltered.length > filteredHubs.length) {
-          logger.info({ city, stateAbbr, retryHubs: retryFiltered.length }, "AI hub selection: retry improved results");
-          filteredHubs = retryFiltered;
-        }
-      }
-    }
-  }
-
-  logger.info(
-    { city, stateAbbr, model: "claude-sonnet-4-5", hubsResolved: filteredHubs.length, hubsRaw: rawHubs.length },
-    "AI hub selection: complete"
-  );
-
-  if (filteredHubs.length < 2) {
-    logger.warn({ city, stateAbbr }, "AI hub selection: < 2 hubs resolved, returning []");
-    return [];
-  }
-
-  aiHubCache.set(cacheKey, { hubs: filteredHubs, expiresAt: now + AI_CACHE_TTL_MS });
-  return filteredHubs;
-}
 
 /**
  * County-based hub selection — deterministic, no AI call.
@@ -972,19 +746,19 @@ async function getCountyTerritoryHubs(
   dealerLat: number,
   dealerLng: number,
   excludedCities: string[]
-): Promise<{ hubs: CityHub[]; countyLabel: string }> {
+): Promise<{ hubs: CityHub[]; countyLabel: string; countyGeoids: string[] }> {
   const excludedSet = new Set(excludedCities.map(c => c.toLowerCase().trim()));
 
   // Step 1: Resolve home city → county GEOID
   const homePlace = findGazetteerCity(city, stateAbbr);
   if (!homePlace) {
     logger.warn({ city, stateAbbr }, "County territory: city not found in Gazetteer");
-    return { hubs: [], countyLabel: "" };
+    return { hubs: [], countyLabel: "", countyGeoids: [] };
   }
   const homeGeoid = getCountyGeoidForLocation(homePlace.lat, homePlace.lng);
   if (!homeGeoid) {
     logger.warn({ city, stateAbbr }, "County territory: could not resolve home county GEOID");
-    return { hubs: [], countyLabel: "" };
+    return { hubs: [], countyLabel: "", countyGeoids: [] };
   }
   const homeCountyInfo = await getCountyInfo(homeGeoid.slice(0, 2), homeGeoid.slice(2));
   const homeCountyShort = homeCountyInfo?.name.replace(/\s+County$/i, "").trim() ?? city;
@@ -1084,11 +858,19 @@ async function getCountyTerritoryHubs(
     ? `${countyShortNames[0]} County`
     : `${countyShortNames.slice(0, -1).join(" / ")} / ${countyShortNames[countyShortNames.length - 1]} Counties`;
 
+  // Collect the exact GEOIDs of every county in this territory (used by the map
+  // renderer to draw precise county-boundary polygons instead of radius footprints).
+  const countyGeoids = [...new Set(
+    hubs.map(h => h.countyGeoid).filter((g): g is string => !!g)
+  )];
+  // Always include homeGeoid even when all hubs were later filtered out.
+  if (!countyGeoids.includes(homeGeoid)) countyGeoids.unshift(homeGeoid);
+
   logger.info(
-    { city, stateAbbr, hubCount: hubs.length, countyLabel },
+    { city, stateAbbr, hubCount: hubs.length, countyLabel, countyGeoids },
     "County territory: hubs resolved"
   );
-  return { hubs, countyLabel };
+  return { hubs, countyLabel, countyGeoids };
 }
 
 /**
@@ -1105,19 +887,9 @@ async function buildCityHubProposal(
   searchRadius: number = TERRITORY_SEARCH_RADIUS
 ): Promise<TerritoryProposal> {
   const excludedCities = await getClaimedHubCities(dealerLat, dealerLng, stateAbbr);
-  let countyLabel = "";
-  let rawHubs: CityHub[];
-  if (USE_COUNTY_TERRITORY_MODEL) {
-    const result = await getCountyTerritoryHubs(
-      city, dealerState || stateAbbr, dealerLat, dealerLng, excludedCities
-    );
-    rawHubs = result.hubs;
-    countyLabel = result.countyLabel;
-  } else {
-    rawHubs = await getAITerritoryHubs(
-      city, dealerState || stateAbbr, dealerLat, dealerLng, excludedCities
-    );
-  }
+  const { hubs: rawHubs, countyLabel, countyGeoids } = await getCountyTerritoryHubs(
+    city, dealerState || stateAbbr, dealerLat, dealerLng, excludedCities
+  );
 
   if (rawHubs.length < 2) {
     return {
@@ -1139,6 +911,7 @@ async function buildCityHubProposal(
         "⚠ We couldn't build a territory for this location. Contact us to discuss options.",
       topCities: [],
       counties: [],
+      countyGeoids,
       estimatedZones: 1,
       isSplit: false,
     };
@@ -1195,10 +968,9 @@ async function buildCityHubProposal(
 
   // Qualification uses Voronoi-exclusive household count (no double-counting)
   const voronoiTotalHH = hubs.reduce((s, h) => s + h.catchmentHouseholds, 0);
-  // County mode uses a lower viability floor (2 hubs) because home + one neighbour
-  // county is a coherent territory even when both counties are small/rural.
-  // AI mode keeps the original MIN_HUB_COUNT (3) to guard against AI hallucinations.
-  const minHubs = USE_COUNTY_TERRITORY_MODEL ? 2 : MIN_HUB_COUNT;
+  // County territories are viable with as few as 2 hub cities — a home county plus
+  // one neighbour county is coherent even when both are small/rural.
+  const minHubs = 2;
   const hasEnoughHubs        = hubCount >= minHubs;
   const hasEnoughHouseholds  = voronoiTotalHH >= MIN_TERRITORY_HOUSEHOLDS;
   const isViable = hasEnoughHubs && hasEnoughHouseholds;
@@ -1312,6 +1084,7 @@ async function buildCityHubProposal(
     viabilityMessage,
     topCities: cityNames,
     counties: [],
+    countyGeoids,
     estimatedZones: Math.max(1, Math.min(4, hubs.length)),
     isSplit: false,
   };
@@ -1491,14 +1264,13 @@ export async function materializeTerritoryFromProposal(
  * Unified territory resolver for all 50 states. Given a location (lat/lng) and
  * its state, returns either:
  *   - an existing same-state territory whose centroid is within 25 miles, or
- *   - a fresh in-memory hub proposal (NOT persisted) via AI hub selection, or
+ *   - a fresh in-memory hub proposal (NOT persisted) built from county boundaries, or
  *   - `unavailable` when no viable territory can be built.
  *
  * The proposal is never written to the database here — it is persisted only
  * when the dealer clicks Claim (see the propose/claim routes).
  *
- * @param city  Optional city name (from Gazetteer or form input) to pass to the
- *              AI hub selector. Adding this trailing param is backward-compatible.
+ * @param city  City name (from Gazetteer or form input) used to resolve the home county.
  * @param dealerState  Optional state abbreviation override (defaults to stateAbbr).
  */
 export async function getTerritoryForLocation(
