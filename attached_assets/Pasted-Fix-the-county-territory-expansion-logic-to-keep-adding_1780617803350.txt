@@ -1,0 +1,97 @@
+Fix the county territory expansion logic to keep adding
+neighbor counties until a minimum of 3 hub cities are
+reached. Currently it stops too early.
+
+════════════════════════════════════════════════
+THE FIX
+════════════════════════════════════════════════
+
+In getCountyTerritoryHubs(), change the expansion logic:
+
+CURRENT (wrong):
+  Expand to neighbor counties only when home county
+  has fewer than 2 hubs. Stop after first useful neighbor.
+
+NEW (correct):
+  Keep adding neighbor counties until total hub count
+  reaches MIN_HUB_COUNT = 3. Stop only when:
+    total hubs >= 3
+    OR no more neighbor counties available
+    OR 3 counties already included (max)
+
+The loop should look like this:
+
+  const MAX_COUNTIES = 3;
+  let countiesUsed = [homeCounty];
+  let allHubs = homeCountyHubs; // may be 0, 1, or 2
+
+  if (allHubs.length < MIN_HUB_COUNT) {
+    const neighbors = getNeighborCountyNames(homeGeoid);
+
+    for (const neighborName of neighbors) {
+      if (allHubs.length >= MIN_HUB_COUNT) break;
+      if (countiesUsed.length >= MAX_COUNTIES) break;
+
+      const neighborHubs = getHubsForCounty(neighborName, stateAbbr);
+      if (neighborHubs.length > 0) {
+        allHubs = [...allHubs, ...neighborHubs];
+        countiesUsed.push(neighborName);
+      }
+    }
+  }
+
+This means:
+  Cleveland (White County, 2 hubs) → still under 3
+    → expand to Habersham → adds Cornelia + Clarkesville
+    → now 4 hubs → stop
+  
+  Dahlonega (Lumpkin, 1 hub) → expand to Dawson
+    → adds Dawsonville → now 2 hubs → still under 3
+    → expand to next neighbor (White or Hall)
+    → adds Cleveland + Helen → now 4 hubs → stop
+
+Cap at 6 hubs total (MAX_HUBS_PER_TERRITORY = 6)
+after collecting from all counties.
+
+════════════════════════════════════════════════
+COUNTY LABEL
+════════════════════════════════════════════════
+
+Show all counties used in the territory name:
+  1 county:  "White County"
+  2 counties: "White / Habersham Counties"
+  3 counties: "Lumpkin / Dawson / White Counties"
+
+════════════════════════════════════════════════
+TEST
+════════════════════════════════════════════════
+
+TEST 1 — Cleveland GA
+  White County has 2 hubs (Cleveland, Helen) — under 3
+  Expand to Habersham → Cornelia + Clarkesville
+  Total: 4 hubs ✓ — stop
+  Label: "White / Habersham Counties"
+  Cities: Cleveland, Helen, Cornelia, Clarkesville
+
+TEST 2 — Dahlonega GA
+  Lumpkin has 1 hub (Dahlonega) — under 3
+  Expand to Dawson → Dawsonville (1 hub)
+  Total: 2 — still under 3
+  Expand to next neighbor → White County
+  White adds Cleveland + Helen
+  Total: 4 hubs ✓ — stop
+  Label: "Lumpkin / Dawson / White Counties"
+  Cities: Dahlonega, Dawsonville, Cleveland, Helen
+
+TEST 3 — Woodstock GA (Cherokee County)
+  Cherokee has 4+ hubs — already >= 3, no expansion
+  Label: "Cherokee County"
+  Cities: unchanged from before
+
+TEST 4 — Marietta GA (Cobb County)
+  Cobb has 4+ hubs — already >= 3, no expansion
+  Label: "Cobb County"
+  Cities: unchanged from before
+
+TEST 5 — Zero overlap between Woodstock and Marietta
+  Still no shared cities ✓

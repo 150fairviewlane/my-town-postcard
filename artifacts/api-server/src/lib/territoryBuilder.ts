@@ -962,8 +962,9 @@ Return ONLY valid JSON with no explanation or markdown:
  * County-based hub selection — deterministic, no AI call.
  *
  * Returns cities in the dealer's home county (sorted by local business density),
- * expanding to the nearest neighbour county if the home county has fewer than 2
- * qualifying cities. Also returns a county-based territory label for display.
+ * expanding to neighbour counties until the territory has at least MIN_HUB_COUNT
+ * qualifying hub cities (or no more neighbours / MAX_COUNTIES reached).
+ * Also returns a county-based territory label for display (up to 3 county names).
  */
 async function getCountyTerritoryHubs(
   city: string,
@@ -1025,13 +1026,15 @@ async function getCountyTerritoryHubs(
   let hubs = homeHubs;
   let countyShortNames = [homeCountyShort];
 
-  // Step 3: If the home county yielded fewer than 2 qualifying hubs, pull in the
-  // nearest qualifying neighbour county. Sparse mountain counties (e.g. Lumpkin GA,
-  // which only has Dahlonega) need this to form a viable territory.
-  // We stop after the FIRST neighbour that contributes hubs so the territory stays
-  // geographically coherent and the county label stays accurate (≤ 2 counties).
-  if (hubs.length < 2) {
-    // Pre-build geoid → short county name map so the filter below stays sync.
+  // Step 3: Expand into neighbour counties until the territory has MIN_HUB_COUNT
+  // qualifying hub cities, a maximum of MAX_COUNTIES counties have been used, or
+  // no more neighbours are available.
+  // This ensures small/rural home counties (e.g. White GA = 2 hubs, Lumpkin GA = 1 hub)
+  // always grow into a viable multi-city mailing area without over-expanding large
+  // counties (e.g. Cherokee GA = 4 hubs → no expansion triggered at all).
+  const MAX_COUNTIES = 3;
+  if (hubs.length < MIN_HUB_COUNT) {
+    // Pre-build geoid → short county name map (async, but done once before the loop).
     const geoidToShortName = new Map<string, string>();
     const uniqueGeoids = new Set(
       allStateCities
@@ -1045,14 +1048,20 @@ async function getCountyTerritoryHubs(
       }
     }
 
+    // usedGeoids tracks counties already in the territory to avoid double-counting.
+    const usedGeoids = new Set([homeGeoid]);
     const neighborShortNames = getNeighborCountyNames(homeGeoid);
+
     for (const neighborShort of neighborShortNames) {
+      if (hubs.length >= MIN_HUB_COUNT) break;          // target reached
+      if (countyShortNames.length >= MAX_COUNTIES) break; // county cap reached
+
       const neighborHubs = allStateCities
         .filter(c => {
           if (excludedSet.has(c.name.toLowerCase().trim())) return false;
           if (RESORT_CITIES.has(c.name)) return false;
           const geoid = getCountyGeoidForLocation(c.lat, c.lng);
-          if (!geoid || geoid === homeGeoid) return false;
+          if (!geoid || usedGeoids.has(geoid)) return false;
           return geoidToShortName.get(geoid)?.toLowerCase() === neighborShort.toLowerCase();
         })
         .map(c => buildHub(c))
@@ -1060,16 +1069,20 @@ async function getCountyTerritoryHubs(
         .sort((a, b) => b.localBiz - a.localBiz);
 
       if (neighborHubs.length > 0) {
+        // Record the GEOID of this neighbour so later iterations skip it.
+        const firstGeoid = getCountyGeoidForLocation(neighborHubs[0].lat, neighborHubs[0].lng);
+        if (firstGeoid) usedGeoids.add(firstGeoid);
+
         hubs = [...hubs, ...neighborHubs].slice(0, COUNTY_MAX_HUBS);
-        countyShortNames.push(neighborShort); // exactly one neighbour recorded
-        break; // stop after first useful neighbour — label stays accurate
+        countyShortNames.push(neighborShort);
       }
     }
   }
 
+  // Label: "X County" | "X / Y Counties" | "X / Y / Z Counties"
   const countyLabel = countyShortNames.length === 1
     ? `${countyShortNames[0]} County`
-    : `${countyShortNames[0]} / ${countyShortNames[1]} Counties`;
+    : `${countyShortNames.slice(0, -1).join(" / ")} / ${countyShortNames[countyShortNames.length - 1]} Counties`;
 
   logger.info(
     { city, stateAbbr, hubCount: hubs.length, countyLabel },
