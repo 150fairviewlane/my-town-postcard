@@ -81,9 +81,18 @@ export function NavBar() {
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
         <MailboxLogo height={isMobile ? 44 : 64} />
         <div style={{
-          fontWeight: 900, fontSize: isMobile ? 22 : 40, color: "#111",
-          fontFamily: "Georgia,serif", lineHeight: 1,
-          whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+          fontWeight: 900,
+          // Mobile (<768px): fixed 22px, wraps to 2 lines if needed
+          // Non-mobile: clamp from 22px→40px so landscape phones (~844px)
+          // get ~30px and never need ellipsis; true desktop (≥1143px) gets 40px
+          fontSize: isMobile ? 22 : "clamp(22px, 3.5vw, 40px)",
+          color: "#111",
+          fontFamily: "Georgia,serif",
+          lineHeight: 1.15,
+          // Allow wrapping at any viewport — on wide desktop the text fits
+          // on one line naturally; on narrow/mobile it wraps to a 2nd line
+          // instead of being truncated with "..."
+          whiteSpace: "normal",
         }}>
           My Town Postcard
         </div>
