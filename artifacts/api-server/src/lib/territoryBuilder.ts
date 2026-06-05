@@ -795,8 +795,11 @@ async function getCountyTerritoryHubs(
       getCountyGeoidForLocation(c.lat, c.lng) === homeGeoid
     )
     .map(c => buildHub(c))
-    .filter(h => h.localBiz >= COUNTY_MIN_LOCAL_BIZ)
+    .filter(h => h.localBiz >= COUNTY_MIN_LOCAL_BIZ)   // viability threshold stays on localBiz
     .sort((a, b) =>
+      // Sort by own-ZIP establishment count, NOT localBiz (8-mile radius sum).
+      // Radius counts double-credit neighbouring cities; own-ZIP is the true
+      // signal for which city is the largest commercial centre.
       getCityZipBusinessCount(b.cityName, b.stateAbbr) -
       getCityZipBusinessCount(a.cityName, a.stateAbbr)
     )
@@ -844,8 +847,9 @@ async function getCountyTerritoryHubs(
           return geoidToShortName.get(geoid)?.toLowerCase() === neighborShort.toLowerCase();
         })
         .map(c => buildHub(c))
-        .filter(h => h.localBiz >= COUNTY_MIN_LOCAL_BIZ)
+        .filter(h => h.localBiz >= COUNTY_MIN_LOCAL_BIZ)   // viability threshold stays on localBiz
         .sort((a, b) =>
+          // Own-ZIP count, not localBiz — same rationale as home county sort above.
           getCityZipBusinessCount(b.cityName, b.stateAbbr) -
           getCityZipBusinessCount(a.cityName, a.stateAbbr)
         );

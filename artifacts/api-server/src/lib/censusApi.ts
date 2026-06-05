@@ -887,11 +887,19 @@ export function getZipPostcardBusinessCount(zip: string): number {
 }
 
 /**
- * Returns the total postcard-industry establishment count for a city based on
- * all ZIP codes where that city is the designated city name in zip-county.csv.
- * Used to rank hub cities by their own commercial density rather than a
- * radius-based proxy (which can double-count neighbouring cities' businesses).
- * Returns 0 for cities not found in the dataset.
+ * Returns the total postcard-industry establishment count for a city, summed
+ * across every ZIP code where that city is the designated city name in
+ * zip-county.csv. This is the "own-ZIP" business count and is used as the
+ * primary sort key when ranking hub cities inside getCountyTerritoryHubs().
+ *
+ * Why own-ZIP instead of the 8-mile-radius `localBiz`:
+ *   A geographically central town can capture its neighbours' businesses
+ *   inside its radius even when it is smaller. E.g. Demorest GA (51 own-ZIP
+ *   establishments) was wrongly ranked above Cornelia GA (166 own-ZIP
+ *   establishments) because Cornelia's ZIP centroid fell inside Demorest's
+ *   8-mile ring. Using own-ZIP count fixes this systematic bias.
+ *
+ * Returns 0 for cities not found in the dataset (treated as lowest priority).
  */
 export function getCityZipBusinessCount(cityName: string, stateAbbr: string): number {
   return cityZipBizMap.get(`${stateAbbr}:${cityName.toLowerCase()}`) ?? 0;
