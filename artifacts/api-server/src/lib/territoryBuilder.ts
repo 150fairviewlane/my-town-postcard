@@ -21,6 +21,7 @@ import {
   getCountyGeoidFromZip,
   findGazetteerCity,
   getNeighborCountyNames,
+  getCityZipBusinessCount,
 } from "./censusApi";
 import { logger } from "./logger";
 
@@ -794,7 +795,10 @@ async function getCountyTerritoryHubs(
     )
     .map(c => buildHub(c))
     .filter(h => h.localBiz >= COUNTY_MIN_LOCAL_BIZ)
-    .sort((a, b) => b.localBiz - a.localBiz)
+    .sort((a, b) =>
+      getCityZipBusinessCount(b.cityName, b.stateAbbr) -
+      getCityZipBusinessCount(a.cityName, a.stateAbbr)
+    )
     .slice(0, COUNTY_MAX_HUBS);
 
   let hubs = homeHubs;
@@ -840,7 +844,10 @@ async function getCountyTerritoryHubs(
         })
         .map(c => buildHub(c))
         .filter(h => h.localBiz >= COUNTY_MIN_LOCAL_BIZ)
-        .sort((a, b) => b.localBiz - a.localBiz);
+        .sort((a, b) =>
+          getCityZipBusinessCount(b.cityName, b.stateAbbr) -
+          getCityZipBusinessCount(a.cityName, a.stateAbbr)
+        );
 
       if (neighborHubs.length > 0) {
         // Record the GEOID of this neighbour so later iterations skip it.
@@ -957,10 +964,18 @@ async function buildCityHubProposal(
     }
   }
 
-  // Final set: only hubs that qualify after Voronoi, capped at TARGET_HUB_COUNT
+  // Final set: only hubs that qualify after Voronoi, capped at TARGET_HUB_COUNT.
+  // Sort primary by own-ZIP postcard-industry business count (most commercially
+  // active cities first — these are the best postcard-mailer targets), with
+  // distance from dealer as a tiebreaker for geographic coherence.
   hubs = hubs
     .filter(h => h.qualifies)
-    .sort((a, b) => a.distanceFromDealer - b.distanceFromDealer)
+    .sort((a, b) => {
+      const bizA = getCityZipBusinessCount(a.cityName, a.stateAbbr);
+      const bizB = getCityZipBusinessCount(b.cityName, b.stateAbbr);
+      if (bizA !== bizB) return bizB - bizA;
+      return a.distanceFromDealer - b.distanceFromDealer;
+    })
     .slice(0, TARGET_HUB_COUNT);
 
   const hubCount = hubs.length;

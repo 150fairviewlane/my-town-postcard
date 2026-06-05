@@ -164,6 +164,15 @@ const zipBusinessMap = new Map<string, number>();
 const zipPostcardBizMap = new Map<string, number>();
 
 /**
+ * "stateAbbr:cityLower" → sum of postcard-industry establishments across all
+ * ZIP codes where that city is the designated city name in zip-county.csv.
+ * Built at the end of loadStaticData() after both zip-county and zbp-postcard
+ * datasets are available. Used to rank hub cities by own commercial density
+ * rather than a radius-based proxy.
+ */
+const cityZipBizMap = new Map<string, number>();
+
+/**
  * 5-digit county GEOID → total occupied housing units (sum of all ZIP estimates
  * within that county from zip-housing-units.csv).
  * Built in loadStaticData() after both zip-county.csv and zip-housing-units.csv load.
@@ -266,6 +275,10 @@ function parseZbpCsvLine(line: string): string[] {
 function loadStaticData(): void {
   const dataDir = join(__dirname, "../data");
 
+  // Local accumulator: ZIP → {stateAbbr, cityLower} — populated in step 1,
+  // consumed after step 7 to build cityZipBizMap.
+  const zipCityRaw = new Map<string, { stateAbbr: string; cityLower: string }>();
+
   // ── 1. zip-county.csv ────────────────────────────────────────────────────────
   // Header: state_fips,state,state_abbr,zipcode,county,city
   // state_fips is unpadded (e.g. "13" for Georgia, "1" for Alabama).
@@ -282,6 +295,7 @@ function loadStaticData(): void {
       const stateAbbr    = cols[2]?.trim() ?? "";
       const zipcode      = cols[3]?.trim() ?? "";
       const countyShort  = cols[4]?.trim() ?? "";
+      const cityName     = cols[5]?.trim() ?? "";
       if (!zipcode || !countyShort || !stateAbbr || !stateFipsRaw) continue;
       zipCountyMap.set(zipcode, {
         stateFips: stateFipsRaw.padStart(2, "0"),
@@ -289,6 +303,9 @@ function loadStaticData(): void {
         stateAbbr,
         countyShort,
       });
+      if (cityName && stateAbbr) {
+        zipCityRaw.set(zipcode, { stateAbbr, cityLower: cityName.toLowerCase() });
+      }
       count++;
     }
     logger.info({ count }, "Census: loaded zip-county.csv");
@@ -511,6 +528,18 @@ function loadStaticData(): void {
     logger.error({ err: err instanceof Error ? err.message : String(err) },
       "Census: failed to load zbp-postcard.csv — postcard business counts will be 0");
   }
+
+  // ── 7b. Build cityZipBizMap ───────────────────────────────────────────────────
+  // Cross-reference zipCityRaw (ZIP → city name, from step 1) with zipPostcardBizMap
+  // (ZIP → establishment count, from step 7) to produce a per-city business total.
+  // A city can have multiple ZIP codes; their business counts are summed.
+  for (const [zip, { stateAbbr, cityLower }] of zipCityRaw) {
+    const biz = zipPostcardBizMap.get(zip) ?? 0;
+    if (biz <= 0) continue;
+    const key = `${stateAbbr}:${cityLower}`;
+    cityZipBizMap.set(key, (cityZipBizMap.get(key) ?? 0) + biz);
+  }
+  logger.info({ cities: cityZipBizMap.size }, "City ZIP business counts built");
 
   // ── 8. zip-centroids.csv ──────────────────────────────────────────────────────
   // Midwire US ZIP centroids. Header: code,city,state,county,area_code,lat,lon
@@ -855,6 +884,17 @@ export function getZipBusinessCount(zip: string): number {
  */
 export function getZipPostcardBusinessCount(zip: string): number {
   return zipPostcardBizMap.get(zip) ?? 0;
+}
+
+/**
+ * Returns the total postcard-industry establishment count for a city based on
+ * all ZIP codes where that city is the designated city name in zip-county.csv.
+ * Used to rank hub cities by their own commercial density rather than a
+ * radius-based proxy (which can double-count neighbouring cities' businesses).
+ * Returns 0 for cities not found in the dataset.
+ */
+export function getCityZipBusinessCount(cityName: string, stateAbbr: string): number {
+  return cityZipBizMap.get(`${stateAbbr}:${cityName.toLowerCase()}`) ?? 0;
 }
 
 /**
