@@ -1,0 +1,80 @@
+The dealer dashboard shows only 1 mailing area
+(Clayton / Dillard / Sky Valley) instead of 3.
+Rabun County territory should have 3 hub cities
+and 3 separate campaigns.
+
+════════════════════════════════════════════════
+DIAGNOSE FIRST — REPORT ALL OF THESE
+════════════════════════════════════════════════
+
+1. Check the territories table for this dealer's territory:
+   SELECT id, name, zone_note, status
+   FROM territories
+   WHERE status = 'taken'
+   ORDER BY created_at DESC
+   LIMIT 5;
+
+   Report the zone_note value — does it contain 3 city
+   names or just 1?
+
+2. Check the campaigns table for this dealer:
+   SELECT id, name, city_list, slug, created_at
+   FROM campaigns
+   WHERE dealer_id = [dealer's id]
+   ORDER BY created_at;
+
+   Report how many campaigns exist and their city_list values.
+
+3. Check whether ensureDealerLandingPage() was updated
+   to create multiple campaigns. Search for the function
+   and confirm it loops over hub cities from zone_note.
+   If it still creates only one campaign, the update
+   did not apply correctly.
+
+4. Check what zone_note contains for Rabun County:
+   The territory builder stores hub city names in zone_note.
+   For Rabun County the expected value would be something like:
+   "Clayton, Dillard, Sky Valley"
+   OR the Gazetteer consolidated name.
+   Report the exact value.
+
+════════════════════════════════════════════════
+LIKELY CAUSES
+════════════════════════════════════════════════
+
+CAUSE A — zone_note only has 1 city
+  If zone_note = "Clayton / Dillard / Sky Valley" as a
+  single string (not 3 separate comma-separated values),
+  the split produces only 1 entry.
+  Fix: the county model stores hub city names correctly —
+  check if this territory was created before or after
+  the multi-hub update.
+
+CAUSE B — ensureDealerLandingPage() not updated
+  The function may still be creating 1 campaign regardless.
+  Fix: confirm the function loops over zone_note.split(',')
+  and creates one campaign per entry.
+
+CAUSE C — Territory created before multi-campaign update
+  The Stripe webhook may have run the old single-campaign
+  code when this territory was first claimed.
+  Fix: manually call ensureDealerLandingPage() for this
+  dealer to create the missing campaigns.
+
+════════════════════════════════════════════════
+FIX AFTER DIAGNOSING
+════════════════════════════════════════════════
+
+Once root cause is confirmed:
+
+If zone_note has correct comma-separated city names AND
+ensureDealerLandingPage() is correctly updated:
+  Call ensureDealerLandingPage(dealerId) manually to
+  create the missing campaigns for this dealer.
+
+If zone_note has the wrong format:
+  Update the territory builder to store hub city names
+  as plain comma-separated values (not consolidated slash
+  names) in zone_note when creating territories.
+
+Report findings before making any changes.

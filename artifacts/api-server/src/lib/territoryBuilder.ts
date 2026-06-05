@@ -991,6 +991,13 @@ async function buildCityHubProposal(
   const hasEnoughHouseholds  = voronoiTotalHH >= MIN_TERRITORY_HOUSEHOLDS;
   const isViable = hasEnoughHubs && hasEnoughHouseholds;
 
+  // Capture individual city names BEFORE the display transform merges small-county
+  // hubs into slash-joined display strings (e.g. "Clayton / Dillard / Sky Valley").
+  // These are used for topCities → proposedCities → zone_note → one campaign per city.
+  // The display transform below should only affect the proposal-card UI, not the
+  // stored city list that drives campaign creation.
+  const individualCityNames = hubs.map(h => h.cityName);
+
   // ── Display transform: county-based household count per hub ──
   // Groups hubs by county GEOID and applies the three display rules:
   //   Rule 1 (county < 15k): merge all hubs in that county → one entry, county total
@@ -1049,7 +1056,7 @@ async function buildCityHubProposal(
   }
 
   const totalHouseholds = hubs.reduce((s, h) => s + h.catchmentHouseholds, 0);
-  const cityNames = hubs.map(h => h.cityName);
+  const cityNames = individualCityNames;
   const proposedName = countyLabel || generateTerritoryName(cityNames, [], stateAbbr);
   const slug = await generateSlug(proposedName);
 

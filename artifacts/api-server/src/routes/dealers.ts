@@ -909,6 +909,25 @@ router.get("/admin/dealers/:id", requireAdmin, async (req, res): Promise<void> =
   });
 });
 
+// ─── POST /api/admin/dealers/:id/rebuild-landing-page ─────────────────────────
+// Re-runs ensureDealerLandingPage for a dealer. Useful for correcting campaigns
+// when zone_note was updated or a prior run created malformed city_list values.
+router.post("/admin/dealers/:id/rebuild-landing-page", requireAdmin, async (req, res): Promise<void> => {
+  const id = parseInt(String(req.params.id), 10);
+  if (!Number.isFinite(id)) {
+    res.status(400).json({ error: "Invalid dealer id" });
+    return;
+  }
+  const [dealer] = await db.select().from(dealersTable).where(eq(dealersTable.id, id));
+  if (!dealer) {
+    res.status(404).json({ error: "Dealer not found" });
+    return;
+  }
+  const campaignIds = await ensureDealerLandingPage(id);
+  req.log.info({ dealerId: id, campaignIds }, "Rebuilt dealer landing page via admin");
+  res.json({ ok: true, campaignIds });
+});
+
 export default router;
 
 /**
