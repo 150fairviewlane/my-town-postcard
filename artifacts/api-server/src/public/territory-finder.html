@@ -605,12 +605,29 @@ async function loadAllTerritories(){
 
     // Render territories that have footprint rows using GeoJSON GEOID matching
     if(footprints.length > 0){
+      // Precompute allowed county names per territory from territories.counties.
+      // Territory ZIP codes often bleed into neighboring counties (e.g. a ZIP that
+      // straddles a county line). Those neighboring county GEOIDs must NOT be colored
+      // — only the counties officially declared in territories.counties should be.
+      const officialCountiesById = new Map();
+      for(const t of list){
+        if(Array.isArray(t.counties) && t.counties.length > 0){
+          officialCountiesById.set(t.id, new Set(t.counties.map(c => String(c).toLowerCase())));
+        }
+      }
+
       const byTerritory = new Map();
       for(const f of geo.features){
         const geoid = String(f.id);
         if(!geoid.startsWith(meta[1])) continue;
         const entry = geoidMap.get(geoid);
         if(!entry) continue;
+        // Skip counties that are not in the territory's official county list.
+        const allowed = officialCountiesById.get(entry.id);
+        if(allowed){
+          const nm = String((f.properties && f.properties.NAME) || '').toLowerCase();
+          if(!allowed.has(nm)) continue;
+        }
         if(!byTerritory.has(entry.id)) byTerritory.set(entry.id, { status: entry.status, features: [] });
         byTerritory.get(entry.id).features.push(f);
       }
