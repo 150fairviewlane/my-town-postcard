@@ -1,0 +1,229 @@
+Upgrade the dealer system to support one postcard per
+mailing area. A dealer with 4 mailing areas gets 4
+campaigns, each with 15 ad slots and its own public
+landing page.
+
+
+════════════════════════════════════════════════
+OVERVIEW OF CHANGES
+════════════════════════════════════════════════
+
+BEFORE: 1 dealer → 1 campaign → 15 spots → 1 landing page
+AFTER:  1 dealer → N campaigns (one per mailing area)
+                 → 15 spots each → N landing pages
+
+N = number of hub cities in the territory (typically 3-4)
+
+
+════════════════════════════════════════════════
+CHANGE 1 — UPDATE ensureDealerLandingPage()
+════════════════════════════════════════════════
+
+Change the function signature to accept hub cities:
+
+  async function ensureDealerLandingPage(
+    dealerId: number,
+    options?: { forceRecreate?: boolean }
+  )
+
+The function already pulls territory metadata from the
+territories table. Extend it to also pull the hub cities
+from zone_note (comma-separated city names already stored
+there from territory creation).
+
+For each hub city in zone_note:
+  1. Check if a campaign already exists for this dealer
+     with city_list matching this hub city name
+     (idempotency check — same as existing early-exit)
+
+  2. If not exists, create a campaign:
+       name: "[Hub City] — Postcard Advertising"
+         e.g. "Woodstock — Postcard Advertising"
+       territory: territoryName (e.g. "Cherokee County")
+       city_list: hub city name (e.g. "Woodstock")
+       slug: generate from territory + city name
+         e.g. "cherokee-woodstock", "cherokee-canton"
+         add numeric suffix if slug taken
+       dealer_id: dealerId
+       status: "draft"
+       is_published: true
+       homes_count: 5000
+       zip_code: dealer's home zip (same as before)
+
+  3. Bulk-insert 15 spots using STANDARD_SPOT_LAYOUT
+     (exactly the same as current implementation)
+
+  4. Do NOT set dealer.landingPageCampaignId to any
+     single campaign — this field is now obsolete for
+     multi-area dealers. Leave it null or set it to
+     the first campaign created for backwards compat.
+
+The function returns an array of created campaign IDs
+instead of a single ID.
+
+IDEMPOTENCY: The function is safe to call multiple times.
+If all campaigns already exist, it returns their IDs
+without creating duplicates. Use:
+  SELECT id FROM campaigns
+  WHERE dealer_id = dealerId AND city_list = hubCityName
+as the existence check per hub city.
+
+
+════════════════════════════════════════════════
+CHANGE 2 — UPDATE STRIPE WEBHOOK
+════════════════════════════════════════════════
+
+In the checkout.session.completed webhook handler,
+after creating the territory record:
+
+Replace the single ensureDealerLandingPage() call with
+the updated version that creates one campaign per hub city.
+
+The territory's zone_note field contains the hub city
+names (already stored at territory creation). Pass these
+through to ensureDealerLandingPage() or let it read
+them directly from the territory record.
+
+Confirm the webhook handler correctly awaits the updated
+function and handles the array of campaign IDs returned.
+
+
+════════════════════════════════════════════════
+CHANGE 3 — DEALER DASHBOARD UI
+════════════════════════════════════════════════
+
+Update the dealer dashboard page to show one large card
+per mailing area instead of a single landing page link.
+
+LAYOUT:
+  Header: "Your Territory — [Territory Name]"
+  Subheader: "[County Name] | $99/month"
+
+  MAILING AREA CARDS (one per campaign, 2-column grid):
+
+  Each card shows:
+  ┌─────────────────────────────────────────────┐
+  │ MAILING AREA                                 │
+  │ Woodstock                                    │
+  │                                              │
+  │ Slots Filled    ████████░░░░░░░  8 of 15    │
+  │ Revenue         $2,392 collected             │
+  │ Status          🟢 Selling                   │
+  │                                              │
+  │ [View Advertiser Page] [Ad Generator]        │
+  └─────────────────────────────────────────────┘
+
+  STATUS logic:
+    0-14 slots paid → "🟢 Selling"
+    15 slots paid → "🟡 Ready to Print"
+    (future: Mailed status)
+
+  SLOTS FILLED: count of spots where status = 'paid'
+  REVENUE: sum of price for spots where status = 'paid'
+    (price is in cents — display in dollars)
+
+  BUTTONS:
+    [View Advertiser Page] → opens the campaign's public
+      slug URL in a new tab
+      e.g. /postcards/cherokee-woodstock
+    [Ad Generator] → opens the existing ad generator
+      for this campaign (use existing route)
+
+  Style the cards in burgundy/cream matching existing
+  dealer dashboard design. Make cards large and easy
+  to tap on mobile.
+
+SUMMARY BAR above the cards:
+  Total Slots: [N] (N × 15, e.g. 60 for 4 areas)
+  Slots Filled: [X] across all areas
+  Total Revenue: $[X] across all areas
+
+
+════════════════════════════════════════════════
+CHANGE 4 — ADVERTISER LANDING PAGE HEADER
+════════════════════════════════════════════════
+
+Each mailing area's public landing page currently shows
+the territory name. Update to show the mailing area
+city name prominently:
+
+  "Advertise in [City Name]"
+  e.g. "Advertise in Woodstock"
+
+  Subheader: "Reach 5,000 local households via USPS EDDM"
+
+  Territory context (smaller text below):
+  "Part of the [Territory Name] dealer territory"
+  e.g. "Part of the Cherokee County dealer territory"
+
+This makes each page feel like a distinct local product
+rather than a subdivision of a larger territory.
+
+
+════════════════════════════════════════════════
+DO NOT TOUCH
+════════════════════════════════════════════════
+
+  The STANDARD_SPOT_LAYOUT — use exactly as-is
+  The spots table structure
+  The ad generator functionality
+  The Stripe checkout flow (only the post-payment
+    campaign creation changes)
+  Authentication
+  The territory builder
+  Admin territory manager
+
+
+════════════════════════════════════════════════
+TEST AFTER BUILDING
+════════════════════════════════════════════════
+
+TEST 1 — Campaign creation
+  Simulate a territory claim for a dealer with a
+  territory that has zone_note = 'Woodstock, Canton,
+  Kennesaw, Holly Springs' (Cherokee County)
+
+  ensureDealerLandingPage() must create:
+    4 campaigns (one per hub city)
+    60 spots total (15 per campaign)
+    4 unique slugs:
+      cherokee-woodstock
+      cherokee-canton
+      cherokee-kennesaw
+      cherokee-holly-springs
+
+  Calling it a second time must create 0 new campaigns
+  (idempotency confirmed)
+
+TEST 2 — Dealer dashboard
+  Log in as the test dealer
+  Dashboard shows 4 mailing area cards
+  Each card shows 0 of 15 slots filled
+  Each card has working View and Ad Generator buttons
+  Summary bar shows: Total 60 slots, 0 filled, $0 revenue
+
+TEST 3 — Simulate slot purchase
+  Mark 3 spots as paid in one campaign (e.g. Woodstock)
+  Dashboard refreshes showing Woodstock card:
+    3 of 15 slots filled
+    Revenue = sum of those 3 spot prices
+  Other 3 cards still show 0 of 15
+
+TEST 4 — Advertiser landing page
+  Visit /postcards/cherokee-woodstock
+  Page header shows "Advertise in Woodstock"
+  Subheader shows "Reach 5,000 local households via USPS EDDM"
+  15 ad slots visible and purchasable
+
+TEST 5 — 3-hub territory
+  Repeat TEST 1 with zone_note = 'Dahlonega, Dawsonville,
+  Cleveland / Helen' (Lumpkin/Dawson/White Counties)
+  Must create exactly 3 campaigns (not 4)
+  Dashboard shows 3 mailing area cards
+  Total slots = 45
+
+TEST 6 — Existing single-campaign dealers
+  Any dealer created before this change who has
+  landingPageCampaignId set should still see their
+  dashboard correctly — do not break existing dealers
+  even if they only have 1 campaign
