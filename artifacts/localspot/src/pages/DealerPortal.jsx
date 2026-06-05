@@ -73,17 +73,15 @@ function MailingAreaCard({ c, money, baseUrl }) {
             View Advertiser Page ↗
           </a>
         )}
-        {c.pageUrl && (
-          <a href={`${c.pageUrl}#book`} target="_blank" rel="noreferrer"
-            style={{
-              fontSize: 13, fontWeight: 700, color: "#374151",
-              border: "1.5px solid #d1d5db", borderRadius: 8,
-              padding: "8px 14px", textDecoration: "none", background: "#fff",
-              whiteSpace: "nowrap",
-            }}>
-            Ad Generator
-          </a>
-        )}
+        <a href={`${baseUrl}/ad-gen`} target="_blank" rel="noreferrer"
+          style={{
+            fontSize: 13, fontWeight: 700, color: "#374151",
+            border: "1.5px solid #d1d5db", borderRadius: 8,
+            padding: "8px 14px", textDecoration: "none", background: "#fff",
+            whiteSpace: "nowrap",
+          }}>
+          Ad Generator
+        </a>
       </div>
     </div>
   );

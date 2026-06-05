@@ -628,7 +628,8 @@ router.get("/dealers/confirm", async (req, res): Promise<void> => {
     await setTerritoryStatusForDealer(dealerId, "taken");
     req.log.info({ dealerId, sessionId }, "Dealer activated via /confirm");
     try {
-      await ensureDealerLandingPage(dealerId);
+      const campaignIds = await ensureDealerLandingPage(dealerId);
+      req.log.info({ dealerId, campaignCount: campaignIds.length, campaignIds }, "ensureDealerLandingPage complete via /confirm");
     } catch (err: any) {
       req.log.error({ err: err?.message, dealerId }, "ensureDealerLandingPage failed in /confirm — webhook will retry");
     }
@@ -952,7 +953,8 @@ export async function activateDealerFromCheckoutSession(
   await setTerritoryStatusForDealer(dealerId, "taken");
 
   try {
-    await ensureDealerLandingPage(dealerId);
+    const campaignIds = await ensureDealerLandingPage(dealerId);
+    logger.info({ dealerId, campaignCount: campaignIds.length, campaignIds }, "ensureDealerLandingPage complete via webhook");
   } catch (err: any) {
     logger.error({ err: err?.message, dealerId }, "ensureDealerLandingPage failed in webhook activation");
   }

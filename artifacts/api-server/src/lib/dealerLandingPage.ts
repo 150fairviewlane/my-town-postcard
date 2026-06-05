@@ -16,6 +16,10 @@ type LandingPageInfo = {
   cityList: string | null;
   homesCount: number;
   zipCode: string;
+  // True only when cityList was sourced from a county territory's zoneNote field.
+  // Legacy dealers whose cityList is synthesized from dealer_territories city labels
+  // must NOT enter the per-hub-city multi-campaign path.
+  fromZoneNote: boolean;
 };
 
 // Pull the best available human metadata for a dealer's territory. County-based
@@ -37,6 +41,10 @@ async function resolveTerritoryInfo(
       cityList: county.zoneNote ?? null,
       homesCount: county.households > 0 ? county.households : 5000,
       zipCode: dealerHomeZip,
+      // Only set true when the territory row actually has a zoneNote — that is
+      // the authoritative source of per-hub-city names. A county row with no
+      // zoneNote falls through to the single-campaign fallback.
+      fromZoneNote: !!county.zoneNote,
     };
   }
 
@@ -49,9 +57,12 @@ async function resolveTerritoryInfo(
     const cities = legacy.map((t) => t.cityLabel).filter(Boolean).join(", ");
     return {
       territoryName: legacy[0].cityLabel || `${dealerName}'s Territory`,
+      // cityList is synthesized from city labels — NOT from a zoneNote. Never
+      // use this for per-hub-city multi-campaign creation.
       cityList: cities || null,
       homesCount: totalHomes > 0 ? totalHomes : 5000,
       zipCode: legacy[0].zipCodes?.[0] ?? dealerHomeZip,
+      fromZoneNote: false,
     };
   }
 
@@ -60,6 +71,7 @@ async function resolveTerritoryInfo(
     cityList: null,
     homesCount: 5000,
     zipCode: dealerHomeZip,
+    fromZoneNote: false,
   };
 }
 
@@ -92,10 +104,13 @@ export async function ensureDealerLandingPage(dealerId: number): Promise<number[
     .limit(1);
   const info = await resolveTerritoryInfo(dealerId, meta.name, meta.homeZip ?? "");
 
-  // Parse hub cities from zoneNote (comma-separated, e.g. "Woodstock, Canton, Kennesaw")
-  const hubCities = info.cityList
-    ? info.cityList.split(",").map((s) => s.trim()).filter(Boolean)
-    : [];
+  // Parse hub cities — ONLY when the city list came from a county zoneNote.
+  // Legacy dealers whose cityList is synthesized from dealer_territories must
+  // always use the single-campaign fallback, never the per-hub-city path.
+  const hubCities =
+    info.fromZoneNote && info.cityList
+      ? info.cityList.split(",").map((s) => s.trim()).filter(Boolean)
+      : [];
 
   // ── Legacy / no-hub-city fallback: create a single territory campaign ───────
   if (hubCities.length === 0) {
