@@ -18,6 +18,7 @@ import {
   findExistingTerritoryWithinMiles,
   resolveProposalHubs,
   checkZipFootprintConflict,
+  proposalCountiesOverlapTerritory,
   ZipFootprintConflictError,
 } from "../lib/territoryBuilder";
 import {
@@ -1060,6 +1061,16 @@ export async function activateTerritoryClaimFromCheckoutSession(session: any): P
   // Post-payment conflict re-check — two layers:
   //   (A) 25-mile centroid proximity (fast, catches obvious overlaps)
   //   (B) ZIP footprint overlap against territory_zip_assignments (precise)
+  //
+  // Both checks apply a county-membership guard: a conflict is only genuine when
+  // the conflicting territory shares at least one declared county with the proposal.
+  // This prevents neighboring-county ZIP bleed (e.g. White/Habersham territory
+  // has some Rabun County ZIPs from its 15-mile footprint) from blocking dealers
+  // in those neighboring counties.
+  const proposalCounties: string[] = Array.isArray(proposal.proposedCounties)
+    ? (proposal.proposedCounties as string[])
+    : [];
+
   if (proposal.centroidLat != null && proposal.centroidLng != null) {
     const conflict = await findExistingTerritoryWithinMiles(
       proposal.centroidLat,
@@ -1068,7 +1079,7 @@ export async function activateTerritoryClaimFromCheckoutSession(session: any): P
       25,
       { statuses: ["taken", "pending"] },
     );
-    if (conflict) {
+    if (conflict && proposalCountiesOverlapTerritory(proposalCounties, conflict)) {
       await db
         .update(territoryProposalsTable)
         .set({ status: "conflict", reviewedAt: new Date(), notes: `Conflict with ${String(conflict.id)}` })
@@ -1102,27 +1113,41 @@ export async function activateTerritoryClaimFromCheckoutSession(session: any): P
     if (hubs.length > 0) {
       const zipConflictId = await checkZipFootprintConflict(hubs);
       if (zipConflictId) {
-        await db
-          .update(territoryProposalsTable)
-          .set({
-            status: "conflict",
-            reviewedAt: new Date(),
-            notes: `ZIP footprint conflict with territory ${zipConflictId}`,
-          })
-          .where(eq(territoryProposalsTable.id, proposalId));
-        await refundAndCancelTerritoryClaim(session, dealerId);
-        if (proposal.dealerEmail) {
-          await sendTerritoryConflictEmail({
-            dealerName: proposal.dealerName ?? "Dealer",
-            dealerEmail: proposal.dealerEmail,
-            territoryName: proposal.proposedName,
-          });
+        // County guard: fetch the conflicting territory and verify it shares a county
+        // with this proposal before treating it as a genuine conflict.
+        const [conflictRow] = await db
+          .select()
+          .from(territoriesTable)
+          .where(eq(territoriesTable.id, zipConflictId));
+        const isRealConflict = !conflictRow ||
+          proposalCountiesOverlapTerritory(proposalCounties, conflictRow as Record<string, unknown>);
+        if (isRealConflict) {
+          await db
+            .update(territoryProposalsTable)
+            .set({
+              status: "conflict",
+              reviewedAt: new Date(),
+              notes: `ZIP footprint conflict with territory ${zipConflictId}`,
+            })
+            .where(eq(territoryProposalsTable.id, proposalId));
+          await refundAndCancelTerritoryClaim(session, dealerId);
+          if (proposal.dealerEmail) {
+            await sendTerritoryConflictEmail({
+              dealerName: proposal.dealerName ?? "Dealer",
+              dealerEmail: proposal.dealerEmail,
+              territoryName: proposal.proposedName,
+            });
+          }
+          logger.info(
+            { proposalId, dealerId, zipConflictTerritoryId: zipConflictId },
+            "Territory claim refunded — ZIP footprint overlap appeared during checkout",
+          );
+          return;
         }
         logger.info(
-          { proposalId, dealerId, zipConflictTerritoryId: zipConflictId },
-          "Territory claim refunded — ZIP footprint overlap appeared during checkout",
+          { proposalId, dealerId, skippedConflictId: zipConflictId, proposalCounties },
+          "ZIP footprint conflict skipped — conflicting territory is in a different county (neighboring bleed)",
         );
-        return;
       }
     }
   }

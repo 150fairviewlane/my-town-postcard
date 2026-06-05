@@ -1256,10 +1256,24 @@ export async function materializeTerritoryFromProposal(
         )
         .limit(1);
       if (stolen.length > 0) {
-        throw new ZipFootprintConflictError(
-          stolen[0].ownerTerritoryId,
-          stolen[0].zip,
-        );
+        // County guard: only treat as a genuine concurrent conflict when the
+        // winning territory shares a county with the one being materialized.
+        // Cross-county ZIP bleed (e.g. a neighboring territory whose footprint
+        // happened to include a ZIP in our county) should not roll back the transaction.
+        const [ownerRow] = await tx
+          .select({ counties: territoriesTable.counties })
+          .from(territoriesTable)
+          .where(eq(territoriesTable.id, stolen[0].ownerTerritoryId));
+        const isRealConflict = !ownerRow ||
+          proposalCountiesOverlapTerritory(counties, { counties: ownerRow.counties });
+        if (isRealConflict) {
+          throw new ZipFootprintConflictError(
+            stolen[0].ownerTerritoryId,
+            stolen[0].zip,
+          );
+        }
+        // Neighboring-county bleed — the ZIP stays with the other territory
+        // (onConflictDoNothing already prevented us from claiming it); continue.
       }
     }
 
@@ -1310,6 +1324,26 @@ function locationIsInTerritoryCounties(
   if (!geoid) return false;
   const countyName = getCountyShortNameByGeoid(geoid);
   return !!countyName && declared.includes(countyName.toLowerCase());
+}
+
+/**
+ * Returns true when the proposal's counties overlap with the territory's
+ * declared counties — indicating a genuine geographic conflict rather than
+ * neighboring-county ZIP bleed.
+ *
+ * Conservative defaults (returns true) when either side has no counties
+ * declared, preserving the original strict behavior for legacy data.
+ */
+export function proposalCountiesOverlapTerritory(
+  proposalCounties: string[],
+  territory: Record<string, unknown>,
+): boolean {
+  const territoryCounties: string[] = Array.isArray(territory.counties)
+    ? (territory.counties as string[]).map((c) => String(c).toLowerCase())
+    : [];
+  if (proposalCounties.length === 0 || territoryCounties.length === 0) return true;
+  const pSet = new Set(proposalCounties.map((c) => c.toLowerCase()));
+  return territoryCounties.some((c) => pSet.has(c));
 }
 
 export async function getTerritoryForLocation(
