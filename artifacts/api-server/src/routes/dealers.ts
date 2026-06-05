@@ -384,7 +384,14 @@ router.post("/dealers/claim-proposal", async (req, res): Promise<void> => {
   const parsed = ClaimProposalBodySchema.safeParse(req.body);
   if (!parsed.success) {
     req.log.warn({ zodError: parsed.error.issues }, "POST /dealers/claim-proposal validation failed");
-    res.status(400).json({ error: "Please fill in all required fields and pick a valid territory." });
+    const firstIssue = parsed.error.issues[0];
+    const field = firstIssue?.path?.[0];
+    const fieldLabel =
+      field === "email" ? "email address" :
+      field === "name"  ? "full name" :
+      field === "phone" ? "phone number" :
+      field === "proposal" ? "territory selection" : "required field";
+    res.status(400).json({ error: `Please enter a valid ${fieldLabel}.` });
     return;
   }
 

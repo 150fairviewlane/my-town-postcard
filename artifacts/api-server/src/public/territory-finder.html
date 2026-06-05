@@ -905,7 +905,7 @@ async function submitClaim(){
   const email = $('claimEmail').value.trim();
   const phone = $('claimPhone').value.trim();
   if(!name){ showToast('Enter your full name'); return; }
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ showToast('Enter a valid email'); return; }
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)){ showToast('Enter a valid email address'); return; }
   if(!phone){ showToast('Enter your phone number'); return; }
 
   const btn = $('modalSubmitBtn');
