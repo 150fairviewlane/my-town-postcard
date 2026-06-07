@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { MrBiscuitsLarge, MrBiscuitsMedium, MrBiscuitsSmall } from "./MrBiscuitsReferenceAd.jsx";
+import { AdTemplatePreview } from "./AdGenerator.jsx";
 
 export const SIZES = {
   xl:     { label: "Extra-Large", dim: '4" × 5"', desc: "Prime placement, maximum impact" },
@@ -592,7 +593,21 @@ function GreenAcresAd({ size }) {
 }
 
 // ─── Fallback Ad ──────────────────────────────────────────────────────────────
-function DefaultAd({ spot }) {
+function DefaultAd({ spot, variant = 1 }) {
+  // Spot with a saved dynamic template → render it with the correct variant palette
+  if (spot.templateData?.template) {
+    const { template, sizeKey, finishedAdUrl, ...adData } = spot.templateData;
+    if (finishedAdUrl) {
+      return (
+        <div style={{ width: "100%", height: "100%", background: "#000", overflow: "hidden" }}>
+          <img src={finishedAdUrl} alt={spot.businessName}
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+        </div>
+      );
+    }
+    const sk = sizeKey || (spot.size === "xl" ? "XL" : spot.size === "large" ? "L" : spot.size === "medium" ? "M" : "S");
+    return <AdTemplatePreview templateKey={template} formData={adData} sizeKey={sk} variant={variant} />;
+  }
   if (spot.adFileUrl) {
     return (
       <div style={{ width: "100%", height: "100%", background: "#000", overflow: "hidden" }}>
@@ -615,7 +630,7 @@ function DefaultAd({ spot }) {
 
 // ─── Public: PaidAd Dispatcher ────────────────────────────────────────────────
 // "xl" maps to the large visual variant in all ad templates.
-export function PaidAd({ spot }) {
+export function PaidAd({ spot, variant = 1 }) {
   const renderSize = spot.size === "xl" ? "large" : spot.size;
   const s = { size: renderSize };
   switch (spot.businessName) {
@@ -628,7 +643,7 @@ export function PaidAd({ spot }) {
     case "Tanner Insurance Agency":     return <TannerAd        {...s} />;
     case "Roma's Pizza & Subs":         return <RomasPizzaAd    {...s} />;
     case "Green Acres Lawn Care":       return <GreenAcresAd    {...s} />;
-    default:                            return <DefaultAd spot={spot} />;
+    default:                            return <DefaultAd spot={spot} variant={variant} />;
   }
 }
 

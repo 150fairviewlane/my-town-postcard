@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { useLocation, useSearch } from "wouter";
 import { useGetActiveCampaign, useGetCampaignBySlug, useReserveSpot, getGetActiveCampaignQueryKey, getGetCampaignBySlugQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { AdTemplatePreview } from "./AdGenerator";
+import { AdTemplatePreview, assignTemplateVariants, TEMPLATES } from "./AdGenerator";
 import AdUploadModal from "./AdUploadModal";
 import { PositionedQR } from "./qrUtils";
 
@@ -383,7 +383,7 @@ const cw=spot.w*scale-7,ch=spot.h*scale-7;
 return(<div style={{position:"absolute",left:spot.x*scale+3.5,top:spot.y*scale+3.5,width:cw,height:ch,overflow:"hidden",borderRadius:3}}><div style={{width:spot.w,height:spot.h,transform:`scale(${cw/spot.w},${ch/spot.h})`,transformOrigin:"top left"}}>{children}</div></div>);
 }
 
-function SpotCell({spot,scale,hov,onHov,onOut,onSel,liveSpot,isHighlighted,territory,eddmCity,eddmZip}){
+function SpotCell({spot,scale,hov,onHov,onOut,onSel,liveSpot,isHighlighted,territory,eddmCity,eddmZip,variantMap}){
 const k=spot.sample;
 const t=spot.tmpl||"photo";
 if(k==="house")return<ScaledCell spot={spot} scale={scale}><AdHouse w={spot.w} h={spot.h} territory={territory}/></ScaledCell>;
@@ -396,7 +396,7 @@ if(liveSpot&&liveSpot.status==="paid"&&liveSpot.templateData){
     <div style={{width:spot.w,height:spot.h,pointerEvents:"none",position:"relative"}}>
       {finishedAdUrl
         ?<img src={finishedAdUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
-        :<AdTemplatePreview templateKey={template||"split-clean"} formData={adData} sizeKey={sk}/>
+        :<AdTemplatePreview templateKey={template||"split-clean"} formData={adData} sizeKey={sk} variant={variantMap?.[liveSpot.id]||1}/>
       }
       {isHighlighted&&<>
         <style>{`@keyframes lsPulse{0%,100%{box-shadow:0 0 0 0 rgba(22,163,74,0.85),inset 0 0 0 4px #16a34a}50%{box-shadow:0 0 0 10px rgba(22,163,74,0),inset 0 0 0 4px #15803d}}`}</style>
@@ -499,6 +499,15 @@ const spotByGridArea=useMemo(()=>{
   const m={};
   (campaign?.spots||[]).forEach(s=>{m[s.gridArea]=s;});
   return m;
+},[campaign]);
+
+const variantMap=useMemo(()=>{
+  const allPaid=(campaign?.spots||[]).filter(
+    s=>s.status==="paid"&&s.templateData?.template&&TEMPLATES[s.templateData.template]
+  );
+  const frontPaid=allPaid.filter(s=>(s.side??"front")==="front");
+  const backPaid=allPaid.filter(s=>s.side==="back");
+  return{...assignTemplateVariants(frontPaid),...assignTemplateVariants(backPaid)};
 },[campaign]);
 
 const takenCategories=useMemo(()=>{
@@ -760,7 +769,7 @@ return(<div style={{fontFamily:"sans-serif"}}>
           {spots.map(spot=>{
             const liveSpot=spot.dbGridArea?spotByGridArea[spot.dbGridArea]:null;
             const isHighlighted=highlighted&&spot.dbGridArea===highlighted;
-            return<SpotCell key={spot.id} spot={spot} scale={scale} hov={hov} onHov={setHov} onOut={()=>setHov(null)} onSel={handleSpotSelect} liveSpot={liveSpot} isHighlighted={isHighlighted} territory={campaign?.territory} eddmCity={(campaign?.cityList||"").split(",")[0].trim().toUpperCase()||undefined} eddmZip={campaign?.zipCode||undefined}/>;
+            return<SpotCell key={spot.id} spot={spot} scale={scale} hov={hov} onHov={setHov} onOut={()=>setHov(null)} onSel={handleSpotSelect} liveSpot={liveSpot} isHighlighted={isHighlighted} territory={campaign?.territory} eddmCity={(campaign?.cityList||"").split(",")[0].trim().toUpperCase()||undefined} eddmZip={campaign?.zipCode||undefined} variantMap={variantMap}/>;
           })}
           {campaignFetching&&!reserving&&(
             <div style={{position:"absolute",inset:0,pointerEvents:"none",zIndex:10,display:"flex",alignItems:"center",justifyContent:"center"}}>
