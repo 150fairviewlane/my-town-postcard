@@ -39,7 +39,7 @@ export const DEFAULT_COPY: LandingCopy = {
   howItWorksMailDesc: "5,000 postcards printed and delivered to Habersham homes via USPS.",
   mailingLabel: "Summer 2026 Mailing",
   mailingDetail:
-    "Timed to reach 5,000 Habersham County homes during peak local shopping season — targeted for the third week of June 2026.",
+    "Timed to reach 5,000 Habersham County homes during peak local shopping season — targeted for mid-July 2026.",
   targetedAreasDesc:
     "We focus on specific Habersham County neighborhoods where your customers already live.",
   faqEddm:
