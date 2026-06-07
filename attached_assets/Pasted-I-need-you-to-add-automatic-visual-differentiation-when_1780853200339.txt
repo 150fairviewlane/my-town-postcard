@@ -1,0 +1,21 @@
+I need you to add automatic visual differentiation when the same ad template is used more than once on the same side of a postcard. The goal is that two ads using the same template should never look like twins sitting next to each other. Here is exactly what to build.
+
+STEP 1 — READ FIRST
+
+Read the existing ad template rendering system before touching anything. Understand how templates are stored, how they are rendered, how the postcard side (front or back) is tracked, and how individual ad slots know which template they are using. Do not change anything yet.
+
+STEP 2 — BUILD A TEMPLATE VARIANT SYSTEM
+
+Create a variant assignment function that runs at the time an ad slot is confirmed or rendered. The function should look at all other confirmed ads on the same postcard side and check whether any of them use the same template as the new ad. If no match is found, assign variant 1 (the default, unchanged appearance). If one match is found, assign variant 2. If two matches are found, assign variant 3. If three or more matches are found, cycle back through variants 2 and 3 as needed. Store the assigned variant alongside the ad slot data so it persists and does not randomly reassign on page reload.
+
+STEP 3 — DEFINE THE VARIANT RULES
+
+For every template in the system, define three variants. Variant 1 is the default unchanged appearance — do not touch it. Variant 2 applies the following changes from the default: shift the primary background color to a distinctly different hue in the same general family (for example if the default is near-black shift to deep navy or dark forest green), change the primary accent color to complement the new background, and mirror the horizontal layout so that elements that were on the left are now on the right and vice versa — this means the main image or photo moves to the opposite side, the headline and text block swap sides, and any badge or offer element moves to the opposite corner. Variant 3 applies these changes from the default: shift the background to a light or neutral tone (cream, warm white, light gray) with dark text instead of light text, change the accent color to a warm tone such as rust, gold, or deep teal depending on the template, and keep the original layout orientation (not mirrored) but change the offer badge shape from rounded rectangle to circular or vice versa, and change the divider line style from solid to dashed or double. All changes must be purely cosmetic. No text content, business information, phone numbers, addresses, pricing, or QR codes should be altered in any way.
+
+STEP 4 — APPLY VARIANTS TO RENDERING
+
+Update the template rendering logic so that it reads the assigned variant for each ad slot and applies the correct color and layout rules before rendering. The variant application should work for both the live postcard preview and any generated output. Make sure the front side and back side are tracked independently — an ad on the front side should only compare against other front side ads, and an ad on the back side should only compare against other back side ads.
+
+STEP 5 — VERIFY
+
+After building, create or find at least two ad slots on the same postcard side using the same template and confirm that they render with visually distinct color palettes and mirrored or altered layouts. Confirm that the business content of both ads is completely unchanged. Confirm that reloading the page does not cause variants to reassign. Report back with a summary of every file changed.
