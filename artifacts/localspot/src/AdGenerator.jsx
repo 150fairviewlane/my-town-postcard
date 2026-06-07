@@ -245,8 +245,10 @@ style={{ color: dark ? "rgba(255,255,255,0.7)" : "#666", fontSize: 7*scale, marg
 function PhotoBoldTemplate({ data, sizeKey, onEdit, onFontSizeChange, onWidthChange, variant = 1 }) {
 const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
 const vc = VARIANT_CFG["photo-bold"][variant] || {};
-const overlayDark = vc.overlayDark || ind.colors.dark;
+const overlayGradient = vc.overlayGradient ||
+  `linear-gradient(180deg, ${ind.colors.dark}99 0%, ${ind.colors.dark}55 40%, ${ind.colors.dark}f0 100%)`;
 const bulletColor = vc.bulletColor || ind.colors.primary;
+const logoBottom = !!vc.logoBottom;
 const photo = data.photo || ind.photos[0];
 const isXL = sizeKey === "XL", isL = sizeKey === "L", isM = sizeKey === "M", isS = sizeKey === "S";
 const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.65;
@@ -269,9 +271,9 @@ onWidthChange,
 return (
 <div style={{ width: "100%", height: "100%", position: "relative", overflow: "hidden", fontFamily: "Georgia, serif" }}>
 <img src={photo} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-<div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${overlayDark}99 0%, ${overlayDark}55 40%, ${overlayDark}f0 100%)` }} />
-  {/* Top: logo + name */}
-  <div style={{ position: "absolute", top: 0, left: 0, right: 0, padding: `${10*fScale}px ${12*fScale}px`, display: "flex", alignItems: "center", gap: 8*fScale }}>
+<div style={{ position: "absolute", inset: 0, background: overlayGradient }} />
+  {/* Logo + name — top by default, bottom for v2 (reversed gradient) */}
+  <div style={{ position: "absolute", [logoBottom ? "bottom" : "top"]: 0, left: 0, right: 0, padding: `${10*fScale}px ${12*fScale}px`, display: "flex", alignItems: "center", gap: 8*fScale }}>
     <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji} size={36*fScale} bg={`${ind.colors.primary}cc`} color="#fff" />
     <div style={{ flex: 1, minWidth: 0 }}>
       <EditableText value={data.businessName} onChange={edit("businessName")} {...ef("businessName")}
@@ -924,8 +926,15 @@ export const TEMPLATES = {
 export const VARIANT_CFG = {
   "photo-bold": {
     1: {},
-    2: { overlayDark: "rgba(0,0,0,0.35)", bulletColor: "#f59e0b" },
-    3: { overlayDark: "rgba(0,0,0,0.70)", bulletColor: "#ffffff" },
+    2: {
+      overlayGradient: "linear-gradient(0deg, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.35) 50%, rgba(0,0,0,0.12) 100%)",
+      bulletColor: "#f59e0b",
+      logoBottom: true,
+    },
+    3: {
+      overlayGradient: "linear-gradient(135deg, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.50) 50%, rgba(0,0,0,0.92) 100%)",
+      bulletColor: "#ffffff",
+    },
   },
   "split-clean": {
     1: {},
@@ -949,9 +958,16 @@ export const VARIANT_CFG = {
   },
 };
 
+// Canonical grid position ranks — matches the visual left→right, top→bottom order
+// for each side. Used to assign variants in a deterministic, layout-aware order.
+const CANONICAL_GRID_RANK = Object.fromEntries(
+  ["mb","dn","re","l1","l2","l3","l4","bxl","bxl2","bxl3","bm1","bm2","bm3","bm4","bs1"]
+    .map((ga, i) => [ga, i])
+);
+
 // Assign variant numbers (1|2|3) to spots that share the same template key.
-// Deterministic: sorted by spot id so the assignment never changes between renders.
-// Returns { [spotId]: variantNumber }.
+// Deterministic: sorted by canonical grid-area position (left→right, top→bottom),
+// with spot.id as a stable tiebreak. Returns { [spotId]: variantNumber }.
 export function assignTemplateVariants(spots) {
   const byTemplate = {};
   spots.forEach((s) => {
@@ -962,7 +978,11 @@ export function assignTemplateVariants(spots) {
   });
   const map = {};
   Object.values(byTemplate).forEach((group) => {
-    const sorted = [...group].sort((a, b) => a.id - b.id);
+    const sorted = [...group].sort((a, b) => {
+      const ra = CANONICAL_GRID_RANK[a.gridArea] ?? 999;
+      const rb = CANONICAL_GRID_RANK[b.gridArea] ?? 999;
+      return ra !== rb ? ra - rb : a.id - b.id;
+    });
     sorted.forEach((spot, i) => {
       const n = i + 1;
       const v = n <= 3 ? n : n % 2 === 0 ? 2 : 3;
