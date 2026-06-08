@@ -491,7 +491,8 @@ export function buildAdPrompt(
     "CRITICAL: All text must appear exactly as specified — zero tolerance for errors on phone numbers, prices, business name, or address. " +
     (fullAddress !== "(none)" ? `Address "${fullAddress}" MUST appear in the footer. ` : "") +
     "No website URL text anywhere. Business name: each word appears exactly once across the entire ad. " +
-    "Each menu/service item exactly once. Special offer in its own distinct coupon zone — never listed alongside menu items.\n\n" +
+    "Each menu/service item exactly once. Special offer in its own distinct coupon zone — never listed alongside menu items. " +
+    "PRICES: If a menu or service item has no price, do NOT add one — never invent or append a dollar amount to any item unless that exact price appears verbatim in BUSINESS DETAILS.\n\n" +
     "BUSINESS DETAILS:\n" + businessBlock
   );
 }
