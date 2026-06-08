@@ -1774,7 +1774,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
   <!-- LEFT: FORM -->
   <div class="fpanel">
     <div>
-      <div class="ptitle">My Town Ad Generator</div>
+      <div class="ptitle">Ad Generator</div>
       <div class="psub">Fill in your details, pick a photo, and let our AI generate your finished postcard ad &mdash; no console, no file attachments.</div>
     </div>
 
