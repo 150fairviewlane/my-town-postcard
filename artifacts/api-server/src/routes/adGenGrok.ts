@@ -1583,9 +1583,9 @@ html,body{height:100%;overflow:hidden}
 }
 body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink);display:flex;flex-direction:column}
 
-.hdr{background:var(--xai);padding:0 28px;display:flex;align-items:center;justify-content:space-between;height:54px;border-bottom:3px solid var(--burg);flex-shrink:0}
-.brand{font-family:'Bebas Neue',sans-serif;font-size:27px;color:#fff;letter-spacing:.08em;display:flex;align-items:center;gap:10px}
-.brand span{color:#C8A882}
+.hdr{background:#fff;padding:0 28px;display:flex;align-items:center;justify-content:space-between;height:54px;border-bottom:3px solid var(--burg);flex-shrink:0}
+.brand{font-family:'Bebas Neue',sans-serif;font-size:27px;color:var(--xai);letter-spacing:.08em;display:flex;align-items:center;gap:10px}
+.brand span{color:var(--burg)}
 .brand-logo{height:42px;width:auto;display:block;flex-shrink:0}
 .hdr-badge{background:var(--burg);color:#fff;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:4px 12px;border-radius:20px;display:flex;align-items:center;gap:6px}
 
