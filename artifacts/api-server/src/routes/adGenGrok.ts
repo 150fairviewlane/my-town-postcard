@@ -343,6 +343,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "home-elegance":     "home_services_no_text_1780946323885.png",
       "sage-organic":      "IMG_0832_1780946925550.png",
       "purple-sage":       "IMG_0836_1780951148325.png",
+      "brush-stroke":      "IMG_0839_1780955044987.png",
     };
     const landscapeFiles: Record<string, string> = {
       "parchment-classic": parchmentLandscape,
@@ -353,6 +354,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "home-elegance":     "image_1780946327957.png",
       "sage-organic":      "image_1780946917886.png",
       "purple-sage":       "IMG_0837_1780951148325.png",
+      "brush-stroke":      "IMG_0838_1780955044987.png",
     };
     const fileMap = isLandscape ? landscapeFiles : portraitFiles;
     const tmplFilename = fileMap[templateKey] ?? fileMap["parchment-classic"]!;
@@ -425,6 +427,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
                   ? "the full landscape postcard layout on a cream/beige textured background with dark olive/sage green and kraft paper accents. Upper-left: large dark olive green circle with botanical leaf sprig illustrations. Upper-left area: large white/cream rounded-rectangle business-name zone; below it a sweeping dark olive green paint brush stroke. Upper-right: large hero photo (natural/organic interior, plants, natural light) filling a curved wave cutout shape, no hard border. Middle row: four dark olive green circular icon badges (award ribbon, people/team, handshake, shield/checkmark) with thin vertical dividers; four equal cream rounded-rect service card tiles below. Lower olive wave band: three equal-width landscape photos side by side (interior, shop, garden/outdoor). Lower-right: kraft paper textured rectangle with dashed stitched border and scissors icon (coupon zone). Footer: dark olive strip with location pin icon + address field left, QR code right. Reproduce exactly."
                   : templateKey === "purple-sage"
                   ? "the full landscape postcard layout on a cream/beige background with muted lavender-purple and sage green accents. Upper-left: large muted purple decorative circle + dot grid pattern; sage green botanical leaf sprig (left, decorative). Large white/cream rounded-rect business-name panel upper-left; sweeping purple paint brush stroke below it. Upper-right: large circular hero photo in sage green ring border. Lower-right: two smaller overlapping circular photos (kitchen, outdoor patio). Middle: four muted sage green circular icon badges (professional, award, team, shield) with thin dividers; four cream rounded-rect service tiles below. Lower section: muted purple wave/blob band, sage green brush stroke. Footer: dark purple strip — phone icon + oval pill left, location pin + oval pill center, QR right. Reproduce exactly."
+                  : templateKey === "brush-stroke"
+                  ? "the full landscape postcard layout on a cream/parchment background with dark olive green and charcoal accents. Left half: large circular hero photo (house exterior + tool bag foreground) framed by a dark organic brush-stroke swoosh curving around the left side. Upper-right: dark olive green hexagonal house-icon badge (logo zone). A wide horizontal olive green paint brush stroke sweeps across the upper-right area — this is the headline/business-name zone. Thin dark horizontal rule with a small diamond separator below the brush stroke. Below: a horizontal row of four service columns, each with a circular olive-bordered icon badge on top (house, paint roller, crossed tools, water-tap faucet) and a short dark charcoal horizontal brush-stroke label in white below it. Footer: wide dark charcoal curved-top band spanning full width — circular phone icon + field left, circular location pin + field center, QR code square right. Reproduce every zone, the cream/olive/charcoal palette, the circular photo frame, and the footer exactly."
                   : "the full landscape postcard layout on a soft cream/off-white background. Upper-left: clinic/office photo inside an organic curved teal blob shape. Upper-center: large wide rounded-rectangle white headline panel; below it a teal pill-shaped tagline bar. Middle: four equal-width service panels with circular teal icon badges on top and white rounded-rectangle text boxes below. Lower-left: reception photo in an organic teal blob. Lower-right: stethoscope on a dark teal circular blob, plus a small white rounded QR box. Right edge: anatomical spine model prop. Footer: dark teal bar — circular phone icon badge + phone left; circular location pin icon badge + address right. Reproduce every zone, blob shape, and layout exactly.";
       refLines.push(`  • IMAGE ${imgIdx++} (LANDSCAPE TEMPLATE) — ${lsTmplDesc}`);
     }
@@ -504,6 +508,15 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
                 "Lower section: muted lavender-purple organic wave/blob band spanning full width; sage green brush stroke accent. " +
                 "Footer: dark purple strip — phone icon + oval pill field left, location pin icon + oval pill field center, QR code right. " +
                 "Reproduce every zone, the cream/purple/sage color scheme, all circular photo frames, and the footer exactly."
+              : templateKey === "brush-stroke"
+              ? "  • IMAGE 1 (TEMPLATE) — a home-services postcard on a cream/parchment background with dark olive green and charcoal accents. " +
+                "Left half: large circular hero photo (craftsman house exterior with tool bag foreground, lush greenery) framed by a dark organic brush-stroke swoosh curving around the left side of the circle — no hard rectangular border outside the circle. " +
+                "Upper-right: a dark olive green hexagonal house-icon badge (this is the logo zone). " +
+                "A wide horizontal olive green paint brush stroke sweeps across the upper-right — this is the business-name headline zone. " +
+                "Below the brush stroke: a thin dark horizontal rule with a small olive diamond separator in the center. " +
+                "Middle-right: a vertical column of four service rows — each row has a circular olive-bordered icon badge (house, paint roller, crossed wrench/tools, water-tap faucet) on the left and a short dark charcoal horizontal brush-stroke shape with white text on the right. " +
+                "Footer: wide dark charcoal curved-top band spanning full width — circular phone icon + text field left, circular location pin + text field center, QR code square right. " +
+                "Reproduce every zone, the cream/olive/charcoal color scheme, all brush-stroke shapes, the circular photo frame, and the footer exactly."
             : templateKey === "health-wellness"
               ? "  • IMAGE 1 (TEMPLATE) — a health and wellness postcard on a soft cream/off-white background with teal and sage green accents. " +
                 "Upper section: two overlapping clinic/office photos arranged inside organic curved teal blob shapes that bleed off the top and right edges. " +
@@ -681,6 +694,55 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "  • NEVER repeat any word from the business name\n" +
       "  • TEXT LEGIBILITY: every text element must be clearly readable — dark text on light zones, light text on dark zones. If any zone background is ambiguous, add a semi-opaque backing panel. Subtle 1px shadows are NOT sufficient.\n" +
       "  • NEVER render website URL as text"
+    )
+    : isLandscape && templateKey === "brush-stroke"
+    ? (
+      "LAYOUT — reproduce the Brush Stroke LANDSCAPE template zones exactly:\n\n" +
+
+      "  ZONE 1 — HERO PHOTO (left half, large circular frame with dark swoosh border):\n" +
+      (hasPhoto
+        ? `    Composite IMAGE 2 into the large circular photo frame on the left half — a dark organic brush-stroke swoosh curves around the left side; keep it visible as a framing element. Blend edges naturally into the circular mask — no hard rectangular border. Professional cinematic lighting.\n\n`
+        : `    Generate a photorealistic hero scene for this home-services business — a craftsman house exterior with a professional tool bag in the foreground, lush greenery. Place inside the large circular frame with the dark organic swoosh curving around the left. No rectangular border.\n\n`) +
+
+      "  ZONE 2 — LOGO BADGE (upper-right, dark olive green hexagonal badge):\n" +
+      (hasLogo
+        ? `    Place IMAGE ${logoImg} centered inside the dark olive green hexagonal house-icon badge upper-right. Scale to fit with clear margin — preserve exact logo colors and proportions.\n` +
+          (d.tagline ? `    Tagline: "${d.tagline}" below the badge in clean italic, dark charcoal.\n` : "") +
+          "\n"
+        : d.tagline
+          ? `  ZONE 2B — TAGLINE:\n    "${d.tagline}" in clean italic, dark charcoal, below the hexagonal badge.\n\n`
+          : "") +
+
+      "  ZONE 3 — BUSINESS NAME (inside the wide horizontal olive green brush-stroke band, upper-right):\n" +
+      `    "${d.bizName}" in bold condensed all-caps sans-serif — large, white or cream, clearly legible against the olive green background.\n` +
+      `    CRITICAL: Render the name EXACTLY — "${d.bizName}". Each word EXACTLY ONCE. NEVER repeat any word.\n` +
+      "    Below the band: a thin dark horizontal rule with a small olive diamond separator in the center.\n\n" +
+
+      (menuStr !== "  (none)"
+        ? `  ZONE 4 — SERVICE COLUMNS (EXACTLY ${menuCount} column${menuCount !== 1 ? "s" : ""}, horizontal row below the diamond rule, right side):\n` +
+          `    Render EXACTLY ${menuCount} column${menuCount !== 1 ? "s" : ""}. Do NOT add more columns or place the Special Offer here.\n` +
+          "    Each column has TWO elements stacked:\n" +
+          "    TOP: a circular olive-bordered icon badge with a relevant home-services icon (house, paint roller, crossed wrench/tools, faucet/water-tap, leaf, lightbulb, etc.)\n" +
+          "    BOTTOM: a short dark charcoal horizontal brush-stroke shape with the service name in white or cream text\n" +
+          `    Services: ${menuStr}\n` +
+          "    Each service exactly once — never repeat.\n\n"
+        : "  ZONE 4 — SERVICE COLUMNS (horizontal row, right side):\n" +
+          "    Four columns. Each: circular olive-bordered icon badge on top (house, paint roller, crossed tools, water-tap) + dark charcoal brush-stroke label with white text below.\n\n") +
+
+      (d.offer
+        ? `  ZONE 5 — SPECIAL OFFER (visually distinct zone — a white rounded-rect or lightly outlined box, separate from service columns):\n` +
+          `    "${d.offer}" in bold dark or olive text, prominently inside this dedicated zone.\n` +
+          (d.offerFine ? `    Fine print: "${d.offerFine}" smaller below.\n` : "") +
+          "    NEVER place a QR code inside or adjacent to this offer zone.\n\n"
+        : "") +
+
+      buildFooterZone(d.phone || "", fullAddress, "circular-badge") +
+      "TYPOGRAPHIC RULES:\n" +
+      "  • Business name: bold condensed all-caps sans-serif, white/cream inside the olive green brush-stroke band\n" +
+      "  • Service labels: white/cream text inside dark charcoal brush-stroke shapes\n" +
+      "  • NEVER repeat any word from the business name\n" +
+      "  • NEVER render the website URL as visible text\n" +
+      "  • NEVER render any hex color code or CSS value as visible text anywhere in the ad"
     )
     : isLandscape
     ? (
@@ -897,6 +959,59 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "  • Fine print: smallest text, still legible\n" +
       "  • NEVER render the website URL as visible text\n" +
       "  • NEVER render any hex color code (e.g. #0F1C10, #FFFFFF), CSS value, or design metadata as visible text anywhere in the ad"
+    )
+    : templateKey === "brush-stroke"
+    ? (
+      "LAYOUT — reproduce the Brush Stroke template zones exactly as described:\n\n" +
+
+      "  ZONE 1 — HERO PHOTO (left half, inside the large circular frame with dark swoosh border):\n" +
+      (hasPhoto
+        ? `    Take IMAGE 2 and SEAMLESSLY COMPOSITE it into the large circular photo frame on the left half:\n` +
+          "    • The photo sits inside a perfect circle. A dark organic brush-stroke swoosh curves around the left side — keep this dark swoosh visible as a framing element.\n" +
+          "    • Blend edges naturally into the circular mask — no hard rectangular border outside the circle.\n" +
+          "    • Professional lighting, cinematic quality.\n\n"
+        : `    Generate a photorealistic hero scene for this home-services business (craftsman house exterior with professional tool bag foreground, lush greenery) inside the large circular frame with the dark organic swoosh curving around the left. No rectangular border.\n\n`) +
+
+      "  ZONE 2 — LOGO BADGE (upper-right, dark olive green hexagonal badge):\n" +
+      (hasLogo
+        ? `    Place IMAGE ${logoImg} centered inside the dark olive green hexagonal house-icon badge in the upper-right. Scale to fit with clear margin — preserve exact logo colors and proportions. The hexagonal badge retains its dark olive green border and house-icon styling.\n` +
+          (d.tagline ? `    Tagline: "${d.tagline}" below the badge in clean italic, dark charcoal.\n` : "") +
+          "\n"
+        : d.tagline
+          ? `  ZONE 2B — TAGLINE (upper-right, below hexagonal badge):\n    "${d.tagline}" in clean italic, dark charcoal.\n\n`
+          : "") +
+
+      "  ZONE 3 — BUSINESS NAME (inside the wide horizontal olive green brush-stroke band, upper-right):\n" +
+      `    Render "${d.bizName}" in bold condensed all-caps sans-serif — large, white or cream, clearly legible against the olive green brush-stroke background.\n` +
+      `    CRITICAL: Render the name EXACTLY — "${d.bizName}". Each word EXACTLY ONCE. NEVER repeat.\n` +
+      "    Below the brush-stroke band: a thin dark horizontal rule with a small olive diamond separator in the center.\n\n" +
+
+      (menuStr !== "  (none)"
+        ? `  ZONE 4 — SERVICE ROWS (EXACTLY ${menuCount} row${menuCount !== 1 ? "s" : ""}, stacked vertically on the right side below the diamond rule):\n` +
+          `    Render EXACTLY ${menuCount} row${menuCount !== 1 ? "s" : ""}. Do NOT add more rows or place the Special Offer in any row.\n` +
+          "    Each row has TWO elements side by side:\n" +
+          "    LEFT: a circular olive-bordered icon badge with a relevant home-services icon (house, paint roller, crossed wrench/tools, faucet/water-tap, leaf, lightbulb, etc.)\n" +
+          "    RIGHT: a short dark charcoal horizontal brush-stroke shape with the service name in white or cream text inside it\n" +
+          `    Services: ${menuStr}\n` +
+          "    Each service exactly once — never repeat.\n\n"
+        : "  ZONE 4 — SERVICE ROWS (right side, stacked vertically):\n" +
+          "    Four rows stacked. Each: circular olive-bordered icon badge (house, paint roller, crossed tools, water-tap faucet) on the left + dark charcoal brush-stroke shape with white service label on the right.\n\n") +
+
+      (d.offer
+        ? "  ZONE 5 — SPECIAL OFFER (visually distinct area — white rounded-rect or lightly outlined box, clearly separated from service rows):\n" +
+          `    Render "${d.offer}" in bold dark or olive text inside this dedicated offer zone.\n` +
+          (d.offerFine ? `    Fine print: "${d.offerFine}" smaller below.\n` : "") +
+          "    NEVER place a QR code inside or adjacent to this offer zone.\n\n"
+        : "") +
+
+      buildFooterZone(d.phone || "", fullAddress, "circular-badge") +
+      "TYPOGRAPHIC RULES:\n" +
+      "  • Business name: bold condensed all-caps sans-serif, white or cream inside the olive green brush-stroke band\n" +
+      "  • Service labels: white or cream text inside dark charcoal brush-stroke shapes\n" +
+      "  • NEVER repeat any word from the business name\n" +
+      "  • Fine print: smallest text, still legible\n" +
+      "  • NEVER render the website URL as visible text\n" +
+      "  • NEVER render any hex color code or CSS value as visible text anywhere in the ad"
     )
     : templateKey === "health-wellness"
     ? (
@@ -1526,6 +1641,7 @@ router.get("/grok-ad-generator/template-preview/:key", (req, res) => {
     "home-elegance":                 "home_services_no_text_1780946323885.png",
     "sage-organic":                  "IMG_0832_1780946925550.png",
     "purple-sage":                   "IMG_0836_1780951148325.png",
+    "brush-stroke":                  "IMG_0839_1780955044987.png",
     "surprise-me":                   "surprise_me_template.png",
     // landscape variants
     "parchment-classic-landscape":   "parchment_classic_landscape_1779162178190.png",
@@ -1536,6 +1652,7 @@ router.get("/grok-ad-generator/template-preview/:key", (req, res) => {
     "home-elegance-landscape":       "image_1780946327957.png",
     "sage-organic-landscape":        "image_1780946917886.png",
     "purple-sage-landscape":         "IMG_0837_1780951148325.png",
+    "brush-stroke-landscape":        "IMG_0838_1780955044987.png",
   };
   const filename = fileMap[key];
   if (!filename) { res.status(404).send("Not found"); return; }
@@ -1884,6 +2001,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
             <div class="tmpl-card-sub">Lavender &middot; Sage green &middot; Circular photos</div>
             <div class="tmpl-sel-badge" id="badge-purple-sage" style="display:none">&#10003; Selected</div>
           </div>
+          <div class="tmpl-card" id="tmpl-brush-stroke" onclick="selectTemplate('brush-stroke')">
+            <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/brush-stroke" alt="Brush Stroke" onerror="this.style.background='#4a5a2a'">
+            <div class="tmpl-card-name">Brush Stroke</div>
+            <div class="tmpl-card-sub">Olive &amp; parchment &middot; Home services &middot; Circular photo</div>
+            <div class="tmpl-sel-badge" id="badge-brush-stroke" style="display:none">&#10003; Selected</div>
+          </div>
           <div class="tmpl-card" id="tmpl-surprise-me" onclick="selectTemplate('surprise-me')">
             <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/surprise-me" alt="Surprise Me" onerror="this.style.background='linear-gradient(135deg,#7b1418,#1b2a4a,#1c3a1c)';this.style.display='flex';this.style.alignItems='center';this.style.justifyContent='center';this.innerHTML='<span style=font-size:2em>&#10067;</span>'">
             <div class="tmpl-card-name">Surprise Me</div>
@@ -1940,6 +2063,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
             <div class="tmpl-card-name">Purple Sage</div>
             <div class="tmpl-card-sub">Lavender &middot; Sage green &middot; Circular photos</div>
             <div class="tmpl-sel-badge" id="badge-ls-purple-sage" style="display:none">&#10003; Selected</div>
+          </div>
+          <div class="tmpl-card" id="tmpl-ls-brush-stroke" onclick="selectTemplate('brush-stroke')">
+            <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/brush-stroke-landscape" alt="Brush Stroke" onerror="this.style.background='#4a5a2a'">
+            <div class="tmpl-card-name">Brush Stroke</div>
+            <div class="tmpl-card-sub">Olive &amp; parchment &middot; Home services &middot; Circular photo</div>
+            <div class="tmpl-sel-badge" id="badge-ls-brush-stroke" style="display:none">&#10003; Selected</div>
           </div>
           <div class="tmpl-card" id="tmpl-ls-surprise-me" onclick="selectTemplate('surprise-me')">
             <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/surprise-me" alt="Surprise Me" onerror="this.style.background='linear-gradient(135deg,#7b1418,#1b2a4a,#1c3a1c)';this.style.display='flex';this.style.alignItems='center';this.style.justifyContent='center';this.innerHTML='<span style=font-size:2em>&#10067;</span>'">
