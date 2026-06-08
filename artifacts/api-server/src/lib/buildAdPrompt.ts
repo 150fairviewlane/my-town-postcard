@@ -8,34 +8,34 @@
 
 export const FONT_VARIANTS: Record<string, string[]> = {
   "parchment-classic": [
-    "Bold condensed slab serif headline (Rockwell/Clarendon style) + warm orange flowing script on one English category noun only.",
-    "Strong display serif headline (Playfair/Bodoni style), all-caps; refined italic serif accent for one category noun — no rounded script.",
-    "Geometric sans-serif headline (Futura/Raleway ExtraBold style), all-caps, zero ornamentation. No script accent.",
+    "VARIANT 1 — RUSTIC WARM: Bold condensed slab serif headline (Rockwell/Clarendon style) + warm orange flowing script on one English category noun only. Rustic and warm.",
+    "VARIANT 2 — ELEGANT SERIF: Tall refined display serif headline (Playfair Display Black/Bodoni style), mixed-case with generous letter-spacing. Fine italic serif for the category noun — no rounded script. Premium editorial feel.",
+    "VARIANT 3 — BOLD MODERN: Ultra-bold geometric sans-serif headline (Futura ExtraBold/Montserrat Black style), all-caps, tight tracking. No script accent. Clean and contemporary.",
   ],
   "made-fresh": [
-    "Bold condensed slab serif headline (Rockwell/Clarendon style) + warm chalk-style script (Pacifico style) for one English category noun.",
-    "Rounded display sans-serif headline (Nunito ExtraBold/Poppins Black style) + bouncy marker-style script (Satisfy style) for one category noun.",
-    "Vintage wood-type display (Alfa Slab One style), all-caps, blocky poster lettering. No script accent.",
+    "VARIANT 1 — CHALK ARTISAN: Bold condensed slab serif headline (Rockwell/Clarendon style) + warm chalk-style script (Pacifico style) for one English category noun. Warm and handcrafted.",
+    "VARIANT 2 — PLAYFUL ROUNDED: Rounded display sans-serif headline (Nunito ExtraBold/Poppins Black style) + bouncy marker-style script (Satisfy style) for one category noun. Friendly and energetic.",
+    "VARIANT 3 — VINTAGE POSTER: Vintage wood-type display (Alfa Slab One style), all-caps, blocky poster lettering. No script accent. Bold and retro.",
   ],
   "neighborhood-pro": [
-    "Bold condensed slab serif headline (Impact/Anton style), all-caps + bright lime-green flowing script for one English service-category noun.",
-    "Extra-bold industrial sans headline (Barlow Condensed/Oswald Bold style), all-caps + dark forest-green casual script for one service noun.",
-    "Heavy display grotesque headline (Teko Bold style), all-caps full-width. No script accent.",
+    "VARIANT 1 — IMPACT SLAB: Bold condensed slab serif headline (Impact/Anton style), all-caps + bright lime-green flowing script for one English service-category noun.",
+    "VARIANT 2 — INDUSTRIAL SANS: Extra-bold industrial sans headline (Barlow Condensed/Oswald Bold style), all-caps + dark forest-green casual script for one service noun.",
+    "VARIANT 3 — HEAVY GROTESQUE: Heavy display grotesque headline (Teko Bold style), all-caps full-width. No script accent. Maximum impact.",
   ],
   "at-your-service": [
-    "Bold condensed slab serif headline (Rockwell/Josefin Slab Bold style), all-caps + gold/yellow flowing script for one English service-category noun.",
-    "Strong military-style condensed headline (Bebas Neue/Oswald ExtraBold style), all-caps + copper-toned elegant italic for one category noun.",
-    "Geometric block sans headline (Exo 2 ExtraBold style), all-caps. No script accent.",
+    "VARIANT 1 — SLAB SCRIPT: Bold condensed slab serif headline (Rockwell/Josefin Slab Bold style), all-caps + gold/yellow flowing script for one English service-category noun.",
+    "VARIANT 2 — MILITARY CONDENSED: Strong military-style condensed headline (Bebas Neue/Oswald ExtraBold style), all-caps + copper-toned elegant italic for one category noun.",
+    "VARIANT 3 — GEOMETRIC BLOCK: Geometric block sans headline (Exo 2 ExtraBold style), all-caps. No script accent. Technical and authoritative.",
   ],
   "health-wellness": [
-    "Bold condensed sans-serif headline (Montserrat ExtraBold style), all-caps. No script accent.",
-    "Refined humanist sans-serif headline (Lato Bold/Raleway SemiBold style), mixed-case + soft sage-green cursive for one wellness noun only.",
-    "Elegant display serif headline (Cormorant Garamond Bold style), all-caps. No script accent.",
+    "VARIANT 1 — CLEAN SANS: Bold condensed sans-serif headline (Montserrat ExtraBold style), all-caps. No script accent. Clinical and trustworthy.",
+    "VARIANT 2 — HUMANIST SCRIPT: Refined humanist sans-serif headline (Lato Bold/Raleway SemiBold style), mixed-case + soft sage-green cursive for one wellness noun only. Warm and approachable.",
+    "VARIANT 3 — EDITORIAL SERIF: Elegant display serif headline (Cormorant Garamond Bold style), all-caps. No script accent. Sophisticated and premium.",
   ],
   "surprise-me": [
-    "Bold editorial display: strong condensed serif headline (Playfair Display Black/Rockwell style), all-caps, dominant weight. No script accent.",
-    "Modern geometric: ultra-clean bold sans-serif headline (Futura ExtraBold/Bebas Neue style), all-caps, zero ornamentation.",
-    "Vintage artisan: expressive slab or wood-type display (Alfa Slab One style), all-caps, textured feel. No script accent.",
+    "VARIANT 1 — EDITORIAL SERIF: Bold editorial display, strong condensed serif headline (Playfair Display Black/Rockwell style), all-caps, dominant weight. No script accent.",
+    "VARIANT 2 — GEOMETRIC MODERN: Ultra-clean bold sans-serif headline (Futura ExtraBold/Bebas Neue style), all-caps, zero ornamentation.",
+    "VARIANT 3 — VINTAGE ARTISAN: Expressive slab or wood-type display (Alfa Slab One style), all-caps, textured feel. No script accent.",
   ],
 };
 
@@ -47,34 +47,67 @@ export const COUPON_VARIANTS: string[] = [
 
 export const COLOR_VARIANTS: Record<string, string[]> = {
   "parchment-classic": [
-    "Color palette A — Primary: deep burgundy. Background: warm ivory. Accent/script: warm orange-gold. Footer: near-black.",
-    "Color palette B — Primary: rich chocolate brown. Background: parchment beige. Accent/script: copper-amber. Footer: dark espresso.",
-    "Color palette C — Primary: forest-ink dark green. Background: cream. Accent/script: warm amber. Footer: near-black.",
+    "VARIANT 1 COLORS — WARM PARCHMENT: Warm ivory/parchment background. Deep dark brown/near-black brush stroke band. Orange-amber pennant ribbon. Orange circular checkmark badges. Dashed dark coupon box. Dark footer.",
+    "VARIANT 2 COLORS — INVERTED DARK: Deep navy or near-black background replaces parchment. Brush stroke band in warm ivory/cream. Gold/amber primary accent replaces orange throughout. Pennant ribbon in deep gold. Checkmark badges in gold. Coupon box with gold dashed border on dark background. Footer in darkest navy. Mood: premium and dramatic.",
+    "VARIANT 3 COLORS — FRESH GREEN: Clean bright white background. Brush stroke band in deep forest green. Pennant ribbon in forest green. Checkmark badges in lime green. Coupon box with bold solid green border and drop shadow. Footer in deep forest green. Mood: fresh and contemporary.",
   ],
   "made-fresh": [
-    "Color palette A — Primary: warm charcoal. Chalkboard: near-black. Accent: golden yellow. Highlight: fresh white.",
-    "Color palette B — Primary: tomato red. Background: rustic cream. Accent: basil green. Warm highlight: honey tan.",
-    "Color palette C — Primary: navy blue. Background: warm white. Accent: bright coral. Footer: deep navy.",
+    "VARIANT 1 COLORS — WARM NATURAL: Warm charcoal primary. Near-black chalkboard. Golden yellow accent. Fresh white highlight. Natural wood tones throughout.",
+    "VARIANT 2 COLORS — BOLD BISTRO: Tomato red primary. Rustic cream background. Basil green accent. Honey tan warm highlight. Mediterranean warmth.",
+    "VARIANT 3 COLORS — CLEAN NAVY: Navy blue primary. Warm white background. Bright coral accent. Deep navy footer. Crisp and fresh.",
   ],
   "neighborhood-pro": [
-    "Color palette A — Background: forest green. Panels/text: clean white. Accent/script: lime green. Footer: dark forest.",
-    "Color palette B — Background: deep navy. Panels/text: white. Accent/script: electric blue. Footer: near-black.",
-    "Color palette C — Background: charcoal. Panels/text: white. Accent/script: bold orange. Footer: near-black.",
+    "VARIANT 1 COLORS — FOREST PRO: Deep forest green background. Clean white panels and text. Lime green accent and script. Dark forest footer.",
+    "VARIANT 2 COLORS — DEEP NAVY: Deep navy background replaces forest green. White panels and text. Electric blue accent replaces lime green. Near-black footer. Professional and bold.",
+    "VARIANT 3 COLORS — CHARCOAL ORANGE: Charcoal/dark concrete background replaces forest green. White panels and text. Bold orange accent replaces lime green. Near-black footer. High energy and industrial.",
   ],
   "at-your-service": [
-    "Color palette A — Primary: dark navy. Background: light gray. Accent: gold/yellow. Footer: near-black navy.",
-    "Color palette B — Primary: deep slate. Background: off-white. Accent: copper. Footer: darkest slate.",
-    "Color palette C — Primary: charcoal. Background: white. Accent: steel blue. Footer: near-black.",
+    "VARIANT 1 COLORS — NAVY GOLD: Dark navy primary. Light gray/cream background. Gold/yellow accent. Near-black navy footer.",
+    "VARIANT 2 COLORS — SLATE COPPER: Deep slate primary replaces navy. Off-white background. Copper accent replaces gold. Darkest slate footer. Warmer and more refined.",
+    "VARIANT 3 COLORS — CHARCOAL STEEL: Charcoal primary replaces navy. White background. Steel blue accent replaces gold. Near-black footer. Modern and technical.",
   ],
   "health-wellness": [
-    "Color palette A — Primary: teal. Background: cream/off-white. Accent: sage green. Footer: dark teal.",
-    "Color palette B — Primary: deep teal. Background: warm white. Accent: soft coral. Footer: darkest teal.",
-    "Color palette C — Primary: forest teal. Background: light mint. Accent: warm gold. Footer: deep forest teal.",
+    "VARIANT 1 COLORS — TEAL WELLNESS: Teal primary (#3d8b9c). Cream/off-white background. Sage green accent. Dark teal footer.",
+    "VARIANT 2 COLORS — DEEP TEAL CORAL: Deep teal primary, slightly darker than variant 1. Warm white background. Soft coral accent replaces sage green — warmer and more energetic. Darkest teal footer.",
+    "VARIANT 3 COLORS — FOREST GOLD: Forest teal primary. Light mint background. Warm gold accent replaces sage green. Deep forest teal footer. Premium and distinctive.",
   ],
   "surprise-me": [
-    "Color palette A — Deep burgundy/crimson + warm ivory + antique gold accents. Footer: near-black.",
-    "Color palette B — Deep navy/charcoal + crisp white + electric blue or vivid coral accent. Footer: near-black navy.",
-    "Color palette C — Deep forest green + warm cream + warm amber accents. Footer: near-black.",
+    "VARIANT 1 COLORS — RICH BURGUNDY: Deep burgundy/crimson dominant. Warm ivory background. Antique gold accents. Near-black footer.",
+    "VARIANT 2 COLORS — NAVY VIVID: Deep navy/charcoal dominant. Crisp white background. Electric blue or vivid coral accent. Near-black navy footer.",
+    "VARIANT 3 COLORS — FOREST AMBER: Deep forest green dominant. Warm cream background. Warm amber accents. Near-black footer.",
+  ],
+};
+
+export const LAYOUT_VARIANTS: Record<string, string[]> = {
+  "parchment-classic": [
+    "VARIANT 1 LAYOUT — STANDARD: Pennant ribbon top-left. Brush stroke band sweeps left to right across upper third. Hero photo right side blending into brush stroke. Service list with circular checkmark badges on left column. Dashed coupon box lower-right. Dark footer full width.",
+    "VARIANT 2 LAYOUT — MIRRORED: Pennant ribbon top-RIGHT instead of top-left. Hero photo on the LEFT side blending into the dark background. Business name and headline on the RIGHT side. Service badges arranged in a 2x2 grid instead of a vertical column. Coupon box lower-LEFT instead of lower-right. Everything is horizontally mirrored from the standard layout.",
+    "VARIANT 3 LAYOUT — STACKED ZONES: No diagonal brush stroke band. Clean horizontal zones instead: top zone contains business name full-width centered. Middle zone contains hero photo full-bleed left with service info in a clean grid right. Bottom zone contains offer/coupon centered above footer. More grid-based and contemporary than the organic brush-stroke default.",
+  ],
+  "made-fresh": [
+    "VARIANT 1 LAYOUT — STANDARD: Wood table background. Plate prop left. Chalkboard sign upper-right. White paint-stroke info panel center. Ticket coupon right.",
+    "VARIANT 2 LAYOUT — CENTER FOCUS: Hero food photo centered and dominant in upper two-thirds. Chalkboard sign repositioned lower-left as a small accent. Business name large and centered above the photo. Service info in a horizontal strip below the photo. Coupon ticket centered at the bottom above footer.",
+    "VARIANT 3 LAYOUT — EDITORIAL GRID: Clean two-column layout on warm background. Left column: business name large + tagline + service list in a vertical stack. Right column: hero photo in a prominent rounded rectangle frame. Coupon as a full-width strip at the bottom above footer. No chalkboard sign.",
+  ],
+  "neighborhood-pro": [
+    "VARIANT 1 LAYOUT — STANDARD: Brush stroke splash upper-left headline zone. Hero photo upper-right. Four diagonal service panels in a horizontal middle row. Offer zone lower-center. Dark footer.",
+    "VARIANT 2 LAYOUT — REVERSED HERO: Hero photo upper-LEFT. Brush stroke headline panel upper-RIGHT. Service panels in a 2x2 grid instead of a horizontal row. Offer/coupon lower-right. Horizontally reverses the standard composition.",
+    "VARIANT 3 LAYOUT — VERTICAL STACK: Full-width hero photo spanning top third. Full-width headline band spanning middle third. Service icons in a single horizontal row with large circular badges below the headline. Coupon full-width above footer. No diagonal cuts.",
+  ],
+  "at-your-service": [
+    "VARIANT 1 LAYOUT — STANDARD: Hexagonal badge upper-left. Gold brush stroke across upper third. Hero photo upper-right blending into background. Navy band center with circular icon row. Dashed coupon box lower-right. Footer.",
+    "VARIANT 2 LAYOUT — CENTERED BADGE: Hexagonal badge centered at the very top. Hero photo as a full-bleed background with a dark semi-transparent overlay. All text, services, and icons overlaid on top of the photo. Coupon box floated center-bottom above footer. Dramatic and immersive.",
+    "VARIANT 3 LAYOUT — HARD SPLIT: Strict vertical split down the center of the card. Left half: solid navy panel containing all text, service list, and the hexagonal badge. Right half: hero photo full-bleed with no overlay. Coupon box overlapping the split line at the bottom, bridging both halves.",
+  ],
+  "health-wellness": [
+    "VARIANT 1 LAYOUT — STANDARD: Organic teal blob shapes frame upper photos. Wide rounded-rectangle headline panel center. Four equal service panels in a horizontal row. Lower blobs + QR box. Dark teal footer.",
+    "VARIANT 2 LAYOUT — CLEAN CLINICAL: No blob shapes — clean rectangular zones only. Hero photo top-right in a crisp rectangle with rounded corners. Headline large and left-aligned top-left. Four service panels in a clean 2x2 grid center. Coupon full-width above footer. More structured and clinical.",
+    "VARIANT 3 LAYOUT — CENTERED HERO: Hero photo centered and large in the upper half, slightly overlapping into the middle zone. Headline centered below photo. Service icons in a single clean horizontal row below headline. Coupon centered above footer. Balanced and symmetrical.",
+  ],
+  "surprise-me": [
+    "VARIANT 1 LAYOUT — Use the selected theme's default layout specification exactly as defined.",
+    "VARIANT 2 LAYOUT — Mirror the selected theme's default layout horizontally. Swap left and right zones. Maintain all other theme characteristics including colors and typography.",
+    "VARIANT 3 LAYOUT — Centered stacked layout regardless of theme: hero photo centered upper half, headline centered below, service icons in a single horizontal row, coupon centered above footer. Override the theme's default layout with this structure.",
   ],
 };
 
@@ -210,11 +243,13 @@ export function buildAdPrompt(
   const fontVariant   = adIndex % 3;
   const couponVariant = (adIndex + 1) % 3;
   const colorVariant  = (adIndex + 2) % 3;
-  const tmplFonts  = FONT_VARIANTS[templateKey]  ?? FONT_VARIANTS["parchment-classic"]!;
-  const tmplColors = COLOR_VARIANTS[templateKey] ?? COLOR_VARIANTS["parchment-classic"]!;
+  const tmplFonts   = FONT_VARIANTS[templateKey]   ?? FONT_VARIANTS["parchment-classic"]!;
+  const tmplColors  = COLOR_VARIANTS[templateKey]  ?? COLOR_VARIANTS["parchment-classic"]!;
+  const tmplLayouts = LAYOUT_VARIANTS[templateKey] ?? LAYOUT_VARIANTS["parchment-classic"]!;
 
   const variantBlock =
-    "VARIANT DIRECTIVES (override defaults):\n" +
+    "\n⚠ OVERRIDE DIRECTIVES — These override the template reference image. Apply all of the following exactly:\n" +
+    `  LAYOUT: ${tmplLayouts[fontVariant]}\n` +
     `  TYPOGRAPHY: ${tmplFonts[fontVariant]}\n` +
     `  COUPON: ${COUPON_VARIANTS[couponVariant]}\n` +
     `  COLORS: ${tmplColors[colorVariant]}\n`;
