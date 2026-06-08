@@ -77,19 +77,19 @@ export function buildFooterZone(phone: string, address: string, isLandscape = fa
     return (
       `FOOTER (full-width dark bar, 15–20% of card height): ` +
       `THREE inline columns left to right — ` +
-      `LEFT: "${phone}" bold white ≥22pt (largest text in footer); ` +
+      `LEFT: "${phone}" bold white, very large (the largest text in the footer); ` +
       `CENTER: ` + (hasAddr
-        ? `"${address}" bold white ≥18pt, split to 2 lines at the comma (street on line 1, city/state on line 2), center-aligned in the bar; `
+        ? `"${address}" bold white, large, split to 2 lines at the comma (street on line 1, city/state on line 2), center-aligned in the bar; `
         : `(centered placeholder); `) +
-      `RIGHT: QR code (≤0.5"×0.5", 4-unit white quiet zone). ` +
+      `RIGHT: QR code, small square. ` +
       `Phone and QR appear EXACTLY ONCE — only inside this footer bar, never elsewhere.\n\n`
     );
   }
   return (
     `FOOTER (full-width dark bar, 15–20% of card): ` +
-    `"${phone}" bold white ≥18pt left (largest footer text); ` +
-    (address !== "(none)" ? `"${address}" bold white ≥14pt directly below phone (same left column); ` : "") +
-    `QR code (≤0.5"×0.5", 4-unit white quiet zone) lower-right. ` +
+    `"${phone}" bold white, very large, left-aligned (the largest text in the footer); ` +
+    (address !== "(none)" ? `"${address}" bold white, large, directly below phone (same left column); ` : "") +
+    `QR code, small square, lower-right. ` +
     `Phone and QR appear EXACTLY ONCE — only inside this footer bar, never elsewhere.\n\n`
   );
 }
@@ -242,7 +242,7 @@ export function buildAdPrompt(
         : (d.tagline ? `TAGLINE: tagline in italic script.\n\n` : "")) +
       `SERVICE LIST (left column, parchment area): ` +
       (menuCount > 0
-        ? `EXACTLY ${menuCount} orange circular checkmark badge item${menuCount !== 1 ? "s" : ""} — one per service in BUSINESS DETAILS, exactly as written. No extras. No invented services. Badge label text ≥14pt bold.\n\n`
+        ? `EXACTLY ${menuCount} stacked rows — one per service in BUSINESS DETAILS, exactly as written. Each row is one visual unit: an orange circular checkmark badge on the left, immediately paired with the service text (including price if shown) to its right in the same horizontal row. Do NOT place badges in a standalone column separate from the text. No extras. No invented services.\n\n`
         : `no services provided — leave the service list area empty; do not render any badge labels or invented items.\n\n`) +
       (hasPhoto ? `HERO PHOTO (right-center): composite IMAGE 2 blended into parchment texture, no hard border.\n\n` : "") +
       (d.offer
@@ -279,7 +279,7 @@ export function buildAdPrompt(
         : `generate photorealistic outdoor service scene, vibrant, no rectangular border.\n\n`) +
       `SERVICE PANELS (middle horizontal row): ` +
       (menuCount > 0
-        ? `EXACTLY ${menuCount} diagonal-cut panel${menuCount !== 1 ? "s" : ""} — one per service in BUSINESS DETAILS, exactly as written. Circular lime-green icon badge + white brush-stroke label per panel. No extras. No invented services. Panel label text ≥14pt bold.\n\n`
+        ? `EXACTLY ${menuCount} diagonal-cut panel${menuCount !== 1 ? "s" : ""} — one per service in BUSINESS DETAILS, exactly as written. Circular lime-green icon badge + white brush-stroke label per panel. No extras. No invented services.\n\n`
         : `service panel row — render the structural diagonal-cut panel shapes with circular lime-green icon badge graphics only; NO text labels (no services provided).\n\n`) +
       (d.offer
         ? `OFFER (wide white brush-stroke area, lower section): offer text bold dark-green, large. Fine print smaller below. No QR inside coupon.\n\n`
@@ -300,7 +300,7 @@ export function buildAdPrompt(
         : `generate professional tools/equipment or home-service scene, left edge blends naturally.\n\n`) +
       `SERVICE BADGES (wide dark navy band, center full-width): ` +
       (menuCount > 0
-        ? `EXACTLY ${menuCount} circular white icon badge${menuCount !== 1 ? "s" : ""} on the navy band — one per service in BUSINESS DETAILS, exactly as written. No extras. No invented services. Badge caption ≥14pt bold.\n\n`
+        ? `EXACTLY ${menuCount} circular white icon badge${menuCount !== 1 ? "s" : ""} on the navy band — one per service in BUSINESS DETAILS, exactly as written. No extras. No invented services.\n\n`
         : `navy band — render decorative circular icon badge graphics only; NO text captions or labels (no services provided).\n\n`) +
       (d.offer
         ? `COUPON (gold/yellow dashed-border box, lower-right): offer text bold dark navy, prominent. Fine print smaller below. No QR inside coupon.\n\n`
@@ -319,7 +319,7 @@ export function buildAdPrompt(
       (d.tagline ? `TAGLINE (teal pill-shaped bar below white panel): tagline in clean white sans-serif, centered.\n\n` : "") +
       `SERVICE PANELS (middle section): ` +
       (menuCount > 0
-        ? `EXACTLY ${menuCount} equal-width panel${menuCount !== 1 ? "s" : ""} — one per service in BUSINESS DETAILS, exactly as written. Circular teal icon badge + white rounded-rect text box per panel. No extras. No invented services. Panel text ≥14pt bold.\n\n`
+        ? `EXACTLY ${menuCount} equal-width panel${menuCount !== 1 ? "s" : ""} — one per service in BUSINESS DETAILS, exactly as written. Circular teal icon badge + white rounded-rect text box per panel. No extras. No invented services.\n\n`
         : `service panel row — render the structural panel shapes with circular teal icon badge graphics only; NO text labels (no services provided).\n\n`) +
       (hasLogo ? `LOGO (IMAGE ${logoImg}) in an upper corner or within the headline panel.\n\n` : "") +
       (d.offer
@@ -348,7 +348,7 @@ export function buildAdPrompt(
         : `  HERO IMAGE: photorealistic business-appropriate image, cinematic quality, blended into bg.\n`) +
       (hasLogo ? `  LOGO: IMAGE ${logoImg} — exact placement, no stylization.\n` : "") +
       (d.tagline ? `  TAGLINE: tagline from BUSINESS DETAILS — supporting, secondary to headline.\n` : "") +
-      (menuCount > 0 ? `  SERVICES/MENU: each service from BUSINESS DETAILS exactly once, in its own clearly defined list zone. Service text ≥14pt bold.\n` : "") +
+      (menuCount > 0 ? `  SERVICES/MENU: each service from BUSINESS DETAILS exactly once, in its own clearly defined list zone. Service text bold.\n` : "") +
       (d.offer
         ? `  SPECIAL OFFER (own visually distinct coupon zone — dashed box or bordered panel, clearly separated from services): offer text and fine print from BUSINESS DETAILS. No filler phrases. No QR inside coupon.\n`
         : "") +
