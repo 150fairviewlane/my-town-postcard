@@ -362,6 +362,13 @@ export function buildAdPrompt(
   const outputRequirements = isLandscape && templateKey === "parchment-classic"
     ? (
       LANDSCAPE_CANVAS_RULE +
+      (fontVariant !== 0
+        ? "⛔ LOGO ZONE OVERRIDE — this variant does NOT use the orange pennant ribbon. " +
+          (fontVariant === 1
+            ? "The logo zone is a CIRCULAR EMBLEM BADGE in the top-RIGHT corner (navy blue double-ring border on parchment). "
+            : "The logo zone is a FULL-WIDTH DARK FOREST-GREEN RECTANGULAR BANNER spanning the entire top edge. ") +
+          "There is NO pennant, bookmark ribbon, or orange triangular shape anywhere in this ad.\n\n"
+        : "") +
       "LAYOUT — reproduce Parchment Classic LANDSCAPE zones exactly:\n\n" +
       `HEADLINE (dark brush-stroke band, upper area): business name in bold condensed all-caps slab serif, white. ` +
       `If the name has a common English category noun (Cafe/Grill/Pizza/Bar/Bakery/Salon/Diner) — render ONLY that word in warm orange script. Each word exactly once.\n\n` +
@@ -371,7 +378,11 @@ export function buildAdPrompt(
           : fontVariant === 2
           ? `LOGO (inside full-width rectangular banner strip spanning the entire top edge): IMAGE ${logoImg} left-aligned inside the banner strip, exact colors preserved.` + (d.tagline ? ` Tagline also inside the banner strip.\n\n` : "\n\n")
           : `LOGO (orange pennant, top-left): IMAGE ${logoImg} centered inside pennant.` + (d.tagline ? ` Tagline in italic script beside pennant.\n\n` : "\n\n")
-        : (d.tagline ? `TAGLINE: tagline in italic script beside the pennant.\n\n` : "")) +
+        : fontVariant === 1
+          ? `LOGO ZONE (circular emblem badge, top-RIGHT corner): draw a circular ring badge with navy blue double-ring border on parchment background — no logo provided, interior is clean parchment. ⛔ NO pennant or orange ribbon anywhere.\n\n`
+          : fontVariant === 2
+          ? `LOGO ZONE (full-width rectangular banner strip at very top, solid dark forest-green, spanning entire top edge): no logo provided — banner is text/business name only. ⛔ NO pennant or orange ribbon anywhere.\n\n`
+          : (d.tagline ? `TAGLINE: tagline in italic script beside the pennant.\n\n` : "")) +
       `SERVICE LIST (left column, parchment area): ` +
       (menuCount > 0
         ? `EXACTLY ${menuCount} orange circular checkmark badge item${menuCount !== 1 ? "s" : ""} — one per service in BUSINESS DETAILS, exactly as written. No extras. No invented services. Badge label text ≥14pt bold.\n\n`
@@ -583,6 +594,13 @@ export function buildAdPrompt(
     )
     : (
       // Default: parchment-classic portrait
+      (fontVariant !== 0
+        ? "⛔ LOGO ZONE OVERRIDE — this variant does NOT use the orange pennant ribbon. " +
+          (fontVariant === 1
+            ? "The logo zone is a CIRCULAR EMBLEM BADGE in the top-RIGHT corner (navy blue double-ring border on parchment). "
+            : "The logo zone is a FULL-WIDTH DARK FOREST-GREEN RECTANGULAR BANNER spanning the entire top edge of the card. ") +
+          "There is NO pennant, bookmark ribbon, or orange triangular shape anywhere in this ad.\n\n"
+        : "") +
       "LAYOUT — render these zones top to bottom:\n\n" +
       `HEADLINE (top): business name uses a LAYERED TWO-FONT treatment — main words in bold condensed all-caps slab/block serif, very large, dark color, horizontal. ` +
       `IF name contains a common English category/industry noun (Cafe/Grill/Spa/Pizza/Bar/Salon/Dental/Kitchen/Bakery/Bistro/Diner) — render ONLY that one word in flowing orange script at ≈−8° angle. Never for proper nouns or brand names. Each word exactly once.\n\n` +
@@ -592,13 +610,17 @@ export function buildAdPrompt(
             `IMAGE ${logoImg} centered inside circular badge, scaled to fit with clear margin, exact colors preserved.` +
             (d.tagline ? ` Tagline in handwriting-style italic script (+5°–7°), large, confident, below the badge.` : "") + "\n\n"
           : fontVariant === 2
-          ? `LOGO (inside full-width rectangular banner strip spanning the entire top edge of the card — no pennant): ` +
+          ? `LOGO (inside full-width rectangular banner strip spanning the entire top edge of the card): ` +
             `IMAGE ${logoImg} positioned left-center inside the banner strip, exact colors preserved.` +
             (d.tagline ? ` Business name and tagline also sit inside the banner strip.` : "") + "\n\n"
           : `LOGO + TAGLINE (orange pennant ribbon, top-left, TOP EDGE flush with top of ad): ` +
             `IMAGE ${logoImg} centered inside pennant, scaled to fit with clear margin, exact colors preserved.` +
             (d.tagline ? ` Tagline in handwriting-style italic script (+5°–7°), large, confident, to the right of pennant below headline.` : "") + "\n\n"
-        : (d.tagline ? `TAGLINE (upper-left, below headline): tagline in handwriting-style italic script (+5°–7°), large, confident.\n\n` : "")) +
+        : fontVariant === 1
+          ? `LOGO ZONE (circular emblem badge, top-RIGHT corner ONLY): draw a circular ring badge with navy blue double-ring border on parchment background — no logo image provided, interior is clean empty parchment. ⛔ NO pennant, bookmark, or orange ribbon anywhere on this ad.\n\n`
+          : fontVariant === 2
+          ? `LOGO ZONE (full-width rectangular banner strip at the very top, solid dark forest-green, spanning edge to edge): no logo image provided — banner area contains only the business name if desired. ⛔ NO pennant, bookmark, or orange ribbon anywhere on this ad.\n\n`
+          : (d.tagline ? `TAGLINE (upper-left, below headline): tagline in handwriting-style italic script (+5°–7°), large, confident.\n\n` : "")) +
       "HERO IMAGE (right-center, large feature area): " +
       (hasPhoto
         ? `composite IMAGE 2 into the template's photo area — blend edges naturally into the dark brush-stroke/painted background, no hard border. Match warm commercial food photography style.\n\n`
