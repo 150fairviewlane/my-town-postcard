@@ -1,0 +1,150 @@
+This task replaces the entire variant system with a cleaner approach: show only unused templates in the picker for each postcard side. If a template is already used by a reserved or paid spot on the same side of the same postcard, remove it from the options presented to the next advertiser.
+
+Read all relevant files before making any changes. Confirm the plan before writing code. Build in the order listed below.
+
+# ==============================================================
+PART 1 — New API endpoint: GET /api/campaigns/:campaignId/used-templates
+
+Add a new route in the API server that returns which template keys are already in use on each side of a postcard for a given campaign.
+
+Request: GET /api/campaigns/:campaignId/used-templates
+
+Response shape:
+{
+“front”: [“parchment-classic”, “made-fresh”],
+“back”:  [“neighborhood-pro”]
+}
+
+Implementation:
+
+- Query the spots table for all spots where:
+  - campaignId matches the route param
+  - status is “reserved” OR “paid”
+  - templateData is not null
+- Parse the templateData JSON for each spot and extract the “template” key
+- Group by the spot’s “side” column (front/back)
+- Return the two arrays of template keys (deduplicated)
+
+This endpoint requires no authentication beyond what other campaign
+endpoints use — match the existing auth pattern for campaign queries.
+
+# ==============================================================
+PART 2 — Template picker UI: filter out used templates
+
+In the template picker component (wherever the 6 template options
+are displayed to the advertiser during ad creation):
+
+1. When the picker opens for a spot, call the new endpoint:
+   GET /api/campaigns/:campaignId/used-templates
+   Pass the campaignId and the current spot’s side (front/back).
+1. Filter the displayed template options to exclude any template
+   key already present in the used list for that side.
+1. If a template is unavailable, either:
+- Hide it entirely from the picker (preferred), OR
+- Show it grayed out with a tooltip:
+  “Already used on this side of the postcard”
+  Use whichever approach fits the existing picker UI better.
+1. If ALL templates are already used on that side (only possible
+   when there are more spots than templates), show all templates
+   with a notice: “All styles are in use on this side. Your ad
+   will still look unique based on your business content and photos.”
+1. The current spot’s own template (if already generated) should
+   NOT count as taken — only OTHER spots’ templates are excluded.
+   Filter using ne(spotsTable.id, currentSpotId) in the query.
+
+# ==============================================================
+PART 3 — Remove the entire variant system
+
+This is a cleanup task. Remove all variant-related code from these files:
+
+### artifacts/api-server/src/routes/adGenGrok.ts
+
+Remove:
+
+- The adIndex DB sibling lookup block (the try/catch that queries
+  campaignId and siblings — approximately lines 390-438)
+- The variantOverride handling (the typeof variantOverride check)
+- fontVariant, couponVariant, colorVariant computations
+- variantBlock construction and any reference to variantBlock
+- The parchment-classic per-variant file routing (the parchmentPortrait
+  and parchmentLandscape ternary blocks that select v2/v3 filenames) —
+  replace with a single filename lookup for the default v1 template only
+- variantOverride from the GenerateSchema Zod definition (line 41)
+- The tmplBuf = null override added for parchment-classic fontVariant >= 1
+
+Keep intact:
+
+- Everything else in the route handler
+- The template file loading logic (just simplified to always use v1)
+- All Grok API call logic
+- The adIndex parameter passed to buildAdPrompt — change this to
+  always pass 0: buildAdPrompt(d, isLandscape, 0)
+
+### artifacts/api-server/src/lib/buildAdPrompt.ts
+
+Remove:
+
+- FONT_VARIANTS constant
+- COUPON_VARIANTS constant
+- COLOR_VARIANTS constant
+- LAYOUT_VARIANTS constant
+- The adIndex parameter from the buildAdPrompt function signature
+- fontVariant, couponVariant, colorVariant, tmplLayouts computations
+- variantBlock construction
+- variantBlock injection into the prompt string
+- The ⚠ OVERRIDE DIRECTIVES text
+
+Keep intact:
+
+- Everything else in buildAdPrompt
+- SURPRISE_ME_THEMES (this is unrelated to variants)
+- All template description strings
+- All prompt assembly logic
+
+### artifacts/localspot/src/pages/[whatever page contains _genCount]
+
+Remove:
+
+- _genCount variable (var _genCount = -1)
+- Any logic that increments _genCount
+- variantOverride from the generate API request body
+
+### AdGenerator.jsx, PostcardPickerSection.jsx, postcardCore.jsx,
+
+### AdminPrintPage.jsx, postcardBack.jsx
+
+Remove any remaining Task 182 variant additions if not already
+removed in a prior task:
+
+- VARIANT_CFG constant
+- CANONICAL_GRID_RANK constant
+- assignTemplateVariants function
+- variant prop from all template components
+- variantMap useMemo
+- Any import of assignTemplateVariants or TEMPLATES for variant purposes
+
+# ==============================================================
+PART 4 — Verify
+
+After all changes:
+
+1. Run pnpm run typecheck — confirm zero new errors
+1. Run the prompt-size check script if available
+1. Confirm the new /api/campaigns/:campaignId/used-templates endpoint
+   returns correct data by querying it directly
+1. Confirm the template picker correctly hides used templates by
+   testing with a campaign that has at least one reserved spot
+
+# ==============================================================
+BUILD ORDER
+
+1. Add the new API endpoint (Part 1)
+1. Wire the picker UI to call it and filter options (Part 2)
+1. Remove variant system from adGenGrok.ts (Part 3, file 1)
+1. Remove variant system from buildAdPrompt.ts (Part 3, file 2)
+1. Remove _genCount from frontend (Part 3, file 3)
+1. Remove any remaining Task 182 frontend remnants (Part 3, file 4)
+1. Run typecheck and verify (Part 4)
+
+Confirm each part works before moving to the next.
+Do not touch any files not listed above.
