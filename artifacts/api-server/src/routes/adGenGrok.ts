@@ -1584,8 +1584,9 @@ html,body{height:100%;overflow:hidden}
 body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink);display:flex;flex-direction:column}
 
 .hdr{background:var(--xai);padding:0 28px;display:flex;align-items:center;justify-content:space-between;height:54px;border-bottom:3px solid var(--burg);flex-shrink:0}
-.brand{font-family:'Bebas Neue',sans-serif;font-size:21px;color:#fff;letter-spacing:.08em}
+.brand{font-family:'Bebas Neue',sans-serif;font-size:27px;color:#fff;letter-spacing:.08em;display:flex;align-items:center;gap:10px}
 .brand span{color:#C8A882}
+.brand-logo{height:42px;width:auto;display:block;flex-shrink:0}
 .hdr-badge{background:var(--burg);color:#fff;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:4px 12px;border-radius:20px;display:flex;align-items:center;gap:6px}
 
 .layout{display:grid;grid-template-columns:400px 1fr;flex:1;min-height:0;overflow:hidden}
@@ -1760,7 +1761,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 <body>
 
 <header class="hdr">
-  <div class="brand">My Town <span>Postcard</span></div>
+  <div class="brand"><img class="brand-logo" src="/mailbox-logo.png" alt="">My Town <span>Postcard</span></div>
   <div class="hdr-badge">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
     My Town Ad Generator
