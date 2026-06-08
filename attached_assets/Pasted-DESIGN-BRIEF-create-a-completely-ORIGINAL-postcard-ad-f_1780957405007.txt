@@ -1,0 +1,71 @@
+DESIGN BRIEF — create a completely ORIGINAL postcard ad for this business. This is a premium print advertisement — design it as a piece of genuine graphic art that a viewer would pause on in a high-end regional magazine, not a coupon flyer insert.
+
+STYLE THEME — “[Theme Name]” (mood: [mood]):
+PALETTE: [palette description]
+TYPOGRAPHY: [typography description]
+LAYOUT APPROACH: [layout description]
+
+CREATIVE DIRECTION: Make at least one unexpected visual choice — an unconventional background material, a surprising crop of the hero image, or a graphic element nobody expects in this category. Avoid every visual cliché associated with this business type.
+
+CATEGORY CLICHÉS — FORBIDDEN for this business type:
+[Populated at generation time based on industry — e.g. for veterinary:
+no paw print graphics, no stethoscopes on white backgrounds,
+no plain solid-color backgrounds behind pet photos,
+no clip-art animal icons, no default blue/teal medical palette]
+
+FORBIDDEN STYLES — do NOT recreate any of these five existing styles:
+• Parchment/rustic: warm ivory bg, orange pennant ribbon, brush-stroke swoosh band
+• Chalkboard/bistro: dark chalkboard, wood table props, golden ticket coupon, gingham cloth
+• Forest-green contractor: deep green bg, white paint-brush splashes, lime-green script
+• Navy/gold home services: dark navy hexagonal badge, gold brush-stroke, circular icon band
+• Teal/sage wellness: teal organic blob shapes, teal pill-shaped tagline bar, cream bg
+
+VISUAL CONSTRUCTION — MANDATORY:
+(a) NO hard rectangular photo borders — use blob mask, brush-stroke cutout, diagonal slash, arch shape, or gradient vignette
+(b) Background must have depth — atmospheric gradient, layered texture, or painterly wash. NEVER a flat solid color anywhere.
+(c) THREE DEPTH PLANES — each must be visually distinct from the others:
+PLANE 1 (background): Rich textured or atmospheric environment. Photographic depth or painterly quality. Tonal variation across the entire canvas. Never flat, never uniform.
+PLANE 2 (mid-layer): Graphic design elements — color bands, overlapping shapes, brushwork, translucent overlays — that bridge background and foreground. This layer is what makes the ad feel professionally designed rather than assembled.
+PLANE 3 (foreground): All text and logo elements at maximum contrast and sharpness. Drop shadows or dark-field backlighting mandatory on every text element.
+(d) HERO PHOTO COMPOSITING — the photo must feel EMBEDDED in the composition, not placed on top like a sticker:
+• Color grade the photo to match the overall palette
+• Add rim lighting or edge glow that echoes the background color
+• At least one photo edge must dissolve into the background via gradient fade, brushstroke mask, or organic vignette
+• Cinematic depth of field — sharp subject, atmospheric background blur
+(e) Every text element must have drop shadows, glows, or dark-field backlighting — no text floats on bare color
+(f) FILL EVERY SQUARE INCH — no empty zones, no bare padding, no wasted canvas area
+(g) Canvas boundary IS the ad boundary — no floating card illusion, no outer border or shadow frame
+
+REQUIRED CONTENT ZONES:
+HEADLINE: Business name — very large, dominant, readable in 1 second at full postcard size
+HERO PHOTO: Supplied photo composited with organic mask, OR AI-generated cinematic scene if no photo provided
+LOGO: If provided — pixel-perfect reproduction, zero stylization, zero color alteration
+TAGLINE: If provided — secondary visual prominence, clearly distinct from headline
+SERVICES/MENU: Every item listed exactly once, in its own clearly legible list zone
+SPECIAL OFFER: Must feel DESIGNED, not templated:
+• Shape is non-rectangular OR has distinctive graphic treatment (torn paper edge, circular stamp ring, diagonal cut panel, overlapping ribbon)
+• Luminance contrast with surrounding area is at least 40%
+• The offer amount or headline is the largest text element inside this zone
+• FORBIDDEN: plain rectangle with solid fill and a simple border — this looks like every other coupon
+
+FOOTER: Solid dark bar spanning full width — phone number on the left, street address directly below phone, QR code on the right
+
+FIRST-GLANCE TEST: A viewer seeing this ad for exactly one second must (a) instantly know what the business does and (b) feel a specific intended emotion — excitement, comfort, trust, appetite, safety, etc. Every single design element either serves that one-second impression or must be removed.
+
+QUALITY STANDARD:
+✗ No flat solid-color backgrounds anywhere on the canvas
+✗ No hard rectangular photo frames or borders
+✗ No text floating on bare flat color
+✗ No decorative filler text or placeholder patterns in the coupon zone
+✗ No visual clichés from the category forbidden list above
+✓ Three depth planes present and visually distinguishable
+✓ Hero photo with cinematic lighting and organic edge blending
+✓ Every text element has contrast treatment (shadow, glow, or backlit field)
+✓ Print-ready sharpness and detail throughout
+
+TYPOGRAPHIC RULES:
+• Headline text: very large, maximum weight, immediate visual dominance
+• NEVER repeat any word from the business name as a decorative element elsewhere
+• NEVER invent or add script accent words that are not part of the business name
+• NEVER render a website URL as visible text anywhere on the ad
+• NEVER render hex color codes, CSS values, or technical notation as visible text
