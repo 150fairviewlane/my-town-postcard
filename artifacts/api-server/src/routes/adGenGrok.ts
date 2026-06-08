@@ -38,6 +38,7 @@ const GenerateSchema = z.object({
   logoData:  z.string().optional().default(""),
   generationIndex: z.number().int().optional().default(0),
   spotId:    z.number().int().optional(),
+  variantOverride: z.number().int().min(0).max(2).optional(),
 });
 
 // ── Variant rotation lookup tables ────────────────────────────────────────────
@@ -389,8 +390,12 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   // ── Compute adIndex for variant rotation ─────────────────────────────────────
   // adIndex = number of other spots in the same campaign already using this template
   // (status reserved or paid). Applies to both portrait and landscape templates.
+  // If the client sends variantOverride (0/1/2), skip the DB lookup and use it directly.
   let adIndex = 0;
-  if (d.spotId !== undefined) {
+  if (typeof (d as { variantOverride?: number }).variantOverride === "number") {
+    adIndex = (d as { variantOverride?: number }).variantOverride!;
+    req.log.info({ variantOverride: adIndex }, "adIndex set from variantOverride");
+  } else if (d.spotId !== undefined) {
     try {
       const thisSpot = await db
         .select({ campaignId: spotsTable.campaignId })
@@ -410,18 +415,27 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
             ),
           );
         const tmpl = d.template || "parchment-classic";
-        adIndex = siblings.filter((row) => {
+        const matchingSiblings = siblings.filter((row) => {
           if (!row.templateData) return false;
           try {
             return (JSON.parse(row.templateData) as { template?: string }).template === tmpl;
           } catch {
             return false;
           }
-        }).length;
+        });
+        adIndex = matchingSiblings.length;
+        req.log.info(
+          { spotId: d.spotId, campaignId, siblingsTotal: siblings.length, siblingsMatching: matchingSiblings.length, tmpl, adIndex },
+          "adIndex computed from siblings"
+        );
+      } else {
+        req.log.warn({ spotId: d.spotId }, "adIndex lookup: spot not found in DB");
       }
     } catch (err) {
       logger.warn({ spotId: d.spotId, err }, "adIndex lookup failed — falling back to variant 0");
     }
+  } else {
+    req.log.warn("adIndex lookup skipped: no spotId and no variantOverride in request");
   }
 
   const fontVariant   = adIndex % 3;
@@ -2438,6 +2452,7 @@ async function generate(){
     sizeKey:   _spotSize || 'XL',
     spotId:    _spotId || undefined,
     generationIndex: _genCount,
+    variantOverride: ((_genCount < 0 ? 0 : _genCount) % 3),
   };
 
   try{
