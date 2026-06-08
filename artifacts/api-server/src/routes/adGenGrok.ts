@@ -1251,11 +1251,14 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     }
   }
 
-  // Set up keepalive before the try so the catch block can always clear it.
+  // Start keepalive immediately — before photo/logo fetches AND the xAI call.
+  // 2-second interval ensures no more than 2 s of silence between server writes,
+  // preventing the Replit proxy from closing the connection during any async gap
+  // (remote photo fetch, xAI generation, image crop) that might exceed its idle timeout.
   res.setHeader("Content-Type", "application/json");
-  let keepAliveTimer: ReturnType<typeof setInterval> | undefined;
+  const keepAliveTimer = setInterval(() => { res.write("\n"); }, 2000);
   const endJson = (data: object) => {
-    if (keepAliveTimer) { clearInterval(keepAliveTimer); keepAliveTimer = undefined; }
+    clearInterval(keepAliveTimer);
     res.end(JSON.stringify(data));
   };
 
@@ -1291,7 +1294,6 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     // text-to-image generations endpoint to avoid an empty-array rejection and
     // to get a more lenient moderation path for commercial advertising prompts.
     if (imageRefs.length === 0) {
-      keepAliveTimer = setInterval(() => { res.write("\n"); }, 5000);
       const genRes = await fetch("https://api.x.ai/v1/images/generations", {
         method: "POST",
         headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -1374,9 +1376,6 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       aspect_ratio: spotAspectRatio,
       resolution:   "2k",
     };
-
-    // Start keepalive right before the xAI call (declared outside try so catch can clear it).
-    keepAliveTimer = setInterval(() => { res.write("\n"); }, 5000);
 
     // ── Retry loop for transient overload errors ────────────────────────────
     let xaiRes!: Response;
@@ -1605,7 +1604,7 @@ router.post("/grok-ad-generator/refine", async (req, res) => {
 
   // Keep the connection alive while xAI processes (proxy timeout ~10 s).
   res.setHeader("Content-Type", "application/json");
-  const refineKeepAliveTimer = setInterval(() => { res.write("\n"); }, 5000);
+  const refineKeepAliveTimer = setInterval(() => { res.write("\n"); }, 2000);
   const refineEndJson = (data: object) => {
     clearInterval(refineKeepAliveTimer);
     res.end(JSON.stringify(data));
@@ -2248,6 +2247,7 @@ function esc(str){ var d=document.createElement('div');d.textContent=String(str|
 var _selectedPhotoUrl = '';
 var _logoData = '';
 var _resultUrl = '';
+var _generationCount = 0;
 var _originalResultUrl = '';
 var _activeTemplate = 'parchment-classic';
 var _spotSize = 'XL';
@@ -2638,7 +2638,7 @@ async function generate(){
     template:  _activeTemplate,
     sizeKey:   _spotSize || 'XL',
     spotId:    _spotId || undefined,
-    generationIndex: 0,
+    generationIndex: _generationCount,
   };
 
   try{
@@ -2657,6 +2657,7 @@ async function generate(){
         ? 'Our AI\\u2019s content filter blocked this ad. Try rephrasing your services list to avoid clinical or procedure-specific terms, then click Generate again.'
         : grokErr);
     } else {
+      _generationCount++;
       _resultUrl = data.imageUrl;
       showResult(data.imageUrl);
       showToast('Ad generated! Review it below.');
