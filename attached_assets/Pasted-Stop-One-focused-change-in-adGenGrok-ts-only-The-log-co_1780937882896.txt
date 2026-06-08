@@ -1,0 +1,49 @@
+Stop. One focused change in adGenGrok.ts only.
+
+The log confirms the correct file is being sent 
+(parchment_classic_portrait_v2.png, fontVariant 1) but 
+grok-imagine EDITS is reconstructing the orange pennant from 
+training memory despite receiving a different reference image.
+
+The fix: for parchment-classic variants 2 and 3 (fontVariant 1 
+and 2), skip the edits endpoint entirely and use the generations 
+endpoint only. The generations endpoint treats the reference image 
+as compositional guidance rather than a base to edit, making it 
+less likely to hallucinate training-memory details.
+
+Find the logic that decides whether to use edits vs generations. 
+It likely checks whether a template buffer exists or checks some 
+condition to route to one endpoint vs the other.
+
+Add an additional condition: if templateKey === "parchment-classic" 
+AND fontVariant >= 1, set tmplBuf to null after loading it. 
+This forces the generations path while still having loaded the 
+file to confirm it exists.
+
+The exact change:
+
+After line 507 (the req.log.info template file loaded line), add:
+
+  // Variants 2 and 3 of parchment-classic must use the 
+  // generations endpoint — the edits endpoint reconstructs 
+  // the orange pennant from training memory regardless of 
+  // what reference image is sent.
+  if (templateKey === "parchment-classic" && fontVariant >= 1) {
+    tmplBuf = null;
+  }
+
+This means:
+- parchment-classic fontVariant 0 → edits endpoint with v1 
+  pennant template (correct, pennant is intentional here)
+- parchment-classic fontVariant 1 → generations endpoint, 
+  text prompt only describing navy layout
+- parchment-classic fontVariant 2 → generations endpoint, 
+  text prompt only describing green layout
+
+The LAYOUT, COLOR, and TYPOGRAPHY variant directives in the 
+prompt already describe the correct layout for v2 and v3. 
+Without the edits endpoint anchoring Grok to its parchment 
+training memory, those text directives should take effect.
+
+One change, one file, after line 507. Show me the exact 
+insertion before applying.

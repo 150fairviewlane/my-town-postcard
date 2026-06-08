@@ -508,6 +508,13 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     tmplBuf = fs.readFileSync(tmplPath);
     tmplMime = /\.(jpe?g)$/i.test(tmplFilename) ? "image/jpeg" : "image/png";
     req.log.info({ templateKey, fontVariant, tmplFilename }, "template file loaded");
+    // Variants 2 and 3 of parchment-classic must use the
+    // generations endpoint — the edits endpoint reconstructs
+    // the orange pennant from training memory regardless of
+    // what reference image is sent.
+    if (templateKey === "parchment-classic" && fontVariant >= 1) {
+      tmplBuf = null;
+    }
   }
 
   // Map spot size → closest supported Grok aspect ratio
