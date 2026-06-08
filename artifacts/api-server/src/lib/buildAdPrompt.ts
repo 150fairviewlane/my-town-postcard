@@ -355,6 +355,9 @@ export function buildAdPrompt(
       (menuCount > 0
         ? `EXACTLY ${menuCount} rounded-rect service tile${menuCount !== 1 ? "s" : ""} — one per service from BUSINESS DETAILS, exactly as written. Each tile: circular dark navy icon badge on top, service name below inside cream card body. No extras. No invented services.\n\n`
         : `render decorative rounded-rect tile shapes with circular dark navy icon badge graphics only; NO text labels (no services provided).\n\n`) +
+      (d.offer
+        ? `SPECIAL OFFER (dashed coupon box, lower area): offer text bold dark navy, large. Fine print smaller below. No QR inside coupon.\n\n`
+        : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape)
     )
     : isLandscape && templateKey === "health-wellness"
@@ -495,6 +498,9 @@ export function buildAdPrompt(
       (menuCount > 0
         ? `EXACTLY ${menuCount} equal rounded-rect service tile${menuCount !== 1 ? "s" : ""} — one per service in BUSINESS DETAILS, exactly as written. Each tile: circular dark navy icon badge on top (house, tools, leaf, or people icon), service name below inside cream card. No extras. No invented services.\n\n`
         : `navy area — render four decorative rounded-rect tile shapes with circular dark navy icon badge graphics only; NO text labels (no services provided).\n\n`) +
+      (d.offer
+        ? `SPECIAL OFFER (dashed coupon box, lower area): offer text bold dark navy, large. Fine print smaller below. No QR inside coupon.\n\n`
+        : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape)
     )
     : templateKey === "surprise-me"
@@ -564,7 +570,7 @@ export function buildAdPrompt(
         : `generate a photorealistic, appetizing hero image. Blend naturally into dark brush-stroke background, no hard border.\n\n`) +
       (menuCount > 0
         ? `MENU/SERVICES (left-center area, orange circular checkmark badges): EXACTLY ${menuCount} item${menuCount !== 1 ? "s" : ""} — one per service/item in BUSINESS DETAILS, exactly as written. Prices right-aligned if present. No extras. No invented items. Do NOT add a row to fill empty template slots.\n\n`
-        : "") +
+        : `no services provided — leave the service list area empty; do not render any badge labels or invented items.\n\n`) +
       (d.offer
         ? `SPECIAL OFFER (dashed coupon box): offer text bold inside dashed rectangle. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
