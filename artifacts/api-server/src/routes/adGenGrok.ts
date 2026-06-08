@@ -2115,6 +2115,19 @@ function applyUsedTemplates(){
   });
 }
 
+function applyTakenIndustries(){
+  var sel = document.getElementById('industry');
+  if(!sel) return;
+  for(var i=0;i<sel.options.length;i++){
+    var opt = sel.options[i];
+    if(!opt.value) continue;
+    var taken = _takenCategories.indexOf(opt.text) !== -1;
+    opt.disabled = taken;
+    opt.style.color  = taken ? '#aaa' : '';
+    opt.style.fontStyle = taken ? 'italic' : '';
+  }
+}
+
 function showTakenDialog(industry){
   var overlay = document.getElementById('takenOverlay');
   var nameEl  = document.getElementById('takenIndustryName');
@@ -2664,6 +2677,7 @@ function showToast(msg){
   _side = params.get('side') || 'front';
   var takenParam = params.get('taken') || '';
   _takenCategories = takenParam ? takenParam.split(',').map(function(s){ return s.trim(); }).filter(Boolean) : [];
+  applyTakenIndustries();
   // Fetch taken categories from the API so standalone use is accurate
   fetch('/api/campaigns/active/taken-categories')
     .then(function(r){ return r.ok ? r.json() : null; })
@@ -2672,6 +2686,7 @@ function showToast(msg){
         var merged = data.takenCategories.slice();
         _takenCategories.forEach(function(c){ if(merged.indexOf(c)===-1) merged.push(c); });
         _takenCategories = merged;
+        applyTakenIndustries();
       }
     })
     .catch(function(){});
