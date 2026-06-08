@@ -178,7 +178,7 @@ S:  { label: "Small",       price: 199, ratio: "2:2",  width: 2, height: 2,   de
 };
 
 // 4 visually distinct template styles
-const TEMPLATE_STYLES = ["photo-bold", "split-clean", "magazine", "stamp", "fade-out"];
+const TEMPLATE_STYLES = ["photo-bold", "split-clean", "magazine", "stamp", "fade-out", "brush-stroke"];
 
 //  Helper: Logo Badge with fallback
 function LogoBadge({ logo, name, emoji, size = 40, bg = "rgba(255,255,255,0.15)", color = "#fff", border }) {
@@ -902,12 +902,264 @@ background: leftBg, fontFamily: "sans-serif",
 );
 }
 
+// TEMPLATE 6: BRUSH STROKE
+// Cream/parchment background with circular photo on the left, SVG brush-stroke
+// banners behind text, circular service icons, and a dark charcoal footer bar.
+// Gives home-services businesses an outdoorsy, handcrafted feel.
+// Best for: HVAC, Plumber, Electrician, Lawn & Landscaping, Roofing, Painting,
+//           Cleaning Service, Pest Control
+//
+const BRUSH_ICONS = [
+  // house
+  <path d="M3 9.5L7 6l4 3.5V14H3V9.5z M6 14v-2.5h2V14" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>,
+  // paint roller
+  <path d="M3 4h8v4H3zM7 8v4m0 0h2m-2 0H5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" fill="none"/>,
+  // wrench
+  <path d="M12 2a4 4 0 00-4 4c0 .5.1 1 .3 1.4L2.7 13a1 1 0 000 1.4l.9.9a1 1 0 001.4 0L10.6 9.7A4 4 0 0012 10a4 4 0 000-8z" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinecap="round"/>,
+  // water drop / faucet
+  <path d="M8 2C6 5 4 7.5 4 9.5a4 4 0 008 0C12 7.5 10 5 8 2z" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinecap="round"/>,
+];
+
+function BrushStrokeCircleIcon({ index, size }) {
+  const oliveRing = "#5a6e3a";
+  return (
+    <svg width={size} height={size} viewBox="0 0 14 14" style={{ flexShrink: 0 }}>
+      <circle cx="7" cy="7" r="6.2" stroke={oliveRing} strokeWidth="1.2" fill="rgba(90,110,58,0.12)" />
+      <g transform="translate(0,0)" color={oliveRing}>
+        {BRUSH_ICONS[index % BRUSH_ICONS.length]}
+      </g>
+    </svg>
+  );
+}
+
+function BrushBanner({ children, width = "100%", height = 26, fScale = 1, style = {} }) {
+  const olive = "#5a6e3a";
+  return (
+    <div style={{ position: "relative", width, height: height * fScale, display: "flex", alignItems: "center", ...style }}>
+      <svg width="100%" height={height * fScale} viewBox={`0 0 200 ${height}`} preserveAspectRatio="none"
+        style={{ position: "absolute", inset: 0 }}>
+        <path d={`M4,${height * 0.25} C20,0 180,2 196,${height * 0.2} C200,${height * 0.55} 198,${height * 0.85} 196,${height * 0.78} C180,${height} 20,${height - 2} 4,${height * 0.8} C0,${height * 0.5} 0,${height * 0.4} 4,${height * 0.25} Z`}
+          fill={olive} />
+      </svg>
+      <div style={{ position: "relative", zIndex: 1, width: "100%", paddingLeft: 10, paddingRight: 10 }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function BrushStrokeTemplate({ data, sizeKey, onEdit, onFontSizeChange, onWidthChange }) {
+  const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
+  const fallbackPhoto = "/IMG_0838_1780954099138.png";
+  const photo = data.photo || ind.photos[0] || fallbackPhoto;
+  const isXL = sizeKey === "XL", isL = sizeKey === "L", isM = sizeKey === "M", isS = sizeKey === "S";
+  const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.65;
+
+  const edit = (field) => (val) => onEdit(field, val);
+  const ef = (key) => ({
+    fieldKey: key,
+    fontSizes: data.fontSizes || {},
+    fieldWidths: data.fieldWidths || {},
+    onFontSizeChange,
+    onWidthChange,
+  });
+  const editMenu = (i) => (val) => onEdit("menuItems", data.menuItems.map((m, j) => {
+    if (j !== i) return m;
+    if (typeof m === "object") return { ...m, text: val };
+    return val;
+  }));
+
+  const parchment = "#f5f0e8";
+  const olive = "#5a6e3a";
+  const charcoal = "#1c2422";
+  const activeItems = getActiveItems(data.menuItems, ind.menu);
+
+  // S size: minimal — circular photo, brush-stroke name banner, phone only
+  if (isS) {
+    const cirSize = 60 * fScale;
+    return (
+      <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative", background: parchment, fontFamily: "sans-serif" }}>
+        <div style={{ position: "absolute", top: 8 * fScale, left: 8 * fScale }}>
+          <div style={{
+            width: cirSize, height: cirSize, borderRadius: "50%", overflow: "hidden",
+            border: `${2.5 * fScale}px solid ${olive}`, flexShrink: 0,
+          }}>
+            <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          </div>
+        </div>
+        <div style={{ position: "absolute", bottom: 12 * fScale, left: 8 * fScale, right: 8 * fScale }}>
+          <BrushBanner height={20} fScale={fScale} style={{ marginBottom: 4 * fScale }}>
+            <EditableText value={data.businessName} onChange={edit("businessName")} {...ef("businessName")}
+              style={{ color: "#fff", fontWeight: 900, fontSize: 8 * fScale, lineHeight: 1, fontFamily: "Georgia, serif", whiteSpace: "nowrap", overflow: "hidden" }} />
+          </BrushBanner>
+          {data.phone && (
+            <EditableText value={data.phone} onChange={edit("phone")} {...ef("phone")}
+              style={{ color: charcoal, fontWeight: 700, fontSize: 8 * fScale, fontFamily: "sans-serif", display: "block" }} />
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Photo circle dimensions
+  const circleSize = isXL ? 110 * fScale : isL ? 90 * fScale : 72 * fScale;
+  const footerH = 28 * fScale;
+  const iconSize = isXL ? 16 * fScale : 13 * fScale;
+  const maxItems = isM ? 3 : 4;
+  const items = activeItems.slice(0, maxItems);
+  // XL stacks icons vertically; L and M go horizontal
+  const iconsVertical = isXL;
+
+  return (
+    <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative", background: parchment, fontFamily: "sans-serif" }}>
+
+      {/* LEFT PANEL — circular photo */}
+      <div style={{
+        position: "absolute",
+        top: isXL ? "12%" : "10%",
+        left: isXL ? "4%" : "3%",
+        width: circleSize,
+        height: circleSize,
+        borderRadius: "50%",
+        overflow: "hidden",
+        border: `${3 * fScale}px solid ${olive}`,
+        boxShadow: `0 0 0 ${2.5 * fScale}px #e8e0ce`,
+        zIndex: 2,
+      }}>
+        <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      </div>
+
+      {/* RIGHT PANEL — content */}
+      <div style={{
+        position: "absolute",
+        top: 0,
+        left: isXL ? "46%" : "44%",
+        right: 0,
+        bottom: footerH,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        padding: isXL ? `${14 * fScale}px ${10 * fScale}px` : `${10 * fScale}px ${10 * fScale}px`,
+        gap: 6 * fScale,
+        zIndex: 2,
+      }}>
+
+        {/* Logo badge (top-right of content area) */}
+        {!isM && (
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 2 * fScale }}>
+            <LogoBadge
+              logo={data.logo}
+              name={data.businessName}
+              emoji={ind.emoji}
+              size={isXL ? 34 * fScale : 26 * fScale}
+              bg={`${olive}22`}
+              color={olive}
+              border={`2px solid ${olive}66`}
+            />
+          </div>
+        )}
+
+        {/* Business name on brush-stroke banner */}
+        <BrushBanner height={isXL ? 28 : 22} fScale={fScale}>
+          <EditableText value={data.businessName} onChange={edit("businessName")} {...ef("businessName")}
+            style={{
+              color: "#fff", fontWeight: 900,
+              fontSize: isXL ? 13 * fScale : isL ? 11 * fScale : 9 * fScale,
+              fontFamily: "Georgia, serif", lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden",
+            }} />
+        </BrushBanner>
+
+        {/* Thin divider with diamond */}
+        {!isM && (
+          <div style={{ display: "flex", alignItems: "center", gap: 4 * fScale, marginTop: -2 * fScale }}>
+            <div style={{ flex: 1, height: 1, background: `${olive}55` }} />
+            <div style={{ width: 5 * fScale, height: 5 * fScale, background: olive, transform: "rotate(45deg)", flexShrink: 0 }} />
+            <div style={{ flex: 1, height: 1, background: `${olive}55` }} />
+          </div>
+        )}
+
+        {/* Tagline */}
+        {!isM && (
+          <EditableText value={data.tagline || ind.taglines[0]} onChange={edit("tagline")} {...ef("tagline")}
+            style={{ color: "#5c4a2a", fontWeight: 700, fontSize: isXL ? 9 * fScale : 8 * fScale, fontStyle: "italic", lineHeight: 1.3 }} />
+        )}
+
+        {/* Service icon rows */}
+        <div style={{
+          display: "flex",
+          flexDirection: iconsVertical ? "column" : "row",
+          flexWrap: iconsVertical ? "nowrap" : "wrap",
+          gap: isXL ? 5 * fScale : 4 * fScale,
+          alignItems: iconsVertical ? "flex-start" : "center",
+          marginTop: isM ? 0 : 2 * fScale,
+        }}>
+          {items.map((item, i) => (
+            <div key={i} style={{
+              display: "flex", alignItems: "center",
+              gap: 4 * fScale,
+              background: `${olive}15`,
+              borderRadius: 30,
+              paddingLeft: 4 * fScale, paddingRight: 6 * fScale,
+              paddingTop: 2 * fScale, paddingBottom: 2 * fScale,
+              border: `1px solid ${olive}40`,
+              flexShrink: 0,
+            }}>
+              <BrushStrokeCircleIcon index={i} size={iconSize} />
+              <EditableText value={item} onChange={editMenu(i)} {...ef(`menuItem_${i}`)}
+                style={{
+                  color: charcoal, fontWeight: 700,
+                  fontSize: isXL ? 8 * fScale : isL ? 7.5 * fScale : 7 * fScale,
+                  lineHeight: 1, fontFamily: "sans-serif",
+                }} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* FOOTER BAR */}
+      <div style={{
+        position: "absolute", bottom: 0, left: 0, right: 0,
+        height: footerH,
+        background: charcoal,
+        display: "flex", alignItems: "center",
+        justifyContent: "space-between",
+        paddingLeft: 10 * fScale, paddingRight: 44 * fScale,
+        zIndex: 3,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 * fScale }}>
+          {/* Phone */}
+          <div style={{ display: "flex", alignItems: "center", gap: 4 * fScale }}>
+            <svg width={10 * fScale} height={10 * fScale} viewBox="0 0 24 24" fill="rgba(255,255,255,0.8)" style={{ flexShrink: 0 }}>
+              <path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/>
+            </svg>
+            <EditableText value={data.phone} onChange={edit("phone")} {...ef("phone")}
+              style={{ color: "#fff", fontWeight: 900, fontSize: isXL ? 13 * fScale : isL ? 11 * fScale : 9 * fScale, fontFamily: "sans-serif", letterSpacing: -0.3 }} />
+          </div>
+          {/* City */}
+          {data.city && (
+            <div style={{ display: "flex", alignItems: "center", gap: 3 * fScale }}>
+              <svg width={9 * fScale} height={9 * fScale} viewBox="0 0 24 24" fill="rgba(255,255,255,0.65)" style={{ flexShrink: 0 }}>
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+              </svg>
+              <EditableText value={data.city} onChange={edit("city")} {...ef("city")}
+                style={{ color: "rgba(255,255,255,0.75)", fontWeight: 600, fontSize: isXL ? 10 * fScale : 8 * fScale, fontFamily: "sans-serif" }} />
+            </div>
+          )}
+        </div>
+      </div>
+
+      <PositionedQR website={data.website} fScale={fScale} dark />
+    </div>
+  );
+}
+
 export const TEMPLATES = {
-"photo-bold":  { name: "Photo Bold",    desc: "Hero photo, bold overlay text",   Component: PhotoBoldTemplate },
-"split-clean": { name: "Split Clean",   desc: "50/50 photo + content split",      Component: SplitCleanTemplate },
-"magazine":    { name: "Magazine",      desc: "Editorial multi-photo layout",     Component: MagazineTemplate },
-"stamp":       { name: "Service Stamp", desc: "Diagonal cut, oversized phone",    Component: StampTemplate },
-"fade-out":    { name: "Fade Out",      desc: "Photo fades right to brand color", Component: FadeOutTemplate },
+"photo-bold":    { name: "Photo Bold",    desc: "Hero photo, bold overlay text",            Component: PhotoBoldTemplate },
+"split-clean":   { name: "Split Clean",   desc: "50/50 photo + content split",               Component: SplitCleanTemplate },
+"magazine":      { name: "Magazine",      desc: "Editorial multi-photo layout",              Component: MagazineTemplate },
+"stamp":         { name: "Service Stamp", desc: "Diagonal cut, oversized phone",             Component: StampTemplate },
+"fade-out":      { name: "Fade Out",      desc: "Photo fades right to brand color",          Component: FadeOutTemplate },
+"brush-stroke":  { name: "Brush Stroke",  desc: "Circle photo, painted banners, service icons", Component: BrushStrokeTemplate },
 };
 
 // Helper: normalize menuItems array (handles both string items and {text,enabled} objects)
@@ -932,12 +1184,14 @@ const restaurantTypes = ["Pizza Restaurant", "Mexican Restaurant", "Chinese Rest
 const medicalTypes = ["Dentist", "Medical & Healthcare", "Chiropractor", "Veterinarian"];
 const editorialTypes = ["Real Estate", "Insurance", "Financial Services", "Photography",
 "Retail Shop", "Daycare", "Salon & Beauty"];
-const serviceTypes = ["HVAC", "Plumber", "Electrician", "Lawn & Landscaping",
-"Roofing", "Painting", "Cleaning Service", "Pest Control", "Auto Repair"];
+const serviceTypes = ["Auto Repair"];
+const brushTypes = ["HVAC", "Plumber", "Electrician", "Lawn & Landscaping",
+"Roofing", "Painting", "Cleaning Service", "Pest Control"];
 
 if (restaurantTypes.includes(industry)) return "photo-bold";
 if (medicalTypes.includes(industry)) return "split-clean";
 if (editorialTypes.includes(industry)) return "magazine";
+if (brushTypes.includes(industry)) return "brush-stroke";
 if (serviceTypes.includes(industry)) return "stamp";
 return "split-clean";
 }
