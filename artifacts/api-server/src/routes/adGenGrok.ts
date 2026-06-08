@@ -2363,8 +2363,8 @@ async function generate(){
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify(body),
     });
-    document.getElementById('loadingPanel').classList.remove('visible');
     var data = await resp.json();
+    document.getElementById('loadingPanel').classList.remove('visible');
     if(!resp.ok || data.error){
       var grokErr = data.error || 'Generation failed \\u2014 please try again.';
       showErr(grokErr === 'overloaded'
