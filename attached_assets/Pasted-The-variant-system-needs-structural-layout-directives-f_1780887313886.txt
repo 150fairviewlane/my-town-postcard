@@ -1,0 +1,159 @@
+The variant system needs structural layout directives for all 5 reference-image-based templates. Color-only variants are insufficient because Grok anchors too strongly to the template reference image. This task rewrites COLOR_VARIANTS and FONT_VARIANTS for all 5 templates to include explicit structural descriptions, and adds a new LAYOUT_VARIANTS table that instructs Grok to change composition — not just colors.
+
+Open ONLY this file: ./artifacts/api-server/src/lib/buildAdPrompt.ts
+
+Do not touch any other file.
+
+Read the entire file before making any changes. Confirm the plan matches this spec before writing code.
+
+# ==============================================================
+CHANGE 1 — Replace entire FONT_VARIANTS object
+
+Replace the entire FONT_VARIANTS constant with this:
+
+export const FONT_VARIANTS: Record<string, string[]> = {
+“parchment-classic”: [
+“VARIANT 1 — RUSTIC WARM: Bold condensed slab serif headline (Rockwell/Clarendon style) + warm orange flowing script on one English category noun only. Rustic and warm.”,
+“VARIANT 2 — ELEGANT SERIF: Tall refined display serif headline (Playfair Display Black/Bodoni style), mixed-case with generous letter-spacing. Fine italic serif for the category noun — no rounded script. Premium editorial feel.”,
+“VARIANT 3 — BOLD MODERN: Ultra-bold geometric sans-serif headline (Futura ExtraBold/Montserrat Black style), all-caps, tight tracking. No script accent. Clean and contemporary.”,
+],
+“made-fresh”: [
+“VARIANT 1 — CHALK ARTISAN: Bold condensed slab serif headline (Rockwell/Clarendon style) + warm chalk-style script (Pacifico style) for one English category noun. Warm and handcrafted.”,
+“VARIANT 2 — PLAYFUL ROUNDED: Rounded display sans-serif headline (Nunito ExtraBold/Poppins Black style) + bouncy marker-style script (Satisfy style) for one category noun. Friendly and energetic.”,
+“VARIANT 3 — VINTAGE POSTER: Vintage wood-type display (Alfa Slab One style), all-caps, blocky poster lettering. No script accent. Bold and retro.”,
+],
+“neighborhood-pro”: [
+“VARIANT 1 — IMPACT SLAB: Bold condensed slab serif headline (Impact/Anton style), all-caps + bright lime-green flowing script for one English service-category noun.”,
+“VARIANT 2 — INDUSTRIAL SANS: Extra-bold industrial sans headline (Barlow Condensed/Oswald Bold style), all-caps + dark forest-green casual script for one service noun.”,
+“VARIANT 3 — HEAVY GROTESQUE: Heavy display grotesque headline (Teko Bold style), all-caps full-width. No script accent. Maximum impact.”,
+],
+“at-your-service”: [
+“VARIANT 1 — SLAB SCRIPT: Bold condensed slab serif headline (Rockwell/Josefin Slab Bold style), all-caps + gold/yellow flowing script for one English service-category noun.”,
+“VARIANT 2 — MILITARY CONDENSED: Strong military-style condensed headline (Bebas Neue/Oswald ExtraBold style), all-caps + copper-toned elegant italic for one category noun.”,
+“VARIANT 3 — GEOMETRIC BLOCK: Geometric block sans headline (Exo 2 ExtraBold style), all-caps. No script accent. Technical and authoritative.”,
+],
+“health-wellness”: [
+“VARIANT 1 — CLEAN SANS: Bold condensed sans-serif headline (Montserrat ExtraBold style), all-caps. No script accent. Clinical and trustworthy.”,
+“VARIANT 2 — HUMANIST SCRIPT: Refined humanist sans-serif headline (Lato Bold/Raleway SemiBold style), mixed-case + soft sage-green cursive for one wellness noun only. Warm and approachable.”,
+“VARIANT 3 — EDITORIAL SERIF: Elegant display serif headline (Cormorant Garamond Bold style), all-caps. No script accent. Sophisticated and premium.”,
+],
+“surprise-me”: [
+“VARIANT 1 — EDITORIAL SERIF: Bold editorial display, strong condensed serif headline (Playfair Display Black/Rockwell style), all-caps, dominant weight. No script accent.”,
+“VARIANT 2 — GEOMETRIC MODERN: Ultra-clean bold sans-serif headline (Futura ExtraBold/Bebas Neue style), all-caps, zero ornamentation.”,
+“VARIANT 3 — VINTAGE ARTISAN: Expressive slab or wood-type display (Alfa Slab One style), all-caps, textured feel. No script accent.”,
+],
+};
+
+# ==============================================================
+CHANGE 2 — Replace entire COLOR_VARIANTS object
+
+Replace the entire COLOR_VARIANTS constant with this:
+
+export const COLOR_VARIANTS: Record<string, string[]> = {
+“parchment-classic”: [
+“VARIANT 1 COLORS — WARM PARCHMENT: Warm ivory/parchment background. Deep dark brown/near-black brush stroke band. Orange-amber pennant ribbon. Orange circular checkmark badges. Dashed dark coupon box. Dark footer.”,
+“VARIANT 2 COLORS — INVERTED DARK: Deep navy or near-black background replaces parchment. Brush stroke band in warm ivory/cream. Gold/amber primary accent replaces orange throughout. Pennant ribbon in deep gold. Checkmark badges in gold. Coupon box with gold dashed border on dark background. Footer in darkest navy. Mood: premium and dramatic.”,
+“VARIANT 3 COLORS — FRESH GREEN: Clean bright white background. Brush stroke band in deep forest green. Pennant ribbon in forest green. Checkmark badges in lime green. Coupon box with bold solid green border and drop shadow. Footer in deep forest green. Mood: fresh and contemporary.”,
+],
+“made-fresh”: [
+“VARIANT 1 COLORS — WARM NATURAL: Warm charcoal primary. Near-black chalkboard. Golden yellow accent. Fresh white highlight. Natural wood tones throughout.”,
+“VARIANT 2 COLORS — BOLD BISTRO: Tomato red primary. Rustic cream background. Basil green accent. Honey tan warm highlight. Mediterranean warmth.”,
+“VARIANT 3 COLORS — CLEAN NAVY: Navy blue primary. Warm white background. Bright coral accent. Deep navy footer. Crisp and fresh.”,
+],
+“neighborhood-pro”: [
+“VARIANT 1 COLORS — FOREST PRO: Deep forest green background. Clean white panels and text. Lime green accent and script. Dark forest footer.”,
+“VARIANT 2 COLORS — DEEP NAVY: Deep navy background replaces forest green. White panels and text. Electric blue accent replaces lime green. Near-black footer. Professional and bold.”,
+“VARIANT 3 COLORS — CHARCOAL ORANGE: Charcoal/dark concrete background replaces forest green. White panels and text. Bold orange accent replaces lime green. Near-black footer. High energy and industrial.”,
+],
+“at-your-service”: [
+“VARIANT 1 COLORS — NAVY GOLD: Dark navy primary. Light gray/cream background. Gold/yellow accent. Near-black navy footer.”,
+“VARIANT 2 COLORS — SLATE COPPER: Deep slate primary replaces navy. Off-white background. Copper accent replaces gold. Darkest slate footer. Warmer and more refined.”,
+“VARIANT 3 COLORS — CHARCOAL STEEL: Charcoal primary replaces navy. White background. Steel blue accent replaces gold. Near-black footer. Modern and technical.”,
+],
+“health-wellness”: [
+“VARIANT 1 COLORS — TEAL WELLNESS: Teal primary (#3d8b9c). Cream/off-white background. Sage green accent. Dark teal footer.”,
+“VARIANT 2 COLORS — DEEP TEAL CORAL: Deep teal primary, slightly darker than variant 1. Warm white background. Soft coral accent replaces sage green — warmer and more energetic. Darkest teal footer.”,
+“VARIANT 3 COLORS — FOREST GOLD: Forest teal primary. Light mint background. Warm gold accent replaces sage green. Deep forest teal footer. Premium and distinctive.”,
+],
+“surprise-me”: [
+“VARIANT 1 COLORS — RICH BURGUNDY: Deep burgundy/crimson dominant. Warm ivory background. Antique gold accents. Near-black footer.”,
+“VARIANT 2 COLORS — NAVY VIVID: Deep navy/charcoal dominant. Crisp white background. Electric blue or vivid coral accent. Near-black navy footer.”,
+“VARIANT 3 COLORS — FOREST AMBER: Deep forest green dominant. Warm cream background. Warm amber accents. Near-black footer.”,
+],
+};
+
+# ==============================================================
+CHANGE 3 — Add new LAYOUT_VARIANTS constant after COLOR_VARIANTS
+
+Insert this new constant immediately after the COLOR_VARIANTS closing bracket:
+
+export const LAYOUT_VARIANTS: Record<string, string[]> = {
+“parchment-classic”: [
+“VARIANT 1 LAYOUT — STANDARD: Pennant ribbon top-left. Brush stroke band sweeps left to right across upper third. Hero photo right side blending into brush stroke. Service list with circular checkmark badges on left column. Dashed coupon box lower-right. Dark footer full width.”,
+“VARIANT 2 LAYOUT — MIRRORED: Pennant ribbon top-RIGHT instead of top-left. Hero photo on the LEFT side blending into the dark background. Business name and headline on the RIGHT side. Service badges arranged in a 2x2 grid instead of a vertical column. Coupon box lower-LEFT instead of lower-right. Everything is horizontally mirrored from the standard layout.”,
+“VARIANT 3 LAYOUT — STACKED ZONES: No diagonal brush stroke band. Clean horizontal zones instead: top zone contains business name full-width centered. Middle zone contains hero photo full-bleed left with service info in a clean grid right. Bottom zone contains offer/coupon centered above footer. More grid-based and contemporary than the organic brush-stroke default.”,
+],
+“made-fresh”: [
+“VARIANT 1 LAYOUT — STANDARD: Wood table background. Plate prop left. Chalkboard sign upper-right. White paint-stroke info panel center. Ticket coupon right.”,
+“VARIANT 2 LAYOUT — CENTER FOCUS: Hero food photo centered and dominant in upper two-thirds. Chalkboard sign repositioned lower-left as a small accent. Business name large and centered above the photo. Service info in a horizontal strip below the photo. Coupon ticket centered at the bottom above footer.”,
+“VARIANT 3 LAYOUT — EDITORIAL GRID: Clean two-column layout on warm background. Left column: business name large + tagline + service list in a vertical stack. Right column: hero photo in a prominent rounded rectangle frame. Coupon as a full-width strip at the bottom above footer. No chalkboard sign.”,
+],
+“neighborhood-pro”: [
+“VARIANT 1 LAYOUT — STANDARD: Brush stroke splash upper-left headline zone. Hero photo upper-right. Four diagonal service panels in a horizontal middle row. Offer zone lower-center. Dark footer.”,
+“VARIANT 2 LAYOUT — REVERSED HERO: Hero photo upper-LEFT. Brush stroke headline panel upper-RIGHT. Service panels in a 2x2 grid instead of a horizontal row. Offer/coupon lower-right. Horizontally reverses the standard composition.”,
+“VARIANT 3 LAYOUT — VERTICAL STACK: Full-width hero photo spanning top third. Full-width headline band spanning middle third. Service icons in a single horizontal row with large circular badges below the headline. Coupon full-width above footer. No diagonal cuts.”,
+],
+“at-your-service”: [
+“VARIANT 1 LAYOUT — STANDARD: Hexagonal badge upper-left. Gold brush stroke across upper third. Hero photo upper-right blending into background. Navy band center with circular icon row. Dashed coupon box lower-right. Footer.”,
+“VARIANT 2 LAYOUT — CENTERED BADGE: Hexagonal badge centered at the very top. Hero photo as a full-bleed background with a dark semi-transparent overlay. All text, services, and icons overlaid on top of the photo. Coupon box floated center-bottom above footer. Dramatic and immersive.”,
+“VARIANT 3 LAYOUT — HARD SPLIT: Strict vertical split down the center of the card. Left half: solid navy panel containing all text, service list, and the hexagonal badge. Right half: hero photo full-bleed with no overlay. Coupon box overlapping the split line at the bottom, bridging both halves.”,
+],
+“health-wellness”: [
+“VARIANT 1 LAYOUT — STANDARD: Organic teal blob shapes frame upper photos. Wide rounded-rectangle headline panel center. Four equal service panels in a horizontal row. Lower blobs + QR box. Dark teal footer.”,
+“VARIANT 2 LAYOUT — CLEAN CLINICAL: No blob shapes — clean rectangular zones only. Hero photo top-right in a crisp rectangle with rounded corners. Headline large and left-aligned top-left. Four service panels in a clean 2x2 grid center. Coupon full-width above footer. More structured and clinical.”,
+“VARIANT 3 LAYOUT — CENTERED HERO: Hero photo centered and large in the upper half, slightly overlapping into the middle zone. Headline centered below photo. Service icons in a single clean horizontal row below headline. Coupon centered above footer. Balanced and symmetrical.”,
+],
+“surprise-me”: [
+“VARIANT 1 LAYOUT — Use the selected theme’s default layout specification exactly as defined.”,
+“VARIANT 2 LAYOUT — Mirror the selected theme’s default layout horizontally. Swap left and right zones. Maintain all other theme characteristics including colors and typography.”,
+“VARIANT 3 LAYOUT — Centered stacked layout regardless of theme: hero photo centered upper half, headline centered below, service icons in a single horizontal row, coupon centered above footer. Override the theme’s default layout with this structure.”,
+],
+};
+
+# ==============================================================
+CHANGE 4 — Update variantBlock assembly to include LAYOUT_VARIANTS
+
+Find the variantBlock assembly inside the buildAdPrompt function. Replace it with:
+
+const tmplLayouts = LAYOUT_VARIANTS[d.template || “parchment-classic”] ?? LAYOUT_VARIANTS[“parchment-classic”]!;
+const variantBlock =
+“\n⚠ OVERRIDE DIRECTIVES — These override the template reference image. Apply all of the following exactly:\n” +
+`  LAYOUT: ${tmplLayouts[fontVariant]}\n` +
+`  TYPOGRAPHY: ${tmplFonts[fontVariant]}\n` +
+`  COUPON: ${COUPON_VARIANTS[couponVariant]}\n` +
+`  COLORS: ${tmplColors[colorVariant]}\n`;
+
+Note: fontVariant is intentionally reused as the layout index. Layout and typography always rotate together — variant 1 gets layout 1 + font 1, variant 2 gets layout 2 + font 2, etc. This is correct behavior.
+
+# ==============================================================
+CHANGE 5 — Update variantBlock injection point
+
+Find where variantBlock is injected into the final prompt string (currently reads something like):
+(variantBlock ? variantBlock + “\n” : “”)
+
+Replace it with:
+(variantBlock ? variantBlock + “\n” : “”)
+
+The ⚠ OVERRIDE DIRECTIVES header is now built into the variantBlock string itself in Change 4, so no wrapper is needed here. Just confirm the injection point is still present and passing variantBlock correctly.
+
+# ==============================================================
+VERIFY
+
+After all changes:
+
+- Run pnpm run typecheck and confirm zero new errors
+- Confirm LAYOUT_VARIANTS is exported so it can be imported by other files if needed
+- Confirm all 6 templates have entries in FONT_VARIANTS, COLOR_VARIANTS, and LAYOUT_VARIANTS
+- Confirm the variantBlock inside buildAdPrompt now includes LAYOUT, TYPOGRAPHY, COUPON, and COLORS directives
+
+Do not change any other files.
