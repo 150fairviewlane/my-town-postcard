@@ -1783,6 +1783,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
         <span id="tmplOrientationLabel" style="font-size:10px;color:var(--ink-light)"></span>
       </div>
       <div class="card-body" style="padding:10px 12px">
+        <!-- Shown when every template on this side is already taken -->
+        <div id="tmplAllUsedBanner" style="display:none;margin-bottom:8px;padding:7px 10px;background:#fff7ed;border:1px solid #f59e0b;border-radius:6px;font-size:11px;color:#92400e;font-weight:600;">
+          All styles are already in use on this side — choose any to reuse a style.
+        </div>
         <!-- Grid shown for portrait & square; hidden for landscape -->
         <div class="tmpl-grid portrait" id="tmplGrid">
           <div class="tmpl-card active" id="tmpl-parchment-classic" onclick="selectTemplate('parchment-classic')">
@@ -1984,8 +1988,26 @@ var _campaignId = 0;
 var _side = 'front';
 
 function applyUsedTemplates(){
-  var prefixes = ['tmpl-', 'tmpl-ls-'];
   var KEYS = ['parchment-classic','made-fresh','health-wellness','at-your-service','neighborhood-pro','surprise-me'];
+  var allUsed = _usedTemplates.length > 0 && KEYS.every(function(k){ return _usedTemplates.indexOf(k) !== -1; });
+
+  // Banner: visible only when every template is already in use
+  var banner = document.getElementById('tmplAllUsedBanner');
+  if(banner) banner.style.display = allUsed ? 'block' : 'none';
+
+  // Auto-fallback: if the current selection is taken and alternatives exist, pick the first free one
+  if(!allUsed && _usedTemplates.indexOf(_activeTemplate) !== -1){
+    var firstFree = KEYS.filter(function(k){ return _usedTemplates.indexOf(k) === -1; })[0];
+    if(firstFree) selectTemplate(firstFree);
+  }
+
+  if(allUsed){
+    // All templates taken — keep every card clickable, just show the banner
+    return;
+  }
+
+  // Disable individual used cards
+  var prefixes = ['tmpl-', 'tmpl-ls-'];
   prefixes.forEach(function(pfx){
     KEYS.forEach(function(key){
       var card = document.getElementById(pfx + key);
