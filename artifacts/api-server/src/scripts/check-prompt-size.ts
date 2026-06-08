@@ -60,7 +60,7 @@ for (const template of TEMPLATES) {
   for (const { label, sizeKey, isLandscape } of ORIENTATIONS) {
     const combo = `${template}/${label}`;
     const d: AdPromptInput = { ...WORST_CASE, template, sizeKey };
-    const prompt = buildAdPrompt(d, isLandscape, 0);
+    const prompt = buildAdPrompt(d, isLandscape);
     const bytes = Buffer.byteLength(prompt, "utf8");
 
     if (bytes > MAX_BYTES) {

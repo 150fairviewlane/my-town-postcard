@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { db, campaignsTable, spotsTable } from "@workspace/db";
 import { GetActiveCampaignResponse } from "@workspace/api-zod";
 import { fetchScanCountsForSpotIds } from "../lib/scanCounts";
@@ -124,6 +124,40 @@ router.get("/campaigns/active/taken-categories", async (req, res): Promise<void>
     .map(s => s.businessCategory as string);
 
   res.json({ takenCategories });
+});
+
+router.get("/campaigns/:campaignId/used-templates", async (req, res): Promise<void> => {
+  const campaignId = parseInt(String(req.params.campaignId ?? ""), 10);
+  if (!campaignId || isNaN(campaignId)) {
+    res.status(400).json({ error: "Invalid campaignId" });
+    return;
+  }
+  const spotId = req.query.spotId ? parseInt(String(req.query.spotId), 10) : null;
+
+  const spots = await db
+    .select({ id: spotsTable.id, side: spotsTable.side, templateData: spotsTable.templateData })
+    .from(spotsTable)
+    .where(
+      and(
+        eq(spotsTable.campaignId, campaignId),
+        inArray(spotsTable.status, ["reserved", "paid"]),
+      ),
+    );
+
+  const result: { front: string[]; back: string[] } = { front: [], back: [] };
+  for (const spot of spots) {
+    if (spotId && spot.id === spotId) continue;
+    if (!spot.templateData) continue;
+    let parsed: unknown;
+    try { parsed = JSON.parse(spot.templateData); } catch { continue; }
+    if (!parsed || typeof parsed !== "object" || !("template" in parsed)) continue;
+    const template = (parsed as Record<string, unknown>).template;
+    if (typeof template !== "string") continue;
+    const side = (spot.side ?? "front") as "front" | "back";
+    if (!result[side].includes(template)) result[side].push(template);
+  }
+
+  res.json(result);
 });
 
 export default router;

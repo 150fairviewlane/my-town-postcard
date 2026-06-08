@@ -3,8 +3,6 @@ import { z } from "zod/v4";
 import fs from "fs";
 import path from "path";
 import sharp from "sharp";
-import { and, eq, ne, or } from "drizzle-orm";
-import { db, spotsTable } from "@workspace/db";
 import { logger } from "../lib/logger";
 import { buildAdPrompt } from "../lib/buildAdPrompt";
 
@@ -38,84 +36,9 @@ const GenerateSchema = z.object({
   logoData:  z.string().optional().default(""),
   generationIndex: z.number().int().optional().default(0),
   spotId:    z.number().int().optional(),
-  variantOverride: z.number().int().min(0).max(2).optional(),
 });
 
-// ── Variant rotation lookup tables ────────────────────────────────────────────
-// Three independent dimensions rotate across ads in the same campaign that
-// share the same template, ensuring each buyer sees a distinct visual treatment.
 
-const FONT_VARIANTS: Record<string, string[]> = {
-  "parchment-classic": [
-    "Typography variant A — Headline: bold condensed slab serif (Rockwell Extra Bold / Clarendon style). Script accent: warm orange flowing script (Pacifico / Lobster style) for ONE identified English category noun — that noun is rendered ONLY in the flowing script and must NOT also appear in the slab-serif block. All other words in the business name stay in the slab serif. Never print any word twice.",
-    "Typography variant B — Headline: strong display serif (Playfair Display Black / Bodoni 72 Bold style), all-caps, maximum weight, rich contrast. Script accent: refined italic serif at a slight angle for a single category noun — no rounded script/cursive. Elegant editorial weight contrast.",
-    "Typography variant C — Headline: geometric sans-serif (Futura ExtraBold / Raleway ExtraBold style), all-caps, ultra-clean. No script accent — the entire business name in solid bold geometric caps. Modern minimalist label aesthetic, zero ornamentation.",
-  ],
-  "made-fresh": [
-    "Typography variant A — Headline: bold condensed slab serif (Rockwell / Clarendon Bold style). Script accent: warm chalk-style handwriting script (Pacifico style) for a single English category noun. Warm bistro editorial feel.",
-    "Typography variant B — Headline: rounded display sans-serif (Nunito ExtraBold / Poppins Black style). Script accent: bouncy marker-style script (Satisfy style) for a single category noun. Casual approachable cafe energy.",
-    "Typography variant C — Headline: vintage wood-type display (Alfa Slab One / Zilla Slab Highlight style). No script accent — full blocky vintage poster lettering, all caps. Old-fashioned diner charm.",
-  ],
-  "neighborhood-pro": [
-    "Typography variant A — Headline: bold condensed slab serif (Impact / Anton style), all-caps, dominant. Script accent: bright lime-green flowing script for a single English service-category noun in the business name. Outdoorsy contractor authority.",
-    "Typography variant B — Headline: extra-bold industrial sans (Barlow Condensed ExtraBold / Oswald Bold style), all-caps. Script accent: dark forest-green casual script for a single service noun. Modern trades feel.",
-    "Typography variant C — Headline: heavy display grotesque (Teko Bold / Black Han Sans style), all-caps full-width. No script accent — monochromatic display type only. Clean bold utility aesthetic.",
-  ],
-  "at-your-service": [
-    "Typography variant A — Headline: bold condensed slab serif (Rockwell Extra Bold / Josefin Slab Bold style), all-caps. Script accent: gold/yellow flowing script for a single English service-category noun. Premium home-services look.",
-    "Typography variant B — Headline: strong military-style condensed (Bebas Neue / Oswald ExtraBold style), all-caps. Script accent: copper-toned elegant italic for a single category noun. Established trades authority.",
-    "Typography variant C — Headline: geometric block sans (Exo 2 ExtraBold / Furore style), all-caps. No script accent — monochromatic all-caps geometric headline only. Technical precision aesthetic.",
-  ],
-  "health-wellness": [
-    "Typography variant A — Headline: bold condensed sans-serif (Montserrat ExtraBold / Source Sans Pro Black style), all-caps. No script accent — clean clinical authority. Professional medical trust.",
-    "Typography variant B — Headline: refined humanist sans-serif (Lato Bold / Raleway SemiBold style), mixed-case or small-caps. Script accent: soft sage-green cursive for a single wellness noun only. Calm, nurturing feel.",
-    "Typography variant C — Headline: elegant display serif (Cormorant Garamond Bold / Libre Baskerville Bold style), all-caps. No script accent — sophisticated serif confidence. Upscale boutique wellness look.",
-  ],
-  "surprise-me": [
-    "Typography variant A — Bold editorial display: strong condensed serif headline (Playfair Display Black / Rockwell Extra Bold style), all-caps, dominant weight. No script accent — render the business name only, never add decorative category words not present in the name. Premium layered editorial headline.",
-    "Typography variant B — Modern geometric: ultra-clean bold sans-serif headline (Futura ExtraBold / Bebas Neue style), all-caps, zero ornamentation. No script accent. Confident, minimal, high-contrast.",
-    "Typography variant C — Vintage artisan: expressive wood-type display or slab (Alfa Slab One / Zilla Slab Highlight style), all-caps, textured feel. No script accent. Handcrafted, collectible, character-driven.",
-  ],
-};
-
-const COUPON_VARIANTS: string[] = [
-  "Coupon box style: CLASSIC PERFORATION STRIP — dashed rectangular border with a scissor ✂ icon on the left edge and a small 'CUT HERE' label. Clean, universally recognized coupon strip format.",
-  "Coupon box style: MOVIE-TICKET STUB — vertical dotted tear-line running along the left edge of the coupon box, subtle diagonal micro-stripe background pattern inside the box — NEVER write 'Admit One Offer', 'Admit Offer', any serial numbers, or any promotional phrase not supplied by the business. Festive, collectible feel.",
-  "Coupon box style: RUBBER-STAMP SEAL — a circular ink-ring border centered around the offer text with a slight distressed texture, 'SPECIAL OFFER' arced along the top of the ring border in small caps. Authentic artisan-stamp aesthetic.",
-];
-
-const COLOR_VARIANTS: Record<string, string[]> = {
-  "parchment-classic": [
-    "Color palette A — Primary: deep burgundy. Background: warm ivory. Accent/script: warm orange-gold. Footer: near-black. Rich, warm, appetite-driving.",
-    "Color palette B — Primary: rich chocolate brown. Background: parchment beige. Accent/script: copper-amber. Footer: dark espresso. Warm artisan depth.",
-    "Color palette C — Primary: forest-ink dark green. Background: cream. Accent/script: warm amber. Footer: near-black with green tint. Natural, premium, farm-to-table.",
-  ],
-  "made-fresh": [
-    "Color palette A — Primary: warm charcoal. Chalkboard: near-black. Accent: golden yellow. Highlight: fresh white. Classic bistro chalk-art palette.",
-    "Color palette B — Primary: tomato red. Background: rustic cream. Accent: basil green. Warm highlight: honey tan. Italian trattoria energy.",
-    "Color palette C — Primary: navy blue. Background: warm white. Accent: bright coral. Footer: deep navy. Modern casual-dining freshness.",
-  ],
-  "neighborhood-pro": [
-    "Color palette A — Background: forest green. Panels and text: clean white. Accent/script: lime green. Footer: dark forest. Energetic outdoor contractor look.",
-    "Color palette B — Background: deep navy. Panels and text: white. Accent/script: electric blue. Footer: near-black navy. Trustworthy professional trades.",
-    "Color palette C — Background: charcoal. Panels and text: white. Accent/script: bold orange. Footer: near-black. High-visibility construction aesthetic.",
-  ],
-  "at-your-service": [
-    "Color palette A — Primary: dark navy. Background: light gray. Accent: gold/yellow. Footer: near-black navy. Premium home-services authority.",
-    "Color palette B — Primary: deep slate. Background: off-white. Accent: copper. Footer: darkest slate. Established artisan trades feel.",
-    "Color palette C — Primary: charcoal. Background: white. Accent: steel blue. Footer: near-black. Clean technical precision.",
-  ],
-  "health-wellness": [
-    "Color palette A — Primary: teal. Background: cream/off-white. Accent: sage green. Footer: dark teal. Calm, trustworthy clinical warmth.",
-    "Color palette B — Primary: deep teal. Background: warm white. Accent: soft coral. Footer: darkest teal. Nurturing boutique wellness feel.",
-    "Color palette C — Primary: forest teal. Background: light mint. Accent: warm gold. Footer: deep forest teal. Upscale spa and wellness luxury.",
-  ],
-  "surprise-me": [
-    "Color palette A — Warm and rich: dominant deep burgundy/crimson paired with warm ivory and antique gold accents. Footer: near-black. Appetite-driving, premium editorial warmth.",
-    "Color palette B — Cool and bold: dominant deep navy/charcoal paired with crisp white and electric blue or vivid coral as the hero accent. Footer: near-black navy. High-contrast, authoritative, modern.",
-    "Color palette C — Natural and fresh: dominant deep forest green paired with warm cream and warm amber accents. Footer: near-black with green undertone. Earthy, premium, inviting.",
-  ],
-};
 
 // ── Surprise Me — 5 named style themes ───────────────────────────────────────
 interface SurpriseMeTheme {
@@ -387,77 +310,12 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   // Medium (3"×2") is the only landscape spot size
   const isLandscape = ["medium", "m"].includes(d.sizeKey.toLowerCase());
 
-  // ── Compute adIndex for variant rotation ─────────────────────────────────────
-  // adIndex = number of other spots in the same campaign already using this template
-  // (status reserved or paid). Applies to both portrait and landscape templates.
-  // Priority: if spotId is present, ALWAYS use the DB sibling count (authoritative).
-  // variantOverride is only a fallback for preview/test generations with no spotId.
-  let adIndex = 0;
-  if (d.spotId !== undefined) {
-    // spotId present — DB sibling count is authoritative; ignore variantOverride
-    try {
-      const thisSpot = await db
-        .select({ campaignId: spotsTable.campaignId })
-        .from(spotsTable)
-        .where(eq(spotsTable.id, d.spotId))
-        .limit(1);
-      if (thisSpot.length > 0) {
-        const campaignId = thisSpot[0].campaignId;
-        const siblings = await db
-          .select({ templateData: spotsTable.templateData })
-          .from(spotsTable)
-          .where(
-            and(
-              eq(spotsTable.campaignId, campaignId),
-              ne(spotsTable.id, d.spotId),
-              or(eq(spotsTable.status, "reserved"), eq(spotsTable.status, "paid")),
-            ),
-          );
-        const tmpl = d.template || "parchment-classic";
-        const matchingSiblings = siblings.filter((row) => {
-          if (!row.templateData) return false;
-          try {
-            return (JSON.parse(row.templateData) as { template?: string }).template === tmpl;
-          } catch {
-            return false;
-          }
-        });
-        adIndex = matchingSiblings.length;
-        req.log.info(
-          { spotId: d.spotId, campaignId, matchingSiblings: matchingSiblings.length, adIndex },
-          "adIndex computed from DB siblings"
-        );
-      } else {
-        req.log.warn({ spotId: d.spotId }, "adIndex lookup: spot not found in DB");
-      }
-    } catch (err) {
-      req.log.warn({ spotId: d.spotId, err }, "adIndex DB lookup failed — falling back to 0");
-    }
-  } else if (typeof d.variantOverride === "number") {
-    // No spotId — use variantOverride for preview/test generations
-    adIndex = d.variantOverride;
-    req.log.info({ variantOverride: adIndex }, "adIndex set from variantOverride (no spotId)");
-  } else {
-    req.log.warn("adIndex = 0: no spotId and no variantOverride");
-  }
-
-  const fontVariant   = adIndex % 3;
-  const couponVariant = (adIndex + 1) % 3;
-  const colorVariant  = (adIndex + 2) % 3;
-  const tmplFonts  = FONT_VARIANTS[d.template || "parchment-classic"]  ?? FONT_VARIANTS["parchment-classic"]!;
-  const tmplColors = COLOR_VARIANTS[d.template || "parchment-classic"] ?? COLOR_VARIANTS["parchment-classic"]!;
-  const variantBlock =
-    "VARIANT DIRECTIVES — follow these exactly, they override any defaults:\n" +
-    `  TYPOGRAPHY: ${tmplFonts[fontVariant]}\n` +
-    `  COUPON: ${COUPON_VARIANTS[couponVariant]}\n` +
-    `  COLORS: ${tmplColors[colorVariant]}\n`;
-
   // Load template PNG as raw buffer — portrait and landscape each have their own template images
   const templateKey = d.template || "parchment-classic";
 
   // ── Surprise Me theme selection ────────────────────────────────────────────
-  // First generation (adIndex 0) → pick the theme that best suits the industry.
-  // Regeneration (adIndex > 0) → pick any theme EXCEPT the industry default,
+  // First generation → pick the theme that best suits the industry.
+  // Regeneration → pick any theme EXCEPT the industry default,
   // guaranteeing a visually distinct result every time Regenerate is clicked.
   const surpriseMeDefaultIdx = getDefaultThemeIndex(d.industry);
   const surpriseMeThemeIdx =
@@ -474,16 +332,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   let tmplBuf: Buffer | null = null;
   let tmplMime = "image/png";
   if (templateKey !== "surprise-me") {
-    // parchment-classic has per-variant template images so Grok sees the correct
-    // logo-zone shape (pennant / circular badge / banner strip) in the pixel image.
-    const parchmentPortrait =
-      fontVariant === 1 ? "parchment_classic_portrait_v2.png"
-      : fontVariant === 2 ? "parchment_classic_portrait_v3.png"
-      : "mr_biscuits_template_no_logo_1778806527327.png";
-    const parchmentLandscape =
-      fontVariant === 1 ? "parchment_classic_landscape_v2.png"
-      : fontVariant === 2 ? "parchment_classic_landscape_v3.png"
-      : "parchment_classic_landscape_1779162178190.png";
+    const parchmentPortrait = "mr_biscuits_template_no_logo_1778806527327.png";
+    const parchmentLandscape = "parchment_classic_landscape_1779162178190.png";
     const portraitFiles: Record<string, string> = {
       "parchment-classic": parchmentPortrait,
       "made-fresh":        "made_fresh_template.png",
@@ -507,14 +357,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     }
     tmplBuf = fs.readFileSync(tmplPath);
     tmplMime = /\.(jpe?g)$/i.test(tmplFilename) ? "image/jpeg" : "image/png";
-    req.log.info({ templateKey, fontVariant, tmplFilename }, "template file loaded");
-    // Variants 2 and 3 of parchment-classic must use the
-    // generations endpoint — the edits endpoint reconstructs
-    // the orange pennant from training memory regardless of
-    // what reference image is sent.
-    if (templateKey === "parchment-classic" && fontVariant >= 1) {
-      tmplBuf = null;
-    }
+    req.log.info({ templateKey, tmplFilename }, "template file loaded");
   }
 
   // Map spot size → closest supported Grok aspect ratio
@@ -1116,7 +959,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     );
 
   // Prompt assembled by the extracted pure function — see lib/buildAdPrompt.ts
-  const adPrompt = buildAdPrompt(d, isLandscape, adIndex);
+  const adPrompt = buildAdPrompt(d, isLandscape);
 
   // ── Enforce xAI 8000-byte prompt limit ───────────────────────────────────────
   // xAI enforces a hard byte limit, not a JS character limit. Multi-byte UTF-8
@@ -2134,8 +1977,37 @@ var _originalResultUrl = '';
 var _activeTemplate = 'parchment-classic';
 var _spotSize = 'XL';
 var _spotId = 0;
-var _genCount = -1;
+
 var _takenCategories = [];
+var _usedTemplates = [];
+var _campaignId = 0;
+var _side = 'front';
+
+function applyUsedTemplates(){
+  var prefixes = ['tmpl-', 'tmpl-ls-'];
+  var KEYS = ['parchment-classic','made-fresh','health-wellness','at-your-service','neighborhood-pro','surprise-me'];
+  prefixes.forEach(function(pfx){
+    KEYS.forEach(function(key){
+      var card = document.getElementById(pfx + key);
+      if(!card) return;
+      var used = _usedTemplates.indexOf(key) !== -1;
+      if(used){
+        card.classList.add('disabled');
+        card.onclick = null;
+        var badge = card.querySelector('.tmpl-sel-badge');
+        if(badge){ badge.style.display='none'; }
+        var existingNote = card.querySelector('.tmpl-used-note');
+        if(!existingNote){
+          var note = document.createElement('div');
+          note.className = 'tmpl-used-note';
+          note.style.cssText = 'font-size:8px;color:#7c1c2e;font-weight:700;padding:2px 5px 4px;';
+          note.textContent = 'Used';
+          card.appendChild(note);
+        }
+      }
+    });
+  });
+}
 
 function showTakenDialog(industry){
   var overlay = document.getElementById('takenOverlay');
@@ -2439,7 +2311,6 @@ async function generate(){
   var biz = document.getElementById('bizName').value.trim();
   if(!biz){ alert('Please enter a business name.'); return; }
 
-  _genCount++;
   hideResult(); hideErr();
   document.getElementById('genBtn').disabled = true;
   document.getElementById('genLabel').textContent = 'Generating\\u2026';
@@ -2461,8 +2332,7 @@ async function generate(){
     template:  _activeTemplate,
     sizeKey:   _spotSize || 'XL',
     spotId:    _spotId || undefined,
-    generationIndex: _genCount,
-    variantOverride: ((_genCount < 0 ? 0 : _genCount) % 3),
+    generationIndex: 0,
   };
 
   try{
@@ -2684,9 +2554,11 @@ function showToast(msg){
   var params = new URLSearchParams(window.location.search);
   _spotSize = params.get('spotSize') || 'XL';
   _spotId = parseInt(params.get('spotId') || '0', 10) || 0;
+  _campaignId = parseInt(params.get('campaignId') || '0', 10) || 0;
+  _side = params.get('side') || 'front';
   var takenParam = params.get('taken') || '';
   _takenCategories = takenParam ? takenParam.split(',').map(function(s){ return s.trim(); }).filter(Boolean) : [];
-  // Also fetch taken categories from the API so standalone use is accurate
+  // Fetch taken categories from the API so standalone use is accurate
   fetch('/api/campaigns/active/taken-categories')
     .then(function(r){ return r.ok ? r.json() : null; })
     .then(function(data){
@@ -2697,6 +2569,18 @@ function showToast(msg){
       }
     })
     .catch(function(){});
+  // Fetch used templates for this campaign side so the picker hides already-used ones
+  if(_campaignId && _spotId){
+    fetch('/api/campaigns/' + _campaignId + '/used-templates?spotId=' + _spotId)
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(data){
+        if(data){
+          _usedTemplates = (_side === 'back' ? data.back : data.front) || [];
+          applyUsedTemplates();
+        }
+      })
+      .catch(function(){});
+  }
   applyTemplateOrientation();
   var urlBiz = params.get('bizName') || '';
   var urlIndustry = params.get('industry') || '';

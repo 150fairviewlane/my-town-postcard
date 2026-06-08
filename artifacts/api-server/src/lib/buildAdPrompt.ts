@@ -4,112 +4,6 @@
  * Import from both the route handler and the prompt-size check script.
  */
 
-// ── Variant lookup tables ────────────────────────────────────────────────────
-
-export const FONT_VARIANTS: Record<string, string[]> = {
-  "parchment-classic": [
-    "VARIANT 1 — RUSTIC WARM: Bold condensed slab serif headline (Rockwell/Clarendon style). Script accent: warm orange flowing script for ONE identified English category noun — that noun is rendered ONLY in the flowing script and must NOT also appear in the slab-serif block. All other words stay in bold slab serif. Never print any word twice. Rustic and warm.",
-    "VARIANT 2 — ELEGANT SERIF: Tall refined display serif headline (Playfair Display Black/Bodoni style), mixed-case with generous letter-spacing. Fine italic serif for the category noun — no rounded script. Premium editorial feel.",
-    "VARIANT 3 — BOLD MODERN: Ultra-bold geometric sans-serif headline (Futura ExtraBold/Montserrat Black style), all-caps, tight tracking. No script accent. Clean and contemporary.",
-  ],
-  "made-fresh": [
-    "VARIANT 1 — CHALK ARTISAN: Bold condensed slab serif headline (Rockwell/Clarendon style) + warm chalk-style script (Pacifico style) for one English category noun. Warm and handcrafted.",
-    "VARIANT 2 — PLAYFUL ROUNDED: Rounded display sans-serif headline (Nunito ExtraBold/Poppins Black style) + bouncy marker-style script (Satisfy style) for one category noun. Friendly and energetic.",
-    "VARIANT 3 — VINTAGE POSTER: Vintage wood-type display (Alfa Slab One style), all-caps, blocky poster lettering. No script accent. Bold and retro.",
-  ],
-  "neighborhood-pro": [
-    "VARIANT 1 — IMPACT SLAB: Bold condensed slab serif headline (Impact/Anton style), all-caps + bright lime-green flowing script for one English service-category noun.",
-    "VARIANT 2 — INDUSTRIAL SANS: Extra-bold industrial sans headline (Barlow Condensed/Oswald Bold style), all-caps + dark forest-green casual script for one service noun.",
-    "VARIANT 3 — HEAVY GROTESQUE: Heavy display grotesque headline (Teko Bold style), all-caps full-width. No script accent. Maximum impact.",
-  ],
-  "at-your-service": [
-    "VARIANT 1 — SLAB SCRIPT: Bold condensed slab serif headline (Rockwell/Josefin Slab Bold style), all-caps + gold/yellow flowing script for one English service-category noun.",
-    "VARIANT 2 — MILITARY CONDENSED: Strong military-style condensed headline (Bebas Neue/Oswald ExtraBold style), all-caps + copper-toned elegant italic for one category noun.",
-    "VARIANT 3 — GEOMETRIC BLOCK: Geometric block sans headline (Exo 2 ExtraBold style), all-caps. No script accent. Technical and authoritative.",
-  ],
-  "health-wellness": [
-    "VARIANT 1 — CLEAN SANS: Bold condensed sans-serif headline (Montserrat ExtraBold style), all-caps. No script accent. Clinical and trustworthy.",
-    "VARIANT 2 — HUMANIST SCRIPT: Refined humanist sans-serif headline (Lato Bold/Raleway SemiBold style), mixed-case + soft sage-green cursive for one wellness noun only. Warm and approachable.",
-    "VARIANT 3 — EDITORIAL SERIF: Elegant display serif headline (Cormorant Garamond Bold style), all-caps. No script accent. Sophisticated and premium.",
-  ],
-  "surprise-me": [
-    "VARIANT 1 — EDITORIAL SERIF: Bold editorial display, strong condensed serif headline (Playfair Display Black/Rockwell style), all-caps, dominant weight. No script accent.",
-    "VARIANT 2 — GEOMETRIC MODERN: Ultra-clean bold sans-serif headline (Futura ExtraBold/Bebas Neue style), all-caps, zero ornamentation.",
-    "VARIANT 3 — VINTAGE ARTISAN: Expressive slab or wood-type display (Alfa Slab One style), all-caps, textured feel. No script accent.",
-  ],
-};
-
-export const COUPON_VARIANTS: string[] = [
-  "CLASSIC PERFORATION: dashed border + scissor ✂ icon left edge + 'CUT HERE' label.",
-  "TICKET STUB: vertical dotted tear-line left edge, subtle diagonal micro-stripe background inside. No filler text.",
-  "RUBBER STAMP: circular ink-ring border, slight distressed texture, 'SPECIAL OFFER' arced along the top of the ring.",
-];
-
-export const COLOR_VARIANTS: Record<string, string[]> = {
-  "parchment-classic": [
-    "VARIANT 1 COLORS — WARM PARCHMENT: Warm ivory/parchment background. Deep dark brown/near-black brush stroke band. Orange-amber pennant ribbon. Orange circular checkmark badges. Dashed dark coupon box. Dark footer.",
-    "VARIANT 2 COLORS — INVERTED DARK: Deep navy or near-black background replaces parchment. Brush stroke band in warm ivory/cream. Gold/amber primary accent replaces orange throughout. Circular emblem/seal ring border in deep gold, top-right. Checkmark badges in gold. Coupon box with gold dashed border on dark background. Footer in darkest navy. Mood: premium and dramatic.",
-    "VARIANT 3 COLORS — FRESH GREEN: Clean bright white background. Brush stroke band in deep forest green. Rectangular banner strip in forest green across top edge. Checkmark badges in lime green. Coupon box with bold solid green border and drop shadow. Footer in deep forest green. Mood: fresh and contemporary.",
-  ],
-  "made-fresh": [
-    "VARIANT 1 COLORS — WARM NATURAL: Warm charcoal primary. Near-black chalkboard. Golden yellow accent. Fresh white highlight. Natural wood tones throughout.",
-    "VARIANT 2 COLORS — BOLD BISTRO: Tomato red primary. Rustic cream background. Basil green accent. Honey tan warm highlight. Mediterranean warmth.",
-    "VARIANT 3 COLORS — CLEAN NAVY: Navy blue primary. Warm white background. Bright coral accent. Deep navy footer. Crisp and fresh.",
-  ],
-  "neighborhood-pro": [
-    "VARIANT 1 COLORS — FOREST PRO: Deep forest green background. Clean white panels and text. Lime green accent and script. Dark forest footer.",
-    "VARIANT 2 COLORS — DEEP NAVY: Deep navy background replaces forest green. White panels and text. Electric blue accent replaces lime green. Near-black footer. Professional and bold.",
-    "VARIANT 3 COLORS — CHARCOAL ORANGE: Charcoal/dark concrete background replaces forest green. White panels and text. Bold orange accent replaces lime green. Near-black footer. High energy and industrial.",
-  ],
-  "at-your-service": [
-    "VARIANT 1 COLORS — NAVY GOLD: Dark navy primary. Light gray/cream background. Gold/yellow accent. Near-black navy footer.",
-    "VARIANT 2 COLORS — SLATE COPPER: Deep slate primary replaces navy. Off-white background. Copper accent replaces gold. Darkest slate footer. Warmer and more refined.",
-    "VARIANT 3 COLORS — CHARCOAL STEEL: Charcoal primary replaces navy. White background. Steel blue accent replaces gold. Near-black footer. Modern and technical.",
-  ],
-  "health-wellness": [
-    "VARIANT 1 COLORS — TEAL WELLNESS: Teal primary (#3d8b9c). Cream/off-white background. Sage green accent. Dark teal footer.",
-    "VARIANT 2 COLORS — DEEP TEAL CORAL: Deep teal primary, slightly darker than variant 1. Warm white background. Soft coral accent replaces sage green — warmer and more energetic. Darkest teal footer.",
-    "VARIANT 3 COLORS — FOREST GOLD: Forest teal primary. Light mint background. Warm gold accent replaces sage green. Deep forest teal footer. Premium and distinctive.",
-  ],
-  "surprise-me": [
-    "VARIANT 1 COLORS — RICH BURGUNDY: Deep burgundy/crimson dominant. Warm ivory background. Antique gold accents. Near-black footer.",
-    "VARIANT 2 COLORS — NAVY VIVID: Deep navy/charcoal dominant. Crisp white background. Electric blue or vivid coral accent. Near-black navy footer.",
-    "VARIANT 3 COLORS — FOREST AMBER: Deep forest green dominant. Warm cream background. Warm amber accents. Near-black footer.",
-  ],
-};
-
-export const LAYOUT_VARIANTS: Record<string, string[]> = {
-  "parchment-classic": [
-    "VARIANT 1 LAYOUT — STANDARD: Pennant ribbon top-left. Brush stroke band sweeps left to right across upper third. Hero photo right side blending into brush stroke. Service list with circular checkmark badges on left column. Dashed coupon box lower-right. Dark footer full width.",
-    "VARIANT 2 LAYOUT — MIRRORED: do NOT use the orange pennant ribbon. Instead, place a circular emblem/seal badge (round, ring-bordered) in the TOP-RIGHT corner for the logo zone. Hero photo on the LEFT side blending into the dark background. Business name and headline on the RIGHT side. Service badges arranged in a 2x2 grid instead of a vertical column. Coupon box lower-LEFT instead of lower-right. Everything is horizontally mirrored from the standard layout.",
-    "VARIANT 3 LAYOUT — STACKED ZONES: do NOT use the orange pennant ribbon. Instead, a full-width rectangular banner strip spans the entire top edge of the card — logo and business name sit inside this banner. No diagonal brush stroke band. Clean horizontal zones below: middle zone contains hero photo full-bleed left with service info in a clean grid right. Bottom zone contains offer/coupon centered above footer. More grid-based and contemporary than the organic brush-stroke default.",
-  ],
-  "made-fresh": [
-    "VARIANT 1 LAYOUT — STANDARD: Wood table background. Plate prop left. Chalkboard sign upper-right. White paint-stroke info panel center. Ticket coupon right.",
-    "VARIANT 2 LAYOUT — CENTER FOCUS: Hero food photo centered and dominant in upper two-thirds. Chalkboard sign repositioned lower-left as a small accent. Business name large and centered above the photo. Service info in a horizontal strip below the photo. Coupon ticket centered at the bottom above footer.",
-    "VARIANT 3 LAYOUT — EDITORIAL GRID: Clean two-column layout on warm background. Left column: business name large + tagline + service list in a vertical stack. Right column: hero photo in a prominent rounded rectangle frame. Coupon as a full-width strip at the bottom above footer. No chalkboard sign.",
-  ],
-  "neighborhood-pro": [
-    "VARIANT 1 LAYOUT — STANDARD: Brush stroke splash upper-left headline zone. Hero photo upper-right. Four diagonal service panels in a horizontal middle row. Offer zone lower-center. Dark footer.",
-    "VARIANT 2 LAYOUT — REVERSED HERO: Hero photo upper-LEFT. Brush stroke headline panel upper-RIGHT. Service panels in a 2x2 grid instead of a horizontal row. Offer/coupon lower-right. Horizontally reverses the standard composition.",
-    "VARIANT 3 LAYOUT — VERTICAL STACK: Full-width hero photo spanning top third. Full-width headline band spanning middle third. Service icons in a single horizontal row with large circular badges below the headline. Coupon full-width above footer. No diagonal cuts.",
-  ],
-  "at-your-service": [
-    "VARIANT 1 LAYOUT — STANDARD: Hexagonal badge upper-left. Gold brush stroke across upper third. Hero photo upper-right blending into background. Navy band center with circular icon row. Dashed coupon box lower-right. Footer.",
-    "VARIANT 2 LAYOUT — CENTERED BADGE: Hexagonal badge centered at the very top. Hero photo as a full-bleed background with a dark semi-transparent overlay. All text, services, and icons overlaid on top of the photo. Coupon box floated center-bottom above footer. Dramatic and immersive.",
-    "VARIANT 3 LAYOUT — HARD SPLIT: Strict vertical split down the center of the card. Left half: solid navy panel containing all text, service list, and the hexagonal badge. Right half: hero photo full-bleed with no overlay. Coupon box overlapping the split line at the bottom, bridging both halves.",
-  ],
-  "health-wellness": [
-    "VARIANT 1 LAYOUT — STANDARD: Organic teal blob shapes frame upper photos. Wide rounded-rectangle headline panel center. Four equal service panels in a horizontal row. Lower blobs + QR box. Dark teal footer.",
-    "VARIANT 2 LAYOUT — CLEAN CLINICAL: No blob shapes — clean rectangular zones only. Hero photo top-right in a crisp rectangle with rounded corners. Headline large and left-aligned top-left. Four service panels in a clean 2x2 grid center. Coupon full-width above footer. More structured and clinical.",
-    "VARIANT 3 LAYOUT — CENTERED HERO: Hero photo centered and large in the upper half, slightly overlapping into the middle zone. Headline centered below photo. Service icons in a single clean horizontal row below headline. Coupon centered above footer. Balanced and symmetrical.",
-  ],
-  "surprise-me": [
-    "VARIANT 1 LAYOUT — Use the selected theme's default layout specification exactly as defined.",
-    "VARIANT 2 LAYOUT — Mirror the selected theme's default layout horizontally. Swap left and right zones. Maintain all other theme characteristics including colors and typography.",
-    "VARIANT 3 LAYOUT — Centered stacked layout regardless of theme: hero photo centered upper half, headline centered below, service icons in a single horizontal row, coupon centered above footer. Override the theme's default layout with this structure.",
-  ],
-};
 
 // ── Surprise Me — 5 named style themes ────────────────────────────────────────
 
@@ -229,30 +123,12 @@ export interface AdPromptInput {
  *
  * @param d           Parsed request data matching AdPromptInput
  * @param isLandscape True for medium/landscape spots (3"×2")
- * @param adIndex     Number of same-template spots already reserved/paid in the
- *                    campaign — used for variant rotation (0 is fine for tests)
  */
 export function buildAdPrompt(
   d: AdPromptInput,
   isLandscape: boolean,
-  adIndex: number,
 ): string {
   const templateKey = d.template || "parchment-classic";
-
-  // Variant rotation
-  const fontVariant   = adIndex % 3;
-  const couponVariant = (adIndex + 1) % 3;
-  const colorVariant  = (adIndex + 2) % 3;
-  const tmplFonts   = FONT_VARIANTS[templateKey]   ?? FONT_VARIANTS["parchment-classic"]!;
-  const tmplColors  = COLOR_VARIANTS[templateKey]  ?? COLOR_VARIANTS["parchment-classic"]!;
-  const tmplLayouts = LAYOUT_VARIANTS[templateKey] ?? LAYOUT_VARIANTS["parchment-classic"]!;
-
-  const variantBlock =
-    "\n⚠ OVERRIDE DIRECTIVES — These override the template reference image. Apply all of the following exactly:\n" +
-    `  LAYOUT: ${tmplLayouts[fontVariant]}\n` +
-    `  TYPOGRAPHY: ${tmplFonts[fontVariant]}\n` +
-    `  COUPON: ${COUPON_VARIANTS[couponVariant]}\n` +
-    `  COLORS: ${tmplColors[colorVariant]}\n`;
 
   // Surprise Me theme selection
   const surpriseMeDefaultIdx = getDefaultThemeIndex(d.industry);
@@ -296,11 +172,7 @@ export function buildAdPrompt(
     if (templateKey !== "surprise-me") {
       const lsTmplDesc =
         templateKey === "parchment-classic"
-          ? fontVariant === 0
-            ? "landscape Parchment Classic layout: warm parchment texture, orange bookmark-ribbon pennant top-left, dark brush-stroke headline band, orange circular checkmark service badges left column, dashed coupon box, dark footer strip. Reproduce every zone exactly."
-            : fontVariant === 1
-            ? "landscape premium dark advertising card: deep navy background, wide ivory brush-stroke band across upper third, hero photo right blending naturally into background, circular gold icon badges left column for services, gold dashed-border offer box lower-right, dark footer with phone and QR code. Render layout zones exactly as shown."
-            : "landscape modern green advertising card: clean white background, wide forest-green brush-stroke band across upper third, hero photo right blending naturally into background, circular green icon badges left column for services, bold green solid-border offer box lower-right, forest-green footer with phone and QR code. Render layout zones exactly as shown."
+          ? "landscape Parchment Classic layout: warm parchment texture, orange bookmark-ribbon pennant top-left, dark brush-stroke headline band, orange circular checkmark service badges left column, dashed coupon box, dark footer strip. Reproduce every zone exactly."
           : templateKey === "made-fresh"
             ? "landscape Made Fresh layout: warm wood-table bg, white plate + gingham cloth left, 'Made Fresh For You' chalkboard A-frame sign upper-right, white paint-stroke business info panel, golden ticket-stub coupon right. Reproduce all textures and zones exactly."
             : templateKey === "neighborhood-pro"
@@ -340,11 +212,7 @@ export function buildAdPrompt(
             ? "  • IMAGE 1 (TEMPLATE) — home-services postcard on light gray/off-white textured bg, navy blue + gold/yellow scheme: large dark navy hexagonal badge upper-left (logo zone), bold horizontal gold/yellow brush-stroke sweeping upper third, large hero photo zone upper-right blending naturally, wide dark navy horizontal band center-full-width, circular white icon service badges on the navy band, gold/yellow dashed-border coupon box lower-right, dark strip footer. Reproduce exactly."
             : templateKey === "health-wellness"
               ? "  • IMAGE 1 (TEMPLATE) — health/wellness postcard on soft cream bg with teal accents: two clinic/office photos inside organic curved teal blob shapes upper section, large wide rounded-rectangle white panel center (headline zone), narrow teal pill-shaped bar below it (tagline zone), service panels with circular teal badge icons and white rounded-rect text boxes, reception/waiting-room photo in organic blob lower-left, teal stethoscope on dark teal circular blob lower-right, small white rounded QR box, dark teal footer bar. Reproduce exactly."
-              : fontVariant === 0
-                ? "  • IMAGE 1 (TEMPLATE) — postcard with parchment texture, brush-stroke headline band, orange pennant ribbon, circular checkmark badge, dashed coupon box, dark footer strip. Reproduce every zone and element exactly."
-                : fontVariant === 1
-                ? "  • IMAGE 1 (TEMPLATE) — premium dark advertising card: deep navy background, wide ivory brush-stroke band across upper third, hero photo right side blending naturally into background, circular gold icon badges left column for services, gold dashed-border offer box lower-right, dark footer with phone and QR code. Render layout zones exactly as shown."
-                : "  • IMAGE 1 (TEMPLATE) — modern green advertising card: clean white background, wide forest-green brush-stroke band across upper third, hero photo right side blending naturally into background, circular green icon badges left column for services, bold green solid-border offer box lower-right, forest-green footer with phone and QR code. Render layout zones exactly as shown.",
+              : "  • IMAGE 1 (TEMPLATE) — postcard with parchment texture, brush-stroke headline band, orange pennant ribbon, circular checkmark badge, dashed coupon box, dark footer strip. Reproduce every zone and element exactly.",
     );
     imgIdx = 2;
     if (hasPhoto) {
@@ -366,27 +234,12 @@ export function buildAdPrompt(
   const outputRequirements = isLandscape && templateKey === "parchment-classic"
     ? (
       LANDSCAPE_CANVAS_RULE +
-      (fontVariant !== 0
-        ? "⛔ LOGO ZONE: " +
-          (fontVariant === 1
-            ? "The top-right corner has a CIRCULAR EMBLEM BADGE with navy blue double-ring border on parchment background. "
-            : "A FULL-WIDTH DARK FOREST-GREEN RECTANGULAR BANNER spans the entire top edge of the card. ") +
-          "This is the only logo-zone element at the top of this ad.\n\n"
-        : "") +
       "LAYOUT — reproduce Parchment Classic LANDSCAPE zones exactly:\n\n" +
       `HEADLINE (dark brush-stroke band, upper area): business name in bold condensed all-caps slab serif, white. ` +
       `If the name has a common English category noun (Cafe/Grill/Pizza/Bar/Bakery/Salon/Diner) — render ONLY that word in warm orange script. Each word exactly once.\n\n` +
       (hasLogo
-        ? fontVariant === 1
-          ? `LOGO (circular emblem/seal badge, top-RIGHT corner, ring-bordered): IMAGE ${logoImg} centered inside circular badge, exact colors preserved.` + (d.tagline ? ` Tagline in italic script beside badge.\n\n` : "\n\n")
-          : fontVariant === 2
-          ? `LOGO (inside full-width rectangular banner strip spanning the entire top edge): IMAGE ${logoImg} left-aligned inside the banner strip, exact colors preserved.` + (d.tagline ? ` Tagline also inside the banner strip.\n\n` : "\n\n")
-          : `LOGO (orange pennant, top-left): IMAGE ${logoImg} centered inside pennant.` + (d.tagline ? ` Tagline in italic script beside pennant.\n\n` : "\n\n")
-        : fontVariant === 1
-          ? `LOGO ZONE (circular emblem badge, top-RIGHT corner): draw a circular ring badge with navy blue double-ring border on parchment background — interior is clean parchment.\n\n`
-          : fontVariant === 2
-          ? `LOGO ZONE (full-width rectangular banner strip at very top, solid dark forest-green, spanning entire top edge): the banner is a clean flat-color strip.\n\n`
-          : (d.tagline ? `TAGLINE: tagline in italic script.\n\n` : "")) +
+        ? `LOGO (orange pennant, top-left): IMAGE ${logoImg} centered inside pennant.` + (d.tagline ? ` Tagline in italic script beside pennant.\n\n` : "\n\n")
+        : (d.tagline ? `TAGLINE: tagline in italic script.\n\n` : "")) +
       `SERVICE LIST (left column, parchment area): ` +
       (menuCount > 0
         ? `EXACTLY ${menuCount} orange circular checkmark badge item${menuCount !== 1 ? "s" : ""} — one per service in BUSINESS DETAILS, exactly as written. No extras. No invented services. Badge label text ≥14pt bold.\n\n`
@@ -598,33 +451,14 @@ export function buildAdPrompt(
     )
     : (
       // Default: parchment-classic portrait
-      (fontVariant !== 0
-        ? "⛔ LOGO ZONE: " +
-          (fontVariant === 1
-            ? "The top-right corner has a CIRCULAR EMBLEM BADGE with navy blue double-ring border on parchment background. "
-            : "A FULL-WIDTH DARK FOREST-GREEN RECTANGULAR BANNER spans the entire top edge of the card. ") +
-          "This is the only logo-zone element at the top of this ad.\n\n"
-        : "") +
       "LAYOUT — render these zones top to bottom:\n\n" +
       `HEADLINE (top): business name uses a LAYERED TWO-FONT treatment — main words in bold condensed all-caps slab/block serif, very large, dark color, horizontal. ` +
       `IF name contains a common English category/industry noun (Cafe/Grill/Spa/Pizza/Bar/Salon/Dental/Kitchen/Bakery/Bistro/Diner) — render ONLY that one word in flowing orange script at ≈−8° angle. Never for proper nouns or brand names. Each word exactly once.\n\n` +
       (hasLogo
-        ? fontVariant === 1
-          ? `LOGO + TAGLINE (circular emblem/seal badge, top-RIGHT corner, ring-bordered): ` +
-            `IMAGE ${logoImg} centered inside circular badge, scaled to fit with clear margin, exact colors preserved.` +
-            (d.tagline ? ` Tagline in handwriting-style italic script (+5°–7°), large, confident, below the badge.` : "") + "\n\n"
-          : fontVariant === 2
-          ? `LOGO (inside full-width rectangular banner strip spanning the entire top edge of the card): ` +
-            `IMAGE ${logoImg} positioned left-center inside the banner strip, exact colors preserved.` +
-            (d.tagline ? ` Business name and tagline also sit inside the banner strip.` : "") + "\n\n"
-          : `LOGO + TAGLINE (orange pennant ribbon, top-left, TOP EDGE flush with top of ad): ` +
-            `IMAGE ${logoImg} centered inside pennant, scaled to fit with clear margin, exact colors preserved.` +
-            (d.tagline ? ` Tagline in handwriting-style italic script (+5°–7°), large, confident, to the right of pennant below headline.` : "") + "\n\n"
-        : fontVariant === 1
-          ? `LOGO ZONE (circular emblem badge, top-RIGHT corner): draw a circular ring badge with navy blue double-ring border on parchment background — interior is clean empty parchment.\n\n`
-          : fontVariant === 2
-          ? `LOGO ZONE (full-width rectangular banner strip at the very top, solid dark forest-green, spanning the full width edge to edge): the banner is a clean flat-color strip.\n\n`
-          : (d.tagline ? `TAGLINE (upper-left, below headline): tagline in handwriting-style italic script (+5°–7°), large, confident.\n\n` : "")) +
+        ? `LOGO + TAGLINE (orange pennant ribbon, top-left, TOP EDGE flush with top of ad): ` +
+          `IMAGE ${logoImg} centered inside pennant, scaled to fit with clear margin, exact colors preserved.` +
+          (d.tagline ? ` Tagline in handwriting-style italic script (+5°–7°), large, confident, to the right of pennant below headline.` : "") + "\n\n"
+        : (d.tagline ? `TAGLINE (upper-left, below headline): tagline in handwriting-style italic script (+5°–7°), large, confident.\n\n` : "")) +
       "HERO IMAGE (right-center, large feature area): " +
       (hasPhoto
         ? `composite IMAGE 2 into the template's photo area — blend edges naturally into the dark brush-stroke/painted background, no hard border. Match warm commercial food photography style.\n\n`
@@ -651,7 +485,6 @@ export function buildAdPrompt(
         refLines.join("\n") + "\n\n"
       : "") +
     outputRequirements + "\n" +
-    (variantBlock ? variantBlock + "\n" : "") +
     "STYLE: high-end editorial advertising. Cinematic photography, rich vibrant color, professional lighting. Bold confident typography hierarchy. Premium color palette — deep, saturated, controlled. Print-ready sharpness throughout.\n\n" +
     "STRICT FIDELITY — ABSOLUTE: Every word of text on this ad must come from BUSINESS DETAILS. Do NOT invent, add, hallucinate, or paraphrase any text, service name, menu item, or label not present in BUSINESS DETAILS. " +
     "If a field is '(none)', omit that element entirely. If no services are listed, render no service text labels anywhere on the ad. " +
