@@ -45,6 +45,7 @@ const TEMPLATES = [
   "neighborhood-pro",
   "at-your-service",
   "health-wellness",
+  "home-elegance",
   "surprise-me",
 ] as const;
 
@@ -75,11 +76,11 @@ for (const template of TEMPLATES) {
 // ── Summary ────────────────────────────────────────────────────────────────────
 console.log("");
 if (failures.length === 0) {
-  console.log(`✓ All 12 template×orientation prompts are under ${MAX_BYTES} bytes`);
+  console.log(`✓ All 14 template×orientation prompts are under ${MAX_BYTES} bytes`);
   process.exit(0);
 } else {
   console.error(
-    `✗ ${failures.length} of 12 template×orientation prompts exceed ${MAX_BYTES} bytes.\n` +
+    `✗ ${failures.length} of 14 template×orientation prompts exceed ${MAX_BYTES} bytes.\n` +
     "  Shorten the template copy in artifacts/api-server/src/lib/buildAdPrompt.ts\n" +
     "  until this check passes, then re-run to confirm.",
   );

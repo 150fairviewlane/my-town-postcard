@@ -179,7 +179,9 @@ export function buildAdPrompt(
               ? "landscape Neighborhood Pro layout: deep forest-green bg, large white brush-stroke splash panel upper-left (headline zone), full-bleed hero photo upper-right, horizontal row of diagonal-cut service panels with circular lime-green icon badges, wide white brush-stroke offer/coupon area lower-center, dark green footer bar. Reproduce exactly."
               : templateKey === "at-your-service"
                 ? "landscape At Your Service layout: light gray/cream textured bg, large dark navy hexagonal badge upper-left (logo zone), gold/yellow brush-stroke sweeping upper area, large hero photo zone blending into bg upper-right, wide dark navy band with circular white icon service badges, gold/yellow dashed-border coupon box lower-right, footer: location-pin + address left, phone center, QR right. Reproduce exactly."
-                : "landscape Health & Wellness layout: soft cream/off-white bg, clinic/office photo in organic curved teal blob upper-left, large wide rounded-rectangle white headline panel upper-center, teal pill-shaped tagline bar below it, service panels row with circular teal icon badges and white rounded-rect text boxes, reception photo in organic teal blob lower-left, stethoscope on dark teal circular blob lower-right, small white rounded QR box, dark teal footer bar. Reproduce exactly.";
+                : templateKey === "home-elegance"
+                  ? "landscape Home Elegance layout: cream/off-white bg with organic blob wave shapes, dark navy + gold accent scheme. Left side (cream blob area): dark navy hexagonal house-icon badge top-left, navy-bordered rounded-rect business-name box, smaller tagline box, additional text boxes, phone/address icons lower-left. Right side: large hero photo upper-right blending naturally, dark navy lower-right section with three overlapping circular photos (interior, kitchen, outdoor service), four rounded-rect service card tiles each topped by circular dark navy icon badge (house, tools, leaf, people), QR code far right. Reproduce exactly."
+                  : "landscape Health & Wellness layout: soft cream/off-white bg, clinic/office photo in organic curved teal blob upper-left, large wide rounded-rectangle white headline panel upper-center, teal pill-shaped tagline bar below it, service panels row with circular teal icon badges and white rounded-rect text boxes, reception photo in organic teal blob lower-left, stethoscope on dark teal circular blob lower-right, small white rounded QR box, dark teal footer bar. Reproduce exactly.";
       refLines.push(`  • IMAGE ${imgIdx++} (LANDSCAPE TEMPLATE) — ${lsTmplDesc}`);
     }
     if (hasPhoto) {
@@ -210,7 +212,9 @@ export function buildAdPrompt(
           ? "  • IMAGE 1 (TEMPLATE) — bold outdoor-service postcard on deep forest-green bg: two overlapping white paint-brush splash shapes upper-left (headline zone), large hero photo zone upper-right, horizontal row of diagonal-cut service photo panels with circular green icon badges and white brush-stroke labels, wide white brush-stroke offer area lower section, dark green footer bar. Reproduce exactly."
           : templateKey === "at-your-service"
             ? "  • IMAGE 1 (TEMPLATE) — home-services postcard on light gray/off-white textured bg, navy blue + gold/yellow scheme: large dark navy hexagonal badge upper-left (logo zone), bold horizontal gold/yellow brush-stroke sweeping upper third, large hero photo zone upper-right blending naturally, wide dark navy horizontal band center-full-width, circular white icon service badges on the navy band, gold/yellow dashed-border coupon box lower-right, dark strip footer. Reproduce exactly."
-            : templateKey === "health-wellness"
+            : templateKey === "home-elegance"
+              ? "  • IMAGE 1 (TEMPLATE) — premium home-services postcard on cream/off-white bg, dark navy + gold scheme: dark navy hexagonal house-icon badge upper-left, large hero photo upper-right bleeding off edge, organic cream blob wave left-center with navy-bordered rounded-rect business-name box + smaller tagline box + gold dot separator, three overlapping circular photos (living room, kitchen, outdoor service) middle-right, wide dark navy lower section with four rounded-rect service card tiles each capped by circular navy icon badge (house, tools, leaf, people), dark navy footer bar with phone icon + QR code. Reproduce exactly."
+              : templateKey === "health-wellness"
               ? "  • IMAGE 1 (TEMPLATE) — health/wellness postcard on soft cream bg with teal accents: two clinic/office photos inside organic curved teal blob shapes upper section, large wide rounded-rectangle white panel center (headline zone), narrow teal pill-shaped bar below it (tagline zone), service panels with circular teal badge icons and white rounded-rect text boxes, reception/waiting-room photo in organic blob lower-left, teal stethoscope on dark teal circular blob lower-right, small white rounded QR box, dark teal footer bar. Reproduce exactly."
               : "  • IMAGE 1 (TEMPLATE) — postcard with parchment texture, brush-stroke headline band, orange pennant ribbon, circular checkmark badge, dashed coupon box, dark footer strip. Reproduce every zone and element exactly.",
     );
@@ -307,6 +311,25 @@ export function buildAdPrompt(
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape)
     )
+    : isLandscape && templateKey === "home-elegance"
+    ? (
+      LANDSCAPE_CANVAS_RULE +
+      "LAYOUT — reproduce Home Elegance LANDSCAPE zones exactly:\n\n" +
+      (hasLogo ? `LOGO (IMAGE ${logoImg} inside dark navy hexagonal badge, upper-left).\n\n` : "") +
+      `HEADLINE (cream blob left area): business name bold condensed all-caps slab serif, dark navy.` +
+      (d.tagline ? ` Tagline in clean italic script, dark navy, below headline box.` : "") + "\n\n" +
+      "HERO PHOTO (upper-right, large):\n" +
+      (hasPhoto
+        ? `  Composite IMAGE 2 — fill upper-right zone, blend left edge naturally into cream bg, no hard border. Cinematic lighting.\n\n`
+        : `  Generate a photorealistic home exterior or landscaping scene. Fill upper-right, blend into cream bg.\n\n`) +
+      "CIRCULAR PHOTOS (dark navy right area, three overlapping circles): " +
+      `generate three circular-cropped interior/exterior photos — living space, kitchen, outdoor service scene. Each perfectly circular with subtle gold ring accent.\n\n` +
+      `SERVICE TILES (dark navy lower-right area): ` +
+      (menuCount > 0
+        ? `EXACTLY ${menuCount} rounded-rect service tile${menuCount !== 1 ? "s" : ""} — one per service from BUSINESS DETAILS, exactly as written. Each tile: circular dark navy icon badge on top, service name below inside cream card body. No extras. No invented services.\n\n`
+        : `render decorative rounded-rect tile shapes with circular dark navy icon badge graphics only; NO text labels (no services provided).\n\n`) +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape)
+    )
     : isLandscape && templateKey === "health-wellness"
     ? (
       LANDSCAPE_CANVAS_RULE +
@@ -334,7 +357,7 @@ export function buildAdPrompt(
       `  PALETTE: ${selectedTheme.palette}\n` +
       `  TYPOGRAPHY: ${selectedTheme.typography}\n` +
       `  LAYOUT: ${selectedTheme.layoutLandscape}\n\n` +
-      "DO NOT recreate any existing LocalSpot template style: Parchment/rustic | Chalkboard/bistro | Forest-green contractor | Navy/gold home services | Teal/sage wellness.\n\n" +
+      "DO NOT recreate any existing LocalSpot template style: Parchment/rustic | Chalkboard/bistro | Forest-green contractor | Navy/gold home services | Teal/sage wellness | Cream/navy circular-photo elegance.\n\n" +
       "VISUAL RULES (mandatory):\n" +
       "  • Fill 100% of the 3\"×2\" canvas to every edge — no blank areas, no outer border, no drop shadow outside the ad.\n" +
       "  • No hard rectangular photo borders — mask/blend edges with organic shapes, gradients, or diagonal cuts.\n" +
@@ -398,6 +421,27 @@ export function buildAdPrompt(
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape)
     )
+    : templateKey === "home-elegance"
+    ? (
+      "LAYOUT — reproduce Home Elegance template zones exactly:\n\n" +
+      (hasLogo
+        ? `LOGO (IMAGE ${logoImg} centered inside dark navy hexagonal badge, upper-left).\n\n`
+        : "") +
+      `HEADLINE (inside cream blob wave, left-center area): business name bold condensed all-caps slab serif, very large, dark navy. ` +
+      `If name has a common English service-category noun (Plumbing/Roofing/Painting/Landscaping/Services/Remodeling) — render ONLY that word in gold script. Each word once.` +
+      (d.tagline ? ` Tagline in clean italic script, dark navy, below headline box.` : "") + "\n\n" +
+      "HERO PHOTO (upper-right, large photo zone):\n" +
+      (hasPhoto
+        ? `  Composite IMAGE 2 — fill upper-right zone, blend left/bottom edges naturally into cream bg, no hard border. Cinematic lighting.\n\n`
+        : `  Generate a photorealistic home exterior or professional landscaping scene. Fill upper-right zone, blend naturally into cream bg.\n\n`) +
+      "CIRCULAR PHOTOS (middle-right area, three overlapping circles): " +
+      `generate three circular-cropped photos — interior living space, kitchen or work area, outdoor service/garden scene. Each perfectly circular with subtle gold ring accent.\n\n` +
+      `SERVICE TILES (wide dark navy lower area): ` +
+      (menuCount > 0
+        ? `EXACTLY ${menuCount} equal rounded-rect service tile${menuCount !== 1 ? "s" : ""} — one per service in BUSINESS DETAILS, exactly as written. Each tile: circular dark navy icon badge on top (house, tools, leaf, or people icon), service name below inside cream card. No extras. No invented services.\n\n`
+        : `navy area — render four decorative rounded-rect tile shapes with circular dark navy icon badge graphics only; NO text labels (no services provided).\n\n`) +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape)
+    )
     : templateKey === "surprise-me"
     ? (
       "DESIGN BRIEF — create a completely ORIGINAL postcard ad. Full creative freedom:\n\n" +
@@ -406,7 +450,7 @@ export function buildAdPrompt(
       `  TYPOGRAPHY: ${selectedTheme.typography}\n` +
       `  LAYOUT: ${selectedTheme.layoutPortrait}\n\n` +
       "DO NOT recreate any existing LocalSpot template style:\n" +
-      "  Parchment/rustic | Chalkboard/bistro | Forest-green contractor | Navy/gold home services | Teal/sage wellness\n\n" +
+      "  Parchment/rustic | Chalkboard/bistro | Forest-green contractor | Navy/gold home services | Teal/sage wellness | Cream/navy circular-photo elegance\n\n" +
       "VISUAL RULES (mandatory):\n" +
       "  • Fill 100% of the canvas to every edge — no blank areas, no outer border, no drop shadow outside the ad.\n" +
       "  • No hard rectangular photo borders — mask/blend edges with organic shapes, gradients, or diagonal cuts.\n" +
