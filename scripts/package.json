@@ -12,6 +12,7 @@
     "update:ga-centroids": "tsx ./src/update-ga-centroids.ts",
     "seed:zip-assignments": "tsx ./src/seed-zip-assignments.ts",
     "update:ga-zone-notes": "tsx ./src/update-ga-zone-notes.ts",
+    "generate-parchment-templates": "tsx ./src/generateParchmentVariantTemplates.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {

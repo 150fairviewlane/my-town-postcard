@@ -8,7 +8,7 @@
 
 export const FONT_VARIANTS: Record<string, string[]> = {
   "parchment-classic": [
-    "VARIANT 1 — RUSTIC WARM: Bold condensed slab serif headline (Rockwell/Clarendon style) + warm orange flowing script on one English category noun only. Rustic and warm.",
+    "VARIANT 1 — RUSTIC WARM: Bold condensed slab serif headline (Rockwell/Clarendon style). Script accent: warm orange flowing script for ONE identified English category noun — that noun is rendered ONLY in the flowing script and must NOT also appear in the slab-serif block. All other words stay in bold slab serif. Never print any word twice. Rustic and warm.",
     "VARIANT 2 — ELEGANT SERIF: Tall refined display serif headline (Playfair Display Black/Bodoni style), mixed-case with generous letter-spacing. Fine italic serif for the category noun — no rounded script. Premium editorial feel.",
     "VARIANT 3 — BOLD MODERN: Ultra-bold geometric sans-serif headline (Futura ExtraBold/Montserrat Black style), all-caps, tight tracking. No script accent. Clean and contemporary.",
   ],

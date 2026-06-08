@@ -46,7 +46,7 @@ const GenerateSchema = z.object({
 
 const FONT_VARIANTS: Record<string, string[]> = {
   "parchment-classic": [
-    "Typography variant A — Headline: bold condensed slab serif (Rockwell Extra Bold / Clarendon style). Script accent: warm orange flowing script (Pacifico / Lobster style) applied only to a single English category noun in the business name. Together they create a layered editorial premium headline.",
+    "Typography variant A — Headline: bold condensed slab serif (Rockwell Extra Bold / Clarendon style). Script accent: warm orange flowing script (Pacifico / Lobster style) for ONE identified English category noun — that noun is rendered ONLY in the flowing script and must NOT also appear in the slab-serif block. All other words in the business name stay in the slab serif. Never print any word twice.",
     "Typography variant B — Headline: strong display serif (Playfair Display Black / Bodoni 72 Bold style), all-caps, maximum weight, rich contrast. Script accent: refined italic serif at a slight angle for a single category noun — no rounded script/cursive. Elegant editorial weight contrast.",
     "Typography variant C — Headline: geometric sans-serif (Futura ExtraBold / Raleway ExtraBold style), all-caps, ultra-clean. No script accent — the entire business name in solid bold geometric caps. Modern minimalist label aesthetic, zero ornamentation.",
   ],
@@ -457,15 +457,25 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   let tmplBuf: Buffer | null = null;
   let tmplMime = "image/png";
   if (templateKey !== "surprise-me") {
+    // parchment-classic has per-variant template images so Grok sees the correct
+    // logo-zone shape (pennant / circular badge / banner strip) in the pixel image.
+    const parchmentPortrait =
+      fontVariant === 1 ? "parchment_classic_portrait_v2.png"
+      : fontVariant === 2 ? "parchment_classic_portrait_v3.png"
+      : "mr_biscuits_template_no_logo_1778806527327.png";
+    const parchmentLandscape =
+      fontVariant === 1 ? "parchment_classic_landscape_v2.png"
+      : fontVariant === 2 ? "parchment_classic_landscape_v3.png"
+      : "parchment_classic_landscape_1779162178190.png";
     const portraitFiles: Record<string, string> = {
-      "parchment-classic": "mr_biscuits_template_no_logo_1778806527327.png",
+      "parchment-classic": parchmentPortrait,
       "made-fresh":        "made_fresh_template.png",
       "neighborhood-pro":  "6300F2D5-6BF1-403E-A40B-7203E4E26402_1778948283280.jpeg",
       "at-your-service":   "IMG_0728_1779065210873.jpeg",
       "health-wellness":   "healthcare_generic_template_1779141099043.png",
     };
     const landscapeFiles: Record<string, string> = {
-      "parchment-classic": "parchment_classic_landscape_1779162178190.png",
+      "parchment-classic": parchmentLandscape,
       "made-fresh":        "made_fresh_landscape_1779162178190.png",
       "neighborhood-pro":  "IMG_0747_1779162178190.png",
       "at-your-service":   "IMG_0746_1779162178190.png",
