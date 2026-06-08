@@ -48,8 +48,8 @@ export const COUPON_VARIANTS: string[] = [
 export const COLOR_VARIANTS: Record<string, string[]> = {
   "parchment-classic": [
     "VARIANT 1 COLORS — WARM PARCHMENT: Warm ivory/parchment background. Deep dark brown/near-black brush stroke band. Orange-amber pennant ribbon. Orange circular checkmark badges. Dashed dark coupon box. Dark footer.",
-    "VARIANT 2 COLORS — INVERTED DARK: Deep navy or near-black background replaces parchment. Brush stroke band in warm ivory/cream. Gold/amber primary accent replaces orange throughout. Pennant ribbon in deep gold. Checkmark badges in gold. Coupon box with gold dashed border on dark background. Footer in darkest navy. Mood: premium and dramatic.",
-    "VARIANT 3 COLORS — FRESH GREEN: Clean bright white background. Brush stroke band in deep forest green. Pennant ribbon in forest green. Checkmark badges in lime green. Coupon box with bold solid green border and drop shadow. Footer in deep forest green. Mood: fresh and contemporary.",
+    "VARIANT 2 COLORS — INVERTED DARK: Deep navy or near-black background replaces parchment. Brush stroke band in warm ivory/cream. Gold/amber primary accent replaces orange throughout. Circular emblem/seal ring border in deep gold, top-right. Checkmark badges in gold. Coupon box with gold dashed border on dark background. Footer in darkest navy. Mood: premium and dramatic.",
+    "VARIANT 3 COLORS — FRESH GREEN: Clean bright white background. Brush stroke band in deep forest green. Rectangular banner strip in forest green across top edge. Checkmark badges in lime green. Coupon box with bold solid green border and drop shadow. Footer in deep forest green. Mood: fresh and contemporary.",
   ],
   "made-fresh": [
     "VARIANT 1 COLORS — WARM NATURAL: Warm charcoal primary. Near-black chalkboard. Golden yellow accent. Fresh white highlight. Natural wood tones throughout.",
@@ -81,8 +81,8 @@ export const COLOR_VARIANTS: Record<string, string[]> = {
 export const LAYOUT_VARIANTS: Record<string, string[]> = {
   "parchment-classic": [
     "VARIANT 1 LAYOUT — STANDARD: Pennant ribbon top-left. Brush stroke band sweeps left to right across upper third. Hero photo right side blending into brush stroke. Service list with circular checkmark badges on left column. Dashed coupon box lower-right. Dark footer full width.",
-    "VARIANT 2 LAYOUT — MIRRORED: Pennant ribbon top-RIGHT instead of top-left. Hero photo on the LEFT side blending into the dark background. Business name and headline on the RIGHT side. Service badges arranged in a 2x2 grid instead of a vertical column. Coupon box lower-LEFT instead of lower-right. Everything is horizontally mirrored from the standard layout.",
-    "VARIANT 3 LAYOUT — STACKED ZONES: No diagonal brush stroke band. Clean horizontal zones instead: top zone contains business name full-width centered. Middle zone contains hero photo full-bleed left with service info in a clean grid right. Bottom zone contains offer/coupon centered above footer. More grid-based and contemporary than the organic brush-stroke default.",
+    "VARIANT 2 LAYOUT — MIRRORED: do NOT use the orange pennant ribbon. Instead, place a circular emblem/seal badge (round, ring-bordered) in the TOP-RIGHT corner for the logo zone. Hero photo on the LEFT side blending into the dark background. Business name and headline on the RIGHT side. Service badges arranged in a 2x2 grid instead of a vertical column. Coupon box lower-LEFT instead of lower-right. Everything is horizontally mirrored from the standard layout.",
+    "VARIANT 3 LAYOUT — STACKED ZONES: do NOT use the orange pennant ribbon. Instead, a full-width rectangular banner strip spans the entire top edge of the card — logo and business name sit inside this banner. No diagonal brush stroke band. Clean horizontal zones below: middle zone contains hero photo full-bleed left with service info in a clean grid right. Bottom zone contains offer/coupon centered above footer. More grid-based and contemporary than the organic brush-stroke default.",
   ],
   "made-fresh": [
     "VARIANT 1 LAYOUT — STANDARD: Wood table background. Plate prop left. Chalkboard sign upper-right. White paint-stroke info panel center. Ticket coupon right.",
@@ -608,8 +608,8 @@ export function buildAdPrompt(
       ? `REFERENCE IMAGES (${refLines.length} provided — treat as distinct inputs, do NOT merge their styles):\n` +
         refLines.join("\n") + "\n\n"
       : "") +
-    (variantBlock ? variantBlock + "\n" : "") +
     outputRequirements + "\n" +
+    (variantBlock ? variantBlock + "\n" : "") +
     "STYLE: high-end editorial advertising. Cinematic photography, rich vibrant color, professional lighting. Bold confident typography hierarchy. Premium color palette — deep, saturated, controlled. Print-ready sharpness throughout.\n\n" +
     "STRICT FIDELITY — ABSOLUTE: Every word of text on this ad must come from BUSINESS DETAILS. Do NOT invent, add, hallucinate, or paraphrase any text, service name, menu item, or label not present in BUSINESS DETAILS. " +
     "If a field is '(none)', omit that element entirely. If no services are listed, render no service text labels anywhere on the ad. " +
