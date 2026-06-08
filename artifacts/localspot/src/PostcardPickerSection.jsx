@@ -667,7 +667,9 @@ const openGrokGenerator=()=>{
   // polling) happen while the user is working in the popup.
   const capturedSel=sel;
   const capturedSide=side;
-  const url=`/api/grok-ad-generator?spotSize=${encodeURIComponent(sel.size||'')}&spotId=${encodeURIComponent(sel.id||'')}&bizName=&industry=&taken=${encodeURIComponent(takenCategories.join(','))}&campaignId=${encodeURIComponent(sel.campaignId||'')}&side=${encodeURIComponent(side||'front')}`;
+  const dbSpotId=spotByGridArea[sel.dbGridArea]?.id??'';
+  const dbCampaignId=campaign?.id??'';
+  const url=`/api/grok-ad-generator?spotSize=${encodeURIComponent(sel.size||'')}&spotId=${encodeURIComponent(dbSpotId)}&bizName=&industry=&taken=${encodeURIComponent(takenCategories.join(','))}&campaignId=${encodeURIComponent(dbCampaignId)}&side=${encodeURIComponent(side||'front')}`;
   const popup=window.open(url,'grok-ad-gen','width=1120,height=800,left=80,top=60');
   grokPopupRef.current=popup;
   setAdMethod("grok");
