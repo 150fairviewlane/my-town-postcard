@@ -1,0 +1,99 @@
+Stop. I need one focused fix in adGenGrok.ts only.
+
+THE PROBLEM:
+The frontend always sends variantOverride which prevents the 
+server-side sibling DB lookup from ever running. _genCount resets 
+to -1 every time the popup opens, so every first generation always 
+sends variantOverride: 0, fontVariant is always 0, and every ad 
+gets the v1 template regardless of what other ads are on the postcard.
+
+THE FIX — two changes only:
+
+CHANGE 1 — adGenGrok.ts line 395:
+The current logic is:
+  if variantOverride is present → use it, skip DB lookup
+
+Change it to:
+  if variantOverride is present AND spotId is NOT present → use it
+  if spotId IS present → always use the DB lookup, ignore variantOverride
+
+The DB lookup already correctly counts sibling spots with the same 
+template in the same campaign. When a spotId is present, that is 
+the authoritative source for variant assignment. variantOverride 
+should only be used as a fallback when there is no spotId 
+(preview/test generations with no DB record).
+
+The updated logic block should be:
+
+  let adIndex = 0;
+  if (d.spotId !== undefined) {
+    // spotId present — use DB sibling count for authoritative 
+    // variant assignment. Ignore variantOverride entirely.
+    try {
+      const thisSpot = await db
+        .select({ campaignId: spotsTable.campaignId })
+        .from(spotsTable)
+        .where(eq(spotsTable.id, d.spotId))
+        .limit(1);
+      if (thisSpot.length > 0) {
+        const campaignId = thisSpot[0].campaignId;
+        const siblings = await db
+          .select({ templateData: spotsTable.templateData })
+          .from(spotsTable)
+          .where(
+            and(
+              eq(spotsTable.campaignId, campaignId),
+              ne(spotsTable.id, d.spotId),
+              or(
+                eq(spotsTable.status, "reserved"),
+                eq(spotsTable.status, "paid"),
+              ),
+            ),
+          );
+        const tmpl = d.template || "parchment-classic";
+        const matchingSiblings = siblings.filter((row) => {
+          if (!row.templateData) return false;
+          try {
+            return (JSON.parse(row.templateData) as { template?: string }).template === tmpl;
+          } catch { return false; }
+        });
+        adIndex = matchingSiblings.length;
+        req.log.info(
+          { spotId: d.spotId, campaignId, matchingSiblings: matchingSiblings.length, adIndex },
+          "adIndex computed from DB siblings"
+        );
+      } else {
+        req.log.warn({ spotId: d.spotId }, "adIndex lookup: spot not found in DB");
+      }
+    } catch (err) {
+      req.log.warn({ spotId: d.spotId, err }, "adIndex DB lookup failed — falling back to 0");
+    }
+  } else if (typeof d.variantOverride === "number") {
+    // No spotId — use variantOverride for preview/test generations
+    adIndex = d.variantOverride;
+    req.log.info({ variantOverride: adIndex }, "adIndex set from variantOverride (no spotId)");
+  } else {
+    req.log.warn("adIndex = 0: no spotId and no variantOverride");
+  }
+
+CHANGE 2 — Verify templateData is being saved correctly.
+The sibling lookup reads templateData from the spots table and 
+parses it to find the template key. Confirm that when an ad is 
+reserved or paid, the templateData field is being written with 
+a JSON object containing a "template" key matching the template 
+key string (e.g. {"template":"parchment-classic",...}).
+
+Run this query against the live DB and show me the result:
+  SELECT id, status, templateData 
+  FROM spots 
+  WHERE templateData IS NOT NULL 
+  LIMIT 5;
+
+If templateData is null for all rows or does not contain a 
+"template" key, the sibling lookup will always return 0 and 
+variants will never advance. Report what you find before 
+making any other changes.
+
+Do not touch any other files. Do not change the frontend.
+Show me the DB query result and the updated adIndex block 
+before applying.

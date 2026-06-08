@@ -390,12 +390,11 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   // ── Compute adIndex for variant rotation ─────────────────────────────────────
   // adIndex = number of other spots in the same campaign already using this template
   // (status reserved or paid). Applies to both portrait and landscape templates.
-  // If the client sends variantOverride (0/1/2), skip the DB lookup and use it directly.
+  // Priority: if spotId is present, ALWAYS use the DB sibling count (authoritative).
+  // variantOverride is only a fallback for preview/test generations with no spotId.
   let adIndex = 0;
-  if (typeof (d as { variantOverride?: number }).variantOverride === "number") {
-    adIndex = (d as { variantOverride?: number }).variantOverride!;
-    req.log.info({ variantOverride: adIndex }, "adIndex set from variantOverride");
-  } else if (d.spotId !== undefined) {
+  if (d.spotId !== undefined) {
+    // spotId present — DB sibling count is authoritative; ignore variantOverride
     try {
       const thisSpot = await db
         .select({ campaignId: spotsTable.campaignId })
@@ -425,17 +424,21 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
         });
         adIndex = matchingSiblings.length;
         req.log.info(
-          { spotId: d.spotId, campaignId, siblingsTotal: siblings.length, siblingsMatching: matchingSiblings.length, tmpl, adIndex },
-          "adIndex computed from siblings"
+          { spotId: d.spotId, campaignId, matchingSiblings: matchingSiblings.length, adIndex },
+          "adIndex computed from DB siblings"
         );
       } else {
         req.log.warn({ spotId: d.spotId }, "adIndex lookup: spot not found in DB");
       }
     } catch (err) {
-      logger.warn({ spotId: d.spotId, err }, "adIndex lookup failed — falling back to variant 0");
+      req.log.warn({ spotId: d.spotId, err }, "adIndex DB lookup failed — falling back to 0");
     }
+  } else if (typeof d.variantOverride === "number") {
+    // No spotId — use variantOverride for preview/test generations
+    adIndex = d.variantOverride;
+    req.log.info({ variantOverride: adIndex }, "adIndex set from variantOverride (no spotId)");
   } else {
-    req.log.warn("adIndex lookup skipped: no spotId and no variantOverride in request");
+    req.log.warn("adIndex = 0: no spotId and no variantOverride");
   }
 
   const fontVariant   = adIndex % 3;
