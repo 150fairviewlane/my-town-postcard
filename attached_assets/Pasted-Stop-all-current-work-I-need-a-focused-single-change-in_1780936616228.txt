@@ -1,0 +1,51 @@
+Stop all current work. I need a focused single change in 
+buildAdPrompt.ts only.
+
+The orange pennant keeps appearing on parchment-classic variant 2 
+and variant 3 ads because Grok associates "parchment" and "postcard" 
+with a pennant ribbon from its training data. No amount of negative 
+prompting will fix this.
+
+The fix: for variants 2 and 3 of parchment-classic, do NOT describe 
+the ad as parchment-style at all. Instead describe it as a completely 
+different design style that happens to use the same layout zones.
+
+In buildAdPrompt.ts, find where the parchment-classic template 
+description is built for variants 2 and 3 (fontVariant 1 and 2).
+
+Replace the template description for variant 2 (fontVariant === 1) 
+with language that describes it as a PREMIUM DARK ADVERTISING CARD 
+with no reference to parchment, texture, ribbon, or bookmark. 
+Describe only what IS there using neutral design language:
+- Deep navy background
+- Wide ivory brush stroke band across upper third
+- Hero photo right side with natural edge blending
+- Business name and headline in the brush stroke zone
+- Circular gold icon badges on left column for services
+- Gold dashed-border offer box lower-right
+- Dark footer with phone icon and QR code
+
+Replace the template description for variant 3 (fontVariant === 2) 
+with language that describes it as a MODERN GREEN ADVERTISING CARD:
+- Clean white background
+- Wide forest green brush stroke band across upper third  
+- Hero photo right side with natural edge blending
+- Business name and headline in the brush stroke zone
+- Circular green icon badges on left column for services
+- Bold green solid-border offer box lower-right
+- Forest green footer with phone icon and QR code
+
+Critical rules for both variant 2 and 3 descriptions:
+- Never use the words: parchment, ribbon, pennant, bookmark, 
+  banner, vintage, rustic, texture, or orange
+- Never describe what is NOT there — only describe what IS there
+- Do not reference the template image at all in the description
+- The top-left corner contains NOTHING decorative — 
+  describe it as empty or as part of the brush stroke band only
+
+Do not touch variant 1 — it should keep the full parchment 
+description including the pennant exactly as-is.
+
+Make this change only in buildAdPrompt.ts. Show me the exact 
+before and after text for both variant 2 and variant 3 descriptions 
+before applying.

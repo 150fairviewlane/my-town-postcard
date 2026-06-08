@@ -298,7 +298,9 @@ export function buildAdPrompt(
         templateKey === "parchment-classic"
           ? fontVariant === 0
             ? "landscape Parchment Classic layout: warm parchment texture, orange bookmark-ribbon pennant top-left, dark brush-stroke headline band, orange circular checkmark service badges left column, dashed coupon box, dark footer strip. Reproduce every zone exactly."
-            : "landscape Parchment Classic layout: warm parchment texture, dark brush-stroke headline band, orange circular checkmark service badges left column, dashed coupon box, dark footer strip. Reference for parchment texture and checkmark badge style only — the logo zone is defined in LOGO ZONE below."
+            : fontVariant === 1
+            ? "landscape premium dark advertising card: deep navy background, wide ivory brush-stroke band across upper third, hero photo right blending naturally into background, circular gold icon badges left column for services, gold dashed-border offer box lower-right, dark footer with phone and QR code. Render layout zones exactly as shown."
+            : "landscape modern green advertising card: clean white background, wide forest-green brush-stroke band across upper third, hero photo right blending naturally into background, circular green icon badges left column for services, bold green solid-border offer box lower-right, forest-green footer with phone and QR code. Render layout zones exactly as shown."
           : templateKey === "made-fresh"
             ? "landscape Made Fresh layout: warm wood-table bg, white plate + gingham cloth left, 'Made Fresh For You' chalkboard A-frame sign upper-right, white paint-stroke business info panel, golden ticket-stub coupon right. Reproduce all textures and zones exactly."
             : templateKey === "neighborhood-pro"
@@ -340,7 +342,9 @@ export function buildAdPrompt(
               ? "  • IMAGE 1 (TEMPLATE) — health/wellness postcard on soft cream bg with teal accents: two clinic/office photos inside organic curved teal blob shapes upper section, large wide rounded-rectangle white panel center (headline zone), narrow teal pill-shaped bar below it (tagline zone), service panels with circular teal badge icons and white rounded-rect text boxes, reception/waiting-room photo in organic blob lower-left, teal stethoscope on dark teal circular blob lower-right, small white rounded QR box, dark teal footer bar. Reproduce exactly."
               : fontVariant === 0
                 ? "  • IMAGE 1 (TEMPLATE) — postcard with parchment texture, brush-stroke headline band, orange pennant ribbon, circular checkmark badge, dashed coupon box, dark footer strip. Reproduce every zone and element exactly."
-                : "  • IMAGE 1 (TEMPLATE) — postcard with parchment texture, brush-stroke headline band, circular checkmark badges, dashed coupon box, dark footer strip. Reference for parchment texture and checkmark badge style only — the logo zone is defined in LOGO ZONE below.",
+                : fontVariant === 1
+                ? "  • IMAGE 1 (TEMPLATE) — premium dark advertising card: deep navy background, wide ivory brush-stroke band across upper third, hero photo right side blending naturally into background, circular gold icon badges left column for services, gold dashed-border offer box lower-right, dark footer with phone and QR code. Render layout zones exactly as shown."
+                : "  • IMAGE 1 (TEMPLATE) — modern green advertising card: clean white background, wide forest-green brush-stroke band across upper third, hero photo right side blending naturally into background, circular green icon badges left column for services, bold green solid-border offer box lower-right, forest-green footer with phone and QR code. Render layout zones exactly as shown.",
     );
     imgIdx = 2;
     if (hasPhoto) {
