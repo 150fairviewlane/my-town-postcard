@@ -490,6 +490,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     }
     tmplBuf = fs.readFileSync(tmplPath);
     tmplMime = /\.(jpe?g)$/i.test(tmplFilename) ? "image/jpeg" : "image/png";
+    req.log.info({ templateKey, fontVariant, tmplFilename }, "template file loaded");
   }
 
   // Map spot size → closest supported Grok aspect ratio

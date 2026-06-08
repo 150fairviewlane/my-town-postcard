@@ -298,7 +298,7 @@ export function buildAdPrompt(
         templateKey === "parchment-classic"
           ? fontVariant === 0
             ? "landscape Parchment Classic layout: warm parchment texture, orange bookmark-ribbon pennant top-left, dark brush-stroke headline band, orange circular checkmark service badges left column, dashed coupon box, dark footer strip. Reproduce every zone exactly."
-            : "landscape Parchment Classic layout: warm parchment texture, dark brush-stroke headline band, orange circular checkmark service badges left column, dashed coupon box, dark footer strip. Reference for texture and checkmark style only — the logo zone and layout are defined in ⚠ OVERRIDE DIRECTIVES below; do NOT reproduce the pennant ribbon."
+            : "landscape Parchment Classic layout: warm parchment texture, dark brush-stroke headline band, orange circular checkmark service badges left column, dashed coupon box, dark footer strip. Reference for parchment texture and checkmark badge style only — the logo zone is defined in LOGO ZONE below."
           : templateKey === "made-fresh"
             ? "landscape Made Fresh layout: warm wood-table bg, white plate + gingham cloth left, 'Made Fresh For You' chalkboard A-frame sign upper-right, white paint-stroke business info panel, golden ticket-stub coupon right. Reproduce all textures and zones exactly."
             : templateKey === "neighborhood-pro"
@@ -340,7 +340,7 @@ export function buildAdPrompt(
               ? "  • IMAGE 1 (TEMPLATE) — health/wellness postcard on soft cream bg with teal accents: two clinic/office photos inside organic curved teal blob shapes upper section, large wide rounded-rectangle white panel center (headline zone), narrow teal pill-shaped bar below it (tagline zone), service panels with circular teal badge icons and white rounded-rect text boxes, reception/waiting-room photo in organic blob lower-left, teal stethoscope on dark teal circular blob lower-right, small white rounded QR box, dark teal footer bar. Reproduce exactly."
               : fontVariant === 0
                 ? "  • IMAGE 1 (TEMPLATE) — postcard with parchment texture, brush-stroke headline band, orange pennant ribbon, circular checkmark badge, dashed coupon box, dark footer strip. Reproduce every zone and element exactly."
-                : "  • IMAGE 1 (TEMPLATE) — postcard with parchment texture, brush-stroke headline band, circular checkmark badges, dashed coupon box, dark footer strip. Reference for texture and checkmark style only — the logo zone and layout are defined in ⚠ OVERRIDE DIRECTIVES below; do NOT reproduce the pennant ribbon.",
+                : "  • IMAGE 1 (TEMPLATE) — postcard with parchment texture, brush-stroke headline band, circular checkmark badges, dashed coupon box, dark footer strip. Reference for parchment texture and checkmark badge style only — the logo zone is defined in LOGO ZONE below.",
     );
     imgIdx = 2;
     if (hasPhoto) {
@@ -363,11 +363,11 @@ export function buildAdPrompt(
     ? (
       LANDSCAPE_CANVAS_RULE +
       (fontVariant !== 0
-        ? "⛔ LOGO ZONE OVERRIDE — this variant does NOT use the orange pennant ribbon. " +
+        ? "⛔ LOGO ZONE: " +
           (fontVariant === 1
-            ? "The logo zone is a CIRCULAR EMBLEM BADGE in the top-RIGHT corner (navy blue double-ring border on parchment). "
-            : "The logo zone is a FULL-WIDTH DARK FOREST-GREEN RECTANGULAR BANNER spanning the entire top edge. ") +
-          "There is NO pennant, bookmark ribbon, or orange triangular shape anywhere in this ad.\n\n"
+            ? "The top-right corner has a CIRCULAR EMBLEM BADGE with navy blue double-ring border on parchment background. "
+            : "A FULL-WIDTH DARK FOREST-GREEN RECTANGULAR BANNER spans the entire top edge of the card. ") +
+          "This is the only logo-zone element at the top of this ad.\n\n"
         : "") +
       "LAYOUT — reproduce Parchment Classic LANDSCAPE zones exactly:\n\n" +
       `HEADLINE (dark brush-stroke band, upper area): business name in bold condensed all-caps slab serif, white. ` +
@@ -379,10 +379,10 @@ export function buildAdPrompt(
           ? `LOGO (inside full-width rectangular banner strip spanning the entire top edge): IMAGE ${logoImg} left-aligned inside the banner strip, exact colors preserved.` + (d.tagline ? ` Tagline also inside the banner strip.\n\n` : "\n\n")
           : `LOGO (orange pennant, top-left): IMAGE ${logoImg} centered inside pennant.` + (d.tagline ? ` Tagline in italic script beside pennant.\n\n` : "\n\n")
         : fontVariant === 1
-          ? `LOGO ZONE (circular emblem badge, top-RIGHT corner): draw a circular ring badge with navy blue double-ring border on parchment background — no logo provided, interior is clean parchment. ⛔ NO pennant or orange ribbon anywhere.\n\n`
+          ? `LOGO ZONE (circular emblem badge, top-RIGHT corner): draw a circular ring badge with navy blue double-ring border on parchment background — interior is clean parchment.\n\n`
           : fontVariant === 2
-          ? `LOGO ZONE (full-width rectangular banner strip at very top, solid dark forest-green, spanning entire top edge): no logo provided — banner is text/business name only. ⛔ NO pennant or orange ribbon anywhere.\n\n`
-          : (d.tagline ? `TAGLINE: tagline in italic script beside the pennant.\n\n` : "")) +
+          ? `LOGO ZONE (full-width rectangular banner strip at very top, solid dark forest-green, spanning entire top edge): the banner is a clean flat-color strip.\n\n`
+          : (d.tagline ? `TAGLINE: tagline in italic script.\n\n` : "")) +
       `SERVICE LIST (left column, parchment area): ` +
       (menuCount > 0
         ? `EXACTLY ${menuCount} orange circular checkmark badge item${menuCount !== 1 ? "s" : ""} — one per service in BUSINESS DETAILS, exactly as written. No extras. No invented services. Badge label text ≥14pt bold.\n\n`
@@ -595,11 +595,11 @@ export function buildAdPrompt(
     : (
       // Default: parchment-classic portrait
       (fontVariant !== 0
-        ? "⛔ LOGO ZONE OVERRIDE — this variant does NOT use the orange pennant ribbon. " +
+        ? "⛔ LOGO ZONE: " +
           (fontVariant === 1
-            ? "The logo zone is a CIRCULAR EMBLEM BADGE in the top-RIGHT corner (navy blue double-ring border on parchment). "
-            : "The logo zone is a FULL-WIDTH DARK FOREST-GREEN RECTANGULAR BANNER spanning the entire top edge of the card. ") +
-          "There is NO pennant, bookmark ribbon, or orange triangular shape anywhere in this ad.\n\n"
+            ? "The top-right corner has a CIRCULAR EMBLEM BADGE with navy blue double-ring border on parchment background. "
+            : "A FULL-WIDTH DARK FOREST-GREEN RECTANGULAR BANNER spans the entire top edge of the card. ") +
+          "This is the only logo-zone element at the top of this ad.\n\n"
         : "") +
       "LAYOUT — render these zones top to bottom:\n\n" +
       `HEADLINE (top): business name uses a LAYERED TWO-FONT treatment — main words in bold condensed all-caps slab/block serif, very large, dark color, horizontal. ` +
@@ -617,9 +617,9 @@ export function buildAdPrompt(
             `IMAGE ${logoImg} centered inside pennant, scaled to fit with clear margin, exact colors preserved.` +
             (d.tagline ? ` Tagline in handwriting-style italic script (+5°–7°), large, confident, to the right of pennant below headline.` : "") + "\n\n"
         : fontVariant === 1
-          ? `LOGO ZONE (circular emblem badge, top-RIGHT corner ONLY): draw a circular ring badge with navy blue double-ring border on parchment background — no logo image provided, interior is clean empty parchment. ⛔ NO pennant, bookmark, or orange ribbon anywhere on this ad.\n\n`
+          ? `LOGO ZONE (circular emblem badge, top-RIGHT corner): draw a circular ring badge with navy blue double-ring border on parchment background — interior is clean empty parchment.\n\n`
           : fontVariant === 2
-          ? `LOGO ZONE (full-width rectangular banner strip at the very top, solid dark forest-green, spanning edge to edge): no logo image provided — banner area contains only the business name if desired. ⛔ NO pennant, bookmark, or orange ribbon anywhere on this ad.\n\n`
+          ? `LOGO ZONE (full-width rectangular banner strip at the very top, solid dark forest-green, spanning the full width edge to edge): the banner is a clean flat-color strip.\n\n`
           : (d.tagline ? `TAGLINE (upper-left, below headline): tagline in handwriting-style italic script (+5°–7°), large, confident.\n\n` : "")) +
       "HERO IMAGE (right-center, large feature area): " +
       (hasPhoto
