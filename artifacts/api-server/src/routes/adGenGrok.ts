@@ -342,6 +342,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "health-wellness":   "healthcare_generic_template_1779141099043.png",
       "home-elegance":     "home_services_no_text_1780946323885.png",
       "sage-organic":      "IMG_0832_1780946925550.png",
+      "purple-sage":       "IMG_0836_1780951148325.png",
     };
     const landscapeFiles: Record<string, string> = {
       "parchment-classic": parchmentLandscape,
@@ -351,6 +352,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "health-wellness":   "healthcare_wellness_landscape_1779162178190.png",
       "home-elegance":     "image_1780946327957.png",
       "sage-organic":      "image_1780946917886.png",
+      "purple-sage":       "IMG_0837_1780951148325.png",
     };
     const fileMap = isLandscape ? landscapeFiles : portraitFiles;
     const tmplFilename = fileMap[templateKey] ?? fileMap["parchment-classic"]!;
@@ -421,6 +423,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
                   ? "the full landscape postcard layout on a cream/off-white background with dark navy blue and gold accents. Left side (organic cream blob wave area): dark navy hexagonal house-icon badge top-left; navy-bordered rounded-rect business-name box, smaller tagline box, and additional text-field boxes inside the cream blob; phone icon + address icon lower-left. Right side: large hero photo upper-right blending naturally into bg; dark navy lower-right section with three overlapping circular photos (interior living room, kitchen, outdoor service scene); four rounded-rect service card tiles each topped by a circular dark navy icon badge (house, tools, leaf, people); QR code square far right. Reproduce every zone, the cream/navy/gold color scheme, and the footer layout exactly."
                   : templateKey === "sage-organic"
                   ? "the full landscape postcard layout on a cream/beige textured background with dark olive/sage green and kraft paper accents. Upper-left: large dark olive green circle with botanical leaf sprig illustrations. Upper-left area: large white/cream rounded-rectangle business-name zone; below it a sweeping dark olive green paint brush stroke. Upper-right: large hero photo (natural/organic interior, plants, natural light) filling a curved wave cutout shape, no hard border. Middle row: four dark olive green circular icon badges (award ribbon, people/team, handshake, shield/checkmark) with thin vertical dividers; four equal cream rounded-rect service card tiles below. Lower olive wave band: three equal-width landscape photos side by side (interior, shop, garden/outdoor). Lower-right: kraft paper textured rectangle with dashed stitched border and scissors icon (coupon zone). Footer: dark olive strip with location pin icon + address field left, QR code right. Reproduce exactly."
+                  : templateKey === "purple-sage"
+                  ? "the full landscape postcard layout on a cream/beige background with muted lavender-purple and sage green accents. Upper-left: large muted purple decorative circle + dot grid pattern; sage green botanical leaf sprig (left, decorative). Large white/cream rounded-rect business-name panel upper-left; sweeping purple paint brush stroke below it. Upper-right: large circular hero photo in sage green ring border. Lower-right: two smaller overlapping circular photos (kitchen, outdoor patio). Middle: four muted sage green circular icon badges (professional, award, team, shield) with thin dividers; four cream rounded-rect service tiles below. Lower section: muted purple wave/blob band, sage green brush stroke. Footer: dark purple strip — phone icon + oval pill left, location pin + oval pill center, QR right. Reproduce exactly."
                   : "the full landscape postcard layout on a soft cream/off-white background. Upper-left: clinic/office photo inside an organic curved teal blob shape. Upper-center: large wide rounded-rectangle white headline panel; below it a teal pill-shaped tagline bar. Middle: four equal-width service panels with circular teal icon badges on top and white rounded-rectangle text boxes below. Lower-left: reception photo in an organic teal blob. Lower-right: stethoscope on a dark teal circular blob, plus a small white rounded QR box. Right edge: anatomical spine model prop. Footer: dark teal bar — circular phone icon badge + phone left; circular location pin icon badge + address right. Reproduce every zone, blob shape, and layout exactly.";
       refLines.push(`  • IMAGE ${imgIdx++} (LANDSCAPE TEMPLATE) — ${lsTmplDesc}`);
     }
@@ -490,6 +494,16 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
                 "Lower-right: kraft paper/cardboard textured rectangle with dashed stitched border and scissors icon (coupon zone). " +
                 "Footer: dark olive green strip — location pin icon + address field left, QR code right. " +
                 "Reproduce every zone, the cream/olive/kraft color scheme, all botanical elements, and the footer exactly."
+              : templateKey === "purple-sage"
+              ? "  • IMAGE 1 (TEMPLATE) — a premium lifestyle/home-services postcard on a cream/beige background with muted lavender-purple and sage green accents. " +
+                "Top-left: large muted purple decorative circle + dot grid pattern (NOT a logo zone). Left side: sage green botanical leaf sprig (decorative). " +
+                "Upper-left: large white/cream rounded-rectangle business-name panel. Below it: a sweeping muted purple paint brush stroke. " +
+                "Upper-right: large circular hero photo (organic interior scene, plants, natural light) in a sage green ring border — perfectly circular, no rectangular frame. " +
+                "Lower-right: two smaller overlapping circular photos (kitchen/dining scene, outdoor patio/pergola). " +
+                "Middle: four muted sage green circular icon badges (professional, award/ribbon, team/people, shield) with thin vertical dividers between them; four cream rounded-rect service card tiles below. " +
+                "Lower section: muted lavender-purple organic wave/blob band spanning full width; sage green brush stroke accent. " +
+                "Footer: dark purple strip — phone icon + oval pill field left, location pin icon + oval pill field center, QR code right. " +
+                "Reproduce every zone, the cream/purple/sage color scheme, all circular photo frames, and the footer exactly."
             : templateKey === "health-wellness"
               ? "  • IMAGE 1 (TEMPLATE) — a health and wellness postcard on a soft cream/off-white background with teal and sage green accents. " +
                 "Upper section: two overlapping clinic/office photos arranged inside organic curved teal blob shapes that bleed off the top and right edges. " +
@@ -1511,6 +1525,7 @@ router.get("/grok-ad-generator/template-preview/:key", (req, res) => {
     "health-wellness":               "healthcare_generic_template_1779141099043.png",
     "home-elegance":                 "home_services_no_text_1780946323885.png",
     "sage-organic":                  "IMG_0832_1780946925550.png",
+    "purple-sage":                   "IMG_0836_1780951148325.png",
     "surprise-me":                   "surprise_me_template.png",
     // landscape variants
     "parchment-classic-landscape":   "parchment_classic_landscape_1779162178190.png",
@@ -1520,6 +1535,7 @@ router.get("/grok-ad-generator/template-preview/:key", (req, res) => {
     "health-wellness-landscape":     "healthcare_wellness_landscape_1779162178190.png",
     "home-elegance-landscape":       "image_1780946327957.png",
     "sage-organic-landscape":        "image_1780946917886.png",
+    "purple-sage-landscape":         "IMG_0837_1780951148325.png",
   };
   const filename = fileMap[key];
   if (!filename) { res.status(404).send("Not found"); return; }
@@ -1861,6 +1877,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
             <div class="tmpl-card-sub">Olive green &middot; Botanical &middot; Kraft coupon</div>
             <div class="tmpl-sel-badge" id="badge-sage-organic" style="display:none">&#10003; Selected</div>
           </div>
+          <div class="tmpl-card" id="tmpl-purple-sage" onclick="selectTemplate('purple-sage')">
+            <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/purple-sage" alt="Purple Sage" onerror="this.style.background='#7b6d9e'">
+            <div class="tmpl-card-name">Purple Sage</div>
+            <div class="tmpl-card-sub">Lavender &middot; Sage green &middot; Circular photos</div>
+            <div class="tmpl-sel-badge" id="badge-purple-sage" style="display:none">&#10003; Selected</div>
+          </div>
           <div class="tmpl-card" id="tmpl-surprise-me" onclick="selectTemplate('surprise-me')">
             <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/surprise-me" alt="Surprise Me" onerror="this.style.background='linear-gradient(135deg,#7b1418,#1b2a4a,#1c3a1c)';this.style.display='flex';this.style.alignItems='center';this.style.justifyContent='center';this.innerHTML='<span style=font-size:2em>&#10067;</span>'">
             <div class="tmpl-card-name">Surprise Me</div>
@@ -1911,6 +1933,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
             <div class="tmpl-card-name">Sage Organic</div>
             <div class="tmpl-card-sub">Olive green &middot; Botanical &middot; Kraft coupon</div>
             <div class="tmpl-sel-badge" id="badge-ls-sage-organic" style="display:none">&#10003; Selected</div>
+          </div>
+          <div class="tmpl-card" id="tmpl-ls-purple-sage" onclick="selectTemplate('purple-sage')">
+            <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/purple-sage-landscape" alt="Purple Sage" onerror="this.style.background='#7b6d9e'">
+            <div class="tmpl-card-name">Purple Sage</div>
+            <div class="tmpl-card-sub">Lavender &middot; Sage green &middot; Circular photos</div>
+            <div class="tmpl-sel-badge" id="badge-ls-purple-sage" style="display:none">&#10003; Selected</div>
           </div>
           <div class="tmpl-card" id="tmpl-ls-surprise-me" onclick="selectTemplate('surprise-me')">
             <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/surprise-me" alt="Surprise Me" onerror="this.style.background='linear-gradient(135deg,#7b1418,#1b2a4a,#1c3a1c)';this.style.display='flex';this.style.alignItems='center';this.style.justifyContent='center';this.innerHTML='<span style=font-size:2em>&#10067;</span>'">

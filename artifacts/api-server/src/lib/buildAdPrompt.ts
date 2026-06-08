@@ -183,6 +183,8 @@ export function buildAdPrompt(
                   ? "landscape Home Elegance layout: cream/off-white bg with organic blob wave shapes, dark navy + gold accent scheme. Left side (cream blob area): dark navy hexagonal house-icon badge top-left, navy-bordered rounded-rect business-name box, smaller tagline box, additional text boxes, phone/address icons lower-left. Right side: large hero photo upper-right blending naturally, dark navy lower-right section with three overlapping circular photos (interior, kitchen, outdoor service), four rounded-rect service card tiles each topped by circular dark navy icon badge (house, tools, leaf, people), QR code far right. Reproduce exactly."
                   : templateKey === "sage-organic"
                   ? "landscape Sage Organic layout: cream/beige textured bg with dark olive/sage green and kraft paper accents. Upper-left: large dark olive circle with botanical leaf sprigs; large white/cream rounded-rect business-name zone; dark olive paint brush stroke below it. Upper-right: large hero photo in curved wave cutout, no hard border. Middle: four dark olive circular icon badges (award, people, handshake, shield) with vertical dividers; four cream rounded-rect service tiles below. Lower olive wave band: three equal-width landscape photos side by side. Lower-right: kraft paper dashed-stitch coupon rectangle. Footer: dark olive strip with location pin + address left, QR right. Reproduce exactly."
+                  : templateKey === "purple-sage"
+                  ? "landscape Purple Sage layout: cream/beige bg with muted lavender-purple and sage green accents. Upper-left: large muted purple circle + dot grid (decorative); sage green botanical leaf sprig (decorative). Large white/cream rounded-rect business-name panel; sweeping purple brush stroke below it. Upper-right: large circular hero photo in sage green ring border. Lower-right: two smaller overlapping circles (kitchen, outdoor patio). Middle: four muted sage green circular icon badges (professional, award, team, shield) with dividers; four cream service tiles below. Lower purple wave band with sage green brush stroke. Footer: dark purple strip with phone + oval pill | location pin + oval pill | QR. Reproduce exactly."
                   : "landscape Health & Wellness layout: soft cream/off-white bg, clinic/office photo in organic curved teal blob upper-left, large wide rounded-rectangle white headline panel upper-center, teal pill-shaped tagline bar below it, service panels row with circular teal icon badges and white rounded-rect text boxes, reception photo in organic teal blob lower-left, stethoscope on dark teal circular blob lower-right, small white rounded QR box, dark teal footer bar. Reproduce exactly.";
       refLines.push(`  • IMAGE ${imgIdx++} (LANDSCAPE TEMPLATE) — ${lsTmplDesc}`);
     }
@@ -218,6 +220,8 @@ export function buildAdPrompt(
               ? "  • IMAGE 1 (TEMPLATE) — premium home-services postcard on cream/off-white bg, dark navy + gold scheme: dark navy hexagonal house-icon badge upper-left, large hero photo upper-right bleeding off edge, organic cream blob wave left-center with navy-bordered rounded-rect business-name box + smaller tagline box + gold dot separator, three overlapping circular photos (living room, kitchen, outdoor service) middle-right, wide dark navy lower section with four rounded-rect service card tiles each capped by circular navy icon badge (house, tools, leaf, people), dark navy footer bar with phone icon + QR code. Reproduce exactly."
               : templateKey === "sage-organic"
               ? "  • IMAGE 1 (TEMPLATE) — botanical organic postcard on cream/beige textured bg, dark olive/sage green + kraft paper scheme: large dark olive circle with botanical leaf sprigs top-left (decorative, not logo zone), large white/cream rounded-rect business-name panel upper-left, sweeping dark olive paint brush stroke below panel, large hero photo upper-right in curved wave cutout (no hard border), four dark olive circular icon badges (award, people, handshake, shield) with vertical dividers middle row, four cream rounded-rect service tiles below badges, dark olive wave band lower section with three landscape photos side by side, kraft paper dashed-stitch coupon rectangle lower-right, dark olive footer strip with location pin + QR. Reproduce exactly."
+              : templateKey === "purple-sage"
+              ? "  • IMAGE 1 (TEMPLATE) — premium lifestyle/home-services postcard on cream/beige bg, muted lavender-purple + sage green scheme: large muted purple circle + dot grid top-left (decorative, NOT logo zone), sage green botanical leaf sprig left (decorative), large white/cream rounded-rect business-name panel upper-left, sweeping purple paint brush stroke below panel, large circular hero photo in sage green ring border upper-right (no rectangular frame), two smaller overlapping circular photos lower-right (kitchen, outdoor patio), four muted sage green circular icon badges (professional, award, team, shield) with vertical dividers middle row, four cream rounded-rect service tiles below badges, muted purple wave band lower section, sage green brush stroke, dark purple footer strip with phone + oval pill | location pin + oval pill | QR. Reproduce exactly."
               : templateKey === "health-wellness"
               ? "  • IMAGE 1 (TEMPLATE) — health/wellness postcard on soft cream bg with teal accents: two clinic/office photos inside organic curved teal blob shapes upper section, large wide rounded-rectangle white panel center (headline zone), narrow teal pill-shaped bar below it (tagline zone), service panels with circular teal badge icons and white rounded-rect text boxes, reception/waiting-room photo in organic blob lower-left, teal stethoscope on dark teal circular blob lower-right, small white rounded QR box, dark teal footer bar. Reproduce exactly."
               : "  • IMAGE 1 (TEMPLATE) — postcard with parchment texture, brush-stroke headline band, orange pennant ribbon, circular checkmark badge, dashed coupon box, dark footer strip. Reproduce every zone and element exactly.",
@@ -315,6 +319,30 @@ export function buildAdPrompt(
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape)
     )
+    : isLandscape && templateKey === "purple-sage"
+    ? (
+      LANDSCAPE_CANVAS_RULE +
+      "LAYOUT — reproduce Purple Sage LANDSCAPE zones exactly:\n\n" +
+      "DECORATIVE ACCENTS (top-left: large muted purple circle + dot grid; left: sage green botanical leaf sprig — NOT logo zones).\n\n" +
+      (hasLogo ? `LOGO (IMAGE ${logoImg} placed inside or beside the white/cream rounded-rect headline panel).\n\n` : "") +
+      `HEADLINE (large white/cream rounded-rect panel, upper-left): business name bold condensed all-caps sans-serif, very large, dark purple/near-black.` +
+      (d.tagline ? ` Tagline in clean italic script below, dark purple.` : "") + "\n\n" +
+      "BRUSH STROKE (sweeping muted purple paint brush stroke below headline panel — structural, no text).\n\n" +
+      "HERO PHOTO (upper-right, large circular frame in sage green ring border):\n" +
+      (hasPhoto
+        ? `  Composite IMAGE ${hasLogo ? logoImg + 1 : 2} — fill circular frame with sage green ring border, no hard rectangular edges. Cinematic lighting.\n\n`
+        : `  Generate a photorealistic organic interior or lifestyle scene. Fill circular frame with sage green ring border.\n\n`) +
+      "SECONDARY PHOTOS (lower-right, two smaller overlapping circles): generate two circular-cropped photos — kitchen/dining scene and outdoor patio/pergola. Each perfectly circular.\n\n" +
+      `SERVICE BADGES + TILES (middle section): ` +
+      (menuCount > 0
+        ? `EXACTLY ${menuCount} muted sage green circular icon badge${menuCount !== 1 ? "s" : ""} with thin vertical dividers; EXACTLY ${menuCount} cream rounded-rect tile${menuCount !== 1 ? "s" : ""} below — one per service in BUSINESS DETAILS, exactly as written. No extras. No invented services.\n\n`
+        : `four decorative sage green circular icon badges with dividers; four cream rounded-rect tile shapes; NO text labels.\n\n`) +
+      "PURPLE WAVE BAND (lower section): muted lavender-purple organic wave/blob shape spanning full width, sage green brush stroke accent.\n\n" +
+      (d.offer
+        ? `SPECIAL OFFER (dashed coupon box, lower area): offer text bold dark, fine print smaller below. No QR inside coupon.\n\n`
+        : "") +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape)
+    )
     : isLandscape && templateKey === "sage-organic"
     ? (
       LANDSCAPE_CANVAS_RULE +
@@ -387,7 +415,7 @@ export function buildAdPrompt(
       `  PALETTE: ${selectedTheme.palette}\n` +
       `  TYPOGRAPHY: ${selectedTheme.typography}\n` +
       `  LAYOUT: ${selectedTheme.layoutLandscape}\n\n` +
-      "DO NOT recreate any existing LocalSpot template style: Parchment/rustic | Chalkboard/bistro | Forest-green contractor | Navy/gold home services | Teal/sage wellness | Cream/navy circular-photo elegance | Sage/olive botanical kraft.\n\n" +
+      "DO NOT recreate any existing LocalSpot template style: Parchment/rustic | Chalkboard/bistro | Forest-green contractor | Navy/gold home services | Teal/sage wellness | Cream/navy circular-photo elegance | Sage/olive botanical kraft | Lavender/sage circular-photo lifestyle.\n\n" +
       "VISUAL RULES (mandatory):\n" +
       "  • Fill 100% of the 3\"×2\" canvas to every edge — no blank areas, no outer border, no drop shadow outside the ad.\n" +
       "  • No hard rectangular photo borders — mask/blend edges with organic shapes, gradients, or diagonal cuts.\n" +
@@ -451,6 +479,35 @@ export function buildAdPrompt(
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape)
     )
+    : templateKey === "purple-sage"
+    ? (
+      "LAYOUT — reproduce Purple Sage template zones exactly:\n\n" +
+      "DECORATIVE ACCENTS (top-left corner: large muted purple circle + dot grid; left side: sage green botanical leaf sprig — structural, NOT logo or text zones).\n\n" +
+      (hasLogo
+        ? `LOGO (IMAGE ${logoImg} placed inside or beside the white/cream rounded-rect headline panel).\n\n`
+        : "") +
+      `HEADLINE (large white/cream rounded-rect panel, upper-left): business name bold condensed all-caps sans-serif, very large, dark purple/near-black. Each word once.` +
+      (d.tagline ? ` Tagline in clean italic script below, dark purple.` : "") + "\n\n" +
+      "BRUSH STROKES (structural, no text): sweeping muted purple paint brush stroke below headline panel; sage green brush stroke in lower area.\n\n" +
+      "HERO PHOTO (upper-right, large circular frame in sage green ring border):\n" +
+      (hasPhoto
+        ? `  Composite IMAGE 2 — fill circular frame, sage green ring border, no hard rectangular edges. Cinematic lighting.\n\n`
+        : `  Generate a photorealistic organic interior or lifestyle scene. Circular frame with sage green ring border.\n\n`) +
+      "SECONDARY PHOTOS (lower-right, two smaller overlapping circles): generate two circular-cropped photos — kitchen/dining scene and outdoor patio/garden. Each perfectly circular.\n\n" +
+      `SERVICE BADGES (middle row): ` +
+      (menuCount > 0
+        ? `EXACTLY ${menuCount} muted sage green circular icon badge${menuCount !== 1 ? "s" : ""} with thin vertical dividers — one per service in BUSINESS DETAILS, exactly as written. No extras. No invented services.\n\n`
+        : `four decorative sage green circular icon badge graphics (professional, award, team, shield) with thin vertical dividers; NO text labels.\n\n`) +
+      `SERVICE TILES (below badges row): ` +
+      (menuCount > 0
+        ? `EXACTLY ${menuCount} cream rounded-rect tile${menuCount !== 1 ? "s" : ""} — one per service, label text inside. No extras.\n\n`
+        : `four cream rounded-rect tile shapes; NO text labels.\n\n`) +
+      "PURPLE WAVE BAND (lower section): muted lavender-purple organic wave/blob shape spanning full width.\n\n" +
+      (d.offer
+        ? `SPECIAL OFFER (dashed coupon box, lower area): offer text bold dark, fine print smaller below. No QR inside coupon.\n\n`
+        : "") +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape)
+    )
     : templateKey === "sage-organic"
     ? (
       "LAYOUT — reproduce Sage Organic template zones exactly:\n\n" +
@@ -511,7 +568,7 @@ export function buildAdPrompt(
       `  TYPOGRAPHY: ${selectedTheme.typography}\n` +
       `  LAYOUT: ${selectedTheme.layoutPortrait}\n\n` +
       "DO NOT recreate any existing LocalSpot template style:\n" +
-      "  Parchment/rustic | Chalkboard/bistro | Forest-green contractor | Navy/gold home services | Teal/sage wellness | Cream/navy circular-photo elegance | Sage/olive botanical kraft\n\n" +
+      "  Parchment/rustic | Chalkboard/bistro | Forest-green contractor | Navy/gold home services | Teal/sage wellness | Cream/navy circular-photo elegance | Sage/olive botanical kraft | Lavender/sage circular-photo lifestyle\n\n" +
       "VISUAL RULES (mandatory):\n" +
       "  • Fill 100% of the canvas to every edge — no blank areas, no outer border, no drop shadow outside the ad.\n" +
       "  • No hard rectangular photo borders — mask/blend edges with organic shapes, gradients, or diagonal cuts.\n" +
