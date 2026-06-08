@@ -2071,7 +2071,7 @@ var _campaignId = 0;
 var _side = 'front';
 
 function applyUsedTemplates(){
-  var KEYS = ['parchment-classic','made-fresh','health-wellness','at-your-service','neighborhood-pro','surprise-me'];
+  var KEYS = ['parchment-classic','made-fresh','health-wellness','at-your-service','neighborhood-pro','home-elegance','sage-organic','purple-sage'];
   var allUsed = _usedTemplates.length > 0 && KEYS.every(function(k){ return _usedTemplates.indexOf(k) !== -1; });
 
   // Banner: visible only when every template is already in use
