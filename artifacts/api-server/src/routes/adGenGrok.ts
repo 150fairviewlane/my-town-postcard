@@ -1274,7 +1274,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           return;
         } catch (fbErr) {
           req.log.error({ editsErr: errMsg, fbErr }, "grok-imagine both edits and generations failed");
-          endJson({ error: errMsg || "Grok API request failed" });
+          endJson({ error: errMsg || "Ad generation failed" });
           return;
         }
       }
@@ -1356,14 +1356,14 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     const imageUrl = extractXaiImageUrl(body);
     if (!imageUrl) {
       req.log.warn({ body: JSON.stringify(body).slice(0, 300) }, "grok-imagine: no image in response");
-      endJson({ error: "Grok returned a response but no image was found — try again or simplify your prompt." });
+      endJson({ error: "No image was returned — try again or simplify your prompt." });
       return;
     }
 
     endJson({ imageUrl: await cropToSpotDims(imageUrl, cropDim.w, cropDim.h) });
   } catch (err) {
     clearInterval(keepAliveTimer);
-    const msg = err instanceof Error ? err.message : "Grok API request failed";
+    const msg = err instanceof Error ? err.message : "Ad generation failed";
     req.log.error({ err: msg, bizName: d.bizName }, "grok-imagine error");
     if (!res.headersSent) {
       res.status(502).json({ error: msg });
@@ -1491,14 +1491,14 @@ router.post("/grok-ad-generator/refine", async (req, res) => {
     const imageUrl = extractXaiImageUrl(body);
     if (!imageUrl) {
       req.log.warn({ body: JSON.stringify(body).slice(0, 300) }, "grok-refine: no image in response");
-      refineEndJson({ error: "Grok returned a response but no image was found — please try again." });
+      refineEndJson({ error: "No image was returned — please try again." });
       return;
     }
 
     refineEndJson({ imageUrl: await cropToSpotDims(imageUrl, dim.w, dim.h) });
   } catch (err) {
     clearInterval(refineKeepAliveTimer);
-    const msg = err instanceof Error ? err.message : "Grok API request failed";
+    const msg = err instanceof Error ? err.message : "Ad generation failed";
     req.log.error({ err: msg }, "grok-refine error");
     if (!res.headersSent) {
       res.status(502).json({ error: msg });
@@ -1570,7 +1570,7 @@ const GROK_HTML = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>My Town Postcard &mdash; Grok Ad Generator</title>
+<title>My Town Postcard &mdash; My Town Ad Generator</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700&family=Crimson+Pro:ital@0;1&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -1763,7 +1763,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
   <div class="brand">My Town <span>Postcard</span></div>
   <div class="hdr-badge">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-    Grok Ad Generator
+    My Town Ad Generator
   </div>
 </header>
 
@@ -1774,8 +1774,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
   <!-- LEFT: FORM -->
   <div class="fpanel">
     <div>
-      <div class="ptitle">Grok Ad Generator</div>
-      <div class="psub">Fill in your details, pick a photo, and let Grok generate your finished postcard ad via API &mdash; no console, no file attachments.</div>
+      <div class="ptitle">My Town Ad Generator</div>
+      <div class="psub">Fill in your details, pick a photo, and let our AI generate your finished postcard ad &mdash; no console, no file attachments.</div>
     </div>
 
     <div>
@@ -1886,7 +1886,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
           <div class="tmpl-card" id="tmpl-surprise-me" onclick="selectTemplate('surprise-me')">
             <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/surprise-me" alt="Surprise Me" onerror="this.style.background='linear-gradient(135deg,#7b1418,#1b2a4a,#1c3a1c)';this.style.display='flex';this.style.alignItems='center';this.style.justifyContent='center';this.innerHTML='<span style=font-size:2em>&#10067;</span>'">
             <div class="tmpl-card-name">Surprise Me</div>
-            <div class="tmpl-card-sub">Grok invents &middot; Industry-driven &middot; Fully original</div>
+            <div class="tmpl-card-sub">AI invents &middot; Industry-driven &middot; Fully original</div>
             <div class="tmpl-sel-badge" id="badge-surprise-me" style="display:none">&#10003; Selected</div>
           </div>
         </div>
@@ -1943,7 +1943,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
           <div class="tmpl-card" id="tmpl-ls-surprise-me" onclick="selectTemplate('surprise-me')">
             <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/surprise-me" alt="Surprise Me" onerror="this.style.background='linear-gradient(135deg,#7b1418,#1b2a4a,#1c3a1c)';this.style.display='flex';this.style.alignItems='center';this.style.justifyContent='center';this.innerHTML='<span style=font-size:2em>&#10067;</span>'">
             <div class="tmpl-card-name">Surprise Me</div>
-            <div class="tmpl-card-sub">Grok invents &middot; Industry-driven &middot; Fully original</div>
+            <div class="tmpl-card-sub">AI invents &middot; Industry-driven &middot; Fully original</div>
             <div class="tmpl-sel-badge" id="badge-ls-surprise-me" style="display:none">&#10003; Selected</div>
           </div>
         </div>
@@ -1971,7 +1971,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
             <img class="upload-preview" id="photoPreview" alt="Photo preview">
             <button class="upload-clear" title="Remove photo" onclick="clearPhoto(event)">&#10005;</button>
           </div>
-          <p class="fnote" style="margin-top:6px">Skip to let Grok generate a photo automatically.</p>
+          <p class="fnote" style="margin-top:6px">Skip to let our AI generate a photo automatically.</p>
           <!-- Library grid always visible below -->
           <div class="lib-section">
             <div class="lib-label">Or pick from library</div>
@@ -2013,8 +2013,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
         <!-- Loading -->
         <div class="loading-panel" id="loadingPanel">
           <div class="spinner"></div>
-          <div class="loading-title">Grok is designing your ad&hellip;</div>
-          <div class="loading-sub">Usually 20&ndash;45 seconds. Grok is compositing your images and placing your business text.</div>
+          <div class="loading-title">My Town AI is designing your ad&hellip;</div>
+          <div class="loading-sub">Usually 20&ndash;45 seconds. Our AI is compositing your images and placing your business text.</div>
         </div>
 
         <!-- Error -->
@@ -2040,10 +2040,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
                 maxlength="300" onkeydown="if(event.key==='Enter')refineAd()">
               <button class="refine-btn" id="refineBtn" onclick="refineAd()">Apply</button>
             </div>
-            <div class="refine-loading" id="refineLoading">&#8987; Grok is applying your change&hellip; (20&ndash;40 seconds)</div>
+            <div class="refine-loading" id="refineLoading">&#8987; My Town AI is applying your change&hellip; (20&ndash;40 seconds)</div>
             <div class="refine-err" id="refineErr"></div>
             <div class="refine-footer">
-              <div class="refine-hint">Type any correction and hit Apply. Grok will update the ad without regenerating from scratch.</div>
+              <div class="refine-hint">Type any correction and hit Apply. Our AI will update the ad without regenerating from scratch.</div>
               <button class="refine-revert-btn" id="refineRevertBtn" style="display:none" onclick="revertAd()">&#8617; Revert to original</button>
             </div>
           </div>
@@ -2467,7 +2467,7 @@ async function generate(){
       showErr(grokErr === 'overloaded'
         ? 'The image generator is busy right now \\u2014 please try again in a moment.'
         : grokErr === 'moderated'
-        ? 'Grok\\u2019s content filter blocked this ad. Try rephrasing your services list to avoid clinical or procedure-specific terms, then click Generate again.'
+        ? 'Our AI\\u2019s content filter blocked this ad. Try rephrasing your services list to avoid clinical or procedure-specific terms, then click Generate again.'
         : grokErr);
     } else {
       _resultUrl = data.imageUrl;
@@ -2480,7 +2480,7 @@ async function generate(){
   }
 
   document.getElementById('genBtn').disabled = false;
-  document.getElementById('genLabel').textContent = 'Generate My Ad with Grok';
+  document.getElementById('genLabel').textContent = 'Generate My Ad';
 }
 
 function showResult(url, keepOriginal){
@@ -2540,7 +2540,7 @@ async function refineAd(){
       errEl.textContent = '\u26a0\ufe0f ' + (refErr === 'overloaded'
         ? 'The image generator is busy right now \u2014 please try again in a moment.'
         : refErr === 'moderated'
-        ? 'Grok\u2019s content filter blocked this adjustment. Try rewording your instruction and click Refine again.'
+        ? 'Our AI\u2019s content filter blocked this adjustment. Try rewording your instruction and click Refine again.'
         : refErr);
       errEl.classList.add('visible');
     } else {
@@ -2657,7 +2657,7 @@ function downloadAd(){
   if(!_resultUrl) return;
   var a = document.createElement('a');
   a.href = _resultUrl;
-  a.download = 'grok-ad-' + document.getElementById('bizName').value.trim().replace(/\\s+/g,'-') + '-' + Date.now() + '.png';
+  a.download = 'my-town-ad-' + document.getElementById('bizName').value.trim().replace(/\\s+/g,'-') + '-' + Date.now() + '.png';
   a.click();
 }
 
