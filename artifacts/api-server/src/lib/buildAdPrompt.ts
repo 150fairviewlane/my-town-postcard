@@ -563,7 +563,7 @@ export function buildAdPrompt(
         ? `composite IMAGE 2 into the template's photo area — blend edges naturally into the dark brush-stroke/painted background, no hard border. Match warm commercial food photography style.\n\n`
         : `generate a photorealistic, appetizing hero image. Blend naturally into dark brush-stroke background, no hard border.\n\n`) +
       (menuCount > 0
-        ? "MENU/SERVICES (left-center area): list each item from BUSINESS DETAILS clearly. Clean legible sans-serif. Prices right-aligned if present.\n\n"
+        ? `MENU/SERVICES (left-center area, orange circular checkmark badges): EXACTLY ${menuCount} item${menuCount !== 1 ? "s" : ""} — one per service/item in BUSINESS DETAILS, exactly as written. Prices right-aligned if present. No extras. No invented items. Do NOT add a row to fill empty template slots.\n\n`
         : "") +
       (d.offer
         ? `SPECIAL OFFER (dashed coupon box): offer text bold inside dashed rectangle. Fine print smaller below. No QR inside coupon.\n\n`
