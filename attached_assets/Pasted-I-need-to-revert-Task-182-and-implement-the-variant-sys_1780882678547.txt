@@ -1,0 +1,61 @@
+I need to revert Task 182 and implement the variant system correctly.
+
+Task 182 made changes to the wrong files. The live ad system uses 
+adGenGrok.ts + buildAdPrompt.ts — NOT AdGenerator.jsx or any 
+frontend components.
+
+STEP 1 — REVERT THESE FILES to their pre-Task-182 state. Remove 
+any variant-related additions Task 182 made to each:
+
+- artifacts/localspot/src/AdGenerator.jsx
+- artifacts/localspot/src/postcardCore.jsx  
+- artifacts/localspot/src/postcardBack.jsx
+- artifacts/localspot/src/PostcardPickerSection.jsx
+- artifacts/localspot/src/pages/AdminPrintPage.jsx
+
+STEP 2 — In artifacts/api-server/src/routes/adGenGrok.ts:
+- Remove the local FONT_VARIANTS, COLOR_VARIANTS, COUPON_VARIANTS 
+  definitions if they exist here (they belong in buildAdPrompt.ts only)
+- Remove the local variantBlock computation (lines ~432-436)
+- Keep the adIndex database lookup exactly as-is — it is correct
+- Update the buildAdPrompt() call at line 1084 to pass adIndex 
+  as a third parameter:
+  const adPrompt = buildAdPrompt(d, isLandscape, adIndex);
+
+STEP 3 — In artifacts/api-server/src/lib/buildAdPrompt.ts:
+- Add adIndex: number as the third parameter to the buildAdPrompt 
+  function signature
+- Use the existing FONT_VARIANTS, COLOR_VARIANTS, and COUPON_VARIANTS 
+  already defined in this file to compute variantBlock:
+
+  const fontVariant   = adIndex % 3;
+  const couponVariant = (adIndex + 1) % 3;
+  const colorVariant  = (adIndex + 2) % 3;
+  const tmplFonts  = FONT_VARIANTS[d.template || "parchment-classic"] 
+                     ?? FONT_VARIANTS["parchment-classic"]!;
+  const tmplColors = COLOR_VARIANTS[d.template || "parchment-classic"] 
+                     ?? COLOR_VARIANTS["parchment-classic"]!;
+  const variantBlock =
+    "VARIANT DIRECTIVES — follow these exactly, they override any defaults:\n" +
+    `  TYPOGRAPHY: ${tmplFonts[fontVariant]}\n` +
+    `  COUPON: ${COUPON_VARIANTS[couponVariant]}\n` +
+    `  COLORS: ${tmplColors[colorVariant]}\n`;
+
+- Inject variantBlock into the final assembled prompt string, 
+  immediately before the closing output requirements section. 
+  Append it as its own paragraph so Grok sees it as a high-priority 
+  directive block.
+
+STEP 4 — Verify:
+- buildAdPrompt.ts has FONT_VARIANTS and COLOR_VARIANTS defined for 
+  all 6 templates: parchment-classic, made-fresh, neighborhood-pro, 
+  at-your-service, health-wellness, surprise-me
+- If any template is missing from either table, add entries following 
+  the same pattern as the existing ones
+- The surprise-me template should get variantBlock injected the same 
+  as all others — the SURPRISE_ME_THEMES rotation handles visual 
+  distinctiveness at the theme level, but font/coupon/color variants 
+  add a second layer of differentiation
+
+Do not touch any other files. Read buildAdPrompt.ts and adGenGrok.ts 
+fully before making any changes. Confirm the plan before writing code.

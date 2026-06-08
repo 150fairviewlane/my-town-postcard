@@ -593,7 +593,7 @@ function GreenAcresAd({ size }) {
 }
 
 // ─── Fallback Ad ──────────────────────────────────────────────────────────────
-function DefaultAd({ spot, variant = 1 }) {
+function DefaultAd({ spot }) {
   // Spot with a saved dynamic template → render it with the correct variant palette
   if (spot.templateData?.template) {
     const { template, sizeKey, finishedAdUrl, ...adData } = spot.templateData;
@@ -606,7 +606,7 @@ function DefaultAd({ spot, variant = 1 }) {
       );
     }
     const sk = sizeKey || (spot.size === "xl" ? "XL" : spot.size === "large" ? "L" : spot.size === "medium" ? "M" : "S");
-    return <AdTemplatePreview templateKey={template} formData={adData} sizeKey={sk} variant={variant} />;
+    return <AdTemplatePreview templateKey={template} formData={adData} sizeKey={sk} />;
   }
   if (spot.adFileUrl) {
     return (
@@ -630,7 +630,7 @@ function DefaultAd({ spot, variant = 1 }) {
 
 // ─── Public: PaidAd Dispatcher ────────────────────────────────────────────────
 // "xl" maps to the large visual variant in all ad templates.
-export function PaidAd({ spot, variant = 1 }) {
+export function PaidAd({ spot }) {
   const renderSize = spot.size === "xl" ? "large" : spot.size;
   const s = { size: renderSize };
   switch (spot.businessName) {
@@ -643,7 +643,7 @@ export function PaidAd({ spot, variant = 1 }) {
     case "Tanner Insurance Agency":     return <TannerAd        {...s} />;
     case "Roma's Pizza & Subs":         return <RomasPizzaAd    {...s} />;
     case "Green Acres Lawn Care":       return <GreenAcresAd    {...s} />;
-    default:                            return <DefaultAd spot={spot} variant={variant} />;
+    default:                            return <DefaultAd spot={spot} />;
   }
 }
 

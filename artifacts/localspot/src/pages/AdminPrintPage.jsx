@@ -5,7 +5,6 @@ import {
   getGetAdminCampaignByIdQueryKey,
 } from "@workspace/api-client-react";
 import { GRID_AREAS, PaidAd } from "../postcardCore";
-import { assignTemplateVariants } from "../AdGenerator";
 import {
   BACK_GRID_AREAS,
   BACK_GRID_ORDER,
@@ -121,10 +120,6 @@ function PostcardFace({ side, spots, gridAreas, gridOrder, fixedAreas, renderFix
     const bi = gridOrder.indexOf(b.gridArea);
     return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
   });
-  const variantMap = assignTemplateVariants(
-    sortedSpots.filter((s) => (s.status === "paid" || s.status === "reserved") && s.templateData?.template)
-  );
-
   return (
     <div className="ls-print-page-wrapper">
       {/* On-screen label so the admin knows which face they're previewing.
@@ -169,7 +164,7 @@ function PostcardFace({ side, spots, gridAreas, gridOrder, fixedAreas, renderFix
 
           let content;
           if (isPaid) {
-            content = <PaidAd spot={spot} variant={variantMap[spot.id] || 1} />;
+            content = <PaidAd spot={spot} />;
           } else if (sampleKey) {
             content = getSampleAd(sampleKey, SIZE_MAP[spot.size] || "S");
           } else {

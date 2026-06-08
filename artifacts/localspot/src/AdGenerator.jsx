@@ -242,13 +242,10 @@ style={{ color: dark ? "rgba(255,255,255,0.7)" : "#666", fontSize: 7*scale, marg
 // Full-bleed photo background with overlay text
 // Best for: restaurants, salons, photography
 //
-function PhotoBoldTemplate({ data, sizeKey, onEdit, onFontSizeChange, onWidthChange, variant = 1 }) {
+function PhotoBoldTemplate({ data, sizeKey, onEdit, onFontSizeChange, onWidthChange }) {
 const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
-const vc = VARIANT_CFG["photo-bold"][variant] || {};
-const overlayGradient = vc.overlayGradient ||
-  `linear-gradient(180deg, ${ind.colors.dark}99 0%, ${ind.colors.dark}55 40%, ${ind.colors.dark}f0 100%)`;
-const bulletColor = vc.bulletColor || ind.colors.primary;
-const logoBottom = !!vc.logoBottom;
+const overlayGradient = `linear-gradient(180deg, ${ind.colors.dark}99 0%, ${ind.colors.dark}55 40%, ${ind.colors.dark}f0 100%)`;
+const bulletColor = ind.colors.primary;
 const photo = data.photo || ind.photos[0];
 const isXL = sizeKey === "XL", isL = sizeKey === "L", isM = sizeKey === "M", isS = sizeKey === "S";
 const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.65;
@@ -273,7 +270,7 @@ return (
 <img src={photo} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
 <div style={{ position: "absolute", inset: 0, background: overlayGradient }} />
   {/* Logo + name — top by default, bottom for v2 (reversed gradient) */}
-  <div style={{ position: "absolute", [logoBottom ? "bottom" : "top"]: 0, left: 0, right: 0, padding: `${10*fScale}px ${12*fScale}px`, display: "flex", alignItems: "center", gap: 8*fScale }}>
+  <div style={{ position: "absolute", top: 0, left: 0, right: 0, padding: `${10*fScale}px ${12*fScale}px`, display: "flex", alignItems: "center", gap: 8*fScale }}>
     <LogoBadge logo={data.logo} name={data.businessName} emoji={ind.emoji} size={36*fScale} bg={`${ind.colors.primary}cc`} color="#fff" />
     <div style={{ flex: 1, minWidth: 0 }}>
       <EditableText value={data.businessName} onChange={edit("businessName")} {...ef("businessName")}
@@ -341,18 +338,16 @@ return (
 // 50/50 split: photo on one side, white content on the other
 // Best for: dental, medical, professional services
 //
-function SplitCleanTemplate({ data, sizeKey, onEdit, onFontSizeChange, onWidthChange, variant = 1 }) {
+function SplitCleanTemplate({ data, sizeKey, onEdit, onFontSizeChange, onWidthChange }) {
 const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
-const vc = VARIANT_CFG["split-clean"][variant] || {};
 const photo = data.photo || ind.photos[0];
 const isXL = sizeKey === "XL", isL = sizeKey === "L", isM = sizeKey === "M", isS = sizeKey === "S";
 const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.65;
 const isVertical = isXL;
-const contentBg = vc.contentBg || ind.colors.light;
-const textDark = vc.textDark || ind.colors.dark;
-const textPrimary = vc.textPrimary || ind.colors.primary;
-const accentDot = vc.accentDot || ind.colors.accent;
-const flipLayout = !!vc.flip;
+const contentBg = ind.colors.light;
+const textDark = ind.colors.dark;
+const textPrimary = ind.colors.primary;
+const accentDot = ind.colors.accent;
 const edit = (field) => (val) => onEdit(field, val);
 
 // ef(): spread onto EditableText to enable the resize toolbar
@@ -373,7 +368,7 @@ return { ...base, text: val };
 return (
 <div style={{
 width: "100%", height: "100%", overflow: "hidden", position: "relative", display: "flex",
-flexDirection: isVertical ? (flipLayout ? "column-reverse" : "column") : (flipLayout ? "row-reverse" : "row"),
+flexDirection: isVertical ? "column" : "row",
 background: contentBg, fontFamily: "sans-serif",
 }}>
 {/* Photo half */}
@@ -450,9 +445,8 @@ size={36 * fScale} bg={ind.colors.primary} color="#fff" border={`2px solid #fff`
 // Editorial style with photo strip + dense content
 // Best for: real estate, insurance, financial, retail
 //
-function MagazineTemplate({ data, sizeKey, onEdit, onFontSizeChange, onWidthChange, variant = 1 }) {
+function MagazineTemplate({ data, sizeKey, onEdit, onFontSizeChange, onWidthChange }) {
 const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
-const vc = VARIANT_CFG["magazine"][variant] || {};
 // Magazine uses 2 photos: the selected/primary photo + one supporting photo
 // If user picked a specific stock photo, show it first + the next one in rotation
 const primaryPhoto = data.photo || ind.photos[0];
@@ -461,11 +455,11 @@ const secondPhoto = primaryIdx >= 0
 ? ind.photos[(primaryIdx + 1) % ind.photos.length]  // next stock photo in rotation
 : (ind.photos[0] !== primaryPhoto ? ind.photos[0] : ind.photos[1]); // fallback
 const photos = [primaryPhoto, secondPhoto].filter(Boolean);
-const headerBg = vc.headerBg || ind.colors.primary;
-const borderColor = vc.borderColor || ind.colors.primary;
-const taglineColor = vc.taglineColor || ind.colors.dark;
-const bulletColor = vc.bulletColor || ind.colors.primary;
-const displayPhotos = vc.reversePhotos ? [...photos].reverse() : photos;
+const headerBg = ind.colors.primary;
+const borderColor = ind.colors.primary;
+const taglineColor = ind.colors.dark;
+const bulletColor = ind.colors.primary;
+const displayPhotos = photos;
 const isXL = sizeKey === "XL", isL = sizeKey === "L", isM = sizeKey === "M", isS = sizeKey === "S";
 const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.65;
 const edit = (field) => (val) => onEdit(field, val);
@@ -571,13 +565,12 @@ borderRadius: 4, fontFamily: "sans-serif", whiteSpace: "nowrap",
 // Diagonal split, oversized offer text, retro stamp feel
 // Best for: services (HVAC, plumber, electrician, lawn, auto)
 //
-function StampTemplate({ data, sizeKey, onEdit, onFontSizeChange, onWidthChange, variant = 1 }) {
+function StampTemplate({ data, sizeKey, onEdit, onFontSizeChange, onWidthChange }) {
 const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
-const vc = VARIANT_CFG["stamp"][variant] || {};
 const photo = data.photo || ind.photos[0];
-const bgDark = vc.bgDark || ind.colors.dark;
-const accentColor = vc.accentColor || ind.colors.accent;
-const clipPathVal = vc.clipPath || "polygon(0 0, 100% 0, 100% 55%, 0 75%)";
+const bgDark = ind.colors.dark;
+const accentColor = ind.colors.accent;
+const clipPathVal = "polygon(0 0, 100% 0, 100% 55%, 0 75%)";
 const isXL = sizeKey === "XL", isL = sizeKey === "L", isM = sizeKey === "M", isS = sizeKey === "S";
 const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.65;
 const edit = (field) => (val) => onEdit(field, val);
@@ -683,10 +676,8 @@ background: `linear-gradient(180deg, ${bgDark}50 0%, ${bgDark}cc 100%)`
 // Matches the professional style of Hometown Realty / GreenScapes reference ads.
 // Best for: real estate, home services, lawn care, roofing, HVAC
 //
-function FadeOutTemplate({ data, sizeKey, onEdit, onFontSizeChange, onWidthChange, variant = 1 }) {
+function FadeOutTemplate({ data, sizeKey, onEdit, onFontSizeChange, onWidthChange }) {
 const ind = INDUSTRIES[data.industry] || INDUSTRIES["Other Service"];
-const vc = VARIANT_CFG["fade-out"][variant] || {};
-const flipH = !!vc.flip;
 const photo = data.photo || ind.photos[0];
 const isXL = sizeKey === "XL", isL = sizeKey === "L", isM = sizeKey === "M", isS = sizeKey === "S";
 const fScale = isXL ? 1.45 : isL ? 1.15 : isM ? 0.75 : 0.65;
@@ -707,7 +698,7 @@ return val;
 }));
 
 // The left color – use industry primary darkened slightly for richness
-const leftBg = vc.leftBgOverride || ind.colors.dark || ind.colors.primary;
+const leftBg = ind.colors.dark || ind.colors.primary;
 
 // How wide the left content zone is (photo fills the rest)
 // For XL (portrait): content left 55%, photo right 45%
@@ -716,7 +707,7 @@ const contentWidth = isXL ? "58%" : isL ? "55%" : "52%";
 
 // Bottom bar – amber/accent colored strip with phone + website
 // (matching the GreenScapes / Hometown reference style)
-const barBg = vc.barBgOverride || ind.colors.accent || ind.colors.primary;
+const barBg = ind.colors.accent || ind.colors.primary;
 const barTextColor = "#fff";
 
 return (
@@ -728,8 +719,8 @@ background: leftBg, fontFamily: "sans-serif",
   <div style={{
     position: "absolute",
     top: 0,
-    right: flipH ? "auto" : 0,
-    left: flipH ? 0 : "auto",
+    right: 0,
+    left: "auto",
     bottom: isS ? 0 : `${28*fScale}px`,
     width: "70%",
   }}>
@@ -740,7 +731,7 @@ background: leftBg, fontFamily: "sans-serif",
     {/* Horizontal fade: transparent on photo edge, full leftBg on content edge */}
     <div style={{
       position: "absolute", inset: 0,
-      background: `linear-gradient(${flipH ? "270deg" : "90deg"}, ${leftBg}ff 0%, ${leftBg}ee 30%, ${leftBg}88 50%, ${leftBg}22 70%, transparent 100%)`,
+      background: `linear-gradient(90deg, ${leftBg}ff 0%, ${leftBg}ee 30%, ${leftBg}88 50%, ${leftBg}22 70%, transparent 100%)`,
     }}/>
   </div>
 
@@ -748,8 +739,8 @@ background: leftBg, fontFamily: "sans-serif",
   <div style={{
     position: "absolute",
     top: 0,
-    left: flipH ? "auto" : 0,
-    right: flipH ? 0 : "auto",
+    left: 0,
+    right: "auto",
     bottom: isS ? 0 : `${28*fScale}px`,
     width: contentWidth,
     padding: isXL ? `${14*fScale}px ${14*fScale}px` : `${10*fScale}px ${12*fScale}px`,
@@ -918,79 +909,6 @@ export const TEMPLATES = {
 "stamp":       { name: "Service Stamp", desc: "Diagonal cut, oversized phone",    Component: StampTemplate },
 "fade-out":    { name: "Fade Out",      desc: "Photo fades right to brand color", Component: FadeOutTemplate },
 };
-
-// Variant palette overrides per template.
-// Variant 1 = default industry colors.
-// Variants 2 & 3 provide visual differentiation when the same template appears
-// more than once on the same postcard side.
-export const VARIANT_CFG = {
-  "photo-bold": {
-    1: {},
-    2: {
-      overlayGradient: "linear-gradient(0deg, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.35) 50%, rgba(0,0,0,0.12) 100%)",
-      bulletColor: "#f59e0b",
-      logoBottom: true,
-    },
-    3: {
-      overlayGradient: "linear-gradient(135deg, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.50) 50%, rgba(0,0,0,0.92) 100%)",
-      bulletColor: "#ffffff",
-    },
-  },
-  "split-clean": {
-    1: {},
-    2: { flip: true },
-    3: { flip: true, contentBg: "#fdf6ec", textPrimary: "#c2410c", accentDot: "#f97316" },
-  },
-  "magazine": {
-    1: {},
-    2: { reversePhotos: true, headerBg: "#1e293b", borderColor: "#1e293b", taglineColor: "#1e293b", bulletColor: "#38bdf8" },
-    3: { headerBg: "#374151", borderColor: "#374151", bulletColor: "#f59e0b" },
-  },
-  "stamp": {
-    1: {},
-    2: { clipPath: "polygon(0 0, 100% 0, 100% 60%, 0 80%)" },
-    3: { clipPath: "polygon(0 0, 100% 0, 100% 50%, 0 65%)", bgDark: "#1e293b", accentColor: "#f59e0b" },
-  },
-  "fade-out": {
-    1: {},
-    2: { flip: true },
-    3: { flip: true, leftBgOverride: "#1e293b", barBgOverride: "#f59e0b" },
-  },
-};
-
-// Canonical grid position ranks — matches the visual left→right, top→bottom order
-// for each side. Used to assign variants in a deterministic, layout-aware order.
-const CANONICAL_GRID_RANK = Object.fromEntries(
-  ["mb","dn","re","l1","l2","l3","l4","bxl","bxl2","bxl3","bm1","bm2","bm3","bm4","bs1"]
-    .map((ga, i) => [ga, i])
-);
-
-// Assign variant numbers (1|2|3) to spots that share the same template key.
-// Deterministic: sorted by canonical grid-area position (left→right, top→bottom),
-// with spot.id as a stable tiebreak. Returns { [spotId]: variantNumber }.
-export function assignTemplateVariants(spots) {
-  const byTemplate = {};
-  spots.forEach((s) => {
-    const t = s.templateData?.template;
-    if (!t) return;
-    if (!byTemplate[t]) byTemplate[t] = [];
-    byTemplate[t].push(s);
-  });
-  const map = {};
-  Object.values(byTemplate).forEach((group) => {
-    const sorted = [...group].sort((a, b) => {
-      const ra = CANONICAL_GRID_RANK[a.gridArea] ?? 999;
-      const rb = CANONICAL_GRID_RANK[b.gridArea] ?? 999;
-      return ra !== rb ? ra - rb : a.id - b.id;
-    });
-    sorted.forEach((spot, i) => {
-      const n = i + 1;
-      const v = n <= 3 ? n : n % 2 === 0 ? 2 : 3;
-      map[spot.id] = v;
-    });
-  });
-  return map;
-}
 
 // Helper: normalize menuItems array (handles both string items and {text,enabled} objects)
 // Returns only the enabled items as plain strings, for use in templates
@@ -1747,14 +1665,13 @@ fontFamily: "system-ui, sans-serif", boxSizing: "border-box", background: "#fff"
 // Renders the exact same template the customer designed, at the spot's natural
 // pixel dimensions, with all interactive handlers disabled (pointer-events off
 // is applied by the caller via a wrapper div).
-export function AdTemplatePreview({ templateKey, formData, sizeKey, variant = 1 }) {
+export function AdTemplatePreview({ templateKey, formData, sizeKey }) {
   const Tpl = (TEMPLATES[templateKey] || TEMPLATES["split-clean"]).Component;
   if (!Tpl) return null;
   return (
     <Tpl
       data={formData}
       sizeKey={sizeKey}
-      variant={variant}
       onEdit={() => {}}
       onFontSizeChange={() => {}}
       onWidthChange={() => {}}
