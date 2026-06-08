@@ -296,7 +296,9 @@ export function buildAdPrompt(
     if (templateKey !== "surprise-me") {
       const lsTmplDesc =
         templateKey === "parchment-classic"
-          ? "landscape Parchment Classic layout: warm parchment texture, orange bookmark-ribbon pennant top-left, dark brush-stroke headline band, orange circular checkmark service badges left column, dashed coupon box, dark footer strip. Reproduce every zone exactly."
+          ? fontVariant === 0
+            ? "landscape Parchment Classic layout: warm parchment texture, orange bookmark-ribbon pennant top-left, dark brush-stroke headline band, orange circular checkmark service badges left column, dashed coupon box, dark footer strip. Reproduce every zone exactly."
+            : "landscape Parchment Classic layout: warm parchment texture, dark brush-stroke headline band, orange circular checkmark service badges left column, dashed coupon box, dark footer strip. Reference for texture and checkmark style only — the logo zone and layout are defined in ⚠ OVERRIDE DIRECTIVES below; do NOT reproduce the pennant ribbon."
           : templateKey === "made-fresh"
             ? "landscape Made Fresh layout: warm wood-table bg, white plate + gingham cloth left, 'Made Fresh For You' chalkboard A-frame sign upper-right, white paint-stroke business info panel, golden ticket-stub coupon right. Reproduce all textures and zones exactly."
             : templateKey === "neighborhood-pro"
@@ -336,7 +338,9 @@ export function buildAdPrompt(
             ? "  • IMAGE 1 (TEMPLATE) — home-services postcard on light gray/off-white textured bg, navy blue + gold/yellow scheme: large dark navy hexagonal badge upper-left (logo zone), bold horizontal gold/yellow brush-stroke sweeping upper third, large hero photo zone upper-right blending naturally, wide dark navy horizontal band center-full-width, circular white icon service badges on the navy band, gold/yellow dashed-border coupon box lower-right, dark strip footer. Reproduce exactly."
             : templateKey === "health-wellness"
               ? "  • IMAGE 1 (TEMPLATE) — health/wellness postcard on soft cream bg with teal accents: two clinic/office photos inside organic curved teal blob shapes upper section, large wide rounded-rectangle white panel center (headline zone), narrow teal pill-shaped bar below it (tagline zone), service panels with circular teal badge icons and white rounded-rect text boxes, reception/waiting-room photo in organic blob lower-left, teal stethoscope on dark teal circular blob lower-right, small white rounded QR box, dark teal footer bar. Reproduce exactly."
-              : "  • IMAGE 1 (TEMPLATE) — postcard with parchment texture, brush-stroke headline band, orange pennant ribbon, circular checkmark badge, dashed coupon box, dark footer strip. Reproduce every zone and element exactly.",
+              : fontVariant === 0
+                ? "  • IMAGE 1 (TEMPLATE) — postcard with parchment texture, brush-stroke headline band, orange pennant ribbon, circular checkmark badge, dashed coupon box, dark footer strip. Reproduce every zone and element exactly."
+                : "  • IMAGE 1 (TEMPLATE) — postcard with parchment texture, brush-stroke headline band, circular checkmark badges, dashed coupon box, dark footer strip. Reference for texture and checkmark style only — the logo zone and layout are defined in ⚠ OVERRIDE DIRECTIVES below; do NOT reproduce the pennant ribbon.",
     );
     imgIdx = 2;
     if (hasPhoto) {
@@ -362,7 +366,11 @@ export function buildAdPrompt(
       `HEADLINE (dark brush-stroke band, upper area): business name in bold condensed all-caps slab serif, white. ` +
       `If the name has a common English category noun (Cafe/Grill/Pizza/Bar/Bakery/Salon/Diner) — render ONLY that word in warm orange script. Each word exactly once.\n\n` +
       (hasLogo
-        ? `LOGO (orange pennant, top-left): IMAGE ${logoImg} centered inside pennant.` + (d.tagline ? ` Tagline in italic script beside pennant.\n\n` : "\n\n")
+        ? fontVariant === 1
+          ? `LOGO (circular emblem/seal badge, top-RIGHT corner, ring-bordered): IMAGE ${logoImg} centered inside circular badge, exact colors preserved.` + (d.tagline ? ` Tagline in italic script beside badge.\n\n` : "\n\n")
+          : fontVariant === 2
+          ? `LOGO (inside full-width rectangular banner strip spanning the entire top edge): IMAGE ${logoImg} left-aligned inside the banner strip, exact colors preserved.` + (d.tagline ? ` Tagline also inside the banner strip.\n\n` : "\n\n")
+          : `LOGO (orange pennant, top-left): IMAGE ${logoImg} centered inside pennant.` + (d.tagline ? ` Tagline in italic script beside pennant.\n\n` : "\n\n")
         : (d.tagline ? `TAGLINE: tagline in italic script beside the pennant.\n\n` : "")) +
       `SERVICE LIST (left column, parchment area): ` +
       (menuCount > 0
@@ -579,9 +587,17 @@ export function buildAdPrompt(
       `HEADLINE (top): business name uses a LAYERED TWO-FONT treatment — main words in bold condensed all-caps slab/block serif, very large, dark color, horizontal. ` +
       `IF name contains a common English category/industry noun (Cafe/Grill/Spa/Pizza/Bar/Salon/Dental/Kitchen/Bakery/Bistro/Diner) — render ONLY that one word in flowing orange script at ≈−8° angle. Never for proper nouns or brand names. Each word exactly once.\n\n` +
       (hasLogo
-        ? `LOGO + TAGLINE (orange pennant ribbon, top-left, TOP EDGE flush with top of ad): ` +
-          `IMAGE ${logoImg} centered inside pennant, scaled to fit with clear margin, exact colors preserved.` +
-          (d.tagline ? ` Tagline in handwriting-style italic script (+5°–7°), large, confident, to the right of pennant below headline.` : "") + "\n\n"
+        ? fontVariant === 1
+          ? `LOGO + TAGLINE (circular emblem/seal badge, top-RIGHT corner, ring-bordered): ` +
+            `IMAGE ${logoImg} centered inside circular badge, scaled to fit with clear margin, exact colors preserved.` +
+            (d.tagline ? ` Tagline in handwriting-style italic script (+5°–7°), large, confident, below the badge.` : "") + "\n\n"
+          : fontVariant === 2
+          ? `LOGO (inside full-width rectangular banner strip spanning the entire top edge of the card — no pennant): ` +
+            `IMAGE ${logoImg} positioned left-center inside the banner strip, exact colors preserved.` +
+            (d.tagline ? ` Business name and tagline also sit inside the banner strip.` : "") + "\n\n"
+          : `LOGO + TAGLINE (orange pennant ribbon, top-left, TOP EDGE flush with top of ad): ` +
+            `IMAGE ${logoImg} centered inside pennant, scaled to fit with clear margin, exact colors preserved.` +
+            (d.tagline ? ` Tagline in handwriting-style italic script (+5°–7°), large, confident, to the right of pennant below headline.` : "") + "\n\n"
         : (d.tagline ? `TAGLINE (upper-left, below headline): tagline in handwriting-style italic script (+5°–7°), large, confident.\n\n` : "")) +
       "HERO IMAGE (right-center, large feature area): " +
       (hasPhoto
