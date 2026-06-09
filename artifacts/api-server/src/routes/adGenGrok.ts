@@ -2868,9 +2868,9 @@ function showToast(msg){
     .then(function(r){ return r.ok ? r.json() : null; })
     .then(function(data){
       if(data && Array.isArray(data.takenCategories)){
-        var merged = data.takenCategories.slice();
-        _takenCategories.forEach(function(c){ if(merged.indexOf(c)===-1) merged.push(c); });
-        _takenCategories = merged;
+        // Server is authoritative — replace entirely so stale URL params
+        // don't keep a category grayed out after it's been freed.
+        _takenCategories = data.takenCategories.slice();
         applyTakenIndustries();
       }
     })
