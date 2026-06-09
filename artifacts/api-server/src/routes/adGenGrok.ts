@@ -79,16 +79,16 @@ const SURPRISE_ME_THEMES: SurpriseMeTheme[] = [
   },
   {
     // Index 2 — default for contractor, HVAC, plumbing, electrical, roofing, auto, landscaping, pest
-    name: "Industrial Edge",
+    name: "Trusted Pro",
     palette:
-      "Concrete, slate gray, or weathered charcoal texture as the dominant background; vivid orange or electric yellow as the primary accent; crisp white for all text; footer in near-black or dark concrete.",
+      "Deep navy blue or slate charcoal as the dominant background — rich, dark, and authoritative. Electric blue or bold safety orange as the single primary accent color throughout. Crisp white for all headline and body text — high contrast and instantly readable. Dark navy or near-black footer bar. No pastels, no florals, no earth tones. The palette says professional, capable, and dependable.",
     typography:
-      "Wide ultra-bold condensed all-caps stencil or block typeface for the headline — very large, zero-ambiguity, stacked; bold sans-serif for service items; sharp angular graphic elements throughout.",
+      "Ultra-bold condensed sans-serif headline in all-caps — maximum weight, maximum size, zero ornamentation (Bebas Neue, Impact, or Barlow Condensed ExtraBold style). The business name should feel like it owns the page. Clean medium-weight sans-serif for service list items — readable and no-nonsense. No script fonts, no italic accents, no decorative lettering of any kind. Thin horizontal rule or accent bar separating major zones.",
     layoutLandscape:
-      "Background filled with a concrete or slate texture; a bold diagonal cut divides the hero photo zone (right half) from the text info zone (left half); headline in oversized all-caps stacked vertically on the left; vivid orange or yellow accent bar or stripe cuts diagonally across the center; coupon in a bold heavy-bordered rectangular badge lower-right.",
+      "Hard diagonal slash divides the card from upper-left to lower-right. Left zone: dark navy panel with the business name stacked in massive all-caps white type, tagline below in smaller weight, service list in a clean column with accent-color slash or chevron bullets. Right zone: hero photo composited with the diagonal edge — photo bleeds to the right and top edges. Coupon zone: bold parallelogram shape overlapping the diagonal cut line in the lower-right, accent color background, white offer text. Footer: full-width dark bar.",
     layoutPortrait:
-      "Full-width concrete or slate texture background; large hero photo with a bold diagonal slash edge blending into the texture; oversized stacked all-caps headline left-aligned below; horizontal vivid-accent band separating the services from the coupon; coupon in a heavy-bordered rectangular box at the bottom.",
-    mood: "bold, rugged, authoritative, high-contrast",
+      "Hero photo fills the upper 40% — composited with a hard diagonal slash at the bottom edge cutting from upper-right to lower-left, blending into the dark background. Below the diagonal: full-width dark navy panel. Business name in massive all-caps stacked type centered or left-aligned on the dark panel. Tagline in smaller clean sans below. Service list in two columns with accent-color chevron or slash bullets, clean and tight. Coupon zone as a bold parallelogram or diagonal-cut shape in accent color. Footer: full-width dark bar spanning edge to edge.",
+    mood: "trustworthy, capable, professional, dependable, no-nonsense",
   },
   {
     // Index 3 — default for restaurant, bakery, cafe, florist, boutique retail, yoga, nutrition
@@ -120,48 +120,19 @@ const SURPRISE_ME_THEMES: SurpriseMeTheme[] = [
 
 /** Return the index into SURPRISE_ME_THEMES whose default industries best match the given industry string. Falls back to Urban Pop (4) if nothing matches. */
 function getDefaultThemeIndex(industry: string): number {
-  const ind = industry.toLowerCase();
-  // Midnight Luxe — professional services, legal, finance, real estate, insurance
-  if (/legal|law|attorney|lawyer|finance|financial|accounting|accountant|cpa|insurance|real estate|realtor|mortgage|wealth|investment|consulting|consultant|advisor|notary/.test(ind)) return 0;
-  // Coastal Bright — healthcare, veterinary, dental, wellness, spa, chiropractic
-  if (/health|medical|clinic|hospital|veterinarian|veterinary|\bvet\b|dental|dentist|wellness|spa|chiropractic|chiropractor|physical therapy|therapy|optometry|optometrist|physician|doctor|pharmacy|pediatric|gynecolog|oncolog|orthopedic|audiolog/.test(ind)) return 1;
-  // Industrial Edge — contractor, HVAC, plumbing, electrical, roofing, auto, landscaping, pest
-  if (/contractor|hvac|heating|cooling|plumbing|plumber|electrical|electrician|roofing|roofer|auto|automotive|mechanic|landscaping|landscape|lawn|pest|exterminator|construction|renovation|remodel|flooring|painting|painter|pressure wash|pool|septic|junk|moving|storage/.test(ind)) return 2;
-  // Botanical Garden — restaurant, bakery, cafe, florist, boutique, yoga, nutrition
-  if (/restaurant|bakery|bake|cafe|coffee|catering|florist|floral|boutique|yoga|nutrition|supplement|organic|farm|winery|brewery|distillery|beauty|cosmetic|nail|estheti|massage|candle|gift|jewelry|jewellery|antique|art studio/.test(ind)) return 3;
-  // Urban Pop — retail, salon, fitness, entertainment, childcare, cleaning, and everything else
-  return 4;
+  const i = (industry || "").toLowerCase();
+  // 0 — Midnight Luxe: professional services, legal, finance, real estate, insurance
+  if (["legal","finance","financial","accounting","real estate","realestate","insurance","consulting","mortgage","investment","wealth","attorney","lawyer","notary"].some(k => i.includes(k))) return 0;
+  // 1 — Coastal Bright: healthcare, medical, dental, veterinary, wellness, spa
+  if (["healthcare","medical","health","dental","dentist","veterinary","vet","animal","clinic","chiropractic","chiropractor","therapy","therapist","physical therapy","wellness","spa","massage","optometry","optometrist","vision","pharmacy","urgent care","pediatric"].some(k => i.includes(k))) return 1;
+  // 2 — Trusted Pro: trade/service industries
+  if (["hvac","heating","cooling","air conditioning","plumbing","plumber","electrical","electrician","roofing","roofer","contractor","construction","handyman","remodeling","renovation","flooring","painting","painter","pressure washing","gutters","windows","siding","insulation","pest","exterminator","locksmith","garage","auto","automotive","mechanic","towing","landscaping","lawn","tree","irrigation"].some(k => i.includes(k))) return 2;
+  // 3 — Botanical Garden: food, café, florist, yoga, farm, beverage
+  if (["restaurant","dining","food","bakery","cafe","coffee","catering","florist","flower","yoga","nutrition","organic","farm","garden","winery","brewery","distillery","juice","smoothie"].some(k => i.includes(k))) return 3;
+  // 4 — Urban Pop: retail, salon, fitness, entertainment, childcare, cleaning, and everything else
+  if (["retail","shop","store","boutique","salon","hair","nail","barbershop","barber","fitness","gym","crossfit","martial arts","dance","entertainment","arcade","gaming","photography","print","childcare","daycare","tutoring","cleaning","maid","laundry","dry cleaning","moving","storage","shipping"].some(k => i.includes(k))) return 4;
+  return 4; // default: Urban Pop
 }
-
-const THEME_EXCLUSIONS: Record<string, number[]> = {
-  // Theme indices: 0=Midnight Luxe, 1=Coastal Bright,
-  // 2=Industrial Edge, 3=Botanical Garden, 4=Urban Pop
-
-  // Food businesses — Industrial Edge (concrete/hazard texture) is wrong for
-  // appetite appeal. Never assign index 2.
-  restaurant:  [2],
-  pizza:       [2],
-  bakery:      [2],
-  cafe:        [2],
-  "food":      [2],
-
-  // Healthcare/wellness — Industrial Edge feels harsh and clinical in the
-  // wrong way. Never assign index 2.
-  veterinary:  [2],
-  dental:      [2],
-  healthcare:  [2],
-  medical:     [2],
-  wellness:    [2],
-  spa:         [2],
-  salon:       [2],
-
-  // Childcare/education — Industrial Edge is inappropriate.
-  childcare:   [2],
-  education:   [2],
-  school:      [2],
-
-  // Default: no exclusions for contractor/trade industries (Industrial Edge fits them).
-};
 
 const CATEGORY_CLICHES: Record<string, string> = {
   veterinary:  "no paw print graphics, no stethoscopes on plain backgrounds, no clip-art animal icons, no default blue/teal medical palette, no plain solid color behind pet photos",
@@ -173,6 +144,11 @@ const CATEGORY_CLICHES: Record<string, string> = {
   plumbing:    "no cartoon wrench or pipe icons, no plain white background, no blue water drop clip art",
   electrician: "no cartoon lightning bolt on plain background, no yellow/black caution stripe cliché, no generic lightbulb icons",
   landscaping: "no cartoon sun and flower icons, no plain green background, no generic lawnmower clip art",
+  heating:     "no commercial rooftop units, no industrial settings, no warehouse environments, no concrete backgrounds",
+  cooling:     "no commercial rooftop units, no industrial settings, no concrete or warehouse backgrounds",
+  pest:        "no cartoon bug icons, no yellow hazard tape, no industrial spraying equipment",
+  automotive:  "no stock photo car on white background, no plain garage floor, no anonymous highway",
+  moving:      "no cartoon moving truck clip art, no anonymous cardboard boxes on white",
   cleaning:    "no cartoon mop or broom icons, no plain white/blue background, no soap bubble clip art",
   salon:       "no cartoon scissors or comb icons, no plain pink background, no generic mirror graphics",
   fitness:     "no cartoon dumbbell icons, no plain black background, no generic silhouette running figure",
@@ -367,39 +343,14 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   // Regeneration → pick any theme EXCEPT the industry default,
   // guaranteeing a visually distinct result every time Regenerate is clicked.
   const surpriseMeDefaultIdx = getDefaultThemeIndex(d.industry);
-
-  // Build exclusion list for this industry
-  const industryLower = (d.industry || "").toLowerCase();
-  const excludedIndices = Object.entries(THEME_EXCLUSIONS)
-    .filter(([key]) => industryLower.includes(key))
-    .flatMap(([, indices]) => indices);
-
-  // For first generation: use the industry default unless it is excluded,
-  // then fall back to the next non-excluded theme cycling forward.
-  const getValidThemeIdx = (preferred: number): number => {
-    if (!excludedIndices.includes(preferred)) return preferred;
-    for (let i = 1; i < SURPRISE_ME_THEMES.length; i++) {
-      const candidate = (preferred + i) % SURPRISE_ME_THEMES.length;
-      if (!excludedIndices.includes(candidate)) return candidate;
-    }
-    return preferred; // all themes excluded — shouldn't happen, but safe fallback
-  };
-
   const surpriseMeThemeIdx =
     d.generationIndex === 0
-      ? getValidThemeIdx(surpriseMeDefaultIdx)
+      ? surpriseMeDefaultIdx
       : (() => {
           const opts = SURPRISE_ME_THEMES
             .map((_, i) => i)
-            .filter((i) => i !== surpriseMeDefaultIdx)
-            .filter((i) => !excludedIndices.includes(i));
-          // If exclusions wipe out all options, allow any non-default theme
-          const fallbackOpts = opts.length > 0
-            ? opts
-            : SURPRISE_ME_THEMES
-                .map((_, i) => i)
-                .filter((i) => i !== surpriseMeDefaultIdx);
-          return fallbackOpts[Math.floor(Math.random() * fallbackOpts.length)]!;
+            .filter(i => i !== surpriseMeDefaultIdx);
+          return opts[Math.floor(Math.random() * opts.length)]!;
         })();
   const selectedTheme = SURPRISE_ME_THEMES[surpriseMeThemeIdx]!;
 
@@ -842,7 +793,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "• Chalkboard/bistro: dark chalkboard, wood table props, golden ticket coupon, gingham cloth\n" +
       "• Forest-green contractor: deep green bg, white paint-brush splashes, lime-green script\n" +
       "• Navy/gold home services: dark navy hexagonal badge, gold brush-stroke, circular icon band\n" +
-      "• Teal/sage wellness: teal organic blob shapes, teal pill-shaped tagline bar, cream bg\n\n" +
+      "• Botanical/floral for trade services: roses, ferns, delicate florals, sage green watercolor, dusty rose backgrounds — these moods are wrong for HVAC, plumbing, roofing, electrical, and contractor businesses\n\n" +
 
       "VISUAL CONSTRUCTION — MANDATORY:\n" +
       "(a) NO hard rectangular photo borders — use blob mask, brush-stroke cutout, diagonal slash, arch shape, or gradient vignette\n" +
@@ -1029,7 +980,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "• Chalkboard/bistro: dark chalkboard, wood table props, golden ticket coupon, gingham cloth\n" +
       "• Forest-green contractor: deep green bg, white paint-brush splashes, lime-green script\n" +
       "• Navy/gold home services: dark navy hexagonal badge, gold brush-stroke, circular icon band\n" +
-      "• Teal/sage wellness: teal organic blob shapes, teal pill-shaped tagline bar, cream bg\n\n" +
+      "• Botanical/floral for trade services: roses, ferns, delicate florals, sage green watercolor, dusty rose backgrounds — these moods are wrong for HVAC, plumbing, roofing, electrical, and contractor businesses\n\n" +
 
       "VISUAL CONSTRUCTION — MANDATORY:\n" +
       "(a) NO hard rectangular photo borders — use blob mask, brush-stroke cutout, diagonal slash, arch shape, or gradient vignette\n" +

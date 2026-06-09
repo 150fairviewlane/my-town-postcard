@@ -1,0 +1,198 @@
+I need to replace the Industrial Edge theme entirely with a new “Trusted Pro” theme that works correctly for trade and service businesses (HVAC, roofing, plumbing, electrical, contractors). Industrial Edge produces unusable ads and should be removed from the system completely.
+
+Open ONLY this file: ./artifacts/api-server/src/routes/adGenGrok.ts
+
+Do not touch any other file. Read the file fully before making changes. Confirm the plan before writing code.
+
+# ==============================================================
+CHANGE 1 — Replace Industrial Edge with Trusted Pro in SURPRISE_ME_THEMES
+
+Find the SURPRISE_ME_THEMES array. It has 5 entries at indices 0-4:
+0 = Midnight Luxe
+1 = Coastal Bright
+2 = Industrial Edge   ← REPLACE THIS ENTIRE ENTRY
+3 = Botanical Garden
+4 = Urban Pop
+
+Replace the entire Industrial Edge entry (index 2) with this
+new Trusted Pro entry. Keep all other entries exactly as-is.
+Keep the entry at index 2 so all existing index references stay valid.
+
+{
+name: “Trusted Pro”,
+palette: “Deep navy blue or slate charcoal as the dominant background — rich, dark, and authoritative. Electric blue or bold safety orange as the single primary accent color throughout. Crisp white for all headline and body text — high contrast and instantly readable. Dark navy or near-black footer bar. No pastels, no florals, no earth tones. The palette says professional, capable, and dependable.”,
+typography: “Ultra-bold condensed sans-serif headline in all-caps — maximum weight, maximum size, zero ornamentation (Bebas Neue, Impact, or Barlow Condensed ExtraBold style). The business name should feel like it owns the page. Clean medium-weight sans-serif for service list items — readable and no-nonsense. No script fonts, no italic accents, no decorative lettering of any kind. Thin horizontal rule or accent bar separating major zones.”,
+layoutLandscape: “Hard diagonal slash divides the card from upper-left to lower-right. Left zone: dark navy panel with the business name stacked in massive all-caps white type, tagline below in smaller weight, service list in a clean column with accent-color slash or chevron bullets. Right zone: hero photo composited with the diagonal edge — photo bleeds to the right and top edges. Coupon zone: bold parallelogram shape overlapping the diagonal cut line in the lower-right, accent color background, white offer text. Footer: full-width dark bar.”,
+layoutPortrait: “Hero photo fills the upper 40% — composited with a hard diagonal slash at the bottom edge cutting from upper-right to lower-left, blending into the dark background. Below the diagonal: full-width dark navy panel. Business name in massive all-caps stacked type centered or left-aligned on the dark panel. Tagline in smaller clean sans below. Service list in two columns with accent-color chevron or slash bullets, clean and tight. Coupon zone as a bold parallelogram or diagonal-cut shape in accent color. Footer: full-width dark bar spanning edge to edge.”,
+mood: “trustworthy, capable, professional, dependable, no-nonsense”,
+},
+
+# ==============================================================
+CHANGE 2 — Update getDefaultThemeIndex to map trade industries to Trusted Pro
+
+Find the getDefaultThemeIndex function. It currently maps industries
+to theme indices. Update it so trade/service industries map to
+index 2 (now Trusted Pro instead of Industrial Edge).
+
+The updated function should map industries as follows:
+
+Index 0 — Midnight Luxe:
+legal, finance, financial, accounting, real estate, realestate,
+insurance, consulting, mortgage, investment, wealth, attorney,
+lawyer, notary
+
+Index 1 — Coastal Bright:
+healthcare, medical, health, dental, dentist, veterinary, vet,
+animal, clinic, chiropractic, chiropractor, therapy, therapist,
+physical therapy, wellness, spa, massage, optometry, optometrist,
+vision, pharmacy, urgent care, pediatric
+
+Index 2 — Trusted Pro (was Industrial Edge):
+hvac, heating, cooling, air conditioning, plumbing, plumber,
+electrical, electrician, roofing, roofer, contractor, construction,
+handyman, remodeling, renovation, flooring, painting, painter,
+pressure washing, gutters, windows, siding, insulation, pest,
+exterminator, locksmith, garage, auto, automotive, mechanic,
+towing, landscaping, lawn, tree, irrigation
+
+Index 3 — Botanical Garden:
+restaurant, dining, food, bakery, cafe, coffee, catering,
+florist, flower, yoga, nutrition, organic, farm, garden,
+winery, brewery, distillery, juice, smoothie
+
+Index 4 — Urban Pop:
+retail, shop, store, boutique, salon, hair, nail, barbershop,
+barber, fitness, gym, crossfit, martial arts, dance, entertainment,
+arcade, gaming, photography, print, childcare, daycare, tutoring,
+cleaning, maid, laundry, dry cleaning, moving, storage, shipping
+
+The function should check if the industry string (lowercased) includes
+any of the keywords for each index. If no match found, return 4 (Urban Pop)
+as the default fallback.
+
+Write the function as a series of keyword checks, returning the
+first matching index. Example structure:
+
+function getDefaultThemeIndex(industry: string): number {
+const i = (industry || “”).toLowerCase();
+if ([…midnight_luxe_keywords].some(k => i.includes(k))) return 0;
+if ([…coastal_bright_keywords].some(k => i.includes(k))) return 1;
+if ([…trusted_pro_keywords].some(k => i.includes(k))) return 2;
+if ([…botanical_garden_keywords].some(k => i.includes(k))) return 3;
+if ([…urban_pop_keywords].some(k => i.includes(k))) return 4;
+return 4; // default: Urban Pop
+}
+
+# ==============================================================
+CHANGE 3 — Remove or simplify the THEME_EXCLUSIONS system
+
+The THEME_EXCLUSIONS map added in a previous task was a workaround
+for Industrial Edge appearing on wrong industries. Now that Industrial
+Edge is replaced with Trusted Pro (which maps correctly to trade
+industries), the exclusion system is no longer needed.
+
+Remove the THEME_EXCLUSIONS constant entirely.
+
+Replace the complex theme selection logic that uses excludedIndices
+with the simpler original logic:
+
+const surpriseMeDefaultIdx = getDefaultThemeIndex(d.industry);
+const surpriseMeThemeIdx =
+d.generationIndex === 0
+? surpriseMeDefaultIdx
+: (() => {
+const opts = SURPRISE_ME_THEMES
+.map((_, i) => i)
+.filter(i => i !== surpriseMeDefaultIdx);
+return opts[Math.floor(Math.random() * opts.length)]!;
+})();
+const selectedTheme = SURPRISE_ME_THEMES[surpriseMeThemeIdx]!;
+
+This is cleaner, simpler, and correct now that the themes
+themselves map logically to industries.
+
+# ==============================================================
+CHANGE 4 — Update the FORBIDDEN STYLES list in the surprise-me prompt
+
+Find the FORBIDDEN STYLES section in both the portrait and
+landscape surprise-me prompt blocks. It lists five bullet points
+of existing named template styles to avoid.
+
+Replace the fifth bullet point (currently about Industrial Edge
+or commercial/industrial scale) with:
+
+• Botanical/floral for trade services: roses, ferns, delicate
+florals, sage green watercolor, dusty rose backgrounds —
+these moods are wrong for HVAC, plumbing, roofing, electrical,
+and contractor businesses
+
+This prevents Botanical Garden from being assigned to trade
+businesses on regeneration passes, and prevents Grok from
+drifting toward floral aesthetics even when told to use Trusted Pro.
+
+# ==============================================================
+CHANGE 5 — Add Trusted Pro to the CATEGORY_CLICHES hero direction
+for trade industries
+
+Find the CATEGORY_CLICHES map. The hvac, roofing, plumbing,
+electrician, contractor, and landscaping entries have heroDirection
+strings. These are correct and should stay.
+
+Add two new entries for industries that were previously covered
+by Industrial Edge but may not have specific entries yet:
+
+“heating”: {
+cliches: “no commercial rooftop units, no industrial settings, no warehouse environments, no concrete backgrounds”,
+heroDirection: “a friendly HVAC technician working on a residential outdoor unit in a suburban backyard, or a family comfortable in a warm cozy living room — always residential, always approachable”
+},
+“cooling”: {
+cliches: “no commercial rooftop units, no industrial settings, no concrete or warehouse backgrounds”,
+heroDirection: “a residential outdoor AC unit in a tidy suburban yard with green grass, or a technician giving a thumbs-up after completing a residential repair — local and professional”
+},
+“pest”: {
+cliches: “no cartoon bug icons, no yellow hazard tape, no industrial spraying equipment”,
+heroDirection: “a uniformed pest control technician confidently treating a clean residential home exterior, or a family at ease in a pest-free bright home interior — professional and reassuring”
+},
+“automotive”: {
+cliches: “no stock photo car on white background, no plain garage floor, no anonymous highway”,
+heroDirection: “a skilled mechanic working confidently in a clean well-organized local garage, or a satisfied customer picking up their car from a friendly local auto shop — personal service, local community feel”
+},
+“moving”: {
+cliches: “no cartoon moving truck clip art, no anonymous cardboard boxes on white”,
+heroDirection: “a professional moving crew carefully handling furniture in a residential home, or a family happily settled in their new home after a successful move — trustworthy local service”
+},
+
+# ==============================================================
+CHANGE 6 — Verify and test
+
+After all changes:
+
+1. Run the prompt-size check:
+   pnpm –filter @workspace/api-server run check:prompt-size
+   Confirm zero violations.
+1. Run typecheck:
+   pnpm –filter @workspace/api-server run typecheck
+   Confirm zero new errors.
+1. Trace the theme selection logic for these industry inputs
+   and report which theme name and index would be selected
+   (generationIndex: 0 for all). Do not generate actual ads.
+- industry: “hvac”
+  Expected: Trusted Pro (index 2)
+- industry: “restaurant”
+  Expected: Botanical Garden (index 3)
+- industry: “dental”
+  Expected: Coastal Bright (index 1)
+- industry: “retail”
+  Expected: Urban Pop (index 4)
+- industry: “insurance”
+  Expected: Midnight Luxe (index 0)
+- industry: “landscaping”
+  Expected: Trusted Pro (index 2)
+   
+   Report PASS or FAIL for each with the actual theme selected.
+1. Show me the full Trusted Pro theme entry as it now exists
+   in the SURPRISE_ME_THEMES array to confirm it was written
+   correctly.
+
+Do not change any named templates. Do not change any frontend files.
+Do not change SURPRISE_ME_THEMES entries other than index 2.
