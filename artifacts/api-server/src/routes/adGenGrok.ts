@@ -5,6 +5,7 @@ import path from "path";
 import sharp from "sharp";
 import { logger } from "../lib/logger";
 import { buildAdPrompt } from "../lib/buildAdPrompt";
+import { generateSurpriseMeTemplate } from "../lib/surpriseMeTransform.js";
 
 function findWorkspaceRoot(): string {
   let dir = process.cwd();
@@ -396,6 +397,29 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     tmplBuf = fs.readFileSync(tmplPath);
     tmplMime = /\.(jpe?g)$/i.test(tmplFilename) ? "image/jpeg" : "image/png";
     req.log.info({ templateKey, tmplFilename }, "template file loaded");
+  }
+
+  if (templateKey === "surprise-me") {
+    const transformResult = await generateSurpriseMeTemplate(
+      d.industry || "",
+      isLandscape,
+      WORKSPACE_ROOT,
+      d.spotId,
+    );
+    if (transformResult) {
+      tmplBuf  = transformResult.buffer;
+      tmplMime = transformResult.mime;
+      req.log.info(
+        {
+          family:  transformResult.family,
+          palette: transformResult.palette,
+          flipped: transformResult.flipped,
+        },
+        "surprise-me template generated"
+      );
+    } else {
+      req.log.warn("surprise-me transform failed — falling back to text-only");
+    }
   }
 
   // Map spot size → closest supported Grok aspect ratio
