@@ -500,7 +500,7 @@ export function buildAdPrompt(
       "  • No hard rectangular photo borders — mask/blend edges with organic shapes, gradients, or diagonal cuts.\n" +
       "  • Background: gradient, texture, or layered wash — never flat solid color.\n" +
       "  • Three depth planes: (1) textured bg, (2) graphic mid-layer shapes, (3) foreground text with shadows/glows.\n" +
-      "  • All text must be clearly readable: use opaque backing panel, heavy drop shadow, or solid-fill text zone — subtle 1px shadows are insufficient.\n\n" +
+      "  • All text clearly readable: opaque backing, heavy drop shadow, or solid text fill — no subtle shadows.\n\n" +
       "CONTENT ZONES:\n" +
       `  HEADLINE: business name — very large, dominant, instantly readable.\n` +
       (hasPhoto
@@ -561,27 +561,27 @@ export function buildAdPrompt(
     : templateKey === "purple-sage"
     ? (
       "LAYOUT — reproduce Purple Sage template zones exactly:\n\n" +
-      "DECORATIVE ACCENTS (top-left corner: large muted purple circle + dot grid; left side: sage green botanical leaf sprig — structural, NOT logo or text zones).\n\n" +
+      "DECORATIVE ACCENTS (top-left: muted purple circle + dot grid; left: sage green leaf sprig — structural, NOT logo zones).\n\n" +
       (hasLogo
         ? `LOGO (IMAGE ${logoImg} placed inside or beside the white/cream rounded-rect headline panel).\n\n`
         : "") +
       `HEADLINE (large white/cream rounded-rect panel, upper-left): business name bold condensed all-caps sans-serif, very large, dark purple/near-black. Each word once.` +
       (d.tagline ? ` Tagline in clean italic script below, dark purple.` : "") + "\n\n" +
-      "BRUSH STROKES (structural, no text): sweeping muted purple paint brush stroke below headline panel; sage green brush stroke in lower area.\n\n" +
+      "BRUSH STROKES (structural, no text): muted purple below headline; sage green in lower area.\n\n" +
       "HERO PHOTO (upper-right, large circular frame in sage green ring border):\n" +
       (hasPhoto
         ? `  Composite IMAGE 2 — fill circular frame, sage green ring border, no hard rectangular edges. Cinematic lighting.\n\n`
         : `  Generate a photorealistic organic interior or lifestyle scene. Circular frame with sage green ring border.\n\n`) +
-      "SECONDARY PHOTOS (lower-right, two smaller overlapping circles): generate two circular-cropped photos — kitchen/dining scene and outdoor patio/garden. Each perfectly circular.\n\n" +
+      "SECONDARY PHOTOS (lower-right, two overlapping circles): kitchen/dining + outdoor patio/garden, perfectly circular.\n\n" +
       `SERVICE BADGES (middle row): ` +
       (menuCount > 0
-        ? `EXACTLY ${menuCount} muted sage green circular icon badge${menuCount !== 1 ? "s" : ""} with thin vertical dividers and NO MORE — one per service in BUSINESS DETAILS, exactly as written. The template image may show more badge slots — ignore extras; do NOT render empty badges. No extras. No invented services.\n\n`
-        : `four decorative sage green circular icon badge graphics (professional, award, team, shield) with thin vertical dividers; NO text labels.\n\n`) +
+        ? `EXACTLY ${menuCount} muted sage green circular icon badge${menuCount !== 1 ? "s" : ""} with thin vertical dividers and NO MORE — one per service in BUSINESS DETAILS, exactly as written. Ignore extra template slots; do NOT render empty badges.\n\n`
+        : `four decorative sage green circular icon badge graphics with thin vertical dividers; NO text labels.\n\n`) +
       `SERVICE TILES (below badges row): ` +
       (menuCount > 0
-        ? `EXACTLY ${menuCount} cream rounded-rect tile${menuCount !== 1 ? "s" : ""} and NO MORE — one per service, label text inside. The template image may show more tile slots — ignore extras; do NOT render empty tiles. No extras.\n\n`
+        ? `EXACTLY ${menuCount} cream rounded-rect tile${menuCount !== 1 ? "s" : ""} — one per service, label inside. Ignore extra template slots; do NOT render empty tiles.\n\n`
         : `four cream rounded-rect tile shapes; NO text labels.\n\n`) +
-      "PURPLE WAVE BAND (lower section): muted lavender-purple organic wave/blob shape spanning full width.\n\n" +
+      "PURPLE WAVE BAND (lower section): muted lavender-purple wave spanning full width.\n\n" +
       (d.offer
         ? `SPECIAL OFFER (dashed coupon box, lower area): offer text bold dark, fine print smaller below. No QR inside coupon.\n\n`
         : "") +
@@ -590,26 +590,26 @@ export function buildAdPrompt(
     : templateKey === "sage-organic"
     ? (
       "LAYOUT — reproduce Sage Organic template zones exactly:\n\n" +
-      "BOTANICAL ACCENT (large dark olive green circle with botanical leaf sprig illustrations, top-left corner — decorative, NOT a logo zone).\n\n" +
+      "BOTANICAL ACCENT (large dark olive circle with leaf sprigs, top-left — decorative, NOT a logo zone).\n\n" +
       (hasLogo
         ? `LOGO (IMAGE ${logoImg} placed inside or beside the white/cream rounded-rect headline panel).\n\n`
         : "") +
       `HEADLINE (large white/cream rounded-rect panel, upper-left): business name bold condensed all-caps sans-serif, very large, dark olive green. Each word once.` +
       (d.tagline ? ` Tagline in clean italic script below, dark olive green.` : "") + "\n\n" +
-      "BRUSH STROKE (sweeping dark olive green paint brush stroke below the headline panel — structural element, NO text).\n\n" +
+      "BRUSH STROKE (dark olive brush stroke below headline panel — structural, NO text).\n\n" +
       "HERO PHOTO (upper-right, curved wave organic cutout):\n" +
       (hasPhoto
         ? `  Composite IMAGE 2 — fill upper-right curved wave zone, blend left/bottom edges naturally into cream bg, no hard rectangular border. Cinematic lighting.\n\n`
         : `  Generate a photorealistic organic interior or garden/outdoor service scene. Fill upper-right curved zone, blend naturally into cream bg.\n\n`) +
       `SERVICE BADGES (middle row): ` +
       (menuCount > 0
-        ? `EXACTLY ${menuCount} dark olive green circular icon badge${menuCount !== 1 ? "s" : ""} with thin vertical dividers and NO MORE — one per service in BUSINESS DETAILS, exactly as written. Dark olive badge + white icon graphic. The template image may show more badge slots — ignore extras; do NOT render empty badges. No extras. No invented services.\n\n`
+        ? `EXACTLY ${menuCount} dark olive circular icon badge${menuCount !== 1 ? "s" : ""} with thin vertical dividers and NO MORE — one per service in BUSINESS DETAILS, exactly as written. The template image may show more badge slots — ignore extras; do NOT render empty badges.\n\n`
         : `four decorative dark olive circular icon badge graphics (award, people, handshake, shield) with thin vertical dividers; NO text labels.\n\n`) +
       `SERVICE TILES (below badges row): ` +
       (menuCount > 0
         ? `EXACTLY ${menuCount} cream rounded-rect tile${menuCount !== 1 ? "s" : ""} and NO MORE — one per service, label text inside. The template image may show more tile slots — ignore extras; do NOT render empty tiles. No extras.\n\n`
         : `four cream rounded-rect tile shapes; NO text labels.\n\n`) +
-      "PHOTO COLLAGE STRIP (dark olive wave/brush-stroke band, lower section): three equal-width landscape photos side by side — interior living space, café/shop scene, outdoor garden/service work.\n\n" +
+      "PHOTO COLLAGE STRIP (dark olive wave band, lower section): three equal-width photos — interior, café/shop, outdoor garden/service.\n\n" +
       (d.offer
         ? `COUPON (kraft paper/cardboard textured rectangle with dashed stitched border and scissors icon, lower-right): offer text bold dark, fine print smaller below. No QR inside coupon.\n\n`
         : "") +
@@ -653,7 +653,7 @@ export function buildAdPrompt(
       "  • No hard rectangular photo borders — mask/blend edges with organic shapes, gradients, or diagonal cuts.\n" +
       "  • Background: gradient, texture, or layered wash — never flat solid color.\n" +
       "  • Three depth planes: (1) textured bg, (2) graphic mid-layer shapes, (3) foreground text with shadows/glows.\n" +
-      "  • All text must be clearly readable: use opaque backing panel, heavy drop shadow, or solid-fill text zone — subtle 1px shadows are insufficient.\n\n" +
+      "  • All text clearly readable: opaque backing, heavy drop shadow, or solid text fill — no subtle shadows.\n\n" +
       "CONTENT ZONES:\n" +
       `  HEADLINE: business name — very large, dominant, instantly readable.\n` +
       (hasPhoto
@@ -666,10 +666,7 @@ export function buildAdPrompt(
         ? `  SPECIAL OFFER (own visually distinct coupon zone, clearly separated from services): offer text and fine print from BUSINESS DETAILS. No filler phrases. No QR inside coupon.\n`
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape) +
-      "QUALITY STANDARD:\n" +
-      "  ✗ No flat solid-color backgrounds | ✗ No rectangular photo frames | ✗ No text on bare flat color\n" +
-      "  ✗ No filler text in coupon area (no 'Admit One Offer', 'Stub No.', etc.)\n" +
-      "  ✓ Three depth planes | ✓ Hero photo with cinematic edge blending | ✓ Print-ready 300 DPI sharpness\n\n"
+      "QUALITY: ✗ flat bg | ✗ rectangular frames | ✗ text on bare color | ✗ filler in coupon. ✓ Three depth planes | ✓ cinematic edge blending | ✓ 300 DPI.\n\n"
     )
     : templateKey === "health-wellness"
     ? (
@@ -735,9 +732,9 @@ export function buildAdPrompt(
     : templateKey === "heritage-home"
     ? (
       "LAYOUT — reproduce Heritage Home template zones exactly:\n\n" +
-      "DIAGONAL BRUSH STROKE (deep burgundy #6b1a2a, sweeping from lower-left to upper-right — organic and painterly, structural depth element, no text).\n\n" +
+      "DIAGONAL BRUSH STROKE (deep burgundy, lower-left to upper-right — structural depth element, no text).\n\n" +
       (hasLogo ? `LOGO (IMAGE ${logoImg} placed inside or beside the rounded-rect headline zone, upper-right).\n\n` : "") +
-      `HEADLINE (upper-right, large rounded-rect zone with thin burgundy border): business name bold serif or display serif, very large, dark burgundy/near-black.` +
+      `HEADLINE (upper-right, rounded-rect zone with thin burgundy border): business name bold serif, very large, dark burgundy/near-black.` +
       (d.tagline ? ` Below a thin burgundy horizontal rule with diamond ◆ accent: tagline in elegant italic serif, dark burgundy.` : "") + "\n\n" +
       "HERO PHOTO (upper-left, fills upper-left area and bleeds into diagonal brush stroke):\n" +
       (hasPhoto
@@ -789,6 +786,9 @@ export function buildAdPrompt(
       : "") +
     outputRequirements + "\n" +
     "STYLE: high-end editorial advertising. Cinematic photography, rich vibrant color, professional lighting. Bold confident typography hierarchy. Premium color palette — deep, saturated, controlled. Print-ready sharpness throughout.\n\n" +
+    "TYPOGRAPHIC RULES — ABSOLUTE:\n" +
+    "  • NEVER add any word, abbreviation, or industry term not provided verbatim in the business data below — this includes industry category words like HVAC, MEXICAN, RESTAURANT, CAFE, PLUMBING, ROOFING, AUTO, DENTAL, or any other category descriptor. The business name must appear EXACTLY as provided, character for character, with zero additions, zero stylistic embellishments, and zero extra words inserted.\n" +
+    "  • NEVER split a business name across two visual styles (e.g. bold + script, or large + small) — render the complete business name in a single consistent typographic treatment.\n\n" +
     "STRICT FIDELITY — ABSOLUTE: Every word of text on this ad must come from BUSINESS DETAILS. Do NOT invent, add, hallucinate, or paraphrase any text, service name, menu item, or label not present in BUSINESS DETAILS. " +
     "If a field is '(none)', omit that element entirely. If no services are listed, render no service text labels anywhere on the ad. " +
     "CRITICAL: All text must appear exactly as specified — zero tolerance for errors on phone numbers, prices, business name, or address. " +
