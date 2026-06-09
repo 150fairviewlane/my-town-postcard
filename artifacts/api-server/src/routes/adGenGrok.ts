@@ -1978,6 +1978,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
             <div class="tmpl-card-sub">Olive &amp; parchment &middot; Home services &middot; Circular photo</div>
             <div class="tmpl-sel-badge" id="badge-brush-stroke" style="display:none">&#10003; Selected</div>
           </div>
+          <div class="tmpl-card" id="tmpl-wok-fire" onclick="selectTemplate('wok-fire')">
+            <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/wok-fire" alt="Wok Fire" onerror="this.style.background='#1a0505'">
+            <div class="tmpl-card-name">Wok Fire</div>
+            <div class="tmpl-card-sub">Dark &amp; dramatic &middot; Restaurant &middot; Red &amp; gold</div>
+            <div class="tmpl-sel-badge" id="badge-wok-fire" style="display:none">&#10003; Selected</div>
+          </div>
           <div class="tmpl-card" id="tmpl-surprise-me" onclick="selectTemplate('surprise-me')">
             <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/surprise-me" alt="Surprise Me" onerror="this.style.background='linear-gradient(135deg,#7b1418,#1b2a4a,#1c3a1c)';this.style.display='flex';this.style.alignItems='center';this.style.justifyContent='center';this.innerHTML='<span style=font-size:2em>&#10067;</span>'">
             <div class="tmpl-card-name">Surprise Me</div>
@@ -2040,6 +2046,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
             <div class="tmpl-card-name">Brush Stroke</div>
             <div class="tmpl-card-sub">Olive &amp; parchment &middot; Home services &middot; Circular photo</div>
             <div class="tmpl-sel-badge" id="badge-ls-brush-stroke" style="display:none">&#10003; Selected</div>
+          </div>
+          <div class="tmpl-card" id="tmpl-ls-wok-fire" onclick="selectTemplate('wok-fire')">
+            <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/wok-fire-landscape" alt="Wok Fire" onerror="this.style.background='#1a0505'">
+            <div class="tmpl-card-name">Wok Fire</div>
+            <div class="tmpl-card-sub">Dark &amp; dramatic &middot; Restaurant &middot; Red &amp; gold</div>
+            <div class="tmpl-sel-badge" id="badge-ls-wok-fire" style="display:none">&#10003; Selected</div>
           </div>
           <div class="tmpl-card" id="tmpl-ls-surprise-me" onclick="selectTemplate('surprise-me')">
             <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/surprise-me" alt="Surprise Me" onerror="this.style.background='linear-gradient(135deg,#7b1418,#1b2a4a,#1c3a1c)';this.style.display='flex';this.style.alignItems='center';this.style.justifyContent='center';this.innerHTML='<span style=font-size:2em>&#10067;</span>'">
