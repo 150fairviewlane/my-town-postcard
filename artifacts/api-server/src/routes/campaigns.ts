@@ -120,7 +120,7 @@ router.get("/campaigns/active/taken-categories", async (req, res): Promise<void>
     .where(eq(spotsTable.campaignId, campaign.id));
 
   const takenCategories = spots
-    .filter(s => s.status !== "available" && s.businessCategory)
+    .filter(s => s.status === "paid" && s.businessCategory)
     .map(s => s.businessCategory as string);
 
   res.json({ takenCategories });
@@ -140,7 +140,7 @@ router.get("/campaigns/:campaignId/used-templates", async (req, res): Promise<vo
     .where(
       and(
         eq(spotsTable.campaignId, campaignId),
-        inArray(spotsTable.status, ["reserved", "paid"]),
+        inArray(spotsTable.status, ["paid"]),
       ),
     );
 

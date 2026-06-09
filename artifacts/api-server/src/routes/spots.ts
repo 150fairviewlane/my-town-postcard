@@ -105,11 +105,9 @@ router.post("/spots/:id/reserve", async (req, res): Promise<void> => {
     return;
   }
 
-  // Only block if a *reserved* or *paid* spot in this campaign already holds
-  // this category. Available spots may have stale businessCategory data left
-  // over from a prior expired reservation — they must not block new reserves.
-  // Also exclude the current spot so re-reserving the same spot after a hold
-  // expired never incorrectly self-conflicts.
+  // Only block if a *paid* spot in this campaign already holds this category.
+  // Reserved spots (unpaid holds) no longer count — category and template are
+  // only truly "taken" once payment is confirmed.
   const takenCategory = await db
     .select()
     .from(spotsTable)
@@ -117,7 +115,7 @@ router.post("/spots/:id/reserve", async (req, res): Promise<void> => {
       and(
         eq(spotsTable.campaignId, spot.campaignId),
         eq(spotsTable.businessCategory, body.data.businessCategory),
-        inArray(spotsTable.status, ["reserved", "paid"]),
+        eq(spotsTable.status, "paid"),
         ne(spotsTable.id, spot.id),
       )
     )
