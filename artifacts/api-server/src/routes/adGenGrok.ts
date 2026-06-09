@@ -1156,6 +1156,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
         if (!resp.ok) return url;
         buf = Buffer.from(await resp.arrayBuffer());
       }
+      const meta = await sharp(buf).metadata();
+      req.log.info({ nativeWidth: meta.width, nativeHeight: meta.height, nativeSize: buf.length, targetW: w, targetH: h }, "grok native output dimensions");
       const out = await sharp(buf)
         .resize(w, h, { fit: "fill", kernel: "lanczos3" })
         .jpeg({ quality: 98, chromaSubsampling: "4:4:4" })
