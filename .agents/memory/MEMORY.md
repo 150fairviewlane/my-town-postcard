@@ -3,3 +3,4 @@
 - [ZBP detail NAICS hierarchy trap](zbp-detail-naics-hierarchy.md) — zbp22detail.txt has 5 NAICS levels per ZIP (NN----, NNN///, NNNN//, NNNNN/, NNNNNN); must filter to 6-digit leaf codes only or each establishment gets counted 5x.
 - [Gazetteer CDP filter](gazetteer-cdp-filter.md) — filter Gazetteer places to FUNCSTAT∈{A,B} only (incorporated); FUNCSTAT=S are CDPs that shadow real cities as hub candidates.
 - [territory-finder toast class](territory-finder-toast.md) — toast notifications use `.toast.show` not `.visible`; the modal-bg uses `.visible`. Don't conflate the two when adding feedback UI.
+- [adGenGrok dead-code prompt builder](adgengrok-dead-code.md) — adGenGrok.ts has a large inline prompt builder (lines 327–1086) that is DEAD CODE; line 1088 calls buildAdPrompt(). Always edit buildAdPrompt.ts for prompt/template changes.
