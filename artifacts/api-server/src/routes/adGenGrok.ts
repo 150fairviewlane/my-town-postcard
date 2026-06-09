@@ -296,6 +296,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     xl: "3:4", large: "3:4", l: "3:4", medium: "3:2", small: "1:1", m: "3:2", s: "1:1",
   };
   const spotAspectRatio = aspectRatioMap[d.sizeKey.toLowerCase()] ?? "3:4";
+  const isXL = ["xl", "x-large", "xlarge"].includes((d.sizeKey || "").toLowerCase());
 
   // Print dimensions at 300 DPI — sharp crops Grok output to these for screen-sharp quality
   const CROP_DIMS: Record<string, { w: number; h: number }> = {
@@ -1157,7 +1158,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
         buf = Buffer.from(await resp.arrayBuffer());
       }
       const meta = await sharp(buf).metadata();
-      req.log.info({ nativeWidth: meta.width, nativeHeight: meta.height, nativeSize: buf.length, targetW: w, targetH: h }, "grok native output dimensions");
+      req.log.debug({ nativeWidth: meta.width, nativeHeight: meta.height, nativeSize: buf.length, targetW: w, targetH: h }, "grok native output dimensions");
       const out = await sharp(buf)
         .resize(w, h, { fit: "fill", kernel: "lanczos3" })
         .jpeg({ quality: 98, chromaSubsampling: "4:4:4" })
@@ -1270,6 +1271,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           prompt:       finalAdPrompt,
           n:            1,
           aspect_ratio: spotAspectRatio,
+          ...(isXL ? { resolution: "2k" } : {}),
         }),
       });
       const genBody = await safeJson(genRes);
@@ -1314,6 +1316,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
             prompt:       safeAdPrompt,
             n:            1,
             aspect_ratio: spotAspectRatio,
+            ...(isXL ? { resolution: "2k" } : {}),
           }),
         });
         const safeBody = await safeJson(safeRes);
@@ -1340,6 +1343,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       n:            1,
       images:       imageRefs,
       aspect_ratio: spotAspectRatio,
+      ...(isXL ? { resolution: "2k" } : {}),
     };
 
     // ── Retry loop for transient overload errors ────────────────────────────
