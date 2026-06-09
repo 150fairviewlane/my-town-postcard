@@ -185,6 +185,8 @@ export function buildAdPrompt(
                   ? "landscape Sage Organic layout: cream/beige textured bg with dark olive/sage green and kraft paper accents. Upper-left: large dark olive circle with botanical leaf sprigs; large white/cream rounded-rect business-name zone; dark olive paint brush stroke below it. Upper-right: large hero photo in curved wave cutout, no hard border. Middle: four dark olive circular icon badges (award, people, handshake, shield) with vertical dividers; four cream rounded-rect service tiles below. Lower olive wave band: three equal-width landscape photos side by side. Lower-right: kraft paper dashed-stitch coupon rectangle. Footer: dark olive strip with location pin + address left, QR right. Reproduce exactly."
                   : templateKey === "purple-sage"
                   ? "landscape Purple Sage layout: cream/beige bg with muted lavender-purple and sage green accents. Upper-left: large muted purple circle + dot grid (decorative); sage green botanical leaf sprig (decorative). Large white/cream rounded-rect business-name panel; sweeping purple brush stroke below it. Upper-right: large circular hero photo in sage green ring border. Lower-right: two smaller overlapping circles (kitchen, outdoor patio). Middle: four muted sage green circular icon badges (professional, award, team, shield) with dividers; four cream service tiles below. Lower purple wave band with sage green brush stroke. Footer: dark purple strip with phone + oval pill | location pin + oval pill | QR. Reproduce exactly."
+                  : templateKey === "wok-fire"
+                  ? "landscape Wok Fire layout: near-black bg with deep red, gold, and parchment accents. Upper-left: large torn-edge deep red paper panel (headline zone) with gold bookmark-ribbon pennant + three gold circular brad accents. Upper-right: large hero food photo zone (wok/flames) natural edges into dark bg, no hard border. Center: wide parchment/kraft torn-edge banner (tagline zone). Lower-left: golden ticket-stub coupon (dashed border, notched edges). Lower-right: dark chalkboard A-frame sign with wood frame (menu/services). Footer: location pin + address pill left, phone + phone pill center, QR code right, gold arrow accent. Reproduce exactly."
                   : "landscape Health & Wellness layout: soft cream/off-white bg, clinic/office photo in organic curved teal blob upper-left, large wide rounded-rectangle white headline panel upper-center, teal pill-shaped tagline bar below it, service panels row with circular teal icon badges and white rounded-rect text boxes, reception photo in organic teal blob lower-left, stethoscope on dark teal circular blob lower-right, small white rounded QR box, dark teal footer bar. Reproduce exactly.";
       refLines.push(`  • IMAGE ${imgIdx++} (LANDSCAPE TEMPLATE) — ${lsTmplDesc}`);
     }
@@ -224,6 +226,8 @@ export function buildAdPrompt(
               ? "  • IMAGE 1 (TEMPLATE) — premium lifestyle/home-services postcard on cream/beige bg, muted lavender-purple + sage green scheme: large muted purple circle + dot grid top-left (decorative, NOT logo zone), sage green botanical leaf sprig left (decorative), large white/cream rounded-rect business-name panel upper-left, sweeping purple paint brush stroke below panel, large circular hero photo in sage green ring border upper-right (no rectangular frame), two smaller overlapping circular photos lower-right (kitchen, outdoor patio), four muted sage green circular icon badges (professional, award, team, shield) with vertical dividers middle row, four cream rounded-rect service tiles below badges, muted purple wave band lower section, sage green brush stroke, dark purple footer strip with phone + oval pill | location pin + oval pill | QR. Reproduce exactly."
               : templateKey === "health-wellness"
               ? "  • IMAGE 1 (TEMPLATE) — health/wellness postcard on soft cream bg with teal accents: two clinic/office photos inside organic curved teal blob shapes upper section, large wide rounded-rectangle white panel center (headline zone), narrow teal pill-shaped bar below it (tagline zone), service panels with circular teal badge icons and white rounded-rect text boxes, reception/waiting-room photo in organic blob lower-left, teal stethoscope on dark teal circular blob lower-right, small white rounded QR box, dark teal footer bar. Reproduce exactly."
+              : templateKey === "wok-fire"
+              ? "  • IMAGE 1 (TEMPLATE) — dramatic dark restaurant/food postcard on near-black bg, deep red + gold + parchment accents: large torn-edge deep red paper panel upper-left (headline zone) with gold bookmark pennant + gold brad accents; large hero food photo zone upper-right (wok/flames) natural edges into dark bg, no hard border; wide parchment/kraft torn-edge banner center (tagline zone); golden ticket-stub coupon lower-left (dashed border, notched edges); dark chalkboard A-frame sign lower-right (menu/services); footer: location pin + address pill left, phone + phone pill center, QR code right, gold arrow. Reproduce exactly."
               : "  • IMAGE 1 (TEMPLATE) — postcard with parchment texture, brush-stroke headline band, orange pennant ribbon, circular checkmark badge, dashed coupon box, dark footer strip. Reproduce every zone and element exactly.",
     );
     imgIdx = 2;
@@ -406,6 +410,30 @@ export function buildAdPrompt(
       (d.offer
         ? `OFFER (teal-bordered rect or dashed coupon box, visually distinct from service panels): offer text large and bold. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape)
+    )
+    : isLandscape && templateKey === "wok-fire"
+    ? (
+      LANDSCAPE_CANVAS_RULE +
+      "LAYOUT — reproduce Wok Fire LANDSCAPE zones exactly:\n\n" +
+      `HEADLINE (upper-left, inside torn-edge deep red panel): business name bold condensed all-caps slab serif, very large, white or cream. Each word exactly once.\n\n` +
+      (hasLogo
+        ? `LOGO (IMAGE ${logoImg} inside gold bookmark-ribbon pennant at top-left of red panel). Scale to fit; exact colors.` +
+          (d.tagline ? ` Tagline in italic script, gold/cream, inside red panel.\n\n` : "\n\n")
+        : (d.tagline ? `TAGLINE: italic script, gold/cream, inside red panel below business name.\n\n` : "")) +
+      "HERO FOOD PHOTO (upper-right, wok/cooking action):\n" +
+      (hasPhoto
+        ? `  Composite IMAGE 2 — dramatic cooking/fire scene, natural edges into dark bg, no hard border.\n\n`
+        : `  Generate a dramatic photorealistic hero food scene — sizzling wok, flames, vibrant fresh ingredients. Natural edges; no hard border.\n\n`) +
+      (d.tagline
+        ? `TAGLINE BANNER (center, parchment/kraft torn-edge banner): "${d.tagline}" in dark serif text.\n\n`
+        : "") +
+      (d.offer
+        ? `COUPON (lower-left, golden ticket-stub — dashed border, notched edges): offer text bold dark. Fine print smaller below. No QR inside coupon.\n\n`
+        : "") +
+      (menuCount > 0
+        ? `CHALKBOARD MENU (lower-right, dark A-frame sign): EXACTLY ${menuCount} item${menuCount !== 1 ? "s" : ""} in chalk-style white text — one per service in BUSINESS DETAILS, exactly as written. No extras.\n\n`
+        : `CHALKBOARD SIGN (lower-right): A-frame — leave board surface clean.\n\n`) +
       buildFooterZone(d.phone || "", fullAddress, isLandscape)
     )
     : isLandscape
@@ -609,6 +637,29 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER: offer text prominently in teal or dark text in an available white-space area. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape)
+    )
+    : templateKey === "wok-fire"
+    ? (
+      "LAYOUT — reproduce Wok Fire template zones exactly:\n\n" +
+      `HEADLINE (upper-left, inside large torn-edge deep red paper panel): business name bold condensed all-caps slab serif, very large, white or cream. Each word exactly once.\n\n` +
+      (hasLogo
+        ? `LOGO (gold bookmark-ribbon pennant, top-left corner of red panel): IMAGE ${logoImg} centered inside pennant, scaled to fit, exact colors.` +
+          (d.tagline ? ` Tagline in italic script, gold/cream, inside red panel below business name.\n\n` : "\n\n")
+        : (d.tagline ? `TAGLINE: italic script, gold/cream, inside red panel below business name.\n\n` : "")) +
+      "HERO FOOD PHOTO (upper-right, wok/cooking action scene):\n" +
+      (hasPhoto
+        ? `  Composite IMAGE 2 — dramatic cooking/fire scene, natural edges into dark bg, no hard border. Cinematic lighting.\n\n`
+        : `  Generate a dramatic photorealistic hero food scene — sizzling wok, flames, vibrant ingredients. Natural edges into dark bg; no hard border.\n\n`) +
+      (d.tagline
+        ? `TAGLINE BANNER (center, parchment/kraft torn-edge banner): "${d.tagline}" in dark serif text on the banner.\n\n`
+        : "") +
+      (d.offer
+        ? `COUPON (lower-left, golden ticket-stub — dashed border, notched edges): offer text bold dark inside ticket-stub. Fine print smaller below. No QR inside coupon.\n\n`
+        : "") +
+      (menuCount > 0
+        ? `CHALKBOARD MENU (lower-right, dark chalkboard A-frame sign): EXACTLY ${menuCount} item${menuCount !== 1 ? "s" : ""} in chalk-style white text — one per service in BUSINESS DETAILS, exactly as written. No extras. No invented items.\n\n`
+        : `CHALKBOARD SIGN (lower-right): A-frame sign — leave board surface clean (no services provided).\n\n`) +
       buildFooterZone(d.phone || "", fullAddress, isLandscape)
     )
     : (

@@ -48,6 +48,7 @@ const TEMPLATES = [
   "home-elegance",
   "sage-organic",
   "purple-sage",
+  "wok-fire",
   "surprise-me",
 ] as const;
 
