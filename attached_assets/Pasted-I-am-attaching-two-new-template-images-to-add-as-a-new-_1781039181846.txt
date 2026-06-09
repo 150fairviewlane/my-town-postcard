@@ -1,0 +1,145 @@
+I am attaching two new template images to add as a new template called “Heritage Home”. The portrait template image and landscape template image are attached to this message. Please save them to attached_assets/ and add Heritage Home as a fully wired 11th template throughout the app.
+
+Read all relevant files fully before making changes. Confirm the complete plan before writing any code. Build in the order listed below.
+
+# ==============================================================
+STEP 1 — Save the attached images to attached_assets/
+
+Save the two attached images to the attached_assets/ directory with these exact filenames:
+heritage_home_portrait.png   (the tall portrait image)
+heritage_home_landscape.png  (the wide landscape image)
+
+Confirm both files exist and report their file sizes before proceeding.
+
+# ==============================================================
+STEP 2 — Add Heritage Home to buildAdPrompt.ts
+
+Open ./artifacts/api-server/src/lib/buildAdPrompt.ts
+
+Add Heritage Home prompt blocks for both portrait and landscape orientations. Follow the exact same structure as the existing templates in this file.
+
+TEMPLATE DESCRIPTION FOR GROK:
+
+Heritage Home is a premium home services postcard template with a cream/off-white background and deep burgundy (#6b1a2a) accent color throughout. A sweeping organic brush stroke in burgundy flows diagonally across the card from lower-left to upper-right, creating depth and movement. The tool belt hero photo composites with a warm residential home in the background — blending naturally into the brush stroke where the edges meet.
+
+PORTRAIT LAYOUT (tall format):
+TOP SECTION (upper 45%):
+LEFT: Hero photo zone — tool belt with residential home background, filling the upper-left area and bleeding into the brush stroke. If a business photo is supplied, composite it here with natural edge blending into the brush stroke. If no photo supplied, generate a photorealistic scene appropriate for this business type — residential scale, warm and approachable.
+RIGHT: Large rounded-rectangle headline zone with a thin burgundy border. Upper portion contains the business name (large, dominant). Below a thin horizontal burgundy rule with a small diamond accent: tagline zone.
+
+MIDDLE SECTION (next 30%):
+Four circular dark burgundy icon badges in a horizontal row, evenly spaced across the full card width. Each badge has a thin vertical burgundy rule on its right side separating it from the next badge. Below each badge: a brush-stroke-style label placeholder for the service name and price. EXACTLY N circular badges where N equals the number of service items — NO MORE. Do not render empty or blank badge rows.
+
+FOOTER SECTION (bottom 20%):
+Full-width dark burgundy bar. Left side: circular phone icon + phone number, burgundy diamond accent below, circular location pin icon + address below that. Center-right: dashed-border rounded-rectangle coupon box with scissor icon upper-right corner — place the special offer text inside. Far right: QR code in a light-bordered square.
+
+LANDSCAPE LAYOUT (wide 3”x2” format):
+LEFT HALF (approximately 40% of width):
+Hero photo zone — tool belt with residential home background filling the entire left half. Photo bleeds to left, top, and bottom edges. Right edge of photo dissolves into the brush stroke organically.
+
+RIGHT HALF (approximately 60% of width):
+Cream/off-white background with burgundy brush stroke sweeping from lower-left to upper-right.
+TOP-RIGHT: Large rounded-rectangle headline zone with thin burgundy border — business name large and dominant, tagline below a thin rule with diamond accent.
+CENTER-RIGHT: Four circular dark burgundy icon badges in a horizontal row with thin vertical burgundy rule dividers. Below each badge: brush-stroke label for service name and price. EXACTLY N badges — NO MORE than the number of service items provided.
+FOOTER: Full-width dark burgundy bar spanning entire card width. Left: phone icon + number. Center-left: location pin + address. Center-right: dashed coupon box with scissor icon + special offer text. Far right: QR code.
+
+COLOR PALETTE:
+Background: warm cream/off-white (#f5f0e8)
+Primary accent: deep burgundy (#6b1a2a)
+Brush stroke: deep burgundy, organic and painterly
+Icon badges: filled dark burgundy circles with cream/white icons
+Coupon box: cream interior with burgundy dashed border
+Footer bar: deep burgundy, full opacity
+All text on cream background: dark burgundy or near-black
+All text on burgundy background: cream/ivory white
+
+TYPOGRAPHY:
+Business name: bold serif or strong display serif, large and dominant
+Tagline: elegant italic serif, smaller weight
+Service labels: clean medium-weight sans-serif
+Footer text: clean sans-serif, cream/white on dark burgundy
+
+QUALITY RULES:
+Hero photo composites naturally into brush stroke — no hard rectangular border
+Brush stroke is organic and painterly — not a flat shape
+All text has sufficient contrast against its background
+Diamond accent (◆) used as decorative divider between headline and tagline zones
+Scissor icon (✂) appears in upper-right corner of coupon box
+NEVER render empty badge slots — only as many badges as service items provided
+NEVER render placeholder text or zone labels as visible content
+
+# ==============================================================
+STEP 3 — Add Heritage Home to adGenGrok.ts file mapping
+
+Open ./artifacts/api-server/src/routes/adGenGrok.ts
+
+Find the portraitFiles and landscapeFiles mapping objects. Add Heritage Home to both:
+
+portraitFiles:
+“heritage-home”: “heritage_home_portrait.png”
+
+landscapeFiles:
+“heritage-home”: “heritage_home_landscape.png”
+
+# ==============================================================
+STEP 4 — Add Heritage Home to the prompt-size check script
+
+Find the prompt-size check script (likely at artifacts/api-server/src/scripts/check-prompt-size.ts or similar).
+
+Add “heritage-home” to the list of template keys that get checked. Run the prompt-size check after adding it:
+
+pnpm –filter @workspace/api-server run check:prompt-size
+
+Confirm heritage-home passes under the 8000 byte limit for both portrait and landscape. Report the byte counts.
+
+# ==============================================================
+STEP 5 — Add Heritage Home to the frontend template picker
+
+Find where the template picker options are defined in the frontend. It will be an array or object listing all available templates with their display names and preview images.
+
+Add Heritage Home with:
+key: “heritage-home”
+displayName: “Heritage Home”
+description: “Premium home services — burgundy & cream”
+
+The picker preview image should reference one of the saved template files or a thumbnail derived from it. Follow the exact same pattern used for the other 10 templates already in the picker.
+
+# ==============================================================
+STEP 6 — Add Heritage Home to surpriseMeTransform.ts
+
+Open ./artifacts/api-server/src/lib/surpriseMeTransform.ts
+
+Add “heritage-home” to the neighborhood-pro family industries mapping OR create a new consideration: Heritage Home is specifically suited for home services (contractor, remodeling, roofing, painting, handyman). Since neighborhood-pro already covers these industries, Heritage Home does not need to be added to the transform system — surprise-me will naturally select it through the template availability system.
+
+No changes needed to surpriseMeTransform.ts unless the template availability system needs to know about it. Confirm whether any changes are needed and report.
+
+# ==============================================================
+STEP 7 — Verify
+
+1. Run typecheck:
+   pnpm –filter @workspace/api-server run typecheck
+   Confirm zero new errors.
+1. Run prompt-size check and confirm heritage-home passes.
+1. Restart the server and confirm it starts without errors.
+1. Confirm “Heritage Home” appears in the template picker UI alongside the other 10 templates.
+1. Generate one test ad using heritage-home template for industry “contractor” and confirm:
+- Server log shows templateKey: “heritage-home”
+- Correct portrait or landscape file is loaded
+- Generation succeeds with HTTP 200
+
+Report results for all 5 verification checks.
+
+# ==============================================================
+BUILD ORDER
+
+1. Save images to attached_assets/ (Step 1)
+1. Add prompt blocks to buildAdPrompt.ts (Step 2)
+1. Add file mapping to adGenGrok.ts (Step 3)
+1. Add to prompt-size check and verify (Step 4)
+1. Add to frontend template picker (Step 5)
+1. Confirm surpriseMeTransform.ts needs no changes (Step 6)
+1. Full verification (Step 7)
+
+Confirm each step before proceeding to the next.
+Do not modify any existing template prompt blocks.
+Do not modify any existing template images in attached_assets/.

@@ -187,6 +187,8 @@ export function buildAdPrompt(
                   ? "landscape Purple Sage layout: cream/beige bg with muted lavender-purple and sage green accents. Upper-left: large muted purple circle + dot grid (decorative); sage green botanical leaf sprig (decorative). Large white/cream rounded-rect business-name panel; sweeping purple brush stroke below it. Upper-right: large circular hero photo in sage green ring border. Lower-right: two smaller overlapping circles (kitchen, outdoor patio). Middle: four muted sage green circular icon badges (professional, award, team, shield) with dividers; four cream service tiles below. Lower purple wave band with sage green brush stroke. Footer: dark purple strip with phone + oval pill | location pin + oval pill | QR. Reproduce exactly."
                   : templateKey === "brush-stroke"
                   ? "landscape Brush Stroke layout: cream/parchment bg with dark olive green and charcoal accents. Left half: large circular hero photo framed by dark organic brush-stroke swoosh curving around left side (no hard rectangular border). Upper-right: dark olive hexagonal house-icon badge (logo zone); wide horizontal olive green paint brush stroke above (headline zone); thin dark rule with diamond separator below. Middle-right: vertical column of service rows — each row has a circular olive-bordered icon badge on the left and a dark charcoal horizontal brush-stroke label in white on the right. Footer: dark charcoal curved-top band full-width — circular phone icon + field left, circular location pin + field center, QR code right. Reproduce exactly."
+                  : templateKey === "heritage-home"
+                  ? "landscape Heritage Home layout: cream/off-white (#f5f0e8) bg, deep burgundy (#6b1a2a) accents. Sweeping organic burgundy brush stroke diagonal lower-left to upper-right for depth. Left 40%: hero photo zone — tool belt + warm residential home background, full bleed left/top/bottom, right edge dissolves organically into brush stroke. Right 60%: upper area — large rounded-rect headline zone with thin burgundy border (business name bold serif, large; tagline in elegant italic serif below thin burgundy rule with diamond ◆ separator). Center-right: horizontal row of circular dark burgundy icon badges with thin vertical burgundy rule dividers; brush-stroke label for service + price below each badge. Footer: full-width dark burgundy bar — phone icon + number left, location pin + address center-left, dashed-border coupon box with scissor ✂ icon + offer center-right, QR code far right. Reproduce exactly."
                   : templateKey === "wok-fire"
                   ? "landscape Wok Fire layout: near-black bg with deep red, gold, and parchment accents. Upper-left: large torn-edge deep red paper panel (headline zone) with gold bookmark-ribbon pennant + three gold circular brad accents. Upper-right: large hero food photo zone (wok/flames) natural edges into dark bg, no hard border. Center: wide parchment/kraft torn-edge banner (tagline zone). Lower-left: golden ticket-stub coupon (dashed border, notched edges). Lower-right: dark chalkboard A-frame sign with wood frame (menu/services). Footer: location pin + address pill left, phone + phone pill center, QR code right, gold arrow accent. Reproduce exactly."
                   : "landscape Health & Wellness layout: soft cream/off-white bg, clinic/office photo in organic curved teal blob upper-left, large wide rounded-rectangle white headline panel upper-center, teal pill-shaped tagline bar below it, service panels row with circular teal icon badges and white rounded-rect text boxes, reception photo in organic teal blob lower-left, stethoscope on dark teal circular blob lower-right, small white rounded QR box, dark teal footer bar. Reproduce exactly.";
@@ -232,6 +234,8 @@ export function buildAdPrompt(
               ? "  • IMAGE 1 (TEMPLATE) — dramatic dark restaurant/food postcard on near-black bg, deep red + gold + parchment accents: large torn-edge deep red paper panel upper-left (headline zone) with gold bookmark pennant + gold brad accents; large hero food photo zone upper-right (wok/flames) natural edges into dark bg, no hard border; wide parchment/kraft torn-edge banner center (tagline zone); golden ticket-stub coupon lower-left (dashed border, notched edges); dark chalkboard A-frame sign lower-right (menu/services); footer: location pin + address pill left, phone + phone pill center, QR code right, gold arrow. Reproduce exactly."
               : templateKey === "brush-stroke"
               ? "  • IMAGE 1 (TEMPLATE) — home-services postcard on cream/parchment bg with dark olive green and charcoal accents: large circular hero photo on the left framed by a dark organic brush-stroke swoosh (no hard rectangular border), dark olive hexagonal house-icon badge upper-right (logo zone), wide horizontal olive green paint brush stroke across upper-right area (headline zone), thin dark horizontal rule with small diamond separator below brush stroke, vertical column of service rows on the right each with a circular olive-bordered icon badge on the left and a dark charcoal horizontal brush-stroke shape with white text on the right, dark charcoal curved-top footer band spanning full width with circular phone icon + field left, circular location pin + field center, QR code right. Reproduce every zone and element exactly."
+              : templateKey === "heritage-home"
+              ? "  • IMAGE 1 (TEMPLATE) — premium home services postcard on cream/off-white (#f5f0e8) bg, deep burgundy (#6b1a2a) accents: sweeping organic burgundy brush stroke diagonal lower-left to upper-right. Upper-left: hero photo zone — tool belt foreground + warm residential home background, blending right edge into the brush stroke, no hard border. Upper-right: large rounded-rect headline zone with thin burgundy border, diamond ◆ separator between business name (bold serif) and tagline (elegant italic serif). Middle: horizontal row of circular dark burgundy icon badges with thin vertical burgundy rule dividers; brush-stroke-style label for service name and price below each badge. Footer: full-width dark burgundy bar — circular phone icon + number left, diamond accent, circular location pin + address; dashed-border rounded-rect coupon box with scissor ✂ upper-right corner + offer text; QR code far right. Reproduce every zone and element exactly."
               : "  • IMAGE 1 (TEMPLATE) — postcard with parchment texture, brush-stroke headline band, orange pennant ribbon, circular checkmark badge, dashed coupon box, dark footer strip. Reproduce every zone and element exactly.",
     );
     imgIdx = 2;
@@ -459,6 +463,27 @@ export function buildAdPrompt(
         : `vertical column of decorative service rows — render structural circular olive-bordered icon badge + charcoal brush-stroke shapes only; NO text labels (no services provided).\n\n`) +
       (d.offer
         ? `SPECIAL OFFER (visually distinct dashed or bordered box, lower area): offer text bold dark, large. Fine print smaller below. No QR inside coupon.\n\n`
+        : "") +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape)
+    )
+    : isLandscape && templateKey === "heritage-home"
+    ? (
+      LANDSCAPE_CANVAS_RULE +
+      "LAYOUT — reproduce Heritage Home LANDSCAPE zones exactly:\n\n" +
+      "DIAGONAL BRUSH STROKE (deep burgundy, sweeping from lower-left to upper-right — organic and painterly, structural depth element, no text).\n\n" +
+      (hasLogo ? `LOGO (IMAGE ${logoImg} placed inside or beside the rounded-rect headline zone, upper-right).\n\n` : "") +
+      `HEADLINE (upper-right, large rounded-rect zone with thin burgundy border): business name bold serif, large, dark burgundy/near-black.` +
+      (d.tagline ? ` Below a thin burgundy rule with diamond ◆ accent: tagline in elegant italic serif, dark burgundy.` : "") + "\n\n" +
+      "HERO PHOTO (left 40%, full bleed left/top/bottom):\n" +
+      (hasPhoto
+        ? `  Composite IMAGE 2 — tool belt foreground + residential home background. Fill left zone, right edge dissolves organically into the diagonal burgundy brush stroke; no hard border. Warm residential lighting.\n\n`
+        : `  Generate a photorealistic tool belt foreground + warm residential home background. Fill left zone, right edge dissolves into brush stroke; no hard border.\n\n`) +
+      `SERVICE BADGES (center-right, horizontal row): ` +
+      (menuCount > 0
+        ? `EXACTLY ${menuCount} circular dark burgundy icon badge${menuCount !== 1 ? "s" : ""} in a horizontal row and NO MORE — one per service in BUSINESS DETAILS, exactly as written. Thin vertical burgundy rule on right side of each badge divides them. Below each badge: brush-stroke-style label with service name and price. The template image may show more badge slots — ignore extras; do NOT render empty badge rows. No extras. No invented services.\n\n`
+        : `four decorative dark burgundy circular icon badge shapes with thin vertical burgundy rule dividers; NO text labels.\n\n`) +
+      (d.offer
+        ? `COUPON (dashed-border box in footer, scissors ✂ icon at upper-right of box): offer text bold cream inside dashed box. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape)
     )
@@ -704,6 +729,26 @@ export function buildAdPrompt(
         : `vertical column of decorative service rows — render structural circular olive-bordered icon badge + charcoal brush-stroke shapes only; NO text labels (no services provided).\n\n`) +
       (d.offer
         ? `SPECIAL OFFER (visually distinct dashed or bordered box, lower area): offer text bold dark, large. Fine print smaller below. No QR inside coupon.\n\n`
+        : "") +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape)
+    )
+    : templateKey === "heritage-home"
+    ? (
+      "LAYOUT — reproduce Heritage Home template zones exactly:\n\n" +
+      "DIAGONAL BRUSH STROKE (deep burgundy #6b1a2a, sweeping from lower-left to upper-right — organic and painterly, structural depth element, no text).\n\n" +
+      (hasLogo ? `LOGO (IMAGE ${logoImg} placed inside or beside the rounded-rect headline zone, upper-right).\n\n` : "") +
+      `HEADLINE (upper-right, large rounded-rect zone with thin burgundy border): business name bold serif or display serif, very large, dark burgundy/near-black.` +
+      (d.tagline ? ` Below a thin burgundy horizontal rule with diamond ◆ accent: tagline in elegant italic serif, dark burgundy.` : "") + "\n\n" +
+      "HERO PHOTO (upper-left, fills upper-left area and bleeds into diagonal brush stroke):\n" +
+      (hasPhoto
+        ? `  Composite IMAGE 2 — tool belt foreground + residential home background. Fill upper-left, right edge dissolves organically into the burgundy brush stroke; no hard border. Warm residential lighting.\n\n`
+        : `  Generate a photorealistic tool belt foreground + warm residential home background. Fill upper-left zone, right edge dissolves into brush stroke; no hard border.\n\n`) +
+      `SERVICE BADGES (middle, horizontal row across full card width): ` +
+      (menuCount > 0
+        ? `EXACTLY ${menuCount} circular dark burgundy icon badge${menuCount !== 1 ? "s" : ""} evenly spaced and NO MORE — one per service in BUSINESS DETAILS, exactly as written. Thin vertical burgundy rule on right side of each badge as divider. Below each badge: brush-stroke-style label with service name and price. The template image may show more badge slots — ignore extras; do NOT render empty badge rows. No extras. No invented services.\n\n`
+        : `four decorative dark burgundy circular icon badge shapes with thin vertical burgundy rule dividers; NO text labels.\n\n`) +
+      (d.offer
+        ? `COUPON (footer area, dashed-border rounded-rect, scissors ✂ icon upper-right corner): offer text bold inside dashed box. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape)
     )

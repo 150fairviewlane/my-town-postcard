@@ -238,6 +238,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "sage-organic":      "IMG_0832_1780946925550.png",
       "purple-sage":       "IMG_0836_1780951148325.png",
       "brush-stroke":      "IMG_0839_1780955044987.png",
+      "heritage-home":     "heritage_home_portrait.png",
       "wok-fire":          "image_1781029065584.png",
     };
     const landscapeFiles: Record<string, string> = {
@@ -250,6 +251,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "sage-organic":      "image_1780946917886.png",
       "purple-sage":       "IMG_0837_1780951148325.png",
       "brush-stroke":      "IMG_0838_1780955044987.png",
+      "heritage-home":     "heritage_home_landscape.png",
       "wok-fire":          "image_1781029077663.png",
     };
     const fileMap = isLandscape ? landscapeFiles : portraitFiles;
@@ -1608,6 +1610,7 @@ router.get("/grok-ad-generator/template-preview/:key", (req, res) => {
     "sage-organic":                  "IMG_0832_1780946925550.png",
     "purple-sage":                   "IMG_0836_1780951148325.png",
     "brush-stroke":                  "IMG_0839_1780955044987.png",
+    "heritage-home":                 "heritage_home_portrait.png",
     "wok-fire":                      "image_1781029065584.png",
     "surprise-me":                   "surprise_me_template.png",
     // landscape variants
@@ -1620,6 +1623,7 @@ router.get("/grok-ad-generator/template-preview/:key", (req, res) => {
     "sage-organic-landscape":        "image_1780946917886.png",
     "purple-sage-landscape":         "IMG_0837_1780951148325.png",
     "brush-stroke-landscape":        "IMG_0838_1780955044987.png",
+    "heritage-home-landscape":       "heritage_home_landscape.png",
     "wok-fire-landscape":            "image_1781029077663.png",
   };
   const filename = fileMap[key];
@@ -1975,6 +1979,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
             <div class="tmpl-card-sub">Olive &amp; parchment &middot; Home services &middot; Circular photo</div>
             <div class="tmpl-sel-badge" id="badge-brush-stroke" style="display:none">&#10003; Selected</div>
           </div>
+          <div class="tmpl-card" id="tmpl-heritage-home" onclick="selectTemplate('heritage-home')">
+            <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/heritage-home" alt="Heritage Home" onerror="this.style.background='#6b1a2a'">
+            <div class="tmpl-card-name">Heritage Home</div>
+            <div class="tmpl-card-sub">Burgundy &amp; cream &middot; Home services &middot; Premium</div>
+            <div class="tmpl-sel-badge" id="badge-heritage-home" style="display:none">&#10003; Selected</div>
+          </div>
           <div class="tmpl-card" id="tmpl-wok-fire" onclick="selectTemplate('wok-fire')">
             <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/wok-fire" alt="Wok Fire" onerror="this.style.background='#1a0505'">
             <div class="tmpl-card-name">Wok Fire</div>
@@ -2043,6 +2053,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
             <div class="tmpl-card-name">Brush Stroke</div>
             <div class="tmpl-card-sub">Olive &amp; parchment &middot; Home services &middot; Circular photo</div>
             <div class="tmpl-sel-badge" id="badge-ls-brush-stroke" style="display:none">&#10003; Selected</div>
+          </div>
+          <div class="tmpl-card" id="tmpl-ls-heritage-home" onclick="selectTemplate('heritage-home')">
+            <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/heritage-home-landscape" alt="Heritage Home" onerror="this.style.background='#6b1a2a'">
+            <div class="tmpl-card-name">Heritage Home</div>
+            <div class="tmpl-card-sub">Burgundy &amp; cream &middot; Home services &middot; Premium</div>
+            <div class="tmpl-sel-badge" id="badge-ls-heritage-home" style="display:none">&#10003; Selected</div>
           </div>
           <div class="tmpl-card" id="tmpl-ls-wok-fire" onclick="selectTemplate('wok-fire')">
             <img class="tmpl-thumb" src="/api/grok-ad-generator/template-preview/wok-fire-landscape" alt="Wok Fire" onerror="this.style.background='#1a0505'">
