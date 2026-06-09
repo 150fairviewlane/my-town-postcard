@@ -1215,7 +1215,6 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           prompt:       finalAdPrompt,
           n:            1,
           aspect_ratio: spotAspectRatio,
-          resolution:   "2k",
         }),
       });
       const genBody = await safeJson(genRes);
@@ -1260,7 +1259,6 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
             prompt:       safeAdPrompt,
             n:            1,
             aspect_ratio: spotAspectRatio,
-            resolution:   "2k",
           }),
         });
         const safeBody = await safeJson(safeRes);
@@ -1287,7 +1285,6 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       n:            1,
       images:       imageRefs,
       aspect_ratio: spotAspectRatio,
-      resolution:   "2k",
     };
 
     // ── Retry loop for transient overload errors ────────────────────────────
