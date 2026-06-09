@@ -9,7 +9,8 @@
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "check:prompt-size": "tsx src/scripts/check-prompt-size.ts",
-    "test:transforms": "tsx src/scripts/test-transforms.ts"
+    "test:transforms": "tsx src/scripts/test-transforms.ts",
+    "analyze:transforms": "tsx src/scripts/analyze-transforms.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.2",
