@@ -1,0 +1,182 @@
+I want to build a template transformation system for the “Surprise Me” option in my ad generator. Instead of asking Grok to invent a layout from scratch, Surprise Me will pick one of the existing named templates, apply a conservative color and layout transformation using Sharp, and send the modified template image to Grok exactly like a named template.
+
+This session is exploration and testing only. Do not wire anything into the live ad generator yet. Build a standalone test script that applies transformations to each template image and saves the results so I can visually inspect them before deciding which palettes to keep.
+
+# ==============================================================
+STEP 1 — Install Sharp if not already installed
+
+Check if Sharp is already a dependency in:
+./artifacts/api-server/package.json
+
+If not present, add it:
+cd ./artifacts/api-server && pnpm add sharp
+
+Sharp version should be latest stable. Confirm installation
+succeeds before proceeding.
+
+# ==============================================================
+STEP 2 — Locate all portrait template images
+
+The template images live in ./attached_assets/
+
+Find the portrait template file for each of these template keys
+by reading the portraitFiles map in adGenGrok.ts. Report the
+exact filename for each:
+
+- parchment-classic
+- made-fresh
+- neighborhood-pro
+- at-your-service
+- health-wellness
+
+We will use portrait templates only for this test session.
+Landscape can be added later once the approach is validated.
+
+# ==============================================================
+STEP 3 — Create a standalone test script
+
+Create this file: ./artifacts/api-server/src/scripts/test-transforms.ts
+
+The script should:
+
+1. Load each of the 5 portrait template images from attached_assets
+1. Apply each of the CONSERVATIVE_PALETTES defined below to
+   each template image
+1. Also apply a horizontal flip (Sharp .flop()) to each
+   palette variation — this doubles the output set
+1. Save every output image to:
+   ./artifacts/api-server/test-output/
+   
+   Filename format:
+   [templateKey]*[paletteName]*[flip].png
+   Examples:
+   parchment-classic_ocean-deep_normal.png
+   parchment-classic_ocean-deep_flipped.png
+   made-fresh_sunset-warm_normal.png
+1. After saving all files, print a summary:
+   “Generated X files in test-output/”
+   List every filename on its own line.
+
+# ==============================================================
+STEP 4 — Define CONSERVATIVE_PALETTES
+
+Use these conservative transformations only. The goal is
+“clearly different color story” not “unrecognizable.”
+All operations use Sharp’s built-in methods only.
+
+const CONSERVATIVE_PALETTES = [
+{
+name: “cool-shift”,
+description: “Shifts warm tones toward cool blues/teals. Good for warm templates like parchment and made-fresh.”,
+operations: [
+// Rotate hue by 150 degrees — warm orange/brown becomes blue/teal
+// Conservative: only 150 degrees, not full 180 inversion
+{ type: “modulate”, options: { hue: 150, saturation: 0.9, brightness: 1.0 } }
+]
+},
+{
+name: “warm-deepen”,
+description: “Deepens and warms the palette. Good for cool templates like health-wellness and neighborhood-pro.”,
+operations: [
+// Shift hue toward warmer tones, slightly increase saturation
+{ type: “modulate”, options: { hue: -40, saturation: 1.15, brightness: 0.95 } }
+]
+},
+{
+name: “rich-dark”,
+description: “Darkens overall palette for a premium moodier look. Works on all templates.”,
+operations: [
+// Reduce brightness moderately, boost saturation slightly
+{ type: “modulate”, options: { hue: 0, saturation: 1.1, brightness: 0.75 } }
+]
+},
+{
+name: “fresh-light”,
+description: “Lightens and desaturates slightly for a fresh clean look. Works on all templates.”,
+operations: [
+// Increase brightness slightly, reduce saturation for airy feel
+{ type: “modulate”, options: { hue: 0, saturation: 0.75, brightness: 1.2 } }
+]
+},
+{
+name: “complementary”,
+description: “Shifts to complementary color — most dramatic but still recognizable. Use carefully.”,
+operations: [
+// 180 degree hue rotation — true complementary colors
+// Most dramatic of the conservative options
+{ type: “modulate”, options: { hue: 180, saturation: 0.85, brightness: 1.0 } }
+]
+},
+{
+name: “muted-mono”,
+description: “Desaturates heavily for near-monochromatic look with subtle tint remaining.”,
+operations: [
+// Heavy desaturation — not full greyscale, just muted
+{ type: “modulate”, options: { hue: 0, saturation: 0.25, brightness: 1.05 } }
+]
+},
+];
+
+# ==============================================================
+STEP 5 — Implementation notes for the test script
+
+Sharp modulate usage for reference:
+sharp(inputBuffer)
+.modulate({ hue: 150, saturation: 0.9, brightness: 1.0 })
+.flop()  // horizontal flip — add this for flipped variants
+.png()
+.toBuffer()
+
+For non-flipped variants, omit .flop()
+
+Process each template × each palette × 2 (normal + flipped)
+Total output files: 5 templates × 6 palettes × 2 flips = 60 images
+
+This is the inspection set. We will visually review all 60
+and select which palette+flip combinations look best per
+template before any of this goes into production.
+
+# ==============================================================
+STEP 6 — Run the test script
+
+Add a script entry to ./artifacts/api-server/package.json:
+“test:transforms”: “tsx src/scripts/test-transforms.ts”
+
+Run it:
+cd ./artifacts/api-server && pnpm run test:transforms
+
+Confirm it completes without errors and all 60 files exist
+in test-output/.
+
+If any template file is missing or fails to load, report
+which one and its expected path — do not crash the whole
+script, skip that template and continue.
+
+# ==============================================================
+STEP 7 — Make output files viewable
+
+After the script runs successfully, zip the entire test-output
+directory and make it available for download:
+
+cd ./artifacts/api-server && zip -r test-transforms.zip test-output/
+
+Then present the zip file for download so I can view all 60
+images and decide which transformations look good enough to
+use in production.
+
+# ==============================================================
+IMPORTANT CONSTRAINTS
+
+- Do NOT modify adGenGrok.ts in this session
+- Do NOT modify buildAdPrompt.ts in this session
+- Do NOT modify any existing template images in attached_assets
+- Do NOT wire any of this into the live ad generator
+- This session is visual inspection only
+
+The only files created or modified should be:
+./artifacts/api-server/src/scripts/test-transforms.ts  (new)
+./artifacts/api-server/package.json  (add script + sharp dep)
+./artifacts/api-server/test-output/  (new directory, 60 images)
+./artifacts/api-server/test-transforms.zip  (new, for download)
+
+Confirm the plan before writing any code.
