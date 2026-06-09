@@ -79,9 +79,21 @@ const CONSERVATIVE_PALETTES: Palette[] = [
 async function main() {
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
+  // Optional --template=<key> CLI filter (e.g. --template=neighborhood-pro)
+  const templateArg = process.argv.find(a => a.startsWith("--template="));
+  const templateFilter = templateArg ? templateArg.split("=")[1] : null;
+  const templates = templateFilter
+    ? TEMPLATES.filter(t => t.key === templateFilter)
+    : TEMPLATES;
+
+  if (templateFilter && templates.length === 0) {
+    console.error(`No template found with key "${templateFilter}".`);
+    process.exit(1);
+  }
+
   const generated: string[] = [];
 
-  for (const template of TEMPLATES) {
+  for (const template of templates) {
     const inputPath = path.join(ASSETS_DIR, template.filename);
 
     if (!fs.existsSync(inputPath)) {
@@ -89,12 +101,42 @@ async function main() {
       continue;
     }
 
-    const inputBuf = fs.readFileSync(inputPath);
+    const rawBuf = fs.readFileSync(inputPath);
     console.log(`  → Processing ${template.key} (${template.filename})`);
+
+    // ── Footer-darkening pre-pass (neighborhood-pro only) ─────────────────────
+    let templateBuffer: Buffer;
+    if (template.key === "neighborhood-pro") {
+      const meta = await sharp(rawBuf).metadata();
+      const w = meta.width!;
+      const h = meta.height!;
+      const footerH = Math.ceil(h * 0.12);
+
+      // Semi-transparent dark rectangle covering the bottom 12%
+      const overlayBuf = await sharp({
+        create: {
+          width: w,
+          height: footerH,
+          channels: 4,
+          background: { r: 20, g: 20, b: 20, alpha: 200 },
+        },
+      })
+        .png()
+        .toBuffer();
+
+      templateBuffer = await sharp(rawBuf)
+        .composite([{ input: overlayBuf, gravity: "south" }])
+        .png()
+        .toBuffer();
+
+      console.log(`     ↳ footer-darkening overlay applied (bottom 12%, rgba 20/20/20/200)`);
+    } else {
+      templateBuffer = rawBuf;
+    }
 
     for (const palette of CONSERVATIVE_PALETTES) {
       // Normal variant
-      const normalBuf = await sharp(inputBuf)
+      const normalBuf = await sharp(templateBuffer)
         .modulate({ hue: palette.hue, saturation: palette.saturation, brightness: palette.brightness })
         .png()
         .toBuffer();
@@ -103,7 +145,7 @@ async function main() {
       generated.push(normalName);
 
       // Flipped variant
-      const flippedBuf = await sharp(inputBuf)
+      const flippedBuf = await sharp(templateBuffer)
         .modulate({ hue: palette.hue, saturation: palette.saturation, brightness: palette.brightness })
         .flop()
         .png()
