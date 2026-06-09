@@ -1189,18 +1189,69 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       imageRefs.push({ type: "image_url", url: toDataUrl(tmplBuf, tmplMime) });
     }
 
+    const MAX_INPUT_BYTES = 15 * 1024 * 1024; // 15 MB
+
+    let photoOriginalBytes = 0;
+    let photoResizedBytes  = 0;
+    let logoOriginalBytes  = 0;
+    let logoResizedBytes   = 0;
+
     if (hasPhoto) {
       const blob = d.photoUrl.startsWith("data:")
         ? dataUrlToBlob(d.photoUrl)
         : await remoteUrlToBlob(d.photoUrl);
-      const photoBuf = Buffer.from(await blob.arrayBuffer());
-      imageRefs.push({ type: "image_url", url: toDataUrl(photoBuf, blob.type || "image/jpeg") });
+      const rawPhotoBuf = Buffer.from(await blob.arrayBuffer());
+      photoOriginalBytes = rawPhotoBuf.length;
+      if (photoOriginalBytes > MAX_INPUT_BYTES) {
+        res.statusCode = 400;
+        endJson({ error: "Image file too large. Please upload an image under 15MB." });
+        return;
+      }
+      const sourceMime   = blob.type || "image/jpeg";
+      const keepPhotoAlpha = sourceMime === "image/png";
+      let photoOutBuf: Buffer;
+      if (keepPhotoAlpha) {
+        photoOutBuf = await sharp(rawPhotoBuf)
+          .resize(1200, 1200, { fit: "inside", withoutEnlargement: true })
+          .png()
+          .toBuffer();
+      } else {
+        photoOutBuf = await sharp(rawPhotoBuf)
+          .resize(1200, 1200, { fit: "inside", withoutEnlargement: true })
+          .jpeg({ quality: 88 })
+          .toBuffer();
+      }
+      photoResizedBytes = photoOutBuf.length;
+      imageRefs.push({ type: "image_url", url: toDataUrl(photoOutBuf, keepPhotoAlpha ? "image/png" : "image/jpeg") });
     }
 
     if (hasLogo) {
-      const logoBlob = dataUrlToBlob(d.logoData);
-      const logoBuf = Buffer.from(await logoBlob.arrayBuffer());
-      imageRefs.push({ type: "image_url", url: toDataUrl(logoBuf, logoBlob.type || "image/png") });
+      const logoBlob   = dataUrlToBlob(d.logoData);
+      const rawLogoBuf = Buffer.from(await logoBlob.arrayBuffer());
+      logoOriginalBytes = rawLogoBuf.length;
+      if (logoOriginalBytes > MAX_INPUT_BYTES) {
+        res.statusCode = 400;
+        endJson({ error: "Image file too large. Please upload an image under 15MB." });
+        return;
+      }
+      const logoOutBuf = await sharp(rawLogoBuf)
+        .resize(800, 800, { fit: "inside", withoutEnlargement: true })
+        .png()
+        .toBuffer();
+      logoResizedBytes = logoOutBuf.length;
+      imageRefs.push({ type: "image_url", url: toDataUrl(logoOutBuf, "image/png") });
+    }
+
+    if (hasPhoto || hasLogo) {
+      req.log.info(
+        {
+          logoOriginalBytes,
+          logoResizedBytes,
+          photoOriginalBytes,
+          photoResizedBytes,
+        },
+        "image resize summary",
+      );
     }
 
     // ── No reference images → /generations is the correct endpoint ────────────

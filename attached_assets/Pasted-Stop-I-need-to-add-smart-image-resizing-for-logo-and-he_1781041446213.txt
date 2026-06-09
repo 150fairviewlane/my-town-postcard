@@ -1,0 +1,59 @@
+Stop. I need to add smart image resizing for logo and 
+hero photo uploads before they are sent to Grok.
+This is a server-side change only — do not touch the 
+frontend upload handler.
+
+In adGenGrok.ts, find where logoData and heroPhoto 
+are processed before being sent to xAI (around lines 
+1200-1204 for logo, similar location for hero photo).
+
+Add a Sharp resize step for BOTH logo and hero photo 
+that:
+
+1. LOGO resizing:
+   - If image dimensions exceed 800x800px, resize to 
+     fit within 800x800px while preserving aspect ratio
+   - If image is already 800x800px or smaller, pass 
+     through unchanged — no upscaling
+   - Use Sharp .resize(800, 800, { fit: "inside", 
+     withoutEnlargement: true })
+   - Preserve PNG transparency (do not flatten alpha)
+   - Output as PNG at quality 90
+   - This gives Grok a crisp 800px logo — more than 
+     sufficient for it to reproduce faithfully
+
+2. HERO PHOTO resizing:
+   - If image dimensions exceed 1200x1200px, resize to 
+     fit within 1200x1200px while preserving aspect ratio
+   - If already smaller, pass through unchanged
+   - Use Sharp .resize(1200, 1200, { fit: "inside", 
+     withoutEnlargement: true })
+   - Output as JPEG at quality 88 (JPEG for photos, 
+     not PNG — smaller file, imperceptible quality loss 
+     for photographic content)
+   - Exception: if the source image is PNG with 
+     transparency, keep as PNG
+
+3. Add file size logging after resize so we can verify:
+   req.log.info({
+     logoOriginalBytes: originalLogoSize,
+     logoResizedBytes: resizedLogoSize,
+     photoOriginalBytes: originalPhotoSize,
+     photoResizedBytes: resizedPhotoSize,
+   }, "image resize summary");
+
+4. Add a MAX_INPUT_SIZE guard before processing:
+   If logo or hero photo exceeds 15MB BEFORE resize, 
+   reject the request with HTTP 400 and message:
+   "Image file too large. Please upload an image 
+   under 15MB."
+   This prevents memory exhaustion on extreme uploads.
+
+Do not touch the template image loading — those are 
+already buffered from disk and we will handle them 
+separately.
+
+Do not touch the frontend upload handler.
+
+Run typecheck after changes. Report before/after 
+estimated payload sizes based on the resize targets.
