@@ -1703,7 +1703,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 
 .card{background:var(--card);border:1.5px solid var(--border);border-radius:11px;overflow:hidden}
 .card-hdr{padding:11px 16px;border-bottom:1px solid var(--border);background:#FAFAF8;display:flex;align-items:center;justify-content:space-between}
-.card-title{font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--burg)}
+.card-title{font-size:15px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--burg)}
 .card-body{padding:14px 16px}
 
 .tmpl-preview{display:flex;align-items:center;gap:12px}
@@ -1915,7 +1915,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
     <!-- Template -->
     <div class="card">
       <div class="card-hdr">
-        <div class="card-title">Template</div>
+        <div class="card-title">Choose a Template</div>
         <span id="tmplOrientationLabel" style="font-size:12px;color:var(--ink-light)"></span>
       </div>
       <div class="card-body" style="padding:10px 12px">
