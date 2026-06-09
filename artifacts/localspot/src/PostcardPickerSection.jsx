@@ -503,7 +503,7 @@ const spotByGridArea=useMemo(()=>{
 
 const takenCategories=useMemo(()=>{
   return(campaign?.spots||[])
-    .filter(s=>s.status!=="available"&&s.businessCategory)
+    .filter(s=>s.status==="paid"&&s.businessCategory)
     .map(s=>s.businessCategory);
 },[campaign]);
 
