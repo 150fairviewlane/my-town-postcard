@@ -238,6 +238,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "sage-organic":      "IMG_0832_1780946925550.png",
       "purple-sage":       "IMG_0836_1780951148325.png",
       "brush-stroke":      "IMG_0839_1780955044987.png",
+      "wok-fire":          "image_1781029065584.png",
     };
     const landscapeFiles: Record<string, string> = {
       "parchment-classic": parchmentLandscape,
@@ -249,6 +250,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "sage-organic":      "image_1780946917886.png",
       "purple-sage":       "IMG_0837_1780951148325.png",
       "brush-stroke":      "IMG_0838_1780955044987.png",
+      "wok-fire":          "image_1781029077663.png",
     };
     const fileMap = isLandscape ? landscapeFiles : portraitFiles;
     const tmplFilename = fileMap[templateKey] ?? fileMap["parchment-classic"]!;
@@ -346,7 +348,9 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
                   ? "the full landscape postcard layout on a cream/beige background with muted lavender-purple and sage green accents. Upper-left: large muted purple decorative circle + dot grid pattern; sage green botanical leaf sprig (left, decorative). Large white/cream rounded-rect business-name panel upper-left; sweeping purple paint brush stroke below it. Upper-right: large circular hero photo in sage green ring border. Lower-right: two smaller overlapping circular photos (kitchen, outdoor patio). Middle: four muted sage green circular icon badges (professional, award, team, shield) with thin dividers; four cream rounded-rect service tiles below. Lower section: muted purple wave/blob band, sage green brush stroke. Footer: dark purple strip — phone icon + oval pill left, location pin + oval pill center, QR right. Reproduce exactly."
                   : templateKey === "brush-stroke"
                   ? "the full landscape postcard layout on a cream/parchment background with dark olive green and charcoal accents. Left half: large circular hero photo (house exterior + tool bag foreground) framed by a dark organic brush-stroke swoosh curving around the left side. Upper-right: dark olive green hexagonal house-icon badge (logo zone). A wide horizontal olive green paint brush stroke sweeps across the upper-right area — this is the headline/business-name zone. Thin dark horizontal rule with a small diamond separator below the brush stroke. Below: a horizontal row of four service columns, each with a circular olive-bordered icon badge on top (house, paint roller, crossed tools, water-tap faucet) and a short dark charcoal horizontal brush-stroke label in white below it. Footer: wide dark charcoal curved-top band spanning full width — circular phone icon + field left, circular location pin + field center, QR code square right. Reproduce every zone, the cream/olive/charcoal palette, the circular photo frame, and the footer exactly."
-                  : "the full landscape postcard layout on a soft cream/off-white background. Upper-left: clinic/office photo inside an organic curved teal blob shape. Upper-center: large wide rounded-rectangle white headline panel; below it a teal pill-shaped tagline bar. Middle: four equal-width service panels with circular teal icon badges on top and white rounded-rectangle text boxes below. Lower-left: reception photo in an organic teal blob. Lower-right: stethoscope on a dark teal circular blob, plus a small white rounded QR box. Right edge: anatomical spine model prop. Footer: dark teal bar — circular phone icon badge + phone left; circular location pin icon badge + address right. Reproduce every zone, blob shape, and layout exactly.";
+                  : templateKey === "wok-fire"
+                    ? "the full landscape postcard layout on a near-black background with deep red, gold, and parchment accents. Upper-left: large torn-edge deep red paper panel (headline zone) with a gold bookmark-ribbon pennant at top-left corner and three gold circular brad accents along its left edge. Upper-right: large hero food photo zone (wok/action cooking scene with flames) with natural edges — no hard rectangular border. Center: wide horizontal parchment/kraft torn-edge paper banner (tagline zone). Lower-left: golden ticket-stub coupon shape with dashed border and notched edges. Lower-right: dark chalkboard A-frame sign with wood frame (menu/services zone). Footer: location pin icon + address pill left, phone icon + phone pill center, QR code square right, gold arrow accent. Reproduce every zone and the footer layout exactly."
+                    : "the full landscape postcard layout on a soft cream/off-white background. Upper-left: clinic/office photo inside an organic curved teal blob shape. Upper-center: large wide rounded-rectangle white headline panel; below it a teal pill-shaped tagline bar. Middle: four equal-width service panels with circular teal icon badges on top and white rounded-rectangle text boxes below. Lower-left: reception photo in an organic teal blob. Lower-right: stethoscope on a dark teal circular blob, plus a small white rounded QR box. Right edge: anatomical spine model prop. Footer: dark teal bar — circular phone icon badge + phone left; circular location pin icon badge + address right. Reproduce every zone, blob shape, and layout exactly.";
       refLines.push(`  • IMAGE ${imgIdx++} (LANDSCAPE TEMPLATE) — ${lsTmplDesc}`);
     }
     if (hasPhoto) {
@@ -444,6 +448,15 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
                 "Lower-right corner: a small white rounded square — this is the QR/contact box. " +
                 "Footer: a dark teal horizontal bar spanning the full width. Left side has a circular phone icon badge + phone number field; right side has a circular location pin icon badge + address field. " +
                 "Color palette: teal (#3d8b9c), sage green, cream/off-white. Reproduce every zone, blob shape, icon badge style, and footer layout exactly."
+              : templateKey === "wok-fire"
+              ? "  • IMAGE 1 (TEMPLATE) — a dramatic dark restaurant/food postcard on a near-black background with deep red, gold, and parchment accents. " +
+                "Upper-left: large torn-edge deep red paper panel (headline/business-name zone) with a gold bookmark-ribbon pennant at its top-left corner and three gold circular brad accents along its left edge. " +
+                "Upper-right: large hero food photo zone (wok/action cooking scene with flames) — no hard rectangular border, natural edges blending into the dark background. " +
+                "Center: wide horizontal parchment/kraft torn-edge paper banner (tagline zone). " +
+                "Lower-left: golden ticket-stub coupon shape with dashed stitched border and notched edges. " +
+                "Lower-right: dark chalkboard A-frame sign with wood frame (menu/services zone). " +
+                "Footer: location pin icon + address pill left, phone icon + phone pill center-left, QR code square right, gold arrow accent. " +
+                "Reproduce every zone, the near-black/red/gold/parchment color scheme, and the footer layout exactly."
               : "  • IMAGE 1 (TEMPLATE) — the full postcard layout with parchment texture, brush-stroke band, " +
                 "pennant ribbon, circular checkmark badge, dashed coupon box, and dark footer strip. " +
                 "Reproduce every zone, texture, and design element exactly.",
@@ -657,6 +670,54 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "TYPOGRAPHIC RULES:\n" +
       "  • Business name: bold condensed all-caps sans-serif, white/cream inside the olive green brush-stroke band\n" +
       "  • Service labels: white/cream text inside dark charcoal brush-stroke shapes\n" +
+      "  • NEVER repeat any word from the business name\n" +
+      "  • NEVER render the website URL as visible text\n" +
+      "  • NEVER render any hex color code or CSS value as visible text anywhere in the ad"
+    )
+    : isLandscape && templateKey === "wok-fire"
+    ? (
+      "LAYOUT — reproduce the Wok Fire LANDSCAPE template zones exactly:\n\n" +
+
+      "  BACKGROUND: near-black with deep red, gold, and parchment accents throughout.\n\n" +
+
+      (hasLogo
+        ? `  ZONE 1 — LOGO (IMAGE ${logoImg} inside the gold bookmark-ribbon pennant, top-left corner of the red panel). Scale to fit with clear margin; preserve exact logo colors.\n` +
+          (d.tagline ? `    Tagline: "${d.tagline}" in italic script, gold or cream, inside the red panel below the headline.\n` : "") +
+          "\n"
+        : d.tagline
+          ? `  TAGLINE: "${d.tagline}" in italic script, gold or cream, inside the red panel below the headline.\n\n`
+          : "") +
+
+      `  ZONE 2 — HEADLINE (upper-left, inside the torn-edge deep red paper panel):\n` +
+      `    "${d.bizName}" in bold condensed all-caps slab serif — very large, white or cream, maximum weight.\n` +
+      `    CRITICAL: Render EXACTLY "${d.bizName}". Each word EXACTLY ONCE. NEVER repeat.\n\n` +
+
+      "  ZONE 3 — HERO PHOTO (upper-right, wok/cooking action scene with flames):\n" +
+      (hasPhoto
+        ? `    Composite IMAGE 2 — dramatic cooking scene. Natural edges blending into dark background; no hard rectangular border. Cinematic lighting with flame and steam effects.\n\n`
+        : `    Generate a dramatic photorealistic hero food scene — sizzling wok, flames, vibrant fresh ingredients tossed mid-air. Natural edges blending into dark background; no hard border.\n\n`) +
+
+      (d.tagline
+        ? `  ZONE 4 — TAGLINE BANNER (center, wide parchment/kraft torn-edge banner):\n` +
+          `    Render "${d.tagline}" in dark serif or italic script on the parchment banner surface.\n\n`
+        : "") +
+
+      (d.offer
+        ? `  ZONE 5 — COUPON (lower-left, golden ticket-stub — dashed stitched border, notched edges):\n` +
+          `    "${d.offer}" in bold dark text inside the golden ticket-stub. Large and prominent.\n` +
+          (d.offerFine ? `    Fine print: "${d.offerFine}" smaller below.\n` : "") +
+          "    NEVER place a QR code inside or adjacent to this coupon zone.\n\n"
+        : "") +
+
+      (menuStr !== "  (none)"
+        ? `  ZONE 6 — MENU/SERVICES (dark chalkboard A-frame sign, lower-right — EXACTLY ${menuCount} item${menuCount !== 1 ? "s" : ""}):\n` +
+          `    Render EXACTLY ${menuCount} item${menuCount !== 1 ? "s" : ""} in white chalk-style text on the chalkboard surface. Wood frame visible. Do NOT add extras.\n` +
+          `    Items: ${menuStr}\n    Each item exactly once.\n\n`
+        : "  ZONE 6 — CHALKBOARD SIGN (lower-right): dark chalkboard A-frame with wood frame — leave board surface clean (no services provided).\n\n") +
+
+      buildFooterZone(d.phone || "", fullAddress, "inline-icon") +
+      "TYPOGRAPHIC RULES:\n" +
+      "  • Headline: bold condensed all-caps slab serif, white or cream, inside the deep red torn-paper panel\n" +
       "  • NEVER repeat any word from the business name\n" +
       "  • NEVER render the website URL as visible text\n" +
       "  • NEVER render any hex color code or CSS value as visible text anywhere in the ad"
@@ -923,6 +984,55 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "  • Service labels: clean dark sans-serif inside white rounded-rectangle boxes\n" +
       "  • Fine print: smallest text, still legible\n" +
       "  • NEVER render the website URL as visible text"
+    )
+    : templateKey === "wok-fire"
+    ? (
+      "LAYOUT — reproduce the Wok Fire template zones exactly as described:\n\n" +
+
+      "  ZONE 1 — HEADLINE (upper-left, inside the large torn-edge deep red paper panel):\n" +
+      `    "${d.bizName}" in bold condensed all-caps slab serif — very large, white or cream, maximum weight inside the red panel.\n` +
+      `    CRITICAL: Render the name EXACTLY — "${d.bizName}". Each word EXACTLY ONCE. NEVER repeat.\n\n` +
+
+      "  ZONE 2 — PENNANT / LOGO (gold bookmark-ribbon pennant, top-left corner of the red panel):\n" +
+      (hasLogo
+        ? `    Place IMAGE ${logoImg} centered inside the gold pennant ribbon. Scale to fit with clear margin; preserve exact logo colors.\n` +
+          (d.tagline ? `    Tagline: "${d.tagline}" in italic script, gold or cream, below the business name inside the red panel.\n` : "") +
+          "\n"
+        : d.tagline
+          ? `    Tagline: "${d.tagline}" in italic script, gold or cream, below the business name inside the red panel.\n\n`
+          : "") +
+
+      "  ZONE 3 — HERO FOOD PHOTO (upper-right, dramatic wok/cooking action scene):\n" +
+      (hasPhoto
+        ? `    Composite IMAGE 2 into the upper-right hero zone — dramatic food/cooking action. Natural edges blending into the dark background; no hard rectangular border. Cinematic lighting with flame and steam effects.\n\n`
+        : `    Generate a dramatic photorealistic hero food scene — sizzling wok, flames, vibrant fresh ingredients tossed mid-air. Fill upper-right zone with natural edges blending into dark background; no hard border.\n\n`) +
+
+      (d.tagline
+        ? `  ZONE 4 — TAGLINE BANNER (center, wide parchment/kraft torn-edge banner):\n` +
+          `    Render "${d.tagline}" in dark serif or italic script on the parchment banner. Natural torn paper texture.\n\n`
+        : "") +
+
+      (d.offer
+        ? "  ZONE 5 — COUPON (lower-left, golden ticket-stub — dashed stitched border, notched edges):\n" +
+          `    Render "${d.offer}" in bold dark text inside the golden ticket-stub. Large and prominent.\n` +
+          (d.offerFine ? `    Fine print: "${d.offerFine}" smaller below.\n` : "") +
+          "    NEVER place a QR code inside or adjacent to this coupon zone.\n\n"
+        : "") +
+
+      (menuStr !== "  (none)"
+        ? `  ZONE 6 — MENU/SERVICES (dark chalkboard A-frame sign, lower-right — EXACTLY ${menuCount} item${menuCount !== 1 ? "s" : ""}):\n` +
+          `    Render EXACTLY ${menuCount} item${menuCount !== 1 ? "s" : ""} in white chalk-style text on the chalkboard surface. Wood frame visible.\n` +
+          `    Do NOT add more items or place the Special Offer on the chalkboard.\n` +
+          `    Items: ${menuStr}\n    Each item exactly once.\n\n`
+        : "  ZONE 6 — CHALKBOARD SIGN (lower-right): dark chalkboard A-frame with wood frame — leave board surface clean (no services provided).\n\n") +
+
+      buildFooterZone(d.phone || "", fullAddress, "inline-icon") +
+      "TYPOGRAPHIC RULES:\n" +
+      "  • Business name: bold condensed all-caps slab serif, white or cream, inside the deep red torn-paper panel\n" +
+      "  • NEVER repeat any word from the business name\n" +
+      "  • Fine print: smallest text, still legible\n" +
+      "  • NEVER render the website URL as visible text\n" +
+      "  • NEVER render any hex color code or CSS value as visible text anywhere in the ad"
     )
     : (
       "LAYOUT — render these zones in order from top to bottom:\n\n" +
@@ -1501,6 +1611,7 @@ router.get("/grok-ad-generator/template-preview/:key", (req, res) => {
     "sage-organic":                  "IMG_0832_1780946925550.png",
     "purple-sage":                   "IMG_0836_1780951148325.png",
     "brush-stroke":                  "IMG_0839_1780955044987.png",
+    "wok-fire":                      "image_1781029065584.png",
     "surprise-me":                   "surprise_me_template.png",
     // landscape variants
     "parchment-classic-landscape":   "parchment_classic_landscape_1779162178190.png",
@@ -1512,6 +1623,7 @@ router.get("/grok-ad-generator/template-preview/:key", (req, res) => {
     "sage-organic-landscape":        "image_1780946917886.png",
     "purple-sage-landscape":         "IMG_0837_1780951148325.png",
     "brush-stroke-landscape":        "IMG_0838_1780955044987.png",
+    "wok-fire-landscape":            "image_1781029077663.png",
   };
   const filename = fileMap[key];
   if (!filename) { res.status(404).send("Not found"); return; }
