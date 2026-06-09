@@ -17,3 +17,9 @@ id = "PFielsSQtDhpuVmd1ITB4"
 uri = "file://postcard_picker_code_dump.txt"
 type = "text"
 title = "Postcard Picker — Full Code Dump"
+
+[[outputs]]
+id = "apDOFVnPaXYMllTWisimy"
+uri = "file://artifacts/api-server/test-transforms.zip"
+type = "unspecified"
+title = "test-transforms.zip — 60 palette-transformed template images"
