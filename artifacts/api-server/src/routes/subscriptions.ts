@@ -115,16 +115,40 @@ router.post("/checkout/create-subscription-session", async (req, res): Promise<v
     res.status(409).json({ error: "This spot has already been paid for." });
     return;
   }
-  // Also refuse if there's an active/pending subscription for this spot.
-  // Without this guard, a customer who clicks "Continue to Stripe" twice
-  // (e.g. opens checkout in two tabs) could start two parallel sessions
-  // and end up with two recurring subscriptions for the same spot.
+  // Guard against duplicate subscriptions. Active/past_due rows always block.
+  // pending_payment rows block only within a 30-minute window — after that the
+  // Stripe Checkout session is considered abandoned and the stale row is
+  // cancelled so the customer can retry without needing admin intervention.
+  const PENDING_EXPIRY_MS = 30 * 60 * 1000; // 30 minutes
   const existingSub = await db
+    .select({
+      id:        spotSubscriptionsTable.id,
+      status:    spotSubscriptionsTable.subscriptionStatus,
+      createdAt: spotSubscriptionsTable.createdAt,
+    })
+    .from(spotSubscriptionsTable)
+    .where(eq(spotSubscriptionsTable.initialSpotId, spot.id))
+    .limit(5);
+  for (const s of existingSub) {
+    if (s.status === "pending_payment") {
+      const ageMs = Date.now() - new Date(s.createdAt).getTime();
+      if (ageMs > PENDING_EXPIRY_MS) {
+        // Stale abandoned session — cancel it silently so the customer can retry.
+        await db
+          .update(spotSubscriptionsTable)
+          .set({ subscriptionStatus: "canceled", updatedAt: new Date() })
+          .where(eq(spotSubscriptionsTable.id, s.id));
+        req.log.info({ stalePendingId: s.id, ageMs }, "cancelled stale pending_payment subscription");
+      }
+    }
+  }
+  // Re-fetch after any stale cancellations.
+  const activeSub = await db
     .select({ id: spotSubscriptionsTable.id, status: spotSubscriptionsTable.subscriptionStatus })
     .from(spotSubscriptionsTable)
     .where(eq(spotSubscriptionsTable.initialSpotId, spot.id))
     .limit(5);
-  const blocking = existingSub.find((s) =>
+  const blocking = activeSub.find((s) =>
     s.status === "active" || s.status === "past_due" || s.status === "pending_payment",
   );
   if (blocking) {
