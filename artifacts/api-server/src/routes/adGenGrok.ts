@@ -133,6 +133,36 @@ function getDefaultThemeIndex(industry: string): number {
   return 4;
 }
 
+const THEME_EXCLUSIONS: Record<string, number[]> = {
+  // Theme indices: 0=Midnight Luxe, 1=Coastal Bright,
+  // 2=Industrial Edge, 3=Botanical Garden, 4=Urban Pop
+
+  // Food businesses — Industrial Edge (concrete/hazard texture) is wrong for
+  // appetite appeal. Never assign index 2.
+  restaurant:  [2],
+  pizza:       [2],
+  bakery:      [2],
+  cafe:        [2],
+  "food":      [2],
+
+  // Healthcare/wellness — Industrial Edge feels harsh and clinical in the
+  // wrong way. Never assign index 2.
+  veterinary:  [2],
+  dental:      [2],
+  healthcare:  [2],
+  medical:     [2],
+  wellness:    [2],
+  spa:         [2],
+  salon:       [2],
+
+  // Childcare/education — Industrial Edge is inappropriate.
+  childcare:   [2],
+  education:   [2],
+  school:      [2],
+
+  // Default: no exclusions for contractor/trade industries (Industrial Edge fits them).
+};
+
 const CATEGORY_CLICHES: Record<string, string> = {
   veterinary:  "no paw print graphics, no stethoscopes on plain backgrounds, no clip-art animal icons, no default blue/teal medical palette, no plain solid color behind pet photos",
   dental:      "no tooth cartoon icons, no plain white clinical backgrounds, no blue/mint default palette, no clip-art toothbrush graphics",
@@ -337,14 +367,39 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   // Regeneration → pick any theme EXCEPT the industry default,
   // guaranteeing a visually distinct result every time Regenerate is clicked.
   const surpriseMeDefaultIdx = getDefaultThemeIndex(d.industry);
+
+  // Build exclusion list for this industry
+  const industryLower = (d.industry || "").toLowerCase();
+  const excludedIndices = Object.entries(THEME_EXCLUSIONS)
+    .filter(([key]) => industryLower.includes(key))
+    .flatMap(([, indices]) => indices);
+
+  // For first generation: use the industry default unless it is excluded,
+  // then fall back to the next non-excluded theme cycling forward.
+  const getValidThemeIdx = (preferred: number): number => {
+    if (!excludedIndices.includes(preferred)) return preferred;
+    for (let i = 1; i < SURPRISE_ME_THEMES.length; i++) {
+      const candidate = (preferred + i) % SURPRISE_ME_THEMES.length;
+      if (!excludedIndices.includes(candidate)) return candidate;
+    }
+    return preferred; // all themes excluded — shouldn't happen, but safe fallback
+  };
+
   const surpriseMeThemeIdx =
     d.generationIndex === 0
-      ? surpriseMeDefaultIdx
+      ? getValidThemeIdx(surpriseMeDefaultIdx)
       : (() => {
-          const opts = SURPRISE_ME_THEMES.map((_, i) => i).filter(
-            (i) => i !== surpriseMeDefaultIdx,
-          );
-          return opts[Math.floor(Math.random() * opts.length)]!;
+          const opts = SURPRISE_ME_THEMES
+            .map((_, i) => i)
+            .filter((i) => i !== surpriseMeDefaultIdx)
+            .filter((i) => !excludedIndices.includes(i));
+          // If exclusions wipe out all options, allow any non-default theme
+          const fallbackOpts = opts.length > 0
+            ? opts
+            : SURPRISE_ME_THEMES
+                .map((_, i) => i)
+                .filter((i) => i !== surpriseMeDefaultIdx);
+          return fallbackOpts[Math.floor(Math.random() * fallbackOpts.length)]!;
         })();
   const selectedTheme = SURPRISE_ME_THEMES[surpriseMeThemeIdx]!;
 
@@ -812,14 +867,25 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
         : `HERO PHOTO: AI-generated cinematic scene appropriate for this business — organic edges, atmospheric lighting, blended into composition.\n`) +
       (hasLogo ? `LOGO: IMAGE ${logoImg} — pixel-perfect reproduction, zero stylization, zero color alteration.\n` : "") +
       (d.tagline ? `TAGLINE: "${d.tagline}" — secondary visual prominence, clearly distinct from headline.\n` : "") +
-      (menuStr !== "  (none)" ? `SERVICES/MENU: ${menuStr} — every item listed exactly once, in its own clearly legible list zone.\n` : "") +
+      (menuStr !== "  (none)"
+        ? `SERVICES/MENU: ${menuStr} — every item listed exactly once, in its own clearly legible list zone. If using icons beside each service:\n` +
+          "• Use minimal single-weight line-art icons only\n" +
+          "• NEVER use emoji-style, cartoon, or clip-art icons\n" +
+          "• NEVER use food-specific emoji (taco, pizza, burger icons)\n" +
+          "• Prefer a simple geometric bullet or dash over a cheap icon\n" +
+          "• No icon is always better than a low-quality icon\n"
+        : "") +
       (d.offer
-        ? `SPECIAL OFFER — must feel DESIGNED, not templated:\n` +
-          `• Shape is non-rectangular OR has distinctive graphic treatment (torn paper edge, circular stamp ring, diagonal cut panel, overlapping ribbon)\n` +
-          `• Luminance contrast with surrounding area is at least 40%\n` +
-          `• "${d.offer}" — offer amount is the largest text element inside this zone\n` +
+        ? `SPECIAL OFFER: Must feel DESIGNED not templated. Choose exactly ONE of these specific shape treatments:\n` +
+          `OPTION A — DIAGONAL PARALLELOGRAM: The offer box is a parallelogram with angled left and right edges, not a rectangle. The diagonal cut gives it energy and motion.\n` +
+          `OPTION B — CIRCULAR STAMP: A circle or oval shape with a double-ring border and slight distressed ink texture. The offer text is centered inside the ring.\n` +
+          `OPTION C — TORN PAPER EDGE: The top edge of the offer zone has a torn/ripped paper texture. The bottom edge is clean. The shape reads as a torn-off coupon.\n` +
+          `OPTION D — OVERLAPPING RIBBON: A horizontal banner ribbon that overlaps/crosses the boundary between two zones, anchored by the design on both sides.\n` +
+          `Requirements for whichever option is chosen:\n` +
+          `• Luminance contrast with surrounding area at least 40%\n` +
+          `• "${d.offer}" — offer amount or headline is the largest text in this zone\n` +
           (d.offerFine ? `• Fine print: "${d.offerFine}" — smaller, inside same offer zone.\n` : "") +
-          "• FORBIDDEN: plain rectangle with solid fill and a simple border\n" +
+          "• FORBIDDEN: plain rectangle with solid fill and border, rounded rectangle with simple stroke, any shape that reads as a standard digital UI button or card\n" +
           "• NEVER place a QR code inside or adjacent to this offer zone — QR belongs ONLY in the footer bottom-right corner.\n"
         : "") +
       buildFooterZone(d.phone || "", fullAddress, "minimal") +
@@ -841,7 +907,9 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "• NEVER repeat any word from the business name as a decorative element elsewhere\n" +
       "• NEVER invent or add script accent words that are not part of the business name\n" +
       "• NEVER render a website URL as visible text anywhere on the ad\n" +
-      "• NEVER render hex color codes, CSS values, or technical notation as visible text"
+      "• NEVER render hex color codes, CSS values, or technical notation as visible text\n" +
+      "• NEVER render layout instruction words as visible text — words like CENTER, LEFT, RIGHT, ZONE, FIELD, LABEL, HEADER, FOOTER, PLACEHOLDER, COLUMN are layout directions not content and must never appear on the finished ad\n" +
+      "• NEVER add any text not explicitly provided in the business data below — invent no words, names, slogans, or labels"
     )
     : templateKey === "neighborhood-pro"
     ? (
@@ -986,14 +1054,25 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
         : `HERO PHOTO: AI-generated cinematic scene appropriate for this business — organic edges, atmospheric lighting, blended into composition.\n`) +
       (hasLogo ? `LOGO: IMAGE ${logoImg} — pixel-perfect reproduction, zero stylization, zero color alteration.\n` : "") +
       (d.tagline ? `TAGLINE: "${d.tagline}" — secondary visual prominence, clearly distinct from headline.\n` : "") +
-      (menuStr !== "  (none)" ? `SERVICES/MENU: ${menuStr} — every item listed exactly once, in its own clearly legible list zone.\n` : "") +
+      (menuStr !== "  (none)"
+        ? `SERVICES/MENU: ${menuStr} — every item listed exactly once, in its own clearly legible list zone. If using icons beside each service:\n` +
+          "• Use minimal single-weight line-art icons only\n" +
+          "• NEVER use emoji-style, cartoon, or clip-art icons\n" +
+          "• NEVER use food-specific emoji (taco, pizza, burger icons)\n" +
+          "• Prefer a simple geometric bullet or dash over a cheap icon\n" +
+          "• No icon is always better than a low-quality icon\n"
+        : "") +
       (d.offer
-        ? `SPECIAL OFFER — must feel DESIGNED, not templated:\n` +
-          `• Shape is non-rectangular OR has distinctive graphic treatment (torn paper edge, circular stamp ring, diagonal cut panel, overlapping ribbon)\n` +
-          `• Luminance contrast with surrounding area is at least 40%\n` +
-          `• "${d.offer}" — offer amount is the largest text element inside this zone\n` +
+        ? `SPECIAL OFFER: Must feel DESIGNED not templated. Choose exactly ONE of these specific shape treatments:\n` +
+          `OPTION A — DIAGONAL PARALLELOGRAM: The offer box is a parallelogram with angled left and right edges, not a rectangle. The diagonal cut gives it energy and motion.\n` +
+          `OPTION B — CIRCULAR STAMP: A circle or oval shape with a double-ring border and slight distressed ink texture. The offer text is centered inside the ring.\n` +
+          `OPTION C — TORN PAPER EDGE: The top edge of the offer zone has a torn/ripped paper texture. The bottom edge is clean. The shape reads as a torn-off coupon.\n` +
+          `OPTION D — OVERLAPPING RIBBON: A horizontal banner ribbon that overlaps/crosses the boundary between two zones, anchored by the design on both sides.\n` +
+          `Requirements for whichever option is chosen:\n` +
+          `• Luminance contrast with surrounding area at least 40%\n` +
+          `• "${d.offer}" — offer amount or headline is the largest text in this zone\n` +
           (d.offerFine ? `• Fine print: "${d.offerFine}" — smaller, inside same offer zone.\n` : "") +
-          "• FORBIDDEN: plain rectangle with solid fill and a simple border\n" +
+          "• FORBIDDEN: plain rectangle with solid fill and border, rounded rectangle with simple stroke, any shape that reads as a standard digital UI button or card\n" +
           "• NEVER place a QR code inside or adjacent to this offer zone — QR belongs ONLY in the footer bottom-right corner.\n"
         : "") +
       buildFooterZone(d.phone || "", fullAddress, "minimal") +
@@ -1015,7 +1094,9 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "• NEVER repeat any word from the business name as a decorative element elsewhere\n" +
       "• NEVER invent or add script accent words that are not part of the business name\n" +
       "• NEVER render a website URL as visible text anywhere on the ad\n" +
-      "• NEVER render hex color codes, CSS values, or technical notation as visible text"
+      "• NEVER render hex color codes, CSS values, or technical notation as visible text\n" +
+      "• NEVER render layout instruction words as visible text — words like CENTER, LEFT, RIGHT, ZONE, FIELD, LABEL, HEADER, FOOTER, PLACEHOLDER, COLUMN are layout directions not content and must never appear on the finished ad\n" +
+      "• NEVER add any text not explicitly provided in the business data below — invent no words, names, slogans, or labels"
     )
     : templateKey === "brush-stroke"
     ? (
