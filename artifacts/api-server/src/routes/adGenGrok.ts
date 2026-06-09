@@ -800,91 +800,33 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     )
     : isLandscape
     ? (
-      // Surprise Me landscape — full creative freedom in a horizontal format
-      `DESIGN BRIEF — create a completely ORIGINAL postcard ad for this business. This is a premium print advertisement — design it as a piece of genuine graphic art that a viewer would pause on in a high-end regional magazine, not a coupon flyer insert.\n\n` +
-
-      `STYLE THEME — "${selectedTheme.name}" (mood: ${selectedTheme.mood}):\n` +
-      `PALETTE: ${selectedTheme.palette}\n` +
-      `TYPOGRAPHY: ${selectedTheme.typography}\n` +
-      `LAYOUT APPROACH: ${selectedTheme.layoutLandscape}\n\n` +
-
-      "CREATIVE DIRECTION: Make at least one unexpected visual choice — an unconventional background material, a surprising crop of the hero image, or a graphic element nobody expects in this category. Avoid every visual cliché associated with this business type.\n\n" +
-
-      `CATEGORY CLICHÉS — FORBIDDEN for this business type:\n${categoryCliches}\n\n` +
-
-      "FORBIDDEN STYLES — do NOT recreate any of these five existing styles:\n" +
-      "• Parchment/rustic: warm ivory bg, orange pennant ribbon, brush-stroke swoosh band\n" +
-      "• Chalkboard/bistro: dark chalkboard, wood table props, golden ticket coupon, gingham cloth\n" +
-      "• Forest-green contractor: deep green bg, white paint-brush splashes, lime-green script\n" +
-      "• Navy/gold home services: dark navy hexagonal badge, gold brush-stroke, circular icon band\n" +
-      "• Botanical/floral for trade services: roses, ferns, delicate florals, sage green watercolor, dusty rose backgrounds — these moods are wrong for HVAC, plumbing, roofing, electrical, and contractor businesses\n\n" +
-
-      "VISUAL CONSTRUCTION — MANDATORY:\n" +
-      "(a) NO hard rectangular photo borders — use blob mask, brush-stroke cutout, diagonal slash, arch shape, or gradient vignette\n" +
-      "(b) Background must have depth — atmospheric gradient, layered texture, or painterly wash. NEVER a flat solid color anywhere.\n" +
-      "(c) THREE DEPTH PLANES — each must be visually distinct from the others:\n" +
-      "PLANE 1 (background): Rich textured or atmospheric environment. Photographic depth or painterly quality. Tonal variation across the entire canvas. Never flat, never uniform.\n" +
-      "PLANE 2 (mid-layer): Graphic design elements — color bands, overlapping shapes, brushwork, translucent overlays — that bridge background and foreground. This layer is what makes the ad feel professionally designed rather than assembled.\n" +
-      "PLANE 3 (foreground): All text and logo elements at maximum contrast and sharpness. Drop shadows or dark-field backlighting mandatory on every text element.\n" +
-      "(d) HERO PHOTO COMPOSITING — the photo must feel EMBEDDED in the composition, not placed on top like a sticker:\n" +
-      "• Color grade the photo to match the overall palette\n" +
-      "• Add rim lighting or edge glow that echoes the background color\n" +
-      "• At least one photo edge must dissolve into the background via gradient fade, brushstroke mask, or organic vignette\n" +
-      "• Cinematic depth of field — sharp subject, atmospheric background blur\n" +
-      "(e) Every text element must have drop shadows, glows, or dark-field backlighting — no text floats on bare color\n" +
-      "(f) FILL EVERY SQUARE INCH — no empty zones, no bare padding, no wasted canvas area\n" +
-      "(g) Canvas boundary IS the ad boundary — no floating card illusion, no outer border or shadow frame\n\n" +
-
-      "REQUIRED CONTENT ZONES:\n" +
-      `HEADLINE: "${d.bizName}" — very large, dominant, readable in 1 second at full postcard size\n` +
-      (hasPhoto
-        ? `HERO PHOTO: IMAGE 1 — composite the provided photo with organic mask, cinematic lighting, and edge blending into the composition — no rectangular frame.\n`
-        : `HERO PHOTO: AI-generated cinematic scene appropriate for this business — organic edges, atmospheric lighting, blended into composition.\n`) +
-      (hasLogo ? `LOGO: IMAGE ${logoImg} — pixel-perfect reproduction, zero stylization, zero color alteration.\n` : "") +
-      (d.tagline ? `TAGLINE: "${d.tagline}" — secondary visual prominence, clearly distinct from headline.\n` : "") +
-      (menuStr !== "  (none)"
-        ? `SERVICES/MENU: ${menuStr} — every item listed exactly once, in its own clearly legible list zone. If using icons beside each service:\n` +
-          "• Use minimal single-weight line-art icons only\n" +
-          "• NEVER use emoji-style, cartoon, or clip-art icons\n" +
-          "• NEVER use food-specific emoji (taco, pizza, burger icons)\n" +
-          "• Prefer a simple geometric bullet or dash over a cheap icon\n" +
-          "• No icon is always better than a low-quality icon\n"
-        : "") +
-      (d.offer
-        ? `SPECIAL OFFER: Must feel DESIGNED not templated. Choose exactly ONE of these specific shape treatments:\n` +
-          `OPTION A — DIAGONAL PARALLELOGRAM: The offer box is a parallelogram with angled left and right edges, not a rectangle. The diagonal cut gives it energy and motion.\n` +
-          `OPTION B — CIRCULAR STAMP: A circle or oval shape with a double-ring border and slight distressed ink texture. The offer text is centered inside the ring.\n` +
-          `OPTION C — TORN PAPER EDGE: The top edge of the offer zone has a torn/ripped paper texture. The bottom edge is clean. The shape reads as a torn-off coupon.\n` +
-          `OPTION D — OVERLAPPING RIBBON: A horizontal banner ribbon that overlaps/crosses the boundary between two zones, anchored by the design on both sides.\n` +
-          `Requirements for whichever option is chosen:\n` +
-          `• Luminance contrast with surrounding area at least 40%\n` +
-          `• "${d.offer}" — offer amount or headline is the largest text in this zone\n` +
-          (d.offerFine ? `• Fine print: "${d.offerFine}" — smaller, inside same offer zone.\n` : "") +
-          "• FORBIDDEN: plain rectangle with solid fill and border, rounded rectangle with simple stroke, any shape that reads as a standard digital UI button or card\n" +
-          "• NEVER place a QR code inside or adjacent to this offer zone — QR belongs ONLY in the footer bottom-right corner.\n"
-        : "") +
-      buildFooterZone(d.phone || "", fullAddress, "minimal") +
-      "FIRST-GLANCE TEST: A viewer seeing this ad for exactly one second must (a) instantly know what the business does and (b) feel a specific intended emotion — excitement, comfort, trust, appetite, safety, etc. Every single design element either serves that one-second impression or must be removed.\n\n" +
-
-      "QUALITY STANDARD:\n" +
-      "✗ No flat solid-color backgrounds anywhere on the canvas\n" +
-      "✗ No hard rectangular photo frames or borders\n" +
-      "✗ No text floating on bare flat color\n" +
-      "✗ No decorative filler text or placeholder patterns in the coupon zone\n" +
-      "✗ No visual clichés from the category forbidden list above\n" +
-      "✓ Three depth planes present and visually distinguishable\n" +
-      "✓ Hero photo with cinematic lighting and organic edge blending\n" +
-      "✓ Every text element has contrast treatment (shadow, glow, or backlit field)\n" +
-      "✓ Print-ready sharpness and detail throughout\n\n" +
-
-      "TYPOGRAPHIC RULES:\n" +
-      "• Headline text: very large, maximum weight, immediate visual dominance\n" +
-      "• NEVER repeat any word from the business name as a decorative element elsewhere\n" +
-      "• NEVER invent or add script accent words that are not part of the business name\n" +
-      "• NEVER render a website URL as visible text anywhere on the ad\n" +
-      "• NEVER render hex color codes, CSS values, or technical notation as visible text\n" +
-      "• NEVER render layout instruction words as visible text — words like CENTER, LEFT, RIGHT, ZONE, FIELD, LABEL, HEADER, FOOTER, PLACEHOLDER, COLUMN are layout directions not content and must never appear on the finished ad\n" +
-      "• NEVER add any text not explicitly provided in the business data below — invent no words, names, slogans, or labels"
+      "You are completing a postcard ad using the provided \n" +
+      "template image.\n\n" +
+      "TEMPLATE INSTRUCTIONS:\n" +
+      "  Follow the layout zones in the reference image exactly.\n" +
+      "  The template has been color-transformed — use the colors\n" +
+      "  shown in the reference image. Do not revert to any\n" +
+      "  original or default color palette.\n" +
+      "  This is landscape format — 3 inches wide by 2 inches tall. Arrange content zones horizontally.\n\n" +
+      "BUSINESS CONTENT TO PLACE:\n" +
+      `  HEADLINE: "${d.bizName}" — very large, dominant, placed\n` +
+      "  in the headline zone shown in the template.\n" +
+      (d.tagline ? `  TAGLINE: "${d.tagline}" — secondary prominence below headline.\n` : "") +
+      "  HERO PHOTO: " + (hasPhoto
+        ? "Supplied photo — composite into hero zone with organic edge blending. No hard rectangular border."
+        : "Generate a cinematic AI image for this business. Residential and human scale. Never commercial or industrial scale.") + "\n" +
+      (hasLogo ? "  LOGO: Reproduce supplied logo pixel-perfect in logo zone. Zero stylization.\n" : "") +
+      "  SERVICES: Place each service item in the service list zone exactly once.\n" +
+      "  OFFER: Place special offer text in the coupon/offer zone.\n" +
+      "  FOOTER: Phone number left, address below phone, QR code right.\n\n" +
+      "QUALITY RULES:\n" +
+      "  Follow template layout zones exactly\n" +
+      "  Use template color palette shown — do not override\n" +
+      "  All text has drop shadows or dark-field backlighting\n" +
+      "  No hard rectangular photo borders\n" +
+      "  No text floating on bare flat color\n" +
+      "  No layout words as visible text (CENTER LEFT RIGHT ZONE)\n" +
+      "  No content not provided in the business data below"
     )
     : templateKey === "neighborhood-pro"
     ? (
@@ -988,90 +930,32 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     )
     : templateKey === "surprise-me"
     ? (
-      "DESIGN BRIEF — create a completely ORIGINAL postcard ad for this business. This is a premium print advertisement — design it as a piece of genuine graphic art that a viewer would pause on in a high-end regional magazine, not a coupon flyer insert.\n\n" +
-
-      `STYLE THEME — "${selectedTheme.name}" (mood: ${selectedTheme.mood}):\n` +
-      `PALETTE: ${selectedTheme.palette}\n` +
-      `TYPOGRAPHY: ${selectedTheme.typography}\n` +
-      `LAYOUT APPROACH: ${selectedTheme.layoutPortrait}\n\n` +
-
-      "CREATIVE DIRECTION: Make at least one unexpected visual choice — an unconventional background material, a surprising crop of the hero image, or a graphic element nobody expects in this category. Avoid every visual cliché associated with this business type.\n\n" +
-
-      `CATEGORY CLICHÉS — FORBIDDEN for this business type:\n${categoryCliches}\n\n` +
-
-      "FORBIDDEN STYLES — do NOT recreate any of these five existing styles:\n" +
-      "• Parchment/rustic: warm ivory bg, orange pennant ribbon, brush-stroke swoosh band\n" +
-      "• Chalkboard/bistro: dark chalkboard, wood table props, golden ticket coupon, gingham cloth\n" +
-      "• Forest-green contractor: deep green bg, white paint-brush splashes, lime-green script\n" +
-      "• Navy/gold home services: dark navy hexagonal badge, gold brush-stroke, circular icon band\n" +
-      "• Botanical/floral for trade services: roses, ferns, delicate florals, sage green watercolor, dusty rose backgrounds — these moods are wrong for HVAC, plumbing, roofing, electrical, and contractor businesses\n\n" +
-
-      "VISUAL CONSTRUCTION — MANDATORY:\n" +
-      "(a) NO hard rectangular photo borders — use blob mask, brush-stroke cutout, diagonal slash, arch shape, or gradient vignette\n" +
-      "(b) Background must have depth — atmospheric gradient, layered texture, or painterly wash. NEVER a flat solid color anywhere.\n" +
-      "(c) THREE DEPTH PLANES — each must be visually distinct from the others:\n" +
-      "PLANE 1 (background): Rich textured or atmospheric environment. Photographic depth or painterly quality. Tonal variation across the entire canvas. Never flat, never uniform.\n" +
-      "PLANE 2 (mid-layer): Graphic design elements — color bands, overlapping shapes, brushwork, translucent overlays — that bridge background and foreground. This layer is what makes the ad feel professionally designed rather than assembled.\n" +
-      "PLANE 3 (foreground): All text and logo elements at maximum contrast and sharpness. Drop shadows or dark-field backlighting mandatory on every text element.\n" +
-      "(d) HERO PHOTO COMPOSITING — the photo must feel EMBEDDED in the composition, not placed on top like a sticker:\n" +
-      "• Color grade the photo to match the overall palette\n" +
-      "• Add rim lighting or edge glow that echoes the background color\n" +
-      "• At least one photo edge must dissolve into the background via gradient fade, brushstroke mask, or organic vignette\n" +
-      "• Cinematic depth of field — sharp subject, atmospheric background blur\n" +
-      "(e) Every text element must have drop shadows, glows, or dark-field backlighting — no text floats on bare color\n" +
-      "(f) FILL EVERY SQUARE INCH — no empty zones, no bare padding, no wasted canvas area\n" +
-      "(g) Canvas boundary IS the ad boundary — no floating card illusion, no outer border or shadow frame\n\n" +
-
-      "REQUIRED CONTENT ZONES:\n" +
-      `HEADLINE: "${d.bizName}" — very large, dominant, readable in 1 second at full postcard size\n` +
-      (hasPhoto
-        ? `HERO PHOTO: IMAGE ${imgIdx > 1 ? imgIdx - 1 : 1} — composite the provided photo with organic mask, cinematic lighting, and edge blending into the composition — no rectangular frame.\n`
-        : `HERO PHOTO: AI-generated cinematic scene appropriate for this business — organic edges, atmospheric lighting, blended into composition.\n`) +
-      (hasLogo ? `LOGO: IMAGE ${logoImg} — pixel-perfect reproduction, zero stylization, zero color alteration.\n` : "") +
-      (d.tagline ? `TAGLINE: "${d.tagline}" — secondary visual prominence, clearly distinct from headline.\n` : "") +
-      (menuStr !== "  (none)"
-        ? `SERVICES/MENU: ${menuStr} — every item listed exactly once, in its own clearly legible list zone. If using icons beside each service:\n` +
-          "• Use minimal single-weight line-art icons only\n" +
-          "• NEVER use emoji-style, cartoon, or clip-art icons\n" +
-          "• NEVER use food-specific emoji (taco, pizza, burger icons)\n" +
-          "• Prefer a simple geometric bullet or dash over a cheap icon\n" +
-          "• No icon is always better than a low-quality icon\n"
-        : "") +
-      (d.offer
-        ? `SPECIAL OFFER: Must feel DESIGNED not templated. Choose exactly ONE of these specific shape treatments:\n` +
-          `OPTION A — DIAGONAL PARALLELOGRAM: The offer box is a parallelogram with angled left and right edges, not a rectangle. The diagonal cut gives it energy and motion.\n` +
-          `OPTION B — CIRCULAR STAMP: A circle or oval shape with a double-ring border and slight distressed ink texture. The offer text is centered inside the ring.\n` +
-          `OPTION C — TORN PAPER EDGE: The top edge of the offer zone has a torn/ripped paper texture. The bottom edge is clean. The shape reads as a torn-off coupon.\n` +
-          `OPTION D — OVERLAPPING RIBBON: A horizontal banner ribbon that overlaps/crosses the boundary between two zones, anchored by the design on both sides.\n` +
-          `Requirements for whichever option is chosen:\n` +
-          `• Luminance contrast with surrounding area at least 40%\n` +
-          `• "${d.offer}" — offer amount or headline is the largest text in this zone\n` +
-          (d.offerFine ? `• Fine print: "${d.offerFine}" — smaller, inside same offer zone.\n` : "") +
-          "• FORBIDDEN: plain rectangle with solid fill and border, rounded rectangle with simple stroke, any shape that reads as a standard digital UI button or card\n" +
-          "• NEVER place a QR code inside or adjacent to this offer zone — QR belongs ONLY in the footer bottom-right corner.\n"
-        : "") +
-      buildFooterZone(d.phone || "", fullAddress, "minimal") +
-      "FIRST-GLANCE TEST: A viewer seeing this ad for exactly one second must (a) instantly know what the business does and (b) feel a specific intended emotion — excitement, comfort, trust, appetite, safety, etc. Every single design element either serves that one-second impression or must be removed.\n\n" +
-
-      "QUALITY STANDARD:\n" +
-      "✗ No flat solid-color backgrounds anywhere on the canvas\n" +
-      "✗ No hard rectangular photo frames or borders\n" +
-      "✗ No text floating on bare flat color\n" +
-      "✗ No decorative filler text or placeholder patterns in the coupon zone\n" +
-      "✗ No visual clichés from the category forbidden list above\n" +
-      "✓ Three depth planes present and visually distinguishable\n" +
-      "✓ Hero photo with cinematic lighting and organic edge blending\n" +
-      "✓ Every text element has contrast treatment (shadow, glow, or backlit field)\n" +
-      "✓ Print-ready sharpness and detail throughout\n\n" +
-
-      "TYPOGRAPHIC RULES:\n" +
-      "• Headline text: very large, maximum weight, immediate visual dominance\n" +
-      "• NEVER repeat any word from the business name as a decorative element elsewhere\n" +
-      "• NEVER invent or add script accent words that are not part of the business name\n" +
-      "• NEVER render a website URL as visible text anywhere on the ad\n" +
-      "• NEVER render hex color codes, CSS values, or technical notation as visible text\n" +
-      "• NEVER render layout instruction words as visible text — words like CENTER, LEFT, RIGHT, ZONE, FIELD, LABEL, HEADER, FOOTER, PLACEHOLDER, COLUMN are layout directions not content and must never appear on the finished ad\n" +
-      "• NEVER add any text not explicitly provided in the business data below — invent no words, names, slogans, or labels"
+      "You are completing a postcard ad using the provided \n" +
+      "template image.\n\n" +
+      "TEMPLATE INSTRUCTIONS:\n" +
+      "  Follow the layout zones in the reference image exactly.\n" +
+      "  The template has been color-transformed — use the colors\n" +
+      "  shown in the reference image. Do not revert to any\n" +
+      "  original or default color palette.\n\n" +
+      "BUSINESS CONTENT TO PLACE:\n" +
+      `  HEADLINE: "${d.bizName}" — very large, dominant, placed\n` +
+      "  in the headline zone shown in the template.\n" +
+      (d.tagline ? `  TAGLINE: "${d.tagline}" — secondary prominence below headline.\n` : "") +
+      "  HERO PHOTO: " + (hasPhoto
+        ? "Supplied photo — composite into hero zone with organic edge blending. No hard rectangular border."
+        : "Generate a cinematic AI image for this business. Residential and human scale. Never commercial or industrial scale.") + "\n" +
+      (hasLogo ? "  LOGO: Reproduce supplied logo pixel-perfect in logo zone. Zero stylization.\n" : "") +
+      "  SERVICES: Place each service item in the service list zone exactly once.\n" +
+      "  OFFER: Place special offer text in the coupon/offer zone.\n" +
+      "  FOOTER: Phone number left, address below phone, QR code right.\n\n" +
+      "QUALITY RULES:\n" +
+      "  Follow template layout zones exactly\n" +
+      "  Use template color palette shown — do not override\n" +
+      "  All text has drop shadows or dark-field backlighting\n" +
+      "  No hard rectangular photo borders\n" +
+      "  No text floating on bare flat color\n" +
+      "  No layout words as visible text (CENTER LEFT RIGHT ZONE)\n" +
+      "  No content not provided in the business data below"
     )
     : templateKey === "brush-stroke"
     ? (

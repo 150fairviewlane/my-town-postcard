@@ -1,0 +1,41 @@
+Step 4: In adGenGrok.ts, find the surprise-me 
+outputRequirements block for portrait. It contains 
+the long freeform DESIGN BRIEF text. Replace the 
+entire surprise-me prompt string with this:
+
+"You are completing a postcard ad using the provided 
+template image.\n\n" +
+"TEMPLATE INSTRUCTIONS:\n" +
+"  Follow the layout zones in the reference image exactly.\n" +
+"  The template has been color-transformed — use the colors\n" +
+"  shown in the reference image. Do not revert to any\n" +
+"  original or default color palette.\n\n" +
+"BUSINESS CONTENT TO PLACE:\n" +
+`  HEADLINE: "${d.bizName}" — very large, dominant, placed\n` +
+"  in the headline zone shown in the template.\n" +
+(d.tagline ? `  TAGLINE: "${d.tagline}" — secondary prominence below headline.\n` : "") +
+"  HERO PHOTO: " + (hasPhoto
+ ? "Supplied photo — composite into hero zone with organic edge blending. No hard rectangular border."
+ : "Generate a cinematic AI image for this business. Residential and human scale. Never commercial or industrial scale.") + "\n" +
+(hasLogo ? "  LOGO: Reproduce supplied logo pixel-perfect in logo zone. Zero stylization.\n" : "") +
+"  SERVICES: Place each service item in the service list zone exactly once.\n" +
+"  OFFER: Place special offer text in the coupon/offer zone.\n" +
+"  FOOTER: Phone number left, address below phone, QR code right.\n\n" +
+"QUALITY RULES:\n" +
+"  Follow template layout zones exactly\n" +
+"  Use template color palette shown — do not override\n" +
+"  All text has drop shadows or dark-field backlighting\n" +
+"  No hard rectangular photo borders\n" +
+"  No text floating on bare flat color\n" +
+"  No layout words as visible text (CENTER LEFT RIGHT ZONE)\n" +
+"  No content not provided in the business data below"
+
+Apply the same replacement to the landscape 
+surprise-me outputRequirements block, adding this 
+line to TEMPLATE INSTRUCTIONS:
+"  This is landscape format — 3 inches wide by 2 
+ inches tall. Arrange content zones horizontally."
+
+Run typecheck after both changes. Report results.
+Do not remove SURPRISE_ME_THEMES or other infrastructure 
+yet — that is Step 5.
