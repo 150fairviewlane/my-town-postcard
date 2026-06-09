@@ -1,0 +1,187 @@
+I need four targeted fixes in the surprise-me ad generator. All changes go in one file only.
+
+Open ONLY this file: ./artifacts/api-server/src/routes/adGenGrok.ts
+
+Do not touch any other file. Read the file fully before making changes. Confirm the plan before writing code.
+
+# ==============================================================
+FIX 1 — Theme exclusion by industry category
+
+Find the surprise-me theme selection logic. It currently uses
+getDefaultThemeIndex to pick a theme based on industry, and a
+random selection for regenerations. Add a theme exclusion system
+so certain themes are never assigned to incompatible industries.
+
+After the SURPRISE_ME_THEMES array and getDefaultThemeIndex
+function, add this exclusion map:
+
+const THEME_EXCLUSIONS: Record<string, number[]> = {
+// Theme indices: 0=Midnight Luxe, 1=Coastal Bright,
+// 2=Industrial Edge, 3=Botanical Garden, 4=Urban Pop
+
+// Food businesses — Industrial Edge (concrete/hazard) is
+// wrong for appetite appeal. Never assign index 2.
+restaurant:  [2],
+pizza:       [2],
+bakery:      [2],
+cafe:        [2],
+“food”:      [2],
+
+// Healthcare/wellness — Industrial Edge feels harsh and
+// clinical in the wrong way. Never assign index 2.
+veterinary:  [2],
+dental:      [2],
+healthcare:  [2],
+medical:     [2],
+wellness:    [2],
+spa:         [2],
+salon:       [2],
+
+// Childcare/education — Industrial Edge inappropriate.
+childcare:   [2],
+education:   [2],
+school:      [2],
+
+// Default: no exclusions for contractor/trade industries
+// since Industrial Edge fits them well
+};
+
+Then update the theme selection logic to respect exclusions.
+Find where surpriseMeThemeIdx is computed. Replace the entire
+theme selection block with this:
+
+const surpriseMeDefaultIdx = getDefaultThemeIndex(d.industry);
+
+// Build exclusion list for this industry
+const industryLower = (d.industry || “”).toLowerCase();
+const excludedIndices = Object.entries(THEME_EXCLUSIONS)
+.filter(([key]) => industryLower.includes(key))
+.flatMap(([, indices]) => indices);
+
+// For first generation: use industry default unless excluded,
+// fall back to next non-excluded theme
+const getValidThemeIdx = (preferred: number): number => {
+if (!excludedIndices.includes(preferred)) return preferred;
+// Find next non-excluded theme cycling forward
+for (let i = 1; i < SURPRISE_ME_THEMES.length; i++) {
+const candidate = (preferred + i) % SURPRISE_ME_THEMES.length;
+if (!excludedIndices.includes(candidate)) return candidate;
+}
+return preferred; // fallback: use preferred if all excluded
+};
+
+const surpriseMeThemeIdx =
+d.generationIndex === 0
+? getValidThemeIdx(surpriseMeDefaultIdx)
+: (() => {
+const opts = SURPRISE_ME_THEMES
+.map((*, i) => i)
+.filter(i => i !== surpriseMeDefaultIdx)
+.filter(i => !excludedIndices.includes(i));
+// If no valid options, allow all non-default
+const fallbackOpts = opts.length > 0
+? opts
+: SURPRISE_ME_THEMES
+.map((*, i) => i)
+.filter(i => i !== surpriseMeDefaultIdx);
+return fallbackOpts[
+Math.floor(Math.random() * fallbackOpts.length)
+]!;
+})();
+
+const selectedTheme = SURPRISE_ME_THEMES[surpriseMeThemeIdx]!;
+
+# ==============================================================
+FIX 2 — Prevent “CENTER”, “LEFT”, “RIGHT” and other layout
+labels from appearing as visible text in the footer
+
+Find the TYPOGRAPHIC RULES section in the surprise-me prompt
+(both portrait and landscape blocks). It currently ends with
+rules about not rendering hex codes and URLs.
+
+Add these two lines at the end of the TYPOGRAPHIC RULES section
+in BOTH portrait and landscape surprise-me prompt blocks:
+
+• NEVER render layout instruction words as visible text —
+words like CENTER, LEFT, RIGHT, ZONE, FIELD, LABEL,
+HEADER, FOOTER, PLACEHOLDER, COLUMN are layout directions
+not content and must never appear on the finished ad
+• NEVER add any text not explicitly provided in the business
+data below — invent no words, names, slogans, or labels
+
+# ==============================================================
+FIX 3 — Improve service list icon quality
+
+Find the REQUIRED CONTENT ZONES section in the surprise-me
+prompt (both portrait and landscape blocks). Find the
+SERVICES/MENU line. Replace it with:
+
+SERVICES/MENU: Every item listed exactly once, in its own
+clearly legible list zone. If using icons beside each service:
+• Use minimal single-weight line-art icons only
+• NEVER use emoji-style, cartoon, or clip-art icons
+• NEVER use food-specific emoji (taco, pizza, burger icons)
+• Prefer a simple geometric bullet or dash over a cheap icon
+• No icon is always better than a low-quality icon
+
+# ==============================================================
+FIX 4 — Strengthen coupon box shape requirements
+
+Find the SPECIAL OFFER section in the surprise-me prompt
+(both portrait and landscape blocks). Replace the entire
+SPECIAL OFFER block with:
+
+SPECIAL OFFER: Must feel DESIGNED not templated. Choose
+exactly ONE of these specific shape treatments:
+OPTION A — DIAGONAL PARALLELOGRAM: The offer box is a
+parallelogram with angled left and right edges, not a
+rectangle. The diagonal cut gives it energy and motion.
+OPTION B — CIRCULAR STAMP: A circle or oval shape with
+a double-ring border and slight distressed ink texture.
+The offer text is centered inside the ring.
+OPTION C — TORN PAPER EDGE: The top edge of the offer
+zone has a torn/ripped paper texture. The bottom edge
+is clean. The shape reads as a torn-off coupon.
+OPTION D — OVERLAPPING RIBBON: A horizontal banner
+ribbon that overlaps/crosses the boundary between two
+zones, anchored by the design on both sides.
+
+Requirements for whichever option is chosen:
+• Luminance contrast with surrounding area at least 40%
+• Offer amount or headline is the largest text in this zone
+• FORBIDDEN: plain rectangle with solid fill and border,
+rounded rectangle with simple stroke, any shape that
+reads as a standard digital UI button or card
+
+# ==============================================================
+FIX 5 — Verify and test
+
+After all four fixes are applied:
+
+1. Run the prompt-size check:
+   pnpm –filter @workspace/api-server run check:prompt-size
+   Confirm zero violations. Report any over-limit combinations
+   without trimming.
+1. Run typecheck:
+   pnpm –filter @workspace/api-server run typecheck
+   Confirm zero new errors.
+1. Show me the theme that would be selected for these
+   industry + generationIndex combinations so I can verify
+   the exclusion logic works:
+- industry: “restaurant”, generationIndex: 0
+  (should NOT be Industrial Edge / index 2)
+- industry: “hvac”, generationIndex: 0
+  (Industrial Edge / index 2 is fine here)
+- industry: “dental”, generationIndex: 0
+  (should NOT be Industrial Edge / index 2)
+- industry: “restaurant”, generationIndex: 1
+  (regeneration — should not include Industrial Edge)
+   
+   Report the selected theme name and index for each.
+   Do not generate actual ads — just trace the logic and
+   report which theme index would be selected.
+
+Do not change any named templates (parchment-classic,
+made-fresh, neighborhood-pro, at-your-service,
+health-wellness). Do not change SURPRISE_ME_THEMES
+definitions. Do not touch any frontend files.
