@@ -18,6 +18,7 @@ import {
   markWebhookEventFailed,
   updateSubscriptionStatusByStripeId,
 } from "../lib/subscriptions";
+import { addMonths } from "../lib/subscriptionPricing";
 import { markSubscriptionAndSpotPaid } from "./subscriptions";
 
 /**
@@ -290,12 +291,19 @@ async function handleSpotSubscriptionCheckoutCompleted(
     return;
   }
 
+  // Set cancel_at on the Stripe subscription now that it exists.
+  // (cancel_at cannot be passed during Checkout Session creation.)
+  const cancelAtSeconds = Math.floor(
+    addMonths(new Date(), pending.commitmentTotalIssues).getTime() / 1000,
+  );
+  await stripe.subscriptions.update(stripeSubscription.id, { cancel_at: cancelAtSeconds } as any);
+
   await markSubscriptionAndSpotPaid({
     pendingRecordId: subscriptionRecordId,
     spotId,
     stripeSubscriptionId: stripeSubscription.id,
     stripeCustomerId,
-    cancelAtSeconds: stripeSubscription.cancel_at ?? null,
+    cancelAtSeconds,
     paymentRef: stripeSubscription.id,
     monthlyCents: pending.monthlyPriceCents,
     req,

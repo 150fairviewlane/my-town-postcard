@@ -211,9 +211,11 @@ router.post("/checkout/create-subscription-session", async (req, res): Promise<v
       subscriptionRecordId: String(pending.id),
       spotId: String(spot.id),
       commitmentType,
+      cancelAtSeconds: String(cancelAtSeconds),
     },
-    // `cancel_at` on subscription_data is valid in the Stripe API but
-    // missing from older Stripe-Node type defs — cast through any.
+    // cancel_at cannot be set on subscription_data during Checkout Session
+    // creation — Stripe rejects it. We set it on the subscription object
+    // immediately after checkout completes (confirm route + webhook handler).
     subscription_data: {
       metadata: {
         kind: "spot_subscription",
@@ -221,8 +223,7 @@ router.post("/checkout/create-subscription-session", async (req, res): Promise<v
         spotId: String(spot.id),
         commitmentType,
       },
-      cancel_at: cancelAtSeconds,
-    } as any,
+    },
     success_url: `${origin}/subscription-confirmation?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/checkout/${spot.id}?cancelled=1`,
   });
@@ -305,12 +306,19 @@ router.get("/checkout/subscription-confirm", async (req, res): Promise<void> => 
     return;
   }
 
+  // Set cancel_at on the Stripe subscription now that it exists.
+  // (cancel_at cannot be passed during Checkout Session creation.)
+  const cancelAtSeconds = Math.floor(
+    addMonths(new Date(), pending.commitmentTotalIssues).getTime() / 1000,
+  );
+  await stripe.subscriptions.update(stripeSubscriptionId, { cancel_at: cancelAtSeconds } as any);
+
   await markSubscriptionAndSpotPaid({
     pendingRecordId: pending.id,
     spotId: pending.initialSpotId,
     stripeSubscriptionId,
     stripeCustomerId,
-    cancelAtSeconds: stripeSubObj?.cancel_at ?? null,
+    cancelAtSeconds,
     paymentRef: stripeSubscriptionId, // store the sub id in orders.stripe_payment_intent_id slot
     monthlyCents: pending.monthlyPriceCents,
     req,
