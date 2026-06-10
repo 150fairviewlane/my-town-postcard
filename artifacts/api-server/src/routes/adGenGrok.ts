@@ -200,6 +200,271 @@ function buildFooterZone(
   );
 }
 
+interface IndustryPhotos {
+  hero:     string;
+  c1:       string;
+  c2:       string;
+  c3:       string;
+  p1:       string;
+  p2:       string;
+  outdoor:  string;
+  interior: string;
+}
+
+function getIndustryPhotos(industry: string): IndustryPhotos {
+  const ind = industry.toLowerCase();
+  if (ind.includes("hvac") || ind.includes("heating") || ind.includes("cooling") || ind.includes("air condition")) {
+    return {
+      hero:     "a technician in uniform servicing a rooftop HVAC unit, clear blue sky background",
+      c1:       "gleaming condenser units installed beside a home exterior",
+      c2:       "close-up of a digital thermostat on a clean white wall",
+      c3:       "happy homeowner relaxing in a comfortably cool living room",
+      p1:       "technician inspecting ductwork inside a clean utility room",
+      p2:       "modern air handler unit in a well-lit mechanical room",
+      outdoor:  "HVAC technician working on condenser units outside a suburban home",
+      interior: "bright clean utility room with a high-efficiency furnace and new ductwork",
+    };
+  }
+  if (ind.includes("plumb")) {
+    return {
+      hero:     "a licensed plumber professionally installing a fixture in a bright modern bathroom",
+      c1:       "gleaming new chrome faucet and sink in a clean bathroom",
+      c2:       "plumber's tool belt with wrenches and pipe fittings",
+      c3:       "happy homeowner in a beautifully renovated bathroom",
+      p1:       "under-sink plumbing with new copper pipes",
+      p2:       "water heater installation in a clean utility room",
+      outdoor:  "plumber unloading tools from a professional service van in a driveway",
+      interior: "bright modern kitchen with new plumbing fixtures under natural light",
+    };
+  }
+  if (ind.includes("electric")) {
+    return {
+      hero:     "a licensed electrician working on a breaker panel in a clean residential setting",
+      c1:       "modern electrical panel with labeled circuit breakers",
+      c2:       "electrician installing recessed lighting in a bright room",
+      c3:       "well-lit kitchen after professional lighting upgrade",
+      p1:       "electrician checking wiring with a digital multimeter",
+      p2:       "new smart outlet and USB charging port installation",
+      outdoor:  "electrician on a ladder installing exterior lighting on a home",
+      interior: "bright home interior with professionally installed pendant lights",
+    };
+  }
+  if (ind.includes("roof")) {
+    return {
+      hero:     "roofing crew installing new architectural shingles on a residential home",
+      c1:       "crisp new asphalt shingle roof on a beautiful suburban home",
+      c2:       "roofer applying flashing around a chimney",
+      c3:       "home exterior after complete roof replacement, strong curb appeal",
+      p1:       "shingle samples and roofing materials spread on a workbench",
+      p2:       "gutters and fascia freshly installed on a home",
+      outdoor:  "roofing team on a residential roof under a clear sky",
+      interior: "dry clean attic with new decking and insulation after re-roof",
+    };
+  }
+  if (ind.includes("lawn") || ind.includes("landscap") || ind.includes("garden")) {
+    return {
+      hero:     "a professional landscaper mowing a lush green residential lawn in bright sunlight",
+      c1:       "perfectly edged lawn with vibrant flower borders",
+      c2:       "landscaper pruning hedges into clean geometric shapes",
+      c3:       "beautiful patio garden with fresh mulch and colorful plantings",
+      p1:       "riding mower on a wide open suburban lawn",
+      p2:       "newly planted garden beds in front of a home",
+      outdoor:  "landscaping crew working on a manicured front yard",
+      interior: "bright sunlit backyard patio surrounded by lush mature landscaping",
+    };
+  }
+  if (ind.includes("paint")) {
+    return {
+      hero:     "a professional painter applying fresh paint on a home exterior with precision",
+      c1:       "freshly painted white exterior home with clean crisp trim",
+      c2:       "painter rolling smooth interior wall in warm neutral tones",
+      c3:       "beautifully painted living room with elegant accent wall",
+      p1:       "painter's brush and paint cans on a clean drop cloth",
+      p2:       "smooth freshly painted cabinet doors in a bright kitchen",
+      outdoor:  "crew painting a home exterior with scaffolding in bright daylight",
+      interior: "bright freshly painted living room with crisp white trim",
+    };
+  }
+  if (ind.includes("clean")) {
+    return {
+      hero:     "a professional cleaner in uniform vacuuming a bright pristine living room",
+      c1:       "sparkling clean kitchen with gleaming countertops and appliances",
+      c2:       "cleaner mopping a spotless hardwood floor",
+      c3:       "gleaming bathroom tile and mirrors after deep clean",
+      p1:       "cleaning supplies and microfiber cloths neatly arranged",
+      p2:       "bright clean home office after professional cleaning service",
+      outdoor:  "cleaning team arriving at a home in a professional branded van",
+      interior: "immaculate freshly cleaned living room bathed in natural light",
+    };
+  }
+  if (ind.includes("pest")) {
+    return {
+      hero:     "a pest control technician in uniform inspecting a home exterior",
+      c1:       "pest control professional applying treatment along a baseboard",
+      c2:       "clean pest-free kitchen with gleaming countertops",
+      c3:       "happy family in a comfortable pest-free home",
+      p1:       "technician setting a professional pest trap device",
+      p2:       "pest control equipment and protective gear in a service van",
+      outdoor:  "pest control technician treating the perimeter of a suburban home",
+      interior: "bright clean kitchen and pantry after professional pest treatment",
+    };
+  }
+  if (ind.includes("dent")) {
+    return {
+      hero:     "a friendly dentist examining a patient in a modern dental office",
+      c1:       "bright modern dental operatory with state-of-the-art equipment",
+      c2:       "patient smiling with a beautiful healthy smile after treatment",
+      c3:       "clean dental reception area with natural light and plants",
+      p1:       "dentist reviewing digital X-rays on a high-resolution monitor",
+      p2:       "hygienist performing a professional teeth cleaning",
+      outdoor:  "welcoming modern dental office building exterior",
+      interior: "bright cheerful dental waiting room with comfortable seating",
+    };
+  }
+  if (ind.includes("medical") || ind.includes("health") || ind.includes("clinic") || ind.includes("doctor") || ind.includes("physician")) {
+    return {
+      hero:     "a friendly doctor in a white coat consulting with a patient in a modern exam room",
+      c1:       "bright clean modern medical exam room with professional equipment",
+      c2:       "doctor reviewing patient records on a tablet",
+      c3:       "welcoming medical clinic reception area with natural light",
+      p1:       "nurse taking a patient's vitals in a clinic",
+      p2:       "modern diagnostic equipment in a clean exam room",
+      outdoor:  "modern medical clinic building exterior with professional signage",
+      interior: "bright comfortable waiting room with natural light and plants",
+    };
+  }
+  if (ind.includes("vet") || ind.includes("pet") || ind.includes("animal")) {
+    return {
+      hero:     "a smiling veterinarian examining a healthy golden retriever on a clinic table",
+      c1:       "vet technician comforting a cat during a wellness exam",
+      c2:       "happy dog owner reuniting with their pet after treatment",
+      c3:       "bright clean modern veterinary exam room",
+      p1:       "puppy getting a checkup at a friendly animal clinic",
+      p2:       "veterinarian reviewing pet health records on a tablet",
+      outdoor:  "welcoming animal hospital exterior with a pet-friendly entrance",
+      interior: "warm friendly veterinary waiting room with natural light",
+    };
+  }
+  if (ind.includes("auto") || ind.includes("car") || ind.includes("mechanic") || ind.includes("tire")) {
+    return {
+      hero:     "a skilled auto mechanic servicing a car in a clean professional garage",
+      c1:       "mechanic performing a precision oil change under a lifted vehicle",
+      c2:       "clean modern auto service bay with professional equipment",
+      c3:       "happy customer picking up their freshly serviced car",
+      p1:       "technician using diagnostic equipment on a vehicle",
+      p2:       "new tires installed on a car, gleaming alloy wheels",
+      outdoor:  "clean professional auto service shop exterior with customer cars",
+      interior: "spotless auto service bay with a car on a hydraulic lift",
+    };
+  }
+  if (ind.includes("real estate") || ind.includes("realt") || ind.includes("home sale") || ind.includes("property")) {
+    return {
+      hero:     "a smiling real estate agent standing in front of a beautiful residential home",
+      c1:       "bright open-concept kitchen in a staged home for sale",
+      c2:       "real estate agent showing a family a beautiful living room",
+      c3:       "beautifully landscaped home exterior with a sold sign",
+      p1:       "cozy master bedroom with natural light and modern decor",
+      p2:       "inviting backyard patio of a home for sale",
+      outdoor:  "stunning curb appeal of a for-sale home in a friendly neighborhood",
+      interior: "bright spacious living room with hardwood floors and large windows",
+    };
+  }
+  if (ind.includes("restaurant") || ind.includes("food") || ind.includes("cafe") || ind.includes("bakery") || ind.includes("diner") || ind.includes("bistro") || ind.includes("pizza") || ind.includes("grill") || ind.includes("bar")) {
+    return {
+      hero:     "a beautifully plated signature dish with vibrant colors under warm restaurant lighting",
+      c1:       "chef preparing fresh ingredients in a professional kitchen",
+      c2:       "cozy inviting restaurant dining room with warm ambient lighting",
+      c3:       "close-up of a tempting dessert or specialty drink",
+      p1:       "sizzling pan of fresh seasonal ingredients being tossed",
+      p2:       "artfully arranged appetizers on a rustic wooden board",
+      outdoor:  "charming restaurant exterior with warm lighting and inviting entrance",
+      interior: "warm cozy restaurant interior with diners enjoying their meals",
+    };
+  }
+  if (ind.includes("salon") || ind.includes("beauty") || ind.includes("hair") || ind.includes("nail") || ind.includes("spa") || ind.includes("barber")) {
+    return {
+      hero:     "a skilled stylist creating a beautiful hair transformation in a modern salon",
+      c1:       "gorgeous finished hairstyle under professional studio lighting",
+      c2:       "clean modern salon interior with styling stations and mirrors",
+      c3:       "happy client smiling at their reflection in a salon mirror",
+      p1:       "stylist applying highlights with precision foils",
+      p2:       "luxurious hair care products and tools neatly arranged",
+      outdoor:  "stylish modern salon storefront with welcoming signage",
+      interior: "bright airy salon interior with natural light and modern decor",
+    };
+  }
+  if (ind.includes("gym") || ind.includes("fitness") || ind.includes("workout") || ind.includes("training") || ind.includes("yoga") || ind.includes("crossfit")) {
+    return {
+      hero:     "a personal trainer motivating a client through a dynamic workout in a modern gym",
+      c1:       "rows of clean modern cardio and strength equipment in a bright gym",
+      c2:       "group fitness class in an energetic bright studio",
+      c3:       "athlete completing a strength training session with proper form",
+      p1:       "close-up of weights and gym equipment in a professional facility",
+      p2:       "clean locker room with modern amenities",
+      outdoor:  "modern fitness center building exterior with motivational signage",
+      interior: "bright spacious gym floor with high-end equipment and natural light",
+    };
+  }
+  if (ind.includes("insur")) {
+    return {
+      hero:     "a friendly insurance agent meeting with a family in a professional office",
+      c1:       "insurance agent reviewing a policy with a smiling client",
+      c2:       "happy family standing in front of their protected home",
+      c3:       "professional modern insurance office with welcoming decor",
+      p1:       "agent shaking hands with a satisfied client",
+      p2:       "insurance forms and documents on a clean organized desk",
+      outdoor:  "professional insurance office building exterior",
+      interior: "bright welcoming insurance office lobby with comfortable seating",
+    };
+  }
+  if (ind.includes("daycare") || ind.includes("child") || ind.includes("preschool") || ind.includes("kinder")) {
+    return {
+      hero:     "happy children playing and learning in a bright colorful daycare classroom",
+      c1:       "teacher reading to a group of engaged young children",
+      c2:       "colorful safe outdoor play area with happy children",
+      c3:       "clean bright classroom with learning materials and cheerful decor",
+      p1:       "children doing arts and crafts at a colorful table",
+      p2:       "teacher comforting and playing with toddlers",
+      outdoor:  "inviting daycare building exterior with safe fenced playground",
+      interior: "warm safe daycare room with age-appropriate toys and natural light",
+    };
+  }
+  if (ind.includes("financ") || ind.includes("account") || ind.includes("tax") || ind.includes("wealth") || ind.includes("invest") || ind.includes("bank")) {
+    return {
+      hero:     "a professional financial advisor consulting with a client in a modern office",
+      c1:       "financial advisor reviewing growth charts with a satisfied client",
+      c2:       "clean modern financial office with large windows",
+      c3:       "happy couple reviewing their financial plan",
+      p1:       "professional reviewing financial documents at a tidy desk",
+      p2:       "modern laptop displaying investment portfolio performance",
+      outdoor:  "professional financial services office building exterior",
+      interior: "bright modern financial office with clean desk and natural light",
+    };
+  }
+  if (ind.includes("photo")) {
+    return {
+      hero:     "a professional photographer composing a portrait in a well-equipped studio",
+      c1:       "beautifully lit family portrait captured by a professional",
+      c2:       "wedding couple embracing in a romantic outdoor setting",
+      c3:       "photographer reviewing stunning shots on a camera LCD",
+      p1:       "professional camera with prime lens on a clean studio surface",
+      p2:       "beautifully framed prints displayed in a photography studio",
+      outdoor:  "photographer capturing a couple in a golden-hour outdoor session",
+      interior: "professional photography studio with softboxes and clean white backdrop",
+    };
+  }
+  return {
+    hero:     `a professional ${industry} business providing excellent service to happy customers`,
+    c1:       `professional ${industry} work being performed by a skilled technician`,
+    c2:       `a satisfied customer with a completed ${industry} project`,
+    c3:       `${industry} professional tools and equipment ready for service`,
+    p1:       `${industry} specialist at work in a clean professional setting`,
+    p2:       `${industry} team providing friendly professional service`,
+    outdoor:  `${industry} business exterior with professional signage and welcoming entrance`,
+    interior: `clean professional ${industry} workspace with natural light`,
+  };
+}
+
 // ── POST /api/grok-ad-generator/generate ─────────────────────────────────────
 router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   const parsed = GenerateSchema.safeParse(req.body);
@@ -312,6 +577,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   const fullAddress = [d.address, d.city].filter(Boolean).join(", ") || "(none)";
   const hasPhoto    = !!d.photoUrl;
   const hasLogo     = !!d.logoData;
+  const ipc         = getIndustryPhotos(d.industry);
 
   // Website is intentionally excluded — a QR code graphic replaces it in the footer
   const businessBlock = [
@@ -541,7 +807,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "  ZONE 2 — HERO PHOTO (upper-right, full-bleed):\n" +
       (hasPhoto
         ? `    Seamlessly composite IMAGE 2 into the upper-right zone. Clean diagonal/curved cut where photo meets the green background. No rectangular border.\n\n`
-        : "    Generate a photorealistic outdoor service scene — bright daylight, vibrant. Full bleed into upper-right zone; no rectangular border.\n\n") +
+        : `    Generate a photorealistic image: ${ipc.outdoor}. Full bleed into upper-right zone; no rectangular border.\n\n`) +
       "  ZONE 3 — SERVICE PANELS (middle horizontal row):\n" +
       (menuStr !== "  (none)"
         ? `    Render EXACTLY ${menuCount} diagonal-cut photo panel${menuCount !== 1 ? "s" : ""} — one per service listed. ` +
@@ -575,7 +841,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "  ZONE 3 — HERO PHOTO (upper-right, large photo zone):\n" +
       (hasPhoto
         ? `    Composite IMAGE 2 — blend left edge into the background; gold brush-stroke overlaps the photo at top. No hard border.\n\n`
-        : "    Generate professional tools/equipment or home-service scene. Fill upper-right zone, left edge blends naturally.\n\n") +
+        : `    Generate a photorealistic image: ${ipc.hero}. Fill upper-right zone, left edge blends naturally.\n\n`) +
       "  ZONE 4 — SERVICE BADGES (wide dark navy band, center full width):\n" +
       "    Four circular white icon service badges on the navy band.\n" +
       (menuStr !== "  (none)"
@@ -602,7 +868,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       (hasPhoto
         ? `    Composite IMAGE 2 into the upper-left organic teal blob zone — edges blend naturally into the teal shape. Professional wellness lighting.\n` +
           "    Generate a complementary second clinic or wellness image for any remaining blob zone.\n\n"
-        : "    Generate two photorealistic clinic or wellness images for the teal blob zones. Edges blend naturally — no rectangular borders.\n\n") +
+        : `    Generate two photorealistic images for the teal blob zones: (1) ${ipc.p1}; (2) ${ipc.p2}. Edges blend naturally — no rectangular borders.\n\n`) +
       `  ZONE 2 — HEADLINE (large rounded-rectangle white panel, upper-center):\n` +
       `    "${d.bizName}" in bold condensed all-caps sans-serif — very large, dark teal or near-black. Each word EXACTLY ONCE — NEVER repeat.\n\n` +
       (d.tagline ? `  ZONE 3 — TAGLINE (teal pill-shaped bar below the white panel):\n    "${d.tagline}" in clean white sans-serif, centered inside the teal pill bar.\n\n` : "") +
@@ -635,7 +901,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "  ZONE 1 — HERO PHOTO (left half, large circular frame with dark swoosh border):\n" +
       (hasPhoto
         ? `    Composite IMAGE 2 into the large circular photo frame on the left half — a dark organic brush-stroke swoosh curves around the left side; keep it visible as a framing element. Blend edges naturally into the circular mask — no hard rectangular border. Professional cinematic lighting.\n\n`
-        : `    Generate a photorealistic hero scene for this home-services business — a craftsman house exterior with a professional tool bag in the foreground, lush greenery. Place inside the large circular frame with the dark organic swoosh curving around the left. No rectangular border.\n\n`) +
+        : `    Generate a photorealistic hero scene: ${ipc.hero}. Place inside the large circular frame with the dark organic swoosh curving around the left. No rectangular border.\n\n`) +
 
       "  ZONE 2 — LOGO BADGE (upper-right, dark olive green hexagonal badge):\n" +
       (hasLogo
@@ -698,7 +964,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "  ZONE 3 — HERO PHOTO (upper-right, wok/cooking action scene with flames):\n" +
       (hasPhoto
         ? `    Composite IMAGE 2 — dramatic cooking scene. Natural edges blending into dark background; no hard rectangular border. Cinematic lighting with flame and steam effects.\n\n`
-        : `    Generate a dramatic photorealistic hero food scene — sizzling wok, flames, vibrant fresh ingredients tossed mid-air. Natural edges blending into dark background; no hard border.\n\n`) +
+        : `    Generate a dramatic photorealistic hero scene: ${ipc.hero}. Natural edges blending into dark background; no hard border.\n\n`) +
 
       (d.tagline
         ? `  ZONE 4 — TAGLINE BANNER (center, wide parchment/kraft torn-edge banner):\n` +
@@ -741,7 +1007,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       (d.tagline ? `  TAGLINE: "${d.tagline}" — secondary prominence below headline.\n` : "") +
       "  HERO PHOTO: " + (hasPhoto
         ? "Supplied photo — composite into hero zone with organic edge blending. No hard rectangular border."
-        : "Generate a cinematic AI image for this business. Residential and human scale. Never commercial or industrial scale.") + "\n" +
+        : `Generate a photorealistic image: ${ipc.hero}. Residential and human scale.`) + "\n" +
       (hasLogo ? "  LOGO: Reproduce supplied logo pixel-perfect in logo zone. Zero stylization.\n" : "") +
       "  SERVICES: Place each service item in the service list zone exactly once.\n" +
       "  OFFER: Place special offer text in the coupon/offer zone.\n" +
@@ -780,7 +1046,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           "    • Fill the entire upper-right zone with the photo — no rectangular frame or border.\n" +
           "    • Left edge: a clean diagonal or curved cut where photo meets the green background (match template exactly).\n" +
           "    • Professional outdoor lighting, vibrant color, cinematic quality. The photo must look native to the design.\n\n"
-        : `    Generate a photorealistic outdoor service scene appropriate for this business — bright daylight, vibrant green tones, professional composition. Fill the entire upper-right zone with no rectangular border.\n\n`) +
+        : `    Generate a photorealistic image: ${ipc.outdoor}. Fill the entire upper-right zone with no rectangular border.\n\n`) +
 
       (menuStr !== "  (none)"
         ? `  ZONE 4 — SERVICES PANELS (EXACTLY ${menuCount} panel${menuCount !== 1 ? "s" : ""}, middle horizontal row):\n` +
@@ -832,7 +1098,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           "    • Fill the entire upper-right area with the photo — blend the left edge naturally into the background; no hard rectangular border.\n" +
           "    • The gold/yellow brush stroke in the upper portion overlaps the photo zone — keep it visible overlapping the image.\n" +
           "    • Professional lighting, vibrant color, cinematic quality. Photo must look native to the design.\n\n"
-        : `    Generate a photorealistic hero image of tools, equipment, or a professional at work — appropriate for this home-services business. Fill the upper-right zone with no rectangular border, blending naturally into the off-white background.\n\n`) +
+        : `    Generate a photorealistic image: ${ipc.hero}. Fill the upper-right zone with no rectangular border, blending naturally into the off-white background.\n\n`) +
 
       "  ZONE 4 — SERVICE ICONS (on the navy horizontal band, center):\n" +
       "    Reproduce the wide dark navy blue horizontal band spanning the full card width.\n" +
@@ -870,7 +1136,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       (d.tagline ? `  TAGLINE: "${d.tagline}" — secondary prominence below headline.\n` : "") +
       "  HERO PHOTO: " + (hasPhoto
         ? "Supplied photo — composite into hero zone with organic edge blending. No hard rectangular border."
-        : "Generate a cinematic AI image for this business. Residential and human scale. Never commercial or industrial scale.") + "\n" +
+        : `Generate a photorealistic image: ${ipc.hero}. Residential and human scale.`) + "\n" +
       (hasLogo ? "  LOGO: Reproduce supplied logo pixel-perfect in logo zone. Zero stylization.\n" : "") +
       "  SERVICES: Place each service item in the service list zone exactly once.\n" +
       "  OFFER: Place special offer text in the coupon/offer zone.\n" +
@@ -894,7 +1160,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           "    • The photo sits inside a perfect circle. A dark organic brush-stroke swoosh curves around the left side — keep this dark swoosh visible as a framing element.\n" +
           "    • Blend edges naturally into the circular mask — no hard rectangular border outside the circle.\n" +
           "    • Professional lighting, cinematic quality.\n\n"
-        : `    Generate a photorealistic hero scene for this home-services business (craftsman house exterior with professional tool bag foreground, lush greenery) inside the large circular frame with the dark organic swoosh curving around the left. No rectangular border.\n\n`) +
+        : `    Generate a photorealistic hero scene: ${ipc.hero}. Place inside the large circular frame with the dark organic swoosh curving around the left. No rectangular border.\n\n`) +
 
       "  ZONE 2 — LOGO BADGE (upper-right, dark olive green hexagonal badge):\n" +
       (hasLogo
@@ -945,7 +1211,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       (hasPhoto
         ? `    Seamlessly composite IMAGE 2 into the upper-right organic teal blob photo zone — no hard rectangular border, natural edges blending into the teal shape.\n` +
           "    Generate a second complementary wellness/clinic image for the upper-left blob zone.\n\n"
-        : "    Generate two photorealistic clinic or wellness imagery photos — one for each upper blob zone (bright reception or treatment room; calming nature or lifestyle detail). No rectangular borders — blend naturally into the teal blob shapes.\n\n") +
+        : `    Generate two photorealistic images — one for each upper blob zone: (1) ${ipc.p1}; (2) ${ipc.p2}. No rectangular borders — blend naturally into the teal blob shapes.\n\n`) +
 
       "  ZONE 2 — HEADLINE (center, inside the large rounded-rectangle white panel):\n" +
       `    Business name: "${d.bizName}" in bold condensed all-caps sans-serif — very large, dark teal or near-black, maximum weight.\n` +
@@ -969,7 +1235,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           "    Reproduce the four-panel row with circular teal icon badges (spine, massage, leaf/wellness, doctor) and white rounded-rectangle text boxes relevant to this practice type.\n\n") +
 
       "  ZONE 5 — LOWER PHOTOS (organic blob shapes):\n" +
-      "    Left: generate a photorealistic reception or waiting-room scene inside an organic curved blob shape.\n" +
+      `    Left: generate a photorealistic scene: ${ipc.interior}. Place inside an organic curved blob shape.\n` +
       "    Right: place a teal stethoscope or relevant medical prop on a dark teal circular blob shape.\n\n" +
 
       (d.offer
@@ -1008,7 +1274,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "  ZONE 3 — HERO FOOD PHOTO (upper-right, dramatic wok/cooking action scene):\n" +
       (hasPhoto
         ? `    Composite IMAGE 2 into the upper-right hero zone — dramatic food/cooking action. Natural edges blending into the dark background; no hard rectangular border. Cinematic lighting with flame and steam effects.\n\n`
-        : `    Generate a dramatic photorealistic hero food scene — sizzling wok, flames, vibrant fresh ingredients tossed mid-air. Fill upper-right zone with natural edges blending into dark background; no hard border.\n\n`) +
+        : `    Generate a dramatic photorealistic hero scene: ${ipc.hero}. Fill upper-right zone with natural edges blending into dark background; no hard border.\n\n`) +
 
       (d.tagline
         ? `  ZONE 4 — TAGLINE BANNER (center, wide parchment/kraft torn-edge banner):\n` +
@@ -1032,6 +1298,54 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       buildFooterZone(d.phone || "", fullAddress, "inline-icon") +
       "TYPOGRAPHIC RULES:\n" +
       "  • Business name: bold condensed all-caps slab serif, white or cream, inside the deep red torn-paper panel\n" +
+      "  • NEVER repeat any word from the business name\n" +
+      "  • Fine print: smallest text, still legible\n" +
+      "  • NEVER render the website URL as visible text\n" +
+      "  • NEVER render any hex color code or CSS value as visible text anywhere in the ad"
+    )
+    : templateKey === "home-elegance"
+    ? (
+      "LAYOUT — reproduce the Home Elegance template zones exactly:\n\n" +
+
+      (hasLogo
+        ? `  ZONE 1 — LOGO (IMAGE ${logoImg} centered inside the dark navy hexagonal badge, upper-left):\n` +
+          "    Scale to fit with clear margin; preserve exact logo colors. The hexagonal badge retains its dark navy border.\n\n"
+        : "") +
+
+      `  ZONE 2 — HEADLINE (inside the cream blob wave area, left-center):\n` +
+      `    "${d.bizName}" in bold condensed all-caps slab serif — very large, dark navy, maximum weight.\n` +
+      `    CRITICAL: Render the name EXACTLY — "${d.bizName}". Each word EXACTLY ONCE. NEVER repeat.\n` +
+      (d.tagline ? `    Tagline: "${d.tagline}" in clean italic script, dark navy, below the headline.\n` : "") + "\n" +
+
+      "  ZONE 3 — HERO PHOTO (upper-right, large photo zone):\n" +
+      (hasPhoto
+        ? `    Take IMAGE 2 and SEAMLESSLY COMPOSITE it into the upper-right hero photo zone — blend left and bottom edges naturally into the cream background; no hard rectangular border. Cinematic lighting.\n\n`
+        : `    Generate a photorealistic image: ${ipc.hero}. Fill the upper-right zone; blend edges naturally into the cream background; no hard border.\n\n`) +
+
+      "  ZONE 3B — CIRCULAR PHOTOS (three overlapping circles, middle-right area):\n" +
+      "    Generate three perfectly circular-cropped photos with subtle gold ring accents:\n" +
+      `    Circle 1: ${ipc.c1}\n` +
+      `    Circle 2: ${ipc.c2}\n` +
+      `    Circle 3: ${ipc.c3}\n\n` +
+
+      (menuStr !== "  (none)"
+        ? `  ZONE 4 — SERVICE TILES (wide dark navy lower area — EXACTLY ${menuCount} tile${menuCount !== 1 ? "s" : ""}):\n` +
+          `    Render EXACTLY ${menuCount} rounded-rectangle service tile${menuCount !== 1 ? "s" : ""} in the dark navy band — one per service. Each tile: circular dark navy icon badge on top, service name in cream below.\n` +
+          "    Do NOT add extra tiles or place the Special Offer in any tile.\n" +
+          `    Services: ${menuStr}\n    Each service exactly once.\n\n`
+        : "  ZONE 4 — SERVICE TILES (wide dark navy lower area):\n" +
+          "    Four rounded-rectangle service card tiles with circular dark navy icon badges (house, tools, leaf, people).\n\n") +
+
+      (d.offer
+        ? "  ZONE 5 — SPECIAL OFFER (visually distinct bordered box, lower area):\n" +
+          `    Render "${d.offer}" in bold dark navy text, prominent.\n` +
+          (d.offerFine ? `    Fine print: "${d.offerFine}" smaller below.\n` : "") +
+          "    NEVER place a QR code inside or adjacent to this coupon zone.\n\n"
+        : "") +
+
+      buildFooterZone(d.phone || "", fullAddress, "circular-badge") +
+      "TYPOGRAPHIC RULES:\n" +
+      "  • Headline: bold condensed all-caps slab serif, dark navy, very large\n" +
       "  • NEVER repeat any word from the business name\n" +
       "  • Fine print: smallest text, still legible\n" +
       "  • NEVER render the website URL as visible text\n" +
@@ -1064,7 +1378,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           "    • Match the lighting, shadows, perspective, and color grading to the warm, appetizing commercial food photography style of a high-end restaurant ad.\n" +
           "    • The food should look like it BELONGS in the design — not pasted on top. Adjust edges, add subtle plate shadows or gradient fade as needed for realism.\n" +
           "    • Preserve the dark painted brush-stroke swoosh behind and around the photo area exactly as in the template.\n\n"
-        : `    Generate a photorealistic, appetizing hero image for this business — cinematic quality, appetizing styling, vibrant color. Blend it naturally into the dark brush-stroke background with no hard rectangular border.\n\n`) +
+        : `    Generate a photorealistic hero image: ${ipc.hero}. Cinematic quality, vibrant color. Blend it naturally into the dark brush-stroke background with no hard rectangular border.\n\n`) +
 
       (menuStr !== "  (none)"
         ? "  ZONE 4 — MENU / SERVICES (left-center card area):\n" +
