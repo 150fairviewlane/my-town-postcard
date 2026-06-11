@@ -94,6 +94,273 @@ export function buildFooterZone(phone: string, address: string, isLandscape = fa
   );
 }
 
+// ── Industry photo descriptions ───────────────────────────────────────────────
+
+export interface IndustryPhotos {
+  hero:     string;
+  c1:       string;
+  c2:       string;
+  c3:       string;
+  p1:       string;
+  p2:       string;
+  outdoor:  string;
+  interior: string;
+}
+
+export function getIndustryPhotos(industry: string): IndustryPhotos {
+  const ind = industry.toLowerCase();
+  if (ind.includes("hvac") || ind.includes("heating") || ind.includes("cooling") || ind.includes("air condition")) {
+    return {
+      hero:     "a technician in uniform servicing a rooftop HVAC unit, clear blue sky background",
+      c1:       "gleaming condenser units installed beside a home exterior",
+      c2:       "close-up of a digital thermostat on a clean white wall",
+      c3:       "happy homeowner relaxing in a comfortably cool living room",
+      p1:       "technician inspecting ductwork inside a clean utility room",
+      p2:       "modern air handler unit in a well-lit mechanical room",
+      outdoor:  "HVAC technician working on condenser units outside a suburban home",
+      interior: "bright clean utility room with a high-efficiency furnace and new ductwork",
+    };
+  }
+  if (ind.includes("plumb")) {
+    return {
+      hero:     "a licensed plumber professionally installing a fixture in a bright modern bathroom",
+      c1:       "gleaming new chrome faucet and sink in a clean bathroom",
+      c2:       "plumber's tool belt with wrenches and pipe fittings",
+      c3:       "happy homeowner in a beautifully renovated bathroom",
+      p1:       "under-sink plumbing with new copper pipes",
+      p2:       "water heater installation in a clean utility room",
+      outdoor:  "plumber unloading tools from a professional service van in a driveway",
+      interior: "bright modern kitchen with new plumbing fixtures under natural light",
+    };
+  }
+  if (ind.includes("electric")) {
+    return {
+      hero:     "a licensed electrician working on a breaker panel in a clean residential setting",
+      c1:       "modern electrical panel with labeled circuit breakers",
+      c2:       "electrician installing recessed lighting in a bright room",
+      c3:       "well-lit kitchen after professional lighting upgrade",
+      p1:       "electrician checking wiring with a digital multimeter",
+      p2:       "new smart outlet and USB charging port installation",
+      outdoor:  "electrician on a ladder installing exterior lighting on a home",
+      interior: "bright home interior with professionally installed pendant lights",
+    };
+  }
+  if (ind.includes("roof")) {
+    return {
+      hero:     "roofing crew installing new architectural shingles on a residential home",
+      c1:       "crisp new asphalt shingle roof on a beautiful suburban home",
+      c2:       "roofer applying flashing around a chimney",
+      c3:       "home exterior after complete roof replacement, strong curb appeal",
+      p1:       "shingle samples and roofing materials spread on a workbench",
+      p2:       "gutters and fascia freshly installed on a home",
+      outdoor:  "roofing team on a residential roof under a clear sky",
+      interior: "dry clean attic with new decking and insulation after re-roof",
+    };
+  }
+  if (ind.includes("lawn") || ind.includes("landscap") || ind.includes("garden")) {
+    return {
+      hero:     "a professional landscaper mowing a lush green residential lawn in bright sunlight",
+      c1:       "perfectly edged lawn with vibrant flower borders",
+      c2:       "landscaper pruning hedges into clean geometric shapes",
+      c3:       "beautiful patio garden with fresh mulch and colorful plantings",
+      p1:       "riding mower on a wide open suburban lawn",
+      p2:       "newly planted garden beds in front of a home",
+      outdoor:  "landscaping crew working on a manicured front yard",
+      interior: "bright sunlit backyard patio surrounded by lush mature landscaping",
+    };
+  }
+  if (ind.includes("paint")) {
+    return {
+      hero:     "a professional painter applying fresh paint on a home exterior with precision",
+      c1:       "freshly painted white exterior home with clean crisp trim",
+      c2:       "painter rolling smooth interior wall in warm neutral tones",
+      c3:       "beautifully painted living room with elegant accent wall",
+      p1:       "painter's brush and paint cans on a clean drop cloth",
+      p2:       "smooth freshly painted cabinet doors in a bright kitchen",
+      outdoor:  "crew painting a home exterior with scaffolding in bright daylight",
+      interior: "bright freshly painted living room with crisp white trim",
+    };
+  }
+  if (ind.includes("clean")) {
+    return {
+      hero:     "a professional cleaner in uniform vacuuming a bright pristine living room",
+      c1:       "sparkling clean kitchen with gleaming countertops and appliances",
+      c2:       "cleaner mopping a spotless hardwood floor",
+      c3:       "gleaming bathroom tile and mirrors after deep clean",
+      p1:       "cleaning supplies and microfiber cloths neatly arranged",
+      p2:       "bright clean home office after professional cleaning service",
+      outdoor:  "cleaning team arriving at a home in a professional branded van",
+      interior: "immaculate freshly cleaned living room bathed in natural light",
+    };
+  }
+  if (ind.includes("pest")) {
+    return {
+      hero:     "a pest control technician in uniform inspecting a home exterior",
+      c1:       "pest control professional applying treatment along a baseboard",
+      c2:       "clean pest-free kitchen with gleaming countertops",
+      c3:       "happy family in a comfortable pest-free home",
+      p1:       "technician setting a professional pest trap device",
+      p2:       "pest control equipment and protective gear in a service van",
+      outdoor:  "pest control technician treating the perimeter of a suburban home",
+      interior: "bright clean kitchen and pantry after professional pest treatment",
+    };
+  }
+  if (ind.includes("dent")) {
+    return {
+      hero:     "a friendly dentist examining a patient in a modern dental office",
+      c1:       "bright modern dental operatory with state-of-the-art equipment",
+      c2:       "patient smiling with a beautiful healthy smile after treatment",
+      c3:       "clean dental reception area with natural light and plants",
+      p1:       "dentist reviewing digital X-rays on a high-resolution monitor",
+      p2:       "hygienist performing a professional teeth cleaning",
+      outdoor:  "welcoming modern dental office building exterior",
+      interior: "bright cheerful dental waiting room with comfortable seating",
+    };
+  }
+  if (ind.includes("medical") || ind.includes("health") || ind.includes("clinic") || ind.includes("doctor") || ind.includes("physician")) {
+    return {
+      hero:     "a friendly doctor in a white coat consulting with a patient in a modern exam room",
+      c1:       "bright clean modern medical exam room with professional equipment",
+      c2:       "doctor reviewing patient records on a tablet",
+      c3:       "welcoming medical clinic reception area with natural light",
+      p1:       "nurse taking a patient's vitals in a clinic",
+      p2:       "modern diagnostic equipment in a clean exam room",
+      outdoor:  "modern medical clinic building exterior with professional signage",
+      interior: "bright comfortable waiting room with natural light and plants",
+    };
+  }
+  if (ind.includes("vet") || ind.includes("pet") || ind.includes("animal")) {
+    return {
+      hero:     "a smiling veterinarian examining a healthy golden retriever on a clinic table",
+      c1:       "vet technician comforting a cat during a wellness exam",
+      c2:       "happy dog owner reuniting with their pet after treatment",
+      c3:       "bright clean modern veterinary exam room",
+      p1:       "puppy getting a checkup at a friendly animal clinic",
+      p2:       "veterinarian reviewing pet health records on a tablet",
+      outdoor:  "welcoming animal hospital exterior with a pet-friendly entrance",
+      interior: "warm friendly veterinary waiting room with natural light",
+    };
+  }
+  if (ind.includes("auto") || ind.includes("car") || ind.includes("mechanic") || ind.includes("tire")) {
+    return {
+      hero:     "a skilled auto mechanic servicing a car in a clean professional garage",
+      c1:       "mechanic performing a precision oil change under a lifted vehicle",
+      c2:       "clean modern auto service bay with professional equipment",
+      c3:       "happy customer picking up their freshly serviced car",
+      p1:       "technician using diagnostic equipment on a vehicle",
+      p2:       "new tires installed on a car, gleaming alloy wheels",
+      outdoor:  "clean professional auto service shop exterior with customer cars",
+      interior: "spotless auto service bay with a car on a hydraulic lift",
+    };
+  }
+  if (ind.includes("real estate") || ind.includes("realt") || ind.includes("home sale") || ind.includes("property")) {
+    return {
+      hero:     "a smiling real estate agent standing in front of a beautiful residential home",
+      c1:       "bright open-concept kitchen in a staged home for sale",
+      c2:       "real estate agent showing a family a beautiful living room",
+      c3:       "beautifully landscaped home exterior with a sold sign",
+      p1:       "cozy master bedroom with natural light and modern decor",
+      p2:       "inviting backyard patio of a home for sale",
+      outdoor:  "stunning curb appeal of a for-sale home in a friendly neighborhood",
+      interior: "bright spacious living room with hardwood floors and large windows",
+    };
+  }
+  if (ind.includes("restaurant") || ind.includes("food") || ind.includes("cafe") || ind.includes("bakery") || ind.includes("diner") || ind.includes("bistro") || ind.includes("pizza") || ind.includes("grill") || ind.includes("bar")) {
+    return {
+      hero:     "a beautifully plated signature dish with vibrant colors under warm restaurant lighting",
+      c1:       "chef preparing fresh ingredients in a professional kitchen",
+      c2:       "cozy inviting restaurant dining room with warm ambient lighting",
+      c3:       "close-up of a tempting dessert or specialty drink",
+      p1:       "sizzling pan of fresh seasonal ingredients being tossed",
+      p2:       "artfully arranged appetizers on a rustic wooden board",
+      outdoor:  "charming restaurant exterior with warm lighting and inviting entrance",
+      interior: "warm cozy restaurant interior with diners enjoying their meals",
+    };
+  }
+  if (ind.includes("salon") || ind.includes("beauty") || ind.includes("hair") || ind.includes("nail") || ind.includes("spa") || ind.includes("barber")) {
+    return {
+      hero:     "a skilled stylist creating a beautiful hair transformation in a modern salon",
+      c1:       "gorgeous finished hairstyle under professional studio lighting",
+      c2:       "clean modern salon interior with styling stations and mirrors",
+      c3:       "happy client smiling at their reflection in a salon mirror",
+      p1:       "stylist applying highlights with precision foils",
+      p2:       "luxurious hair care products and tools neatly arranged",
+      outdoor:  "stylish modern salon storefront with welcoming signage",
+      interior: "bright airy salon interior with natural light and modern decor",
+    };
+  }
+  if (ind.includes("gym") || ind.includes("fitness") || ind.includes("workout") || ind.includes("training") || ind.includes("yoga") || ind.includes("crossfit")) {
+    return {
+      hero:     "a personal trainer motivating a client through a dynamic workout in a modern gym",
+      c1:       "rows of clean modern cardio and strength equipment in a bright gym",
+      c2:       "group fitness class in an energetic bright studio",
+      c3:       "athlete completing a strength training session with proper form",
+      p1:       "close-up of weights and gym equipment in a professional facility",
+      p2:       "clean locker room with modern amenities",
+      outdoor:  "modern fitness center building exterior with motivational signage",
+      interior: "bright spacious gym floor with high-end equipment and natural light",
+    };
+  }
+  if (ind.includes("insur")) {
+    return {
+      hero:     "a friendly insurance agent meeting with a family in a professional office",
+      c1:       "insurance agent reviewing a policy with a smiling client",
+      c2:       "happy family standing in front of their protected home",
+      c3:       "professional modern insurance office with welcoming decor",
+      p1:       "agent shaking hands with a satisfied client",
+      p2:       "insurance forms and documents on a clean organized desk",
+      outdoor:  "professional insurance office building exterior",
+      interior: "bright welcoming insurance office lobby with comfortable seating",
+    };
+  }
+  if (ind.includes("daycare") || ind.includes("child") || ind.includes("preschool") || ind.includes("kinder")) {
+    return {
+      hero:     "happy children playing and learning in a bright colorful daycare classroom",
+      c1:       "teacher reading to a group of engaged young children",
+      c2:       "colorful safe outdoor play area with happy children",
+      c3:       "clean bright classroom with learning materials and cheerful decor",
+      p1:       "children doing arts and crafts at a colorful table",
+      p2:       "teacher comforting and playing with toddlers",
+      outdoor:  "inviting daycare building exterior with safe fenced playground",
+      interior: "warm safe daycare room with age-appropriate toys and natural light",
+    };
+  }
+  if (ind.includes("financ") || ind.includes("account") || ind.includes("tax") || ind.includes("wealth") || ind.includes("invest") || ind.includes("bank")) {
+    return {
+      hero:     "a professional financial advisor consulting with a client in a modern office",
+      c1:       "financial advisor reviewing growth charts with a satisfied client",
+      c2:       "clean modern financial office with large windows",
+      c3:       "happy couple reviewing their financial plan",
+      p1:       "professional reviewing financial documents at a tidy desk",
+      p2:       "modern laptop displaying investment portfolio performance",
+      outdoor:  "professional financial services office building exterior",
+      interior: "bright modern financial office with clean desk and natural light",
+    };
+  }
+  if (ind.includes("photo")) {
+    return {
+      hero:     "a professional photographer composing a portrait in a well-equipped studio",
+      c1:       "beautifully lit family portrait captured by a professional",
+      c2:       "wedding couple embracing in a romantic outdoor setting",
+      c3:       "photographer reviewing stunning shots on a camera LCD",
+      p1:       "professional camera with prime lens on a clean studio surface",
+      p2:       "beautifully framed prints displayed in a photography studio",
+      outdoor:  "photographer capturing a couple in a golden-hour outdoor session",
+      interior: "professional photography studio with softboxes and clean white backdrop",
+    };
+  }
+  return {
+    hero:     `a professional ${industry} business providing excellent service to happy customers`,
+    c1:       `professional ${industry} work being performed by a skilled technician`,
+    c2:       `a satisfied customer with a completed ${industry} project`,
+    c3:       `${industry} professional tools and equipment ready for service`,
+    p1:       `${industry} specialist at work in a clean professional setting`,
+    p2:       `${industry} team providing friendly professional service`,
+    outdoor:  `${industry} business exterior with professional signage and welcoming entrance`,
+    interior: `clean professional ${industry} workspace with natural light`,
+  };
+}
+
 // ── Input type ───────────────────────────────────────────────────────────────
 
 export interface AdPromptInput {
@@ -150,6 +417,8 @@ export function buildAdPrompt(
   const fullAddress = [d.address, d.city].filter(Boolean).join(", ") || "(none)";
   const hasPhoto    = !!d.photoUrl;
   const hasLogo     = !!d.logoData;
+  const ipc         = getIndustryPhotos(d.industry);
+  const abbr        = (s: string) => s.split(' ').slice(0, 5).join(' ');
 
   const businessBlock = [
     `Business Name : ${d.bizName}`,
@@ -302,7 +571,7 @@ export function buildAdPrompt(
       "HERO PHOTO (upper-right, full-bleed): " +
       (hasPhoto
         ? `composite IMAGE 2 — clean diagonal/curved cut at photo edge, no rectangular border.\n\n`
-        : `generate photorealistic outdoor service scene, vibrant, no rectangular border.\n\n`) +
+        : `${ipc.outdoor} — vibrant, no rectangular border.\n\n`) +
       `SERVICE PANELS (middle horizontal row): ` +
       (menuCount > 0
         ? `EXACTLY ${menuCount} diagonal-cut panel${menuCount !== 1 ? "s" : ""} and NO MORE — one per service in BUSINESS DETAILS, exactly as written. Circular lime-green icon badge + white brush-stroke label per panel. The template image may show more panel slots — ignore extras; do NOT render empty panels. No extras. No invented services.\n\n`
@@ -323,7 +592,7 @@ export function buildAdPrompt(
       "HERO PHOTO (upper-right): " +
       (hasPhoto
         ? `composite IMAGE 2 — blend left edge into bg, gold brush-stroke overlaps photo at top, no hard border.\n\n`
-        : `generate professional tools/equipment or home-service scene, left edge blends naturally.\n\n`) +
+        : `${ipc.hero} — left edge blends naturally.\n\n`) +
       `SERVICE BADGES (wide dark navy band, center full-width): ` +
       (menuCount > 0
         ? `EXACTLY ${menuCount} circular white icon badge${menuCount !== 1 ? "s" : ""} on the navy band and NO MORE — one per service in BUSINESS DETAILS, exactly as written. The template image may show more badge slots — ignore extras; do NOT render empty badges. No extras. No invented services.\n\n`
@@ -345,8 +614,8 @@ export function buildAdPrompt(
       "HERO PHOTO (upper-right, large circular frame in sage green ring border):\n" +
       (hasPhoto
         ? `  Composite IMAGE ${hasLogo ? logoImg + 1 : 2} — fill circular frame with sage green ring border, no hard rectangular edges. Cinematic lighting.\n\n`
-        : `  Generate a photorealistic organic interior or lifestyle scene. Fill circular frame with sage green ring border.\n\n`) +
-      "SECONDARY PHOTOS (lower-right, two smaller overlapping circles): generate two circular-cropped photos — kitchen/dining scene and outdoor patio/pergola. Each perfectly circular.\n\n" +
+        : `  ${ipc.hero}. Fill circular frame with sage green ring border.\n\n`) +
+      `SECONDARY PHOTOS (lower-right, two smaller overlapping circles): generate two circular-cropped photos — ${ipc.c1} and ${ipc.c2}. Each perfectly circular.\n\n` +
       `SERVICE BADGES + TILES (middle section): ` +
       (menuCount > 0
         ? `EXACTLY ${menuCount} muted sage green circular icon badge${menuCount !== 1 ? "s" : ""} with thin vertical dividers and EXACTLY ${menuCount} cream rounded-rect tile${menuCount !== 1 ? "s" : ""} below — one per service in BUSINESS DETAILS, exactly as written. The template image may show more slots — ignore extras; do NOT render empty badges or tiles. No extras. No invented services.\n\n`
@@ -369,12 +638,12 @@ export function buildAdPrompt(
       "HERO PHOTO (upper-right, curved wave cutout shape):\n" +
       (hasPhoto
         ? `  Composite IMAGE ${hasLogo ? logoImg + 1 : 2} — fill upper-right wave zone, blend edges naturally into cream bg, no hard border. Cinematic lighting.\n\n`
-        : `  Generate a photorealistic organic/natural interior or garden scene. Fill upper-right curved zone, blend naturally.\n\n`) +
+        : `  ${ipc.hero}. Fill upper-right curved zone, blend naturally.\n\n`) +
       `SERVICE BADGES + TILES (middle section): ` +
       (menuCount > 0
         ? `EXACTLY ${menuCount} dark olive circular icon badge${menuCount !== 1 ? "s" : ""} with thin vertical dividers and EXACTLY ${menuCount} cream rounded-rect tile${menuCount !== 1 ? "s" : ""} below — one per service in BUSINESS DETAILS, exactly as written. The template image may show more slots — ignore extras; do NOT render empty badges or tiles. No extras. No invented services.\n\n`
         : `four decorative dark olive circular icon badges with vertical dividers; four cream rounded-rect tile shapes; NO text labels.\n\n`) +
-      "PHOTO COLLAGE STRIP (dark olive wave band, lower section): three equal-width landscape photos side by side — interior, shop/café, outdoor garden/service.\n\n" +
+      `PHOTO COLLAGE STRIP (dark olive wave band, lower section): three equal-width landscape photos side by side — ${ipc.interior}, ${ipc.c1}, ${ipc.outdoor}.\n\n` +
       (d.offer
         ? `COUPON (kraft paper dashed-stitch rectangle, lower-right, scissors icon): offer text bold dark, fine print below. No QR inside coupon.\n\n`
         : "") +
@@ -390,9 +659,9 @@ export function buildAdPrompt(
       "HERO PHOTO (upper-right, large):\n" +
       (hasPhoto
         ? `  Composite IMAGE 2 — fill upper-right zone, blend left edge naturally into cream bg, no hard border. Cinematic lighting.\n\n`
-        : `  Generate a photorealistic home exterior or landscaping scene. Fill upper-right, blend into cream bg.\n\n`) +
+        : `  ${ipc.hero}. Fill upper-right, blend into cream bg.\n\n`) +
       "CIRCULAR PHOTOS (dark navy right area, three overlapping circles): " +
-      `generate three circular-cropped interior/exterior photos — living space, kitchen, outdoor service scene. Each perfectly circular with subtle gold ring accent.\n\n` +
+      `generate three circular-cropped photos — ${ipc.c1}, ${ipc.c2}, ${ipc.c3}. Each perfectly circular with subtle gold ring accent.\n\n` +
       `SERVICE TILES (dark navy lower-right area): ` +
       (menuCount > 0
         ? `EXACTLY ${menuCount} rounded-rect service tile${menuCount !== 1 ? "s" : ""} and NO MORE — one per service from BUSINESS DETAILS, exactly as written. Each tile: circular dark navy icon badge on top, service name below inside cream card body. The template image may show more tile slots — ignore extras; do NOT render empty tiles. No extras. No invented services.\n\n`
@@ -409,7 +678,7 @@ export function buildAdPrompt(
       "PHOTOS (upper area, inside organic teal blob shapes): " +
       (hasPhoto
         ? `composite IMAGE 2 into upper-left blob — edges blend naturally into teal shape. Generate a complementary second wellness image for remaining blob.\n\n`
-        : `generate two photorealistic clinic/wellness images for the teal blob zones. No rectangular borders.\n\n`) +
+        : `generate two photorealistic images — ${ipc.p1} in one blob, ${ipc.p2} in the other. No rectangular borders.\n\n`) +
       `HEADLINE (large rounded-rect white panel, upper-center): business name bold condensed all-caps sans-serif, dark teal/near-black. Each word exactly once.\n\n` +
       (d.tagline ? `TAGLINE (teal pill-shaped bar below white panel): tagline in clean white sans-serif, centered.\n\n` : "") +
       `SERVICE PANELS (middle section): ` +
@@ -434,7 +703,7 @@ export function buildAdPrompt(
       "HERO FOOD PHOTO (upper-right, wok/cooking action):\n" +
       (hasPhoto
         ? `  Composite IMAGE 2 — dramatic cooking/fire scene, natural edges into dark bg, no hard border.\n\n`
-        : `  Generate a dramatic photorealistic hero food scene — sizzling wok, flames, vibrant fresh ingredients. Natural edges; no hard border.\n\n`) +
+        : `  ${ipc.hero} — dramatic, vibrant. Natural edges; no hard border.\n\n`) +
       (d.tagline
         ? `TAGLINE BANNER (center, parchment/kraft torn-edge banner): "${d.tagline}" in dark serif text.\n\n`
         : "") +
@@ -456,7 +725,7 @@ export function buildAdPrompt(
       "HERO PHOTO (left half, large circular frame with dark brush-stroke swoosh):\n" +
       (hasPhoto
         ? `  Composite IMAGE 2 — fill circular frame, dark brush-stroke swoosh curves around left side, no hard rectangular border. Cinematic lighting.\n\n`
-        : `  Generate a photorealistic scene appropriate for this business. Fill circular frame, dark brush-stroke swoosh curves around left side; no hard border.\n\n`) +
+        : `  ${ipc.hero}. Fill circular frame, dark brush-stroke swoosh curves around left side; no hard border.\n\n`) +
       `SERVICE ROWS (middle-right, vertical column): ` +
       (menuCount > 0
         ? `EXACTLY ${menuCount} service row${menuCount !== 1 ? "s" : ""} and NO MORE — one per service in BUSINESS DETAILS, exactly as written. Each row: circular olive-bordered icon badge on the left + dark charcoal horizontal brush-stroke shape with white text label on the right. The template image may show more row slots — ignore extras; do NOT render empty rows. No extras. No invented services.\n\n`
@@ -477,7 +746,7 @@ export function buildAdPrompt(
       "HERO PHOTO (left 40%, full bleed left/top/bottom):\n" +
       (hasPhoto
         ? `  Composite IMAGE 2 — tool belt foreground + residential home background. Fill left zone, right edge dissolves organically into the diagonal burgundy brush stroke; no hard border. Warm residential lighting.\n\n`
-        : `  Generate a photorealistic tool belt foreground + warm residential home background. Fill left zone, right edge dissolves into brush stroke; no hard border.\n\n`) +
+        : `  ${ipc.hero}. Fill left zone, right edge dissolves into brush stroke; no hard border.\n\n`) +
       `SERVICE BADGES (center-right, horizontal row): ` +
       (menuCount > 0
         ? `EXACTLY ${menuCount} circular dark burgundy icon badge${menuCount !== 1 ? "s" : ""} in a horizontal row and NO MORE — one per service in BUSINESS DETAILS, exactly as written. Thin vertical burgundy rule on right side of each badge divides them. Below each badge: brush-stroke-style label with service name and price. The template image may show more badge slots — ignore extras; do NOT render empty badge rows. No extras. No invented services.\n\n`
@@ -526,7 +795,7 @@ export function buildAdPrompt(
       "HERO IMAGE (upper-right, large full-bleed):\n" +
       (hasPhoto
         ? `  Composite IMAGE 2 into the upper-right zone — fill completely, no rectangular border, clean diagonal/curved cut where photo meets the green bg. Cinematic lighting.\n\n`
-        : `  Generate a photorealistic outdoor service scene — bright daylight, vibrant. Full bleed, no rectangular border.\n\n`) +
+        : `  ${ipc.outdoor} — bright daylight, vibrant. Full bleed, no rectangular border.\n\n`) +
       `SERVICE PANELS (middle horizontal row): ` +
       (menuCount > 0
         ? `EXACTLY ${menuCount} diagonal-cut panel${menuCount !== 1 ? "s" : ""} and NO MORE — one per service in BUSINESS DETAILS, exactly as written. Service photo + circular green icon badge + white brush-stroke label per panel. The template image may show more panel slots — ignore extras; do NOT render empty panels. No extras. No invented services. No offer in service panels.\n\n`
@@ -548,7 +817,7 @@ export function buildAdPrompt(
       "HERO IMAGE (upper-right, large photo zone):\n" +
       (hasPhoto
         ? `  Composite IMAGE 2 — fill upper-right area, blend left edge naturally into bg, gold/yellow brush stroke overlaps photo at top, no hard border. Cinematic lighting.\n\n`
-        : `  Generate a photorealistic image of tools, equipment, or professional at work. Fill upper-right zone, blend naturally into off-white bg.\n\n`) +
+        : `  ${ipc.hero}. Fill upper-right zone, blend naturally into off-white bg.\n\n`) +
       `SERVICE ICONS (wide dark navy band, center full-width): ` +
       (menuCount > 0
         ? `EXACTLY ${menuCount} circular white icon badge${menuCount !== 1 ? "s" : ""} on the navy band and NO MORE — one per service in BUSINESS DETAILS, exactly as written. The template image may show more badge slots — ignore extras; do NOT render empty badges. No extras. No invented services.\n\n`
@@ -571,8 +840,8 @@ export function buildAdPrompt(
       "HERO PHOTO (upper-right, large circular frame in sage green ring border):\n" +
       (hasPhoto
         ? `  Composite IMAGE 2 — fill circular frame, sage green ring border, no hard rectangular edges. Cinematic lighting.\n\n`
-        : `  Generate a photorealistic organic interior or lifestyle scene. Circular frame with sage green ring border.\n\n`) +
-      "SECONDARY PHOTOS (lower-right, two overlapping circles): kitchen/dining + outdoor patio/garden, perfectly circular.\n\n" +
+        : `  ${ipc.hero}. Circular frame with sage green ring border.\n\n`) +
+      `SECONDARY PHOTOS (lower-right, two overlapping circles): ${abbr(ipc.c1)} and ${abbr(ipc.c2)}, perfectly circular.\n\n` +
       `SERVICE BADGES (middle row): ` +
       (menuCount > 0
         ? `EXACTLY ${menuCount} muted sage green circular icon badge${menuCount !== 1 ? "s" : ""} with thin vertical dividers and NO MORE — one per service in BUSINESS DETAILS, exactly as written. Ignore extra template slots; do NOT render empty badges.\n\n`
@@ -600,7 +869,7 @@ export function buildAdPrompt(
       "HERO PHOTO (upper-right, curved wave organic cutout):\n" +
       (hasPhoto
         ? `  Composite IMAGE 2 — fill upper-right curved wave zone, blend left/bottom edges naturally into cream bg, no hard rectangular border. Cinematic lighting.\n\n`
-        : `  Generate a photorealistic organic interior or garden/outdoor service scene. Fill upper-right curved zone, blend naturally into cream bg.\n\n`) +
+        : `  ${ipc.hero}. Fill upper-right curved zone, blend naturally into cream bg.\n\n`) +
       `SERVICE BADGES (middle row): ` +
       (menuCount > 0
         ? `EXACTLY ${menuCount} dark olive circular icon badge${menuCount !== 1 ? "s" : ""} with thin vertical dividers and NO MORE — one per service in BUSINESS DETAILS, exactly as written. The template image may show more badge slots — ignore extras; do NOT render empty badges.\n\n`
@@ -609,7 +878,7 @@ export function buildAdPrompt(
       (menuCount > 0
         ? `EXACTLY ${menuCount} cream rounded-rect tile${menuCount !== 1 ? "s" : ""} and NO MORE — one per service, label text inside. The template image may show more tile slots — ignore extras; do NOT render empty tiles. No extras.\n\n`
         : `four cream rounded-rect tile shapes; NO text labels.\n\n`) +
-      "PHOTO COLLAGE STRIP (dark olive wave band, lower section): three equal-width photos — interior, café/shop, outdoor garden/service.\n\n" +
+      `PHOTO COLLAGE STRIP (dark olive wave band, lower section): three equal-width photos — ${abbr(ipc.interior)}, ${abbr(ipc.c1)}, ${abbr(ipc.outdoor)}.\n\n` +
       (d.offer
         ? `COUPON (kraft paper/cardboard textured rectangle with dashed stitched border and scissors icon, lower-right): offer text bold dark, fine print smaller below. No QR inside coupon.\n\n`
         : "") +
@@ -627,9 +896,9 @@ export function buildAdPrompt(
       "HERO PHOTO (upper-right, large photo zone):\n" +
       (hasPhoto
         ? `  Composite IMAGE 2 — fill upper-right zone, blend left/bottom edges naturally into cream bg, no hard border. Cinematic lighting.\n\n`
-        : `  Generate a photorealistic home exterior or professional landscaping scene. Fill upper-right zone, blend naturally into cream bg.\n\n`) +
+        : `  ${ipc.hero}. Fill upper-right zone, blend naturally into cream bg.\n\n`) +
       "CIRCULAR PHOTOS (middle-right area, three overlapping circles): " +
-      `generate three circular-cropped photos — interior living space, kitchen or work area, outdoor service/garden scene. Each perfectly circular with subtle gold ring accent.\n\n` +
+      `generate three circular-cropped photos — ${ipc.c1}, ${ipc.c2}, ${ipc.c3}. Each perfectly circular with subtle gold ring accent.\n\n` +
       `SERVICE TILES (wide dark navy lower area): ` +
       (menuCount > 0
         ? `EXACTLY ${menuCount} equal rounded-rect service tile${menuCount !== 1 ? "s" : ""} and NO MORE — one per service in BUSINESS DETAILS, exactly as written. Each tile: circular dark navy icon badge on top (house, tools, leaf, or people icon), service name below inside cream card. The template image may show more tile slots — ignore extras; do NOT render empty tiles. No extras. No invented services.\n\n`
@@ -674,14 +943,14 @@ export function buildAdPrompt(
       "HERO PHOTOS (upper section, inside organic teal blob shapes): " +
       (hasPhoto
         ? `composite IMAGE 2 into upper-right organic teal blob — no hard border, natural edges blending into teal shape. Generate a second complementary wellness/clinic image for the upper-left blob.\n\n`
-        : `generate two photorealistic clinic/wellness images — one per upper blob zone. No rectangular borders.\n\n`) +
+        : `generate two photorealistic images — ${ipc.p1} in one blob, ${ipc.p2} in the other. No rectangular borders.\n\n`) +
       `HEADLINE (center, large rounded-rect white panel): business name bold condensed all-caps sans-serif, very large, dark teal/near-black. Each word exactly once.\n\n` +
       (d.tagline ? `TAGLINE (teal pill-shaped bar below white panel): tagline in clean white sans-serif, centered.\n\n` : "") +
       `SERVICE PANELS (middle section): ` +
       (menuCount > 0
         ? `EXACTLY ${menuCount} equal-width panel${menuCount !== 1 ? "s" : ""} and NO MORE — one per service in BUSINESS DETAILS, exactly as written. Each panel: circular teal badge + white icon on top, white rounded-rect text box below. The template image may show more panel slots — ignore extras; do NOT render empty panels. No extras. No invented services. No offer in service panels.\n\n`
         : `service panel row — render the structural panel shapes with circular teal icon badge graphics only; NO text labels (no services provided).\n\n`) +
-      "LOWER PHOTOS (organic blob shapes): reception or waiting-room scene in left blob; teal stethoscope/medical prop on dark teal circular blob right.\n\n" +
+      `LOWER PHOTOS (organic blob shapes): ${ipc.interior} in left blob; ${ipc.c1} in right blob.\n\n` +
       (d.offer
         ? `SPECIAL OFFER: offer text prominently in teal or dark text in an available white-space area. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
@@ -698,7 +967,7 @@ export function buildAdPrompt(
       "HERO FOOD PHOTO (upper-right, wok/cooking action scene):\n" +
       (hasPhoto
         ? `  Composite IMAGE 2 — dramatic cooking/fire scene, natural edges into dark bg, no hard border. Cinematic lighting.\n\n`
-        : `  Generate a dramatic photorealistic hero food scene — sizzling wok, flames, vibrant ingredients. Natural edges into dark bg; no hard border.\n\n`) +
+        : `  ${ipc.hero} — dramatic. Natural edges into dark bg; no hard border.\n\n`) +
       (d.tagline
         ? `TAGLINE BANNER (center, parchment/kraft torn-edge banner): "${d.tagline}" in dark serif text on the banner.\n\n`
         : "") +
@@ -719,7 +988,7 @@ export function buildAdPrompt(
       "HERO PHOTO (large circular frame framed by dark brush-stroke swoosh):\n" +
       (hasPhoto
         ? `  Composite IMAGE 2 — fill circular frame, dark brush-stroke swoosh curves around one side, no hard rectangular border. Cinematic lighting.\n\n`
-        : `  Generate a photorealistic scene appropriate for this business. Fill circular frame, dark brush-stroke swoosh framing; no hard border.\n\n`) +
+        : `  ${ipc.hero}. Fill circular frame, dark brush-stroke swoosh framing; no hard border.\n\n`) +
       `SERVICE ROWS (vertical column): ` +
       (menuCount > 0
         ? `EXACTLY ${menuCount} service row${menuCount !== 1 ? "s" : ""} and NO MORE — one per service in BUSINESS DETAILS, exactly as written. Each row: circular olive-bordered icon badge on the left + dark charcoal horizontal brush-stroke shape with white text label on the right. The template image may show more row slots — ignore extras; do NOT render empty rows. No extras. No invented services.\n\n`
@@ -739,7 +1008,7 @@ export function buildAdPrompt(
       "HERO PHOTO (upper-left, fills upper-left area and bleeds into diagonal brush stroke):\n" +
       (hasPhoto
         ? `  Composite IMAGE 2 — tool belt foreground + residential home background. Fill upper-left, right edge dissolves organically into the burgundy brush stroke; no hard border. Warm residential lighting.\n\n`
-        : `  Generate a photorealistic tool belt foreground + warm residential home background. Fill upper-left zone, right edge dissolves into brush stroke; no hard border.\n\n`) +
+        : `  ${ipc.hero}. Fill upper-left zone, right edge dissolves into brush stroke; no hard border.\n\n`) +
       `SERVICE BADGES (middle, horizontal row across full card width): ` +
       (menuCount > 0
         ? `EXACTLY ${menuCount} circular dark burgundy icon badge${menuCount !== 1 ? "s" : ""} evenly spaced and NO MORE — one per service in BUSINESS DETAILS, exactly as written. Thin vertical burgundy rule on right side of each badge as divider. Below each badge: brush-stroke-style label with service name and price. The template image may show more badge slots — ignore extras; do NOT render empty badge rows. No extras. No invented services.\n\n`
@@ -762,7 +1031,7 @@ export function buildAdPrompt(
       "HERO IMAGE (right-center, large feature area): " +
       (hasPhoto
         ? `composite IMAGE 2 into the template's photo area — blend edges naturally into the dark brush-stroke/painted background, no hard border. Match warm commercial food photography style.\n\n`
-        : `generate a photorealistic, appetizing hero image. Blend naturally into dark brush-stroke background, no hard border.\n\n`) +
+        : `${ipc.hero}. Blend naturally into dark brush-stroke background, no hard border.\n\n`) +
       (menuCount > 0
         ? `MENU/SERVICES (left-center area, orange circular checkmark badges): EXACTLY ${menuCount} item${menuCount !== 1 ? "s" : ""} and NO MORE — one per service/item in BUSINESS DETAILS, exactly as written. Prices right-aligned if present. The template image may show more badge slots — ignore extras; do NOT render empty or blank badge rows. No extras. No invented items.\n\n`
         : `no services provided — leave the service list area empty; do not render any badge labels or invented items.\n\n`) +
