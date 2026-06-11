@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Link } from "wouter";
 import { ARTICLES, BlogNav } from "./BlogIndexPage";
 
-// ─── Shared article prose helpers ─────────────────────────────────────────────
+// ─── Shared prose helpers ──────────────────────────────────────────────────────
 function H2({ children }: { children: React.ReactNode }) {
   return (
     <h2 className="font-sans text-xl font-bold text-[#0f1117] mt-12 mb-4 pl-4 border-l-4 border-[#7C1C2E]">
@@ -24,7 +24,13 @@ function UL({ children }: { children: React.ReactNode }) {
 function LI({ children }: { children: React.ReactNode }) {
   return <li>{children}</li>;
 }
-function Callout({ children, gold = false }: { children: React.ReactNode; gold?: boolean }) {
+function Callout({
+  children,
+  gold = false,
+}: {
+  children: React.ReactNode;
+  gold?: boolean;
+}) {
   return (
     <div
       className={`rounded-xl p-6 my-8 font-sans text-sm leading-relaxed ${
@@ -37,7 +43,13 @@ function Callout({ children, gold = false }: { children: React.ReactNode; gold?:
     </div>
   );
 }
-function CalloutTitle({ children, gold = false }: { children: React.ReactNode; gold?: boolean }) {
+function CalloutTitle({
+  children,
+  gold = false,
+}: {
+  children: React.ReactNode;
+  gold?: boolean;
+}) {
   return (
     <strong
       className={`block text-[11px] tracking-[0.12em] uppercase mb-2 font-bold ${
@@ -49,10 +61,8 @@ function CalloutTitle({ children, gold = false }: { children: React.ReactNode; g
   );
 }
 
-// ─── Revenue table ─────────────────────────────────────────────────────────────
-function RevTable({ rows, total }: { rows: string[][]; total: string[] }) {
-  const headers = rows[0];
-  const body = rows.slice(1);
+// ─── Simple data table ────────────────────────────────────────────────────────
+function DataTable({ headers, rows }: { headers: string[]; rows: string[][] }) {
   return (
     <div className="overflow-x-auto my-7">
       <table className="w-full border-collapse font-sans text-sm">
@@ -69,7 +79,7 @@ function RevTable({ rows, total }: { rows: string[][]; total: string[] }) {
           </tr>
         </thead>
         <tbody>
-          {body.map((row, i) => (
+          {rows.map((row, i) => (
             <tr key={i}>
               {row.map((cell, j) => (
                 <td
@@ -83,457 +93,403 @@ function RevTable({ rows, total }: { rows: string[][]; total: string[] }) {
               ))}
             </tr>
           ))}
-          <tr>
-            {total.map((cell, j) => (
-              <td
-                key={j}
-                className="px-4 py-3 bg-[#f9eaed] font-bold text-[#7C1C2E]"
-              >
-                {cell}
-              </td>
-            ))}
-          </tr>
         </tbody>
       </table>
     </div>
   );
 }
 
-// ─── Article bodies ────────────────────────────────────────────────────────────
-
+// ═══════════════════════════════════════════════════════════════════════════════
+// ARTICLE 1 — The $199 Question: Is a Postcard Ad Worth It?
+// ═══════════════════════════════════════════════════════════════════════════════
 function Article1Body() {
   return (
     <>
       <P>
-        Ask any small business owner how they feel about Facebook ads and you'll get an earful. The
-        targeting that used to work doesn't anymore. The costs keep rising. The results are harder
-        to measure than ever. And every week there's a new platform demanding their attention.
+        You've probably been pitched every kind of advertising at least once. The radio spot. The
+        local magazine. The Yelp upgrade. The Google ad package. And somewhere in that pile of
+        disappointments, you learned to be skeptical — which is healthy. So when someone tells you
+        a postcard ad reaching 5,000 households starts at $199, the right question is: does this
+        actually work, or is it just another way to spend money I won't get back?
       </P>
       <P>
-        Meanwhile, the postcard sitting on a kitchen counter? Nobody's charging extra to show it to
-        more people. There's no algorithm deciding whether it gets seen. It just sits there,
-        working, until someone throws it away — and even then, 68% of people read every piece of
-        direct mail before discarding it.
-      </P>
-      <P>
-        That statistic isn't from 2005. It's from recent USPS consumer research. And it's why
-        savvy local business owners are quietly shifting budget back to physical mail.
+        The honest answer is: it depends on your business. Not in a hand-wavy way — in a specific,
+        calculable way. Let's run the numbers for a few common business types so you can decide for
+        yourself.
       </P>
 
-      <H2>What EDDM Actually Is (And Why It's Different)</H2>
+      <H2>The Only Math That Matters: Cost Per New Customer</H2>
       <P>
-        EDDM stands for Every Door Direct Mail. It's a USPS program that lets mailers send
-        postcards to every household on a specific mail carrier route — no mailing list required.
-        You pick the ZIP codes, the USPS delivers to every door.
+        Forget impressions, reach, and engagement. The only number that matters for a local
+        business is how much you spend to acquire a paying customer. Everything else is noise.
       </P>
       <P>
-        This is fundamentally different from targeted digital advertising. You're not trying to
-        guess which Facebook users match your customer profile. You're reaching everyone in a
-        geographic area — which, for a local service business, is exactly the right approach. Your
-        customers are your neighbors. They live nearby. EDDM reaches all of them.
+        A postcard delivered to 5,000 households will generate a response rate somewhere between
+        1% and 5% depending on your offer, your industry, and how compelling your ad is. That's
+        50 to 250 people who take some kind of action — visiting your website, calling, or walking
+        in. Of those, a percentage become actual customers. Let's use conservative numbers:
+      </P>
+      <DataTable
+        headers={["Business Type", "Ad Cost", "Response Rate", "New Customers", "Cost Per Customer"]}
+        rows={[
+          ["Restaurant (with coupon)", "$199", "2% (100 visits)", "80 tables", "$2.49"],
+          ["HVAC / Plumber", "$299", "0.5% (25 calls)", "8 jobs", "$37"],
+          ["Dental (new patient offer)", "$299", "0.5% (25 inquiries)", "5 new patients", "$60"],
+          ["Hair Salon", "$199", "1% (50 inquiries)", "15 new clients", "$13"],
+          ["Real Estate Agent", "$499", "0.3% (15 contacts)", "1–2 listings", "$250–500"],
+        ]}
+      />
+      <P>
+        Now compare those numbers to what you're probably paying elsewhere. The national average
+        cost per lead from Facebook ads for home services is over $60. For dental, it's routinely
+        $80–150 per lead — before you've converted them into a patient. A Google search ad click
+        for a competitive local keyword can run $5–15 per click, with no guarantee of a call.
       </P>
       <P>
-        The My Town Postcard model takes this a step further by turning a single mailer into a
-        shared community resource: 15 local businesses share space on one oversized 9×12 postcard,
-        each paying a fraction of what a solo mailer would cost, and all 5,000 households on the
-        route receive it.
+        The postcard doesn't look expensive by comparison. It looks cheap.
       </P>
 
-      <H2>The Attention Economy Has a Physical Escape Hatch</H2>
+      <H2>The Lifetime Value Multiplier</H2>
       <P>
-        Here's something worth sitting with: the average American sees between 4,000 and 10,000
-        digital ads per day. Banner ads, pre-roll video, sponsored posts, retargeted product
-        listings — all competing for the same eyeballs at the same moment.
+        Cost per new customer is only half the equation. The other half is how much that customer
+        is worth to you over time. This is where postcard advertising becomes genuinely compelling
+        for the right businesses.
       </P>
       <P>
-        The result is banner blindness. People have trained themselves to not see digital ads. They
-        scroll past them. They install blockers. Their attention drifts.
+        Consider a dentist who pays $299 for an ad and converts five new patients. Each new dental
+        patient is worth somewhere between $500 and $2,000 per year in recurring treatment,
+        cleanings, and referrals. That $299 ad potentially generates $2,500 to $10,000 in lifetime
+        revenue. The return on investment isn't 10x — it might be 30x or 50x.
       </P>
       <P>
-        Mail doesn't work that way. It's physical. It has to be picked up, looked at, and made a
-        decision about. Nobody can "scroll past" a postcard. It requires an active choice to
-        discard — and before that choice is made, it gets seen.
+        The same logic applies to any business where customers come back repeatedly: salons, HVAC
+        companies with maintenance contracts, restaurants, gyms, pediatric practices. One postcard
+        that brings in a loyal customer is worth far more than the cost of the ad.
       </P>
-      <Callout>
-        <CalloutTitle>By the numbers</CalloutTitle>
-        According to USPS research, direct mail achieves a 4.4% average response rate versus 0.12%
-        for email. For local service businesses — contractors, dentists, restaurants, real estate
-        agents — physical mail routinely outperforms digital on a cost-per-acquisition basis.
+
+      <Callout gold>
+        <CalloutTitle gold>The rule of thumb</CalloutTitle>
+        If a single new customer is worth more than $100 to your business over their lifetime,
+        postcard advertising almost certainly pays for itself. The higher your average customer
+        lifetime value, the harder it is to lose money on a $199–$499 ad.
       </Callout>
 
-      <H2>Why Local Businesses Specifically Benefit</H2>
+      <H2>When Postcards Work Best</H2>
       <P>
-        Digital advertising is increasingly a game for brands with big budgets and dedicated
-        marketing teams. Targeting options, creative testing, retargeting pixels, lookalike
-        audiences — this machinery works, but it takes expertise and ongoing investment to operate
-        well.
+        Direct mail performs best when three conditions are met: you serve customers who are defined
+        by where they live, your average sale is meaningful (not a $5 transaction), and you have
+        something specific to offer — a discount, a free consultation, a new patient special — that
+        gives people a reason to act now rather than file you away for later.
       </P>
       <P>
-        A co-op postcard, by contrast, is simple: your ad, printed beautifully, delivered to 5,000
-        households in your service area. No learning curve. No account manager. No weekly budget
-        adjustments. Just presence in your community, in people's hands, repeatedly.
-      </P>
-      <P>
-        And repetition is where direct mail earns its keep. Most purchases — especially for service
-        businesses — don't happen immediately. Someone who gets your plumber's ad today might not
-        need a plumber for six months. But when they do, they'll remember the postcard. They might
-        even have kept it.
+        The businesses that see the strongest results are those who treat the postcard as a
+        consistent presence rather than a one-time test. A restaurant that appears on the postcard
+        every quarter becomes part of the community fabric. A contractor whose face and phone number
+        show up regularly gets called when something breaks. Repetition builds trust in a way that
+        a single ad — digital or physical — rarely does.
       </P>
 
-      <H2>The Co-Op Advantage</H2>
+      <H2>When Postcards Are a Harder Sell</H2>
       <P>
-        The most common objection to direct mail is cost. A solo EDDM campaign to 5,000 homes —
-        design, printing, postage, fulfillment — can easily run $3,000–$5,000. That's out of reach
-        for most small businesses.
+        There are businesses where the math is tighter. If your average transaction is under $20
+        and customers don't return frequently, you'll need a strong volume response to justify the
+        spend. If your service area is very narrow (a single apartment complex, for example) and
+        doesn't align well with the postcard's geographic footprint, you may be paying to reach
+        households who are too far away. And if you have no offer — nothing to motivate someone
+        to act — the postcard becomes pure brand awareness, which has value but is harder to measure.
       </P>
       <P>
-        The shared postcard model solves this entirely. When 15 businesses split the production and
-        postage costs, each pays a fraction of what a solo mailer would cost. A Small ad on My Town
-        Postcard starts at $199. That's less than the cost of a one-day Facebook campaign that most
-        business owners can't measure.
-      </P>
-      <P>
-        And because the postcard goes to every door in a defined area, advertisers don't need to
-        know anything about digital targeting. They choose their size, upload their ad, and let the
-        postcard do the work.
+        In those cases, a smaller ad size and a strong coupon can still make sense. But go in with
+        realistic expectations.
       </P>
 
-      <H2>The Format Matters Too</H2>
-      <P>
-        A 9×12 postcard is large. Considerably larger than a typical piece of mail. It doesn't get
-        lost in an envelope. It doesn't require opening. It commands attention the moment it comes
-        out of the mailbox — which is the entire point.
-      </P>
-      <P>
-        When that oversized postcard features beautiful, professional advertising from local
-        businesses people actually recognize — the diner down the street, the HVAC company they've
-        seen around town, the dentist in the nearby strip mall — it becomes something worth looking
-        at. Not junk mail. A local business directory in print.
-      </P>
-
-      <H2>What This Means for Local Advertisers</H2>
-      <P>If you're a local business owner trying to reach your community, the math is simple:</P>
-      <UL>
-        <LI>
-          <strong>Digital ads</strong> are expensive, hard to measure, and increasingly ignored.
-        </LI>
-        <LI>
-          <strong>Solo direct mail</strong> is effective but costs thousands per campaign.
-        </LI>
-        <LI>
-          <strong>A co-op postcard</strong> gives you the reach of direct mail at a fraction of the
-          cost, with zero technical overhead.
-        </LI>
-      </UL>
-      <P>
-        The best local advertisers treat the postcard like a recurring billboard in their
-        neighbors' homes. They book a spot, renew it each mailing, and think of it as part of
-        their fixed marketing budget rather than a one-time experiment. Over time, that consistency
-        builds the kind of recognition that no algorithm can replicate.
-      </P>
-      <Callout gold>
-        <CalloutTitle gold>Ready to advertise?</CalloutTitle>
-        Find your town's current postcard campaign and reserve your ad spot. Spaces are limited to
-        15 per postcard — and they fill up. Browse available spots at mytownpostcard.com.
+      <Callout>
+        <CalloutTitle>Bottom line</CalloutTitle>
+        For most local service businesses — home services, healthcare, food, personal services,
+        real estate — a postcard ad is one of the lowest-cost, most measurable ways to reach your
+        neighbors. The $199 question usually answers itself once you run your own numbers.
       </Callout>
     </>
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// ARTICLE 2 — Why Your Facebook Ads Aren't Working
+// ═══════════════════════════════════════════════════════════════════════════════
 function Article2Body() {
   return (
     <>
       <P>
-        When most people hear "local advertising business," they picture a salesperson driving from
-        business to business, pitching reluctant owners, and working entirely on commission. That
-        model is exhausting, unpredictable, and increasingly outdated.
+        You set the radius to five miles. You picked "homeowners" and "ages 30–65" and "interested
+        in home improvement." You ran the ad for two weeks and spent $300. You got 47 clicks, three
+        form fills, and zero actual jobs.
       </P>
       <P>
-        The new version looks different. You claim a territory. You set up a landing page that does
-        the selling. Local businesses find you online, browse the available ad sizes and prices, pay
-        by credit card, and book their spot — all without a single phone call. You collect the
-        revenue. The postcard gets printed and mailed.
+        Sound familiar? It does to most local business owners who've tried Facebook advertising in
+        the last few years. And here's the thing — it's not because you did it wrong. It's because
+        Facebook is structurally poorly suited for most local service businesses, and the platform
+        has only gotten worse at it as it's scaled up.
       </P>
       <P>
-        That's the My Town Postcard dealer model, and this article breaks down exactly how it
-        works, who it's right for, and how to get started.
+        Understanding why helps you spend your marketing budget on things that actually work.
       </P>
 
-      <H2>What a Dealer Actually Does</H2>
+      <H2>The Core Problem: Intent vs. Interruption</H2>
       <P>
-        As a My Town Postcard dealer, you own the exclusive rights to sell advertising on the
-        postcard in your territory. Your territory is defined by geography — typically a town or
-        cluster of ZIP codes with a defined household count.
+        Facebook is an interruption platform. People are there to see photos of their friends'
+        kids, argue about politics, and scroll past things they didn't ask to see. Your ad appears
+        in that stream uninvited. The person who sees it wasn't looking for a plumber. They weren't
+        thinking about their HVAC system. You interrupted something they were doing to show them
+        something they didn't want.
       </P>
       <P>
-        Your primary job is getting local businesses to discover your postcard campaign. Once they
-        find your landing page, the platform handles everything else: presenting ad sizes and
-        pricing, collecting payment via Stripe, confirming the order, and logging the spot as sold.
-        You never have to quote a price, send an invoice, or chase a payment.
+        Compare that to Google search, where someone types "plumber near me" — they have intent,
+        they want a result, and your ad appears at the moment of need. Google works for this reason.
+        Facebook doesn't, because intent is absent.
       </P>
       <P>
-        When the postcard fills up (or gets close), you notify My Town Postcard headquarters. They
-        coordinate printing and EDDM delivery through the USPS. The postcard goes out. The
-        businesses get the exposure they paid for. You move on to filling the next issue.
-      </P>
-
-      <H2>Who This Is a Good Fit For</H2>
-      <P>
-        The dealers who do best with this model share a few common traits. They don't need to be
-        salespeople. They do need to be:
-      </P>
-      <UL>
-        <LI>
-          <strong>Community-connected.</strong> You don't need to know every business owner
-          personally, but being a known face in your town — at the Chamber of Commerce, at
-          community events, in local Facebook groups — gives you a running start.
-        </LI>
-        <LI>
-          <strong>Comfortable with basic digital outreach.</strong> Posting in local Facebook
-          groups, sending a simple email to business owners, running a small Facebook ad — that's
-          the ceiling of the technical skill required.
-        </LI>
-        <LI>
-          <strong>Interested in recurring revenue.</strong> This model builds. Each mailing cycle,
-          return advertisers rebook. Over time, a portion of your ad inventory renews automatically,
-          and you spend less time filling each postcard than the one before.
-        </LI>
-      </UL>
-
-      <H2>The Setup Process</H2>
-      <H3>1. Claim your territory</H3>
-      <P>
-        Use the interactive territory map to find available territories. Enter your ZIP code and see
-        what's open near you. Each territory is exclusive — once claimed, no other dealer can sell
-        ads in that area.
-      </P>
-      <H3>2. Pay the setup fee and monthly subscription</H3>
-      <P>
-        There's a one-time setup fee plus a modest monthly subscription. Both are charged at signup
-        through Stripe. This covers your territory license, your dealer landing page, access to the
-        dealer portal, and ongoing platform support.
-      </P>
-      <H3>3. Your landing page goes live</H3>
-      <P>
-        Within minutes of your payment clearing, My Town Postcard automatically creates a branded
-        campaign landing page for your territory. It shows the postcard layout, available ad sizes
-        and prices, and a live "spots remaining" counter. Businesses can browse it, pick their spot
-        size, and pay — without any involvement from you.
-      </P>
-      <H3>4. Drive traffic to your page</H3>
-      <P>
-        This is the bulk of the dealer's work: getting local business owners to visit the landing
-        page. More on this below.
-      </P>
-      <H3>5. Collect revenue as spots sell</H3>
-      <P>
-        Every paid spot generates revenue. You keep the spread between what advertisers pay and what
-        you owe to My Town Postcard for production and delivery.
+        But Google has its own problem for local businesses: the cost. Competitive local keywords —
+        "HVAC repair," "dentist near me," "emergency plumber" — can cost $10–30 per click in many
+        markets. For a business owner without a dedicated marketing team optimizing campaigns daily,
+        the budget gets chewed up fast with little to show for it.
       </P>
 
-      <H2>How to Fill Your Postcard Without Cold Calling</H2>
-      <H3>Facebook &amp; Nextdoor</H3>
+      <H2>Why Facebook Targeting Isn't as Local as You Think</H2>
       <P>
-        Local business owner groups on Facebook are gold. A genuine post — not an ad — explaining
-        what you're doing and inviting businesses to claim a spot generates real interest. Keep it
-        short, personal, and specific: "I'm launching a direct mail postcard campaign for [Town
-        Name] — 5,000 households, 15 spots, filling fast. Here's the link if you want to check it
-        out."
+        Facebook lets you set a geographic radius, but the algorithm optimizes for engagement and
+        conversions across your entire audience — not necessarily for the people physically closest
+        to your business. You may be paying to reach people five miles away when your ideal
+        customer is two streets over.
       </P>
       <P>
-        Nextdoor is increasingly used by small business owners to promote their services. An
-        introduction there, from a community member running a local marketing initiative, reads very
-        differently than a cold solicitation.
-      </P>
-      <H3>Email outreach (not cold calling)</H3>
-      <P>
-        Pull a list of local businesses from Google Maps in your target categories — restaurants,
-        contractors, dental offices, real estate agents, salons. Send a brief, plain-text email with
-        your landing page link. No pitch, no pressure — just: "Here's what this is, here's what it
-        costs, here's how to grab a spot." A 5–10% click rate on a list of 200 businesses generates
-        meaningful interest.
-      </P>
-      <H3>Leverage your personal network</H3>
-      <P>
-        The first spot you sell is always the hardest. The easiest way to get it is to think of one
-        business owner you know — a friend, a neighbor, someone you frequent — and offer them the
-        first spot at a small discount in exchange for a testimonial. Once one real business is on
-        board, word spreads naturally.
-      </P>
-      <H3>Small paid ads</H3>
-      <P>
-        A $100–200 Facebook ad targeted at business owners within your ZIP codes, with the headline
-        "Advertise to 5,000 households in [Town] for $199," will generate leads you wouldn't
-        otherwise reach. This isn't a requirement, but it's a high-leverage option once you've done
-        the free outreach.
+        More importantly, Facebook's targeting categories are self-reported and behavioral, not
+        geographic. "Homeowner" is an interest category based on behavior signals, not an actual
+        property record. "Ages 30–55" is accurate, but it doesn't tell you whether those people
+        have a leaking roof, need a dentist, or are looking for a new restaurant to try. You're
+        targeting a demographic, not a need.
       </P>
 
-      <H2>What Ongoing Operations Look Like</H2>
+      <Callout>
+        <CalloutTitle>The data</CalloutTitle>
+        Meta's own advertising data shows that the average click-through rate for local service
+        ads is 0.9%. That means 99.1% of the people who see your ad don't click. Of those who do
+        click, only a fraction convert to actual customers. You're paying for a lot of people to
+        ignore you.
+      </Callout>
+
+      <H2>What Actually Works for Local Businesses</H2>
       <P>
-        After your first postcard mails, the rhythm gets easier. Businesses that advertised once and
-        saw results will rebook. You'll have a roster of warm contacts who already understand the
-        product. Each subsequent issue requires less outreach than the last.
+        The channels that consistently work for local service businesses share one characteristic:
+        they reach people based on where they live, not what they clicked on last week.
+      </P>
+      <H3>Direct mail to every household in your area</H3>
+      <P>
+        EDDM — Every Door Direct Mail — is the USPS program that delivers to every household on a
+        mail route with no mailing list required. A 9×12 postcard lands in every mailbox in your
+        target neighborhood. No algorithm decides who sees it. No bid war drives up the cost. Every
+        door gets one.
       </P>
       <P>
-        The platform handles renewals, payment collection, and campaign status tracking. Your dealer
-        portal shows you exactly how many spots are sold, which are still available, and your
-        running revenue total. You can check it from your phone in two minutes.
+        The My Town Postcard co-op model makes this affordable for small businesses: 15 local
+        advertisers share one oversized postcard, splitting the printing and postage costs. A spot
+        starts at $199 for reach to 5,000 households — a fraction of what a solo direct mail
+        campaign would cost.
       </P>
+      <H3>Nextdoor and local Facebook groups (organic, not paid)</H3>
+      <P>
+        The irony is that Facebook's paid ads underperform for local businesses, but Facebook
+        Groups — particularly buy/sell/trade groups and neighborhood groups — can be highly
+        effective for free. A genuine post in a local group ("we're a family-owned HVAC company
+        serving this area — happy to answer any questions about your system before the heat hits")
+        generates trust and referrals that a paid ad never will.
+      </P>
+      <H3>Google Business Profile (free)</H3>
+      <P>
+        If you haven't fully optimized your Google Business Profile — photos, hours, services,
+        regular posts, and actively requesting reviews — you're leaving the highest-intent local
+        search traffic on the table for free. This should be the first thing you do before spending
+        a dollar on any paid channel.
+      </P>
+
+      <H2>The Right Way to Think About Your Marketing Mix</H2>
+      <P>
+        The most effective local marketing strategies combine channels that serve different
+        purposes. Google Business Profile captures people actively searching. Direct mail reaches
+        people who aren't searching yet but live near you. Word of mouth and reviews convert the
+        people who find you through either of those channels.
+      </P>
+      <P>
+        Facebook paid ads can play a role — but for most local service businesses, it should be
+        a small one, used for specific retargeting to people who've already visited your website
+        rather than cold outreach. Using it as your primary customer acquisition channel is where
+        most of the wasted spend happens.
+      </P>
+
       <Callout gold>
-        <CalloutTitle gold>Is your territory available?</CalloutTitle>
-        Use the territory finder to see if your town has an open dealer slot. Territories are
-        claimed on a first-come, first-served basis — and once they're gone, they're gone.
+        <CalloutTitle gold>The shift worth making</CalloutTitle>
+        Move budget from Facebook cold advertising toward channels where geography is the
+        primary targeting mechanism — direct mail, local SEO, Google Business optimization. You'll
+        reach fewer people, but the people you reach will actually be your neighbors. That's the
+        only audience that matters for a local business.
       </Callout>
     </>
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// ARTICLE 3 — 5 Types of Local Businesses That Get the Best Results
+// ═══════════════════════════════════════════════════════════════════════════════
 function Article3Body() {
   return (
     <>
       <P>
-        Business opportunities live and die by their numbers. Vague promises about "unlimited
-        income potential" don't tell you anything useful. What you actually need to know is: what
-        does a realistic scenario look like, what does it cost to get started, and what happens if
-        it goes slower than expected?
+        Direct mail advertising isn't magic. It works extremely well for certain types of
+        businesses and less well for others. The difference usually comes down to three factors:
+        whether your customers are defined by geography, whether your average sale justifies the
+        ad cost, and whether you have a compelling offer that gives people a reason to act.
       </P>
-      <P>This article answers all three questions with real numbers from the My Town Postcard model.</P>
-
-      <H2>The Postcard Layout: 15 Spots, 4 Price Points</H2>
       <P>
-        Each My Town Postcard is a 9×12 oversized mailer delivered to 5,000 households via USPS
-        Every Door Direct Mail. The front and back of the postcard together contain 15 advertising
-        spots, organized by size:
+        After running postcard campaigns across dozens of local markets, five business categories
+        stand out as consistent performers — the ones where the phone reliably rings after the
+        postcard hits mailboxes.
       </P>
-      <RevTable
-        rows={[
-          ["Ad Size", "Price per Issue", "Best For"],
-          ["Small", "$199", "Coupons, simple service listings"],
-          ["Medium", "$299", "Restaurants, retail, salons"],
-          ["Large", "$399", "Contractors, dental, medical"],
-          ["XL", "$499", "Anchor advertisers, real estate"],
-        ]}
-        total={["", "", ""]}
-      />
 
-      <H2>Revenue Scenarios</H2>
-      <H3>Scenario A: Conservative mix (mostly Small/Medium)</H3>
-      <RevTable
-        rows={[
-          ["Size", "Qty", "Price", "Revenue"],
-          ["Small", "6", "$199", "$1,194"],
-          ["Medium", "5", "$299", "$1,495"],
-          ["Large", "3", "$399", "$1,197"],
-          ["XL", "1", "$499", "$499"],
-        ]}
-        total={["Total (15 spots)", "", "", "$4,385"]}
-      />
-
-      <H3>Scenario B: Premium mix (more Large/XL)</H3>
-      <RevTable
-        rows={[
-          ["Size", "Qty", "Price", "Revenue"],
-          ["Small", "3", "$199", "$597"],
-          ["Medium", "4", "$299", "$1,196"],
-          ["Large", "5", "$399", "$1,995"],
-          ["XL", "3", "$499", "$1,497"],
-        ]}
-        total={["Total (15 spots)", "", "", "$5,285"]}
-      />
-
-      <H2>What the Dealer Keeps</H2>
+      <H2>1. Home Services: HVAC, Plumbers, Electricians, Roofers</H2>
       <P>
-        As a dealer, you earn the spread between what advertisers pay and what My Town Postcard
-        charges for production and delivery. Production and postage for a 9×12 EDDM mailer to
-        5,000 homes — printing, fulfillment, USPS costs — typically runs in the $1,500–2,000 range
-        depending on volume and vendor.
+        Home service companies are the single best fit for neighborhood postcard advertising, and
+        the reason is simple: your customer is literally defined by their address. You don't serve
+        the whole city — you serve a radius around your base. The postcard's geographic targeting
+        is a direct match for your service area.
       </P>
+      <P>
+        The other reason home services works so well is timing. A homeowner who receives your
+        postcard in March might not need you until July when their AC fails. But your name and
+        number are on a 9×12 card that might still be stuck to their fridge. When the crisis
+        happens — and in home services, it's always a crisis — you're the call they make.
+      </P>
+      <P>
+        The best performing home service ads include a specific seasonal offer ("AC tune-up special
+        — $89 before summer"), a clear phone number, and a service area note so readers know you
+        actually serve their neighborhood.
+      </P>
+
       <Callout gold>
-        <CalloutTitle gold>Example per-postcard profit</CalloutTitle>
-        $4,385 gross revenue − $1,800 production − $99 monthly platform fee = approximately{" "}
-        <strong>$2,486 net</strong> per mailing cycle. With 4 mailings per year, that's roughly{" "}
-        <strong>$9,900 annually</strong> from a single territory.
+        <CalloutTitle gold>Real talk</CalloutTitle>
+        One HVAC company that advertised on a local postcard campaign reported that a single
+        service call from the mailing led to a full system replacement — a $7,000 job — from a
+        customer who had held onto the postcard for three months. The ad cost $299.
       </Callout>
 
-      <H2>The Cost to Get Started</H2>
-      <P>Dealer pricing includes two components:</P>
-      <UL>
-        <LI>
-          <strong>One-time setup fee: $99</strong> — covers territory licensing and landing page
-          creation.
-        </LI>
-        <LI>
-          <strong>Monthly subscription: $99/month</strong> — covers platform access, dealer portal,
-          campaign management tools, and ongoing support.
-        </LI>
-      </UL>
+      <H2>2. Dental and Medical Practices Accepting New Patients</H2>
       <P>
-        Your total first-year cost to run the platform is $99 + ($99 × 12) = $1,287. Against the
-        revenue potential above, payback on that investment happens within the first
-        partially-filled postcard.
+        Healthcare practices have a specific problem that postcard advertising solves well: they
+        need patients who are physically nearby, they accept new patients on a rolling basis, and
+        the lifetime value of a single patient is extremely high.
+      </P>
+      <P>
+        A dentist who converts two new patients from a postcard campaign has likely generated
+        $1,000–4,000 in first-year revenue and a recurring patient relationship worth thousands
+        more over time. The math is almost always favorable — which is why you'll notice that
+        dental offices are consistently among the most active direct mail advertisers in any market.
+      </P>
+      <P>
+        The key for healthcare ads is the new patient offer: a free consultation, discounted
+        first exam, or specific treatment special. People who aren't actively looking for a new
+        dentist need a concrete reason to switch. A good offer provides that reason.
       </P>
 
-      <H2>What Happens If You Don't Fill Every Spot?</H2>
-      <RevTable
-        rows={[
-          ["Spots Sold", "Est. Revenue", "Less Production", "Net"],
-          ["15 of 15 (sold out)", "~$4,400", "$1,800", "~$2,600"],
-          ["12 of 15 (80%)", "~$3,500", "$1,800", "~$1,700"],
-          ["10 of 15 (67%)", "~$2,900", "$1,800", "~$1,100"],
-          ["8 of 15 (53%)", "~$2,300", "$1,800", "~$500"],
-        ]}
-        total={["", "", "", ""]}
-      />
+      <H2>3. Restaurants — Especially with a Coupon</H2>
       <P>
-        A postcard won't go to print without sufficient spots sold to cover costs. This protects
-        dealers from running a mailing at a loss on their first few issues while they build their
-        advertiser base.
+        Restaurants are a natural fit because their entire business model is geographic. Nobody
+        drives forty-five minutes for dinner at a casual local restaurant. Your customers live,
+        work, or pass through your immediate area — and those are exactly the households the
+        postcard reaches.
+      </P>
+      <P>
+        What separates the restaurants that see strong results from those that don't is usually
+        one thing: the offer. A postcard ad that says "Come visit us — great food!" generates
+        mild awareness. A postcard ad that says "Buy one entrée, get one 50% off — valid through
+        July" gives people a specific, time-bounded reason to choose your restaurant over the
+        three others they could visit this weekend.
+      </P>
+      <P>
+        Coupons also give you a measurable way to track the ad's performance. Count the coupons
+        redeemed, multiply by your average check, and you can calculate your exact return on the
+        ad spend. Most digital advertising can't give you that kind of direct attribution.
       </P>
 
-      <H2>The Compounding Effect of Renewals</H2>
+      <H2>4. Salons, Spas, and Personal Services</H2>
       <P>
-        The number that makes this model genuinely compelling isn't the first postcard — it's the
-        third or fourth. Once advertisers see results (tracked via QR code scan analytics built into
-        every ad), they renew. Once a business owner renews once, they become a near-automatic
-        renewal on subsequent issues.
+        Hair salons, nail salons, massage studios, and similar personal service businesses share
+        a key characteristic with healthcare: once you have a customer, they tend to return
+        regularly. A new salon client who likes her cut comes back every six weeks. That's eight
+        visits a year, potentially for years. The lifetime value of a single new client is
+        substantial.
       </P>
       <P>
-        A dealer who fills their first postcard with 10 advertisers might see 7 of them rebook for
-        the second issue. By the fourth or fifth mailing, the postcard might be 80–90% pre-sold to
-        returning advertisers. That's when the business starts to feel genuinely passive.
+        Personal service businesses also benefit from the "local discovery" dynamic. People often
+        patronize the salon or spa closest to where they live or work out of pure convenience —
+        they didn't find it on Google, they just noticed it exists. A postcard that lands in a
+        nearby household announces your existence to people who might not have known you were there.
+      </P>
+      <P>
+        New client offers work extremely well in this category: "$20 off your first visit" or
+        "complimentary deep conditioning treatment with any haircut" give new customers a low-risk
+        reason to try you for the first time.
       </P>
 
-      <H2>Is This the Right Opportunity for You?</H2>
-      <P>It's a fit if you're looking for:</P>
-      <UL>
-        <LI>A side business that builds recurring revenue over time</LI>
-        <LI>Something rooted in your local community, not a generic online hustle</LI>
-        <LI>Low startup cost relative to the income potential</LI>
-        <LI>A platform that handles the operational complexity so you focus on relationships</LI>
-      </UL>
+      <H2>5. Real Estate Agents and Mortgage Professionals</H2>
       <P>
-        It's not a fit if you need immediate, guaranteed income from day one, or if you're
-        unwilling to do any community outreach in the early stages. The first postcard requires
-        effort. The fifth postcard, much less so.
+        Real estate is a high-ticket, low-frequency purchase where name recognition matters
+        enormously. Homeowners don't sell their house every year — but when they do, they call the
+        agent whose name they've seen repeatedly. Consistent postcard presence builds exactly that
+        kind of recognition over time.
       </P>
+      <P>
+        The typical real estate postcard strategy isn't about immediate conversion — it's about
+        staying top of mind in a specific farm area. An agent who appears on the neighborhood
+        postcard quarterly for two years becomes "the local real estate agent" in the minds of
+        the households who've seen her face and name dozens of times. When they're ready to list,
+        the call is almost automatic.
+      </P>
+      <P>
+        For mortgage professionals and financial advisors, the same logic applies: direct mail
+        builds credibility in a category where trust is everything, and physical mail reads as
+        more substantive and professional than a Facebook ad.
+      </P>
+
+      <H2>The Common Thread</H2>
+      <P>
+        What all five of these business types share is a customer base defined primarily by
+        geography, a lifetime customer value that easily justifies the ad cost, and a natural fit
+        with the postcard format — which rewards consistent, repeated presence rather than one-time
+        campaigns.
+      </P>
+      <P>
+        If your business fits one of these categories, the question isn't really whether postcard
+        advertising works. It's whether your competitors will claim the spot before you do.
+      </P>
+
       <Callout>
-        <CalloutTitle>Transparency note</CalloutTitle>
-        These numbers are illustrative, based on the platform's pricing tiers and typical EDDM
-        production costs. Actual results depend on territory size, advertiser mix, fill rate, and
-        local market dynamics. We encourage every prospective dealer to run their own numbers before
-        signing up.
+        <CalloutTitle>Spots are limited</CalloutTitle>
+        Each postcard has 15 ad spots total. Only one business per category is accepted — meaning
+        if you're a dentist, your spot blocks every other dentist in the area from advertising on
+        that mailing. Category exclusivity is first-come, first-served.
       </Callout>
     </>
   );
 }
 
-// Map slug → body component
+// ─── Slug → body component map ────────────────────────────────────────────────
 const ARTICLE_BODIES: Record<string, React.ComponentType> = {
-  "eddm-vs-digital": Article1Body,
-  "start-local-ad-business": Article2Body,
-  "numbers-breakdown": Article3Body,
+  "is-a-postcard-ad-worth-it": Article1Body,
+  "facebook-ads-not-working": Article2Body,
+  "best-businesses-for-direct-mail": Article3Body,
 };
 
+function unsplashUrl(id: string, w = 900) {
+  return `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=80`;
+}
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function BlogArticlePage({ params }: { params: { slug: string } }) {
@@ -562,7 +518,6 @@ export default function BlogArticlePage({ params }: { params: { slug: string } }
     );
   }
 
-  // Related articles = everything except the current one
   const related = ARTICLES.filter((a) => a.slug !== article.slug);
 
   return (
@@ -570,7 +525,7 @@ export default function BlogArticlePage({ params }: { params: { slug: string } }
       <BlogNav />
 
       <main className="max-w-3xl mx-auto px-6 py-12 pb-24">
-        {/* Back link */}
+        {/* Back */}
         <Link href="/blog">
           <span className="inline-flex items-center gap-2 text-[#7C1C2E] font-semibold text-sm cursor-pointer hover:underline mb-10">
             ← Back to Blog
@@ -587,8 +542,8 @@ export default function BlogArticlePage({ params }: { params: { slug: string } }
 
         {/* Hero image */}
         <img
-          src={article.imageUrl}
-          alt={article.imageAlt}
+          src={unsplashUrl(article.unsplashId)}
+          alt={article.unsplashAlt}
           className="w-full h-72 object-cover rounded-xl mb-8"
         />
 
@@ -598,7 +553,7 @@ export default function BlogArticlePage({ params }: { params: { slug: string } }
           {article.readMin} min read
         </p>
 
-        {/* Article body */}
+        {/* Body */}
         <div className="font-['Crimson_Pro'] text-[19px] leading-[1.75] text-[#1a1e28]">
           <BodyComponent />
         </div>
@@ -614,8 +569,8 @@ export default function BlogArticlePage({ params }: { params: { slug: string } }
                 <Link key={rel.slug} href={`/blog/${rel.slug}`}>
                   <div className="bg-white border border-[#E2DDD6] rounded-xl overflow-hidden flex gap-4 p-4 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer group">
                     <img
-                      src={rel.imageUrl}
-                      alt={rel.imageAlt}
+                      src={unsplashUrl(rel.unsplashId, 200)}
+                      alt={rel.unsplashAlt}
                       className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
                     />
                     <div>
@@ -633,17 +588,14 @@ export default function BlogArticlePage({ params }: { params: { slug: string } }
           </div>
         )}
 
-        {/* Article CTA */}
+        {/* CTA */}
         <div className="bg-[#0f1117] rounded-2xl p-10 text-center mt-16">
           <p className="font-['Bebas_Neue'] text-4xl text-white tracking-wide mb-3">
-            {article.cta.label === "See Available Spots"
-              ? "Advertise in Your Town"
-              : "Claim Your Territory"}
+            Ready to Reach 5,000 Households?
           </p>
           <p className="text-[#bbb] text-sm mb-6">
-            {article.cta.label === "See Available Spots"
-              ? "Reserve a spot on the next postcard in your area. Starting at $199 for 5,000 households."
-              : "See if your town is available. Setup takes minutes — your landing page goes live automatically."}
+            Ad spots on the next postcard in your area start at $199. Only 15 spots total —
+            and only one per business category.
           </p>
           <Link href={article.cta.href}>
             <span className="inline-block bg-[#7C1C2E] hover:bg-[#5a1220] text-white font-bold text-sm px-8 py-4 rounded-lg tracking-wide transition-colors cursor-pointer">
