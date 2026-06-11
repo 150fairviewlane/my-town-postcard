@@ -131,8 +131,8 @@ export default function BlogIndexPage() {
           The Local Advertising Playbook
         </h1>
         <p className="font-['Crimson_Pro'] italic text-lg text-[#bbb] max-w-lg mx-auto">
-          Everything you need to know about EDDM postcards, local marketing, and
-          building a business in your own backyard.
+          Real talk on local advertising — what works, what it costs, and how
+          to get your business in front of every door in your neighborhood.
         </p>
       </section>
 
