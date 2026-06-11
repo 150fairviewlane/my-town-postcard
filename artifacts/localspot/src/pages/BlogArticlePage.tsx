@@ -534,10 +534,6 @@ const ARTICLE_BODIES: Record<string, React.ComponentType> = {
   "numbers-breakdown": Article3Body,
 };
 
-// ─── Unsplash helper ──────────────────────────────────────────────────────────
-function unsplashUrl(id: string, w = 900) {
-  return `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=80`;
-}
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function BlogArticlePage({ params }: { params: { slug: string } }) {
@@ -591,8 +587,8 @@ export default function BlogArticlePage({ params }: { params: { slug: string } }
 
         {/* Hero image */}
         <img
-          src={unsplashUrl(article.unsplashId)}
-          alt={article.unsplashAlt}
+          src={article.imageUrl}
+          alt={article.imageAlt}
           className="w-full h-72 object-cover rounded-xl mb-8"
         />
 
@@ -618,8 +614,8 @@ export default function BlogArticlePage({ params }: { params: { slug: string } }
                 <Link key={rel.slug} href={`/blog/${rel.slug}`}>
                   <div className="bg-white border border-[#E2DDD6] rounded-xl overflow-hidden flex gap-4 p-4 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer group">
                     <img
-                      src={unsplashUrl(rel.unsplashId, 200)}
-                      alt={rel.unsplashAlt}
+                      src={rel.imageUrl}
+                      alt={rel.imageAlt}
                       className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
                     />
                     <div>

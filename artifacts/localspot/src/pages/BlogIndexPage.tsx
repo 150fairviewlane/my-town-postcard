@@ -13,9 +13,8 @@ export const ARTICLES = [
       "Every door gets one. No algorithms, no ad blockers, no competing for attention in a feed. Here's why direct mail is quietly having its moment again — and why local businesses are winning with it.",
     date: "June 2026",
     readMin: 6,
-    // Unsplash photo IDs — deterministic, free, no API key needed at render time
-    unsplashId: "photo-1586769852044-692d6e3703f0", // mailbox / postal
-    unsplashAlt: "Neighborhood mailboxes on a sunny street",
+    imageUrl: "/postcard-hero-double.png",
+    imageAlt: "Two 9×12 co-op EDDM postcards showing local business ads",
     cta: { label: "See Available Spots", href: "/" },
   },
   {
@@ -26,8 +25,8 @@ export const ARTICLES = [
       "You don't need a media sales background, a big upfront investment, or a talent for cold calling. Here's the blueprint for running a hyperlocal postcard business from your town — mostly on autopilot.",
     date: "June 2026",
     readMin: 8,
-    unsplashId: "photo-1449824913935-59a10b8d2000", // town main street
-    unsplashAlt: "Main street of a small American town",
+    imageUrl: "/blog-small-town-ga.jpg",
+    imageAlt: "Small town square in Senoia, Georgia with brick storefronts and water tower",
     cta: { label: "Check Territory Availability", href: "/dealers" },
   },
   {
@@ -38,15 +37,11 @@ export const ARTICLES = [
       "What does a sold-out postcard actually earn? What does it cost? And what's realistic for a dealer working their local market? We run the numbers so you can make an informed decision.",
     date: "June 2026",
     readMin: 7,
-    unsplashId: "photo-1554224155-6726b3ff858f", // financial planning / notebook
-    unsplashAlt: "Person reviewing financial planning documents",
+    imageUrl: "/postcard-hero-single.png",
+    imageAlt: "9×12 co-op EDDM postcard showing local business ad grid",
     cta: { label: "See Dealer Details", href: "/dealers" },
   },
 ];
-
-function unsplashUrl(id: string, w = 800) {
-  return `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=75`;
-}
 
 // ─── Shared nav used by both blog pages ───────────────────────────────────────
 export function BlogNav() {
@@ -91,8 +86,8 @@ function ArticleCard({ article }: { article: (typeof ARTICLES)[number] }) {
     <article className="bg-white border border-[#E2DDD6] rounded-xl overflow-hidden flex flex-col group hover:shadow-lg hover:-translate-y-1 transition-all duration-200">
       <div className="h-48 overflow-hidden">
         <img
-          src={unsplashUrl(article.unsplashId, 600)}
-          alt={article.unsplashAlt}
+          src={article.imageUrl}
+          alt={article.imageAlt}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           loading="lazy"
         />
