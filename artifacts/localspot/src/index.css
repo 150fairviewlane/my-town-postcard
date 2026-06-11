@@ -59,6 +59,8 @@
   --font-sans: var(--app-font-sans);
   --font-serif: var(--app-font-serif);
   --font-mono: var(--app-font-mono);
+  --font-Bebas_Neue: 'Bebas Neue', sans-serif;
+  --font-Crimson_Pro: 'Crimson Pro', serif;
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

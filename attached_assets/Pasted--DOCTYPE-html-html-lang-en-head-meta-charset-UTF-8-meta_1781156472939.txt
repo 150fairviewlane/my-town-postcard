@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blog — My Town Postcard</title>
+<meta name="description" content="Insights on local advertising, EDDM postcards, and how to build a hyperlocal marketing business in your town.">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Crimson+Pro:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --burg:#7C1C2E;--burg-dark:#5a1220;--burg-pale:#f9eaed;
+  --ink:#0f1117;--ink-mid:#374151;--ink-light:#6B7280;
+  --surface:#F4F1ED;--card:#fff;--border:#E2DDD6;
+  --gold:#C8952A;--gold-pale:#fdf6e7;--green:#1a5c3a;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink);line-height:1.6}
+
+/* ── Header ── */
+.hdr{background:var(--ink);padding:0 32px;display:flex;align-items:center;justify-content:space-between;height:56px;border-bottom:3px solid var(--burg);position:sticky;top:0;z-index:100}
+.brand{font-family:'Bebas Neue',sans-serif;font-size:22px;color:#fff;letter-spacing:.08em;text-decoration:none}
+.brand span{color:#C8A882}
+.hdr-nav{display:flex;gap:24px;align-items:center}
+.hdr-nav a{color:#ccc;font-size:13px;font-weight:500;text-decoration:none;letter-spacing:.03em;transition:color .2s}
+.hdr-nav a:hover{color:#fff}
+.hdr-cta{background:var(--burg);color:#fff!important;padding:7px 16px;border-radius:6px;font-weight:600!important}
+.hdr-cta:hover{background:var(--burg-dark)!important}
+
+/* ── Blog Hero ── */
+.blog-hero{background:var(--ink);padding:72px 32px 64px;text-align:center;border-bottom:3px solid var(--burg)}
+.blog-eyebrow{font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:16px}
+.blog-hero h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(48px,7vw,80px);color:#fff;letter-spacing:.06em;line-height:1;margin-bottom:16px}
+.blog-hero p{font-family:'Crimson Pro',serif;font-style:italic;font-size:20px;color:#bbb;max-width:540px;margin:0 auto}
+
+/* ── Layout ── */
+.blog-wrap{max-width:1100px;margin:0 auto;padding:64px 24px}
+.blog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:32px}
+
+/* ── Article Card ── */
+.art-card{background:var(--card);border:1.5px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;transition:box-shadow .25s,transform .25s}
+.art-card:hover{box-shadow:0 8px 32px rgba(0,0,0,.1);transform:translateY(-3px)}
+.art-card-img{height:200px;display:flex;align-items:center;justify-content:center;font-size:64px;position:relative;overflow:hidden}
+.art-card-img.c1{background:linear-gradient(135deg,var(--burg-dark),var(--burg))}
+.art-card-img.c2{background:linear-gradient(135deg,#1B3A6B,#2a5298)}
+.art-card-img.c3{background:linear-gradient(135deg,var(--green),#2d7a52)}
+.art-card-body{padding:28px;flex:1;display:flex;flex-direction:column}
+.art-tag{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--burg);margin-bottom:10px}
+.art-card h2{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:.04em;line-height:1.1;margin-bottom:12px;color:var(--ink)}
+.art-card p{font-size:14px;color:var(--ink-mid);line-height:1.65;flex:1}
+.art-meta{display:flex;align-items:center;gap:12px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+.art-meta-date{font-size:12px;color:var(--ink-light)}
+.art-read-btn{margin-left:auto;background:var(--burg);color:#fff;border:none;padding:8px 18px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;text-decoration:none;transition:background .2s}
+.art-read-btn:hover{background:var(--burg-dark)}
+
+/* ── Article Page ── */
+.article-page{display:none;max-width:780px;margin:0 auto;padding:48px 24px 96px}
+.article-page.active{display:block}
+.back-btn{display:inline-flex;align-items:center;gap:8px;color:var(--burg);font-weight:600;font-size:14px;cursor:pointer;border:none;background:none;padding:0;margin-bottom:40px;font-family:'DM Sans',sans-serif}
+.back-btn:hover{text-decoration:underline}
+.article-eyebrow{font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:14px}
+.article-page h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(40px,6vw,64px);letter-spacing:.04em;line-height:1.05;color:var(--ink);margin-bottom:20px}
+.article-page .art-hero-img{width:100%;height:280px;border-radius:12px;margin-bottom:36px;display:flex;align-items:center;justify-content:center;font-size:72px}
+.article-byline{font-size:13px;color:var(--ink-light);margin-bottom:40px;padding-bottom:24px;border-bottom:2px solid var(--border)}
+.article-byline strong{color:var(--ink)}
+
+/* Article Body Typography */
+.article-body{font-family:'Crimson Pro',serif;font-size:19px;line-height:1.75;color:#1a1e28}
+.article-body h2{font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;color:var(--ink);margin:48px 0 16px;padding-left:16px;border-left:4px solid var(--burg)}
+.article-body h3{font-family:'DM Sans',sans-serif;font-size:17px;font-weight:700;color:var(--ink-mid);margin:32px 0 10px}
+.article-body p{margin-bottom:22px}
+.article-body ul,
+.article-body ol{margin:0 0 22px 24px}
+.article-body li{margin-bottom:8px}
+.article-body strong{font-weight:700;color:var(--ink)}
+.article-body em{font-style:italic}
+.article-body a{color:var(--burg);text-decoration:underline}
+
+/* Callout box */
+.callout{background:var(--burg-pale);border:1.5px solid #e8c4cc;border-radius:10px;padding:24px 28px;margin:36px 0;font-family:'DM Sans',sans-serif;font-size:15px;color:var(--burg-dark)}
+.callout strong{display:block;font-size:13px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;color:var(--burg)}
+.callout-gold{background:var(--gold-pale);border-color:#e8d5a0;color:#5a3e0a}
+.callout-gold strong{color:var(--gold)}
+
+/* Revenue Table */
+.rev-table{width:100%;border-collapse:collapse;margin:28px 0;font-family:'DM Sans',sans-serif;font-size:14px}
+.rev-table th{background:var(--ink);color:#fff;padding:12px 16px;text-align:left;font-weight:600;letter-spacing:.04em}
+.rev-table td{padding:11px 16px;border-bottom:1px solid var(--border)}
+.rev-table tr:last-child td{border-bottom:none}
+.rev-table tr:nth-child(even) td{background:#f7f5f2}
+.rev-table .total td{background:var(--burg-pale);font-weight:700;color:var(--burg)}
+
+/* Article CTA */
+.article-cta{background:var(--ink);border-radius:14px;padding:40px;text-align:center;margin-top:64px}
+.article-cta h3{font-family:'Bebas Neue',sans-serif;font-size:36px;color:#fff;letter-spacing:.06em;margin-bottom:10px}
+.article-cta p{color:#bbb;font-size:15px;margin-bottom:24px}
+.article-cta a{display:inline-block;background:var(--burg);color:#fff;padding:14px 32px;border-radius:8px;font-weight:700;font-size:15px;text-decoration:none;letter-spacing:.04em}
+.article-cta a:hover{background:var(--burg-dark)}
+
+/* Blog list state */
+.blog-list-view{display:block}
+.blog-list-view.hidden{display:none}
+
+@media(max-width:640px){
+  .hdr{padding:0 16px}
+  .hdr-nav{gap:12px}
+  .blog-hero{padding:48px 20px 40px}
+  .blog-wrap{padding:40px 16px}
+  .article-page{padding:32px 16px 64px}
+  .article-body{font-size:17px}
+}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <a href="#" class="brand" onclick="showBlog()">My Town <span>Postcard</span></a>
+  <nav class="hdr-nav">
+    <a href="#" onclick="showBlog()">Blog</a>
+    <a href="/dealers" class="hdr-cta">Become a Dealer</a>
+  </nav>
+</header>
+
+<!-- Blog Index -->
+<div class="blog-list-view" id="blogIndex">
+  <div class="blog-hero">
+    <div class="blog-eyebrow">My Town Postcard &mdash; Resources</div>
+    <h1>The Local Advertising Playbook</h1>
+    <p>Everything you need to know about EDDM postcards, local marketing, and building a business in your own backyard.</p>
+  </div>
+
+  <div class="blog-wrap">
+    <div class="blog-grid">
+
+      <!-- Card 1 -->
+      <article class="art-card">
+        <div class="art-card-img c1">📮</div>
+        <div class="art-card-body">
+          <div class="art-tag">Local Advertising</div>
+          <h2>Why EDDM Postcards Still Beat Digital for Local Businesses</h2>
+          <p>Every door gets one. No algorithms, no ad blockers, no competing for attention in a feed. Here's why direct mail is quietly having its moment again — and why local businesses are winning with it.</p>
+          <div class="art-meta">
+            <span class="art-meta-date">June 2026 &bull; 6 min read</span>
+            <a class="art-read-btn" href="#" onclick="showArticle('a1')">Read →</a>
+          </div>
+        </div>
+      </article>
+
+      <!-- Card 2 -->
+      <article class="art-card">
+        <div class="art-card-img c2">🗺️</div>
+        <div class="art-card-body">
+          <div class="art-tag">Dealer Opportunity</div>
+          <h2>How to Start a Local Advertising Business with No Sales Experience</h2>
+          <p>You don't need a media sales background, a big upfront investment, or a talent for cold calling. Here's the blueprint for running a hyperlocal postcard business from your town — mostly on autopilot.</p>
+          <div class="art-meta">
+            <span class="art-meta-date">June 2026 &bull; 8 min read</span>
+            <a class="art-read-btn" href="#" onclick="showArticle('a2')">Read →</a>
+          </div>
+        </div>
+      </article>
+
+      <!-- Card 3 -->
+      <article class="art-card">
+        <div class="art-card-img c3">💰</div>
+        <div class="art-card-body">
+          <div class="art-tag">Business Model</div>
+          <h2>The EDDM Postcard Business Opportunity: A Real Numbers Breakdown</h2>
+          <p>What does a sold-out postcard actually earn? What does it cost? And what's realistic for a dealer working their local market? We run the numbers so you can make an informed decision.</p>
+          <div class="art-meta">
+            <span class="art-meta-date">June 2026 &bull; 7 min read</span>
+            <a class="art-read-btn" href="#" onclick="showArticle('a3')">Read →</a>
+          </div>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     ARTICLE 1: Why EDDM Beats Digital
+═══════════════════════════════════════════════════════════════ -->
+<div class="article-page" id="a1">
+  <div style="max-width:780px;margin:0 auto;padding:32px 24px 0">
+    <button class="back-btn" onclick="showBlog()">← Back to Blog</button>
+  </div>
+  <div class="article-page" style="display:block">
+    <div class="article-eyebrow">Local Advertising</div>
+    <h1>Why EDDM Postcards Still Beat Digital for Local Businesses</h1>
+    <div class="art-hero-img c1" style="border-radius:12px;width:100%;height:280px;display:flex;align-items:center;justify-content:center;font-size:72px;margin-bottom:36px">📮</div>
+    <p class="article-byline"><strong>My Town Postcard</strong> &bull; June 2026 &bull; 6 min read</p>
+
+    <div class="article-body">
+
+      <p>Ask any small business owner how they feel about Facebook ads and you'll get an earful. The targeting that used to work doesn't anymore. The costs keep rising. The results are harder to measure than ever. And every week there's a new platform demanding their attention.</p>
+
+      <p>Meanwhile, the postcard sitting on a kitchen counter? Nobody's charging extra to show it to more people. There's no algorithm deciding whether it gets seen. It just sits there, working, until someone throws it away — and even then, 68% of people read every piece of direct mail before discarding it.</p>
+
+      <p>That statistic isn't from 2005. It's from recent USPS consumer research. And it's why savvy local business owners are quietly shifting budget back to physical mail.</p>
+
+      <h2>What EDDM Actually Is (And Why It's Different)</h2>
+
+      <p>EDDM stands for Every Door Direct Mail. It's a USPS program that lets mailers send postcards to every household on a specific mail carrier route — no mailing list required. You pick the ZIP codes, the USPS delivers to every door.</p>
+
+      <p>This is fundamentally different from targeted digital advertising. You're not trying to guess which Facebook users match your customer profile. You're reaching everyone in a geographic area — which, for a local service business, is exactly the right approach. Your customers are your neighbors. They live nearby. EDDM reaches all of them.</p>
+
+      <p>The My Town Postcard model takes this a step further by turning a single mailer into a shared community resource: 15 local businesses share space on one oversized 9×12 postcard, each paying a fraction of what a solo mailer would cost, and all 5,000 households on the route receive it.</p>
+
+      <h2>The Attention Economy Has a Physical Escape Hatch</h2>
+
+      <p>Here's something worth sitting with: the average American sees between 4,000 and 10,000 digital ads per day. Banner ads, pre-roll video, sponsored posts, retargeted product listings — all competing for the same eyeballs at the same moment.</p>
+
+      <p>The result is banner blindness. People have trained themselves to not see digital ads. They scroll past them. They install blockers. Their attention drifts.</p>
+
+      <p>Mail doesn't work that way. It's physical. It has to be picked up, looked at, and made a decision about. Nobody can "scroll past" a postcard. It requires an active choice to discard — and before that choice is made, it gets seen.</p>
+
+      <div class="callout">
+        <strong>By the numbers</strong>
+        According to USPS research, direct mail achieves a 4.4% average response rate versus 0.12% for email. For local service businesses — contractors, dentists, restaurants, real estate agents — physical mail routinely outperforms digital on a cost-per-acquisition basis.
+      </div>
+
+      <h2>Why Local Businesses Specifically Benefit</h2>
+
+      <p>Digital advertising is increasingly a game for brands with big budgets and dedicated marketing teams. Targeting options, creative testing, retargeting pixels, lookalike audiences — this machinery works, but it takes expertise and ongoing investment to operate well.</p>
+
+      <p>A co-op postcard, by contrast, is simple: your ad, printed beautifully, delivered to 5,000 households in your service area. No learning curve. No account manager. No weekly budget adjustments. Just presence in your community, in people's hands, repeatedly.</p>
+
+      <p>And repetition is where direct mail earns its keep. Most purchases — especially for service businesses — don't happen immediately. Someone who gets your plumber's ad today might not need a plumber for six months. But when they do, they'll remember the postcard. They might even have kept it.</p>
+
+      <h2>The Co-Op Advantage</h2>
+
+      <p>The most common objection to direct mail is cost. A solo EDDM campaign to 5,000 homes — design, printing, postage, fulfillment — can easily run $3,000–$5,000. That's out of reach for most small businesses.</p>
+
+      <p>The shared postcard model solves this entirely. When 15 businesses split the production and postage costs, each pays a few hundred dollars for the same reach. A Small ad on My Town Postcard starts at $199. That's less than the cost of a one-day Facebook campaign that most business owners can't measure.</p>
+
+      <p>And because the postcard goes to every door in a defined area, advertisers don't need to know anything about digital targeting. They just choose their size, upload their ad, and let the postcard do the work.</p>
+
+      <h2>The Format Matters Too</h2>
+
+      <p>A 9×12 postcard is large. Considerably larger than a typical piece of mail. It doesn't get lost in an envelope. It doesn't require opening. It commands attention the moment it comes out of the mailbox — which is the entire point.</p>
+
+      <p>When that oversized postcard features beautiful, professional advertising from local businesses people actually recognize — the diner down the street, the HVAC company they've seen around town, the dentist in the nearby strip mall — it becomes something worth looking at. Not junk mail. A local business directory in print.</p>
+
+      <h2>What This Means for Local Advertisers</h2>
+
+      <p>If you're a local business owner trying to reach your community, the math is simple:</p>
+
+      <ul>
+        <li><strong>Digital ads</strong> are expensive, hard to measure, and increasingly ignored.</li>
+        <li><strong>Solo direct mail</strong> is effective but costs thousands per campaign.</li>
+        <li><strong>A co-op postcard</strong> gives you the reach of direct mail at a fraction of the cost, with zero technical overhead.</li>
+      </ul>
+
+      <p>The best local advertisers we work with treat the postcard like a recurring billboard in their neighbors' homes. They book a spot, renew it each mailing, and think of it as part of their fixed marketing budget rather than a one-time experiment. Over time, that consistency builds the kind of recognition that no algorithm can replicate.</p>
+
+      <div class="callout callout-gold">
+        <strong>Ready to advertise?</strong>
+        Find your town's current postcard campaign and reserve your ad spot. Spaces are limited to 15 per postcard — and they fill up. Browse available spots at mytownpostcard.com.
+      </div>
+
+    </div>
+
+    <div class="article-cta">
+      <h3>Advertise in Your Town</h3>
+      <p>Reserve a spot on the next postcard in your area. Starting at $199 for 5,000 households.</p>
+      <a href="/">See Available Spots</a>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     ARTICLE 2: How to Start a Local Advertising Business
+═══════════════════════════════════════════════════════════════ -->
+<div class="article-page" id="a2">
+  <div style="max-width:780px;margin:0 auto;padding:32px 24px 0">
+    <button class="back-btn" onclick="showBlog()">← Back to Blog</button>
+  </div>
+  <div class="article-page" style="display:block">
+    <div class="article-eyebrow">Dealer Opportunity</div>
+    <h1>How to Start a Local Advertising Business with No Sales Experience</h1>
+    <div class="art-hero-img c2" style="border-radius:12px;width:100%;height:280px;display:flex;align-items:center;justify-content:center;font-size:72px;margin-bottom:36px">🗺️</div>
+    <p class="article-byline"><strong>My Town Postcard</strong> &bull; June 2026 &bull; 8 min read</p>
+
+    <div class="article-body">
+
+      <p>When most people hear "local advertising business," they picture a salesperson driving from business to business, pitching reluctant owners, and working entirely on commission. That model is exhausting, unpredictable, and increasingly outdated.</p>
+
+      <p>The new version looks different. You claim a territory. You set up a landing page that does the selling. Local businesses find you online, browse the available ad sizes and prices, pay by credit card, and book their spot — all without a single phone call. You collect the revenue. The postcard gets printed and mailed.</p>
+
+      <p>That's the My Town Postcard dealer model, and this article breaks down exactly how it works, who it's right for, and how to get started.</p>
+
+      <h2>What a Dealer Actually Does</h2>
+
+      <p>As a My Town Postcard dealer, you own the exclusive rights to sell advertising on the postcard in your territory. Your territory is defined by geography — typically a town or cluster of ZIP codes with a defined household count.</p>
+
+      <p>Your primary job is getting local businesses to discover your postcard campaign. Once they find your landing page, the platform handles everything else: presenting ad sizes and pricing, collecting payment via Stripe, confirming the order, and logging the spot as sold. You never have to quote a price, send an invoice, or chase a payment.</p>
+
+      <p>When the postcard fills up (or gets close), you notify My Town Postcard headquarters. They coordinate printing and EDDM delivery through the USPS. The postcard goes out. The businesses get the exposure they paid for. You move on to filling the next issue.</p>
+
+      <h2>Who This Is a Good Fit For</h2>
+
+      <p>The dealers who do best with this model share a few common traits. They don't need to be salespeople. They do need to be:</p>
+
+      <ul>
+        <li><strong>Community-connected.</strong> You don't need to know every business owner personally, but being a known face in your town — at the Chamber of Commerce, at community events, in local Facebook groups — gives you a running start.</li>
+        <li><strong>Comfortable with basic digital outreach.</strong> Posting in local Facebook groups, sending a simple email to business owners, running a small Facebook ad — that's the ceiling of the technical skill required. If you can do those things, you can drive advertiser signups.</li>
+        <li><strong>Interested in recurring revenue.</strong> This model builds. Each mailing cycle, return advertisers rebook. Over time, a portion of your ad inventory renews automatically, and you spend less time filling each postcard than the one before.</li>
+      </ul>
+
+      <p>The people who struggle are those who expect the business to run with zero effort. Some outreach is necessary, especially in the beginning. But it's outreach at a scale that fits a part-time schedule — a few hours a week, not a full-time job.</p>
+
+      <h2>The Setup Process</h2>
+
+      <p>Getting started as a dealer involves a few concrete steps:</p>
+
+      <h3>1. Claim your territory</h3>
+      <p>Use the interactive territory map at mytownpostcard.com to find available territories. Enter your ZIP code and see what's open near you. Each territory is exclusive — once claimed, no other dealer can sell ads in that area.</p>
+
+      <h3>2. Pay the setup fee and monthly subscription</h3>
+      <p>There's a one-time setup fee plus a modest monthly subscription. Both are charged at signup through Stripe. This covers your territory license, your dealer landing page, access to the dealer portal, and ongoing platform support.</p>
+
+      <h3>3. Your landing page goes live</h3>
+      <p>Within minutes of your payment clearing, My Town Postcard automatically creates a branded campaign landing page for your territory. It shows the postcard layout, available ad sizes and prices, and a live "spots remaining" counter. Businesses can browse it, pick their spot size, and pay — without any involvement from you.</p>
+
+      <h3>4. Drive traffic to your page</h3>
+      <p>This is the bulk of the dealer's work: getting local business owners to visit the landing page. More on this below.</p>
+
+      <h3>5. Collect revenue as spots sell</h3>
+      <p>Every paid spot generates revenue. You keep the spread between what advertisers pay and what you owe to My Town Postcard for production and delivery. A sold-out postcard in a typical territory generates several thousand dollars in gross revenue.</p>
+
+      <h2>How to Fill Your Postcard Without Cold Calling</h2>
+
+      <p>This is the part that intimidates most people — and it shouldn't. You have more tools than you think, and none of them require picking up the phone uninvited.</p>
+
+      <h3>Facebook & Nextdoor</h3>
+      <p>Local business owner groups on Facebook are gold. A genuine post — not an ad — explaining what you're doing and inviting businesses to claim a spot generates real interest. Keep it short, personal, and specific: "I'm launching a direct mail postcard campaign for [Town Name] — 5,000 households, 15 spots, filling fast. Here's the link if you want to check it out." That's all it takes.</p>
+
+      <p>Nextdoor is increasingly used by small business owners to promote their services. An introduction there, from a community member running a local marketing initiative, reads very differently than a cold solicitation.</p>
+
+      <h3>Email outreach (not cold calling)</h3>
+      <p>Pull a list of local businesses from Google Maps in your target categories — restaurants, contractors, dental offices, real estate agents, salons. Send a brief, plain-text email with your landing page link. No pitch, no pressure — just: "Here's what this is, here's what it costs, here's how to grab a spot." A 5–10% click rate on a list of 200 businesses generates meaningful interest.</p>
+
+      <h3>Leverage your personal network</h3>
+      <p>The first spot you sell is always the hardest. The easiest way to get it is to think of one business owner you know — a friend, a neighbor, someone you frequent — and offer them the first spot at a small discount in exchange for a testimonial. Once one real business is on board, word spreads naturally.</p>
+
+      <h3>Small paid ads</h3>
+      <p>A $100–200 Facebook ad targeted at business owners within your ZIP codes, with the headline "Advertise to 5,000 households in [Town] for $199," will generate leads you wouldn't otherwise reach. This isn't a requirement, but it's a high-leverage option once you've done the free outreach.</p>
+
+      <h2>What Ongoing Operations Look Like</h2>
+
+      <p>After your first postcard mails, the rhythm gets easier. Businesses that advertised once and saw results will rebook. You'll have a roster of warm contacts who already understand the product. Each subsequent issue requires less outreach than the last.</p>
+
+      <p>The platform handles renewals, payment collection, and campaign status tracking. Your dealer portal shows you exactly how many spots are sold, which are still available, and your running revenue total. You can check it from your phone in two minutes.</p>
+
+      <div class="callout callout-gold">
+        <strong>Is your territory available?</strong>
+        Use the territory finder to see if your town has an open dealer slot. Territories are claimed on a first-come, first-served basis — and once they're gone, they're gone.
+      </div>
+
+    </div>
+
+    <div class="article-cta">
+      <h3>Claim Your Territory</h3>
+      <p>See if your town is available. Setup takes minutes — your landing page goes live automatically.</p>
+      <a href="/dealers">Check Availability</a>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     ARTICLE 3: Real Numbers Breakdown
+═══════════════════════════════════════════════════════════════ -->
+<div class="article-page" id="a3">
+  <div style="max-width:780px;margin:0 auto;padding:32px 24px 0">
+    <button class="back-btn" onclick="showBlog()">← Back to Blog</button>
+  </div>
+  <div class="article-page" style="display:block">
+    <div class="article-eyebrow">Business Model</div>
+    <h1>The EDDM Postcard Business Opportunity: A Real Numbers Breakdown</h1>
+    <div class="art-hero-img c3" style="border-radius:12px;width:100%;height:280px;display:flex;align-items:center;justify-content:center;font-size:72px;margin-bottom:36px">💰</div>
+    <p class="article-byline"><strong>My Town Postcard</strong> &bull; June 2026 &bull; 7 min read</p>
+
+    <div class="article-body">
+
+      <p>Business opportunities live and die by their numbers. Vague promises about "unlimited income potential" don't tell you anything useful. What you actually need to know is: what does a realistic scenario look like, what does it cost to get started, and what happens if it goes slower than expected?</p>
+
+      <p>This article answers all three questions with real numbers from the My Town Postcard model.</p>
+
+      <h2>The Postcard Layout: 15 Spots, 4 Price Points</h2>
+
+      <p>Each My Town Postcard is a 9×12 oversized mailer delivered to 5,000 households via USPS Every Door Direct Mail. The front and back of the postcard together contain 15 advertising spots, organized by size:</p>
+
+      <table class="rev-table">
+        <thead>
+          <tr><th>Ad Size</th><th>Price per Issue</th><th>Best For</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Small</td><td>$199</td><td>Coupons, simple service listings</td></tr>
+          <tr><td>Medium</td><td>$299</td><td>Restaurants, retail, salons</td></tr>
+          <tr><td>Large</td><td>$399</td><td>Contractors, dental, medical</td></tr>
+          <tr><td>XL</td><td>$499</td><td>Anchor advertisers, real estate</td></tr>
+        </tbody>
+      </table>
+
+      <p>The mix of sizes per postcard varies, but a typical layout might include a combination of all four tiers. Here's what revenue looks like across a few realistic scenarios:</p>
+
+      <h2>Revenue Scenarios</h2>
+
+      <h3>Scenario A: Conservative mix (mostly Small/Medium)</h3>
+      <table class="rev-table">
+        <thead>
+          <tr><th>Size</th><th>Qty</th><th>Price</th><th>Revenue</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Small</td><td>6</td><td>$199</td><td>$1,194</td></tr>
+          <tr><td>Medium</td><td>5</td><td>$299</td><td>$1,495</td></tr>
+          <tr><td>Large</td><td>3</td><td>$399</td><td>$1,197</td></tr>
+          <tr><td>XL</td><td>1</td><td>$499</td><td>$499</td></tr>
+          <tr class="total"><td colspan="3"><strong>Total (15 spots)</strong></td><td><strong>$4,385</strong></td></tr>
+        </tbody>
+      </table>
+
+      <h3>Scenario B: Premium mix (more Large/XL)</h3>
+      <table class="rev-table">
+        <thead>
+          <tr><th>Size</th><th>Qty</th><th>Price</th><th>Revenue</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Small</td><td>3</td><td>$199</td><td>$597</td></tr>
+          <tr><td>Medium</td><td>4</td><td>$299</td><td>$1,196</td></tr>
+          <tr><td>Large</td><td>5</td><td>$399</td><td>$1,995</td></tr>
+          <tr><td>XL</td><td>3</td><td>$499</td><td>$1,497</td></tr>
+          <tr class="total"><td colspan="3"><strong>Total (15 spots)</strong></td><td><strong>$5,285</strong></td></tr>
+        </tbody>
+      </table>
+
+      <h2>What the Dealer Keeps</h2>
+
+      <p>As a dealer, you earn the spread between what advertisers pay and what My Town Postcard charges for production and delivery. Production and postage for a 9×12 EDDM mailer to 5,000 homes — printing, fulfillment, USPS costs — typically runs in the $1,500–2,000 range depending on volume and vendor.</p>
+
+      <p>Using a conservative production cost of $1,800 and Scenario A revenue of $4,385:</p>
+
+      <div class="callout callout-gold">
+        <strong>Example per-postcard profit</strong>
+        $4,385 gross revenue − $1,800 production − $99 monthly platform fee = approximately <strong>$2,486 net</strong> per mailing cycle. With 4 mailings per year, that's roughly <strong>$9,900 annually</strong> from a single territory.
+      </div>
+
+      <p>Multiple territories multiply this proportionally. A dealer managing two territories with similar fill rates is looking at $15,000–20,000 per year in part-time income, with the platform handling all payment processing and campaign management.</p>
+
+      <h2>The Cost to Get Started</h2>
+
+      <p>Dealer pricing includes two components:</p>
+
+      <ul>
+        <li><strong>One-time setup fee: $99</strong> — covers territory licensing and landing page creation</li>
+        <li><strong>Monthly subscription: $99/month</strong> — covers platform access, dealer portal, campaign management tools, and ongoing support</li>
+      </ul>
+
+      <p>Your total first-year cost to run the platform is $99 + ($99 × 12) = $1,287. Against the revenue potential above, payback on that investment happens within the first partially-filled postcard.</p>
+
+      <h2>What Happens If You Don't Fill Every Spot?</h2>
+
+      <p>Not every postcard will sell out completely, especially early on. Here's what the math looks like at different fill rates:</p>
+
+      <table class="rev-table">
+        <thead>
+          <tr><th>Spots Sold</th><th>Est. Revenue</th><th>Less Production</th><th>Net</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>15 of 15 (sold out)</td><td>~$4,400</td><td>$1,800</td><td><strong>~$2,600</strong></td></tr>
+          <tr><td>12 of 15 (80%)</td><td>~$3,500</td><td>$1,800</td><td><strong>~$1,700</strong></td></tr>
+          <tr><td>10 of 15 (67%)</td><td>~$2,900</td><td>$1,800</td><td><strong>~$1,100</strong></td></tr>
+          <tr><td>8 of 15 (53%)</td><td>~$2,300</td><td>$1,800</td><td><strong>~$500</strong></td></tr>
+        </tbody>
+      </table>
+
+      <p>Note that production decisions — whether and when to print — are made with My Town Postcard. A postcard won't go to print without sufficient spots sold to cover costs. This protects dealers from running a mailing at a loss on their first few issues while they build their advertiser base.</p>
+
+      <h2>The Compounding Effect of Renewals</h2>
+
+      <p>The number that makes this model genuinely compelling isn't the first postcard — it's the third or fourth. Once advertisers see results (tracked via QR code scan analytics built into every ad), they renew. Once a business owner renews once, they become a near-automatic renewal on subsequent issues.</p>
+
+      <p>A dealer who fills their first postcard with 10 advertisers might see 7 of them rebook for the second issue. That means 7 spots are pre-sold before any outreach begins. By the fourth or fifth mailing, the postcard might be 80–90% pre-sold to returning advertisers, with only a handful of open slots to fill each cycle.</p>
+
+      <p>That's when the business starts to feel genuinely passive. And that compounding dynamic is the real reason the EDDM dealer model is worth taking seriously.</p>
+
+      <h2>Is This the Right Opportunity for You?</h2>
+
+      <p>It's a fit if you're looking for:</p>
+      <ul>
+        <li>A side business that builds recurring revenue over time</li>
+        <li>Something rooted in your local community, not a generic online hustle</li>
+        <li>Low startup cost relative to the income potential</li>
+        <li>A platform that handles the operational complexity so you focus on relationships</li>
+      </ul>
+
+      <p>It's not a fit if you need immediate, guaranteed income from day one, or if you're unwilling to do any community outreach in the early stages. The first postcard requires effort. The fifth postcard, much less so.</p>
+
+      <div class="callout">
+        <strong>Transparency note</strong>
+        These numbers are illustrative, based on the platform's pricing tiers and typical EDDM production costs. Actual results depend on territory size, advertiser mix, fill rate, and local market dynamics. We encourage every prospective dealer to run their own numbers before signing up.
+      </div>
+
+    </div>
+
+    <div class="article-cta">
+      <h3>Run the Numbers for Your Town</h3>
+      <p>Check if your territory is available and see what a sold-out postcard could earn you.</p>
+      <a href="/dealers">See Dealer Details</a>
+    </div>
+  </div>
+</div>
+
+<script>
+function showBlog() {
+  document.getElementById('blogIndex').classList.remove('hidden');
+  ['a1','a2','a3'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.classList.remove('active');
+  });
+  window.scrollTo(0,0);
+  return false;
+}
+
+function showArticle(id) {
+  document.getElementById('blogIndex').classList.add('hidden');
+  ['a1','a2','a3'].forEach(aid => {
+    const el = document.getElementById(aid);
+    if(el) el.classList.remove('active');
+  });
+  const target = document.getElementById(id);
+  if(target) target.classList.add('active');
+  window.scrollTo(0,0);
+  return false;
+}
+</script>
+
+</body>
+</html>
