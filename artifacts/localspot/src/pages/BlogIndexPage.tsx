@@ -59,6 +59,16 @@ export function BlogNav() {
           </span>
         </Link>
         <nav className="flex items-center gap-6">
+          <Link href="/">
+            <span className="text-[#ccc] text-sm font-medium hover:text-white transition-colors cursor-pointer">
+              Advertise
+            </span>
+          </Link>
+          <Link href="/#how-it-works">
+            <span className="text-[#ccc] text-sm font-medium hover:text-white transition-colors cursor-pointer">
+              How It Works
+            </span>
+          </Link>
           <Link href="/blog">
             <span className="text-[#ccc] text-sm font-medium hover:text-white transition-colors cursor-pointer">
               Blog
@@ -95,12 +105,12 @@ function ArticleCard({ article }: { article: (typeof ARTICLES)[number] }) {
           {article.title}
         </h2>
         <p className="text-sm text-[#374151] leading-relaxed flex-1">{article.excerpt}</p>
-        <div className="flex items-center mt-5 pt-4 border-t border-[#E2DDD6]">
-          <span className="text-xs text-[#6B7280]">
+        <div className="flex items-center justify-between gap-6 mt-5 pt-4 border-t border-[#E2DDD6]">
+          <span className="text-xs text-[#6B7280] shrink-0">
             {article.date} &bull; {article.readMin} min read
           </span>
           <Link href={`/blog/${article.slug}`}>
-            <span className="ml-auto bg-[#7C1C2E] hover:bg-[#5a1220] text-white text-sm font-semibold px-4 py-2 rounded-md transition-colors cursor-pointer">
+            <span className="bg-[#7C1C2E] hover:bg-[#5a1220] text-white text-sm font-semibold px-4 py-2 rounded-md transition-colors cursor-pointer whitespace-nowrap">
               Read →
             </span>
           </Link>
@@ -121,7 +131,7 @@ export default function BlogIndexPage() {
       <BlogNav />
 
       {/* Hero */}
-      <section className="bg-[#0f1117] border-b-[3px] border-[#7C1C2E] py-20 text-center px-6">
+      <section className="bg-[#0f1117] border-b-[3px] border-[#7C1C2E] py-10 text-center px-6">
         <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-[#C8952A] mb-4">
           My Town Postcard — Resources
         </p>

@@ -142,6 +142,16 @@ export function NavBar() {
                     {l.label}
                   </button>
                 ))}
+                <a href="/blog"
+                  onClick={() => setMenuOpen(false)}
+                  style={{
+                    fontSize: 16, fontWeight: 600, color: "#374151",
+                    fontFamily: "sans-serif", textDecoration: "none",
+                    padding: "14px 8px", minHeight: 44, display: "block",
+                    borderRadius: 8,
+                  }}>
+                  Blog
+                </a>
                 <a href="/dealers"
                   onClick={() => setMenuOpen(false)}
                   style={{
@@ -174,6 +184,11 @@ export function NavBar() {
               {l.label}
             </button>
           ))}
+          <a href="/blog"
+            style={{ fontSize: 14, fontWeight: 600, color: "#374151",
+              fontFamily: "sans-serif", textDecoration: "none" }}>
+            Blog
+          </a>
           <a href="/dealers"
             style={{ fontSize: 14, fontWeight: 700, color: RED,
               fontFamily: "sans-serif", textDecoration: "none",
@@ -645,6 +660,12 @@ export function Footer({ copy = DEFAULT_COPY }: { copy?: LandingCopy }) {
               </a>
             </div>
           ))}
+          <div style={{ marginBottom: 8 }}>
+            <a href="/blog"
+              style={{ fontSize: 13, color: "#555", textDecoration: "none", fontFamily: "sans-serif" }}>
+              Blog
+            </a>
+          </div>
         </div>
         <div>
           <div style={{ fontWeight: 700, color: "#111", fontSize: 14, marginBottom: 14,
