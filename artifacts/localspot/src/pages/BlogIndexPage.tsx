@@ -127,9 +127,6 @@ export default function BlogIndexPage() {
 
       {/* Hero */}
       <section className="bg-[#0f1117] border-b-[3px] border-[#7C1C2E] py-10 text-center px-6">
-        <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-[#C8952A] mb-4">
-          My Town Postcard — Resources
-        </p>
         <h1 className="font-['Bebas_Neue'] text-6xl md:text-7xl tracking-wide text-white leading-none mb-4">
           The Local Advertising Playbook
         </h1>
