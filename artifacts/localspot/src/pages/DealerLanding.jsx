@@ -88,6 +88,17 @@ function NavBar() {
                     {l.label}
                   </button>
                 ))}
+                <a href={`${baseUrl}/dealers/blog`}
+                  onClick={() => setMenuOpen(false)}
+                  style={{
+                    background: "none", border: "none", cursor: "pointer",
+                    fontSize: 16, fontWeight: 600, color: "#374151",
+                    fontFamily: "sans-serif", textAlign: "left",
+                    padding: "14px 8px", minHeight: 44, borderRadius: 8,
+                    textDecoration: "none", display: "block",
+                  }}>
+                  Dealer Blog
+                </a>
                 <a href={`${baseUrl}/dealers/signup`}
                   style={{
                     marginTop: 8, background: RED, color: "#fff", border: "none",
@@ -110,6 +121,11 @@ function NavBar() {
               {l.label}
             </button>
           ))}
+          <a href={`${baseUrl}/dealers/blog`}
+            style={{ fontSize: 14, fontWeight: 600, color: "#374151",
+              fontFamily: "sans-serif", textDecoration: "none" }}>
+            Dealer Blog
+          </a>
           <a href={`${baseUrl}/dealers/signup`}
             style={{ background: RED, color: "#fff", border: "none", borderRadius: 8,
               padding: "9px 22px", fontSize: 14, fontWeight: 800, cursor: "pointer",
@@ -332,6 +348,41 @@ function FAQSection() {
   );
 }
 
+function Footer() {
+  const baseUrl = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+  return (
+    <footer style={{
+      background: "#111", borderTop: "3px solid #7B1418",
+      padding: "36px 32px", textAlign: "center",
+    }}>
+      <div style={{
+        display: "flex", flexWrap: "wrap", justifyContent: "center",
+        gap: "12px 32px", marginBottom: 20,
+      }}>
+        {[
+          { label: "Advertise on a Postcard", href: `${baseUrl}/` },
+          { label: "Dealer Blog", href: `${baseUrl}/dealers/blog` },
+          { label: "Apply to Become a Dealer", href: `${baseUrl}/dealers/signup` },
+        ].map(l => (
+          <a key={l.label} href={l.href}
+            style={{
+              color: "#ccc", fontSize: 13, fontWeight: 600,
+              fontFamily: "sans-serif", textDecoration: "none",
+            }}
+            onMouseOver={e => e.currentTarget.style.color = "#fff"}
+            onMouseOut={e => e.currentTarget.style.color = "#ccc"}
+          >
+            {l.label}
+          </a>
+        ))}
+      </div>
+      <p style={{ color: "#666", fontSize: 12, fontFamily: "sans-serif", margin: 0 }}>
+        © {new Date().getFullYear()} My Town Postcard. All rights reserved.
+      </p>
+    </footer>
+  );
+}
+
 export default function DealerLanding() {
   return (
     <div>
@@ -341,6 +392,7 @@ export default function DealerLanding() {
       <WhatYouGet />
       <Territories />
       <FAQSection />
+      <Footer />
     </div>
   );
 }
