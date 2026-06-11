@@ -47,9 +47,13 @@ const AdminSubscriptionsPage = lazy(() => import("./pages/AdminSubscriptionsPage
 const SpotConfirmationPage = lazy(() => import("./pages/SpotConfirmationPage"));
 const TerritoryLandingPage = lazy(() => import("./pages/TerritoryLandingPage"));
 
-// ── Blog pages (lazy — not a critical first-paint path) ───────────────────────
+// ── Advertiser blog pages ─────────────────────────────────────────────────────
 const BlogIndexPage = lazy(() => import("./pages/BlogIndexPage"));
 const BlogArticlePage = lazy(() => import("./pages/BlogArticlePage"));
+
+// ── Dealer blog pages ─────────────────────────────────────────────────────────
+const DealerBlogIndexPage = lazy(() => import("./pages/DealerBlogIndexPage"));
+const DealerBlogArticlePage = lazy(() => import("./pages/DealerBlogArticlePage"));
 
 import NotFound from "./pages/not-found";
 
@@ -57,8 +61,9 @@ import NotFound from "./pages/not-found";
 // territory slug. The /:slug catch-all is registered last, but wouter's
 // Switch matches the first hit, so these explicit routes already win — this
 // list is the guard for the catch-all's own handler (and documents intent).
-// NOTE: "blog" is included so that /blog and /blog/:slug are never intercepted
-// by the territory landing page catch-all.
+// NOTE: "blog" and "dealers" are included so that /blog, /blog/:slug,
+// /dealers/blog, and /dealers/blog/:slug are never intercepted by the
+// territory landing page catch-all.
 const RESERVED_SLUGS = new Set([
   "blog",
   "checkout", "upload", "confirmation", "admin", "subscription-confirmation",
@@ -123,6 +128,15 @@ function Router() {
         <Route path="/dealers/signup" component={DealerSignup} />
         <Route path="/dealers/confirmation" component={DealerConfirmation} />
         <Route path="/my-territory" component={DealerPortal} />
+
+        {/* ── Dealer blog routes — nested under /dealers, before catch-all ──
+            /dealers/blog          → dealer article index
+            /dealers/blog/:slug    → individual dealer article
+        ─────────────────────────────────────────────────────────────────── */}
+        <Route path="/dealers/blog" component={DealerBlogIndexPage} />
+        <Route path="/dealers/blog/:slug">
+          {(params) => <DealerBlogArticlePage params={params} />}
+        </Route>
 
         {import.meta.env.DEV && <Route path="/test/ad" component={TestAdPage} />}
 
