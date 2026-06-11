@@ -5,7 +5,8 @@ import path from "path";
 import sharp from "sharp";
 import { logger } from "../lib/logger";
 import { buildAdPrompt } from "../lib/buildAdPrompt";
-import { generateSurpriseMeTemplate } from "../lib/surpriseMeTransform.js";
+import { db, spotsTable } from "@workspace/db";
+import { eq, and, ne, sql as drizzleSql } from "drizzle-orm";
 
 function findWorkspaceRoot(): string {
   let dir = process.cwd();
@@ -37,6 +38,8 @@ const GenerateSchema = z.object({
   logoData:  z.string().optional().default(""),
   generationIndex: z.number().int().optional().default(0),
   spotId:    z.number().int().optional(),
+  campaignId: z.number().int().optional(),
+  side:       z.string().optional(),
 });
 
 
@@ -484,14 +487,43 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   // Medium (3"×2") is the only landscape spot size
   const isLandscape = ["medium", "m"].includes(d.sizeKey.toLowerCase());
 
+  // Resolve template — "surprise-me" picks a random unused real template for this campaign side
+  let templateKey = d.template || "parchment-classic";
+
+  if (templateKey === "surprise-me") {
+    const TEMPLATE_POOL = [
+      "parchment-classic", "made-fresh", "neighborhood-pro", "at-your-service",
+      "health-wellness", "home-elegance", "sage-organic", "purple-sage",
+      "brush-stroke", "wok-fire",
+    ];
+    const usedTemplates = new Set<string>();
+    if (d.campaignId != null && d.side) {
+      try {
+        const usedRows = await db
+          .select({ tmpl: drizzleSql<string | null>`${spotsTable.templateData}::jsonb->>'template'` })
+          .from(spotsTable)
+          .where(and(
+            eq(spotsTable.campaignId, d.campaignId),
+            eq(spotsTable.side, d.side as "front" | "back"),
+            d.spotId != null ? ne(spotsTable.id, d.spotId) : undefined,
+          ));
+        for (const row of usedRows) {
+          if (row.tmpl && row.tmpl !== "surprise-me") usedTemplates.add(row.tmpl);
+        }
+      } catch (err) {
+        req.log.warn({ err }, "surprise-me: failed to query used templates — using full pool");
+      }
+    }
+    const available = TEMPLATE_POOL.filter(t => !usedTemplates.has(t));
+    const pool = available.length > 0 ? available : TEMPLATE_POOL;
+    templateKey = pool[Math.floor(Math.random() * pool.length)]!;
+    req.log.info({ templateKey, usedCount: usedTemplates.size }, "surprise-me: selected random template");
+  }
+
   // Load template PNG as raw buffer — portrait and landscape each have their own template images
-  const templateKey = d.template || "parchment-classic";
-
-
   let tmplBuf: Buffer | null = null;
   let tmplMime = "image/png";
-  if (templateKey !== "surprise-me") {
-    const parchmentPortrait = "mr_biscuits_template_no_logo_1778806527327.png";
+  const parchmentPortrait = "mr_biscuits_template_no_logo_1778806527327.png";
     const parchmentLandscape = "parchment_classic_landscape_1779162178190.png";
     const portraitFiles: Record<string, string> = {
       "parchment-classic": parchmentPortrait,
@@ -529,30 +561,6 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     tmplBuf = fs.readFileSync(tmplPath);
     tmplMime = /\.(jpe?g)$/i.test(tmplFilename) ? "image/jpeg" : "image/png";
     req.log.info({ templateKey, tmplFilename }, "template file loaded");
-  }
-
-  if (templateKey === "surprise-me") {
-    const transformResult = await generateSurpriseMeTemplate(
-      d.industry || "",
-      isLandscape,
-      WORKSPACE_ROOT,
-      d.spotId,
-    );
-    if (transformResult) {
-      tmplBuf  = transformResult.buffer;
-      tmplMime = transformResult.mime;
-      req.log.info(
-        {
-          family:  transformResult.family,
-          palette: transformResult.palette,
-          flipped: transformResult.flipped,
-        },
-        "surprise-me template generated"
-      );
-    } else {
-      req.log.warn("surprise-me transform failed — falling back to text-only");
-    }
-  }
 
   // Map spot size → closest supported Grok aspect ratio
   // XL=4"×5" → 3:4 (4:5 unsupported; sharp crops to exact) | Large=3"×4" → 3:4
@@ -629,22 +637,6 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     if (hasLogo) {
       refLines.push(`  • IMAGE ${imgIdx} (BUSINESS LOGO) — the exact business logo. Reproduce it pixel-perfect with no stylization, color changes, or distortion.`);
     }
-  } else if (templateKey === "surprise-me") {
-    // No template reference image — Grok invents freely; photo and logo get IMAGE 1/2
-    imgIdx = 1;
-    if (hasPhoto) {
-      refLines.push(
-        `  • IMAGE ${imgIdx++} (HERO PHOTO) — the product/service photograph. ` +
-        "Composite it as the dominant hero visual with NO hard rectangular border — " +
-        "blend its edges using an organic mask, gradient fade, diagonal cut, color-band overlay, or brushstroke shape. " +
-        "Apply cinematic lighting with realistic shadow and soft-light blending into the background layer. " +
-        "The photo must feel fully embedded in the composition, not dropped on top like a placed sticker.",
-      );
-    }
-    if (hasLogo) {
-      refLines.push(`  • IMAGE ${imgIdx} (BUSINESS LOGO) — the exact business logo. Reproduce it pixel-perfect with no stylization, color changes, or distortion.`);
-    }
-    logoImg = hasPhoto ? 2 : 1;
   } else {
     refLines.push(
       templateKey === "made-fresh"
@@ -1120,35 +1112,6 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       "  • Gold/yellow brush stroke: must remain visible in the upper portion, overlapping the hero image zone\n" +
       "  • Fine print: smallest text, still legible\n" +
       "  • NEVER render the website URL as visible text"
-    )
-    : templateKey === "surprise-me"
-    ? (
-      "You are completing a postcard ad using the provided \n" +
-      "template image.\n\n" +
-      "TEMPLATE INSTRUCTIONS:\n" +
-      "  Follow the layout zones in the reference image exactly.\n" +
-      "  The template has been color-transformed — use the colors\n" +
-      "  shown in the reference image. Do not revert to any\n" +
-      "  original or default color palette.\n\n" +
-      "BUSINESS CONTENT TO PLACE:\n" +
-      `  HEADLINE: "${d.bizName}" — very large, dominant, placed\n` +
-      "  in the headline zone shown in the template.\n" +
-      (d.tagline ? `  TAGLINE: "${d.tagline}" — secondary prominence below headline.\n` : "") +
-      "  HERO PHOTO: " + (hasPhoto
-        ? "Supplied photo — composite into hero zone with organic edge blending. No hard rectangular border."
-        : `Generate a photorealistic image: ${ipc.hero}. Residential and human scale.`) + "\n" +
-      (hasLogo ? "  LOGO: Reproduce supplied logo pixel-perfect in logo zone. Zero stylization.\n" : "") +
-      "  SERVICES: Place each service item in the service list zone exactly once.\n" +
-      "  OFFER: Place special offer text in the coupon/offer zone.\n" +
-      "  FOOTER: Phone number left, address below phone, QR code right.\n\n" +
-      "QUALITY RULES:\n" +
-      "  Follow template layout zones exactly\n" +
-      "  Use template color palette shown — do not override\n" +
-      "  All text has drop shadows or dark-field backlighting\n" +
-      "  No hard rectangular photo borders\n" +
-      "  No text floating on bare flat color\n" +
-      "  No layout words as visible text (CENTER LEFT RIGHT ZONE)\n" +
-      "  No content not provided in the business data below"
     )
     : templateKey === "brush-stroke"
     ? (
