@@ -27,12 +27,6 @@ async function callImageGen(prompt, imageFile) {
   return data.imageUrl;
 }
 
-// Fetch a URL or data-URI as a File object
-async function urlToFile(src, filename = "image.png") {
-  const res = await fetch(src);
-  const blob = await res.blob();
-  return new File([blob], filename, { type: blob.type || "image/png" });
-}
 
 function Spinner({ label }) {
   return (
@@ -114,8 +108,18 @@ export default function AdminImageGenPage() {
     setAlterLoading(true);
     setAlterError("");
     try {
-      const asFile = await urlToFile(result, "current.png");
-      const url = await callImageGen(alterPrompt.trim(), asFile);
+      // Pass the current image URL as a field — the server fetches it to avoid browser CORS
+      const form = new FormData();
+      form.append("prompt", alterPrompt.trim());
+      form.append("imageUrl", result);
+      const res = await fetch(`${BASE}/api/admin/image-gen`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${getToken()}` },
+        body: form,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? `Error ${res.status}`);
+      const url = data.imageUrl;
       // push old result into history
       setHistory(h => [...h, { url: result, label: alterPrompt.trim() }]);
       setResult(url);

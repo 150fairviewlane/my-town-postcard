@@ -40,7 +40,27 @@ router.post(
       return;
     }
 
-    const imageFile = req.file;
+    // imageFile can come from a multipart upload OR the client can pass
+    // imageUrl (string) so the server fetches it — avoids browser CORS on xAI URLs.
+    let imageFile = req.file;
+    const incomingImageUrl = (req.body?.imageUrl as string | undefined)?.trim();
+    if (!imageFile && incomingImageUrl) {
+      try {
+        const fetched = await fetch(incomingImageUrl);
+        if (!fetched.ok) throw new Error(`Fetch image failed: ${fetched.status}`);
+        const arrayBuf = await fetched.arrayBuffer();
+        const contentType = fetched.headers.get("content-type") || "image/png";
+        imageFile = {
+          buffer: Buffer.from(arrayBuf),
+          mimetype: contentType,
+          originalname: "fetched.png",
+        } as Express.Multer.File;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        res.status(400).json({ error: `Could not fetch reference image: ${msg}` });
+        return;
+      }
+    }
     let imageUrl: string;
 
     try {
