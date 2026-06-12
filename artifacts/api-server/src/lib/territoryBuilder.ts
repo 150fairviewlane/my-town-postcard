@@ -737,10 +737,17 @@ async function getClaimedHubCities(
 /**
  * County-based hub selection — deterministic, no AI call.
  *
- * Returns cities in the dealer's home county (sorted by local business density),
- * expanding to neighbour counties until the territory has at least MIN_HUB_COUNT
- * qualifying hub cities (or no more neighbours / MAX_COUNTIES reached).
- * Also returns a county-based territory label for display (up to 3 county names).
+ * Always pins the seed city as Zone 1. Then selects up to 3 additional zones
+ * using a radius-based search (starting at 15 miles, expanding in 5-mile
+ * increments) sorted primarily by proximity-weighted distance:
+ *   - same county as seed: distanceMultiplier = 0.7  (strongly preferred)
+ *   - adjacent county:     distanceMultiplier = 0.85
+ *   - any other county:    distanceMultiplier = 1.0
+ *
+ * This guarantees Johns Creek / Milton / Roswell appear before Atlanta for an
+ * Alpharetta dealer, because they are much closer even after the county weight.
+ * Atlanta at 25 miles actual distance exceeds the 15-mile hard cap and is
+ * excluded entirely in the first pass.
  */
 async function getCountyTerritoryHubs(
   city: string,
@@ -751,7 +758,7 @@ async function getCountyTerritoryHubs(
 ): Promise<{ hubs: CityHub[]; countyLabel: string; countyGeoids: string[] }> {
   const excludedSet = new Set(excludedCities.map(c => c.toLowerCase().trim()));
 
-  // Step 1: Resolve home city → county GEOID
+  // Step 1: Resolve seed city → Gazetteer place + county GEOID
   const homePlace = findGazetteerCity(city, stateAbbr);
   if (!homePlace) {
     logger.warn({ city, stateAbbr }, "County territory: city not found in Gazetteer");
@@ -765,7 +772,7 @@ async function getCountyTerritoryHubs(
   const homeCountyInfo = await getCountyInfo(homeGeoid.slice(0, 2), homeGeoid.slice(2));
   const homeCountyShort = homeCountyInfo?.name.replace(/\s+County$/i, "").trim() ?? city;
 
-  // Helper: build CityHub from a Gazetteer-resolved place
+  // Helper: build a CityHub from a Gazetteer-resolved place
   function buildHub(c: { name: string; stateAbbr: string; lat: number; lng: number }): CityHub {
     const geoid = getCountyGeoidForLocation(c.lat, c.lng) ?? "";
     const nearbyZips = getZipsNearLocation(c.lat, c.lng, HUB_HOUSEHOLD_RADIUS);
@@ -786,101 +793,138 @@ async function getCountyTerritoryHubs(
   }
 
   const allStateCities = getCitiesInState(stateAbbr);
+  const seedCityNorm = city.toLowerCase().trim();
 
-  // Step 2: Qualifying cities in home county
-  const homeHubs = allStateCities
-    .filter(c =>
-      !excludedSet.has(c.name.toLowerCase().trim()) &&
-      !RESORT_CITIES.has(c.name) &&
-      getCountyGeoidForLocation(c.lat, c.lng) === homeGeoid
-    )
-    .map(c => buildHub(c))
-    .filter(h => h.localBiz >= COUNTY_MIN_LOCAL_BIZ)   // viability threshold stays on localBiz
-    .sort((a, b) =>
-      // Sort by own-ZIP establishment count, NOT localBiz (8-mile radius sum).
-      // Radius counts double-credit neighbouring cities; own-ZIP is the true
-      // signal for which city is the largest commercial centre.
-      getCityZipBusinessCount(b.cityName, b.stateAbbr) -
-      getCityZipBusinessCount(a.cityName, a.stateAbbr)
-    )
-    .slice(0, COUNTY_MAX_HUBS);
+  // Step 2: Build adjacent-county short-name set for proximity weighting.
+  const adjacentCountyShortNames = new Set(
+    getNeighborCountyNames(homeGeoid).map(n => n.toLowerCase())
+  );
 
-  let hubs = homeHubs;
-  let countyShortNames = [homeCountyShort];
-
-  // Step 3: Expand into neighbour counties until the territory has MIN_HUB_COUNT
-  // qualifying hub cities, a maximum of MAX_COUNTIES counties have been used, or
-  // no more neighbours are available.
-  // This ensures small/rural home counties (e.g. White GA = 2 hubs, Lumpkin GA = 1 hub)
-  // always grow into a viable multi-city mailing area without over-expanding large
-  // counties (e.g. Cherokee GA = 4 hubs → no expansion triggered at all).
-  const MAX_COUNTIES = 3;
-  if (hubs.length < MIN_HUB_COUNT) {
-    // Pre-build geoid → short county name map (async, but done once before the loop).
-    const geoidToShortName = new Map<string, string>();
-    const uniqueGeoids = new Set(
-      allStateCities
-        .map(c => getCountyGeoidForLocation(c.lat, c.lng))
-        .filter((g): g is string => g != null && g !== homeGeoid)
-    );
-    for (const geoid of uniqueGeoids) {
-      const info = await getCountyInfo(geoid.slice(0, 2), geoid.slice(2));
-      if (info) {
-        geoidToShortName.set(geoid, info.name.replace(/\s+County$/i, "").trim());
-      }
-    }
-
-    // usedGeoids tracks counties already in the territory to avoid double-counting.
-    const usedGeoids = new Set([homeGeoid]);
-    const neighborShortNames = getNeighborCountyNames(homeGeoid);
-
-    for (const neighborShort of neighborShortNames) {
-      if (hubs.length >= MIN_HUB_COUNT) break;          // target reached
-      if (countyShortNames.length >= MAX_COUNTIES) break; // county cap reached
-
-      const neighborHubs = allStateCities
-        .filter(c => {
-          if (excludedSet.has(c.name.toLowerCase().trim())) return false;
-          if (RESORT_CITIES.has(c.name)) return false;
-          const geoid = getCountyGeoidForLocation(c.lat, c.lng);
-          if (!geoid || usedGeoids.has(geoid)) return false;
-          return geoidToShortName.get(geoid)?.toLowerCase() === neighborShort.toLowerCase();
-        })
-        .map(c => buildHub(c))
-        .filter(h => h.localBiz >= COUNTY_MIN_LOCAL_BIZ)   // viability threshold stays on localBiz
-        .sort((a, b) =>
-          // Own-ZIP count, not localBiz — same rationale as home county sort above.
-          getCityZipBusinessCount(b.cityName, b.stateAbbr) -
-          getCityZipBusinessCount(a.cityName, a.stateAbbr)
-        );
-
-      if (neighborHubs.length > 0) {
-        // Record the GEOID of this neighbour so later iterations skip it.
-        const firstGeoid = getCountyGeoidForLocation(neighborHubs[0].lat, neighborHubs[0].lng);
-        if (firstGeoid) usedGeoids.add(firstGeoid);
-
-        hubs = [...hubs, ...neighborHubs].slice(0, COUNTY_MAX_HUBS);
-        countyShortNames.push(neighborShort);
-      }
+  // Step 3: Build geoid → short county name map (one async pass over all geoids).
+  const candidateGeoids = new Set(
+    allStateCities
+      .map(c => getCountyGeoidForLocation(c.lat, c.lng))
+      .filter((g): g is string => g != null)
+  );
+  const geoidToShortName = new Map<string, string>();
+  geoidToShortName.set(homeGeoid, homeCountyShort.toLowerCase());
+  for (const geoid of candidateGeoids) {
+    if (geoidToShortName.has(geoid)) continue;
+    const info = await getCountyInfo(geoid.slice(0, 2), geoid.slice(2));
+    if (info) {
+      geoidToShortName.set(geoid, info.name.replace(/\s+County$/i, "").trim().toLowerCase());
     }
   }
 
-  // Label: "X County" | "X / Y Counties" | "X / Y / Z Counties"
-  const countyLabel = countyShortNames.length === 1
-    ? `${countyShortNames[0]} County`
-    : `${countyShortNames.slice(0, -1).join(" / ")} / ${countyShortNames[countyShortNames.length - 1]} Counties`;
+  // Step 4: Score every candidate city with proximity-weighted distance.
+  //   same county    → actual distance × 0.7
+  //   adjacent county → actual distance × 0.85
+  //   other county   → actual distance × 1.0
+  // Sorting is distance-primary; business count is tiebreaker within a 0.5-mile band.
+  type ScoredHub = CityHub & { scoredDist: number };
 
-  // Collect the exact GEOIDs of every county in this territory (used by the map
-  // renderer to draw precise county-boundary polygons instead of radius footprints).
+  const candidateHubs: ScoredHub[] = allStateCities
+    .filter(c => {
+      const norm = c.name.toLowerCase().trim();
+      if (norm === seedCityNorm) return false;   // seed is handled separately
+      if (excludedSet.has(norm)) return false;
+      if (RESORT_CITIES.has(c.name)) return false;
+      return true;
+    })
+    .map(c => {
+      const hub = buildHub(c);
+      const shortName = geoidToShortName.get(hub.countyGeoid) ?? "";
+      let multiplier: number;
+      if (hub.countyGeoid === homeGeoid) {
+        multiplier = 0.7;
+      } else if (adjacentCountyShortNames.has(shortName)) {
+        multiplier = 0.85;
+      } else {
+        multiplier = 1.0;
+      }
+      return { ...hub, scoredDist: hub.distanceFromDealer * multiplier };
+    })
+    .filter(h => h.localBiz >= COUNTY_MIN_LOCAL_BIZ)
+    .sort((a, b) => {
+      const diff = a.scoredDist - b.scoredDist;
+      if (Math.abs(diff) > 0.5) return diff;
+      // Tiebreaker: more own-ZIP businesses = higher-value mailing area
+      return (
+        getCityZipBusinessCount(b.cityName, b.stateAbbr) -
+        getCityZipBusinessCount(a.cityName, a.stateAbbr)
+      );
+    });
+
+  // Step 5: Always pin the seed city as Zone 1.
+  const seedHub = buildHub({ name: city, stateAbbr, lat: homePlace.lat, lng: homePlace.lng });
+
+  // Step 6: Radius-based fill for the remaining 3 zones.
+  // Start at 15 miles actual distance; expand in 5-mile steps until 3 found or
+  // the 40-mile hard cap is reached.
+  const INITIAL_RADIUS_MI = 15;
+  const RADIUS_STEP_MI    = 5;
+  const HARD_MAX_RADIUS   = 40;
+  const ZONES_NEEDED      = TARGET_HUB_COUNT - 1; // 3 additional zones
+
+  let additionalHubs: ScoredHub[] = [];
+  let currentRadius = INITIAL_RADIUS_MI;
+
+  while (currentRadius <= HARD_MAX_RADIUS) {
+    // Filter on ACTUAL distance (not scored distance) for the hard radius cap.
+    const withinRadius = candidateHubs.filter(h => h.distanceFromDealer <= currentRadius);
+    if (withinRadius.length >= ZONES_NEEDED) {
+      additionalHubs = withinRadius.slice(0, ZONES_NEEDED);
+      break;
+    }
+    currentRadius += RADIUS_STEP_MI;
+  }
+
+  // If we still don't have enough after exhausting the radius, take closest available.
+  if (additionalHubs.length < ZONES_NEEDED) {
+    additionalHubs = candidateHubs.slice(0, ZONES_NEEDED);
+    currentRadius = HARD_MAX_RADIUS;
+  }
+
+  const hubs: CityHub[] = [seedHub, ...additionalHubs];
+
+  // Build county label from hubs actually selected.
+  const usedCountyShortNames: string[] = [homeCountyShort];
+  for (const h of additionalHubs) {
+    const raw = geoidToShortName.get(h.countyGeoid) ?? "";
+    const display = raw.charAt(0).toUpperCase() + raw.slice(1);
+    if (
+      display &&
+      display.toLowerCase() !== homeCountyShort.toLowerCase() &&
+      !usedCountyShortNames.some(n => n.toLowerCase() === display.toLowerCase())
+    ) {
+      usedCountyShortNames.push(display);
+    }
+  }
+
+  const countyLabel =
+    usedCountyShortNames.length === 1
+      ? `${usedCountyShortNames[0]} County`
+      : `${usedCountyShortNames.slice(0, -1).join(" / ")} / ${usedCountyShortNames[usedCountyShortNames.length - 1]} Counties`;
+
   const countyGeoids = [...new Set(
     hubs.map(h => h.countyGeoid).filter((g): g is string => !!g)
   )];
-  // Always include homeGeoid even when all hubs were later filtered out.
   if (!countyGeoids.includes(homeGeoid)) countyGeoids.unshift(homeGeoid);
 
   logger.info(
-    { city, stateAbbr, hubCount: hubs.length, countyLabel, countyGeoids },
-    "County territory: hubs resolved"
+    {
+      city,
+      stateAbbr,
+      hubCount: hubs.length,
+      finalRadius: currentRadius,
+      countyLabel,
+      countyGeoids,
+      hubs: hubs.map(h => ({
+        name: h.cityName,
+        dist: Math.round(h.distanceFromDealer * 10) / 10,
+      })),
+    },
+    "County territory: hubs resolved (proximity-first)"
   );
   return { hubs, countyLabel, countyGeoids };
 }
@@ -970,18 +1014,35 @@ async function buildCityHubProposal(
   }
 
   // Final set: only hubs that qualify after Voronoi, capped at TARGET_HUB_COUNT.
-  // Sort primary by own-ZIP postcard-industry business count (most commercially
-  // active cities first — these are the best postcard-mailer targets), with
-  // distance from dealer as a tiebreaker for geographic coherence.
-  hubs = hubs
-    .filter(h => h.qualifies)
-    .sort((a, b) => {
-      const bizA = getCityZipBusinessCount(a.cityName, a.stateAbbr);
-      const bizB = getCityZipBusinessCount(b.cityName, b.stateAbbr);
-      if (bizA !== bizB) return bizB - bizA;
-      return a.distanceFromDealer - b.distanceFromDealer;
-    })
-    .slice(0, TARGET_HUB_COUNT);
+  //
+  // Ordering rules (Bug 1 + Bug 2 fix):
+  //   1. The seed city (dealer's entered city) is always pinned as Zone 1.
+  //   2. Remaining zones are sorted by distance from dealer (ascending).
+  //   3. Population/business count is a tiebreaker only, never the primary sort.
+  {
+    const seedCityNorm = city.toLowerCase().trim();
+    const qualifiedHubs = hubs.filter(h => h.qualifies);
+
+    // Separate the pinned seed hub from the rest.
+    const seedHubs  = qualifiedHubs.filter(h => h.cityName.toLowerCase().trim() === seedCityNorm);
+    const otherHubs = qualifiedHubs.filter(h => h.cityName.toLowerCase().trim() !== seedCityNorm);
+
+    // Sort non-seed hubs by distance (ascending), business count as tiebreaker.
+    otherHubs.sort((a, b) => {
+      const distDiff = a.distanceFromDealer - b.distanceFromDealer;
+      if (Math.abs(distDiff) > 0.5) return distDiff;
+      return (
+        getCityZipBusinessCount(b.cityName, b.stateAbbr) -
+        getCityZipBusinessCount(a.cityName, a.stateAbbr)
+      );
+    });
+
+    // Seed first, then up to 3 nearest others.
+    hubs = [
+      ...seedHubs.slice(0, 1),
+      ...otherHubs.slice(0, TARGET_HUB_COUNT - seedHubs.length),
+    ].slice(0, TARGET_HUB_COUNT);
+  }
 
   const hubCount = hubs.length;
   const totalBusinesses = hubs.reduce((s, h) => s + h.nearbyBusinesses, 0);
