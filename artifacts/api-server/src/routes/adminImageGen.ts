@@ -90,7 +90,7 @@ router.post(
         const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
         form.append("image", new Blob([ab], { type: "image/png" }), "image.png");
         form.append("prompt", prompt);
-        form.append("model", "aurora");
+        form.append("model", "grok-imagine-image-quality");
         form.append("response_format", "b64_json");
 
         logger.info({ prompt: prompt.slice(0, 120) }, "admin-image-gen: calling xAI /images/edits");
@@ -123,7 +123,7 @@ router.post(
         const xaiRes = await fetch("https://api.x.ai/v1/images/generations", {
           method: "POST",
           headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ model: "aurora", prompt, n: 1 }),
+          body: JSON.stringify({ model: "grok-imagine-image-quality", prompt, n: 1 }),
         });
         const body = await safeJson(xaiRes);
         logger.info({ status: xaiRes.status, bodyPreview: JSON.stringify(body).slice(0, 200) }, "admin-image-gen: generations response");
