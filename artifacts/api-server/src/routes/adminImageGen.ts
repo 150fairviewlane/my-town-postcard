@@ -1,0 +1,132 @@
+import { Router } from "express";
+import multer from "multer";
+import jwt from "jsonwebtoken";
+import { logger } from "../lib/logger";
+
+const router = Router();
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
+
+const JWT_SECRET = process.env.SESSION_SECRET || "localspot-secret";
+
+function requireAdmin(req: any, res: any, next: any): void {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith("Bearer ")) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  try {
+    jwt.verify(auth.slice(7), JWT_SECRET);
+    next();
+  } catch {
+    res.status(401).json({ error: "Invalid or expired token" });
+  }
+}
+
+// POST /api/admin/image-gen
+router.post(
+  "/admin/image-gen",
+  requireAdmin,
+  upload.single("image"),
+  async (req, res): Promise<void> => {
+    const apiKey = process.env.XAI_API_KEY;
+    if (!apiKey) {
+      res.status(503).json({ error: "XAI_API_KEY is not configured on this server." });
+      return;
+    }
+
+    const prompt = (req.body?.prompt as string | undefined)?.trim();
+    if (!prompt) {
+      res.status(400).json({ error: "prompt is required" });
+      return;
+    }
+
+    const imageFile = req.file;
+    let imageUrl: string;
+
+    try {
+      if (imageFile) {
+        // Image provided — use /v1/images/edits (multipart)
+        const form = new FormData();
+        const buf = imageFile.buffer;
+        const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
+        form.append(
+          "image",
+          new Blob([ab], { type: imageFile.mimetype }),
+          imageFile.originalname || "upload.png",
+        );
+        form.append("prompt", prompt);
+        form.append("model", "grok-imagine-image-quality");
+        form.append("n", "1");
+
+        logger.info({ prompt: prompt.slice(0, 120) }, "admin-image-gen: calling xAI /images/edits");
+        const xaiRes = await fetch("https://api.x.ai/v1/images/edits", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${apiKey}` },
+          body: form,
+        });
+        const body = (await xaiRes.json()) as Record<string, unknown>;
+        logger.info({ status: xaiRes.status }, "admin-image-gen: edits response");
+
+        if (!xaiRes.ok) {
+          const msg =
+            ((body["error"] as Record<string, unknown> | undefined)?.["message"] as string) ??
+            `xAI /images/edits error ${xaiRes.status}`;
+          res.status(502).json({ error: msg });
+          return;
+        }
+
+        const dataArr = Array.isArray(body["data"])
+          ? (body["data"] as Record<string, unknown>[])
+          : [];
+        const item = dataArr[0];
+        if (item && typeof item["url"] === "string" && item["url"]) {
+          imageUrl = item["url"];
+        } else if (item && typeof item["b64_json"] === "string") {
+          imageUrl = `data:image/png;base64,${item["b64_json"]}`;
+        } else {
+          res.status(502).json({ error: "No image returned from xAI /images/edits" });
+          return;
+        }
+      } else {
+        // Text-only — use /v1/images/generations
+        logger.info({ prompt: prompt.slice(0, 120) }, "admin-image-gen: calling xAI /images/generations");
+        const xaiRes = await fetch("https://api.x.ai/v1/images/generations", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ model: "grok-imagine-image-quality", prompt, n: 1 }),
+        });
+        const body = (await xaiRes.json()) as Record<string, unknown>;
+        logger.info({ status: xaiRes.status }, "admin-image-gen: generations response");
+
+        if (!xaiRes.ok) {
+          const msg =
+            ((body["error"] as Record<string, unknown> | undefined)?.["message"] as string) ??
+            `xAI /images/generations error ${xaiRes.status}`;
+          res.status(502).json({ error: msg });
+          return;
+        }
+
+        const dataArr = Array.isArray(body["data"])
+          ? (body["data"] as Record<string, unknown>[])
+          : [];
+        const item = dataArr[0];
+        if (item && typeof item["url"] === "string" && item["url"]) {
+          imageUrl = item["url"];
+        } else if (item && typeof item["b64_json"] === "string") {
+          imageUrl = `data:image/png;base64,${item["b64_json"]}`;
+        } else {
+          res.status(502).json({ error: "No image returned from xAI /images/generations" });
+          return;
+        }
+      }
+
+      res.json({ imageUrl });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.error({ err: msg }, "admin-image-gen: unexpected error");
+      res.status(500).json({ error: msg });
+    }
+  },
+);
+
+export default router;

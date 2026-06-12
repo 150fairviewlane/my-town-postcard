@@ -399,6 +399,16 @@ function Dashboard({ token }) {
           >
             ✦ Grok Ad Generator
           </a>
+          <a
+            href={`${import.meta.env.BASE_URL}admin/image-gen`}
+            style={{
+              fontSize: 13, fontWeight: 700, color: "#065f46",
+              background: "#ecfdf5", border: "1px solid #6ee7b7",
+              borderRadius: 8, padding: "7px 12px", textDecoration: "none",
+            }}
+          >
+            🖼 Image Generator
+          </a>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>

@@ -55,6 +55,10 @@ const BlogArticlePage = lazy(() => import("./pages/BlogArticlePage"));
 const DealerBlogIndexPage = lazy(() => import("./pages/DealerBlogIndexPage"));
 const DealerBlogArticlePage = lazy(() => import("./pages/DealerBlogArticlePage"));
 
+// ── Admin tools ───────────────────────────────────────────────────────────────
+// @ts-expect-error JSX module without types
+const AdminImageGenPage = lazy(() => import("./pages/AdminImageGenPage"));
+
 import NotFound from "./pages/not-found";
 
 // Top-level frontend route prefixes that must NEVER be shadowed by a
@@ -110,6 +114,7 @@ function Router() {
         </Route>
 
         {/* Admin routes — more-specific paths before /admin */}
+        <Route path="/admin/image-gen" component={AdminImageGenPage} />
         <Route path="/admin/campaign/:id/print" component={AdminPrintPage} />
         <Route path="/admin/outreach" component={OutreachPage} />
         <Route path="/admin/scans" component={ScanAnalyticsPage} />

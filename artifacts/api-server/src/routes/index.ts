@@ -24,6 +24,7 @@ import adGenGrokRouter from "./adGenGrok";
 import interestRouter from "./interest";
 import subscriptionsRouter from "./subscriptions";
 import territoriesRouter from "./territories";
+import adminImageGenRouter from "./adminImageGen";
 
 const router: IRouter = Router();
 
@@ -52,5 +53,6 @@ router.use(adGenGrokRouter);
 router.use(interestRouter);
 router.use(subscriptionsRouter);
 router.use(territoriesRouter);
+router.use(adminImageGenRouter);
 
 export default router;
