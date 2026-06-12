@@ -84,20 +84,20 @@ router.post(
 
     try {
       if (imageFile) {
-        // Image provided — use /v1/images/edits (multipart)
-        const form = new FormData();
-        const buf = imageFile.buffer;
-        const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
-        form.append("image", new Blob([ab], { type: "image/png" }), "image.png");
-        form.append("prompt", prompt);
-        form.append("model", "grok-imagine-image-quality");
-        form.append("response_format", "b64_json");
+        // Image provided — use /v1/images/edits (JSON + base64, same as ad generator)
+        const dataUrl = `data:image/png;base64,${imageFile.buffer.toString("base64")}`;
+        const editsBody = {
+          model: "grok-imagine-image-quality",
+          prompt,
+          n: 1,
+          images: [{ type: "image_url", url: dataUrl }],
+        };
 
         logger.info({ prompt: prompt.slice(0, 120) }, "admin-image-gen: calling xAI /images/edits");
         const xaiRes = await fetch("https://api.x.ai/v1/images/edits", {
           method: "POST",
-          headers: { Authorization: `Bearer ${apiKey}` },
-          body: form,
+          headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify(editsBody),
         });
         const body = await safeJson(xaiRes);
         logger.info({ status: xaiRes.status, bodyPreview: JSON.stringify(body).slice(0, 200) }, "admin-image-gen: edits response");
