@@ -92,6 +92,7 @@ export default function SubscriptionConfirmationPage() {
         </p>
 
 
+        <a
           href="/"
           style={{ display: "inline-block", background: "#7B1418", color: "#fff", fontWeight: 600, padding: "12px 28px", borderRadius: 8, textDecoration: "none", fontSize: 15 }}
         >
