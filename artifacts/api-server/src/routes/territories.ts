@@ -12,7 +12,7 @@ import {
   selectBestHubs,
   selectHubsByCountyFill,
   getFootprintCountyGeoids,
-  computeHubZipFootprint,
+  computeMapDisplayZips,
 } from "../lib/territoryBuilder";
 import {
   getCountyGeoidsByShortNames,
@@ -552,7 +552,8 @@ router.post("/territories/propose", async (req, res): Promise<void> => {
       .map(g => getCountyShortNameByGeoid(g))
       .filter((n): n is string => !!n);
     const footprintCountyGeoids = getFootprintCountyGeoids(p.hubs);
-    const proposalZips = computeHubZipFootprint(p.hubs).map(z => z.zip);
+    const stateCities = getCitiesInState(stateAbbr);
+    const proposalZips = computeMapDisplayZips(p.hubs, stateCities);
     res.json({
       type: "proposed",
       proposal: {

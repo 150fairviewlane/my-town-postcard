@@ -516,6 +516,59 @@ export function computeHubZipFootprint(
 }
 
 /**
+ * Computes the map-display ZIP footprint for a set of hub cities.
+ *
+ * Unlike computeHubZipFootprint (which uses a 15-mile radius for conflict
+ * detection), this function further filters each candidate ZIP by "nearest
+ * gazetteer city" attribution: a ZIP is only included if the closest city in
+ * the state gazetteer is one of the hub cities. This prevents geographically
+ * close but distinctly-named cities (e.g. Sandy Springs, Cumming, Buford)
+ * from bleeding into the Alpharetta proposal highlight, even when they sit
+ * within the 15-mile search radius.
+ *
+ * @param hubs        - Hub cities with lat/lng (same shape as CityHub[])
+ * @param stateCities - All gazetteer cities for the state (from getCitiesInState)
+ * @returns           - Flat list of ZIP strings that "belong" to one of the hub cities
+ */
+export function computeMapDisplayZips(
+  hubs: Array<{ cityName: string; lat: number; lng: number }>,
+  stateCities: Array<{ name: string; lat: number; lng: number }>
+): string[] {
+  if (hubs.length === 0 || stateCities.length === 0) return [];
+
+  const hubNames = new Set(hubs.map(h => h.cityName.toLowerCase().trim()));
+
+  // Collect candidate ZIPs with lat/lng — 15-mile radius, each assigned to
+  // the nearest hub (same Voronoi logic as computeHubZipFootprint).
+  const zipMap = new Map<string, { lat: number; lng: number; dist: number }>();
+  for (const hub of hubs) {
+    for (const z of getZipsNearLocation(hub.lat, hub.lng, ZIP_FOOTPRINT_RADIUS_MI)) {
+      const ex = zipMap.get(z.zip);
+      if (!ex || z.distance < ex.dist) {
+        zipMap.set(z.zip, { lat: z.lat, lng: z.lng, dist: z.distance });
+      }
+    }
+  }
+
+  // For each candidate ZIP, find the nearest gazetteer city.
+  // Only keep ZIPs whose nearest city matches one of the hub city names.
+  const result: string[] = [];
+  for (const [zip, { lat, lng }] of zipMap.entries()) {
+    let nearestName = "";
+    let nearestDist = Infinity;
+    for (const city of stateCities) {
+      const d = haversineDistanceMiles(lat, lng, city.lat, city.lng);
+      if (d < nearestDist) {
+        nearestDist = d;
+        nearestName = city.name.toLowerCase().trim();
+      }
+    }
+    if (hubNames.has(nearestName)) result.push(zip);
+  }
+  return result;
+}
+
+/**
  * Returns all unique county GEOIDs covered by the hub ZIP footprint.
  */
 export function getFootprintCountyGeoids(
