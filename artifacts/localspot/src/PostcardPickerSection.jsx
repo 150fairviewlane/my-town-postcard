@@ -355,7 +355,7 @@ function AdHouse({w,h}){
   const HouseIco=()=><svg width={iconSz} height={iconSz} viewBox="0 0 24 24" fill="white"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>;
   const EnvIco=()=><svg width={iconSz} height={iconSz} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,8 12,14 22,8"/></svg>;
   const PinIco=()=><svg width={iconSz} height={iconSz} viewBox="0 0 24 24" fill="white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>;
-  const Ico=({icon,label})=>(<div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:Math.round(3*s),minWidth:0}}><div style={{width:circSz,height:circSz,borderRadius:"50%",background:"#c41c1c",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{icon}</div><div style={{color:"#fff",fontSize:Math.round(8*s),textAlign:"center",lineHeight:1.25,fontFamily:"sans-serif",fontWeight:500}}>{label}</div></div>);
+  const Ico=({icon,label})=>(<div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:Math.round(3*s),minWidth:0}}><div style={{width:circSz,height:circSz,borderRadius:"50%",background:"#c41c1c",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{icon}</div><div style={{color:"#fff",fontSize:Math.round(10*s),textAlign:"center",lineHeight:1.25,fontFamily:"sans-serif",fontWeight:500}}>{label}</div></div>);
   const Divider=()=><div style={{width:1,height:divH,background:"rgba(255,255,255,0.35)",flexShrink:0}}/>;
   return(
     <div style={{width:w,height:h,display:"flex",flexDirection:"column",overflow:"hidden",fontFamily:"sans-serif"}}>
@@ -363,10 +363,10 @@ function AdHouse({w,h}){
         <img src="/mailbox-logo.png" alt="My Town Postcard" style={{height:topH-Math.round(8*s),width:"auto",flexShrink:0}}/>
         <div style={{width:2,height:Math.round(58*s),background:"#991b1b",flexShrink:0}}/>
         <div style={{display:"flex",flexDirection:"column",justifyContent:"center",gap:Math.round(3*s)}}>
-          <div style={{fontSize:Math.round(21*s),fontFamily:"Georgia,serif",fontWeight:700,lineHeight:1.05,whiteSpace:"nowrap"}}>
+          <div style={{fontSize:Math.round(23*s),fontFamily:"Georgia,serif",fontWeight:700,lineHeight:1.05,whiteSpace:"nowrap"}}>
             <span style={{color:"#0d1d36"}}>My Town </span><span style={{color:"#991b1b"}}>Postcard</span>
           </div>
-          <div style={{fontSize:Math.round(8.5*s),color:"#0d1d36",letterSpacing:Math.round(2*s),fontWeight:700,textTransform:"uppercase",whiteSpace:"nowrap"}}>
+          <div style={{fontSize:Math.round(10.5*s),color:"#0d1d36",letterSpacing:Math.round(2*s),fontWeight:700,textTransform:"uppercase",whiteSpace:"nowrap"}}>
             Local Reach.&nbsp; Real Results.
           </div>
         </div>
@@ -386,7 +386,7 @@ function AdHouse({w,h}){
           <div style={{background:"#fff",borderRadius:3,padding:Math.round(4*s)}}>
             <img src={qrUrl} style={{width:qrSz,height:qrSz,display:"block"}} alt="QR"/>
           </div>
-          <div style={{color:"rgba(255,255,255,0.65)",fontSize:Math.round(7.5*s),textAlign:"center"}}>Scan to advertise</div>
+          <div style={{color:"rgba(255,255,255,0.65)",fontSize:Math.round(9.5*s),textAlign:"center"}}>Scan to advertise</div>
         </div>
       </div>
     </div>

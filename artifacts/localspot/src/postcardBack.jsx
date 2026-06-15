@@ -76,7 +76,7 @@ export function HouseAdVertical() {
   const Ico = ({ icon, label }) => (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, minWidth: 0 }}>
       <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#c41c1c", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{icon}</div>
-      <div style={{ color: "#fff", fontSize: 8, textAlign: "center", lineHeight: 1.25, fontFamily: "sans-serif", fontWeight: 500 }}>{label}</div>
+      <div style={{ color: "#fff", fontSize: 10, textAlign: "center", lineHeight: 1.25, fontFamily: "sans-serif", fontWeight: 500 }}>{label}</div>
     </div>
   );
   const Div = () => <div style={{ width: 1, height: 80, background: "rgba(255,255,255,0.35)", flexShrink: 0 }} />;
@@ -87,11 +87,11 @@ export function HouseAdVertical() {
         <img src="/mailbox-logo.png" alt="My Town Postcard" style={{ height: 80, width: "auto", flexShrink: 0 }} />
         <div style={{ width: 2, height: 58, background: "#991b1b", flexShrink: 0 }} />
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 3 }}>
-          <div style={{ fontSize: 21, fontFamily: "Georgia,serif", fontWeight: 700, lineHeight: 1.05, whiteSpace: "nowrap" }}>
+          <div style={{ fontSize: 23, fontFamily: "Georgia,serif", fontWeight: 700, lineHeight: 1.05, whiteSpace: "nowrap" }}>
             <span style={{ color: "#0d1d36" }}>My Town </span>
             <span style={{ color: "#991b1b" }}>Postcard</span>
           </div>
-          <div style={{ fontSize: 8.5, color: "#0d1d36", letterSpacing: 2, fontWeight: 700, textTransform: "uppercase", whiteSpace: "nowrap" }}>
+          <div style={{ fontSize: 10.5, color: "#0d1d36", letterSpacing: 2, fontWeight: 700, textTransform: "uppercase", whiteSpace: "nowrap" }}>
             Local Reach.&nbsp; Real Results.
           </div>
         </div>
@@ -112,7 +112,7 @@ export function HouseAdVertical() {
           <div style={{ background: "#fff", borderRadius: 3, padding: 4 }}>
             <img src={qrUrl} style={{ width: 68, height: 68, display: "block" }} alt="QR" />
           </div>
-          <div style={{ color: "rgba(255,255,255,0.65)", fontSize: 7.5, textAlign: "center" }}>Scan to advertise</div>
+          <div style={{ color: "rgba(255,255,255,0.65)", fontSize: 9.5, textAlign: "center" }}>Scan to advertise</div>
         </div>
       </div>
     </div>
