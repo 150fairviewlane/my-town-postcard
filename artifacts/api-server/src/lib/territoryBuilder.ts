@@ -23,6 +23,8 @@ import {
   findGazetteerCity,
   getNeighborCountyNames,
   getCityZipBusinessCount,
+  getZipPrimaryCity,
+  getZipsForCity,
 } from "./censusApi";
 import { logger } from "./logger";
 
@@ -532,28 +534,59 @@ export function computeHubZipFootprint(
  */
 export function computeMapDisplayZips(
   hubs: Array<{ cityName: string; lat: number; lng: number }>,
-  stateCities: Array<{ name: string; lat: number; lng: number }>
+  stateCities: Array<{ name: string; lat: number; lng: number }>,
+  stateAbbr: string
 ): string[] {
   if (hubs.length === 0 || stateCities.length === 0) return [];
 
   const hubNames = new Set(hubs.map(h => h.cityName.toLowerCase().trim()));
 
-  // Collect candidate ZIPs with lat/lng — 15-mile radius, each assigned to
-  // the nearest hub (same Voronoi logic as computeHubZipFootprint).
-  const zipMap = new Map<string, { lat: number; lng: number; dist: number }>();
+  // Collect candidate ZIPs — two passes combined into one map:
+  //
+  // Pass A (USPS city): seed with ALL ZIPs in the state whose USPS primary
+  //   city name matches a hub city, regardless of centroid distance. This is
+  //   the authoritative fix for PO Box ZIPs like 30009/Alpharetta whose mass
+  //   centroid sits 19+ miles from the actual city and would otherwise fall
+  //   outside the 15-mile geometry radius entirely.
+  //   We use a sentinel distance (0) to mark these as authoritative inclusions.
+  //
+  // Pass B (geometry): collect ZIPs within ZIP_FOOTPRINT_RADIUS_MI of any hub
+  //   centroid. Each ZIP is assigned to the nearest hub (Voronoi). If a ZIP was
+  //   already seeded by Pass A, keep the existing entry (dist=0 wins).
+  const zipMap = new Map<string, { lat: number; lng: number; dist: number; uspsMatch: boolean }>();
+
   for (const hub of hubs) {
-    for (const z of getZipsNearLocation(hub.lat, hub.lng, ZIP_FOOTPRINT_RADIUS_MI)) {
-      const ex = zipMap.get(z.zip);
-      if (!ex || z.distance < ex.dist) {
-        zipMap.set(z.zip, { lat: z.lat, lng: z.lng, dist: z.distance });
+    const cityZips = getZipsForCity(hub.cityName, stateAbbr);
+    for (const zip of cityZips) {
+      if (!zipMap.has(zip)) {
+        const loc = getZipLocation(zip);
+        if (loc) zipMap.set(zip, { lat: loc.lat, lng: loc.lng, dist: 0, uspsMatch: true });
       }
     }
   }
 
-  // For each candidate ZIP, find the nearest gazetteer city.
-  // Only keep ZIPs whose nearest city matches one of the hub city names.
+  for (const hub of hubs) {
+    for (const z of getZipsNearLocation(hub.lat, hub.lng, ZIP_FOOTPRINT_RADIUS_MI)) {
+      const ex = zipMap.get(z.zip);
+      if (!ex || (!ex.uspsMatch && z.distance < ex.dist)) {
+        zipMap.set(z.zip, { lat: z.lat, lng: z.lng, dist: z.distance, uspsMatch: false });
+      }
+    }
+  }
+
+  // For each candidate ZIP, apply a two-rule inclusion test:
+  //   Rule A (USPS city): the USPS city name matches a hub city → always include.
+  //                       (These were seeded in Pass A above.)
+  //   Rule B (nearest gazetteer city): the closest gazetteer centroid is a hub
+  //                       city → include. Catches delivery ZIPs that share hub
+  //                       territory without a matching USPS primary city name.
+  // A ZIP is included if EITHER rule matches.
   const result: string[] = [];
-  for (const [zip, { lat, lng }] of zipMap.entries()) {
+  for (const [zip, { lat, lng, uspsMatch }] of zipMap.entries()) {
+    if (uspsMatch) {
+      result.push(zip);
+      continue;
+    }
     let nearestName = "";
     let nearestDist = Infinity;
     for (const city of stateCities) {

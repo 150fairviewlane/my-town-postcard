@@ -206,6 +206,29 @@ const zipHousingUnitsMap = new Map<string, number>();
 const zipCentroidsMap = new Map<string, { lat: number; lng: number }>();
 
 /**
+ * ZIP → USPS primary city name.
+ * Source: src/data/zip-centroids.csv (city column, index 1)
+ * Used as the authoritative city-ZIP attribution for ZIPs whose mass centroid
+ * is misplaced (e.g. PO Box ZIPs like 30009/Alpharetta whose centroid sits far
+ * from the actual delivery area).
+ * Key: 5-digit ZIP string (e.g. "30009")
+ * Value: city name as printed in the USPS data (e.g. "Alpharetta")
+ */
+const zipCityMap = new Map<string, string>();
+
+/**
+ * "stateAbbr:cityLower" → list of ZIP codes whose USPS primary city matches.
+ * Built after loadStaticData() finishes loading both zip-county.csv and
+ * zip-centroids.csv so that state can be resolved for each ZIP.
+ * Key: e.g. "GA:alpharetta"
+ * Value: e.g. ["30004", "30005", "30009", "30022", "30023"]
+ *
+ * Used by computeMapDisplayZips to seed the candidate pool with USPS-city ZIPs
+ * that may lie outside the normal 15-mile centroid radius (PO Box ZIPs).
+ */
+const stateZipCityMap = new Map<string, string[]>();
+
+/**
  * City/place record from the Census 2023 Gazetteer for Places.
  */
 export interface GazetteerPlace {
@@ -554,11 +577,25 @@ function loadStaticData(): void {
       if (!line || line.startsWith("code,")) continue;
       const cols = line.split(",");
       if (cols.length < 7) continue;
-      const zip = (cols[0] ?? "").trim();
-      const lat = parseFloat(cols[5] ?? "");
-      const lng = parseFloat(cols[6] ?? "");
+      const zip   = (cols[0] ?? "").trim();
+      const city  = (cols[1] ?? "").trim();
+      const state = (cols[2] ?? "").trim(); // 2-letter state abbreviation, e.g. "GA"
+      const lat   = parseFloat(cols[5] ?? "");
+      const lng   = parseFloat(cols[6] ?? "");
       if (!zip || zip.length !== 5 || isNaN(lat) || isNaN(lng)) continue;
       zipCentroidsMap.set(zip, { lat, lng });
+      if (city) {
+        zipCityMap.set(zip, city);
+        // Build stateZipCityMap inline: uses state from zip-centroids.csv (col 2)
+        // rather than joining with zipCountyMap, so PO Box ZIPs absent from
+        // zip-county.csv (e.g. 30009/Alpharetta) are still indexed.
+        if (state) {
+          const key = `${state}:${city.toLowerCase()}`;
+          let arr = stateZipCityMap.get(key);
+          if (!arr) { arr = []; stateZipCityMap.set(key, arr); }
+          arr.push(zip);
+        }
+      }
       count++;
     }
     logger.info({ count }, "ZIP centroids loaded");
@@ -566,6 +603,7 @@ function loadStaticData(): void {
     logger.error({ err: err instanceof Error ? err.message : String(err) },
       "Census: failed to load zip-centroids.csv");
   }
+  logger.info({ cities: stateZipCityMap.size }, "USPS city→ZIP reverse index built");
 
   // ── 8. gazetteer-places.txt ───────────────────────────────────────────────────
   // Census 2023 Gazetteer for Incorporated/CDP Places. Tab-delimited.
@@ -913,6 +951,32 @@ export function getCityZipBusinessCount(cityName: string, stateAbbr: string): nu
  */
 export function getZipLocation(zip: string): { lat: number; lng: number } | null {
   return zipCentroidsMap.get(zip) ?? null;
+}
+
+/**
+ * Returns the USPS primary city name for a ZIP code, as recorded in
+ * zip-centroids.csv (city column). This is the authoritative attribution for
+ * PO Box ZIPs whose mass centroid may be misplaced relative to the delivery
+ * area (e.g. 30009/Alpharetta centroid sits at 33.84, -84.47 — far from the
+ * actual city — so nearest-gazetteer-city geometry fails for it).
+ *
+ * Returns undefined for unknown ZIPs or ZIPs not loaded at startup.
+ */
+export function getZipPrimaryCity(zip: string): string | undefined {
+  return zipCityMap.get(zip);
+}
+
+/**
+ * Returns all ZIP codes in `stateAbbr` whose USPS primary city matches `city`
+ * (case-insensitive). Uses the pre-built stateZipCityMap reverse index.
+ *
+ * This is the companion to getZipPrimaryCity: instead of looking up a single
+ * ZIP's city, it answers "give me every ZIP in GA with city = Alpharetta",
+ * which lets computeMapDisplayZips include ZIPs whose mass centroid is
+ * misplaced and therefore outside the normal geometry radius.
+ */
+export function getZipsForCity(city: string, stateAbbr: string): string[] {
+  return stateZipCityMap.get(`${stateAbbr}:${city.toLowerCase()}`) ?? [];
 }
 
 /**
