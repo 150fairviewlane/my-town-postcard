@@ -1375,42 +1375,53 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   // these tweaks layer on top to produce distinctly varied Surprise Me results.
   // All three variations apply whenever isSurpriseMe.
   if (isSurpriseMe) {
-    // Variation 1 — headline font style swap (slab serif ↔ geometric sans-serif)
-    // Constrained to the HEADLINE zone description line so no other font references
-    // in template detail copy are affected.
+    // Variation 1 — headline font style swap (bidirectional, full-phrase replacement)
+    // Constrained to the first HEADLINE zone description line so template detail
+    // copy and reference-image descriptions are never affected.
     adPrompt = adPrompt.replace(/(HEADLINE[^\n]+)/, (line) => {
-      if (/\bslab(?:\/block)? serif\b/.test(line)) {
-        // Template uses slab serif → swap to geometric sans-serif
-        return line.replace(/\bslab(?:\/block)? serif\b/, "geometric sans-serif");
+      // slab/block serif templates → swap to geometric sans-serif
+      if (/\bbold condensed all-caps slab(?:\/block)? serif\b/.test(line)) {
+        return line.replace(
+          /\bbold condensed all-caps slab(?:\/block)? serif\b/,
+          "bold condensed all-caps geometric sans-serif",
+        );
       }
-      if (/\bsans-serif\b/.test(line)) {
-        // Template uses sans-serif → swap to slab serif for contrast
-        return line.replace(/\bsans-serif\b/, "slab serif");
+      // sans-serif templates (sage-organic, purple-sage, health-wellness) → swap to slab serif
+      if (/\bbold condensed all-caps (?:geometric )?sans-serif\b/.test(line)) {
+        return line.replace(
+          /\bbold condensed all-caps (?:geometric )?sans-serif\b/,
+          "bold condensed all-caps slab serif",
+        );
+      }
+      // heritage-home uses "bold serif" (no condensed qualifier) → swap to geometric sans-serif
+      if (/\bbold serif\b/.test(line)) {
+        return line.replace(/\bbold serif\b/, "bold geometric sans-serif");
       }
       return line;
     });
 
     // Variation 3 — swap coupon border style (runs before Variation 2 so the
     // accent-color sentence is always appended to the already-modified coupon line)
+    // Targets COUPON and SPECIAL OFFER zone lines (templates use both headings).
     if (d.offer) {
-      if (adPrompt.includes("dashed")) {
-        adPrompt = adPrompt
-          .replace(
-            /dashed(?:-stitch)?\s+(?:border\s+)?(?:box|rectangle|rect)/g,
-            "solid filled color block in a bold contrasting accent color",
-          )
-          .replace(/dashed border/g, "solid filled block in a bold contrasting accent color");
-      } else if (adPrompt.includes("ticket-stub") || adPrompt.includes("torn-edge")) {
-        adPrompt = adPrompt
-          .replace(/ticket-stub/g, "clean rectangular box with a subtle diagonal color stripe across one corner")
-          .replace(/torn-edge/g, "clean rectangular box with a subtle diagonal color stripe across one corner");
-      }
+      adPrompt = adPrompt.replace(/((?:COUPON|SPECIAL OFFER)[^\n]+)/, (line) => {
+        if (line.includes("dashed")) {
+          return line.replace(/dashed(?:-stitch)?/g, "solid filled");
+        }
+        if (line.includes("ticket-stub") || line.includes("torn-edge")) {
+          return line
+            .replace(/ticket-stub/g, "clean rectangular with diagonal stripe")
+            .replace(/torn-edge/g, "clean rectangular with diagonal stripe");
+        }
+        return line;
+      });
     }
 
-    // Variation 2 — accent the coupon in the industry's characteristic color
+    // Variation 2 — industry characteristic accent color on the coupon/offer zone
+    // Targets COUPON and SPECIAL OFFER zone lines (templates use both headings).
     if (d.offer) {
       adPrompt = adPrompt.replace(
-        /(COUPON[^\n]+)/,
+        /((?:COUPON|SPECIAL OFFER)[^\n]+)/,
         "$1 Use the industry's characteristic accent color — brighter or warmer than the primary palette — for the coupon border or background fill.",
       );
     }
