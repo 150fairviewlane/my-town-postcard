@@ -887,16 +887,32 @@ async function getCountyTerritoryHubs(
 
   const hubs: CityHub[] = [seedHub, ...additionalHubs];
 
-  // Build county label from hubs actually selected.
+  // Count hubs per county GEOID.  Used for both countyGeoids and countyLabel
+  // so the two are always in sync.
+  const geoidHubCounts = new Map<string, number>();
+  for (const h of hubs) {
+    if (!h.countyGeoid) continue;
+    geoidHubCounts.set(h.countyGeoid, (geoidHubCounts.get(h.countyGeoid) ?? 0) + 1);
+  }
+
+  // Build county GEOID list.  Always include the home county.  Only include
+  // non-home counties that have ≥ 2 hubs — single-hub non-home counties are
+  // border-bleed artifacts (e.g. Mountain Park geocoding into Fulton County
+  // when all other hubs are in Cherokee County) and must not be claimed,
+  // because they would cause unrelated large counties to block new proposals.
+  const countyGeoids: string[] = homeGeoid ? [homeGeoid] : [];
+  for (const [geoid, count] of geoidHubCounts) {
+    if (geoid !== homeGeoid && count >= 2) countyGeoids.push(geoid);
+  }
+
+  // Build county label — uses the same ≥2-hub rule as countyGeoids so the
+  // human-readable name and the machine-readable GEOID list always agree.
   const usedCountyShortNames: string[] = [homeCountyShort];
-  for (const h of additionalHubs) {
-    const raw = geoidToShortName.get(h.countyGeoid) ?? "";
+  for (const [geoid, count] of geoidHubCounts) {
+    if (geoid === homeGeoid || count < 2) continue;
+    const raw = geoidToShortName.get(geoid) ?? "";
     const display = raw.charAt(0).toUpperCase() + raw.slice(1);
-    if (
-      display &&
-      display.toLowerCase() !== homeCountyShort.toLowerCase() &&
-      !usedCountyShortNames.some(n => n.toLowerCase() === display.toLowerCase())
-    ) {
+    if (display && !usedCountyShortNames.some(n => n.toLowerCase() === display.toLowerCase())) {
       usedCountyShortNames.push(display);
     }
   }
@@ -905,21 +921,6 @@ async function getCountyTerritoryHubs(
     usedCountyShortNames.length === 1
       ? `${usedCountyShortNames[0]} County`
       : `${usedCountyShortNames.slice(0, -1).join(" / ")} / ${usedCountyShortNames[usedCountyShortNames.length - 1]} Counties`;
-
-  // Build county GEOID list.  Always include the home county.  Only include
-  // non-home counties that have ≥ 2 hubs — single-hub non-home counties are
-  // border-bleed artifacts (e.g. Mountain Park geocoding into Fulton County
-  // when all other hubs are in Cherokee County) and must not be claimed,
-  // because they would cause unrelated large counties to block new proposals.
-  const geoidHubCounts = new Map<string, number>();
-  for (const h of hubs) {
-    if (!h.countyGeoid) continue;
-    geoidHubCounts.set(h.countyGeoid, (geoidHubCounts.get(h.countyGeoid) ?? 0) + 1);
-  }
-  const countyGeoids: string[] = homeGeoid ? [homeGeoid] : [];
-  for (const [geoid, count] of geoidHubCounts) {
-    if (geoid !== homeGeoid && count >= 2) countyGeoids.push(geoid);
-  }
 
   logger.info(
     {

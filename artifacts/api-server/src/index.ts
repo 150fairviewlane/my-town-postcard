@@ -2,6 +2,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { startExpirationSweeper } from "./lib/expirationCleanup";
 import { startRenewalScheduler } from "./lib/renewalScheduler";
+import { repairOverclaimedCounties } from "./lib/territoryDataRepair";
 
 const rawPort = process.env["PORT"];
 
@@ -24,6 +25,11 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+
+  // One-time idempotent data repair: remove spurious county claims caused by
+  // the border-bleed bug fixed in Task #211 (getCountyTerritoryHubs). Safe on
+  // every boot — the WHERE clause is a no-op once the row is already fixed.
+  void repairOverclaimedCounties();
 
   // Sweep lapsed reservations every 5 minutes. The interval is unref()'d
   // and the immediate first tick runs in the background — no app.listen
