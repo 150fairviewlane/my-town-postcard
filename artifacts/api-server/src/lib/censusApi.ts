@@ -273,7 +273,9 @@ function parseZbpCsvLine(line: string): string[] {
 }
 
 function loadStaticData(): void {
-  const dataDir = join(__dirname, "../data");
+  const dataDir = process.env.NODE_ENV === "production"
+    ? join(__dirname, "data")
+    : join(__dirname, "../data");
 
   // Local accumulator: ZIP → {stateAbbr, cityLower} — populated in step 1,
   // consumed after step 7 to build cityZipBizMap.
