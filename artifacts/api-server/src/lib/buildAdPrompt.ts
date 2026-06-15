@@ -706,7 +706,7 @@ export function buildAdPrompt(
         : (d.tagline ? `TAGLINE: italic script, gold/cream, inside red panel below business name.\n\n` : "")) +
       "HERO FOOD PHOTO (upper-right, wok/cooking action):\n" +
       (hasPhoto
-        ? `  Composite IMAGE 2 — dramatic cooking/fire scene, natural edges into dark bg, no hard border.\n\n`
+        ? `  Composite IMAGE 2 into the hero zone. Natural edges into dark bg, no hard border.\n\n`
         : `  ${ipc.hero} — dramatic, vibrant. Natural edges; no hard border.\n\n`) +
       (d.tagline
         ? `TAGLINE BANNER (center, parchment/kraft torn-edge banner): "${d.tagline}" in dark serif text.\n\n`
@@ -970,7 +970,7 @@ export function buildAdPrompt(
         : (d.tagline ? `TAGLINE: italic script, gold/cream, inside red panel below business name.\n\n` : "")) +
       "HERO FOOD PHOTO (upper-right, wok/cooking action scene):\n" +
       (hasPhoto
-        ? `  Composite IMAGE 2 — dramatic cooking/fire scene, natural edges into dark bg, no hard border. Cinematic lighting.\n\n`
+        ? `  Composite IMAGE 2 into the hero zone. Natural edges into dark bg, no hard border. Cinematic lighting.\n\n`
         : `  ${ipc.hero} — dramatic. Natural edges into dark bg; no hard border.\n\n`) +
       (d.tagline
         ? `TAGLINE BANNER (center, parchment/kraft torn-edge banner): "${d.tagline}" in dark serif text on the banner.\n\n`
