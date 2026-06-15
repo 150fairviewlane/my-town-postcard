@@ -1021,6 +1021,19 @@ async function buildCityHubProposal(
   //   3. Population/business count is a tiebreaker only, never the primary sort.
   {
     const seedCityNorm = city.toLowerCase().trim();
+
+    // Bug 3 fix: Force the seed hub to always qualify, regardless of Voronoi results.
+    // In dense suburban markets (e.g. Alpharetta / Fulton County), nearby hubs like
+    // Johns Creek, Roswell, and Milton absorb most surrounding ZIPs, leaving the
+    // seed city below VORONOI_HUB_MIN_HOUSEHOLDS and causing it to be filtered out
+    // before the pinning logic below can act.  The dealer explicitly named this city —
+    // it must always appear as Zone 1.
+    hubs = hubs.map(h =>
+      h.cityName.toLowerCase().trim() === seedCityNorm
+        ? { ...h, qualifies: true }
+        : h
+    );
+
     const qualifiedHubs = hubs.filter(h => h.qualifies);
 
     // Separate the pinned seed hub from the rest.
