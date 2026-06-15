@@ -388,14 +388,18 @@ export interface AdPromptInput {
  * Build the Grok image-generation prompt for a single ad.
  * Pure function — no I/O. Returns the raw prompt string (before runtime trimming).
  *
- * @param d           Parsed request data matching AdPromptInput
- * @param isLandscape True for medium/landscape spots (3"×2")
+ * @param d                Parsed request data matching AdPromptInput
+ * @param isLandscape      True for medium/landscape spots (3"×2")
+ * @param resolvedTemplate When provided, overrides d.template (used by adGenGrok to
+ *                         pass the already-resolved surprise-me template key so the
+ *                         prompt and the template reference image stay in sync).
  */
 export function buildAdPrompt(
   d: AdPromptInput,
   isLandscape: boolean,
+  resolvedTemplate?: string,
 ): string {
-  const templateKey = d.template || "parchment-classic";
+  const templateKey = resolvedTemplate ?? d.template ?? "parchment-classic";
 
   // Surprise Me theme selection
   const surpriseMeDefaultIdx = getDefaultThemeIndex(d.industry);

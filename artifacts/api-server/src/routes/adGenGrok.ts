@@ -488,13 +488,14 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   const isLandscape = ["medium", "m"].includes(d.sizeKey.toLowerCase());
 
   // Resolve template — "surprise-me" picks a random unused real template for this campaign side
+  const isSurpriseMe = d.template === "surprise-me";
   let templateKey = d.template || "parchment-classic";
 
   if (templateKey === "surprise-me") {
     const TEMPLATE_POOL = [
       "parchment-classic", "made-fresh", "neighborhood-pro", "at-your-service",
       "health-wellness", "home-elegance", "sage-organic", "purple-sage",
-      "brush-stroke", "wok-fire",
+      "brush-stroke", "wok-fire", "heritage-home",
     ];
     const usedTemplates = new Set<string>();
     if (d.campaignId != null && d.side) {
@@ -1365,7 +1366,43 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     );
 
   // Prompt assembled by the extracted pure function — see lib/buildAdPrompt.ts
-  const adPrompt = buildAdPrompt(d, isLandscape);
+  // Pass the already-resolved templateKey so the prompt and template reference image stay in sync.
+  // When d.template was "surprise-me", templateKey is now the concrete template chosen from TEMPLATE_POOL.
+  let adPrompt = buildAdPrompt(d, isLandscape, templateKey);
+
+  // ── Surprise Me visual variations ──────────────────────────────────────────
+  // Applied post-build so the base template prompt is generated first, then
+  // these tweaks layer on top to produce distinctly varied Surprise Me results.
+  if (isSurpriseMe) {
+    // Variation 1 — headline font style swap on odd generation attempts
+    // Keeps first-gen and re-gen visually distinct from each other.
+    if (d.generationIndex % 2 === 1) {
+      adPrompt = adPrompt
+        .replace(/\bslab\/block serif\b/g, "geometric sans-serif")
+        .replace(/\bslab serif\b/g, "geometric sans-serif");
+    }
+
+    // Variation 2 — accent the coupon in the palette's primary color when an offer exists
+    if (d.offer) {
+      adPrompt = adPrompt.replace(
+        /(COUPON[^\n]+)(\n)/,
+        "$1 Fill or border the coupon using the palette's primary accent color.$2",
+      );
+    }
+
+    // Variation 3 — swap the coupon border style for visual variety
+    if (d.offer) {
+      if (adPrompt.includes("dashed")) {
+        adPrompt = adPrompt
+          .replace(/dashed(?:-stitch)?\s+(?:border\s+)?(?:box|rectangle|rect)/g, "solid filled color block")
+          .replace(/dashed border/g, "solid filled block");
+      } else if (adPrompt.includes("ticket-stub") || adPrompt.includes("torn-edge")) {
+        adPrompt = adPrompt
+          .replace(/ticket-stub/g, "clean rectangular with diagonal stripe")
+          .replace(/torn-edge/g, "clean rectangular with diagonal stripe");
+      }
+    }
+  }
 
   // ── Enforce xAI 8000-byte prompt limit ───────────────────────────────────────
   // xAI enforces a hard byte limit, not a JS character limit. Multi-byte UTF-8
