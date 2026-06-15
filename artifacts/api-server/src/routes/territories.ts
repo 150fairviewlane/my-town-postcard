@@ -12,6 +12,7 @@ import {
   selectBestHubs,
   selectHubsByCountyFill,
   getFootprintCountyGeoids,
+  computeHubZipFootprint,
 } from "../lib/territoryBuilder";
 import {
   getCountyGeoidsByShortNames,
@@ -551,6 +552,7 @@ router.post("/territories/propose", async (req, res): Promise<void> => {
       .map(g => getCountyShortNameByGeoid(g))
       .filter((n): n is string => !!n);
     const footprintCountyGeoids = getFootprintCountyGeoids(p.hubs);
+    const proposalZips = computeHubZipFootprint(p.hubs).map(z => z.zip);
     res.json({
       type: "proposed",
       proposal: {
@@ -569,6 +571,7 @@ router.post("/territories/propose", async (req, res): Promise<void> => {
         countyGeoids,
         countyShortNames,
         footprintCountyGeoids,
+        proposalZips,
         viabilityMessage: p.viabilityMessage,
       },
     });
@@ -684,6 +687,56 @@ router.get("/counties-geojson", async (req, res): Promise<void> => {
     req.log.error({ err: err?.message }, "Failed to fetch counties GeoJSON");
     res.status(502).json({ error: "Could not load county GeoJSON" });
   }
+});
+
+// ─── GET /api/zip-geojson?state=GA&zips=30022,30076,... ──────────────────────
+// Returns a GeoJSON FeatureCollection of ZIP code polygons for the requested
+// ZIPs in the given state.  Only states that have a <state>-zips.geojson file
+// in src/data/ are supported — returns 404 otherwise.  Used by the territory
+// finder map to highlight proposed territory footprints at ZIP resolution
+// instead of drawing an entire county polygon.
+const _zipGeoCache = new Map<string, any>();
+
+router.get("/zip-geojson", async (req, res): Promise<void> => {
+  const stateParam = typeof req.query.state === "string"
+    ? req.query.state.toUpperCase().trim()
+    : "";
+  const zipsParam = typeof req.query.zips === "string" ? req.query.zips : "";
+
+  if (!stateParam || !zipsParam) {
+    res.status(400).json({ error: "state and zips query params are required" });
+    return;
+  }
+
+  // Load and cache the state ZIP GeoJSON file
+  if (!_zipGeoCache.has(stateParam)) {
+    const dataDir = process.env.NODE_ENV === "production"
+      ? path.join(_dirname, "data")
+      : path.join(_dirname, "../data");
+    const filePath = path.join(dataDir, `${stateParam.toLowerCase()}-zips.geojson`);
+    if (!fs.existsSync(filePath)) {
+      res.status(404).json({ error: `No ZIP boundary data for state: ${stateParam}` });
+      return;
+    }
+    try {
+      const raw = fs.readFileSync(filePath, "utf-8");
+      _zipGeoCache.set(stateParam, JSON.parse(raw));
+    } catch (err) {
+      req.log.error({ err, stateParam }, "Failed to load ZIP GeoJSON file");
+      res.status(500).json({ error: "Failed to load ZIP boundary data" });
+      return;
+    }
+  }
+
+  const geoJson = _zipGeoCache.get(stateParam);
+  const requestedZips = new Set(zipsParam.split(",").map(z => z.trim()).filter(Boolean));
+
+  const features = (geoJson?.features ?? []).filter((f: any) => {
+    const zip = f?.properties?.ZCTA5CE10;
+    return zip && requestedZips.has(zip);
+  });
+
+  res.json({ type: "FeatureCollection", features });
 });
 
 export default router;

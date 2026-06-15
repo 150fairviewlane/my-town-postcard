@@ -824,25 +824,53 @@ async function renderProposed(p){
     // Add grey background layer first so unassigned counties show the click hint
     addGreyCountyLayer(stateFips);
 
-    const geo = await stateGeo(stateFips);
-    if(geo){
-      // Use the exact territory county geoids so the amber highlight matches
-      // only the counties that are actually part of the territory (not a 15-mile
-      // radius footprint that bleeds into adjacent counties like Chattanooga/Hamilton).
-      const geoids = p.countyGeoids || [];
-      const features = pickFeatures(geo, stateFips, geoids, p.countyShortNames);
-      if(features.length){
-        const layer = L.geoJSON({ type:'FeatureCollection', features }, {
-          style: countyStyle('proposed'),
-          onEachFeature: (_, lyr) => lyr.bindTooltip(
-            `<div style="font-weight:700">${p.proposedName}</div>` +
-            `<div style="font-size:11px;color:#555">Proposed Territory</div>`,
-            { sticky:true }),
-        }).addTo(map);
-        searchLayers.push(layer);
-        fitTo(layer);
-      } else if(p.centroidLat != null && p.centroidLng != null){
-        map.setView([p.centroidLat, p.centroidLng], 9);
+    // Prefer ZIP-level polygons when the proposal includes a ZIP list and the
+    // server has boundary data for this state.  This draws only the actual
+    // mailing footprint (e.g. north Fulton ZIPs for Alpharetta) instead of the
+    // entire county polygon (which would include south Fulton / Atlanta).
+    let zipLayerRendered = false;
+    if(Array.isArray(p.proposalZips) && p.proposalZips.length && p.stateAbbr){
+      try {
+        const zipRes = await fetch(`/api/zip-geojson?state=${encodeURIComponent(p.stateAbbr)}&zips=${encodeURIComponent(p.proposalZips.join(','))}`);
+        if(zipRes.ok){
+          const zipGeo = await zipRes.json();
+          if(zipGeo.features && zipGeo.features.length){
+            const layer = L.geoJSON(zipGeo, {
+              style: countyStyle('proposed'),
+              onEachFeature: (_, lyr) => lyr.bindTooltip(
+                `<div style="font-weight:700">${p.proposedName}</div>` +
+                `<div style="font-size:11px;color:#555">Proposed Territory</div>`,
+                { sticky:true }),
+            }).addTo(map);
+            searchLayers.push(layer);
+            fitTo(layer);
+            zipLayerRendered = true;
+          }
+        }
+      } catch(e){ /* fall through to county polygon */ }
+    }
+
+    if(!zipLayerRendered){
+      const geo = await stateGeo(stateFips);
+      if(geo){
+        // Use the exact territory county geoids so the amber highlight matches
+        // only the counties that are actually part of the territory (not a 15-mile
+        // radius footprint that bleeds into adjacent counties like Chattanooga/Hamilton).
+        const geoids = p.countyGeoids || [];
+        const features = pickFeatures(geo, stateFips, geoids, p.countyShortNames);
+        if(features.length){
+          const layer = L.geoJSON({ type:'FeatureCollection', features }, {
+            style: countyStyle('proposed'),
+            onEachFeature: (_, lyr) => lyr.bindTooltip(
+              `<div style="font-weight:700">${p.proposedName}</div>` +
+              `<div style="font-size:11px;color:#555">Proposed Territory</div>`,
+              { sticky:true }),
+          }).addTo(map);
+          searchLayers.push(layer);
+          fitTo(layer);
+        } else if(p.centroidLat != null && p.centroidLng != null){
+          map.setView([p.centroidLat, p.centroidLng], 9);
+        }
       }
     }
   }
