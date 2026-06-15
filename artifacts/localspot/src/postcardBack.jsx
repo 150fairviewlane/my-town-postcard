@@ -54,70 +54,61 @@ export const BACK_GRID_ORDER = ["bxl", "bxl2", "bxl3", "bm1", "bm2", "bm3", "bm4
 // share the brand colors of the front HouseAd so the postcard reads as a
 // single product across both faces.
 
-// bhs — vertical strip on the right edge (2 cols × 7 rows ≈ tall portrait).
+// bhs — wide banner (6 cols × 2 rows ≈ 3:1 landscape). Mirrors AdHouse in the picker.
 export function HouseAdVertical() {
   return (
     <div
       style={{
         width: "100%",
         height: "100%",
-        background: "linear-gradient(160deg,#0f1923 0%,#1a2a3a 100%)",
+        background: "linear-gradient(135deg,#0f1923 0%,#1a2d45 55%,#2a1010 100%)",
         display: "flex",
-        flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
-        gap: 8,
-        padding: "10px 6px",
+        padding: "0 20px",
         boxSizing: "border-box",
-        fontFamily: "sans-serif",
-        textAlign: "center",
+        gap: 16,
         overflow: "hidden",
+        fontFamily: "sans-serif",
       }}
     >
-      <div style={{ width: "70%", height: 2, background: "#991b1b", borderRadius: 1 }} />
-      <div
-        style={{
-          color: "#fff",
-          fontWeight: 900,
-          fontSize: 13,
-          fontFamily: "Georgia,serif",
-          lineHeight: 1.1,
-        }}
-      >
-        Want
-        <br />
-        Your Ad
-        <br />
-        Here?
+      {/* Logo + brand name */}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flexShrink: 0 }}>
+        <img src="/mailbox-logo.png" alt="My Town Postcard" style={{ height: 64, width: "auto" }} />
+        <div style={{ color: "#fff", fontWeight: 900, fontSize: 14, fontFamily: "Georgia,serif", lineHeight: 1.1, textAlign: "center" }}>
+          My Town<br />Postcard
+        </div>
       </div>
-      <div style={{ width: "60%", height: 1, background: "rgba(255,255,255,0.25)" }} />
-      <div
-        style={{
-          color: "rgba(255,255,255,0.7)",
-          fontSize: 8,
-          letterSpacing: 1,
-          textTransform: "uppercase",
-        }}
-      >
-        Reach 5,000
-        <br />
-        Local Homes
+
+      <div style={{ width: 2, height: 100, background: "#991b1b", flexShrink: 0 }} />
+
+      {/* Headline + tagline + URL */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: 7, minWidth: 0 }}>
+        <div style={{ color: "#fff", fontWeight: 900, fontSize: 30, fontFamily: "Georgia,serif", lineHeight: 1.0 }}>
+          Advertise Here.
+        </div>
+        <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, lineHeight: 1.3 }}>
+          Reach 5,000+ local homes · USPS Every Door Direct Mail
+        </div>
+        <div style={{ color: "#fca5a5", fontWeight: 800, fontSize: 16, fontFamily: "Georgia,serif" }}>
+          mytownpostcard.com
+        </div>
       </div>
-      <div
-        style={{
-          color: "#991b1b",
-          background: "#fff",
-          fontWeight: 800,
-          fontSize: 8,
-          padding: "3px 6px",
-          borderRadius: 3,
-          letterSpacing: 0.5,
-        }}
-      >
-        From $199
+
+      <div style={{ width: 2, height: 100, background: "#991b1b", flexShrink: 0 }} />
+
+      {/* QR code */}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, flexShrink: 0 }}>
+        <div style={{ background: "#fff", borderRadius: 5, padding: 5 }}>
+          <img
+            src={"https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=" + encodeURIComponent("https://mytownpostcard.com")}
+            style={{ width: 72, height: 72, display: "block" }}
+            alt="QR"
+          />
+        </div>
+        <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 9, letterSpacing: 0.5, textAlign: "center" }}>
+          Scan to advertise
+        </div>
       </div>
-      <div style={{ color: "#fff", fontSize: 7, fontWeight: 700 }}>mytownpostcard.com</div>
-      <div style={{ width: "70%", height: 2, background: "#991b1b", borderRadius: 1 }} />
     </div>
   );
 }
