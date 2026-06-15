@@ -304,6 +304,13 @@ function loadStaticData(): void {
   // consumed after step 7 to build cityZipBizMap.
   const zipCityRaw = new Map<string, { stateAbbr: string; cityLower: string }>();
 
+  // Local accumulator: ZIP → {stateAbbr, countyUpper} — populated in step 8
+  // (zip-centroids.csv) and consumed in step 8b to backfill zipCountyMap.
+  // zip-county.csv has coverage gaps in dense US metros where USPS assigns
+  // suburban ZIPs a big-city mailing label (e.g. 30338 "Atlanta, FULTON"
+  // covers Dunwoody/Sandy Springs territory but is absent from zip-county.csv).
+  const zipFromCentroids = new Map<string, { stateAbbr: string; countyUpper: string }>();
+
   // ── 1. zip-county.csv ────────────────────────────────────────────────────────
   // Header: state_fips,state,state_abbr,zipcode,county,city
   // state_fips is unpadded (e.g. "13" for Georgia, "1" for Alabama).
@@ -577,13 +584,17 @@ function loadStaticData(): void {
       if (!line || line.startsWith("code,")) continue;
       const cols = line.split(",");
       if (cols.length < 7) continue;
-      const zip   = (cols[0] ?? "").trim();
-      const city  = (cols[1] ?? "").trim();
-      const state = (cols[2] ?? "").trim(); // 2-letter state abbreviation, e.g. "GA"
-      const lat   = parseFloat(cols[5] ?? "");
-      const lng   = parseFloat(cols[6] ?? "");
+      const zip    = (cols[0] ?? "").trim();
+      const city   = (cols[1] ?? "").trim();
+      const state  = (cols[2] ?? "").trim(); // 2-letter state abbreviation, e.g. "GA"
+      const county = (cols[3] ?? "").trim(); // e.g. "FULTON", "DEKALB", "GWINNETT"
+      const lat    = parseFloat(cols[5] ?? "");
+      const lng    = parseFloat(cols[6] ?? "");
       if (!zip || zip.length !== 5 || isNaN(lat) || isNaN(lng)) continue;
       zipCentroidsMap.set(zip, { lat, lng });
+      if (county && state) {
+        zipFromCentroids.set(zip, { stateAbbr: state, countyUpper: county.toUpperCase() });
+      }
       if (city) {
         zipCityMap.set(zip, city);
         // Build stateZipCityMap inline: uses state from zip-centroids.csv (col 2)
@@ -604,6 +615,37 @@ function loadStaticData(): void {
       "Census: failed to load zip-centroids.csv");
   }
   logger.info({ cities: stateZipCityMap.size }, "USPS city→ZIP reverse index built");
+
+  // ── 8b. Backfill zipCountyMap from zip-centroids.csv county column ────────────
+  // Fills any ZIP that is present in zip-centroids.csv but absent from
+  // zip-county.csv — common in dense US metros where USPS assigns a big-city
+  // mailing label to suburban ZIPs (e.g. 30338 filed as "Atlanta, GA, FULTON"
+  // covers Dunwoody/Sandy Springs delivery area but has no row in zip-county.csv).
+  // Runs AFTER county-adjacency.txt (step 4) so countyFipsByShortName is populated.
+  try {
+    let backfillCount = 0;
+    for (const [zip, { stateAbbr, countyUpper }] of zipFromCentroids) {
+      if (zipCountyMap.has(zip)) continue; // already covered by zip-county.csv
+      const stateFips = STATE_FIPS[stateAbbr];
+      if (!stateFips) continue;
+      // countyFipsByShortName key = "${stateFips}:${COUNTY_UPPER}" (e.g. "13:FULTON")
+      // Only succeeds when that county exists in the adjacency file.
+      const countyFips3 = countyFipsByShortName.get(`${stateFips}:${countyUpper}`);
+      if (!countyFips3) continue; // no matching county in adjacency data — skip
+      const stateName = STATE_NAME_BY_ABBR[stateAbbr] ?? stateAbbr;
+      zipCountyMap.set(zip, {
+        stateFips,
+        stateName,
+        stateAbbr,
+        countyShort: countyUpper, // already uppercase; matches countyFipsByShortName key format
+      });
+      backfillCount++;
+    }
+    logger.info({ backfillCount }, "Census: backfilled zipCountyMap from zip-centroids.csv");
+  } catch (err: unknown) {
+    logger.error({ err: err instanceof Error ? err.message : String(err) },
+      "Census: zip-centroids backfill failed — some metro ZIPs may lack county mapping");
+  }
 
   // ── 8. gazetteer-places.txt ───────────────────────────────────────────────────
   // Census 2023 Gazetteer for Incorporated/CDP Places. Tab-delimited.

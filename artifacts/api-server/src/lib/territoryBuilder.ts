@@ -850,12 +850,16 @@ async function getCountyTerritoryHubs(
     logger.warn({ city, stateAbbr }, "County territory: city not found in Gazetteer");
     return { hubs: [], countyLabel: "", countyGeoids: [] };
   }
-  const homeGeoid = getCountyGeoidForLocation(homePlace.lat, homePlace.lng);
+  const homeGeoid = getCountyGeoidForLocation(homePlace.lat, homePlace.lng) ?? "";
   if (!homeGeoid) {
-    logger.warn({ city, stateAbbr }, "County territory: could not resolve home county GEOID");
-    return { hubs: [], countyLabel: "", countyGeoids: [] };
+    // County resolution failed (e.g. metro ZIP absent from zip-county.csv).
+    // Proceed without county-proximity weighting — still produces a valid
+    // 4-zone proposal using pure distance sorting rather than "unavailable".
+    logger.warn({ city, stateAbbr }, "County territory: could not resolve home county GEOID — proceeding without county scoping");
   }
-  const homeCountyInfo = await getCountyInfo(homeGeoid.slice(0, 2), homeGeoid.slice(2));
+  const homeCountyInfo = homeGeoid
+    ? await getCountyInfo(homeGeoid.slice(0, 2), homeGeoid.slice(2))
+    : null;
   const homeCountyShort = homeCountyInfo?.name.replace(/\s+County$/i, "").trim() ?? city;
 
   // Helper: build a CityHub from a Gazetteer-resolved place
@@ -882,8 +886,9 @@ async function getCountyTerritoryHubs(
   const seedCityNorm = city.toLowerCase().trim();
 
   // Step 2: Build adjacent-county short-name set for proximity weighting.
+  // Empty when homeGeoid is unknown — all candidates get multiplier 1.0.
   const adjacentCountyShortNames = new Set(
-    getNeighborCountyNames(homeGeoid).map(n => n.toLowerCase())
+    homeGeoid ? getNeighborCountyNames(homeGeoid).map(n => n.toLowerCase()) : []
   );
 
   // Step 3: Build geoid → short county name map (one async pass over all geoids).
@@ -893,7 +898,7 @@ async function getCountyTerritoryHubs(
       .filter((g): g is string => g != null)
   );
   const geoidToShortName = new Map<string, string>();
-  geoidToShortName.set(homeGeoid, homeCountyShort.toLowerCase());
+  if (homeGeoid) geoidToShortName.set(homeGeoid, homeCountyShort.toLowerCase());
   for (const geoid of candidateGeoids) {
     if (geoidToShortName.has(geoid)) continue;
     const info = await getCountyInfo(geoid.slice(0, 2), geoid.slice(2));
@@ -921,9 +926,9 @@ async function getCountyTerritoryHubs(
       const hub = buildHub(c);
       const shortName = geoidToShortName.get(hub.countyGeoid) ?? "";
       let multiplier: number;
-      if (hub.countyGeoid === homeGeoid) {
+      if (homeGeoid && hub.countyGeoid === homeGeoid) {
         multiplier = 0.7;
-      } else if (adjacentCountyShortNames.has(shortName)) {
+      } else if (homeGeoid && adjacentCountyShortNames.has(shortName)) {
         multiplier = 0.85;
       } else {
         multiplier = 1.0;
@@ -993,9 +998,9 @@ async function getCountyTerritoryHubs(
 
   // Build county label — uses the same ≥2-hub rule as countyGeoids so the
   // human-readable name and the machine-readable GEOID list always agree.
-  const usedCountyShortNames: string[] = [homeCountyShort];
+  const usedCountyShortNames: string[] = homeGeoid ? [homeCountyShort] : [];
   for (const [geoid, count] of geoidHubCounts) {
-    if (geoid === homeGeoid || count < 2) continue;
+    if ((homeGeoid && geoid === homeGeoid) || count < 2 || !geoid) continue;
     const raw = geoidToShortName.get(geoid) ?? "";
     const display = raw.charAt(0).toUpperCase() + raw.slice(1);
     if (display && !usedCountyShortNames.some(n => n.toLowerCase() === display.toLowerCase())) {
@@ -1003,8 +1008,9 @@ async function getCountyTerritoryHubs(
     }
   }
 
-  const countyLabel =
-    usedCountyShortNames.length === 1
+  const countyLabel = usedCountyShortNames.length === 0
+    ? ""
+    : usedCountyShortNames.length === 1
       ? `${usedCountyShortNames[0]} County`
       : `${usedCountyShortNames.slice(0, -1).join(" / ")} / ${usedCountyShortNames[usedCountyShortNames.length - 1]} Counties`;
 

@@ -1,0 +1,62 @@
+The territory finder returns "unavailable" for Dunwoody, Sandy Springs, Norcross, and 200+ other Atlanta metro cities. The confirmed root cause is that 203 Georgia ZIPs exist in zip-centroids.csv but have zero entries in zip-county.csv. When getCountyGeoidForLocation does its bounding-box search it finds the ZIP centroids but cannot map them to a county GEOID, so it returns null. getCountyTerritoryHubs hits its early-return path and returns empty hubs, causing getTerritoryForLocation to return "unavailable."
+
+This is not a Georgia-only problem. The same ZIP-to-county mapping gap exists in every major US metro where USPS assigns suburban ZIPs a big-city mailing label (Houston suburbs mail as "Houston", DC suburbs mail as their own names but ZIPs are miscategorized, etc.). Patching Georgia alone will cause the same failures in every new market.
+
+The correct fix has two parts: replace the incomplete zip-county.csv with a complete national dataset, and make the code resilient so a missing county mapping never causes a total failure.
+
+Fix 1 — Replace zip-county.csv with complete national data (permanent fix):
+Download the Census Bureau ZIP-to-County Relationship File which covers all ~42,000 US ZIPs with correct county FIPS codes regardless of USPS mailing city labels.
+
+The file is available at no cost here:
+https://www.census.gov/geographies/reference-files/time-series/geo/relationship-files.html
+Look for "ZIP Code Tabulation Area (ZCTA) to County" relationship file.
+
+Alternatively use the HUD USPS ZIP-County crosswalk (updated quarterly):
+https://www.huduser.gov/portal/datasets/usps_crosswalk.html
+Download the ZIP-COUNTY crosswalk, which gives a ZIP, county FIPS, and residential address count for every US ZIP.
+
+The HUD file is preferred because it also includes household/address counts per ZIP which can improve territory sizing accuracy.
+
+Steps to implement:
+1. Download the HUD ZIP-COUNTY crosswalk CSV
+2. Parse it into the same format as the current zip-county.csv
+3. Replace zip-county.csv entirely with this complete dataset
+4. Run a verification check: every ZIP in zip-centroids.csv should now have at least one entry in zip-county.csv. Log any that are still missing.
+5. Re-test Dunwoody GA, Sandy Springs GA, and Norcross GA — all should resolve correctly.
+
+Fix 2 — Make getCountyGeoidForLocation resilient (safety net for any remaining gaps):
+Even after replacing the data file, add a fallback so a missing county mapping never causes a total failure:
+
+If getCountyGeoidForLocation returns null for the seed city ZIPs, do NOT return empty hubs immediately. Instead fall back in this order:
+1. Attempt to resolve county by looking up the city name directly in the gazetteer data which has state+county info for named places
+2. If that also fails, scope the hub search to the correct state using the state FIPS code alone
+3. If that fails, use a pure radius search (15 miles from seed city lat/lng) without county scoping
+4. Only return empty hubs as a true last resort if the lat/lng coordinates themselves are invalid
+
+County scoping is an optimization for result quality, not a hard requirement. The algorithm must degrade gracefully rather than returning unavailable.
+
+Fix 3 — Temporary Georgia stopgap (apply immediately while Fix 1 is being implemented):
+If Fix 1 takes time to implement, add these 203 missing Atlanta-metro ZIPs to zip-county.csv as a bridge fix so Georgia works right away. All belong to one of these three counties:
+
+Fulton County FIPS 13121: 30004, 30005, 30009, 30022, 30023, 30075, 30076, 30328, 30338, 30342, 30346, 30350
+
+DeKalb County FIPS 13089: 30071, 30083, 30084, 30085, 30087, 30088, 30319, 30324, 30329, 30340, 30341, 30360
+
+Gwinnett County FIPS 13135: 30017, 30019, 30024, 30040, 30041, 30043, 30044, 30045, 30047, 30052, 30078, 30092, 30093, 30096, 30097
+
+Cherokee County FIPS 13057: 30102, 30107, 30114, 30115, 30183, 30188, 30189
+
+Cobb County FIPS 13067: 30008, 30060, 30062, 30064, 30066, 30067, 30068, 30080, 30082, 30101, 30126, 30127, 30144, 30152, 30339
+
+Before adding, check which are already present to avoid duplicates. This stopgap should be replaced by Fix 1 as soon as the national dataset is in place.
+
+Fix 4 — Better error message while any gap remains:
+When getTerritoryForLocation returns unavailable, change the frontend message from a generic error to:
+"Territory data for [city] is not yet available in our system. Please try entering a nearby city, or contact support to request this area be added."
+
+To verify the complete fix works:
+- Dunwoody GA, Sandy Springs GA, and Norcross GA all return valid 4-zone proposals
+- Test at least one city in each of these known problem metros: Sugar Land TX, Schaumburg IL, McLean VA
+- All should return geographically sensible nearby suburbs, not the nearest large city
+- Cities that already worked should continue working unchanged
+- Run the coverage check: zero ZIPs should remain in zip-centroids.csv without a zip-county.csv entry

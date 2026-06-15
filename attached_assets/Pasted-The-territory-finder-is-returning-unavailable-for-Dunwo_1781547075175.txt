@@ -1,0 +1,44 @@
+The territory finder is returning "unavailable" for Dunwoody, Sandy Springs, and Norcross. The root cause has been identified: these cities do not have their own ZIP code entries in zip-centroids.csv — their ZIPs are labeled as "Atlanta" in that file. So when getCountyTerritoryHubs tries to resolve these cities, it finds no matching ZIPs and returns empty hubs, causing getTerritoryForLocation to return unavailable.
+
+Please fix this with the following changes:
+
+Fix 1 — City-to-ZIP resolution fallback:
+In findGazetteerCity (or wherever city-to-ZIP matching happens), when a city name is not found directly in zip-centroids.csv, add a fallback that:
+1. Looks up the city in the gazetteer data (which already has all three cities confirmed present)
+2. Uses the city's lat/lng coordinates from the gazetteer
+3. Finds the nearest ZIP centroids within a 5-mile radius regardless of what city name they are labeled as in zip-centroids.csv
+4. Uses those ZIPs as the city's ZIP footprint
+
+This means Dunwoody gets its actual ZIPs (30338, 30346, 30350 etc.) even though those ZIPs say "Atlanta" in the centroids file.
+
+Fix 2 — ZIP label mismatch for Atlanta suburbs:
+Many Atlanta suburbs have ZIPs labeled as "Atlanta" in zip-centroids.csv because USPS assigned them Atlanta mailing addresses. This affects at minimum: Dunwoody, Sandy Springs, Norcross, Brookhaven, Chamblee, Doraville, and likely others.
+
+Add a city alias mapping table that explicitly maps these commonly affected cities to their correct ZIP codes. At minimum include:
+
+Dunwoody, GA: 30338, 30346, 30350
+Sandy Springs, GA: 30328, 30342, 30350
+Norcross, GA: 30071, 30092, 30093
+Brookhaven, GA: 30319, 30324, 30329
+Chamblee, GA: 30341
+Doraville, GA: 30340, 30360
+Tucker, GA: 30084, 30085
+Smyrna, GA: 30080, 30082
+Mableton, GA: 30126
+Peachtree City, GA: 30269
+Tyrone, GA: 30290
+
+When looking up ZIPs for a city, check this alias table first before falling back to zip-centroids.csv name matching.
+
+Fix 3 — Graceful degradation in getCountyTerritoryHubs:
+Currently if getCountyGeoidForLocation fails or returns no results for the seed city, getCountyTerritoryHubs returns empty hubs immediately. Change this so that if the county GEOID lookup fails, it falls back to a pure radius-based search (15 miles from the seed city's lat/lng) instead of returning empty. Empty hubs should be a last resort, not the result of a single lookup failure.
+
+Fix 4 — Better error messaging:
+When getTerritoryForLocation returns "unavailable," the frontend currently shows a generic failure. Change it to show a more specific message: "We couldn't find territory data for [city name]. Please try a nearby major city or contact support." This helps dealers understand the issue is geographic data coverage, not a system error.
+
+To verify the fix works:
+- "Dunwoody, GA" should return a valid territory proposal with 4 zones
+- "Sandy Springs, GA" should return a valid territory proposal with 4 zones
+- "Norcross, GA" should return a valid territory proposal with 4 zones
+- All three should return nearby north Atlanta suburbs, not downtown Atlanta ZIPs
+- Cities that already worked (Alpharetta, Roswell, Johns Creek) should continue working unchanged

@@ -698,7 +698,10 @@ async function runSearch(){
     } else if(data.type === 'proposed' && data.proposal){
       await renderProposed(data.proposal);
     } else {
-      showUnavail(data.message || 'No territory is available for this location yet.');
+      const unavailCity = $('cityInput')?.value?.trim() ?? '';
+      const unavailState = $('stateSelect')?.value ?? '';
+      const unavailLoc = unavailCity ? `${unavailCity}${unavailState ? ', ' + unavailState : ''}` : 'this location';
+      showUnavail(data.message || `Territory data for ${unavailLoc} is not yet available in our system. Please try entering a nearby city, or contact support to request this area be added.`);
     }
   } catch(e){
     showToast('Something went wrong — please try again');
