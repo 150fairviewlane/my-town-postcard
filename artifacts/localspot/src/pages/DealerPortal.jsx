@@ -73,15 +73,20 @@ function MailingAreaCard({ c, money, baseUrl }) {
             View Advertiser Page ↗
           </a>
         )}
-        <a href={`${baseUrl}/ad-gen`} target="_blank" rel="noreferrer"
+        <button
+          onClick={() => window.open(
+            `/api/grok-ad-generator?campaignId=${encodeURIComponent(c.campaignId ?? '')}&side=front`,
+            "grok-ad-gen",
+            "width=1120,height=800,left=80,top=60",
+          )}
           style={{
             fontSize: 13, fontWeight: 700, color: "#374151",
             border: "1.5px solid #d1d5db", borderRadius: 8,
-            padding: "8px 14px", textDecoration: "none", background: "#fff",
-            whiteSpace: "nowrap",
+            padding: "8px 14px", background: "#fff",
+            whiteSpace: "nowrap", cursor: "pointer",
           }}>
           Ad Generator
-        </a>
+        </button>
       </div>
     </div>
   );
