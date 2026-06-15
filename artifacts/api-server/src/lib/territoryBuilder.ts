@@ -66,6 +66,10 @@ const MAX_HUB_DISTANCE_MILES = 22; // hard cap on hub distance from dealer
 
 // ─── County Territory Model ───────────────────────────────────────────────────
 const COUNTY_MIN_LOCAL_BIZ = 3;  // minimum local businesses per city to qualify as a hub
+const COUNTY_MIN_OWN_ZIP_BIZ = 1; // city must have ≥1 postcard-industry biz in its own USPS ZIPs;
+                                   // filters residential enclaves (e.g. Berkeley Lake GA, ~600 homes)
+                                   // that have Gazetteer entries but no USPS ZIP identity and would
+                                   // otherwise inflate their localBiz count via surrounding cities.
 const COUNTY_MAX_HUBS = 6;       // max hubs collected before Voronoi caps at TARGET_HUB_COUNT
 
 // Private/gated/ferry-only communities that can slip through the density proxy
@@ -950,6 +954,11 @@ async function getCountyTerritoryHubs(
       return { ...hub, scoredDist: hub.distanceFromDealer * multiplier };
     })
     .filter(h => h.localBiz >= COUNTY_MIN_LOCAL_BIZ)
+    // Exclude residential enclaves with no USPS ZIP identity. localBiz at 8 mi
+    // is inflated by surrounding commercial corridors (e.g. Berkeley Lake GA
+    // captures Peachtree Corners + Duluth + Norcross), so we require the city
+    // to have at least one postcard-industry biz in its own USPS-labeled ZIPs.
+    .filter(h => getCityZipBusinessCount(h.cityName, h.stateAbbr) >= COUNTY_MIN_OWN_ZIP_BIZ)
     .sort((a, b) => {
       const diff = a.scoredDist - b.scoredDist;
       if (Math.abs(diff) > 0.5) return diff;
