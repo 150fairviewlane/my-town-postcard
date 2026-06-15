@@ -553,7 +553,7 @@ router.post("/territories/propose", async (req, res): Promise<void> => {
       .filter((n): n is string => !!n);
     const footprintCountyGeoids = getFootprintCountyGeoids(p.hubs);
     const stateCities = getCitiesInState(stateAbbr);
-    const proposalZips = computeMapDisplayZips(p.hubs, stateCities, stateAbbr);
+    const proposalZips = computeMapDisplayZips(p.hubs, stateCities, stateAbbr, countyGeoids);
     res.json({
       type: "proposed",
       proposal: {

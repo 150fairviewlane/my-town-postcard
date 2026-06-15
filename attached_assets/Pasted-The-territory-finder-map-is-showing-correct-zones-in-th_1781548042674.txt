@@ -1,0 +1,22 @@
+The territory finder map is showing correct zones in the sidebar (Dunwoody, Sandy Springs, Doraville, Chamblee) but the map polygon extends too far southwest into Vinings and toward Smyrna. These areas are not part of the declared territory but their ZIP boundaries are bleeding into the shaded region. The zone list and city assignments are correct — only the map rendering needs to be fixed.
+
+Root cause: some ZIP codes assigned to the 4 zones have irregular shapes that extend geographically beyond the hub city. ZIP 30339 in particular straddles the Vinings/Smyrna area and Cobb County even though it is assigned to the Dunwoody/Sandy Springs territory. The map is drawing the full ZIP polygon boundary, which includes the Vinings peninsula.
+
+Fix 1 — Clip ZIP polygons to county boundaries:
+When drawing the territory shading on the map, clip each ZIP polygon to the county boundary of the territory. The Dunwoody territory is in Fulton and DeKalb counties. Any part of a ZIP polygon that falls outside Fulton or DeKalb county boundaries should be excluded from the shaded area. This prevents cross-county ZIPs from visually bleeding into neighboring territories.
+
+Fix 2 — Exclude ZIPs whose centroid is outside the territory counties:
+Before adding a ZIP to a zone's map polygon, check that the ZIP's centroid coordinates fall within the intended county (or adjacent counties). If a ZIP centroid is in Cobb County (FIPS 13067) and the territory is Fulton/DeKalb, exclude it from the map rendering entirely even if it was included in the mailing count. Specifically, ZIP 30339 has its centroid in Cobb County and should not be shaded as part of a Fulton/DeKalb territory.
+
+Fix 3 — Tighten hub-to-ZIP assignment radius:
+When building the ZIP footprint for each hub city, reduce the assignment radius so that ZIPs are only included if their centroid is within 6 miles of the hub city center (currently appears to be 8-10 miles). This prevents distant edge ZIPs from being pulled into a zone. If a ZIP falls within radius of two different hubs, assign it to the closer one — do not assign it to both.
+
+Fix 4 — Visual only, do not change mailing area counts:
+The EDDM mailing areas and household counts shown in the sidebar should remain unchanged. This fix only affects what is shaded on the map. The dealer is mailing to the correct addresses — the map just needs to accurately reflect the geographic footprint of those addresses without showing areas that are not being mailed to.
+
+To verify the fix:
+- Enter Dunwoody GA and generate the territory proposal
+- The map shading should cover Dunwoody, Sandy Springs, Doraville, and Chamblee
+- The shading should NOT extend into Vinings, Smyrna, or any part of Cobb County
+- The household count and zone list in the sidebar should remain the same as before this fix
+- Test Sandy Springs GA and Norcross GA to confirm their maps are also clean

@@ -535,7 +535,8 @@ export function computeHubZipFootprint(
 export function computeMapDisplayZips(
   hubs: Array<{ cityName: string; lat: number; lng: number }>,
   stateCities: Array<{ name: string; lat: number; lng: number }>,
-  stateAbbr: string
+  stateAbbr: string,
+  countyGeoids: string[] = []
 ): string[] {
   if (hubs.length === 0 || stateCities.length === 0) return [];
 
@@ -597,6 +598,19 @@ export function computeMapDisplayZips(
       }
     }
     if (hubNames.has(nearestName)) result.push(zip);
+  }
+
+  // County-GEOID filter (visual only — mailing counts are unaffected):
+  // Exclude ZIPs whose county GEOID is not in the territory's declared counties.
+  // Prevents cross-county ZIPs (e.g. 30339/Cobb bleeding into a Fulton+DeKalb
+  // territory) from having their full polygon shaded on the map.
+  // Skipped when countyGeoids is empty (county could not be resolved).
+  if (countyGeoids.length > 0) {
+    const allowed = new Set(countyGeoids);
+    return result.filter(zip => {
+      const geoid = getCountyGeoidFromZip(zip);
+      return geoid != null && allowed.has(geoid);
+    });
   }
   return result;
 }
