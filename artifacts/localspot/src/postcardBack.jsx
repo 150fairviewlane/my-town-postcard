@@ -56,57 +56,63 @@ export const BACK_GRID_ORDER = ["bxl", "bxl2", "bxl3", "bm1", "bm2", "bm3", "bm4
 
 // bhs — wide banner (6 cols × 2 rows ≈ 3:1 landscape). Mirrors AdHouse in the picker.
 export function HouseAdVertical() {
+  const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=" + encodeURIComponent("https://mytownpostcard.com");
+  const HouseIco = () => (
+    <svg width={20} height={20} viewBox="0 0 24 24" fill="white">
+      <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+    </svg>
+  );
+  const EnvIco = () => (
+    <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2">
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <polyline points="2,8 12,14 22,8" />
+    </svg>
+  );
+  const PinIco = () => (
+    <svg width={20} height={20} viewBox="0 0 24 24" fill="white">
+      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+    </svg>
+  );
+  const Ico = ({ icon, label }) => (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, minWidth: 0 }}>
+      <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#c41c1c", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{icon}</div>
+      <div style={{ color: "#fff", fontSize: 8, textAlign: "center", lineHeight: 1.25, fontFamily: "sans-serif", fontWeight: 500 }}>{label}</div>
+    </div>
+  );
+  const Div = () => <div style={{ width: 1, height: 80, background: "rgba(255,255,255,0.35)", flexShrink: 0 }} />;
   return (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        background: "linear-gradient(135deg,#0f1923 0%,#1a2d45 55%,#2a1010 100%)",
-        display: "flex",
-        alignItems: "center",
-        padding: "0 20px",
-        boxSizing: "border-box",
-        gap: 16,
-        overflow: "hidden",
-        fontFamily: "sans-serif",
-      }}
-    >
-      {/* Logo + brand name */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flexShrink: 0 }}>
-        <img src="/mailbox-logo.png" alt="My Town Postcard" style={{ height: 64, width: "auto" }} />
-        <div style={{ color: "#fff", fontWeight: 900, fontSize: 14, fontFamily: "Georgia,serif", lineHeight: 1.1, textAlign: "center" }}>
-          My Town<br />Postcard
+    <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: "sans-serif" }}>
+      {/* Top: white section */}
+      <div style={{ height: 88, background: "#f4f3ef", display: "flex", alignItems: "center", padding: "0 10px", gap: 10, flexShrink: 0 }}>
+        <img src="/mailbox-logo.png" alt="My Town Postcard" style={{ height: 80, width: "auto", flexShrink: 0 }} />
+        <div style={{ width: 2, height: 58, background: "#991b1b", flexShrink: 0 }} />
+        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 3 }}>
+          <div style={{ fontSize: 21, fontFamily: "Georgia,serif", fontWeight: 700, lineHeight: 1.05, whiteSpace: "nowrap" }}>
+            <span style={{ color: "#0d1d36" }}>My Town </span>
+            <span style={{ color: "#991b1b" }}>Postcard</span>
+          </div>
+          <div style={{ fontSize: 8.5, color: "#0d1d36", letterSpacing: 2, fontWeight: 700, textTransform: "uppercase", whiteSpace: "nowrap" }}>
+            Local Reach.&nbsp; Real Results.
+          </div>
         </div>
       </div>
-
-      <div style={{ width: 2, height: 100, background: "#991b1b", flexShrink: 0 }} />
-
-      {/* Headline + tagline + URL */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: 7, minWidth: 0 }}>
-        <div style={{ color: "#fff", fontWeight: 900, fontSize: 30, fontFamily: "Georgia,serif", lineHeight: 1.0 }}>
-          Advertise Here.
+      {/* Bottom: navy section */}
+      <div style={{ flex: 1, background: "#0d1d36", display: "flex", alignItems: "center", padding: "0 10px", gap: 8, overflow: "hidden" }}>
+        <div style={{ color: "#fff", fontFamily: "Impact,'Arial Black',sans-serif", fontSize: 34, fontWeight: 900, flexShrink: 0, lineHeight: 1, textTransform: "uppercase", letterSpacing: 0.5 }}>
+          ADVERTISE<br />HERE!
         </div>
-        <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, lineHeight: 1.3 }}>
-          Reach 5,000+ local homes · USPS Every Door Direct Mail
-        </div>
-        <div style={{ color: "#fca5a5", fontWeight: 800, fontSize: 16, fontFamily: "Georgia,serif" }}>
-          mytownpostcard.com
-        </div>
-      </div>
-
-      <div style={{ width: 2, height: 100, background: "#991b1b", flexShrink: 0 }} />
-
-      {/* QR code */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, flexShrink: 0 }}>
-        <div style={{ background: "#fff", borderRadius: 5, padding: 5 }}>
-          <img
-            src={"https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=" + encodeURIComponent("https://mytownpostcard.com")}
-            style={{ width: 72, height: 72, display: "block" }}
-            alt="QR"
-          />
-        </div>
-        <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 9, letterSpacing: 0.5, textAlign: "center" }}>
-          Scan to advertise
+        <Div />
+        <Ico icon={<HouseIco />} label={<>Reach 5,000<br />Homes In<br />Your Town</>} />
+        <Div />
+        <Ico icon={<EnvIco />} label={<>USPS Every<br />Door Direct<br />Mail</>} />
+        <Div />
+        <Ico icon={<PinIco />} label={<>Targeted.<br />Local.<br />Effective.</>} />
+        <Div />
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, flexShrink: 0 }}>
+          <div style={{ background: "#fff", borderRadius: 3, padding: 4 }}>
+            <img src={qrUrl} style={{ width: 68, height: 68, display: "block" }} alt="QR" />
+          </div>
+          <div style={{ color: "rgba(255,255,255,0.65)", fontSize: 7.5, textAlign: "center" }}>Scan to advertise</div>
         </div>
       </div>
     </div>

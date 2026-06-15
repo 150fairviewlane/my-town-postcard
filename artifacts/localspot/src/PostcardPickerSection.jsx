@@ -342,7 +342,56 @@ return(<div style={{width:w,height:h,display:"flex",flexDirection:"column",overf
 // ── S (200x200) ─────────────────────────────────────────────────────────────
 function AdS({d}){return(<div style={{width:200,height:200,overflow:"hidden",position:"relative",fontFamily:"sans-serif"}}><img src={d.photo} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}} alt=""/><div style={{position:"absolute",inset:0,background:`linear-gradient(180deg,${d.d}aa 0%,${d.d}f5 100%)`}}/><div style={{position:"absolute",inset:0,padding:"12px 10px",display:"flex",flexDirection:"column",justifyContent:"space-between",alignItems:"center",textAlign:"center"}}><div><div style={{color:"#fff",fontSize:16,fontWeight:900,fontFamily:"Georgia,serif",lineHeight:1.0,marginTop:3}}>{d.biz}</div><div style={{color:"rgba(255,255,255,0.85)",fontSize:10,fontStyle:"italic",marginTop:4,lineHeight:1.3}}>{d.tag}</div></div>{d.offer&&(<div style={{background:d.a,padding:"6px 10px",borderRadius:4,width:"100%",boxSizing:"border-box"}}><div style={{color:"#fff",fontWeight:900,fontSize:12,lineHeight:1.1}}>{d.offer}</div></div>)}<div style={{color:"#fff",fontSize:13,fontWeight:900,lineHeight:1}}>{d.phone}</div></div><PositionedQR website={d.web} fScale={0.65} dark /></div>);}
 
-function AdHouse({w,h,territory}){return(<div style={{width:w,height:h,background:"linear-gradient(135deg,#0f1923 0%,#1a2d45 55%,#2a1010 100%)",display:"flex",alignItems:"center",padding:"0 20px",boxSizing:"border-box",gap:16,overflow:"hidden"}}><div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:6,flexShrink:0}}><img src="/mailbox-logo.png" alt="My Town Postcard" style={{height:64,width:"auto"}}/><div style={{color:"#fff",fontWeight:900,fontSize:14,fontFamily:"Georgia,serif",lineHeight:1.1,textAlign:"center",letterSpacing:0.2}}>My Town<br/>Postcard</div></div><div style={{width:2,height:100,background:"#991b1b",flexShrink:0}}/><div style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center",gap:7,minWidth:0}}><div style={{color:"#fff",fontWeight:900,fontSize:30,fontFamily:"Georgia,serif",lineHeight:1.0}}>Advertise Here.</div><div style={{color:"rgba(255,255,255,0.7)",fontSize:13,fontFamily:"sans-serif",lineHeight:1.3}}>Reach 5,000+ {territory||"Habersham County"} homes · USPS Every Door Direct Mail</div><div style={{color:"#fca5a5",fontWeight:800,fontSize:16,fontFamily:"Georgia,serif"}}>mytownpostcard.com</div></div><div style={{width:2,height:100,background:"#991b1b",flexShrink:0}}/><div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:5,flexShrink:0}}><div style={{background:"#fff",borderRadius:5,padding:5}}><img src={"https://api.qrserver.com/v1/create-qr-code/?size=120x120&data="+encodeURIComponent("https://mytownpostcard.com")} style={{width:72,height:72,display:"block"}} alt="QR"/></div><div style={{color:"rgba(255,255,255,0.55)",fontSize:9,fontFamily:"sans-serif",letterSpacing:0.5,textAlign:"center"}}>Scan to advertise</div></div></div>);}
+function AdHouse({w,h}){
+  const s=h/200;
+  const topH=Math.round(h*0.44);
+  const botH=h-topH;
+  const qrSz=Math.round(68*s);
+  const circSz=Math.round(36*s);
+  const iconSz=Math.round(20*s);
+  const px=Math.round(10*s);
+  const divH=Math.round(botH*0.72);
+  const qrUrl="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data="+encodeURIComponent("https://mytownpostcard.com");
+  const HouseIco=()=><svg width={iconSz} height={iconSz} viewBox="0 0 24 24" fill="white"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>;
+  const EnvIco=()=><svg width={iconSz} height={iconSz} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,8 12,14 22,8"/></svg>;
+  const PinIco=()=><svg width={iconSz} height={iconSz} viewBox="0 0 24 24" fill="white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>;
+  const Ico=({icon,label})=>(<div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:Math.round(3*s),minWidth:0}}><div style={{width:circSz,height:circSz,borderRadius:"50%",background:"#c41c1c",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{icon}</div><div style={{color:"#fff",fontSize:Math.round(8*s),textAlign:"center",lineHeight:1.25,fontFamily:"sans-serif",fontWeight:500}}>{label}</div></div>);
+  const Divider=()=><div style={{width:1,height:divH,background:"rgba(255,255,255,0.35)",flexShrink:0}}/>;
+  return(
+    <div style={{width:w,height:h,display:"flex",flexDirection:"column",overflow:"hidden",fontFamily:"sans-serif"}}>
+      <div style={{height:topH,background:"#f4f3ef",display:"flex",alignItems:"center",padding:`0 ${px}px`,gap:Math.round(10*s),flexShrink:0}}>
+        <img src="/mailbox-logo.png" alt="My Town Postcard" style={{height:topH-Math.round(8*s),width:"auto",flexShrink:0}}/>
+        <div style={{width:2,height:Math.round(58*s),background:"#991b1b",flexShrink:0}}/>
+        <div style={{display:"flex",flexDirection:"column",justifyContent:"center",gap:Math.round(3*s)}}>
+          <div style={{fontSize:Math.round(21*s),fontFamily:"Georgia,serif",fontWeight:700,lineHeight:1.05,whiteSpace:"nowrap"}}>
+            <span style={{color:"#0d1d36"}}>My Town </span><span style={{color:"#991b1b"}}>Postcard</span>
+          </div>
+          <div style={{fontSize:Math.round(8.5*s),color:"#0d1d36",letterSpacing:Math.round(2*s),fontWeight:700,textTransform:"uppercase",whiteSpace:"nowrap"}}>
+            Local Reach.&nbsp; Real Results.
+          </div>
+        </div>
+      </div>
+      <div style={{height:botH,background:"#0d1d36",display:"flex",alignItems:"center",padding:`0 ${px}px`,gap:Math.round(8*s),boxSizing:"border-box",overflow:"hidden"}}>
+        <div style={{color:"#fff",fontFamily:"Impact,'Arial Black',sans-serif",fontSize:Math.round(34*s),fontWeight:900,flexShrink:0,lineHeight:1,textTransform:"uppercase",letterSpacing:0.5}}>
+          ADVERTISE<br/>HERE!
+        </div>
+        <Divider/>
+        <Ico icon={<HouseIco/>} label={<>Reach 5,000<br/>Homes In<br/>Your Town</>}/>
+        <Divider/>
+        <Ico icon={<EnvIco/>} label={<>USPS Every<br/>Door Direct<br/>Mail</>}/>
+        <Divider/>
+        <Ico icon={<PinIco/>} label={<>Targeted.<br/>Local.<br/>Effective.</>}/>
+        <Divider/>
+        <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:Math.round(3*s),flexShrink:0}}>
+          <div style={{background:"#fff",borderRadius:3,padding:Math.round(4*s)}}>
+            <img src={qrUrl} style={{width:qrSz,height:qrSz,display:"block"}} alt="QR"/>
+          </div>
+          <div style={{color:"rgba(255,255,255,0.65)",fontSize:Math.round(7.5*s),textAlign:"center"}}>Scan to advertise</div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function AdEDDM({w,h,eddmCity,eddmZip}){return(<div style={{width:w,height:h,background:"#f8f8f8",border:"2px solid #aaa",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,boxSizing:"border-box",padding:16}}><div style={{width:44,height:44,borderRadius:"50%",border:"3px solid #555",display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{width:26,height:26,borderRadius:"50%",border:"2px dashed #555"}}/></div><div style={{textAlign:"center",lineHeight:1.8,fontFamily:"sans-serif",color:"#333"}}><div style={{fontSize:9,letterSpacing:1,fontWeight:600}}>PRESORTED STD</div><div style={{fontSize:9,letterSpacing:1,fontWeight:600}}>U.S. POSTAGE PAID</div><div style={{fontSize:9,letterSpacing:1,fontWeight:600}}>{eddmCity||"CLARKESVILLE"}, GA {eddmZip||"30523"}</div><div style={{marginTop:6,paddingTop:6,borderTop:"1px solid #ccc",fontSize:9,letterSpacing:2,fontWeight:600}}>LOCAL POSTAL CUSTOMER</div><div style={{fontWeight:900,fontSize:15,letterSpacing:3,marginTop:2}}>EDDM</div></div></div>);}
 
