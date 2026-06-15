@@ -749,7 +749,7 @@ export function buildAdPrompt(
       (d.tagline ? ` Below a thin burgundy rule with diamond ◆ accent: tagline in elegant italic serif, dark burgundy.` : "") + "\n\n" +
       "HERO PHOTO (left 40%, full bleed left/top/bottom):\n" +
       (hasPhoto
-        ? `  Composite IMAGE 2 — tool belt foreground + residential home background. Fill left zone, right edge dissolves organically into the diagonal burgundy brush stroke; no hard border. Warm residential lighting.\n\n`
+        ? `  Composite IMAGE 2 into the hero zone. Fill left zone, right edge dissolves organically into the diagonal burgundy brush stroke; no hard border.\n\n`
         : `  ${ipc.hero}. Fill left zone, right edge dissolves into brush stroke; no hard border.\n\n`) +
       `SERVICE BADGES (center-right, horizontal row): ` +
       (menuCount > 0
@@ -1011,7 +1011,7 @@ export function buildAdPrompt(
       (d.tagline ? ` Below a thin burgundy horizontal rule with diamond ◆ accent: tagline in elegant italic serif, dark burgundy.` : "") + "\n\n" +
       "HERO PHOTO (upper-left, fills upper-left area and bleeds into diagonal brush stroke):\n" +
       (hasPhoto
-        ? `  Composite IMAGE 2 — tool belt foreground + residential home background. Fill upper-left, right edge dissolves organically into the burgundy brush stroke; no hard border. Warm residential lighting.\n\n`
+        ? `  Composite IMAGE 2 into the hero zone. Fill upper-left, right edge dissolves organically into the burgundy brush stroke; no hard border.\n\n`
         : `  ${ipc.hero}. Fill upper-left zone, right edge dissolves into brush stroke; no hard border.\n\n`) +
       `SERVICE BADGES (middle, horizontal row across full card width): ` +
       (menuCount > 0
