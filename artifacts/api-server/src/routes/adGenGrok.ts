@@ -1373,34 +1373,46 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   // ── Surprise Me visual variations ──────────────────────────────────────────
   // Applied post-build so the base template prompt is generated first, then
   // these tweaks layer on top to produce distinctly varied Surprise Me results.
+  // All three variations apply whenever isSurpriseMe.
   if (isSurpriseMe) {
-    // Variation 1 — headline font style swap on odd generation attempts
-    // Keeps first-gen and re-gen visually distinct from each other.
-    if (d.generationIndex % 2 === 1) {
-      adPrompt = adPrompt
-        .replace(/\bslab\/block serif\b/g, "geometric sans-serif")
-        .replace(/\bslab serif\b/g, "geometric sans-serif");
-    }
+    // Variation 1 — headline font style swap (slab serif ↔ geometric sans-serif)
+    // Constrained to the HEADLINE zone description line so no other font references
+    // in template detail copy are affected.
+    adPrompt = adPrompt.replace(/(HEADLINE[^\n]+)/, (line) => {
+      if (/\bslab(?:\/block)? serif\b/.test(line)) {
+        // Template uses slab serif → swap to geometric sans-serif
+        return line.replace(/\bslab(?:\/block)? serif\b/, "geometric sans-serif");
+      }
+      if (/\bsans-serif\b/.test(line)) {
+        // Template uses sans-serif → swap to slab serif for contrast
+        return line.replace(/\bsans-serif\b/, "slab serif");
+      }
+      return line;
+    });
 
-    // Variation 2 — accent the coupon in the palette's primary color when an offer exists
-    if (d.offer) {
-      adPrompt = adPrompt.replace(
-        /(COUPON[^\n]+)(\n)/,
-        "$1 Fill or border the coupon using the palette's primary accent color.$2",
-      );
-    }
-
-    // Variation 3 — swap the coupon border style for visual variety
+    // Variation 3 — swap coupon border style (runs before Variation 2 so the
+    // accent-color sentence is always appended to the already-modified coupon line)
     if (d.offer) {
       if (adPrompt.includes("dashed")) {
         adPrompt = adPrompt
-          .replace(/dashed(?:-stitch)?\s+(?:border\s+)?(?:box|rectangle|rect)/g, "solid filled color block")
-          .replace(/dashed border/g, "solid filled block");
+          .replace(
+            /dashed(?:-stitch)?\s+(?:border\s+)?(?:box|rectangle|rect)/g,
+            "solid filled color block in a bold contrasting accent color",
+          )
+          .replace(/dashed border/g, "solid filled block in a bold contrasting accent color");
       } else if (adPrompt.includes("ticket-stub") || adPrompt.includes("torn-edge")) {
         adPrompt = adPrompt
-          .replace(/ticket-stub/g, "clean rectangular with diagonal stripe")
-          .replace(/torn-edge/g, "clean rectangular with diagonal stripe");
+          .replace(/ticket-stub/g, "clean rectangular box with a subtle diagonal color stripe across one corner")
+          .replace(/torn-edge/g, "clean rectangular box with a subtle diagonal color stripe across one corner");
       }
+    }
+
+    // Variation 2 — accent the coupon in the industry's characteristic color
+    if (d.offer) {
+      adPrompt = adPrompt.replace(
+        /(COUPON[^\n]+)/,
+        "$1 Use the industry's characteristic accent color — brighter or warmer than the primary palette — for the coupon border or background fill.",
+      );
     }
   }
 
