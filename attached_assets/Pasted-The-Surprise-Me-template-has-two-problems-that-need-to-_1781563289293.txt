@@ -1,0 +1,66 @@
+The "Surprise Me" template has two problems that need to be fixed together in this prompt:
+
+PROBLEM 1 — Sequencing bug causing bad output:
+The templateKey resolution (from "surprise-me" to a real template name like "sage-organic") happens after refLines and outputRequirements are already built. So Surprise Me always uses the generic fallback prompt regardless of which template was randomly selected. The template reference image and the prompt instructions are mismatched, causing Grok to produce incoherent output.
+
+PROBLEM 2 — No visual distinction from the base template:
+Even after fixing the sequencing bug, Surprise Me would produce identical output to just selecting that template directly. We want Surprise Me ads to look subtly but noticeably different from the base template while still being clean and professional.
+
+Fix the sequencing bug AND apply the three visual variation instructions described below, all in the same update.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 1 — FIX THE SEQUENCING BUG
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Move the Surprise Me resolution block so it executes BEFORE refLines is populated and BEFORE outputRequirements is constructed. The resolved templateKey value (e.g. "sage-organic") must be what flows into all of these:
+- The refLines block that describes the IMAGE 1 template reference to Grok
+- The outputRequirements block that describes zone layout instructions
+- The fileMap lookup that loads the template PNG file from disk
+- The landscape/portrait file map selection
+
+Also add "heritage-home" to the TEMPLATE_POOL array — it is currently missing.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 2 — THREE VISUAL VARIATIONS FOR SURPRISE ME
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+When templateKey was originally "surprise-me" (i.e. the user selected Surprise Me, not a specific template), apply these three modifications to the prompt text AFTER building it from the resolved template. These modifications apply on top of the normal template prompt — they do not replace or restructure any zone layout instructions.
+
+Store a boolean flag like const isSurpriseMe = (originalTemplate === "surprise-me") before the resolution runs, so you can reference it when building the prompt.
+
+VARIATION 1 — Font swap:
+In the TYPOGRAPHIC RULES section of the outputRequirements, find the headline font instruction. It will say something like "bold condensed all-caps slab serif" for most templates, or "bold condensed sans-serif" for others.
+- If the base template uses "slab serif" in the headline rule, replace that phrase with "bold condensed all-caps geometric sans-serif"
+- If the base template uses "sans-serif" in the headline rule, replace that phrase with "bold condensed all-caps slab serif"
+This swap applies only to the headline font description in the typographic rules. Do not change any other font instructions.
+
+VARIATION 2 — Accent color on the coupon:
+In the outputRequirements, find the coupon or special offer zone instruction. After the coupon zone description, add this sentence:
+"Use the industry accent color (the brighter or warmer of the two brand colors) as the dominant color for the coupon box background or border, rather than the primary color."
+If there is no coupon zone because the business has no offer, skip this variation silently.
+
+VARIATION 3 — Coupon style swap:
+In the same coupon zone instruction, find the style description and replace it based on what the base template normally uses:
+- If the base template uses a dashed border coupon style, change the description to: "solid filled coupon block with rounded corners, the offer text in large bold white letters on a filled background"
+- If the base template uses a ticket-stub or torn-edge coupon style, change the description to: "clean rectangular coupon with a bold solid border and a subtle diagonal stripe pattern on the left edge"
+If there is no coupon zone, skip this variation silently.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+IMPORTANT CONSTRAINTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- The three variations apply ONLY when the original user selection was "surprise-me". When a user picks a specific template directly, the prompt must be completely unchanged.
+- Do not restructure any zone layouts, move any content zones, or change any photo or logo instructions.
+- Do not change the template reference image — it must still match the resolved template.
+- Keep all existing footer instructions, phone/address placement rules, and QR code rules exactly as they are.
+- The output should look like a polished professional version of the resolved template with subtle visual differences, not like a randomly generated ad.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+VERIFICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Select Italian Restaurant, enter a business name and a special offer, leave photo and logo empty, select Surprise Me, click Generate. The output should look like a clean polished version of a real template with the three subtle variations applied.
+2. Run it 3-4 more times. Each run should produce a different template and all should be clean and professional.
+3. Select Sage Organic directly and generate. Confirm the output is identical to before this change — no variations applied when the user picks a template directly.
+4. Test with a photo uploaded to confirm the /images/edits path also works correctly.
+5. Confirm heritage-home now appears occasionally in Surprise Me results.
