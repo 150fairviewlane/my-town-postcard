@@ -906,10 +906,20 @@ async function getCountyTerritoryHubs(
       ? `${usedCountyShortNames[0]} County`
       : `${usedCountyShortNames.slice(0, -1).join(" / ")} / ${usedCountyShortNames[usedCountyShortNames.length - 1]} Counties`;
 
-  const countyGeoids = [...new Set(
-    hubs.map(h => h.countyGeoid).filter((g): g is string => !!g)
-  )];
-  if (!countyGeoids.includes(homeGeoid)) countyGeoids.unshift(homeGeoid);
+  // Build county GEOID list.  Always include the home county.  Only include
+  // non-home counties that have ≥ 2 hubs — single-hub non-home counties are
+  // border-bleed artifacts (e.g. Mountain Park geocoding into Fulton County
+  // when all other hubs are in Cherokee County) and must not be claimed,
+  // because they would cause unrelated large counties to block new proposals.
+  const geoidHubCounts = new Map<string, number>();
+  for (const h of hubs) {
+    if (!h.countyGeoid) continue;
+    geoidHubCounts.set(h.countyGeoid, (geoidHubCounts.get(h.countyGeoid) ?? 0) + 1);
+  }
+  const countyGeoids: string[] = homeGeoid ? [homeGeoid] : [];
+  for (const [geoid, count] of geoidHubCounts) {
+    if (geoid !== homeGeoid && count >= 2) countyGeoids.push(geoid);
+  }
 
   logger.info(
     {
