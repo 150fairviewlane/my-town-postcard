@@ -29,35 +29,35 @@ function requireAdmin(req: any, res: any, next: any): void {
   }
 }
 
-// 150 DPI canvas: 12" × 9" = 1800 × 1350 px.
-// 300 DPI (9.7 MP) causes Safari's PDF renderer to show a blank page;
-// 150 DPI (2.4 MP) renders correctly and is still sharp for proofing.
-const W = 1800;
-const H = 1350;
+// 300 DPI canvas: 12" × 9" = 3600 × 2700 px (print-ready quality).
+// Delivered as application/octet-stream so iOS saves to Files instead of
+// trying to render inline (which caused a blank page at any resolution).
+const W = 3600;
+const H = 2700;
 
 interface SlotRect { x: number; y: number; w: number; h: number }
 
-// Each sellable spot → pixel rect on the 1800×1350 canvas.
-// 1 inch = 150 px, 1 column = 1 inch = 150 px, 1 row = 1 inch = 150 px.
+// Each sellable spot → pixel rect on the 3600×2700 canvas.
+// 1 inch = 300 px, 1 column = 1 inch = 300 px, 1 row = 1 inch = 300 px.
 const FRONT_LAYOUT: Record<string, SlotRect> = {
-  mb:  { x: 0,    y: 0,   w: 600, h: 750 },
-  dn:  { x: 600,  y: 0,   w: 600, h: 750 },
-  re:  { x: 1200, y: 0,   w: 600, h: 750 },
-  l1:  { x: 0,    y: 750, w: 450, h: 600 },
-  l2:  { x: 450,  y: 750, w: 450, h: 600 },
-  l3:  { x: 900,  y: 750, w: 450, h: 600 },
-  l4:  { x: 1350, y: 750, w: 450, h: 600 },
+  mb:  { x: 0,    y: 0,    w: 1200, h: 1500 },
+  dn:  { x: 1200, y: 0,    w: 1200, h: 1500 },
+  re:  { x: 2400, y: 0,    w: 1200, h: 1500 },
+  l1:  { x: 0,    y: 1500, w: 900,  h: 1200 },
+  l2:  { x: 900,  y: 1500, w: 900,  h: 1200 },
+  l3:  { x: 1800, y: 1500, w: 900,  h: 1200 },
+  l4:  { x: 2700, y: 1500, w: 900,  h: 1200 },
 };
 
 const BACK_LAYOUT: Record<string, SlotRect> = {
-  bxl:  { x: 0,    y: 0,    w: 600, h: 750 },
-  bxl2: { x: 600,  y: 0,    w: 600, h: 750 },
-  bxl3: { x: 1200, y: 0,    w: 600, h: 750 },
-  bm1:  { x: 0,    y: 750,  w: 450, h: 300 },
-  bm2:  { x: 450,  y: 750,  w: 450, h: 300 },
-  bm3:  { x: 900,  y: 750,  w: 450, h: 300 },
-  bm4:  { x: 1350, y: 750,  w: 450, h: 300 },
-  bs1:  { x: 0,    y: 1050, w: 300, h: 300 },
+  bxl:  { x: 0,    y: 0,    w: 1200, h: 1500 },
+  bxl2: { x: 1200, y: 0,    w: 1200, h: 1500 },
+  bxl3: { x: 2400, y: 0,    w: 1200, h: 1500 },
+  bm1:  { x: 0,    y: 1500, w: 900,  h: 600  },
+  bm2:  { x: 900,  y: 1500, w: 900,  h: 600  },
+  bm3:  { x: 1800, y: 1500, w: 900,  h: 600  },
+  bm4:  { x: 2700, y: 1500, w: 900,  h: 600  },
+  bs1:  { x: 0,    y: 2100, w: 600,  h: 600  },
 };
 
 async function fetchBuffer(url: string): Promise<Buffer | null> {
@@ -200,9 +200,10 @@ router.get("/admin/campaigns/:campaignId/download-pdf", requireAdmin, async (req
 
     const filename = `postcard-campaign-${campaignId}-${side}.pdf`;
     res.removeHeader("Transfer-Encoding");
-    res.setHeader("Content-Type", "application/pdf");
-    // 'inline' tells Safari to show the PDF in its viewer rather than download
-    res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
+    // octet-stream + attachment: iOS treats this as a file download (saves to
+    // Files app) instead of trying to render inline (which showed a blank page).
+    res.setHeader("Content-Type", "application/octet-stream");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     res.setHeader("Content-Length", pdfBuf.length);
     res.setHeader("Cache-Control", "no-store");
     res.end(pdfBuf);

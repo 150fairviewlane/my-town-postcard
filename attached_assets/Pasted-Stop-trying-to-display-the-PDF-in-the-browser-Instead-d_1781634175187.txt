@@ -1,0 +1,56 @@
+Stop trying to display the PDF in the browser. Instead, deliver it as a direct file download that saves straight to the iPad's Files app without rendering in Safari at all.
+
+The trick is to fetch the PDF as a blob via JavaScript, convert it to a base64 data URL with the correct MIME type and a download filename, then navigate to that data URL. On iOS Safari, a data URL with application/octet-stream (not application/pdf) triggers a "Download" prompt that saves directly to Files without trying to render anything.
+
+BACKEND — no changes needed to PDF generation. Keep generating the PDF exactly as it is now. Only change the Content-Type header:
+
+  res.setHeader('Content-Type', 'application/octet-stream');
+  res.setHeader('Content-Disposition', 'attachment; filename="mytown-postcard.pdf"');
+
+Using application/octet-stream instead of application/pdf tells the browser "this is a binary file, save it" rather than "this is a PDF, try to display it."
+
+FRONTEND — replace the current download function with this:
+
+  async function downloadPdf(side) {
+    const btn = document.getElementById('downloadBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Generating PDF…'; }
+    
+    try {
+      const response = await fetch(`/api/campaigns/${campaignId}/download-pdf?side=${side}`);
+      if (!response.ok) throw new Error('PDF generation failed');
+      
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `mytown-postcard-${side}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch (err) {
+      alert('PDF download failed: ' + err.message);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Download PDF'; }
+    }
+  }
+
+The key differences from the previous attempt:
+- Uses fetch() to get the blob (not window.open)
+- Content-Type is application/octet-stream so iOS treats it as a file download
+- The anchor click triggers the native iOS download behavior
+- The file saves to Files app with the .pdf extension intact
+
+On iPad this shows iOS's native "Download" confirmation sheet which lets the user choose where to save it in the Files app. The PDF never tries to render in the browser.
+
+BUTTON:
+Replace any existing print/PDF buttons with:
+  <button id="downloadBtn" onclick="downloadPdf('front')">Download Front PDF</button>
+  <button id="downloadBackBtn" onclick="downloadPdf('back')">Download Back PDF</button>
+
+No window.print(), no window.open(), no inline PDF viewer.
+
+VERIFICATION:
+Tap "Download Front PDF" on iPad — iOS should show a download progress indicator then offer to save the file to Files. The file should appear as "mytown-postcard-front.pdf" in the Downloads folder in Files app. Opening it from Files should show the full postcard.

@@ -243,16 +243,32 @@ export default function AdminPrintPage() {
     return null;
   };
 
-  const downloadPdf = (side) => {
+  const downloadPdf = async (side) => {
     if (!hasValidId) return;
-    // Use window.open() with a direct GET URL — iOS Safari cannot download
-    // blob URLs created by anchor.click(), but it handles direct PDF URLs
-    // natively in its built-in viewer (share sheet → Save to Files from there).
-    const tok = adminToken ? `&tok=${encodeURIComponent(adminToken)}` : "";
-    window.open(
-      `/api/admin/campaigns/${numericId}/download-pdf?side=${side}${tok}`,
-      "_blank",
-    );
+    setPdfLoading(side);
+    try {
+      const tok = adminToken ? `&tok=${encodeURIComponent(adminToken)}` : "";
+      const response = await fetch(
+        `/api/admin/campaigns/${numericId}/download-pdf?side=${side}${tok}`,
+      );
+      if (!response.ok) {
+        const text = await response.text().catch(() => "");
+        throw new Error(`Server error ${response.status}: ${text}`);
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `postcard-campaign-${numericId}-${side}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch (err) {
+      alert("PDF download failed: " + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setPdfLoading(null);
+    }
   };
 
   return (
