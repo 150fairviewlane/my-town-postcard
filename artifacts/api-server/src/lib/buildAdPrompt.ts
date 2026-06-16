@@ -380,6 +380,8 @@ export interface AdPromptInput {
   logoData: string;
   generationIndex: number;
   spotId?: number;
+  primaryColor?: string;
+  accentColor?: string;
 }
 
 // ── Main builder ─────────────────────────────────────────────────────────────
@@ -1059,6 +1061,9 @@ export function buildAdPrompt(
       : "") +
     outputRequirements + "\n" +
     "STYLE: high-end editorial advertising. Cinematic photography, rich vibrant color, professional lighting. Bold confident typography hierarchy. Premium color palette — deep, saturated, controlled. Print-ready sharpness throughout.\n\n" +
+    (d.primaryColor && d.accentColor
+      ? `BRAND COLORS: Primary ${d.primaryColor} · Accent ${d.accentColor}. Use these as the brand color for header/footer bars, icon badge fills, coupon border accent, and headline highlights. Integrate them harmoniously with the template's visual framework.\n\n`
+      : "") +
     "TYPOGRAPHIC RULES — ABSOLUTE:\n" +
     "  • NEVER add any word, abbreviation, or industry term not provided verbatim in the business data below — this includes industry category words like HVAC, MEXICAN, RESTAURANT, CAFE, PLUMBING, ROOFING, AUTO, DENTAL, or any other category descriptor. The business name must appear EXACTLY as provided, character for character, with zero additions, zero stylistic embellishments, and zero extra words inserted.\n" +
     "  • NEVER split a business name across two visual styles (e.g. bold + script, or large + small) — render the complete business name in a single consistent typographic treatment.\n\n" +
