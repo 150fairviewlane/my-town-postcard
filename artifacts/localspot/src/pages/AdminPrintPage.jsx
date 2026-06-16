@@ -18,7 +18,7 @@ import { getSampleAd, SPOT_SAMPLE_MAP } from "../PostcardSampleAds";
 const SIZE_MAP = { xl: "XL", large: "L", medium: "M", small: "S" };
 
 // Same render order as the picker so each side lays out identically.
-const FRONT_GRID_ORDER = ["mb", "dn", "re", "hv", "ins", "pz", "lw", "a1", "a2", "a3"];
+const FRONT_GRID_ORDER = ["mb", "dn", "re", "l1", "l2", "l3", "l4"];
 
 // Permanent front-side house ad — same content as PostcardPickerSection so
 // the printed postcard matches what customers see in the live preview. Kept
@@ -467,8 +467,8 @@ export default function AdminPrintPage() {
           spots={frontSpots}
           gridAreas={GRID_AREAS}
           gridOrder={FRONT_GRID_ORDER}
-          fixedAreas={["hs"]}
-          renderFixed={renderFrontFixed}
+          fixedAreas={[]}
+          renderFixed={() => null}
           label="Front"
         />
         <PostcardFace

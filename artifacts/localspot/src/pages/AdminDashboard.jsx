@@ -270,7 +270,13 @@ function Dashboard({ token }) {
   }
 
   const campaign = detail?.campaign;
-  const spots = detail?.spots || [];
+  const VALID_GRID_AREAS = new Set([
+    "mb", "dn", "re", "l1", "l2", "l3", "l4",
+    "bxl", "bxl2", "bxl3", "bm1", "bm2", "bm3", "bm4", "bs1",
+  ]);
+  const spots = (detail?.spots || []).filter(
+    (s) => !s.gridArea || VALID_GRID_AREAS.has(s.gridArea),
+  );
   const totalRevenue = detail?.totalRevenue ?? 0;
   const totalSpots = detail?.totalSpots ?? 0;
   const paidSpots = detail?.paidSpots ?? 0;
@@ -546,7 +552,14 @@ function Dashboard({ token }) {
                   <tbody>
                     {spots.map((spot, i) => (
                       <tr key={spot.id} style={{ borderTop: "1px solid #f3f4f6", background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
-                        <td style={{ padding: "12px 16px", fontSize: 13, fontWeight: 600, color: "#111" }}>{spot.businessName || <span style={{ color: "#9ca3af" }}>Available</span>}</td>
+                        <td style={{ padding: "12px 16px", fontSize: 13, fontWeight: 600, color: "#111" }}>
+                          {spot.businessName || spot.templateData?.businessName
+                            ? <span>{spot.businessName || spot.templateData?.businessName}</span>
+                            : spot.status === "paid"
+                              ? <span style={{ color: "#9ca3af", fontStyle: "italic" }}>(no name on file)</span>
+                              : <span style={{ color: "#9ca3af" }}>Available</span>
+                          }
+                        </td>
                         <td style={{ padding: "12px 16px", fontSize: 13, color: "#374151" }}>{spot.businessCategory || "—"}</td>
                         <td style={{ padding: "12px 16px", fontSize: 13 }}>
                           <span style={{
