@@ -519,7 +519,7 @@ function Dashboard({ token }) {
                   onClick={() => {
                     if (!campaign?.id) return;
                     window.open(
-                      `${import.meta.env.BASE_URL}admin/campaign/${campaign.id}/print`,
+                      `${import.meta.env.BASE_URL}admin/campaign/${campaign.id}/print?tok=${encodeURIComponent(token)}`,
                       "_blank",
                       "noopener,noreferrer",
                     );

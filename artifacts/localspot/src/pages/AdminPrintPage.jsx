@@ -216,9 +216,15 @@ export default function AdminPrintPage() {
   // Token state — mirrors AdminDashboard so the print page can auto-login
   // when opened in a new tab where localStorage may not yet have a token
   // (e.g. direct link, expired token, or first visit).
-  const [adminToken, setAdminToken] = useState(() =>
-    typeof window !== "undefined" ? localStorage.getItem("admin_token") : null,
-  );
+  const [adminToken, setAdminToken] = useState(() => {
+    if (typeof window === "undefined") return null;
+    const urlTok = new URLSearchParams(window.location.search).get("tok");
+    if (urlTok) {
+      localStorage.setItem("admin_token", urlTok);
+      return urlTok;
+    }
+    return localStorage.getItem("admin_token");
+  });
 
   useEffect(() => {
     if (adminToken) return;
