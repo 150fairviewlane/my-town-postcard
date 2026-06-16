@@ -64,10 +64,16 @@ async function buildCampaignDetail(
     .where(eq(campaignsTable.id, campaignId));
   if (!campaign) return null;
 
-  const spots = await db
+  const validGridAreas = new Set(STANDARD_SPOT_LAYOUT.map((s) => s.gridArea));
+
+  const allSpots = await db
     .select()
     .from(spotsTable)
     .where(eq(spotsTable.campaignId, campaignId));
+
+  const spots = allSpots.filter(
+    (s) => s.gridArea !== null && validGridAreas.has(s.gridArea),
+  );
 
   // Only fetch orders for this campaign's spots — global SELECT * FROM orders
   // would scan the entire orders table on every dashboard refresh and grow
@@ -154,6 +160,9 @@ router.get("/admin/campaigns", requireAdmin, async (_req, res): Promise<void> =>
       COALESCE(SUM(CASE WHEN s.status = 'paid' THEN s.price ELSE 0 END)::int, 0)      AS total_revenue
     FROM campaigns c
     LEFT JOIN spots s ON s.campaign_id = c.id
+      AND s.grid_area = ANY(ARRAY[${sql.raw(
+        STANDARD_SPOT_LAYOUT.map((s) => `'${s.gridArea}'`).join(", ")
+      )}])
     GROUP BY c.id
     ORDER BY c.created_at DESC, c.id DESC
   `);
