@@ -21,7 +21,7 @@ import jwt from "jsonwebtoken";
 import { fetchScanCountsForSpotIds } from "../lib/scanCounts";
 import { sendCampaignCompletedAdminEmail } from "../lib/emails";
 import { markCampaignAssignmentsMailed } from "../lib/subscriptions";
-import { STANDARD_SPOT_LAYOUT } from "../lib/standardLayout";
+import { STANDARD_SPOT_LAYOUT, validateLayout } from "../lib/standardLayout";
 
 const router: IRouter = Router();
 
@@ -191,6 +191,12 @@ router.post("/admin/campaigns", requireAdmin, async (req, res): Promise<void> =>
     res.status(400).json({ error: body.error.message });
     return;
   }
+
+  // Guard: assert the layout is internally consistent (no duplicate gridAreas,
+  // no empty entries) before opening the transaction. This is a cheap sync
+  // check that fails loudly if STANDARD_SPOT_LAYOUT was accidentally edited
+  // to contain duplicates or blank entries.
+  validateLayout(STANDARD_SPOT_LAYOUT);
 
   // Auto-generate the standard postcard layout for the new campaign in a
   // single transaction so we never end up with a campaign row but no spots.

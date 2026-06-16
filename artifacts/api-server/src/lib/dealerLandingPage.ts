@@ -8,7 +8,7 @@ import {
 } from "@workspace/db";
 import { and, eq } from "drizzle-orm";
 import { generateSlug, generateUniqueCampaignSlug } from "./slugify";
-import { STANDARD_SPOT_LAYOUT } from "./standardLayout";
+import { STANDARD_SPOT_LAYOUT, validateLayout } from "./standardLayout";
 import { logger } from "./logger";
 
 type LandingPageInfo = {
@@ -90,6 +90,11 @@ async function resolveTerritoryInfo(
 // pages are live immediately but never collide with the single-active-campaign
 // rule that the house homepage depends on.
 export async function ensureDealerLandingPage(dealerId: number): Promise<number[]> {
+  // Guard: assert the layout is internally consistent before any spot insert.
+  // Fails loudly if STANDARD_SPOT_LAYOUT was accidentally edited to contain
+  // duplicate gridAreas or blank entries.
+  validateLayout(STANDARD_SPOT_LAYOUT);
+
   const [dealerExists] = await db
     .select({ id: dealersTable.id })
     .from(dealersTable)

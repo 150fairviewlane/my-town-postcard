@@ -241,10 +241,89 @@ export default function AdminPrintPage() {
     return null;
   };
 
+  const [showIosTip, setShowIosTip] = useState(false);
+
   const handlePrint = () => window.print();
+
+  const handleSavePdf = () => {
+    const isIOS =
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    if (isIOS) {
+      setShowIosTip(true);
+    } else {
+      window.print();
+    }
+  };
 
   return (
     <>
+      {/* iPad "Save as PDF" instruction modal */}
+      {showIosTip && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 1000,
+            background: "rgba(0,0,0,0.6)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: 24, fontFamily: "sans-serif",
+          }}
+          onClick={() => setShowIosTip(false)}
+        >
+          <div
+            style={{
+              background: "#fff", borderRadius: 16, padding: "32px 28px",
+              maxWidth: 380, width: "100%", boxShadow: "0 24px 64px rgba(0,0,0,0.4)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 36, textAlign: "center", marginBottom: 12 }}>📄</div>
+            <div style={{ fontWeight: 900, fontSize: 19, color: "#111", textAlign: "center", marginBottom: 8 }}>
+              Save as PDF on iPad
+            </div>
+            <p style={{ color: "#6b7280", fontSize: 14, lineHeight: 1.6, textAlign: "center", margin: "0 0 20px" }}>
+              Safari will open a print preview. From there:
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
+              {[
+                ["1", "Tap the Share button", "The box with an arrow (□↑) in the top-right of the preview"],
+                ["2", "Choose "Save to Files"", "This creates a PDF and saves it to your iPad"],
+              ].map(([num, title, desc]) => (
+                <div key={num} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                  <div style={{
+                    width: 28, height: 28, borderRadius: "50%", background: "#991b1b",
+                    color: "#fff", fontWeight: 900, fontSize: 14,
+                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                  }}>{num}</div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: "#111" }}>{title}</div>
+                    <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>{desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => { setShowIosTip(false); window.print(); }}
+              style={{
+                width: "100%", background: "#991b1b", color: "#fff", border: "none",
+                borderRadius: 10, padding: "13px 0", fontSize: 15, fontWeight: 700,
+                cursor: "pointer", marginBottom: 10,
+              }}
+            >
+              Open Print Preview →
+            </button>
+            <button
+              onClick={() => setShowIosTip(false)}
+              style={{
+                width: "100%", background: "transparent", color: "#9ca3af",
+                border: "none", fontSize: 13, cursor: "pointer", padding: "6px 0",
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/*
         Print stylesheet. The layout is dual-mode:
           - on screen: each postcard scales to viewport at 12:9 aspect ratio
@@ -373,6 +452,21 @@ export default function AdminPrintPage() {
               ← Back to Admin
             </a>
             <button
+              onClick={handleSavePdf}
+              style={{
+                background: "#1d4ed8",
+                color: "#fff",
+                border: "none",
+                borderRadius: 8,
+                padding: "9px 18px",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              📥 Save as PDF
+            </button>
+            <button
               onClick={handlePrint}
               style={{
                 background: "#991b1b",
@@ -385,7 +479,7 @@ export default function AdminPrintPage() {
                 cursor: "pointer",
               }}
             >
-              🖨 Print / Save as PDF
+              🖨 Print
             </button>
           </div>
         </div>

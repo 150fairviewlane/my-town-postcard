@@ -3,6 +3,36 @@
 // dealer territory). Mirrors the picker / print page exactly. House-ad cells
 // (`hs`, `bhs`, `bhr`, `bhn`) and the `ed` EDDM block are rendered statically
 // by the frontend and intentionally have no DB row. Prices in cents.
+
+/**
+ * Validate that a spot layout contains no duplicate grid areas and that every
+ * entry has the required fields. Throws an Error with a descriptive message if
+ * any invariant is violated. Call this inside the campaign-creation transaction
+ * before inserting spots so layout bugs are caught at insertion time rather
+ * than silently producing corrupt data.
+ */
+export function validateLayout(
+  layout: ReadonlyArray<{ gridArea: string; side: string; size: string; price: number }>,
+  layoutName = "STANDARD_SPOT_LAYOUT",
+): void {
+  if (layout.length === 0) {
+    throw new Error(`${layoutName} is empty — cannot create a campaign with no spots`);
+  }
+
+  const seen = new Map<string, number>();
+  for (const [i, spot] of layout.entries()) {
+    if (!spot.gridArea) {
+      throw new Error(`${layoutName}[${i}] has a missing or empty gridArea`);
+    }
+    if (seen.has(spot.gridArea)) {
+      throw new Error(
+        `${layoutName} has duplicate gridArea "${spot.gridArea}" at index ${seen.get(spot.gridArea)} and ${i}`,
+      );
+    }
+    seen.set(spot.gridArea, i);
+  }
+}
+
 export const STANDARD_SPOT_LAYOUT: ReadonlyArray<{
   side: "front" | "back";
   size: "xl" | "large" | "medium" | "small";

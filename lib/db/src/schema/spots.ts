@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -35,7 +35,17 @@ export const spotsTable = pgTable("spots", {
   // picker can render the exact ad the customer designed.
   templateData: text("template_data"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => ({
+  // Prevent two spots with the same grid area from being inserted for the
+  // same campaign. This is the DB-level enforcement of the layout invariant —
+  // a uniqueness violation here means a bug in the spot-generation code
+  // (duplicate entry in STANDARD_SPOT_LAYOUT or two concurrent inserts for
+  // the same campaign).
+  campaignGridAreaUnique: uniqueIndex("spots_campaign_grid_area_unique").on(
+    table.campaignId,
+    table.gridArea,
+  ),
+}));
 
 export const insertSpotSchema = createInsertSchema(spotsTable).omit({ id: true, createdAt: true });
 export type InsertSpot = z.infer<typeof insertSpotSchema>;
