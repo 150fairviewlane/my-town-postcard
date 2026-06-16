@@ -13,6 +13,7 @@
     "seed:zip-assignments": "tsx ./src/seed-zip-assignments.ts",
     "update:ga-zone-notes": "tsx ./src/update-ga-zone-notes.ts",
     "generate-parchment-templates": "tsx ./src/generateParchmentVariantTemplates.ts",
+    "purge:orphaned-spots": "tsx ./src/purge-orphaned-spots.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
