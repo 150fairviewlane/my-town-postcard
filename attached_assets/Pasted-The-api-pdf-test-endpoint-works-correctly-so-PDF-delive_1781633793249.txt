@@ -1,0 +1,74 @@
+The /api/pdf-test endpoint works correctly, so PDF delivery is fine. The problem is in the actual postcard PDF endpoint. Check the server logs for the diagnostic messages added earlier and fix based on what they show.
+
+The most likely cause is one of these — fix whichever the logs identify:
+
+CAUSE A — finishedAdUrl is a data URL (base64) not an https URL:
+The Grok generator stores the finished ad as a base64 data URL (data:image/jpeg;base64,...) in template_data.finishedAdUrl. Sharp cannot fetch a data URL like a remote URL — it must be passed as a Buffer.
+
+Fix: when loading each spot's image, check if the URL starts with "data:":
+  async function loadSpotImage(url: string): Promise<Buffer> {
+    if (url.startsWith('data:')) {
+      const base64 = url.split(',')[1];
+      if (!base64) throw new Error('Invalid data URL');
+      return Buffer.from(base64, 'base64');
+    }
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Failed to fetch image: ' + url);
+    return Buffer.from(await response.arrayBuffer());
+  }
+
+Use this function for every spot image instead of passing the URL string directly to sharp.
+
+CAUSE B — sharp composite input format is wrong:
+The sharp composite() method requires input as a Buffer with { input: Buffer } not as a URL string. Make sure every composite input is:
+  { input: await loadSpotImage(spot.templateData.finishedAdUrl), left: x, top: y }
+
+CAUSE C — canvas creation is failing silently:
+If sharp throws during compositing, the error may be caught and swallowed, sending an empty response. Make sure the try/catch logs the full error and sends a 500 response with the error message:
+  } catch (err) {
+    req.log.error({ err }, 'pdf: compositing failed');
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'PDF generation failed', detail: err instanceof Error ? err.message : String(err) });
+    }
+  }
+
+CAUSE D — sharp create() dimensions are wrong:
+The base canvas must be created at the correct pixel dimensions. At 150 DPI (good quality, reasonable file size):
+  12 inches × 150 = 1800px wide
+  9 inches × 150 = 1350px tall
+
+  const canvas = sharp({
+    create: {
+      width: 1800,
+      height: 1350,
+      channels: 3,
+      background: { r: 255, g: 255, b: 255 }
+    }
+  });
+
+Each spot's pixel position must also be scaled to 150 DPI (multiply the 100px/inch positions by 1.5):
+
+Front side at 150 DPI:
+  XL spots (600x750px): left=0,top=0 | left=600,top=0 | left=1200,top=0
+  L spots  (600x450px): left=0,top=750 | left=600,top=750 | left=1200,top=750 (portrait: 450x600)
+
+Wait — front Large spots are PORTRAIT (3"x4" = 450x600px at 150dpi), arranged in bottom row:
+  L spots (450x600px each): left=0,top=750 | left=450,top=750 | left=900,top=750 | left=1350,top=750
+
+Back side at 150 DPI:
+  XL spots (600x750px): left=0,top=0 | left=600,top=0 | left=1200,top=0
+  M spots  (450x300px): left=0,top=750 | left=450,top=750 | left=900,top=750 | left=1350,top=750
+  S spot   (300x300px): left=0,top=1050
+  House Ad (900x300px): left=300,top=1050
+  EDDM     (600x300px): left=1200,top=1050
+
+Each spot's image must be resized to exactly these pixel dimensions before compositing:
+  const resized = await sharp(imageBuffer)
+    .resize(spotWidthPx, spotHeightPx, { fit: 'fill' })
+    .jpeg({ quality: 90 })
+    .toBuffer();
+
+Then the pdfkit image must match the PDF page size (864x648 points for 12x9 inches at 72pt/inch):
+  doc.image(compositedBuffer, 0, 0, { width: 864, height: 648 });
+
+Fix whichever causes the logs identify, then test by navigating to the postcard PDF URL on iPad. The PDF should show all filled ad spots composited in their correct positions.
