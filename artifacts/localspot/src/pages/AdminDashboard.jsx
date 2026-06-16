@@ -560,7 +560,7 @@ function Dashboard({ token }) {
                               : <span style={{ color: "#9ca3af" }}>Available</span>
                           }
                         </td>
-                        <td style={{ padding: "12px 16px", fontSize: 13, color: "#374151" }}>{spot.businessCategory || spot.templateData?.businessCategory || "—"}</td>
+                        <td style={{ padding: "12px 16px", fontSize: 13, color: "#374151" }}>{spot.businessCategory || spot.templateData?.industry || "—"}</td>
                         <td style={{ padding: "12px 16px", fontSize: 13 }}>
                           <span style={{
                             display: "inline-block",
