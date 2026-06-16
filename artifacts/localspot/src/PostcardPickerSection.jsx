@@ -719,7 +719,8 @@ const openGrokGenerator=()=>{
   const dbSpotId=spotByGridArea[sel.dbGridArea]?.id??'';
   const dbCampaignId=campaign?.id??'';
   const url=`/api/grok-ad-generator?spotSize=${encodeURIComponent(sel.size||'')}&spotId=${encodeURIComponent(dbSpotId)}&bizName=&industry=&taken=${encodeURIComponent(takenCategories.join(','))}&campaignId=${encodeURIComponent(dbCampaignId)}&side=${encodeURIComponent(side||'front')}`;
-  const popup=window.open(url,'grok-ad-gen','width=1120,height=800,left=80,top=60');
+  const popup=window.open(url,'mytown_ad_generator','width=1120,height=800,left=80,top=60');
+  if(popup)popup.focus();
   grokPopupRef.current=popup;
   setAdMethod("grok");
   const handler=(e)=>{
