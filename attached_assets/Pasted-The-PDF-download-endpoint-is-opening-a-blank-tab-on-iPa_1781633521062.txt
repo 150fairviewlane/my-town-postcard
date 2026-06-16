@@ -1,0 +1,79 @@
+The PDF download endpoint is opening a blank tab on iPad. The server appears to be processing the request but the PDF bytes are not reaching the browser. We need to debug this and fix it.
+
+STEP 1 — ADD DIAGNOSTIC LOGGING:
+In the GET /api/campaigns/:campaignId/download-pdf route handler, add req.log.info() calls at each major step so we can see exactly where it fails:
+
+  req.log.info({ campaignId, side }, 'pdf: request received')
+  // after fetching spots from DB:
+  req.log.info({ spotCount: spots.length, spots: spots.map(s => ({ id: s.id, hasAd: !!s.templateData?.finishedAdUrl })) }, 'pdf: spots fetched')
+  // after compositing image:
+  req.log.info({ canvasBytes: compositedBuffer.length }, 'pdf: image composited')
+  // after generating PDF:
+  req.log.info({ pdfBytes: pdfBuffer.length }, 'pdf: pdf generated')
+  // just before sending response:
+  req.log.info('pdf: sending response')
+
+STEP 2 — FIX COMMON PDF RESPONSE ISSUES:
+The blank tab is usually caused by one of these. Fix all of them:
+
+A) If using pdfkit's pipe/stream API, the PDF may not be fully generated before the response is sent. Switch to collecting the PDF into a Buffer first, then send it all at once:
+
+  const pdfBuffer = await new Promise<Buffer>((resolve, reject) => {
+    const doc = new PDFDocument({ size: [842, 595], margin: 0 }); // 12x9 at 72dpi = 864x648, use A4 landscape as close match or use custom
+    const chunks: Buffer[] = [];
+    doc.on('data', chunk => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+    // ... add image to doc ...
+    doc.end();
+  });
+  
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', 'inline; filename="postcard.pdf"');
+  res.setHeader('Content-Length', pdfBuffer.length);
+  res.setHeader('Cache-Control', 'no-store');
+  res.end(pdfBuffer);
+
+Note: use 'inline' not 'attachment' for Content-Disposition — inline tells Safari to display it in the PDF viewer rather than download it, which is what works on iOS.
+
+B) The PDF page size must match the image dimensions. For a 12x9 inch postcard at 72 PDF points per inch:
+  width = 12 * 72 = 864 points
+  height = 9 * 72 = 648 points
+  const doc = new PDFDocument({ size: [864, 648], margin: 0, autoFirstPage: true });
+
+C) When embedding the composited image in pdfkit, the image must fill the entire page:
+  doc.image(compositedBuffer, 0, 0, { width: 864, height: 648 });
+
+D) The composited sharp image must be output as JPEG or PNG buffer before passing to pdfkit:
+  const compositedBuffer = await canvas.jpeg({ quality: 92 }).toBuffer();
+  // NOT .toFile() — must be a Buffer
+
+STEP 3 — SIMPLER TEST:
+Before debugging the full compositing logic, add a temporary test route that generates a minimal PDF with just a colored rectangle and some text, to confirm the PDF delivery mechanism itself works:
+
+  router.get('/api/pdf-test', (req, res) => {
+    const PDFDocument = require('pdfkit');
+    const chunks: Buffer[] = [];
+    const doc = new PDFDocument({ size: [864, 648], margin: 0 });
+    doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+    doc.on('end', () => {
+      const buf = Buffer.concat(chunks);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'inline; filename="test.pdf"');
+      res.setHeader('Content-Length', buf.length);
+      res.end(buf);
+    });
+    doc.rect(0, 0, 864, 648).fill('#ff0000');
+    doc.fillColor('white').fontSize(48).text('PDF TEST', 300, 280);
+    doc.end();
+  });
+
+Navigate to /api/pdf-test on the iPad. If this shows a red page with "PDF TEST" then the delivery mechanism works and the problem is in the compositing step. If this also shows blank, the problem is earlier (routing, middleware, or response headers).
+
+Report what the server logs show and whether /api/pdf-test renders correctly, then fix the actual issue based on those findings.
+
+STEP 4 — CHECK FOR MIDDLEWARE INTERFERENCE:
+Make sure no middleware is compressing or buffering the response before it reaches the client. Add this before setting headers:
+  res.removeHeader('Transfer-Encoding');
+
+Also confirm the artifact.toml proxy config is not stripping or modifying the Content-Type header for this route.

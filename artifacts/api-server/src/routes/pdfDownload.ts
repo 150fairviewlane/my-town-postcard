@@ -102,8 +102,41 @@ async function buildSideImage(
   return base.composite(composites).jpeg({ quality: 92 }).toBuffer();
 }
 
+// Collect a PDFKit doc into a Buffer before sending — streaming (doc.pipe)
+// delivers partial bytes to iOS Safari which shows a blank page.
+function buildPdfBuffer(
+  drawFn: (doc: InstanceType<typeof PDFDocument>) => void,
+  pageSize: [number, number],
+): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: pageSize, margin: 0, autoFirstPage: true });
+    const chunks: Buffer[] = [];
+    doc.on("data", (chunk: Buffer) => chunks.push(chunk));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+    drawFn(doc);
+    doc.end();
+  });
+}
+
+// Minimal test route — open /api/pdf-test on iPad to confirm PDF delivery works.
+router.get("/pdf-test", async (_req: any, res: any) => {
+  const PAGE: [number, number] = [864, 648];
+  const buf = await buildPdfBuffer((doc) => {
+    doc.rect(0, 0, 864, 648).fill("#1d4ed8");
+    doc.fillColor("white").fontSize(56).text("PDF TEST OK", 220, 270);
+  }, PAGE);
+  res.removeHeader("Transfer-Encoding");
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", 'inline; filename="test.pdf"');
+  res.setHeader("Content-Length", buf.length);
+  res.setHeader("Cache-Control", "no-store");
+  res.end(buf);
+});
+
 // GET /api/admin/campaigns/:campaignId/download-pdf?side=front|back|both
-// iOS Safari requires a direct GET URL — blob/anchor.click() pattern doesn't work on iPad.
+// Uses window.open() on the frontend — iOS Safari displays it in the native
+// PDF viewer (share sheet → Save to Files from there).
 router.get("/admin/campaigns/:campaignId/download-pdf", requireAdmin, async (req: any, res: any) => {
   const campaignId = Number(req.params.campaignId);
   const side = ((req.query?.side as string) ?? "both") as "front" | "back" | "both";
@@ -117,6 +150,8 @@ router.get("/admin/campaigns/:campaignId/download-pdf", requireAdmin, async (req
     return;
   }
 
+  req.log?.info({ campaignId, side }, "pdf: request received");
+
   try {
     const spots = await db
       .select({
@@ -128,38 +163,47 @@ router.get("/admin/campaigns/:campaignId/download-pdf", requireAdmin, async (req
       .from(spotsTable)
       .where(eq(spotsTable.campaignId, campaignId));
 
+    req.log?.info({ spotCount: spots.length }, "pdf: spots fetched");
+
     const frontSpots = spots.filter((s) => (s.side ?? "front") === "front");
     const backSpots  = spots.filter((s) => s.side === "back");
 
     const doFront = side === "front" || side === "both";
     const doBack  = side === "back"  || side === "both";
 
-    // Build composited images first (can be slow — fetch from Cloudinary)
     const [frontImg, backImg] = await Promise.all([
       doFront ? buildSideImage(frontSpots, FRONT_LAYOUT) : null,
       doBack  ? buildSideImage(backSpots,  BACK_LAYOUT)  : null,
     ]);
 
-    // PDF page size in points: 12" × 9" at 72pt/inch
-    const PAGE_W = 12 * 72; // 864pt
-    const PAGE_H =  9 * 72; // 648pt
+    req.log?.info(
+      { frontBytes: frontImg?.length ?? 0, backBytes: backImg?.length ?? 0 },
+      "pdf: images composited",
+    );
+
+    // 12" × 9" at 72pt/inch
+    const PAGE: [number, number] = [864, 648];
+
+    const pdfBuf = await buildPdfBuffer((doc) => {
+      if (frontImg) {
+        doc.image(frontImg, 0, 0, { width: 864, height: 648 });
+      }
+      if (backImg) {
+        if (frontImg) doc.addPage({ size: PAGE, margin: 0 });
+        doc.image(backImg, 0, 0, { width: 864, height: 648 });
+      }
+    }, PAGE);
+
+    req.log?.info({ pdfBytes: pdfBuf.length }, "pdf: pdf built, sending");
 
     const filename = `postcard-campaign-${campaignId}-${side}.pdf`;
+    res.removeHeader("Transfer-Encoding");
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-
-    const doc = new PDFDocument({ size: [PAGE_W, PAGE_H], margin: 0, autoFirstPage: true });
-    doc.pipe(res);
-
-    if (frontImg) {
-      doc.image(frontImg, 0, 0, { width: PAGE_W, height: PAGE_H });
-    }
-    if (backImg) {
-      if (frontImg) doc.addPage({ size: [PAGE_W, PAGE_H], margin: 0 });
-      doc.image(backImg, 0, 0, { width: PAGE_W, height: PAGE_H });
-    }
-
-    doc.end();
+    // 'inline' tells Safari to show the PDF in its viewer rather than download
+    res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
+    res.setHeader("Content-Length", pdfBuf.length);
+    res.setHeader("Cache-Control", "no-store");
+    res.end(pdfBuf);
   } catch (err: unknown) {
     req.log?.error({ err }, "PDF generation failed");
     if (!res.headersSent) {
