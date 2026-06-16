@@ -25,6 +25,7 @@ import interestRouter from "./interest";
 import subscriptionsRouter from "./subscriptions";
 import territoriesRouter from "./territories";
 import adminImageGenRouter from "./adminImageGen";
+import pdfDownloadRouter from "./pdfDownload";
 
 const router: IRouter = Router();
 
@@ -54,5 +55,6 @@ router.use(interestRouter);
 router.use(subscriptionsRouter);
 router.use(territoriesRouter);
 router.use(adminImageGenRouter);
+router.use(pdfDownloadRouter);
 
 export default router;

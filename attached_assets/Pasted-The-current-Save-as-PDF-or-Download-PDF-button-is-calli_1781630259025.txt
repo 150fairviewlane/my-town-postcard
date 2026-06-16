@@ -1,0 +1,68 @@
+The current "Save as PDF" or "Download PDF" button is calling window.print() which opens the OS printer dialog. This is wrong. The user wants to download an actual PDF file to their device, not print anything.
+
+Replace the print-based approach entirely with a server-side PDF generation endpoint that returns a real downloadable PDF file.
+
+IMPLEMENTATION:
+
+1. Add a new backend endpoint: POST /api/campaigns/:campaignId/download-pdf
+
+This endpoint should:
+- Accept { side: "front" | "back" | "both" } in the request body
+- Fetch the finished ad image URLs for the requested spots from the database (the finishedAdUrl stored in template_data jsonb for each spot)
+- Use the "sharp" library (already installed) to composite the spot images onto a 12x9 inch canvas at 300 DPI (3600x2700 pixels) in their correct positions according to the postcard layout
+- Convert the composited image to a high-quality JPEG or PNG
+- Use the "pdfkit" npm package to create a PDF with the image embedded at exactly 12x9 inches
+- Set response headers:
+    Content-Type: application/pdf
+    Content-Disposition: attachment; filename="mytown-postcard-front.pdf"
+- Send the PDF buffer as the response
+
+If pdfkit is not installed, add it: pnpm --filter @workspace/api-server add pdfkit @types/pdfkit
+
+2. The postcard layout at 300 DPI (3600x2700px total canvas):
+Front side spots and their pixel positions at 300 DPI (multiply all 100px/inch coords by 3):
+- XL spots (1200x1500px each): x=0,y=0 | x=1200,y=0 | x=2400,y=0
+- L spots (900x1200px each):   x=0,y=1500 | x=900,y=1500 | x=1800,y=1500 | x=2700,y=1500
+
+Back side spots at 300 DPI:
+- XL spots (1200x1500px each): x=0,y=0 | x=1200,y=0 | x=2400,y=0
+- M spots (900x600px each):    x=0,y=1500 | x=900,y=1500 | x=1800,y=1500 | x=2700,y=1500
+- S spot (600x600px):          x=0,y=2100
+- House Ad:                    x=600,y=2100 w=1800,h=600
+- EDDM Indicia:                x=2400,y=2100 w=1200,h=600
+
+For any spot that does not have a finishedAdUrl, fill its area with a light gray rectangle (#f0f0f0) so the PDF still generates cleanly with available spots.
+
+3. On the frontend, replace all window.print() calls and any print-based PDF buttons with a call to this endpoint:
+
+async function downloadPdf(side) {
+  const response = await fetch(`/api/campaigns/${campaignId}/download-pdf`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ side })
+  });
+  if (!response.ok) {
+    showError('PDF generation failed — please try again.');
+    return;
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `mytown-postcard-${side}.pdf`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+4. The download buttons should be:
+- "Download Front PDF"
+- "Download Back PDF"  
+- "Download Both Sides (2-page PDF)" — for this option, create a 2-page PDF with front on page 1 and back on page 2
+
+5. Do NOT use window.print(), window.open() with print parameters, or any browser print dialog. The PDF must be generated entirely on the server and downloaded as a file.
+
+VERIFICATION:
+- Click "Download Front PDF" on an iPad — the browser should download a .pdf file, not open a print dialog
+- Open the downloaded PDF — it should show the postcard at 12x9 inches with all filled ad spots composited correctly
+- Spots without ads should show as gray placeholders
+- The PDF file size should be reasonable (under 20MB)

@@ -199,7 +199,7 @@ export default function AdminPrintPage() {
     query: { enabled: !hasValidId },
   });
 
-  const [showIosTip, setShowIosTip] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(null); // "front" | "back" | "both" | null
 
   // While waiting for auto-login to complete, treat the page as loading.
   const tokenPending = hasValidId && !adminToken;
@@ -243,88 +243,38 @@ export default function AdminPrintPage() {
     return null;
   };
 
-  const handlePrint = () => window.print();
-
-  const handleSavePdf = () => {
-    // iPadOS 13+ disguises itself as a Mac (same userAgent as MacBook).
-    // Reliable tell: Macs have 0 touch points; iPads have 5.
-    const isIOS =
-      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-      (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.userAgent));
-    if (isIOS) {
-      setShowIosTip(true);
-    } else {
-      window.print();
+  const downloadPdf = async (side) => {
+    if (!hasValidId) return;
+    setPdfLoading(side);
+    try {
+      const res = await fetch(`/api/admin/campaigns/${numericId}/download-pdf`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(adminToken ? { Authorization: `Bearer ${adminToken}` } : {}),
+        },
+        body: JSON.stringify({ side }),
+      });
+      if (!res.ok) {
+        alert("PDF generation failed — please try again.");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `postcard-campaign-${numericId}-${side}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("PDF generation failed — please try again.");
+    } finally {
+      setPdfLoading(null);
     }
   };
 
   return (
     <>
-      {/* iPad "Save as PDF" instruction modal */}
-      {showIosTip && (
-        <div
-          style={{
-            position: "fixed", inset: 0, zIndex: 1000,
-            background: "rgba(0,0,0,0.6)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            padding: 24, fontFamily: "sans-serif",
-          }}
-          onClick={() => setShowIosTip(false)}
-        >
-          <div
-            style={{
-              background: "#fff", borderRadius: 16, padding: "32px 28px",
-              maxWidth: 380, width: "100%", boxShadow: "0 24px 64px rgba(0,0,0,0.4)",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ fontSize: 36, textAlign: "center", marginBottom: 12 }}>📄</div>
-            <div style={{ fontWeight: 900, fontSize: 19, color: "#111", textAlign: "center", marginBottom: 8 }}>
-              Save as PDF on iPad
-            </div>
-            <p style={{ color: "#6b7280", fontSize: 14, lineHeight: 1.6, textAlign: "center", margin: "0 0 20px" }}>
-              Safari will open a print preview. From there:
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
-              {[
-                ["1", "Tap the Share button", "The box with an arrow (□↑) in the top-right of the preview"],
-                ["2", 'Choose "Save to Files"', "This creates a PDF and saves it to your iPad"],
-              ].map(([num, title, desc]) => (
-                <div key={num} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                  <div style={{
-                    width: 28, height: 28, borderRadius: "50%", background: "#991b1b",
-                    color: "#fff", fontWeight: 900, fontSize: 14,
-                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                  }}>{num}</div>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: "#111" }}>{title}</div>
-                    <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>{desc}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <button
-              onClick={() => { setShowIosTip(false); window.print(); }}
-              style={{
-                width: "100%", background: "#991b1b", color: "#fff", border: "none",
-                borderRadius: 10, padding: "13px 0", fontSize: 15, fontWeight: 700,
-                cursor: "pointer", marginBottom: 10,
-              }}
-            >
-              Open Print Preview →
-            </button>
-            <button
-              onClick={() => setShowIosTip(false)}
-              style={{
-                width: "100%", background: "transparent", color: "#9ca3af",
-                border: "none", fontSize: 13, cursor: "pointer", padding: "6px 0",
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
 
       {/*
         Print stylesheet. The layout is dual-mode:
@@ -437,7 +387,7 @@ export default function AdminPrintPage() {
               {" · 2 pages (Front + Back)"}
             </div>
           </div>
-          <div style={{ display: "flex", gap: 10 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <a
               href={`${import.meta.env.BASE_URL}admin`}
               style={{
@@ -453,29 +403,69 @@ export default function AdminPrintPage() {
             >
               ← Back to Admin
             </a>
+            {hasValidId && (
+              <>
+                <button
+                  onClick={() => downloadPdf("front")}
+                  disabled={!!pdfLoading}
+                  style={{
+                    background: "#1d4ed8",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 8,
+                    padding: "9px 16px",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: pdfLoading ? "default" : "pointer",
+                    opacity: pdfLoading && pdfLoading !== "front" ? 0.5 : 1,
+                  }}
+                >
+                  {pdfLoading === "front" ? "⏳ Generating…" : "📥 Front PDF"}
+                </button>
+                <button
+                  onClick={() => downloadPdf("back")}
+                  disabled={!!pdfLoading}
+                  style={{
+                    background: "#1d4ed8",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 8,
+                    padding: "9px 16px",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: pdfLoading ? "default" : "pointer",
+                    opacity: pdfLoading && pdfLoading !== "back" ? 0.5 : 1,
+                  }}
+                >
+                  {pdfLoading === "back" ? "⏳ Generating…" : "📥 Back PDF"}
+                </button>
+                <button
+                  onClick={() => downloadPdf("both")}
+                  disabled={!!pdfLoading}
+                  style={{
+                    background: "#1e40af",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 8,
+                    padding: "9px 16px",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: pdfLoading ? "default" : "pointer",
+                    opacity: pdfLoading && pdfLoading !== "both" ? 0.5 : 1,
+                  }}
+                >
+                  {pdfLoading === "both" ? "⏳ Generating…" : "📥 Both Sides (2-page)"}
+                </button>
+              </>
+            )}
             <button
-              onClick={handleSavePdf}
-              style={{
-                background: "#1d4ed8",
-                color: "#fff",
-                border: "none",
-                borderRadius: 8,
-                padding: "9px 18px",
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              📥 Save as PDF
-            </button>
-            <button
-              onClick={handlePrint}
+              onClick={() => window.print()}
               style={{
                 background: "#991b1b",
                 color: "#fff",
                 border: "none",
                 borderRadius: 8,
-                padding: "9px 18px",
+                padding: "9px 16px",
                 fontSize: 13,
                 fontWeight: 700,
                 cursor: "pointer",
@@ -509,9 +499,9 @@ export default function AdminPrintPage() {
           <div>
             <strong>Bleed: 0.125 inches on all sides for the printer.</strong>
             <div style={{ fontSize: 12, marginTop: 2, color: "#a16207" }}>
-              Final trim size is 12&quot; × 9&quot; per side. Use Save as PDF in the
-              print dialog — the file will be 2 pages (Front, then Back). The
-              USPS EDDM block in the bottom-right of the back page is a
+              Final trim size is 12&quot; × 9&quot; per side. Use the PDF download buttons
+              above to get a print-ready file — choose Front, Back, or Both Sides (2-page).
+              The USPS EDDM block in the bottom-right of the back page is a
               placeholder; the printer will imprint the live indicia.
             </div>
           </div>
