@@ -939,6 +939,11 @@ async function submitClaim(){
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)){ showToast('Enter a valid email address'); return; }
   if(!phone){ showToast('Enter your phone number'); return; }
 
+  // Read the password that DealerSignup stored in sessionStorage (never in the URL).
+  // Clear it immediately after reading — one-time use only.
+  const pendingPassword = sessionStorage.getItem('_dealer_pw_pending') || undefined;
+  sessionStorage.removeItem('_dealer_pw_pending');
+
   const btn = $('modalSubmitBtn');
   btn.disabled = true; btn.textContent = 'Redirecting…';
 
@@ -949,6 +954,7 @@ async function submitClaim(){
       url = '/api/dealers/claim-proposal';
       body = {
         name, email, phone,
+        ...(pendingPassword ? { password: pendingPassword } : {}),
         proposal: {
           proposedName: p.proposedName,
           stateAbbr:    p.stateAbbr,
@@ -967,7 +973,8 @@ async function submitClaim(){
       };
     } else {
       url = '/api/dealers';
-      body = { name, email, phone, territoryId: selectedClaim.territoryId, territoryName: selectedClaim.name };
+      body = { name, email, phone, territoryId: selectedClaim.territoryId, territoryName: selectedClaim.name,
+               ...(pendingPassword ? { password: pendingPassword } : {}) };
     }
 
     const res = await fetch(url, {

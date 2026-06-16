@@ -32,6 +32,14 @@ const DealerConfirmation = lazy(() => import("./pages/DealerConfirmation"));
 // @ts-expect-error JSX module without types
 const DealerPortal = lazy(() => import("./pages/DealerPortal"));
 // @ts-expect-error JSX module without types
+const DealerLogin = lazy(() => import("./pages/DealerLogin"));
+// @ts-expect-error JSX module without types
+const DealerForgotPassword = lazy(() => import("./pages/DealerForgotPassword"));
+// @ts-expect-error JSX module without types
+const DealerResetPassword = lazy(() => import("./pages/DealerResetPassword"));
+// @ts-expect-error JSX module without types
+const DealerDashboard = lazy(() => import("./pages/DealerDashboard"));
+// @ts-expect-error JSX module without types
 const AdminDealersPage = lazy(() => import("./pages/AdminDealersPage"));
 // @ts-expect-error JSX module without types
 const AdminAITestPage = lazy(() => import("./pages/AdminAITestPage"));
@@ -71,7 +79,7 @@ import NotFound from "./pages/not-found";
 const RESERVED_SLUGS = new Set([
   "blog",
   "checkout", "upload", "confirmation", "admin", "subscription-confirmation",
-  "spot-confirmation", "ad-gen", "request-options", "dealers", "find-territory",
+  "spot-confirmation", "ad-gen", "request-options", "dealers", "dealer", "find-territory",
   "my-territory", "test", "go", "api",
 ]);
 
@@ -132,7 +140,18 @@ function Router() {
         <Route path="/dealers" component={DealerLanding} />
         <Route path="/dealers/signup" component={DealerSignup} />
         <Route path="/dealers/confirmation" component={DealerConfirmation} />
-        <Route path="/my-territory" component={DealerPortal} />
+        <Route path="/my-territory">
+          {() => {
+            window.location.replace("/dealer/dashboard");
+            return null;
+          }}
+        </Route>
+
+        {/* Dealer auth + dashboard routes */}
+        <Route path="/dealer/login" component={DealerLogin} />
+        <Route path="/dealer/forgot-password" component={DealerForgotPassword} />
+        <Route path="/dealer/reset-password" component={DealerResetPassword} />
+        <Route path="/dealer/dashboard" component={DealerDashboard} />
 
         {/* ── Dealer blog routes — nested under /dealers, before catch-all ──
             /dealers/blog          → dealer article index

@@ -848,6 +848,34 @@ export const ApproveAdResponse = zod.object({
 });
 
 /**
+ * @summary Start an admin impersonation session for a dealer (short-lived cookie)
+ */
+export const ImpersonateDealerParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ImpersonateDealerResponse = zod.object({
+  ok: zod.boolean(),
+  dealerId: zod.number(),
+});
+
+/**
+ * @summary Return the last 100 admin action audit records
+ */
+export const GetAdminAuditLogResponse = zod.object({
+  actions: zod.array(
+    zod.object({
+      id: zod.number().optional(),
+      adminId: zod.string().optional(),
+      action: zod.string().optional(),
+      targetDealerId: zod.number().nullish(),
+      metadata: zod.object({}).passthrough().nullish(),
+      createdAt: zod.coerce.date().nullish(),
+    }),
+  ),
+});
+
+/**
  * @summary Submit an interest lead for a taken industry
  */
 export const SubmitInterestBody = zod.object({
@@ -887,4 +915,79 @@ export const RefineGrokAdBody = zod.object({
 
 export const RefineGrokAdResponse = zod.object({
   imageUrl: zod.string().describe("Base64 data URL of the refined ad image"),
+});
+
+/**
+ * @summary Issue a CSRF token cookie and return the token
+ */
+export const GetDealerCsrfTokenResponse = zod.object({
+  csrfToken: zod.string(),
+});
+
+/**
+ * @summary Authenticate a dealer with email and password
+ */
+export const DealerLoginBody = zod.object({
+  email: zod.string().email(),
+  password: zod.string(),
+  rememberMe: zod.boolean().optional(),
+});
+
+export const DealerLoginResponse = zod.object({
+  ok: zod.boolean(),
+  dealerId: zod.number(),
+});
+
+/**
+ * @summary Clear the dealer session cookie
+ */
+export const DealerLogoutResponse = zod.object({
+  ok: zod.boolean(),
+});
+
+/**
+ * @summary Return the currently authenticated dealer
+ */
+export const GetDealerMeResponse = zod.object({
+  dealerId: zod.number(),
+  name: zod.string(),
+  email: zod.string(),
+  status: zod.string(),
+  impersonatedBy: zod.string().optional(),
+});
+
+/**
+ * @summary Return dashboard data for the authenticated dealer
+ */
+export const GetDealerPortalDataResponse = zod.object({
+  dealer: zod.object({}).passthrough(),
+  territory: zod.object({}).passthrough().nullish(),
+  campaigns: zod.array(zod.object({}).passthrough()),
+  campaign: zod.object({}).passthrough().nullish(),
+});
+
+/**
+ * @summary Send a password reset email (always returns success to prevent enumeration)
+ */
+export const DealerForgotPasswordBody = zod.object({
+  email: zod.string().email(),
+});
+
+export const DealerForgotPasswordResponse = zod.object({
+  ok: zod.boolean(),
+  message: zod.string(),
+});
+
+/**
+ * @summary Set a new password using a reset token
+ */
+export const dealerResetPasswordBodyNewPasswordMin = 8;
+
+export const DealerResetPasswordBody = zod.object({
+  token: zod.string(),
+  newPassword: zod.string().min(dealerResetPasswordBodyNewPasswordMin),
+});
+
+export const DealerResetPasswordResponse = zod.object({
+  ok: zod.boolean(),
 });

@@ -36,6 +36,7 @@ export default function AdminDealersPage() {
   const [error, setError] = useState(null);
   const [expanded, setExpanded] = useState(null);
   const [pages, setPages] = useState({});
+  const [impersonating, setImpersonating] = useState(null);
 
   const loadPage = (dealerId) => {
     const baseUrl = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
@@ -58,6 +59,27 @@ export default function AdminDealersPage() {
     setExpanded((cur) => (cur === dealerId ? null : dealerId));
     if (pages[dealerId]) return;
     loadPage(dealerId);
+  };
+
+  const impersonateDealer = async (dealerId) => {
+    if (impersonating) return;
+    setImpersonating(dealerId);
+    try {
+      const baseUrl = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+      const token = localStorage.getItem("admin_token");
+      const res = await fetch(`${baseUrl}/api/admin/dealers/${dealerId}/impersonate`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: "include",
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || `Failed: ${res.status}`);
+      window.location.href = `${baseUrl}/dealer/dashboard`;
+    } catch (err) {
+      alert(`Could not impersonate: ${err.message}`);
+    } finally {
+      setImpersonating(null);
+    }
   };
 
   useEffect(() => {
@@ -162,7 +184,7 @@ export default function AdminDealersPage() {
               boxShadow: "0 2px 8px rgba(0,0,0,0.04)", overflow: "hidden" }}>
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse",
-                  minWidth: 760 }}>
+                  minWidth: 840 }}>
                   <thead>
                     <tr style={{ background: "#fafafa", textAlign: "left" }}>
                       <Th>Dealer</Th>
@@ -173,6 +195,7 @@ export default function AdminDealersPage() {
                       <Th>Signed Up</Th>
                       <Th>Activated</Th>
                       <Th>Landing Page</Th>
+                      <Th>Actions</Th>
                     </tr>
                   </thead>
                   <tbody>
@@ -203,10 +226,30 @@ export default function AdminDealersPage() {
                               {expanded === d.id ? "Hide ▲" : "View ▾"}
                             </button>
                           </Td>
+                          <Td>
+                            <button
+                              onClick={() => impersonateDealer(d.id)}
+                              disabled={impersonating === d.id}
+                              style={{
+                                background: "#fffbeb",
+                                color: "#92400e",
+                                border: "1.5px solid #fde68a",
+                                borderRadius: 8,
+                                padding: "6px 12px",
+                                fontSize: 12.5,
+                                fontWeight: 800,
+                                cursor: impersonating === d.id ? "default" : "pointer",
+                                whiteSpace: "nowrap",
+                                opacity: impersonating && impersonating !== d.id ? 0.5 : 1,
+                              }}
+                            >
+                              {impersonating === d.id ? "Opening…" : "🔍 Log in as dealer"}
+                            </button>
+                          </Td>
                         </tr>
                         {expanded === d.id && (
                           <tr style={{ background: "#fafafa" }}>
-                            <td colSpan={8} style={{ padding: "0 16px 18px" }}>
+                            <td colSpan={9} style={{ padding: "0 16px 18px" }}>
                               <LandingPagePanel state={pages[d.id]} onRefresh={() => loadPage(d.id)} />
                             </td>
                           </tr>

@@ -1,11 +1,14 @@
 import { Router, type IRouter, type Request } from "express";
-import { eq, sql, desc, asc, and, or, isNull } from "drizzle-orm";
+import { eq, sql, desc, asc, and, or, isNull, gt } from "drizzle-orm";
 import { z } from "zod/v4";
 import jwt from "jsonwebtoken";
+import rateLimit from "express-rate-limit";
 import {
   db,
   dealersTable,
   dealerTerritoriesTable,
+  dealerPasswordResetsTable,
+  adminActionsTable,
   campaignsTable,
   spotsTable,
   territoriesTable,
@@ -24,12 +27,52 @@ import {
 import {
   sendTerritoryClaimedEmail,
   sendTerritoryConflictEmail,
+  sendDealerPasswordResetEmail,
 } from "../lib/emails";
 import { logger } from "../lib/logger";
+import {
+  hashPassword,
+  verifyPassword,
+  signDealerToken,
+  verifyDealerToken,
+  generateResetToken,
+  hashResetToken,
+  setDealerCookie,
+  clearDealerCookie,
+  requireDealerAuth,
+  validatePasswordComplexity,
+  generateCsrfToken,
+  setCsrfCookie,
+  csrfProtect,
+} from "../lib/dealerAuth";
 
 const router: IRouter = Router();
 
-// Pricing for the Phase 1 dealer program. Setup fee is a one-time line item
+// ─── Rate limiters ────────────────────────────────────────────────────────────
+// In-memory per-IP failed attempt tracker (5 failures / 10 min window per IP).
+// Separate from the per-account lock — an attacker distributing requests across
+// many accounts would otherwise never trigger the account lock.
+const IP_WINDOW_MS = 10 * 60 * 1000;
+const IP_MAX_FAILURES = 5;
+const ipFailedAttempts = new Map<string, { count: number; windowStart: number }>();
+
+const loginLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many attempts, please try again in 10 minutes" },
+});
+
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests. Please wait before trying again." },
+});
+
+// ─── Pricing for the Phase 1 dealer program. ───────────────────────────────── Setup fee is a one-time line item
 // on the first invoice; the $99/mo subscription is the recurring half. Both
 // are inlined as Stripe `price_data` so we don't have to pre-create Products
 // in the Stripe dashboard for QA / dev.
@@ -87,6 +130,8 @@ const CreateDealerBodySchema = z.union([
     phone: z.string().trim().max(40).optional().nullable(),
     territoryId: z.string().min(1).max(20),
     territoryName: z.string().min(1).max(200),
+    password: z.string().min(8).max(128).optional(),
+    confirmPassword: z.string().optional(),
   }),
   z.object({
     name: z.string().trim().min(1).max(120),
@@ -94,6 +139,8 @@ const CreateDealerBodySchema = z.union([
     phone: z.string().trim().max(40).optional().nullable(),
     homeZip: z.string().regex(/^\d{5}$/),
     territories: z.array(LegacyTerritorySchema).min(1).max(8),
+    password: z.string().min(8).max(128).optional(),
+    confirmPassword: z.string().optional(),
   }),
 ]);
 
@@ -184,6 +231,20 @@ router.post("/dealers", async (req, res): Promise<void> => {
   }
 
   const { name, email, phone } = parsed.data;
+  const rawPassword = (parsed.data as any).password as string | undefined;
+  if (rawPassword) {
+    const complexityError = validatePasswordComplexity(rawPassword);
+    if (complexityError) {
+      res.status(400).json({ error: complexityError });
+      return;
+    }
+    const rawConfirm = (parsed.data as any).confirmPassword as string | undefined;
+    if (rawConfirm !== undefined && rawPassword !== rawConfirm) {
+      res.status(400).json({ error: "Passwords do not match." });
+      return;
+    }
+  }
+  const passwordHash = rawPassword ? await hashPassword(rawPassword) : null;
 
   const isCountyFlow = "territoryId" in parsed.data;
   const homeZip = isCountyFlow ? "00000" : (parsed.data as any).homeZip as string;
@@ -247,7 +308,7 @@ router.post("/dealers", async (req, res): Promise<void> => {
       } else {
         const [created] = await tx
           .insert(dealersTable)
-          .values({ name, email, phone: phone ?? null, homeZip, status: "pending_payment" })
+          .values({ name, email, phone: phone ?? null, homeZip, status: "pending_payment", ...(passwordHash ? { passwordHash } : {}) })
           .returning({ id: dealersTable.id, portalToken: dealersTable.portalToken });
         txDealerId = created.id;
         txPortalToken = created.portalToken ?? crypto.randomUUID();
@@ -335,7 +396,7 @@ router.post("/dealers", async (req, res): Promise<void> => {
     // {CHECKOUT_SESSION_ID} is replaced by Stripe with the real session ID.
     // The portal page uses it as a synchronous fallback activation in case
     // the checkout.session.completed webhook hasn't fired yet.
-    success_url: `${origin}/my-territory?token=${portalToken}&session_id={CHECKOUT_SESSION_ID}`,
+    success_url: `${origin}/dealer/login?paid=1`,
     cancel_url: `${origin}/dealers/signup?cancelled=1`,
   });
 
@@ -374,10 +435,12 @@ const ClaimProposalProposalSchema = z.object({
   countyShortNames: z.array(z.string()).default([]),
 });
 const ClaimProposalBodySchema = z.object({
-  name:     z.string().min(1).max(120),
-  email:    z.string().email().max(180),
-  phone:    z.string().max(40).optional(),
-  proposal: ClaimProposalProposalSchema,
+  name:            z.string().min(1).max(120),
+  email:           z.string().email().max(180),
+  phone:           z.string().max(40).optional(),
+  proposal:        ClaimProposalProposalSchema,
+  password:        z.string().min(8).max(128).optional(),
+  confirmPassword: z.string().optional(),
 });
 
 router.post("/dealers/claim-proposal", async (req, res): Promise<void> => {
@@ -404,6 +467,20 @@ router.post("/dealers/claim-proposal", async (req, res): Promise<void> => {
   }
 
   const { name, email, phone, proposal } = parsed.data;
+  const cpRawPassword = (parsed.data as any).password as string | undefined;
+  if (cpRawPassword) {
+    const complexityError = validatePasswordComplexity(cpRawPassword);
+    if (complexityError) {
+      res.status(400).json({ error: complexityError });
+      return;
+    }
+    const cpRawConfirm = (parsed.data as any).confirmPassword as string | undefined;
+    if (cpRawConfirm !== undefined && cpRawPassword !== cpRawConfirm) {
+      res.status(400).json({ error: "Passwords do not match." });
+      return;
+    }
+  }
+  const cpPasswordHash = cpRawPassword ? await hashPassword(cpRawPassword) : null;
 
   const [existing] = await db.select().from(dealersTable).where(eq(dealersTable.email, email));
   if (existing && existing.status === "active") {
@@ -428,12 +505,12 @@ router.post("/dealers/claim-proposal", async (req, res): Promise<void> => {
       txPortalToken = existing.portalToken ?? crypto.randomUUID();
       await tx
         .update(dealersTable)
-        .set({ name, phone: phone ?? null, homeZip: proposal.zipCode ?? null, portalToken: txPortalToken })
+        .set({ name, phone: phone ?? null, homeZip: proposal.zipCode ?? null, portalToken: txPortalToken, ...(cpPasswordHash ? { passwordHash: cpPasswordHash } : {}) })
         .where(eq(dealersTable.id, txDealerId));
     } else {
       const [created] = await tx
         .insert(dealersTable)
-        .values({ name, email, phone: phone ?? null, homeZip: proposal.zipCode ?? null, status: "pending_payment" })
+        .values({ name, email, phone: phone ?? null, homeZip: proposal.zipCode ?? null, status: "pending_payment", ...(cpPasswordHash ? { passwordHash: cpPasswordHash } : {}) })
         .returning({ id: dealersTable.id, portalToken: dealersTable.portalToken });
       txDealerId = created.id;
       txPortalToken = created.portalToken ?? crypto.randomUUID();
@@ -495,7 +572,7 @@ router.post("/dealers/claim-proposal", async (req, res): Promise<void> => {
     ],
     metadata: meta,
     subscription_data: { metadata: meta },
-    success_url: `${origin}/my-territory?token=${portalToken}&session_id={CHECKOUT_SESSION_ID}`,
+    success_url: `${origin}/dealer/login?paid=1`,
     cancel_url: `${origin}/find-territory?cancelled=1`,
   });
 
@@ -581,7 +658,7 @@ router.get("/dealers/confirm", async (req, res): Promise<void> => {
 
     const origin = getOrigin(req);
     const portalToken = claimDealer.portalToken;
-    const portalUrl = portalToken ? `${origin}/my-territory?token=${portalToken}` : null;
+    const portalUrl = `${origin}/dealer/login`;
     const territories = await db
       .select()
       .from(dealerTerritoriesTable)
@@ -645,7 +722,7 @@ router.get("/dealers/confirm", async (req, res): Promise<void> => {
 
   const origin = getOrigin(req);
   const portalToken = dealer.portalToken;
-  const portalUrl = portalToken ? `${origin}/my-territory?token=${portalToken}` : null;
+  const portalUrl = `${origin}/dealer/login`;
 
   const territories = await db
     .select()
@@ -670,90 +747,18 @@ router.get("/dealers/confirm", async (req, res): Promise<void> => {
 });
 
 // ─── Dealer self-service portal ────────────────────────────────────────────────
-// Public endpoint — authenticated by the opaque portalToken UUID, not a login.
-// Returns the dealer's name, territory, and campaign sell-through summary.
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-router.get("/dealer-portal", async (req, res): Promise<void> => {
-  const token = typeof req.query.token === "string" ? req.query.token.trim() : null;
-  if (!token) {
-    res.status(400).json({ error: "Missing token" });
-    return;
-  }
-  // Guard against non-UUID strings that would cause a PostgreSQL type error.
-  if (!UUID_RE.test(token)) {
-    res.status(404).json({ error: "Invalid or expired portal link." });
-    return;
-  }
-
-  const [dealer] = await db
-    .select()
-    .from(dealersTable)
-    .where(eq(dealersTable.portalToken, token));
-  if (!dealer) {
-    res.status(404).json({ error: "Invalid or expired portal link." });
-    return;
-  }
-
-  const [territory] = await db
-    .select()
-    .from(territoriesTable)
-    .where(eq(territoriesTable.dealerId, dealer.id));
-
-  // Fetch ALL campaigns for this dealer, ordered oldest-first so the UI always
-  // shows them in the creation order (matches the zoneNote hub-city order).
-  const allCampaigns = await db
-    .select()
-    .from(campaignsTable)
-    .where(eq(campaignsTable.dealerId, dealer.id))
-    .orderBy(asc(campaignsTable.id));
-
-  const origin = getOrigin(req);
-
-  // Build per-campaign summaries including live sell-through stats.
-  const campaignSummaries = await Promise.all(
-    allCampaigns.map(async (c) => {
-      const spots = await db
-        .select()
-        .from(spotsTable)
-        .where(eq(spotsTable.campaignId, c.id));
-      const sold = spots.filter((s) => s.status === "paid");
-      const revenueCents = sold.reduce((sum, s) => sum + (s.price || 0), 0);
-      return {
-        campaignId: c.id,
-        campaignName: c.name,
-        cityList: c.cityList,
-        slug: c.slug,
-        pageUrl: c.slug ? `${origin}/${c.slug}` : null,
-        isPublished: c.isPublished,
-        totalSpots: spots.length,
-        soldSpots: sold.length,
-        availableSpots: spots.filter((s) => s.status === "available").length,
-        revenueCents,
-      };
-    }),
-  );
-
-  res.json({
-    dealerId: dealer.id,
-    name: dealer.name,
-    email: dealer.email,
-    status: dealer.status,
-    territory: territory
-      ? {
-          id: territory.id,
-          name: territory.name,
-          counties: territory.counties,
-          households: territory.households,
-          zoneNote: territory.zoneNote,
-        }
-      : null,
-    // `campaigns` is the authoritative multi-area array. `campaign` (singular)
-    // is kept for any legacy consumers still reading the old field.
-    campaigns: campaignSummaries,
-    campaign: campaignSummaries[0] ?? null,
+// ─── GET /api/dealer-portal — DEPRECATED ──────────────────────────────────────
+// This token-based portal endpoint has been superseded by cookie-auth routes:
+//   GET /api/dealers/me  and  GET /api/dealers/portal-data
+// Disabled to eliminate the weaker auth surface.
+router.get("/dealer-portal", (_req, res): void => {
+  res.status(410).json({
+    error: "This endpoint is deprecated. Please use the dealer dashboard at /dealer/dashboard.",
+    loginUrl: "/dealer/login",
   });
+  return;
 });
+
 
 // Dealer portal data (admin-only). Summary of a dealer's auto-created landing
 // page: public URL + live sell-through + per-spot revenue.
@@ -933,6 +938,349 @@ router.post("/admin/dealers/:id/rebuild-landing-page", requireAdmin, async (req,
   const campaignIds = await ensureDealerLandingPage(id);
   req.log.info({ dealerId: id, campaignIds }, "Rebuilt dealer landing page via admin");
   res.json({ ok: true, campaignIds });
+});
+
+// ─── GET /api/dealers/portal-data (cookie-auth version of /dealer-portal) ─────
+// Used by DealerDashboard.jsx (cookie-auth). Returns the same data shape as
+// the legacy token-based /dealer-portal endpoint but authenticates via the
+// dealer_token httpOnly cookie instead.
+router.get("/dealers/portal-data", requireDealerAuth, async (req, res): Promise<void> => {
+  const dealer = (res as any).locals.dealer;
+
+  const [territory] = await db
+    .select()
+    .from(territoriesTable)
+    .where(eq(territoriesTable.dealerId, dealer.id));
+
+  const allCampaigns = await db
+    .select()
+    .from(campaignsTable)
+    .where(eq(campaignsTable.dealerId, dealer.id))
+    .orderBy(asc(campaignsTable.id));
+
+  const origin = getOrigin(req);
+
+  const campaignSummaries = await Promise.all(
+    allCampaigns.map(async (c) => {
+      const spots = await db
+        .select()
+        .from(spotsTable)
+        .where(eq(spotsTable.campaignId, c.id));
+      const sold = spots.filter((s) => s.status === "paid");
+      const revenueCents = sold.reduce((sum, s) => sum + (s.price || 0), 0);
+      return {
+        campaignId: c.id,
+        campaignName: c.name,
+        cityList: c.cityList,
+        slug: c.slug,
+        pageUrl: c.slug ? `${origin}/${c.slug}` : null,
+        isPublished: c.isPublished,
+        totalSpots: spots.length,
+        soldSpots: sold.length,
+        availableSpots: spots.filter((s) => s.status === "available").length,
+        revenueCents,
+      };
+    }),
+  );
+
+  res.json({
+    dealerId: dealer.id,
+    name: dealer.name,
+    email: dealer.email,
+    status: dealer.status,
+    territory: territory
+      ? { id: territory.id, name: territory.name, counties: territory.counties, households: territory.households }
+      : null,
+    campaigns: campaignSummaries,
+    campaign: campaignSummaries[0] ?? null,
+  });
+});
+
+// ─── GET /api/dealers/csrf-token ─────────────────────────────────────────────
+// Issues the CSRF double-submit cookie and returns the token in JSON.
+// The frontend fetches this before any state-mutating dealer auth request.
+router.get("/dealers/csrf-token", (req, res): void => {
+  const token = generateCsrfToken();
+  setCsrfCookie(res, token);
+  res.json({ csrfToken: token });
+});
+
+// ─── POST /api/dealers/login ──────────────────────────────────────────────────
+router.post("/dealers/login", loginLimiter, csrfProtect, async (req, res): Promise<void> => {
+  const { email, password, rememberMe } = req.body ?? {};
+  if (typeof email !== "string" || typeof password !== "string") {
+    res.status(400).json({ error: "Email and password are required." });
+    return;
+  }
+
+  // ── IP-based failed attempt check ─────────────────────────────────────────
+  const ip = req.ip || req.socket?.remoteAddress || "unknown";
+  const now = Date.now();
+  const ipEntry = ipFailedAttempts.get(ip);
+  if (ipEntry && now - ipEntry.windowStart < IP_WINDOW_MS && ipEntry.count >= IP_MAX_FAILURES) {
+    res.status(429).json({ error: "Too many failed attempts from this address. Please try again in 10 minutes." });
+    return;
+  }
+
+  const [dealer] = await db
+    .select()
+    .from(dealersTable)
+    .where(eq(dealersTable.email, email.trim().toLowerCase()));
+
+  const INVALID_MSG = "Invalid email or password.";
+
+  if (!dealer) {
+    // Still count IP failures for non-existent accounts (prevents enumeration via timing)
+    _recordIpFailure(ip);
+    res.status(401).json({ error: INVALID_MSG });
+    return;
+  }
+
+  // ── Per-account lockout check ────────────────────────────────────────────
+  if (dealer.lockedUntil && dealer.lockedUntil > new Date()) {
+    res.status(429).json({ error: "Account is temporarily locked. Please try again in 10 minutes." });
+    return;
+  }
+
+  if (!dealer.passwordHash) {
+    _recordIpFailure(ip);
+    res.status(401).json({ error: INVALID_MSG });
+    return;
+  }
+
+  const valid = await verifyPassword(password, dealer.passwordHash);
+  if (!valid) {
+    // If the previous lock has expired, start a fresh window — otherwise cumulative
+    // counts would re-lock the account on the very first attempt after expiry.
+    const lockExpired = dealer.lockedUntil && dealer.lockedUntil <= new Date();
+    const priorAttempts = lockExpired ? 0 : (dealer.failedLoginAttempts ?? 0);
+    const attempts = priorAttempts + 1;
+    const shouldLock = attempts >= 5;
+
+    await db
+      .update(dealersTable)
+      .set({
+        failedLoginAttempts: attempts,
+        lockedUntil: shouldLock ? new Date(Date.now() + 10 * 60 * 1000) : null,
+      })
+      .where(eq(dealersTable.id, dealer.id));
+
+    _recordIpFailure(ip);
+    res.status(401).json({ error: INVALID_MSG });
+    return;
+  }
+
+  // ── Success — reset all failure counters ─────────────────────────────────
+  await db
+    .update(dealersTable)
+    .set({ failedLoginAttempts: 0, lockedUntil: null, lastLoginAt: new Date() })
+    .where(eq(dealersTable.id, dealer.id));
+
+  ipFailedAttempts.delete(ip);
+
+  const token = signDealerToken({ dealer_id: dealer.id }, { rememberMe: !!rememberMe });
+  setDealerCookie(res, token, !!rememberMe);
+
+  req.log.info({ dealerId: dealer.id }, "Dealer logged in");
+  res.json({ ok: true, dealerId: dealer.id });
+});
+
+function _recordIpFailure(ip: string): void {
+  const now = Date.now();
+  const existing = ipFailedAttempts.get(ip);
+  if (!existing || now - existing.windowStart >= IP_WINDOW_MS) {
+    ipFailedAttempts.set(ip, { count: 1, windowStart: now });
+  } else {
+    ipFailedAttempts.set(ip, { count: existing.count + 1, windowStart: existing.windowStart });
+  }
+}
+
+// ─── POST /api/dealers/logout ─────────────────────────────────────────────────
+router.post("/dealers/logout", csrfProtect, (req, res): void => {
+  clearDealerCookie(res);
+  res.json({ ok: true });
+});
+
+// ─── GET /api/dealers/me ──────────────────────────────────────────────────────
+router.get("/dealers/me", requireDealerAuth, async (req, res): Promise<void> => {
+  const dealer = (res as any).locals.dealer;
+  const tokenPayload = (res as any).locals.dealerToken;
+
+  const [territory] = await db
+    .select()
+    .from(territoriesTable)
+    .where(eq(territoriesTable.dealerId, dealer.id));
+
+  res.json({
+    dealerId: dealer.id,
+    name: dealer.name,
+    email: dealer.email,
+    status: dealer.status,
+    impersonatedBy: tokenPayload?.impersonatedBy ?? null,
+    territory: territory
+      ? { id: territory.id, name: territory.name, households: territory.households }
+      : null,
+  });
+});
+
+// ─── POST /api/dealers/forgot-password ───────────────────────────────────────
+router.post("/dealers/forgot-password", forgotPasswordLimiter, csrfProtect, async (req, res): Promise<void> => {
+  const { email } = req.body ?? {};
+  // Always return success regardless of whether email exists (prevents enumeration)
+  const GENERIC_MSG = "If that email is registered you'll receive a link shortly.";
+
+  if (typeof email !== "string" || !email.trim()) {
+    res.json({ ok: true, message: GENERIC_MSG });
+    return;
+  }
+
+  const [dealer] = await db
+    .select()
+    .from(dealersTable)
+    .where(eq(dealersTable.email, email.trim().toLowerCase()));
+
+  if (!dealer) {
+    res.json({ ok: true, message: GENERIC_MSG });
+    return;
+  }
+
+  const rawToken = generateResetToken();
+  const tokenHash = hashResetToken(rawToken);
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+  await db.insert(dealerPasswordResetsTable).values({
+    dealerId: dealer.id,
+    tokenHash,
+    expiresAt,
+  });
+
+  const appUrl = process.env.PUBLIC_APP_URL?.replace(/\/$/, "") ||
+    (process.env.REPLIT_DOMAINS
+      ? `https://${process.env.REPLIT_DOMAINS.split(",")[0].trim()}`
+      : "http://localhost:3000");
+  const resetLink = `${appUrl}/dealer/reset-password?token=${rawToken}`;
+
+  try {
+    await sendDealerPasswordResetEmail({
+      dealerName: dealer.name,
+      dealerEmail: dealer.email,
+      resetLink,
+    });
+  } catch (err: any) {
+    req.log.error({ err: err?.message, dealerId: dealer.id }, "Failed to send password reset email");
+  }
+
+  req.log.info({ dealerId: dealer.id }, "Password reset token generated");
+  res.json({ ok: true, message: GENERIC_MSG });
+});
+
+// ─── POST /api/dealers/reset-password ────────────────────────────────────────
+router.post("/dealers/reset-password", csrfProtect, async (req, res): Promise<void> => {
+  const { token, newPassword } = req.body ?? {};
+
+  if (typeof token !== "string" || typeof newPassword !== "string") {
+    res.status(400).json({ error: "Token and new password are required." });
+    return;
+  }
+
+  const complexityError = validatePasswordComplexity(newPassword);
+  if (complexityError) {
+    res.status(400).json({ error: complexityError });
+    return;
+  }
+
+  const tokenHash = hashResetToken(token);
+  const now = new Date();
+
+  const [resetRow] = await db
+    .select()
+    .from(dealerPasswordResetsTable)
+    .where(
+      and(
+        eq(dealerPasswordResetsTable.tokenHash, tokenHash),
+        isNull(dealerPasswordResetsTable.usedAt),
+        gt(dealerPasswordResetsTable.expiresAt, now),
+      ),
+    );
+
+  if (!resetRow) {
+    res.status(400).json({ error: "This link has expired or already been used." });
+    return;
+  }
+
+  const newHash = await hashPassword(newPassword);
+
+  await db
+    .update(dealersTable)
+    .set({ passwordHash: newHash, failedLoginAttempts: 0, lockedUntil: null })
+    .where(eq(dealersTable.id, resetRow.dealerId));
+
+  await db
+    .update(dealerPasswordResetsTable)
+    .set({ usedAt: now })
+    .where(eq(dealerPasswordResetsTable.id, resetRow.id));
+
+  clearDealerCookie(res);
+  req.log.info({ dealerId: resetRow.dealerId }, "Dealer password reset");
+  res.json({ ok: true });
+});
+
+// ─── POST /api/admin/dealers/:id/impersonate ──────────────────────────────────
+router.post("/admin/dealers/:id/impersonate", requireAdmin, async (req, res): Promise<void> => {
+  const id = parseInt(String(req.params.id), 10);
+  if (!Number.isFinite(id)) {
+    res.status(400).json({ error: "Invalid dealer id" });
+    return;
+  }
+
+  const [dealer] = await db.select().from(dealersTable).where(eq(dealersTable.id, id));
+  if (!dealer) {
+    res.status(404).json({ error: "Dealer not found" });
+    return;
+  }
+
+  const token = signDealerToken(
+    { dealer_id: dealer.id, impersonatedBy: "admin" },
+    { shortLived: true },
+  );
+
+  await db.insert(adminActionsTable).values({
+    adminId: "admin",
+    action: "impersonate_dealer",
+    targetDealerId: dealer.id,
+    metadata: { dealerName: dealer.name, dealerEmail: dealer.email },
+  });
+
+  setDealerCookie(res, token, false);
+  req.log.info({ dealerId: dealer.id }, "Admin impersonating dealer");
+  res.json({ ok: true, dealerId: dealer.id });
+});
+
+// ─── GET /api/admin/audit-log ─────────────────────────────────────────────────
+router.get("/admin/audit-log", requireAdmin, async (_req, res): Promise<void> => {
+  const rows = await db
+    .select()
+    .from(adminActionsTable)
+    .orderBy(desc(adminActionsTable.createdAt))
+    .limit(100);
+
+  const toIso = (v: Date | string | null | undefined): string | null => {
+    if (!v) return null;
+    if (v instanceof Date) return v.toISOString();
+    const d = new Date(v as string);
+    return Number.isNaN(d.getTime()) ? String(v) : d.toISOString();
+  };
+
+  res.json({
+    actions: rows.map((r) => ({
+      id: r.id,
+      adminId: r.adminId,
+      action: r.action,
+      targetDealerId: r.targetDealerId,
+      metadata: r.metadata,
+      createdAt: toIso(r.createdAt),
+    })),
+  });
 });
 
 export default router;

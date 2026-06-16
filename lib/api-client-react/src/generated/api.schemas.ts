@@ -451,3 +451,86 @@ are always relative to "now" and are not affected.
    */
   campaignId?: number;
 };
+
+export type ImpersonateDealer200 = {
+  ok: boolean;
+  dealerId: number;
+};
+
+export type GetAdminAuditLog200ActionsItemMetadata = {
+  [key: string]: unknown;
+} | null;
+
+export type GetAdminAuditLog200ActionsItem = {
+  id?: number;
+  adminId?: string;
+  action?: string;
+  targetDealerId?: number | null;
+  metadata?: GetAdminAuditLog200ActionsItemMetadata;
+  createdAt?: string | null;
+};
+
+export type GetAdminAuditLog200 = {
+  actions: GetAdminAuditLog200ActionsItem[];
+};
+
+export type GetDealerCsrfToken200 = {
+  csrfToken: string;
+};
+
+export type DealerLoginBody = {
+  email: string;
+  password: string;
+  rememberMe?: boolean;
+};
+
+export type DealerLogin200 = {
+  ok: boolean;
+  dealerId: number;
+};
+
+export type DealerLogout200 = {
+  ok: boolean;
+};
+
+export type GetDealerMe200 = {
+  dealerId: number;
+  name: string;
+  email: string;
+  status: string;
+  impersonatedBy?: string;
+};
+
+export type GetDealerPortalData200Dealer = { [key: string]: unknown };
+
+export type GetDealerPortalData200Territory = { [key: string]: unknown } | null;
+
+export type GetDealerPortalData200CampaignsItem = { [key: string]: unknown };
+
+export type GetDealerPortalData200Campaign = { [key: string]: unknown } | null;
+
+export type GetDealerPortalData200 = {
+  dealer: GetDealerPortalData200Dealer;
+  territory?: GetDealerPortalData200Territory;
+  campaigns: GetDealerPortalData200CampaignsItem[];
+  campaign?: GetDealerPortalData200Campaign;
+};
+
+export type DealerForgotPasswordBody = {
+  email: string;
+};
+
+export type DealerForgotPassword200 = {
+  ok: boolean;
+  message: string;
+};
+
+export type DealerResetPasswordBody = {
+  token: string;
+  /** @minLength 8 */
+  newPassword: string;
+};
+
+export type DealerResetPassword200 = {
+  ok: boolean;
+};

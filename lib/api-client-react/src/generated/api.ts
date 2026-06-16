@@ -28,10 +28,22 @@ import type {
   ConfirmPaymentResponse,
   CreateCampaignBody,
   CreatePaymentIntentBody,
+  DealerForgotPassword200,
+  DealerForgotPasswordBody,
+  DealerLogin200,
+  DealerLoginBody,
+  DealerLogout200,
+  DealerResetPassword200,
+  DealerResetPasswordBody,
   DeleteOutreachLeadResponse,
   ErrorResponse,
+  GetAdminAuditLog200,
   GetAdminScansParams,
+  GetDealerCsrfToken200,
+  GetDealerMe200,
+  GetDealerPortalData200,
   HealthStatus,
+  ImpersonateDealer200,
   OutreachLead,
   OutreachLeadInput,
   OutreachLeadUpdate,
@@ -1888,6 +1900,165 @@ export const useApproveAd = <
 };
 
 /**
+ * @summary Start an admin impersonation session for a dealer (short-lived cookie)
+ */
+export const getImpersonateDealerUrl = (id: number) => {
+  return `/api/admin/dealers/${id}/impersonate`;
+};
+
+export const impersonateDealer = async (
+  id: number,
+  options?: RequestInit,
+): Promise<ImpersonateDealer200> => {
+  return customFetch<ImpersonateDealer200>(getImpersonateDealerUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getImpersonateDealerMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof impersonateDealer>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof impersonateDealer>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["impersonateDealer"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof impersonateDealer>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return impersonateDealer(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ImpersonateDealerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof impersonateDealer>>
+>;
+
+export type ImpersonateDealerMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Start an admin impersonation session for a dealer (short-lived cookie)
+ */
+export const useImpersonateDealer = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof impersonateDealer>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof impersonateDealer>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getImpersonateDealerMutationOptions(options));
+};
+
+/**
+ * @summary Return the last 100 admin action audit records
+ */
+export const getGetAdminAuditLogUrl = () => {
+  return `/api/admin/audit-log`;
+};
+
+export const getAdminAuditLog = async (
+  options?: RequestInit,
+): Promise<GetAdminAuditLog200> => {
+  return customFetch<GetAdminAuditLog200>(getGetAdminAuditLogUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAdminAuditLogQueryKey = () => {
+  return [`/api/admin/audit-log`] as const;
+};
+
+export const getGetAdminAuditLogQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAdminAuditLog>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminAuditLog>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAdminAuditLogQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAdminAuditLog>>
+  > = ({ signal }) => getAdminAuditLog({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminAuditLog>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAdminAuditLogQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAdminAuditLog>>
+>;
+export type GetAdminAuditLogQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Return the last 100 admin action audit records
+ */
+
+export function useGetAdminAuditLog<
+  TData = Awaited<ReturnType<typeof getAdminAuditLog>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminAuditLog>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAdminAuditLogQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
  * @summary Submit an interest lead for a taken industry
  */
 export const getSubmitInterestUrl = () => {
@@ -2057,4 +2228,569 @@ export const useRefineGrokAd = <
   TContext
 > => {
   return useMutation(getRefineGrokAdMutationOptions(options));
+};
+
+/**
+ * @summary Issue a CSRF token cookie and return the token
+ */
+export const getGetDealerCsrfTokenUrl = () => {
+  return `/api/dealers/csrf-token`;
+};
+
+export const getDealerCsrfToken = async (
+  options?: RequestInit,
+): Promise<GetDealerCsrfToken200> => {
+  return customFetch<GetDealerCsrfToken200>(getGetDealerCsrfTokenUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetDealerCsrfTokenQueryKey = () => {
+  return [`/api/dealers/csrf-token`] as const;
+};
+
+export const getGetDealerCsrfTokenQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDealerCsrfToken>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDealerCsrfToken>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetDealerCsrfTokenQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getDealerCsrfToken>>
+  > = ({ signal }) => getDealerCsrfToken({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getDealerCsrfToken>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetDealerCsrfTokenQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getDealerCsrfToken>>
+>;
+export type GetDealerCsrfTokenQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Issue a CSRF token cookie and return the token
+ */
+
+export function useGetDealerCsrfToken<
+  TData = Awaited<ReturnType<typeof getDealerCsrfToken>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDealerCsrfToken>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetDealerCsrfTokenQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Authenticate a dealer with email and password
+ */
+export const getDealerLoginUrl = () => {
+  return `/api/dealers/login`;
+};
+
+export const dealerLogin = async (
+  dealerLoginBody: DealerLoginBody,
+  options?: RequestInit,
+): Promise<DealerLogin200> => {
+  return customFetch<DealerLogin200>(getDealerLoginUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(dealerLoginBody),
+  });
+};
+
+export const getDealerLoginMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof dealerLogin>>,
+    TError,
+    { data: BodyType<DealerLoginBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof dealerLogin>>,
+  TError,
+  { data: BodyType<DealerLoginBody> },
+  TContext
+> => {
+  const mutationKey = ["dealerLogin"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof dealerLogin>>,
+    { data: BodyType<DealerLoginBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return dealerLogin(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DealerLoginMutationResult = NonNullable<
+  Awaited<ReturnType<typeof dealerLogin>>
+>;
+export type DealerLoginMutationBody = BodyType<DealerLoginBody>;
+export type DealerLoginMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Authenticate a dealer with email and password
+ */
+export const useDealerLogin = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof dealerLogin>>,
+    TError,
+    { data: BodyType<DealerLoginBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof dealerLogin>>,
+  TError,
+  { data: BodyType<DealerLoginBody> },
+  TContext
+> => {
+  return useMutation(getDealerLoginMutationOptions(options));
+};
+
+/**
+ * @summary Clear the dealer session cookie
+ */
+export const getDealerLogoutUrl = () => {
+  return `/api/dealers/logout`;
+};
+
+export const dealerLogout = async (
+  options?: RequestInit,
+): Promise<DealerLogout200> => {
+  return customFetch<DealerLogout200>(getDealerLogoutUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getDealerLogoutMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof dealerLogout>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof dealerLogout>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["dealerLogout"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof dealerLogout>>,
+    void
+  > = () => {
+    return dealerLogout(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DealerLogoutMutationResult = NonNullable<
+  Awaited<ReturnType<typeof dealerLogout>>
+>;
+
+export type DealerLogoutMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Clear the dealer session cookie
+ */
+export const useDealerLogout = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof dealerLogout>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof dealerLogout>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getDealerLogoutMutationOptions(options));
+};
+
+/**
+ * @summary Return the currently authenticated dealer
+ */
+export const getGetDealerMeUrl = () => {
+  return `/api/dealers/me`;
+};
+
+export const getDealerMe = async (
+  options?: RequestInit,
+): Promise<GetDealerMe200> => {
+  return customFetch<GetDealerMe200>(getGetDealerMeUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetDealerMeQueryKey = () => {
+  return [`/api/dealers/me`] as const;
+};
+
+export const getGetDealerMeQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDealerMe>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDealerMe>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetDealerMeQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getDealerMe>>> = ({
+    signal,
+  }) => getDealerMe({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getDealerMe>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetDealerMeQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getDealerMe>>
+>;
+export type GetDealerMeQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Return the currently authenticated dealer
+ */
+
+export function useGetDealerMe<
+  TData = Awaited<ReturnType<typeof getDealerMe>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDealerMe>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetDealerMeQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Return dashboard data for the authenticated dealer
+ */
+export const getGetDealerPortalDataUrl = () => {
+  return `/api/dealers/portal-data`;
+};
+
+export const getDealerPortalData = async (
+  options?: RequestInit,
+): Promise<GetDealerPortalData200> => {
+  return customFetch<GetDealerPortalData200>(getGetDealerPortalDataUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetDealerPortalDataQueryKey = () => {
+  return [`/api/dealers/portal-data`] as const;
+};
+
+export const getGetDealerPortalDataQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDealerPortalData>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDealerPortalData>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetDealerPortalDataQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getDealerPortalData>>
+  > = ({ signal }) => getDealerPortalData({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getDealerPortalData>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetDealerPortalDataQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getDealerPortalData>>
+>;
+export type GetDealerPortalDataQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Return dashboard data for the authenticated dealer
+ */
+
+export function useGetDealerPortalData<
+  TData = Awaited<ReturnType<typeof getDealerPortalData>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDealerPortalData>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetDealerPortalDataQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Send a password reset email (always returns success to prevent enumeration)
+ */
+export const getDealerForgotPasswordUrl = () => {
+  return `/api/dealers/forgot-password`;
+};
+
+export const dealerForgotPassword = async (
+  dealerForgotPasswordBody: DealerForgotPasswordBody,
+  options?: RequestInit,
+): Promise<DealerForgotPassword200> => {
+  return customFetch<DealerForgotPassword200>(getDealerForgotPasswordUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(dealerForgotPasswordBody),
+  });
+};
+
+export const getDealerForgotPasswordMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof dealerForgotPassword>>,
+    TError,
+    { data: BodyType<DealerForgotPasswordBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof dealerForgotPassword>>,
+  TError,
+  { data: BodyType<DealerForgotPasswordBody> },
+  TContext
+> => {
+  const mutationKey = ["dealerForgotPassword"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof dealerForgotPassword>>,
+    { data: BodyType<DealerForgotPasswordBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return dealerForgotPassword(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DealerForgotPasswordMutationResult = NonNullable<
+  Awaited<ReturnType<typeof dealerForgotPassword>>
+>;
+export type DealerForgotPasswordMutationBody =
+  BodyType<DealerForgotPasswordBody>;
+export type DealerForgotPasswordMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Send a password reset email (always returns success to prevent enumeration)
+ */
+export const useDealerForgotPassword = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof dealerForgotPassword>>,
+    TError,
+    { data: BodyType<DealerForgotPasswordBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof dealerForgotPassword>>,
+  TError,
+  { data: BodyType<DealerForgotPasswordBody> },
+  TContext
+> => {
+  return useMutation(getDealerForgotPasswordMutationOptions(options));
+};
+
+/**
+ * @summary Set a new password using a reset token
+ */
+export const getDealerResetPasswordUrl = () => {
+  return `/api/dealers/reset-password`;
+};
+
+export const dealerResetPassword = async (
+  dealerResetPasswordBody: DealerResetPasswordBody,
+  options?: RequestInit,
+): Promise<DealerResetPassword200> => {
+  return customFetch<DealerResetPassword200>(getDealerResetPasswordUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(dealerResetPasswordBody),
+  });
+};
+
+export const getDealerResetPasswordMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof dealerResetPassword>>,
+    TError,
+    { data: BodyType<DealerResetPasswordBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof dealerResetPassword>>,
+  TError,
+  { data: BodyType<DealerResetPasswordBody> },
+  TContext
+> => {
+  const mutationKey = ["dealerResetPassword"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof dealerResetPassword>>,
+    { data: BodyType<DealerResetPasswordBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return dealerResetPassword(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DealerResetPasswordMutationResult = NonNullable<
+  Awaited<ReturnType<typeof dealerResetPassword>>
+>;
+export type DealerResetPasswordMutationBody = BodyType<DealerResetPasswordBody>;
+export type DealerResetPasswordMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Set a new password using a reset token
+ */
+export const useDealerResetPassword = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof dealerResetPassword>>,
+    TError,
+    { data: BodyType<DealerResetPasswordBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof dealerResetPassword>>,
+  TError,
+  { data: BodyType<DealerResetPasswordBody> },
+  TContext
+> => {
+  return useMutation(getDealerResetPasswordMutationOptions(options));
 };

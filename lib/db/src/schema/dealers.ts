@@ -1,10 +1,11 @@
-import { pgTable, text, serial, integer, timestamp, real, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, real, uniqueIndex, uuid, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
 // Dealers are independent resellers who buy the rights to sell ad space on
 // co-op postcards in their own town. Phase 1 captures signup + payment only;
-// dealer login + dashboard come in later phases.
+// Phase 2 adds full email/password authentication (login, password reset,
+// admin impersonation).
 export const dealersTable = pgTable(
   "dealers",
   {
@@ -33,6 +34,11 @@ export const dealersTable = pgTable(
     // Generated automatically at row creation. Lets us give the dealer a
     // bookmark-able link without building a full login system.
     portalToken: uuid("portal_token").defaultRandom().unique(),
+    // Phase 2: email/password authentication fields
+    passwordHash: text("password_hash"),
+    lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+    failedLoginAttempts: integer("failed_login_attempts").notNull().default(0),
+    lockedUntil: timestamp("locked_until", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     activatedAt: timestamp("activated_at", { withTimezone: true }),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
@@ -73,6 +79,32 @@ export const dealerTerritoriesTable = pgTable(
   }),
 );
 
+// Phase 2: password reset tokens. Raw tokens are never stored — only SHA-256
+// hashes. One row per reset request; expires in 1 hour; used_at is stamped
+// when the reset succeeds (token is then invalid for re-use).
+export const dealerPasswordResetsTable = pgTable("dealer_password_resets", {
+  id: serial("id").primaryKey(),
+  dealerId: integer("dealer_id")
+    .notNull()
+    .references(() => dealersTable.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Phase 2: audit log for admin actions (primarily impersonation). Logged
+// whenever an admin logs in as a dealer so there is a full audit trail.
+export const adminActionsTable = pgTable("admin_actions", {
+  id: serial("id").primaryKey(),
+  adminId: text("admin_id").notNull().default("admin"),
+  action: text("action").notNull(),
+  targetDealerId: integer("target_dealer_id")
+    .references(() => dealersTable.id, { onDelete: "set null" }),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const insertDealerSchema = createInsertSchema(dealersTable).omit({
   id: true,
   createdAt: true,
@@ -82,3 +114,5 @@ export const insertDealerSchema = createInsertSchema(dealersTable).omit({
 export type InsertDealer = z.infer<typeof insertDealerSchema>;
 export type Dealer = typeof dealersTable.$inferSelect;
 export type DealerTerritory = typeof dealerTerritoriesTable.$inferSelect;
+export type DealerPasswordReset = typeof dealerPasswordResetsTable.$inferSelect;
+export type AdminAction = typeof adminActionsTable.$inferSelect;

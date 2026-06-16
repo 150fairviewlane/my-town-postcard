@@ -24,9 +24,42 @@ const US_STATES = [
   ["VA","Virginia"],["WA","Washington"],["WV","West Virginia"],["WI","Wisconsin"],["WY","Wyoming"],
 ];
 
+function getStrength(pw) {
+  if (!pw) return { level: 0, label: "", color: "#e5e7eb" };
+  let score = 0;
+  if (pw.length >= 8) score++;
+  if (pw.length >= 12) score++;
+  if (/\d/.test(pw)) score++;
+  if (/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(pw)) score++;
+  if (pw.length >= 16) score++;
+  if (score <= 1) return { level: 1, label: "Weak", color: "#ef4444" };
+  if (score <= 3) return { level: 2, label: "Fair", color: "#f59e0b" };
+  return { level: 3, label: "Strong", color: "#22c55e" };
+}
+
+function PasswordStrengthIndicator({ password }) {
+  const strength = useMemo(() => getStrength(password), [password]);
+  if (!password) return null;
+  return (
+    <div style={{ marginTop: 6 }}>
+      <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
+        {[1, 2, 3].map((lvl) => (
+          <div key={lvl} style={{
+            flex: 1, height: 4, borderRadius: 2,
+            background: lvl <= strength.level ? strength.color : "#e5e7eb",
+            transition: "background 0.2s",
+          }} />
+        ))}
+      </div>
+      <div style={{ fontSize: 12, fontWeight: 700, color: strength.color }}>{strength.label}</div>
+    </div>
+  );
+}
+
 export default function DealerSignup() {
-  const [form, setForm] = useState({ name: "", email: "", phone: "", city: "", state: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", city: "", state: "", password: "", confirmPassword: "" });
   const [error, setError] = useState(null);
+  const [mismatch, setMismatch] = useState(false);
 
   const cancelled = useMemo(
     () => new URLSearchParams(window.location.search).get("cancelled") === "1",
@@ -35,9 +68,14 @@ export default function DealerSignup() {
 
   const set = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }));
 
+  const checkMismatch = () => {
+    if (form.confirmPassword) setMismatch(form.password !== form.confirmPassword);
+  };
+
   const handleNext = (e) => {
     e.preventDefault();
     setError(null);
+    setMismatch(false);
 
     if (!form.name.trim() || !form.email.trim()) {
       setError("Please fill in your name and email.");
@@ -55,8 +93,32 @@ export default function DealerSignup() {
       setError("Please select your state.");
       return;
     }
+    if (!form.password) {
+      setError("Please create a password.");
+      return;
+    }
+    if (form.password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+    if (!/\d/.test(form.password)) {
+      setError("Password must contain at least one number.");
+      return;
+    }
+    if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(form.password)) {
+      setError("Password must contain at least one special character.");
+      return;
+    }
+    if (form.password !== form.confirmPassword) {
+      setMismatch(true);
+      setError("Passwords do not match.");
+      return;
+    }
 
     const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+    // Store the password in sessionStorage so it is NEVER exposed in the URL.
+    // territory-finder.html reads and clears this key before sending to the API.
+    sessionStorage.setItem("_dealer_pw_pending", form.password);
     const params = new URLSearchParams({
       city:  form.city.trim(),
       state: form.state,
@@ -142,6 +204,51 @@ export default function DealerSignup() {
                 display: "block", marginBottom: 4 }}>Phone (optional)</label>
               <input style={inputStyle} type="tel" value={form.phone}
                 onChange={set("phone")} placeholder="(555) 123-4567" />
+            </div>
+
+            {/* Password fields */}
+            <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 14, marginTop: 4 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#374151", marginBottom: 12 }}>
+                Create a password for your dealer portal
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <div>
+                  <label style={{ fontSize: 12.5, fontWeight: 600, color: "#374151",
+                    display: "block", marginBottom: 4 }}>Password *</label>
+                  <input
+                    style={inputStyle}
+                    type="password"
+                    required
+                    value={form.password}
+                    onChange={set("password")}
+                    placeholder="••••••••"
+                    autoComplete="new-password"
+                  />
+                  <PasswordStrengthIndicator password={form.password} />
+                  <div style={{ fontSize: 11.5, color: "#9ca3af", marginTop: 4 }}>
+                    8+ chars, one number, one special character
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: 12.5, fontWeight: 600, color: "#374151",
+                    display: "block", marginBottom: 4 }}>Confirm password *</label>
+                  <input
+                    style={{ ...inputStyle, borderColor: mismatch ? "#ef4444" : "#d1d5db" }}
+                    type="password"
+                    required
+                    value={form.confirmPassword}
+                    onChange={set("confirmPassword")}
+                    onBlur={checkMismatch}
+                    placeholder="••••••••"
+                    autoComplete="new-password"
+                  />
+                  {mismatch && (
+                    <div style={{ fontSize: 12.5, color: "#ef4444", marginTop: 4, fontWeight: 600 }}>
+                      Passwords do not match.
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             {error && (

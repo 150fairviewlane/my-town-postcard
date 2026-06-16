@@ -567,3 +567,53 @@ export async function sendTerritoryConflictEmail(
     logger.error({ err, territory: info.territoryName }, "Failed to send territory conflict email");
   }
 }
+
+export interface DealerPasswordResetEmailInfo {
+  dealerName: string;
+  dealerEmail: string;
+  resetLink: string;
+}
+
+export async function sendDealerPasswordResetEmail(
+  info: DealerPasswordResetEmailInfo
+): Promise<void> {
+  const resend = getResendClient();
+  if (!resend) {
+    logger.info(
+      { dealer: info.dealerEmail },
+      "Password reset email skipped — RESEND_API_KEY not set"
+    );
+    return;
+  }
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: info.dealerEmail,
+      subject: "Reset your My Town Postcard dealer password",
+      html: `
+        <div style="font-family:sans-serif;max-width:560px;margin:0 auto;">
+          <h2 style="color:#1a1a1a;">Hi ${escapeHtml(info.dealerName)},</h2>
+          <p>We received a request to reset your dealer portal password.</p>
+          <p>Click the button below to set a new password. This link expires in <strong>1 hour</strong>.</p>
+          <p>
+            <a href="${info.resetLink}"
+               style="display:inline-block;background:#7B1418;color:#fff;padding:12px 22px;border-radius:6px;text-decoration:none;font-weight:700;">
+              Reset my password →
+            </a>
+          </p>
+          <p style="color:#666;font-size:13px;">
+            If you didn't request a password reset, you can safely ignore this email.
+            Your password will not change.
+          </p>
+          <p style="color:#999;font-size:12px;">
+            Or paste this link in your browser:<br/>
+            <a href="${info.resetLink}" style="color:#7B1418;">${info.resetLink}</a>
+          </p>
+        </div>
+      `,
+    });
+    logger.info({ dealer: info.dealerEmail }, "Dealer password reset email sent");
+  } catch (err) {
+    logger.error({ err, dealer: info.dealerEmail }, "Failed to send dealer password reset email");
+  }
+}

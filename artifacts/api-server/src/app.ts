@@ -1,5 +1,6 @@
 import express, { type Express } from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import redirectRouter from "./routes/redirect";
@@ -34,6 +35,7 @@ app.use(
   }),
 );
 app.use(cors());
+app.use(cookieParser());
 
 // Stripe webhook MUST receive the raw request body so the signature in the
 // `stripe-signature` header can be verified against the exact bytes Stripe
