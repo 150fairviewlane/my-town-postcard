@@ -10,8 +10,6 @@ import {
   BACK_GRID_AREAS,
   BACK_GRID_ORDER,
   HouseAdVertical,
-  HouseAdRow,
-  HouseAdBanner,
   EDDMBox,
 } from "../postcardBack";
 import { getSampleAd, SPOT_SAMPLE_MAP } from "../PostcardSampleAds";
@@ -20,69 +18,6 @@ const SIZE_MAP = { xl: "XL", large: "L", medium: "M", small: "S" };
 
 // Same render order as the picker so each side lays out identically.
 const FRONT_GRID_ORDER = ["mb", "dn", "re", "l1", "l2", "l3", "l4"];
-
-// Permanent front-side house ad — same content as PostcardPickerSection so
-// the printed postcard matches what customers see in the live preview. Kept
-// as a local copy to avoid widening the export surface of PostcardPickerSection.
-function HouseAd() {
-  return (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        background: "linear-gradient(160deg,#0f1923 0%,#1a2a3a 100%)",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        fontFamily: "sans-serif",
-        padding: "6px 5px",
-        boxSizing: "border-box",
-        gap: 2.5,
-        overflow: "hidden",
-      }}
-    >
-      <div style={{ width: "72%", height: 2, background: "#991b1b", borderRadius: 1 }} />
-      <div
-        style={{
-          color: "#fff",
-          fontWeight: 900,
-          fontSize: 9,
-          textAlign: "center",
-          lineHeight: 1.15,
-          letterSpacing: 0.3,
-        }}
-      >
-        Shop, Dine<br />&amp; Buy Local
-      </div>
-      <div
-        style={{
-          color: "rgba(255,255,255,0.52)",
-          fontSize: 6.5,
-          textAlign: "center",
-          letterSpacing: 0.8,
-          textTransform: "uppercase",
-        }}
-      >
-        Your Ad Here
-      </div>
-      <div
-        style={{
-          color: "#fff",
-          fontWeight: 800,
-          fontSize: 8,
-          textAlign: "center",
-          fontFamily: "Georgia,serif",
-          lineHeight: 1.1,
-        }}
-      >
-        My Town Postcard
-      </div>
-      <div style={{ color: "#991b1b", fontSize: 7, fontWeight: 700 }}>mytownpostcard.com</div>
-      <div style={{ width: "72%", height: 2, background: "#991b1b", borderRadius: 1 }} />
-    </div>
-  );
-}
 
 // Filler shown in print for unsold spots that don't have a sample ad mapped.
 // Neutral, prints cleanly, signals to the press operator that the slot was
@@ -149,18 +84,12 @@ function PostcardFace({ side, spots, gridAreas, gridOrder, fixedAreas, renderFix
           gridTemplateColumns: "repeat(12, 1fr)",
           gridTemplateRows: "repeat(9, 1fr)",
           gridTemplateAreas: gridAreas,
-          gap: "10px",
-          background: "#000",
+          gap: 0,
+          background: "#c8c8c8",
         }}
       >
         {sortedSpots.map((spot) => {
-          // Match the picker's logic exactly: on the front side "mb" is the
-          // perpetual sponsor demo cell (Mr. Biscuit's) and always renders
-          // the sample ad, never the PaidAd dispatcher path. The back side
-          // has no equivalent — every paid back-side spot uses PaidAd.
-          const isPaid =
-            (spot.status === "paid" || spot.status === "reserved") &&
-            !(side === "front" && spot.gridArea === "mb");
+          const isPaid = spot.status === "paid" || spot.status === "reserved";
           const sampleKey = SPOT_SAMPLE_MAP[spot.gridArea];
 
           let content;
@@ -303,12 +232,9 @@ export default function AdminPrintPage() {
   const frontSpots = allSpots.filter((s) => (s.side ?? "front") === "front");
   const backSpots = allSpots.filter((s) => s.side === "back");
 
-  const renderFrontFixed = (area) => (area === "hs" ? <HouseAd /> : null);
   const renderBackFixed = (area) => {
     if (area === "bhs") return <HouseAdVertical />;
-    if (area === "bhr") return <HouseAdRow />;
-    if (area === "bhn") return <HouseAdBanner campaign={campaign} />;
-    if (area === "ed") return <EDDMBox />;
+    if (area === "bed") return <EDDMBox />;
     return null;
   };
 
@@ -507,7 +433,7 @@ export default function AdminPrintPage() {
           spots={backSpots}
           gridAreas={BACK_GRID_AREAS}
           gridOrder={BACK_GRID_ORDER}
-          fixedAreas={["bhs", "bhr", "bhn", "ed"]}
+          fixedAreas={["bhs", "bed"]}
           renderFixed={renderBackFixed}
           label="Back"
         />
