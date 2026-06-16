@@ -246,9 +246,11 @@ export default function AdminPrintPage() {
   const handlePrint = () => window.print();
 
   const handleSavePdf = () => {
+    // iPadOS 13+ disguises itself as a Mac (same userAgent as MacBook).
+    // Reliable tell: Macs have 0 touch points; iPads have 5.
     const isIOS =
       /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.userAgent));
     if (isIOS) {
       setShowIosTip(true);
     } else {
