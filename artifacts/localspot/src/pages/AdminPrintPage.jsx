@@ -264,8 +264,12 @@ export default function AdminPrintPage() {
       const a = document.createElement("a");
       a.href = url;
       a.download = `postcard-campaign-${numericId}-${side}.pdf`;
+      a.rel = "noopener";
+      // Must be in the DOM for Safari; revoke after delay so the tab can load it.
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 30_000);
     } catch {
       alert("PDF generation failed — please try again.");
     } finally {
