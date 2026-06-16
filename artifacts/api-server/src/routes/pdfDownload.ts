@@ -4,6 +4,22 @@ import PDFDocument from "pdfkit";
 import { eq } from "drizzle-orm";
 import { db, spotsTable } from "@workspace/db";
 import jwt from "jsonwebtoken";
+import QRCode from "qrcode";
+
+// QR code buffer for mytownpostcard.com — generated once, cached for the
+// lifetime of the process so PDF requests don't regenerate it every time.
+let _qrCache: Buffer | null = null;
+async function getQrBuffer(): Promise<Buffer> {
+  if (!_qrCache) {
+    _qrCache = await QRCode.toBuffer("https://mytownpostcard.com", {
+      type: "png",
+      width: 400,
+      margin: 1,
+      color: { dark: "#000000", light: "#ffffff" },
+    }) as Buffer;
+  }
+  return _qrCache;
+}
 
 const router: IRouter = Router();
 const JWT_SECRET = process.env.SESSION_SECRET || "localspot-secret";
@@ -167,6 +183,9 @@ async function drawSpots(
   defs: SpotDef[],
   dbSpots: SpotRow[],
 ): Promise<void> {
+  // Generate QR code once per PDF build (cached across calls in this process)
+  const qrPng = await getQrBuffer();
+
   for (const def of defs) {
     const dbSpot = dbSpots.find((s) => s.gridArea === def.gridArea);
     const imageUrl = resolveImageUrl(dbSpot);
@@ -175,10 +194,24 @@ async function drawSpots(
     const px = toPx300(def);
 
     if (rawBuf) {
+      // QR code: 15% of the spot's shorter side, min 60px, with padding
+      const qrSizePx = Math.max(60, Math.round(Math.min(px.w, px.h) * 0.15));
+      const paddingPx = Math.max(8, Math.round(qrSizePx * 0.08));
+      const qrResized = await sharp(qrPng)
+        .resize(qrSizePx, qrSizePx)
+        .png()
+        .toBuffer();
+
       const imgBuf = await sharp(rawBuf)
         .resize(px.w, px.h, { fit: "fill" })
+        .composite([{
+          input: qrResized,
+          left: px.w - qrSizePx - paddingPx,
+          top:  px.h - qrSizePx - paddingPx,
+        }])
         .jpeg({ quality: 92 })
         .toBuffer();
+
       doc.image(imgBuf, c.x, c.y, { width: c.w, height: c.h });
     } else {
       // Placeholder: light gray rectangle
