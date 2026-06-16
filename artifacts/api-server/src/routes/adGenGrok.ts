@@ -2056,13 +2056,13 @@ function isXaiOverload(status: number, errMsg: string): boolean {
 // 3 retries at 3 s / 6 s / 12 s → up to ~21 s of silent back-off before giving up
 const XAI_RETRY_DELAYS_MS = [3000, 6000, 12000] as const;
 
-// ── SMART_HTML — Smart Ad Studio (industry-ranked gallery + color pickers) ────
+// ── SMART_HTML — Smart Ad Studio (auto-template gallery + color swatches) ─────
 const SMART_HTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>My Town Postcard &mdash; Smart Ad Studio</title>
+<title>My Town Postcard &#8212; Smart Ad Studio</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700&family=Crimson+Pro:ital@0;1&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -2098,38 +2098,19 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .rm-btn:hover{border-color:#c0392b;color:#c0392b;background:#fef2f2}
 .add-btn{font-size:13px;font-weight:600;color:var(--burg);background:none;border:1.5px dashed var(--burg);border-radius:6px;padding:5px 12px;cursor:pointer;width:100%;transition:all .2s;font-family:'DM Sans',sans-serif}
 .add-btn:hover{background:var(--burg-pale)}
-.rpanel{background:#ECEAE6;padding:18px 22px 22px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
-.rpanel>*{flex-shrink:0}
-.card{background:var(--card);border:1.5px solid var(--border);border-radius:11px;overflow:hidden}
-.card-hdr{padding:11px 16px;border-bottom:1px solid var(--border);background:#FAFAF8;display:flex;align-items:center;justify-content:space-between}
-.card-title{font-size:15px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--burg)}
-.card-body{padding:14px 16px}
-/* Smart gallery */
-.smart-gallery{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
-.sg-card{border:2px solid var(--border);border-radius:7px;overflow:hidden;cursor:pointer;transition:all .18s;background:#fff;display:flex;flex-direction:column;position:relative}
-.sg-card:hover:not(.sg-used){border-color:var(--burg);box-shadow:0 2px 8px rgba(124,28,46,.18)}
-.sg-card.sg-active{border-color:var(--green);box-shadow:0 0 0 1.5px var(--green)}
-.sg-card.sg-used{opacity:.48;cursor:default}
-.sg-thumb{width:100%;object-fit:cover;display:block;background:#f0ede8}
-.smart-gallery.portrait .sg-thumb{aspect-ratio:4/5}
-.smart-gallery.landscape .sg-thumb{aspect-ratio:5/4}
-.smart-gallery.square .sg-thumb{aspect-ratio:1/1}
-.sg-name{font-size:9.5px;font-weight:700;color:var(--ink);padding:3px 4px 4px;line-height:1.2;text-align:center}
-.sg-badge{display:none;position:absolute;top:3px;right:3px;background:var(--green);color:#fff;font-size:8px;font-weight:700;padding:1px 4px;border-radius:99px}
-.sg-card.sg-active .sg-badge{display:block}
-.sg-used-dot{display:none;position:absolute;top:3px;left:3px;background:#c0392b;color:#fff;font-size:8px;font-weight:700;padding:1px 4px;border-radius:3px}
-.sg-card.sg-used .sg-used-dot{display:block}
-.sg-ph{grid-column:1/-1;padding:20px 8px;text-align:center;font-size:13px;color:var(--ink-light);line-height:1.5;background:#f8f7f5;border-radius:7px}
-/* Brand colors */
-.colors-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.color-swatch{display:flex;flex-direction:column;gap:4px}
-.color-swatch label{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mid)}
-.color-input-row{display:flex;align-items:center;gap:8px}
-.color-input-row input[type=color]{width:38px;height:38px;padding:2px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;background:#fff;flex-shrink:0}
-.color-hex{font-size:12px;font-weight:600;color:var(--ink);font-family:monospace;background:var(--surface);padding:4px 8px;border-radius:5px;border:1px solid var(--border);flex:1}
-.reset-colors-btn{font-size:12px;font-weight:600;color:var(--burg);background:none;border:none;cursor:pointer;padding:0;font-family:'DM Sans',sans-serif;text-decoration:underline;text-underline-offset:2px}
-.reset-colors-btn:hover{color:var(--burg-dark)}
-/* Photo / library */
+/* Swatches */
+.swatches-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}
+.swatch-card{border:2px solid var(--border);border-radius:9px;padding:9px 11px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:all .18s;background:#fafaf8}
+.swatch-card:hover{border-color:var(--burg);background:#fff}
+.swatch-card.active{border-color:var(--burg);box-shadow:0 0 0 2px var(--burg);background:#fff}
+.swatch-circles{display:flex;gap:4px;flex-shrink:0}
+.swatch-circle{width:28px;height:28px;border-radius:50%;border:1.5px solid rgba(0,0,0,.1)}
+.swatch-name{font-size:11px;font-weight:700;color:var(--ink);line-height:1.3;letter-spacing:.02em}
+/* Upload */
+.photo-logo-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
+.logo-col{display:flex;flex-direction:column;gap:8px}
+.lib-section{margin-top:10px}
+.lib-label{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-light);margin-bottom:6px}
 .img-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
 .img-thumb{position:relative;aspect-ratio:4/3;border-radius:6px;overflow:hidden;cursor:pointer;border:2.5px solid transparent;transition:all .2s}
 .img-thumb:hover{transform:scale(1.03)}
@@ -2137,82 +2118,77 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .img-thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .img-thumb .chk{display:none;position:absolute;top:3px;right:3px;background:var(--burg);color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:900;align-items:center;justify-content:center}
 .img-thumb.selected .chk{display:flex}
-.img-empty{grid-column:1/-1;padding:14px 8px;text-align:center;font-size:13px;color:var(--ink-light);line-height:1.5}
-.img-loading{grid-column:1/-1;padding:14px 8px;text-align:center;font-size:13px;color:var(--ink-light)}
-.fnote{font-size:12px;color:var(--ink-light);margin-top:5px;line-height:1.4}
-.photo-logo-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
-.logo-col{display:flex;flex-direction:column;gap:8px}
-.lib-section{margin-top:10px}
-.lib-label{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-light);margin-bottom:6px}
-/* Upload zone */
-.upload-zone{border:2px dashed var(--border);border-radius:8px;padding:14px 10px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;background:var(--surface);position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:110px}
-.upload-zone.photo-zone{min-height:130px}
-.upload-zone.logo-zone{min-height:80px}
+.img-empty,.img-loading{grid-column:1/-1;padding:14px 8px;text-align:center;font-size:13px;color:var(--ink-light);line-height:1.5}
+.upload-zone{border:2px dashed var(--border);border-radius:8px;padding:14px 10px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;background:var(--surface);position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100px}
+.upload-zone.logo-zone{min-height:75px}
 .upload-zone:hover:not(.has-file){border-color:var(--burg);background:var(--burg-pale)}
 .upload-zone.has-file{border-color:var(--green);background:#f0fdf4;padding:6px;justify-content:flex-start;align-items:stretch;min-height:0}
-.logo-zone.has-file{min-height:80px;justify-content:center;align-items:center;padding:6px}
+.logo-zone.has-file{min-height:75px;justify-content:center;align-items:center;padding:6px}
 .upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;z-index:2}
 .upload-placeholder{display:flex;flex-direction:column;align-items:center;gap:2px;pointer-events:none}
 .upload-icon{font-size:22px;opacity:.45}
-.upload-label{font-size:13.5px;font-weight:600;color:var(--ink-mid);margin-top:2px}
-.upload-sub{font-size:12px;color:var(--ink-light);margin-top:1px;line-height:1.3;max-width:140px}
+.upload-label{font-size:13px;font-weight:600;color:var(--ink-mid);margin-top:2px}
+.upload-sub{font-size:11.5px;color:var(--ink-light);margin-top:1px;line-height:1.3;max-width:130px}
 .upload-zone.has-file .upload-placeholder{display:none}
 .upload-preview{display:none;width:100%;height:auto;object-fit:contain;border-radius:5px}
 .upload-zone.has-file .upload-preview{display:block}
-.logo-zone.has-file .upload-preview{width:auto;max-height:64px;margin:0 auto}
+.logo-zone.has-file .upload-preview{width:auto;max-height:60px;margin:0 auto}
 .upload-clear{position:absolute;top:5px;right:5px;z-index:3;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.45);color:#fff;border:none;cursor:pointer;font-size:13px;display:none;align-items:center;justify-content:center;line-height:1}
 .upload-zone.has-file .upload-clear{display:flex}
-/* Generate + result */
-.gen-btn{width:100%;padding:13px 16px;background:linear-gradient(135deg,#1a1a2e,#3D1A6B);color:#fff;border:none;border-radius:10px;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.14em;cursor:pointer;transition:all .25s;display:flex;align-items:center;justify-content:center;gap:8px}
+.fnote{font-size:11.5px;color:var(--ink-light);line-height:1.4}
+/* Generate button */
+.gen-btn{width:100%;padding:13px 16px;background:linear-gradient(135deg,#1a1a2e,#3D1A6B);color:#fff;border:none;border-radius:10px;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.14em;cursor:pointer;transition:all .25s;display:flex;align-items:center;justify-content:center;gap:8px;flex-shrink:0}
 .gen-btn:hover:not(:disabled){background:linear-gradient(135deg,#2a2a4e,#5a2490);transform:translateY(-1px);box-shadow:0 6px 24px rgba(80,30,180,.35)}
-.gen-btn:disabled{background:#888;cursor:not-allowed;transform:none;box-shadow:none}
+.gen-btn:disabled{background:#999;cursor:not-allowed;transform:none;box-shadow:none}
 .gen-spark{font-size:17px;animation:sp 2s ease-in-out infinite}
 @keyframes sp{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
-.loading-panel{background:var(--card);border:1.5px solid var(--border);border-radius:11px;padding:18px 14px;text-align:center;display:none}
-.loading-panel.visible{display:block}
-.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--burg);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 10px}
-@keyframes spin{to{transform:rotate(360deg)}}
-.loading-title{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.08em;color:var(--ink);margin-bottom:4px}
-.loading-sub{font-size:13px;color:var(--ink-light);line-height:1.4}
-.result-panel{background:var(--card);border:1.5px solid var(--border);border-radius:11px;overflow:hidden;display:none}
-.result-panel.visible{display:block}
-.result-hdr{padding:8px 12px;border-bottom:1px solid var(--border);background:#FAFAF8;display:flex;align-items:center;justify-content:space-between}
-.result-title{font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--green)}
-.result-img-wrap{display:flex;justify-content:center;background:#f5f3f0}
-.result-img{display:block;width:100%;height:auto;object-fit:contain;border-radius:0}
-.result-actions{padding:8px 10px;display:flex;gap:6px;flex-wrap:wrap;border-top:1px solid var(--border);align-items:center}
-.act-btn{padding:9px 18px;border-radius:8px;font-size:13.5px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:var(--surface);color:var(--ink-mid);transition:all .2s;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px}
-.act-btn:hover:not(:disabled){border-color:var(--burg);color:var(--burg)}
-.act-btn.primary{background:var(--green);border-color:var(--green);color:#fff;font-size:14.5px;font-weight:700}
-.act-btn.primary:hover:not(:disabled){background:#144d30}
-.err-box{padding:14px 16px;background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;font-size:14px;color:#991b1b;line-height:1.5;display:none}
+.err-box{padding:14px 16px;background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;font-size:14px;color:#991b1b;line-height:1.5;display:none;margin-top:4px}
 .err-box.visible{display:block}
 .field-error{border-color:#ef4444 !important;box-shadow:0 0 0 3px rgba(239,68,68,.25) !important;animation:field-shake .35s ease}
 @keyframes field-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:#fff;padding:10px 22px;border-radius:30px;font-size:14px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,.3);transition:transform .3s cubic-bezier(.34,1.56,.64,1);z-index:999;pointer-events:none}
+/* Right panel */
+.rpanel{background:#ECEAE6;padding:18px 22px 22px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+.var-header{margin-bottom:4px}
+.var-title{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:.05em;color:var(--ink)}
+.var-sub{font-family:'Crimson Pro',serif;font-style:italic;font-size:14px;color:var(--ink-light);line-height:1.4;margin-top:2px}
+/* Variations grid */
+.variations-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.var-slot{border-radius:10px;overflow:hidden;border:2px solid var(--border);background:var(--card);display:flex;flex-direction:column;min-height:180px}
+.var-slot.slot-empty{border-style:dashed;background:transparent;align-items:center;justify-content:center;gap:5px}
+.var-slot.slot-loading{border-style:dashed;border-color:var(--burg);background:rgba(124,28,46,.04);align-items:center;justify-content:center;gap:5px}
+.var-slot.slot-filled{cursor:pointer;transition:border-color .18s,box-shadow .18s}
+.var-slot.slot-filled:hover{border-color:var(--burg);box-shadow:0 4px 16px rgba(124,28,46,.2)}
+.slot-num{font-size:13px;font-weight:700;color:var(--ink-light)}
+.slot-ph-text{font-size:12px;color:var(--ink-light);opacity:.7}
+.slot-spinner{width:26px;height:26px;border:2.5px solid var(--border);border-top-color:var(--burg);border-radius:50%;animation:spin 1s linear infinite}
+.slot-gen-text{font-size:12px;color:var(--burg);font-weight:600;text-align:center;line-height:1.4;padding:0 8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.slot-img-wrap{flex:1;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f5f3f0;min-height:130px}
+.slot-img{width:100%;height:100%;object-fit:cover;display:block}
+.slot-footer{padding:8px 10px;border-top:1px solid var(--border);background:#fafaf8;display:flex;flex-direction:column;gap:6px}
+.slot-tmpl-name{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-light)}
+.slot-select-btn{padding:8px 0;background:var(--green);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .2s;width:100%;letter-spacing:.03em}
+.slot-select-btn:hover{background:#144d30}
+/* Lightbox */
+.lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:9999;align-items:center;justify-content:center;padding:20px}
+.lightbox.visible{display:flex}
+.lb-close{position:fixed;top:18px;right:22px;width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.15);color:#fff;border:none;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;transition:background .2s;z-index:1;font-family:'DM Sans',sans-serif}
+.lb-close:hover{background:rgba(255,255,255,.3)}
+.lb-content{display:flex;flex-direction:column;align-items:center;gap:14px;max-width:90vw}
+.lb-img{max-width:100%;max-height:68vh;object-fit:contain;border-radius:6px;box-shadow:0 24px 64px rgba(0,0,0,.7)}
+.lb-tmpl-name{color:rgba(255,255,255,.55);font-size:12px;font-weight:700;letter-spacing:.2em;text-transform:uppercase}
+.lb-actions{display:flex;gap:12px}
+.lb-select-btn{padding:14px 48px;background:var(--green);color:#fff;border:none;border-radius:11px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:background .2s;letter-spacing:.04em}
+.lb-select-btn:hover{background:#144d30}
+.lb-dl-btn{padding:14px 24px;background:rgba(255,255,255,.12);color:#fff;border:1.5px solid rgba(255,255,255,.3);border-radius:11px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all .2s}
+.lb-dl-btn:hover{background:rgba(255,255,255,.22)}
+/* Toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:#fff;padding:10px 22px;border-radius:30px;font-size:14px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,.3);transition:transform .3s cubic-bezier(.34,1.56,.64,1);z-index:9998;pointer-events:none}
 .toast.show{transform:translateX(-50%) translateY(0)}
-/* Refine panel */
-.refine-panel{padding:11px 12px 10px;border-top:1.5px solid var(--border);background:#f8f7f4}
-.refine-label{font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-mid);margin-bottom:7px}
-.refine-row{display:flex;gap:7px}
-.refine-input{flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);background:#fff;outline:none;transition:border-color .2s}
-.refine-input:focus{border-color:var(--burg)}
-.refine-input::placeholder{color:#b0aaa4}
-.refine-btn{padding:8px 16px;background:var(--burg);color:#fff;border:none;border-radius:7px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;transition:background .2s;flex-shrink:0}
-.refine-btn:hover:not(:disabled){background:var(--burg-dark)}
-.refine-btn:disabled{background:#aaa;cursor:not-allowed}
-.refine-err{font-size:13px;color:#991b1b;margin-top:6px;display:none;line-height:1.4}
-.refine-err.visible{display:block}
-.refine-loading{font-size:13px;color:var(--ink-light);margin-top:6px;display:none;line-height:1.4}
-.refine-loading.visible{display:block}
-.refine-footer{display:flex;align-items:center;justify-content:space-between;margin-top:5px}
-.refine-hint{font-size:12px;color:var(--ink-light);line-height:1.4}
-.refine-revert-btn{background:none;border:none;font-size:13px;color:var(--burg);cursor:pointer;padding:0;font-family:'DM Sans',sans-serif;text-decoration:underline;text-underline-offset:2px;transition:color .2s;white-space:nowrap}
-.refine-revert-btn:hover{color:var(--burg-dark)}
-/* Industry conflict overlay */
-#takenOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:9999;align-items:center;justify-content:center;padding:16px}
+/* Taken dialog */
+#takenOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:9997;align-items:center;justify-content:center;padding:16px}
 #takenOverlay.visible{display:flex}
-#takenCard{background:#fff;border-radius:14px;max-width:400px;width:100%;padding:32px 28px;box-shadow:0 24px 64px rgba(0,0,0,0.45);text-align:center;font-family:'DM Sans',sans-serif}
+#takenCard{background:#fff;border-radius:14px;max-width:400px;width:100%;padding:32px 28px;box-shadow:0 24px 64px rgba(0,0,0,.45);text-align:center}
 .tc-icon{font-size:42px;margin-bottom:12px;line-height:1}
 .tc-title{font-weight:900;font-size:20px;color:#0f1117;margin:0 0 10px;font-family:'Bebas Neue',sans-serif;letter-spacing:.05em}
 .tc-body{color:#6B7280;font-size:13px;line-height:1.65;margin:0 0 24px}
@@ -2221,7 +2197,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .tc-btn:last-child{margin-bottom:0}
 .tc-btn.primary{background:#0f1117;color:#fff}
 .tc-btn.secondary{background:#fff;color:#7C1C2E;border:2px solid #7C1C2E}
-@media(max-width:860px){.layout{grid-template-columns:1fr;overflow:auto}html,body{height:auto;overflow:auto}.fpanel,.rpanel{overflow:visible}.photo-logo-row{grid-template-columns:1fr}}
+@media(max-width:860px){.layout{grid-template-columns:1fr;overflow:auto}html,body{height:auto;overflow:auto}.fpanel,.rpanel{overflow:visible}.photo-logo-row{grid-template-columns:1fr}.variations-grid{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
@@ -2235,11 +2211,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 
 <div class="layout">
 
-  <!-- LEFT: FORM -->
+  <!-- LEFT: FORM PANEL -->
   <div class="fpanel">
     <div>
       <div class="ptitle">Smart Ad Studio</div>
-      <div class="psub">Pick your industry for AI-ranked template suggestions and auto-filled brand colors, then generate your ad.</div>
+      <div class="psub">Pick your industry and color palette, then click Generate up to 6 times. Each version uses a new template style &mdash; compare them all and select the best.</div>
     </div>
 
     <div>
@@ -2283,171 +2259,131 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
       <div class="field"><label>Offer</label><input type="text" id="offer" placeholder="$1 OFF Any Biscuit"></div>
       <div class="field"><label>Fine Print</label><input type="text" id="offerFine" placeholder="1 per visit &middot; with this postcard"></div>
     </div>
-  </div>
 
-  <!-- RIGHT PANEL -->
-  <div class="rpanel">
-
-    <!-- Smart Template Gallery -->
-    <div class="card">
-      <div class="card-hdr">
-        <div class="card-title">&#10024; Smart Template Picks</div>
-        <span id="tmplPicksLabel" style="font-size:12px;color:var(--ink-light)">Select your industry to see picks</span>
-      </div>
-      <div class="card-body" style="padding:10px 12px">
-        <div id="tmplAllUsedBanner" style="display:none;margin-bottom:8px;padding:7px 10px;background:#fff7ed;border:1px solid #f59e0b;border-radius:6px;font-size:13px;color:#92400e;font-weight:600;">
-          All styles are in use on this side &mdash; you may reuse any of them.
-        </div>
-        <div class="smart-gallery portrait" id="smartGallery">
-          <div class="sg-ph">&#10024;&nbsp; Select your industry on the left to get personalized template recommendations.</div>
-        </div>
-      </div>
+    <div>
+      <div class="sec-label">&#127775; Brand Color Palette</div>
+      <div class="swatches-grid" id="swatchesGrid"></div>
+      <p class="fnote">Auto-selected for your industry &mdash; click any pair to switch.</p>
     </div>
 
-    <!-- Brand Colors -->
-    <div class="card">
-      <div class="card-hdr">
-        <div class="card-title">&#127775; Brand Colors</div>
-        <button class="reset-colors-btn" id="resetColorsBtn" onclick="resetColors()" style="display:none">&#8635; Reset to defaults</button>
-      </div>
-      <div class="card-body">
-        <div class="colors-row">
-          <div class="color-swatch">
-            <label>Primary Color</label>
-            <div class="color-input-row">
-              <input type="color" id="primaryColor" value="#7c3a1e" oninput="onColorChange('primary')">
-              <div id="primaryHex" class="color-hex">#7c3a1e</div>
-            </div>
-          </div>
-          <div class="color-swatch">
-            <label>Accent Color</label>
-            <div class="color-input-row">
-              <input type="color" id="accentColor" value="#f59e0b" oninput="onColorChange('accent')">
-              <div id="accentHex" class="color-hex">#f59e0b</div>
-            </div>
-          </div>
-        </div>
-        <p class="fnote">The AI uses these as the brand palette for header bars, badges, coupon accents, and CTA elements.</p>
-      </div>
-    </div>
-
-    <!-- Hero Photo + Logo -->
     <div class="photo-logo-row">
-      <div class="card">
-        <div class="card-hdr">
-          <div class="card-title">Primary Photo</div>
-          <span style="font-size:12px;color:var(--ink-light)" id="photoStatus">Optional</span>
-        </div>
-        <div class="card-body">
-          <div class="upload-zone photo-zone" id="photoZone">
-            <input type="file" accept="image/*" onchange="handlePhotoUpload(this)">
-            <div class="upload-placeholder">
-              <div class="upload-icon">&#128248;</div>
-              <div class="upload-label">Upload a photo</div>
-              <div class="upload-sub">Food, product, or storefront &mdash; JPG, PNG, WebP</div>
-            </div>
-            <img class="upload-preview" id="photoPreview" alt="Photo preview">
-            <button class="upload-clear" title="Remove photo" onclick="clearPhoto(event)">&#10005;</button>
+      <div>
+        <div class="sec-label" style="margin-top:0">Primary Photo</div>
+        <div class="upload-zone" id="photoZone">
+          <input type="file" accept="image/*" onchange="handlePhotoUpload(this)">
+          <div class="upload-placeholder">
+            <div class="upload-icon">&#128248;</div>
+            <div class="upload-label">Upload a photo</div>
+            <div class="upload-sub">Food, product, or storefront</div>
           </div>
-          <p class="fnote" style="margin-top:6px">Skip to let our AI generate a photo automatically.</p>
-          <div class="lib-section">
-            <div class="lib-label">Or pick from library</div>
-            <div id="libGrid" class="img-grid">
-              <div class="img-empty">Select an industry above to load photos.</div>
-            </div>
+          <img class="upload-preview" id="photoPreview" alt="Photo">
+          <button class="upload-clear" title="Remove" onclick="clearPhoto(event)">&#10005;</button>
+        </div>
+        <p class="fnote" style="margin-top:5px">Skip to let AI auto-generate a photo.</p>
+        <div class="lib-section">
+          <div class="lib-label">Or pick from library</div>
+          <div id="libGrid" class="img-grid">
+            <div class="img-empty">Select an industry above to load photos.</div>
           </div>
         </div>
       </div>
-
       <div class="logo-col">
-        <div class="card">
-          <div class="card-hdr">
-            <div class="card-title">Company Logo</div>
-            <span style="font-size:12px;color:var(--ink-light)" id="logoStatus">Optional</span>
-          </div>
-          <div class="card-body">
-            <div class="upload-zone logo-zone" id="logoZone">
-              <input type="file" accept="image/*" onchange="handleLogoUpload(this)">
-              <div class="upload-placeholder">
-                <div class="upload-icon">&#127991;&#65039;</div>
-                <div class="upload-label">Upload logo</div>
-                <div class="upload-sub">PNG with transparency preferred</div>
-              </div>
-              <img class="upload-preview" id="logoPreview" alt="Logo preview">
-              <button class="upload-clear" title="Remove logo" onclick="clearLogo(event)">&#10005;</button>
+        <div>
+          <div class="sec-label" style="margin-top:0">Logo</div>
+          <div class="upload-zone logo-zone" id="logoZone">
+            <input type="file" accept="image/*" onchange="handleLogoUpload(this)">
+            <div class="upload-placeholder">
+              <div class="upload-icon">&#127991;&#65039;</div>
+              <div class="upload-label">Upload logo</div>
+              <div class="upload-sub">PNG with transparency preferred</div>
             </div>
-            <p class="fnote" style="margin-top:8px">Placed in the upper-left corner exactly as provided.</p>
+            <img class="upload-preview" id="logoPreview" alt="Logo">
+            <button class="upload-clear" title="Remove" onclick="clearLogo(event)">&#10005;</button>
           </div>
+          <p class="fnote" style="margin-top:5px">Placed upper-left exactly as provided.</p>
         </div>
-
-        <!-- Generate -->
         <button class="gen-btn" id="genBtn" onclick="generate()" disabled>
           <span class="gen-spark">&#9889;</span>
-          <span id="genLabel">Generate My Ad</span>
+          <span id="genLabel">Generate My Ad (6 remaining)</span>
         </button>
-
-        <!-- Loading -->
-        <div class="loading-panel" id="loadingPanel">
-          <div class="spinner"></div>
-          <div class="loading-title">My Town AI is designing your ad&hellip;</div>
-          <div class="loading-sub">Usually 20&ndash;45 seconds. Our AI is compositing your images and placing your business text.</div>
-        </div>
-
-        <!-- Error -->
         <div class="err-box" id="errBox"></div>
-
-        <!-- Result -->
-        <div class="result-panel" id="resultPanel">
-          <div class="result-hdr">
-            <div class="result-title">&#10003; Your Ad</div>
-            <button class="act-btn" onclick="resetResult()" style="padding:4px 10px;font-size:12px">&#8634; Start Over</button>
-          </div>
-          <div class="result-img-wrap"><img class="result-img" id="resultImg" alt="Generated ad"></div>
-          <div class="result-actions">
-            <button class="act-btn primary" onclick="useThisAd()">&#10003; Use This Ad</button>
-            <button class="act-btn" onclick="downloadAd()">&#8595; Download</button>
-            <button class="act-btn" onclick="generate()">&#8634; Regenerate</button>
-          </div>
-          <div class="refine-panel" id="refinePanel">
-            <div class="refine-label">&#9998; Refine this ad</div>
-            <div class="refine-row">
-              <input type="text" id="refineInput" class="refine-input"
-                placeholder='e.g. "Remove the word Shield" or "Change the phone number"'
-                maxlength="300" onkeydown="if(event.key==='Enter')refineAd()">
-              <button class="refine-btn" id="refineBtn" onclick="refineAd()">Apply</button>
-            </div>
-            <div class="refine-loading" id="refineLoading">&#8987; My Town AI is applying your change&hellip; (20&ndash;40 seconds)</div>
-            <div class="refine-err" id="refineErr"></div>
-            <div class="refine-footer">
-              <div class="refine-hint">Type any correction and hit Apply. Our AI updates the ad without regenerating from scratch.</div>
-              <button class="refine-revert-btn" id="refineRevertBtn" style="display:none" onclick="revertAd()">&#8617; Revert to original</button>
-            </div>
-          </div>
-        </div>
-
       </div>
     </div>
+  </div>
 
+  <!-- RIGHT: VARIATIONS PANEL -->
+  <div class="rpanel">
+    <div class="var-header">
+      <div class="var-title">Your Ad Variations</div>
+      <div class="var-sub">Each click generates a new template style &mdash; compare up to 6 versions and select the best one.</div>
+    </div>
+    <div class="variations-grid" id="variationsGrid"></div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div id="lightbox" class="lightbox" onclick="onLightboxClick(event)">
+  <button class="lb-close" onclick="closeLightbox()">&#10005;</button>
+  <div class="lb-content" onclick="event.stopPropagation()">
+    <img id="lbImg" class="lb-img" alt="Ad preview">
+    <div class="lb-tmpl-name" id="lbTmplName"></div>
+    <div class="lb-actions">
+      <button class="lb-select-btn" onclick="selectAdFromLightbox()">&#10003; Select This Ad</button>
+      <button class="lb-dl-btn" onclick="downloadFromLightbox()">&#8595; Download</button>
+    </div>
+  </div>
+</div>
+
+<!-- Industry conflict dialog -->
+<div id="takenOverlay">
+  <div id="takenCard">
+    <div class="tc-icon">&#9888;&#65039;</div>
+    <div class="tc-title">That Category is Taken</div>
+    <p class="tc-body"><span class="tc-industry" id="takenIndustryName"></span> is already reserved on this postcard. Each category is exclusive &mdash; one business per industry per mailing.</p>
+    <button class="tc-btn primary" onclick="closeTakenDialog()">Choose a Different Category</button>
+    <button class="tc-btn secondary" onclick="goRequestOptions()">Request More Options &rarr;</button>
   </div>
 </div>
 
 <script>
-function esc(str){ var d=document.createElement('div');d.textContent=String(str||'');return d.innerHTML; }
+function esc(s){ var d=document.createElement('div');d.textContent=String(s||'');return d.innerHTML; }
 
-var _selectedPhotoUrl = '';
-var _logoData = '';
-var _resultUrl = '';
-var _generationCount = 0;
-var _originalResultUrl = '';
-var _activeTemplate = 'parchment-classic';
+// ── State ──────────────────────────────────────────────────────────────────────
+var _variations = [];          // [{imageUrl, templateKey, templateName}]
+var _sessionUsedTemplates = [];// templates used this session
+var _campaignUsedTemplates = [];
+var _activeSwatchIdx = 1;
 var _spotSize = 'XL';
 var _spotId = 0;
-var _takenCategories = [];
-var _usedTemplates = [];
 var _campaignId = 0;
 var _side = 'front';
-var _colorsModified = false;
-var _industryDefaultColors = {p:'#7c3a1e', a:'#f59e0b'};
+var _takenCategories = [];
+var _selectedPhotoUrl = '';
+var _logoData = '';
+var _isGenerating = false;
+var _lightboxVariationIdx = -1;
+
+// ── Data ───────────────────────────────────────────────────────────────────────
+var COLOR_SWATCHES = [
+  {name:'Classic Red \u00b7 Gold',    p:'#c0392b',a:'#f39c12'},
+  {name:'Deep Navy \u00b7 Amber',     p:'#1a3d5c',a:'#c8a84b'},
+  {name:'Forest Green \u00b7 Sage',   p:'#2e7d32',a:'#8bc34a'},
+  {name:'Royal Purple \u00b7 Lilac',  p:'#6a1b9a',a:'#ce93d8'},
+  {name:'Warm Espresso \u00b7 Cream', p:'#4a2c1a',a:'#d4a574'},
+  {name:'Steel Blue \u00b7 Sky',      p:'#1565c0',a:'#42a5f5'},
+];
+
+var INDUSTRY_SWATCH_IDX = {
+  'Pizza Restaurant':0,'Mexican Restaurant':2,'Chinese Restaurant':0,
+  'Breakfast & Cafe':4,'Bar & Grill':1,'Italian Restaurant':0,
+  'Bakery':4,'Coffee Shop':4,'Dentist':5,'Medical & Healthcare':5,
+  'Chiropractor':5,'Veterinarian':2,'HVAC':5,'Plumber':5,
+  'Electrician':1,'Lawn & Landscaping':2,'Roofing':1,'Painting':3,
+  'Cleaning Service':5,'Pest Control':2,'Real Estate':1,'Insurance':1,
+  'Auto Repair':1,'Salon & Beauty':3,'Barbershop':1,'Gym & Fitness':0,
+  'Pet Services':2,'Financial Services':1,'Daycare':0,'Photography':4,
+  'Retail Shop':3,'Other Service':1,
+};
 
 var INDUSTRY_TEMPLATES = {
   'Pizza Restaurant':    ['wok-fire','made-fresh','parchment-classic','neighborhood-pro','at-your-service','sage-organic'],
@@ -2485,53 +2421,13 @@ var INDUSTRY_TEMPLATES = {
 
 var DEFAULT_TEMPLATES = ['parchment-classic','made-fresh','at-your-service','neighborhood-pro','home-elegance','heritage-home'];
 
-var INDUSTRY_COLORS = {
-  'Pizza Restaurant':    {p:'#c0392b',a:'#f39c12'},
-  'Mexican Restaurant':  {p:'#2e7d32',a:'#f57f17'},
-  'Chinese Restaurant':  {p:'#b71c1c',a:'#f9a825'},
-  'Breakfast & Cafe':    {p:'#7c3a1e',a:'#f59e0b'},
-  'Bar & Grill':         {p:'#1a3a1a',a:'#d4a017'},
-  'Italian Restaurant':  {p:'#7b1a1a',a:'#e53935'},
-  'Bakery':              {p:'#6d4c2a',a:'#f8c77e'},
-  'Coffee Shop':         {p:'#4a2c1a',a:'#d97706'},
-  'Dentist':             {p:'#1565c0',a:'#42a5f5'},
-  'Medical & Healthcare':{p:'#00695c',a:'#4db6ac'},
-  'Chiropractor':        {p:'#0d47a1',a:'#4fc3f7'},
-  'Veterinarian':        {p:'#1b5e20',a:'#66bb6a'},
-  'HVAC':                {p:'#0277bd',a:'#29b6f6'},
-  'Plumber':             {p:'#01579b',a:'#26c6da'},
-  'Electrician':         {p:'#1a237e',a:'#f9a825'},
-  'Lawn & Landscaping':  {p:'#2e7d32',a:'#8bc34a'},
-  'Roofing':             {p:'#4e342e',a:'#bf8970'},
-  'Painting':            {p:'#6a1b9a',a:'#ce93d8'},
-  'Cleaning Service':    {p:'#0277bd',a:'#4dd0e1'},
-  'Pest Control':        {p:'#33691e',a:'#aed581'},
-  'Real Estate':         {p:'#1a3d5c',a:'#c8a84b'},
-  'Insurance':           {p:'#1565c0',a:'#e8c800'},
-  'Auto Repair':         {p:'#7f1d1d',a:'#fca5a5'},
-  'Salon & Beauty':      {p:'#831843',a:'#f472b6'},
-  'Barbershop':          {p:'#1a237e',a:'#b8860b'},
-  'Gym & Fitness':       {p:'#b71c1c',a:'#ff7043'},
-  'Pet Services':        {p:'#1b5e20',a:'#a5d6a7'},
-  'Financial Services':  {p:'#0d3349',a:'#c9a84c'},
-  'Daycare':             {p:'#e65100',a:'#ffe082'},
-  'Photography':         {p:'#212121',a:'#bdbdbd'},
-  'Retail Shop':         {p:'#880e4f',a:'#f06292'},
-};
-
 var TEMPLATE_NAMES = {
-  'parchment-classic':'Parchment Classic',
-  'made-fresh':'Made Fresh',
-  'health-wellness':'Health & Wellness',
-  'at-your-service':'At Your Service',
-  'neighborhood-pro':'Neighborhood Pro',
-  'home-elegance':'Home Elegance',
-  'sage-organic':'Sage Organic',
-  'purple-sage':'Purple Sage',
-  'brush-stroke':'Brush Stroke',
-  'heritage-home':'Heritage Home',
-  'wok-fire':'Wok Fire',
-  'surprise-me':'Surprise Me',
+  'parchment-classic':'Parchment Classic','made-fresh':'Made Fresh',
+  'health-wellness':'Health & Wellness','at-your-service':'At Your Service',
+  'neighborhood-pro':'Neighborhood Pro','home-elegance':'Home Elegance',
+  'sage-organic':'Sage Organic','purple-sage':'Purple Sage',
+  'brush-stroke':'Brush Stroke','heritage-home':'Heritage Home',
+  'wok-fire':'Wok Fire','surprise-me':'Surprise Me',
 };
 
 var TAGLINE_DEFAULTS = {
@@ -2540,19 +2436,19 @@ var TAGLINE_DEFAULTS = {
   'Chinese Restaurant':'Traditional Recipes, Modern Taste',
   'Breakfast & Cafe':'Start Your Morning Right',
   'Bar & Grill':'Great Food, Cold Drinks, Good Times',
-  'Italian Restaurant':'Authentic Italian \\u2014 From Our Kitchen to Yours',
+  'Italian Restaurant':'Authentic Italian \u2014 From Our Kitchen to Yours',
   'Bakery':'Baked Fresh Every Morning',
   'Coffee Shop':'Your Daily Dose of Delicious',
   'Dentist':'Healthy Smiles for the Whole Family',
   'Medical & Healthcare':'Caring for Our Community',
-  'Chiropractor':'Pain Relief \\u2014 Feel Better Fast',
+  'Chiropractor':'Pain Relief \u2014 Feel Better Fast',
   'Veterinarian':'Compassionate Care for Your Pets',
   'HVAC':'Comfort Year-Round, Service You Trust',
-  'Plumber':'Fast, Reliable Plumbing \\u2014 24/7',
+  'Plumber':'Fast, Reliable Plumbing \u2014 24/7',
   'Electrician':'Safe, Reliable Electrical Service',
   'Lawn & Landscaping':'Beautiful Lawns, Zero Hassle',
   'Roofing':'Protecting Your Home, Rain or Shine',
-  'Painting':'Transform Your Space \\u2014 Inside & Out',
+  'Painting':'Transform Your Space \u2014 Inside & Out',
   'Cleaning Service':'Spotless Results, Every Time',
   'Pest Control':'Protecting Homes & Families',
   'Real Estate':'Your Local Real Estate Expert',
@@ -2565,338 +2461,148 @@ var TAGLINE_DEFAULTS = {
   'Financial Services':'Building Your Financial Future',
   'Daycare':'Safe, Nurturing Care for Your Child',
   'Photography':'Capturing Your Priceless Moments',
-  'Retail Shop':'Something for Everyone \\u2014 Shop Local',
+  'Retail Shop':'Something for Everyone \u2014 Shop Local',
 };
 
 var OFFER_DEFAULTS = {
-  'Pizza Restaurant':    ['BOGO Tuesday \\u2014 Buy One, Get One 50% Off','One per order \\u00b7 with this postcard'],
-  'Mexican Restaurant':  ['FREE Chips & Salsa with Any Entr\\u00e9e','One per table \\u00b7 with this postcard'],
+  'Pizza Restaurant':    ['BOGO Tuesday \u2014 Buy One, Get One 50% Off','One per order \u00b7 with this postcard'],
+  'Mexican Restaurant':  ['FREE Chips & Salsa with Any Entr\u00e9e','One per table \u00b7 with this postcard'],
   'Chinese Restaurant':  ['10% OFF Your First Order','With this postcard'],
-  'Breakfast & Cafe':    ['$1 OFF Any Breakfast Plate','One per visit \\u00b7 with this postcard'],
-  'Bar & Grill':         ['Happy Hour 3\\u20136pm \\u2014 $3 Draft Beers','Dine-in only \\u00b7 with this postcard'],
-  'Italian Restaurant':  ['FREE Dessert with Entr\\u00e9e Purchase','One per table \\u00b7 with this postcard'],
+  'Breakfast & Cafe':    ['$1 OFF Any Breakfast Plate','One per visit \u00b7 with this postcard'],
+  'Bar & Grill':         ['Happy Hour 3\u20136pm \u2014 $3 Draft Beers','Dine-in only \u00b7 with this postcard'],
+  'Italian Restaurant':  ['FREE Dessert with Entr\u00e9e Purchase','One per table \u00b7 with this postcard'],
   'Bakery':              ['Buy a Dozen, Get 2 FREE','With this postcard'],
-  'Coffee Shop':         ['FREE Pastry with Any Latte','One per visit \\u00b7 with this postcard'],
-  'Dentist':             ['New Patient Special \\u2014 Exam + X-Rays $49','New patients only \\u00b7 call to schedule'],
-  'Medical & Healthcare':['New Patient Visit \\u2014 $99 Flat','New patients only \\u00b7 call for details'],
-  'Chiropractor':        ['First Visit \\u2014 Exam + Adjustment $49','New patients only \\u00b7 call to schedule'],
-  'Veterinarian':        ['10% OFF First Wellness Visit','New clients only \\u00b7 with this postcard'],
-  'HVAC':                ['FREE System Check \\u2014 $89 Value','Call today to schedule'],
+  'Coffee Shop':         ['FREE Pastry with Any Latte','One per visit \u00b7 with this postcard'],
+  'Dentist':             ['New Patient Special \u2014 Exam + X-Rays $49','New patients only \u00b7 call to schedule'],
+  'Medical & Healthcare':['New Patient Visit \u2014 $99 Flat','New patients only \u00b7 call for details'],
+  'Chiropractor':        ['First Visit \u2014 Exam + Adjustment $49','New patients only \u00b7 call to schedule'],
+  'Veterinarian':        ['10% OFF First Wellness Visit','New clients only \u00b7 with this postcard'],
+  'HVAC':                ['FREE System Check \u2014 $89 Value','Call today to schedule'],
   'Plumber':             ['$25 OFF Any Service Call','With this postcard'],
-  'Electrician':         ['FREE Safety Inspection \\u2014 No Obligation','Call to schedule \\u00b7 with this postcard'],
-  'Lawn & Landscaping':  ['FREE First Mow with Monthly Service','New customers only \\u00b7 call today'],
-  'Roofing':             ['FREE Roof Inspection \\u2014 No Pressure','Call or text to schedule'],
-  'Painting':            ['10% OFF Any Interior Painting Job','With this postcard \\u00b7 mention ad'],
-  'Cleaning Service':    ['$20 OFF First Home Cleaning','New customers only \\u00b7 with this postcard'],
+  'Electrician':         ['FREE Safety Inspection \u2014 No Obligation','Call to schedule \u00b7 with this postcard'],
+  'Lawn & Landscaping':  ['FREE First Mow with Monthly Service','New customers only \u00b7 call today'],
+  'Roofing':             ['FREE Roof Inspection \u2014 No Pressure','Call or text to schedule'],
+  'Painting':            ['10% OFF Any Interior Painting Job','With this postcard \u00b7 mention ad'],
+  'Cleaning Service':    ['$20 OFF First Home Cleaning','New customers only \u00b7 with this postcard'],
   'Pest Control':        ['FREE Inspection + $20 OFF First Treatment','With this postcard'],
-  'Real Estate':         ['FREE Home Valuation \\u2014 No Obligation','Call or text to schedule'],
-  'Insurance':           ['FREE Coverage Review \\u2014 Could Save You 30%','No obligation \\u00b7 call today'],
+  'Real Estate':         ['FREE Home Valuation \u2014 No Obligation','Call or text to schedule'],
+  'Insurance':           ['FREE Coverage Review \u2014 Could Save You 30%','No obligation \u00b7 call today'],
   'Auto Repair':         ['FREE Multi-Point Inspection with Any Service','With this postcard'],
-  'Salon & Beauty':      ['$10 OFF First Visit','New clients only \\u00b7 with this postcard'],
-  'Barbershop':          ['First Cut $15 \\u2014 New Customers Only','With this postcard'],
-  'Gym & Fitness':       ['First Month FREE \\u2014 No Contract','New members only \\u00b7 call to enroll'],
-  'Pet Services':        ['10% OFF First Grooming Appointment','New clients only \\u00b7 with this postcard'],
-  'Financial Services':  ['FREE 30-Minute Consultation','No obligation \\u00b7 call to schedule'],
-  'Daycare':             ['First Week FREE \\u2014 Schedule a Tour Today','New enrollments only \\u00b7 call for details'],
-  'Photography':         ['$50 OFF Your First Session','With this postcard \\u00b7 book in advance'],
-  'Retail Shop':         ['10% OFF Entire Purchase \\u2014 Show This Card','In-store only \\u00b7 one use per customer'],
+  'Salon & Beauty':      ['$10 OFF First Visit','New clients only \u00b7 with this postcard'],
+  'Barbershop':          ['First Cut $15 \u2014 New Customers Only','With this postcard'],
+  'Gym & Fitness':       ['First Month FREE \u2014 No Contract','New members only \u00b7 call to enroll'],
+  'Pet Services':        ['10% OFF First Grooming Appointment','New clients only \u00b7 with this postcard'],
+  'Financial Services':  ['FREE 30-Minute Consultation','No obligation \u00b7 call to schedule'],
+  'Daycare':             ['First Week FREE \u2014 Schedule a Tour Today','New enrollments only \u00b7 call for details'],
+  'Photography':         ['$50 OFF Your First Session','With this postcard \u00b7 book in advance'],
+  'Retail Shop':         ['10% OFF Entire Purchase \u2014 Show This Card','In-store only \u00b7 one use per customer'],
 };
 
 var MENU_DEFAULTS = {
   'Pizza Restaurant':    ['Pepperoni Pizza $12.99','Margherita Pizza $10.99','Chicken Wings $8.99','Caesar Salad $7.99'],
   'Mexican Restaurant':  ['Tacos (3) $9.99','Burrito Bowl $10.99','Nachos Supreme $8.99','Guacamole & Chips $6.99'],
-  'Chinese Restaurant':  ["General Tso\\u2019s Chicken $11.99",'Fried Rice $8.99','Spring Rolls (3) $5.99','Wonton Soup $6.99'],
+  'Chinese Restaurant':  ['General Tso\u2019s Chicken $11.99','Fried Rice $8.99','Spring Rolls (3) $5.99','Wonton Soup $6.99'],
   'Breakfast & Cafe':    ['Bacon Egg & Cheese $5.99','Pancake Stack $7.99','Breakfast Plate $8.99','Coffee & Muffin $4.99'],
   'Bar & Grill':         ['Cheeseburger & Fries $12.99','BBQ Ribs Half Rack $16.99','Chicken Tenders $10.99','Loaded Nachos $9.99'],
   'Italian Restaurant':  ['Fettuccine Alfredo $13.99','Chicken Parmigiana $14.99','Lasagna $12.99','Tiramisu $6.99'],
-  'Bakery':              ['Fresh Sourdough Loaf $7.99','Croissants (2) $4.99','Custom Cakes \\u2014 Call for Pricing','Muffins 6-Pack $8.99'],
+  'Bakery':              ['Fresh Sourdough Loaf $7.99','Croissants (2) $4.99','Custom Cakes \u2014 Call for Pricing','Muffins 6-Pack $8.99'],
   'Coffee Shop':         ['Latte $5.49','Cold Brew $4.99','Espresso $3.49','Pastry of the Day $3.99'],
-  'Dentist':             ['New Patient Exam $49','Teeth Whitening $199','Dental Cleaning $79','Emergency \\u2014 Same Day'],
+  'Dentist':             ['New Patient Exam $49','Teeth Whitening $199','Dental Cleaning $79','Emergency \u2014 Same Day'],
   'Medical & Healthcare':['New Patient Visit $99','Annual Wellness Exam','Lab Work In-House','Telehealth Available'],
   'Chiropractor':        ['Initial Exam & X-Rays $49','Spinal Adjustment $45','Massage Therapy $60/hr','Family Plans Available'],
   'Veterinarian':        ['Wellness Exam $45','Vaccinations from $25','Dental Cleaning $150','Spay/Neuter Packages'],
   'HVAC':                ['AC Tune-Up $79','Heating Inspection $69','Emergency Service 24/7','Free Estimates'],
   'Plumber':             ['Drain Clearing $99','Water Heater Install','Leak Detection & Repair','Free Estimates'],
-  'Electrician':         ['Panel Upgrade \\u2014 Call','Outlet Installation $75','EV Charger Install','Free Safety Inspection'],
+  'Electrician':         ['Panel Upgrade \u2014 Call','Outlet Installation $75','EV Charger Install','Free Safety Inspection'],
   'Lawn & Landscaping':  ['Weekly Mowing from $35','Mulch & Bed Prep','Irrigation Install','Free Lawn Analysis'],
   'Roofing':             ['Free Roof Inspection','Storm Damage Repair','New Roof Install','Gutter Cleaning'],
   'Painting':            ['Interior Room from $250','Exterior Painting','Cabinet Refinishing','Free Color Consultation'],
   'Cleaning Service':    ['Home Cleaning from $99','Deep Clean','Move-In/Out Clean','Commercial Services'],
   'Pest Control':        ['General Pest Control $89','Free Termite Inspection','Mosquito Treatment','Annual Protection Plans'],
-  'Real Estate':         ['Free Home Valuation','Buyer Representation',"Seller\\u2019s Market Experts",'Free Consultation'],
+  'Real Estate':         ['Free Home Valuation','Buyer Representation','Seller\u2019s Market Experts','Free Consultation'],
   'Insurance':           ['Auto Insurance Quotes','Home & Renters Coverage','Life Insurance Plans','Free Policy Review'],
   'Auto Repair':         ['Oil Change from $39','Brake Service','Free Diagnostics','Tires & Alignment'],
   'Salon & Beauty':      ['Haircut & Style from $35','Color & Highlights','Blowout $45','Balayage from $85'],
-  'Barbershop':          ['Classic Cut $20','Fade & Design $25','Hot Towel Shave $30',"Kid\\u2019s Cut $15"],
+  'Barbershop':          ['Classic Cut $20','Fade & Design $25','Hot Towel Shave $30','Kid\u2019s Cut $15'],
   'Gym & Fitness':       ['Monthly Membership $39','Personal Training','Group Classes Included','Free Week Trial'],
   'Pet Services':        ['Dog Grooming from $45','Boarding from $35/night','Doggy Daycare','Training Packages'],
   'Financial Services':  ['Free Consultation','Retirement Planning','Tax Preparation','Investment Review'],
-  'Daycare':             ['Full-Time Enrollment','Part-Time Available','Ages 6 Weeks\\u20135 Years','Hot Meals Provided'],
+  'Daycare':             ['Full-Time Enrollment','Part-Time Available','Ages 6 Weeks\u20135 Years','Hot Meals Provided'],
   'Photography':         ['Family Portraits from $149','Event Photography','Headshots $99','Prints & Albums Available'],
   'Retail Shop':         ['New Arrivals Weekly','Gift Cards Available','Layaway & Special Orders','Call for Hours'],
 };
 
-var SIZE_DIMS = { XL:{w:400,h:500}, L:{w:300,h:400}, M:{w:300,h:200}, S:{w:200,h:200} };
-function getOrientation(sizeKey){
-  var d = SIZE_DIMS[sizeKey] || SIZE_DIMS.XL;
-  return d.h > d.w ? 'portrait' : d.w > d.h ? 'landscape' : 'square';
-}
-
-function applyTakenIndustries(){
-  var sel = document.getElementById('industry');
-  if(!sel) return;
-  for(var i=0;i<sel.options.length;i++){
-    var opt = sel.options[i];
-    if(!opt.value) continue;
-    var taken = _takenCategories.indexOf(opt.text) !== -1;
-    opt.disabled = taken;
-    opt.style.color = taken ? '#aaa' : '';
-    opt.style.fontStyle = taken ? 'italic' : '';
-  }
-}
-
-function showTakenDialog(industry){
-  var overlay = document.getElementById('takenOverlay');
-  var nameEl  = document.getElementById('takenIndustryName');
-  if(nameEl) nameEl.textContent = industry;
-  if(overlay) overlay.classList.add('visible');
-}
-function closeTakenDialog(){
-  var overlay = document.getElementById('takenOverlay');
-  if(overlay) overlay.classList.remove('visible');
-  var sel = document.getElementById('industry');
-  if(sel) sel.value = '';
-}
-function goRequestOptions(){
-  var overlay = document.getElementById('takenOverlay');
-  if(overlay) overlay.classList.remove('visible');
-  var industry = document.getElementById('takenIndustryName').textContent || '';
-  var bizName = (document.getElementById('bizName') || {}).value || '';
-  var url = '/request-options?category=' + encodeURIComponent(industry);
-  if(bizName.trim()) url += '&bizName=' + encodeURIComponent(bizName.trim());
-  window.open(url, '_blank');
-  var sel = document.getElementById('industry');
-  if(sel) sel.value = '';
-}
-
-function renderGallery(industry){
-  var isLandscape = getOrientation(_spotSize) === 'landscape';
-  var orientation = isLandscape ? 'landscape' : getOrientation(_spotSize) === 'square' ? 'square' : 'portrait';
-  var keys = (INDUSTRY_TEMPLATES[industry] || DEFAULT_TEMPLATES).slice(0, 6);
-  var gallery = document.getElementById('smartGallery');
-  var label   = document.getElementById('tmplPicksLabel');
-  if(!gallery) return;
-
-  gallery.className = 'smart-gallery ' + orientation;
-
-  var allUsed = _usedTemplates.length > 0 && keys.every(function(k){ return _usedTemplates.indexOf(k) !== -1; });
-  var banner  = document.getElementById('tmplAllUsedBanner');
-  if(banner) banner.style.display = allUsed ? 'block' : 'none';
-
-  gallery.innerHTML = keys.map(function(key){
-    var isUsed   = !allUsed && _usedTemplates.indexOf(key) !== -1;
-    var isActive = _activeTemplate === key;
-    var suffix   = isLandscape ? '-landscape' : '';
-    var src      = '/api/grok-ad-generator/template-preview/' + key + suffix;
-    var name     = TEMPLATE_NAMES[key] || key;
-    var clickAttr = isUsed ? '' : 'onclick="selectTemplate(\\'' + key + '\\')"';
-    return '<div class="sg-card' + (isActive?' sg-active':'') + (isUsed?' sg-used':'') + '" id="sg-' + key + '" ' + clickAttr + '>'
-      + '<img class="sg-thumb" src="' + src + '" alt="' + esc(name) + '" onerror="this.style.background=\'#e8e3dc\'">'
-      + '<div class="sg-name">' + esc(name) + '</div>'
-      + '<div class="sg-badge">\\u2713</div>'
-      + '<div class="sg-used-dot">Used</div>'
+// ── Swatch rendering ───────────────────────────────────────────────────────────
+function renderSwatches(){
+  var grid = document.getElementById('swatchesGrid');
+  if(!grid) return;
+  grid.innerHTML = COLOR_SWATCHES.map(function(sw,i){
+    return '<div class="swatch-card' + (i===_activeSwatchIdx?' active':'') + '" onclick="selectSwatch(' + i + ')" title="' + esc(sw.name) + '">'
+      + '<div class="swatch-circles">'
+      + '<div class="swatch-circle" style="background:' + sw.p + '"></div>'
+      + '<div class="swatch-circle" style="background:' + sw.a + '"></div>'
+      + '</div>'
+      + '<div class="swatch-name">' + esc(sw.name) + '</div>'
       + '</div>';
   }).join('');
-
-  if(label) label.textContent = (industry || 'All-Industry') + ' picks \\u2014 ' + keys.length + ' options';
-
-  // Auto-select first non-used template when current selection is used or not in gallery
-  var firstFree = keys.filter(function(k){ return _usedTemplates.indexOf(k) === -1; })[0] || keys[0];
-  if(keys.indexOf(_activeTemplate) === -1 || (!allUsed && _usedTemplates.indexOf(_activeTemplate) !== -1)){
-    selectTemplate(firstFree);
-  } else {
-    // Refresh active badge on the new card elements
-    selectTemplate(_activeTemplate);
-  }
 }
 
-function selectTemplate(key){
-  if(!key) return;
-  _activeTemplate = key;
-  document.querySelectorAll('.sg-card').forEach(function(c){ c.classList.remove('sg-active'); });
-  var card = document.getElementById('sg-' + key);
-  if(card) card.classList.add('sg-active');
+function selectSwatch(i){
+  _activeSwatchIdx = i;
+  renderSwatches();
 }
 
-function onColorChange(which){
-  var val = document.getElementById(which + 'Color').value;
-  document.getElementById(which + 'Hex').textContent = val;
-  _colorsModified = true;
-  var btn = document.getElementById('resetColorsBtn');
-  if(btn) btn.style.display = '';
-}
-
-function resetColors(){
-  var ind = document.getElementById('industry').value;
-  var c = INDUSTRY_COLORS[ind] || {p:'#7c3a1e', a:'#f59e0b'};
-  document.getElementById('primaryColor').value = c.p;
-  document.getElementById('accentColor').value  = c.a;
-  document.getElementById('primaryHex').textContent = c.p;
-  document.getElementById('accentHex').textContent  = c.a;
-  _industryDefaultColors = c;
-  _colorsModified = false;
-  var btn = document.getElementById('resetColorsBtn');
-  if(btn) btn.style.display = 'none';
-}
-
-function onFormChange(){
-  var biz = document.getElementById('bizName').value.trim();
-  document.getElementById('genBtn').disabled = !biz;
-}
-
-function onIndustryChange(){
-  var industry = document.getElementById('industry').value;
-  if(industry && _takenCategories.indexOf(industry) !== -1){
-    showTakenDialog(industry);
-    return;
-  }
-  loadLibrary();
-  var list = document.getElementById('menuList');
-  list.innerHTML = '';
-  var menuDefaults = MENU_DEFAULTS[industry];
-  var _menuCap = getOrientation(_spotSize) === 'landscape' ? 3 : 4;
-  if(menuDefaults) menuDefaults.slice(0, _menuCap).forEach(function(v){ addMenuItem(v); });
-  var taglineEl = document.getElementById('tagline');
-  if(taglineEl) taglineEl.value = TAGLINE_DEFAULTS[industry] || '';
-  var offerPair = OFFER_DEFAULTS[industry];
-  document.getElementById('offer').value     = offerPair ? offerPair[0] : '';
-  document.getElementById('offerFine').value = offerPair ? offerPair[1] : '';
-  if(industry) renderGallery(industry);
-  if(!_colorsModified){
-    var c = INDUSTRY_COLORS[industry];
-    if(c){
-      document.getElementById('primaryColor').value = c.p;
-      document.getElementById('accentColor').value  = c.a;
-      document.getElementById('primaryHex').textContent = c.p;
-      document.getElementById('accentHex').textContent  = c.a;
-      _industryDefaultColors = c;
-      var btn = document.getElementById('resetColorsBtn');
-      if(btn) btn.style.display = 'none';
-    }
-  }
-}
-
-function addMenuItem(val){
-  val = val || '';
-  var list = document.getElementById('menuList');
-  if(list.children.length >= 4) return;
-  var row = document.createElement('div'); row.className = 'mrow';
-  var inp = document.createElement('input'); inp.type='text'; inp.placeholder='Item Name $Price'; inp.value=val;
-  var rm  = document.createElement('button'); rm.className='rm-btn'; rm.title='Remove'; rm.textContent='\\u00d7';
-  rm.onclick = function(){ this.parentElement.remove(); };
-  row.appendChild(inp); row.appendChild(rm);
-  list.appendChild(row);
-}
-
-function getMenu(){
-  return Array.from(document.querySelectorAll('.mrow input'))
-    .map(function(i){ return i.value.trim(); }).filter(Boolean).slice(0,4);
-}
-
-async function loadLibrary(){
-  var industry = document.getElementById('industry').value;
-  var grid = document.getElementById('libGrid');
-  if(!industry){
-    grid.innerHTML = '<div class="img-empty">Select an industry above to load photos.</div>';
-    return;
-  }
-  grid.innerHTML = '<div class="img-loading">Loading library photos&hellip;</div>';
-  try{
-    var r = await fetch('/api/image-library?industry=' + encodeURIComponent(industry));
-    var data = await r.json();
-    var imgs = data.images || [];
-    if(!imgs.length){
-      grid.innerHTML = '<div class="img-empty">No approved photos yet. Upload your own above.</div>';
-      return;
-    }
-    grid.innerHTML = imgs.map(function(img,i){
-      return '<div class="img-thumb" id="lthumb-'+i+'" onclick="selectLibPhoto('+i+',this)" title="'+esc(img.photographer_credit)+'">'
-        + '<img src="'+esc(img.thumb_url)+'" loading="lazy" alt="">'
-        + '<div class="chk">\\u2713</div>'
-        + '<input type="hidden" id="lurl-'+i+'" value="'+esc(img.image_url)+'">'
+// ── Variations grid ────────────────────────────────────────────────────────────
+function renderVariations(){
+  var grid = document.getElementById('variationsGrid');
+  if(!grid) return;
+  var html = '';
+  for(var i = 0; i < 6; i++){
+    var v = _variations[i];
+    var isLoadingSlot = _isGenerating && i === _variations.length;
+    if(v){
+      html += '<div class="var-slot slot-filled" onclick="openLightbox(' + i + ')" title="Click to view full-size">'
+        + '<div class="slot-img-wrap"><img class="slot-img" src="' + esc(v.imageUrl) + '" alt="Version ' + (i+1) + '" loading="lazy"></div>'
+        + '<div class="slot-footer">'
+        + '<div class="slot-tmpl-name">' + esc(v.templateName) + '</div>'
+        + '<button class="slot-select-btn" onclick="event.stopPropagation();selectAd(' + i + ')">&#10003; Select This Ad</button>'
+        + '</div>'
         + '</div>';
-    }).join('');
-  }catch(e){
-    grid.innerHTML = '<div class="img-empty">Error loading library: ' + e.message + '</div>';
+    } else if(isLoadingSlot){
+      html += '<div class="var-slot slot-loading">'
+        + '<div class="slot-spinner"></div>'
+        + '<div class="slot-gen-text">Generating version ' + (i+1) + ' of 6&hellip;</div>'
+        + '</div>';
+    } else {
+      html += '<div class="var-slot slot-empty">'
+        + '<div class="slot-num">Version ' + (i+1) + '</div>'
+        + '<div class="slot-ph-text">Not yet generated</div>'
+        + '</div>';
+    }
   }
+  grid.innerHTML = html;
 }
 
-function selectLibPhoto(i, el){
-  document.querySelectorAll('.img-thumb').forEach(function(t){ t.classList.remove('selected'); });
-  el.classList.add('selected');
-  _selectedPhotoUrl = document.getElementById('lurl-'+i).value;
-  document.getElementById('photoStatus').textContent = '\\u2713 Photo selected';
-  document.getElementById('photoStatus').style.color = 'var(--green)';
+// ── Template selection ─────────────────────────────────────────────────────────
+function getNextTemplate(){
+  var industry = document.getElementById('industry').value || '';
+  var ranked = INDUSTRY_TEMPLATES[industry] || DEFAULT_TEMPLATES;
+  var excluded = _campaignUsedTemplates.concat(_sessionUsedTemplates);
+  var available = ranked.filter(function(k){ return excluded.indexOf(k) === -1; });
+  return available.length > 0 ? available[0] : ranked[0];
 }
 
-function handlePhotoUpload(input){
-  var file = input.files[0]; if(!file) return;
-  var reader = new FileReader();
-  reader.onload = function(e){
-    _selectedPhotoUrl = e.target.result;
-    document.querySelectorAll('.img-thumb').forEach(function(t){ t.classList.remove('selected'); });
-    var prev = document.getElementById('photoPreview');
-    prev.src = e.target.result;
-    document.getElementById('photoZone').classList.add('has-file');
-    document.getElementById('photoStatus').textContent = '\\u2713 Uploaded';
-    document.getElementById('photoStatus').style.color = 'var(--green)';
-  };
-  reader.readAsDataURL(file);
-}
-
-function clearPhoto(evt){
-  evt.preventDefault(); evt.stopPropagation();
-  _selectedPhotoUrl = '';
-  var zone = document.getElementById('photoZone');
-  zone.classList.remove('has-file');
-  var prev = document.getElementById('photoPreview'); prev.src = '';
-  var inp = zone.querySelector('input[type=file]'); if(inp) inp.value = '';
-  document.getElementById('photoStatus').textContent = 'Optional';
-  document.getElementById('photoStatus').style.color = '';
-}
-
-function handleLogoUpload(input){
-  var file = input.files[0]; if(!file) return;
-  var reader = new FileReader();
-  reader.onload = function(e){
-    _logoData = e.target.result;
-    var prev = document.getElementById('logoPreview');
-    prev.src = e.target.result;
-    document.getElementById('logoZone').classList.add('has-file');
-    document.getElementById('logoStatus').textContent = '\\u2713 Uploaded';
-    document.getElementById('logoStatus').style.color = 'var(--green)';
-  };
-  reader.readAsDataURL(file);
-}
-
-function clearLogo(evt){
-  evt.preventDefault(); evt.stopPropagation();
-  _logoData = '';
-  var zone = document.getElementById('logoZone');
-  zone.classList.remove('has-file');
-  var prev = document.getElementById('logoPreview'); prev.src = '';
-  var inp = zone.querySelector('input[type=file]'); if(inp) inp.value = '';
-  document.getElementById('logoStatus').textContent = 'Optional';
-  document.getElementById('logoStatus').style.color = '';
-}
-
+// ── Generate ───────────────────────────────────────────────────────────────────
 async function generate(){
+  if(_isGenerating || _variations.length >= 6) return;
   var biz = document.getElementById('bizName').value.trim();
-  if(!biz){ alert('Please enter a business name.'); return; }
-  hideResult(); hideErr();
+  if(!biz){ showErr('Please enter a business name above.'); return; }
+  hideErr();
+  _isGenerating = true;
   document.getElementById('genBtn').disabled = true;
-  document.getElementById('genLabel').textContent = 'Generating\\u2026';
-  document.getElementById('loadingPanel').classList.add('visible');
+  renderVariations();
+  var templateKey = getNextTemplate();
+  var sw = COLOR_SWATCHES[_activeSwatchIdx] || COLOR_SWATCHES[1];
   var body = {
     bizName:      biz,
     tagline:      document.getElementById('tagline').value.trim(),
@@ -2910,156 +2616,102 @@ async function generate(){
     offerFine:    document.getElementById('offerFine').value.trim(),
     photoUrl:     _selectedPhotoUrl,
     logoData:     _logoData,
-    template:     _activeTemplate,
+    template:     templateKey,
     sizeKey:      _spotSize || 'XL',
     spotId:       _spotId || undefined,
     campaignId:   _campaignId || undefined,
     side:         _side || undefined,
-    generationIndex: _generationCount,
-    primaryColor: document.getElementById('primaryColor').value,
-    accentColor:  document.getElementById('accentColor').value,
+    generationIndex: _variations.length,
+    primaryColor: sw.p,
+    accentColor:  sw.a,
   };
   try{
-    var resp = await fetch('/api/grok-ad-generator/generate', {
+    var resp = await fetch('/api/grok-ad-generator/generate',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify(body),
     });
     var data = await resp.json();
-    document.getElementById('loadingPanel').classList.remove('visible');
+    _isGenerating = false;
     if(!resp.ok || data.error){
-      var grokErr = data.error || 'Generation failed \\u2014 please try again.';
-      showErr(grokErr === 'overloaded'
-        ? 'The image generator is busy right now \\u2014 please try again in a moment.'
-        : grokErr === 'moderated'
-        ? 'Our AI\\u2019s content filter blocked this ad. Try rephrasing your services list to avoid clinical or procedure-specific terms, then click Generate again.'
-        : grokErr);
+      var msg = data.error || 'Generation failed \u2014 please try again.';
+      showErr(msg === 'overloaded'
+        ? 'The image generator is busy right now \u2014 please try again in a moment.'
+        : msg === 'moderated'
+        ? 'Our AI content filter blocked this ad. Try rephrasing your services and click Generate again.'
+        : msg);
     } else {
-      _generationCount++;
-      _resultUrl = data.imageUrl;
-      showResult(data.imageUrl);
-      showToast('Ad generated! Review it below.');
+      _sessionUsedTemplates.push(templateKey);
+      _variations.push({imageUrl:data.imageUrl, templateKey:templateKey, templateName:TEMPLATE_NAMES[templateKey]||templateKey});
+      showToast('Version ' + _variations.length + ' ready! Click to view or select.');
     }
   }catch(err){
-    document.getElementById('loadingPanel').classList.remove('visible');
+    _isGenerating = false;
     showErr('Network error: ' + (err instanceof Error ? err.message : String(err)));
   }
-  document.getElementById('genBtn').disabled = false;
-  document.getElementById('genLabel').textContent = 'Generate My Ad';
+  renderVariations();
+  updateGenButton();
 }
 
-function showResult(url, keepOriginal){
-  var panel = document.getElementById('resultPanel');
-  var img   = document.getElementById('resultImg');
-  panel.classList.add('visible');
-  var rp = document.querySelector('.rpanel');
-  function scrollDown(){ img.scrollIntoView({ behavior:'smooth', block:'nearest' }); rp.scrollTop = rp.scrollHeight; }
-  img.onload = function(){ scrollDown(); };
-  img.src = url;
-  setTimeout(scrollDown, 120);
-  if(!keepOriginal){
-    _originalResultUrl = url;
-    document.getElementById('refineInput').value = '';
-    document.getElementById('refineErr').classList.remove('visible');
-    document.getElementById('refineLoading').classList.remove('visible');
-    var revertBtn = document.getElementById('refineRevertBtn');
-    if(revertBtn) revertBtn.style.display = 'none';
-    var refineBtn = document.getElementById('refineBtn');
-    if(refineBtn){ refineBtn.disabled = false; refineBtn.textContent = 'Apply'; }
+function updateGenButton(){
+  var btn = document.getElementById('genBtn');
+  var lbl = document.getElementById('genLabel');
+  if(!btn||!lbl) return;
+  if(_variations.length >= 6){
+    btn.disabled = true;
+    lbl.textContent = 'All 6 versions generated \u2014 choose below';
+  } else {
+    var biz = document.getElementById('bizName').value.trim();
+    btn.disabled = !biz || _isGenerating;
+    var rem = 6 - _variations.length;
+    lbl.textContent = 'Generate My Ad (' + rem + ' remaining)';
   }
 }
 
-async function refineAd(){
-  var instruction = document.getElementById('refineInput').value.trim();
-  var errEl = document.getElementById('refineErr');
-  var loadingEl = document.getElementById('refineLoading');
-  errEl.textContent = ''; errEl.classList.remove('visible');
-  if(!instruction){
-    errEl.textContent = 'Please describe the change you want (e.g. "Remove the word Shield").';
-    errEl.classList.add('visible');
-    return;
-  }
-  if(!_resultUrl){ return; }
-  var btn = document.getElementById('refineBtn');
-  btn.disabled = true; btn.textContent = 'Applying\\u2026';
-  loadingEl.classList.add('visible');
-  try{
-    var resp = await fetch('/api/grok-ad-generator/refine', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ imageDataUrl: _resultUrl, instruction: instruction, sizeKey: _spotSize || 'XL' }),
-    });
-    var data = await resp.json();
-    loadingEl.classList.remove('visible');
-    if(!resp.ok || data.error){
-      var refErr = data.error || 'Refinement failed \\u2014 please try again.';
-      errEl.textContent = '\\u26a0\\ufe0f ' + (refErr === 'overloaded'
-        ? 'The image generator is busy right now \\u2014 please try again in a moment.'
-        : refErr === 'moderated'
-        ? 'Our AI\\u2019s content filter blocked this adjustment. Try rewording your instruction and click Refine again.'
-        : refErr);
-      errEl.classList.add('visible');
-    } else {
-      _resultUrl = data.imageUrl;
-      document.getElementById('resultImg').src = data.imageUrl;
-      document.getElementById('refineInput').value = '';
-      if(data.imageUrl !== _originalResultUrl){
-        var revertBtn = document.getElementById('refineRevertBtn');
-        if(revertBtn) revertBtn.style.display = '';
-      }
-      showToast('Ad refined! Review the changes below.');
-    }
-  }catch(err){
-    loadingEl.classList.remove('visible');
-    errEl.textContent = '\\u26a0\\ufe0f Network error: ' + (err instanceof Error ? err.message : String(err));
-    errEl.classList.add('visible');
-  }
-  btn.disabled = false; btn.textContent = 'Apply';
+// ── Lightbox ───────────────────────────────────────────────────────────────────
+function openLightbox(idx){
+  var v = _variations[idx];
+  if(!v) return;
+  _lightboxVariationIdx = idx;
+  document.getElementById('lbImg').src = v.imageUrl;
+  document.getElementById('lbTmplName').textContent = v.templateName;
+  document.getElementById('lightbox').classList.add('visible');
 }
 
-function revertAd(){
-  if(!_originalResultUrl) return;
-  _resultUrl = _originalResultUrl;
-  document.getElementById('resultImg').src = _originalResultUrl;
-  var revertBtn = document.getElementById('refineRevertBtn');
-  if(revertBtn) revertBtn.style.display = 'none';
-  document.getElementById('refineErr').classList.remove('visible');
-  showToast('Reverted to original.');
+function closeLightbox(){
+  document.getElementById('lightbox').classList.remove('visible');
+  _lightboxVariationIdx = -1;
 }
 
-function hideResult(){ document.getElementById('resultPanel').classList.remove('visible'); }
-function resetResult(){ hideResult(); _resultUrl = ''; }
+function onLightboxClick(evt){ if(evt.target===document.getElementById('lightbox')) closeLightbox(); }
 
-function showErr(msg){
-  var box = document.getElementById('errBox');
-  box.textContent = '\\u26a0\\ufe0f ' + msg;
-  box.classList.add('visible');
-  box.scrollIntoView({ behavior:'smooth', block:'start' });
-}
-function hideErr(){ document.getElementById('errBox').classList.remove('visible'); }
-
-function fieldHighlight(id){
-  var el = document.getElementById(id);
-  if(!el) return;
-  el.classList.remove('field-error');
-  void el.offsetWidth;
-  el.classList.add('field-error');
-  el.scrollIntoView({ behavior:'smooth', block:'center' });
-  el.addEventListener('input', function clear(){ el.classList.remove('field-error'); el.removeEventListener('input', clear); });
+function downloadFromLightbox(){
+  var v = _variations[_lightboxVariationIdx];
+  if(!v) return;
+  downloadAd(v.imageUrl, document.getElementById('bizName').value.trim());
 }
 
-function useThisAd(){
-  if(!_resultUrl){ return; }
+// ── Select ad ─────────────────────────────────────────────────────────────────
+function selectAdFromLightbox(){
+  if(_lightboxVariationIdx < 0) return;
+  selectAd(_lightboxVariationIdx);
+}
+
+function selectAd(idx){
+  var v = _variations[idx];
+  if(!v) return;
   var bizName = document.getElementById('bizName').value.trim();
-  var email   = document.getElementById('email') ? document.getElementById('email').value.trim() : '';
+  var email   = document.getElementById('email').value.trim();
   if(!bizName){
-    showErr('Please enter your business name (scroll up) before continuing.');
+    showErr('Please enter your business name before continuing.');
     fieldHighlight('bizName');
+    closeLightbox();
     return;
   }
   if(!email){
-    showErr('Please enter a contact email (scroll up) so we can send your order confirmation.');
+    showErr('Please enter a contact email so we can send your order confirmation.');
     fieldHighlight('email');
+    closeLightbox();
     return;
   }
   hideErr();
@@ -3075,11 +2727,11 @@ function useThisAd(){
     offer:         document.getElementById('offer').value.trim(),
     offerFine:     document.getElementById('offerFine').value.trim(),
     menuItems:     getMenu(),
-    finishedAdUrl: _resultUrl,
-    template:      _activeTemplate,
+    finishedAdUrl: v.imageUrl,
+    template:      v.templateKey,
     sizeKey:       _spotSize || 'XL',
   };
-  try {
+  try{
     var urlParams = new URLSearchParams(window.location.search);
     localStorage.setItem('localspot:grok:pendingAd', JSON.stringify({
       formData:     formData,
@@ -3087,25 +2739,189 @@ function useThisAd(){
       spotSize:     urlParams.get('spotSize') || 'XL',
       savedAt:      Date.now(),
     }));
-  } catch(e) {}
+  }catch(e){}
+  closeLightbox();
   if(window.opener && !window.opener.closed){
     window.opener.postMessage({ type: 'grok-ad-result', formData: formData }, '*');
     window.opener.focus();
-    showToast('Ad sent! Completing your reservation\\u2026');
+    showToast('Ad sent! Completing your reservation\u2026');
     setTimeout(function(){ window.close(); }, 1400);
   } else {
-    downloadAd();
-    showToast('Ad saved! Upload it from your spot\\u2019s upload page to complete your order.');
+    downloadAd(v.imageUrl, bizName);
+    showToast('Ad saved! Upload it from your spot upload page to complete your order.');
   }
 }
 
-function downloadAd(){
-  if(!_resultUrl) return;
+function downloadAd(url, bizName){
+  if(!url) return;
   var a = document.createElement('a');
-  a.href = _resultUrl;
-  a.download = 'my-town-ad-' + document.getElementById('bizName').value.trim().replace(/\\s+/g,'-') + '-' + Date.now() + '.png';
+  a.href = url;
+  a.download = 'my-town-ad-' + (bizName||'ad').replace(/\\s+/g,'-') + '-' + Date.now() + '.png';
   a.click();
 }
+
+// ── Form helpers ───────────────────────────────────────────────────────────────
+function onFormChange(){
+  var biz = document.getElementById('bizName').value.trim();
+  if(_variations.length < 6 && !_isGenerating){
+    document.getElementById('genBtn').disabled = !biz;
+  }
+}
+
+function onIndustryChange(){
+  var industry = document.getElementById('industry').value;
+  if(industry && _takenCategories.indexOf(industry) !== -1){ showTakenDialog(industry); return; }
+  loadLibrary();
+  var list = document.getElementById('menuList'); list.innerHTML = '';
+  var defs = MENU_DEFAULTS[industry];
+  if(defs) defs.slice(0,4).forEach(function(v){ addMenuItem(v); });
+  var tEl = document.getElementById('tagline'); if(tEl) tEl.value = TAGLINE_DEFAULTS[industry]||'';
+  var op = OFFER_DEFAULTS[industry];
+  document.getElementById('offer').value     = op ? op[0] : '';
+  document.getElementById('offerFine').value = op ? op[1] : '';
+  if(industry){
+    var si = INDUSTRY_SWATCH_IDX[industry];
+    if(si !== undefined){ _activeSwatchIdx = si; renderSwatches(); }
+  }
+}
+
+function addMenuItem(val){
+  val = val || '';
+  var list = document.getElementById('menuList');
+  if(list.children.length >= 4) return;
+  var row = document.createElement('div'); row.className = 'mrow';
+  var inp = document.createElement('input'); inp.type='text'; inp.placeholder='Item Name $Price'; inp.value=val;
+  var rm  = document.createElement('button'); rm.className='rm-btn'; rm.title='Remove'; rm.innerHTML='&#215;';
+  rm.onclick = function(){ this.parentElement.remove(); };
+  row.appendChild(inp); row.appendChild(rm);
+  list.appendChild(row);
+}
+
+function getMenu(){
+  return Array.from(document.querySelectorAll('.mrow input'))
+    .map(function(i){ return i.value.trim(); }).filter(Boolean).slice(0,4);
+}
+
+// ── Photo / library ────────────────────────────────────────────────────────────
+async function loadLibrary(){
+  var industry = document.getElementById('industry').value;
+  var grid = document.getElementById('libGrid');
+  if(!industry){ grid.innerHTML = '<div class="img-empty">Select an industry above.</div>'; return; }
+  grid.innerHTML = '<div class="img-loading">Loading library photos&hellip;</div>';
+  try{
+    var r = await fetch('/api/image-library?industry=' + encodeURIComponent(industry));
+    var data = await r.json();
+    var imgs = data.images || [];
+    if(!imgs.length){ grid.innerHTML = '<div class="img-empty">No photos yet. Upload your own above.</div>'; return; }
+    grid.innerHTML = imgs.map(function(img,i){
+      return '<div class="img-thumb" id="lthumb-'+i+'" onclick="selectLibPhoto('+i+',this)">'
+        + '<img src="'+esc(img.thumb_url)+'" loading="lazy" alt="">'
+        + '<div class="chk">&#10003;</div>'
+        + '<input type="hidden" id="lurl-'+i+'" value="'+esc(img.image_url)+'">'
+        + '</div>';
+    }).join('');
+  }catch(e){ grid.innerHTML = '<div class="img-empty">Error loading library: ' + e.message + '</div>'; }
+}
+
+function selectLibPhoto(i, el){
+  document.querySelectorAll('.img-thumb').forEach(function(t){ t.classList.remove('selected'); });
+  el.classList.add('selected');
+  _selectedPhotoUrl = document.getElementById('lurl-'+i).value;
+}
+
+function handlePhotoUpload(input){
+  var file = input.files[0]; if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    _selectedPhotoUrl = e.target.result;
+    document.querySelectorAll('.img-thumb').forEach(function(t){ t.classList.remove('selected'); });
+    document.getElementById('photoPreview').src = e.target.result;
+    document.getElementById('photoZone').classList.add('has-file');
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearPhoto(evt){
+  evt.preventDefault(); evt.stopPropagation();
+  _selectedPhotoUrl = '';
+  var zone = document.getElementById('photoZone');
+  zone.classList.remove('has-file');
+  document.getElementById('photoPreview').src = '';
+  var inp = zone.querySelector('input[type=file]'); if(inp) inp.value='';
+}
+
+function handleLogoUpload(input){
+  var file = input.files[0]; if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    _logoData = e.target.result;
+    document.getElementById('logoPreview').src = e.target.result;
+    document.getElementById('logoZone').classList.add('has-file');
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearLogo(evt){
+  evt.preventDefault(); evt.stopPropagation();
+  _logoData = '';
+  var zone = document.getElementById('logoZone');
+  zone.classList.remove('has-file');
+  document.getElementById('logoPreview').src = '';
+  var inp = zone.querySelector('input[type=file]'); if(inp) inp.value='';
+}
+
+// ── Taken-industry dialog ──────────────────────────────────────────────────────
+function applyTakenIndustries(){
+  var sel = document.getElementById('industry');
+  if(!sel) return;
+  for(var i=0;i<sel.options.length;i++){
+    var opt = sel.options[i];
+    if(!opt.value) continue;
+    var taken = _takenCategories.indexOf(opt.text) !== -1;
+    opt.disabled = taken;
+    opt.style.color = taken ? '#aaa' : '';
+    opt.style.fontStyle = taken ? 'italic' : '';
+  }
+}
+
+function showTakenDialog(industry){
+  var el = document.getElementById('takenIndustryName');
+  if(el) el.textContent = industry;
+  document.getElementById('takenOverlay').classList.add('visible');
+}
+
+function closeTakenDialog(){
+  document.getElementById('takenOverlay').classList.remove('visible');
+  var sel = document.getElementById('industry'); if(sel) sel.value = '';
+}
+
+function goRequestOptions(){
+  document.getElementById('takenOverlay').classList.remove('visible');
+  var industry = (document.getElementById('takenIndustryName')||{}).textContent || '';
+  var bizName  = document.getElementById('bizName').value.trim();
+  var url = '/request-options?category=' + encodeURIComponent(industry);
+  if(bizName) url += '&bizName=' + encodeURIComponent(bizName);
+  window.open(url, '_blank');
+  var sel = document.getElementById('industry'); if(sel) sel.value = '';
+}
+
+// ── UI helpers ─────────────────────────────────────────────────────────────────
+function fieldHighlight(id){
+  var el = document.getElementById(id); if(!el) return;
+  el.classList.remove('field-error'); void el.offsetWidth;
+  el.classList.add('field-error');
+  el.scrollIntoView({behavior:'smooth',block:'center'});
+  el.addEventListener('input',function c(){ el.classList.remove('field-error'); el.removeEventListener('input',c); });
+}
+
+function showErr(msg){
+  var box = document.getElementById('errBox');
+  box.textContent = '\u26a0\ufe0f ' + msg;
+  box.classList.add('visible');
+  box.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function hideErr(){ document.getElementById('errBox').classList.remove('visible'); }
 
 function showToast(msg){
   var t = document.getElementById('toast');
@@ -3114,7 +2930,7 @@ function showToast(msg){
   setTimeout(function(){ t.classList.remove('show'); }, 3500);
 }
 
-// Prefill — use URL params if provided, otherwise load demo
+// ── Prefill ────────────────────────────────────────────────────────────────────
 (function prefill(){
   var params = new URLSearchParams(window.location.search);
   _spotSize   = params.get('spotSize') || 'XL';
@@ -3124,71 +2940,54 @@ function showToast(msg){
   var takenParam = params.get('taken') || '';
   _takenCategories = takenParam ? takenParam.split(',').map(function(s){ return s.trim(); }).filter(Boolean) : [];
   applyTakenIndustries();
+  renderSwatches();
+  renderVariations();
+  // Fetch server-side taken categories
   fetch('/api/campaigns/active/taken-categories')
     .then(function(r){ return r.ok ? r.json() : null; })
-    .then(function(data){
-      if(data && Array.isArray(data.takenCategories)){
-        _takenCategories = data.takenCategories.slice();
-        applyTakenIndustries();
-      }
-    })
+    .then(function(data){ if(data && Array.isArray(data.takenCategories)){ _takenCategories = data.takenCategories; applyTakenIndustries(); } })
     .catch(function(){});
+  // Fetch campaign-used templates
   if(_campaignId && _spotId){
     fetch('/api/campaigns/' + _campaignId + '/used-templates?spotId=' + _spotId)
       .then(function(r){ return r.ok ? r.json() : null; })
-      .then(function(data){
-        if(data){
-          _usedTemplates = (_side === 'back' ? data.back : data.front) || [];
-          var ind = document.getElementById('industry').value;
-          if(ind) renderGallery(ind);
-        }
-      })
+      .then(function(data){ if(data){ _campaignUsedTemplates = (_side==='back' ? data.back : data.front) || []; } })
       .catch(function(){});
   }
+  // Prefill from URL params or use demo data
   var urlBiz      = params.get('bizName') || '';
   var urlIndustry = params.get('industry') || '';
   if(urlBiz){
     var el = document.getElementById('bizName'); if(el) el.value = urlBiz;
-    var selEl = document.getElementById('industry');
     if(urlIndustry){
-      for(var i=0;i<selEl.options.length;i++){
-        if(selEl.options[i].text === urlIndustry){ selEl.selectedIndex=i; break; }
+      var sel = document.getElementById('industry');
+      for(var i=0;i<sel.options.length;i++){
+        if(sel.options[i].text === urlIndustry){ sel.selectedIndex=i; break; }
       }
     }
     onIndustryChange();
   } else {
-    var f = {
-      bizName:"Mr. Biscuit's Cafe", tagline:"From-Scratch Biscuits & Boba!",
-      phone:"(706) 754-0105", city:"Clarkesville, GA", address:"596 W Louise St",
-      website:"mrbiscuitscafe.com", offer:"$1 OFF Any Biscuit",
-      offerFine:"1 per visit \\u00b7 with this postcard"
+    var demo = {
+      bizName:"Mr. Biscuit's Cafe",tagline:"From-Scratch Biscuits & Boba!",
+      phone:"(706) 754-0105",city:"Clarkesville, GA",address:"596 W Louise St",
+      website:"mrbiscuitscafe.com",offer:"$1 OFF Any Biscuit",
+      offerFine:"1 per visit \u00b7 with this postcard"
     };
-    Object.keys(f).forEach(function(id){ var elx=document.getElementById(id); if(elx) elx.value=f[id]; });
-    var sel = document.getElementById('industry');
-    for(var i=0;i<sel.options.length;i++){
-      if(sel.options[i].text === 'Breakfast & Cafe'){ sel.selectedIndex=i; break; }
+    Object.keys(demo).forEach(function(id){ var e=document.getElementById(id); if(e) e.value=demo[id]; });
+    var sel2 = document.getElementById('industry');
+    for(var j=0;j<sel2.options.length;j++){
+      if(sel2.options[j].text === 'Breakfast & Cafe'){ sel2.selectedIndex=j; break; }
     }
     ['Bacon Egg & Cheese Biscuit $5.99','Boba Tea (any flavor) $4.50','Gravy Biscuit $3.99','Breakfast Plate $7.99']
       .forEach(function(v){ addMenuItem(v); });
     onIndustryChange();
   }
   onFormChange();
-  loadLibrary();
 })();
 </script>
-
-<!-- Industry conflict dialog -->
-<div id="takenOverlay">
-  <div id="takenCard">
-    <div class="tc-icon">&#9888;&#65039;</div>
-    <div class="tc-title">That Category is Taken</div>
-    <p class="tc-body"><span class="tc-industry" id="takenIndustryName"></span> is already reserved on this postcard. Each category is exclusive &mdash; one business per industry per mailing.</p>
-    <button class="tc-btn primary" onclick="closeTakenDialog()">Choose a Different Category</button>
-    <button class="tc-btn secondary" onclick="goRequestOptions()">Request More Options &rarr;</button>
-  </div>
-</div>
 </body>
 </html>`;
+
 
 // ── CLASSIC_HTML — original full template picker ──────────────────────────────
 const CLASSIC_HTML = `<!DOCTYPE html>
