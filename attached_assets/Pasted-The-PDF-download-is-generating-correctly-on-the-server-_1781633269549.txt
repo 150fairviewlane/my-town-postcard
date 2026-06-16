@@ -1,0 +1,32 @@
+The PDF download is generating correctly on the server but showing a blank tab on iPad instead of downloading. This is because iOS Safari does not support the programmatic anchor.click() download pattern for blob URLs. The fix is to change the approach so the PDF is served as a direct URL that Safari can handle natively.
+
+Fix the PDF download to work on iOS Safari using this approach:
+
+BACKEND CHANGE:
+Change the endpoint from POST /api/campaigns/:campaignId/download-pdf to GET /api/campaigns/:campaignId/download-pdf?side=front
+
+GET requests can be opened as direct URLs which iOS Safari handles correctly. Move the side parameter to a query string parameter instead of the request body.
+
+Keep all the PDF generation logic exactly the same — only change POST to GET and read side from req.query.side instead of req.body.side.
+
+Add authentication check — verify the user/dealer has access to this campaign before serving the PDF.
+
+FRONTEND CHANGE:
+Replace the entire blob download approach with a direct window.open() call:
+
+function downloadPdf(side) {
+  window.open(`/api/campaigns/${campaignId}/download-pdf?side=${side}`, '_blank');
+}
+
+That is the entire frontend function. Do not use fetch, do not create blob URLs, do not create anchor elements, do not call .click(). Just window.open() pointing directly at the endpoint URL.
+
+On iPad, this opens the PDF directly in Safari's built-in PDF viewer. From there the user can tap the share icon and save to Files, AirDrop it, or open in any PDF app. This is the correct iOS pattern — iOS intentionally routes all PDF URLs through its native viewer.
+
+On desktop browsers, the Content-Disposition: attachment header on the response will trigger a normal file download.
+
+Remove all the old blob/anchor download code entirely. Also remove any window.print() calls that may still exist elsewhere for PDF functionality.
+
+VERIFICATION:
+- On iPad: tap Download Front PDF — Safari opens a new tab showing the PDF in the native PDF viewer. The share button (box with arrow) appears at the top, allowing Save to Files.
+- On desktop Chrome: clicking the button triggers a file download directly to the downloads folder.
+- The PDF content is correct — 12x9 inches, all ad spots composited in correct positions.

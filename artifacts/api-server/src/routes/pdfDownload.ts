@@ -8,14 +8,21 @@ import jwt from "jsonwebtoken";
 const router: IRouter = Router();
 const JWT_SECRET = process.env.SESSION_SECRET || "localspot-secret";
 
+// Accepts token via Authorization header OR ?tok= query param.
+// The query-param fallback is required for window.open() on iOS Safari,
+// which cannot send custom headers for direct URL navigations.
 function requireAdmin(req: any, res: any, next: any): void {
-  const auth = req.headers.authorization;
-  if (!auth?.startsWith("Bearer ")) {
+  const headerToken = req.headers.authorization?.startsWith("Bearer ")
+    ? req.headers.authorization.slice(7)
+    : null;
+  const queryToken = typeof req.query?.tok === "string" ? req.query.tok : null;
+  const token = headerToken ?? queryToken;
+  if (!token) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
   try {
-    jwt.verify(auth.slice(7), JWT_SECRET);
+    jwt.verify(token, JWT_SECRET);
     next();
   } catch {
     res.status(401).json({ error: "Unauthorized" });
@@ -95,11 +102,11 @@ async function buildSideImage(
   return base.composite(composites).jpeg({ quality: 92 }).toBuffer();
 }
 
-// POST /admin/campaigns/:campaignId/download-pdf
-// body: { side: "front" | "back" | "both" }
-router.post("/admin/campaigns/:campaignId/download-pdf", requireAdmin, async (req: any, res: any) => {
+// GET /api/admin/campaigns/:campaignId/download-pdf?side=front|back|both
+// iOS Safari requires a direct GET URL — blob/anchor.click() pattern doesn't work on iPad.
+router.get("/admin/campaigns/:campaignId/download-pdf", requireAdmin, async (req: any, res: any) => {
   const campaignId = Number(req.params.campaignId);
-  const side = (req.body?.side ?? "both") as "front" | "back" | "both";
+  const side = ((req.query?.side as string) ?? "both") as "front" | "back" | "both";
 
   if (!Number.isFinite(campaignId) || campaignId <= 0) {
     res.status(400).json({ error: "Invalid campaign ID" });
