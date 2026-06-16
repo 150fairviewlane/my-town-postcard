@@ -2,6 +2,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { startExpirationSweeper } from "./lib/expirationCleanup";
 import { startRenewalScheduler } from "./lib/renewalScheduler";
+import { startWelcomeReminderScheduler } from "./lib/welcomeReminderScheduler";
 import { repairOverclaimedCounties } from "./lib/territoryDataRepair";
 
 const rawPort = process.env["PORT"];
@@ -41,4 +42,9 @@ app.listen(port, (err) => {
   // appropriate Resend email. Idempotent: each milestone has its own
   // _at column and we only mark it after a successful send.
   startRenewalScheduler(60 * 60 * 1000);
+
+  // Welcome reminder scheduler — runs every hour. Finds active dealers who
+  // have not set a password within 48 hours of activation and resends the
+  // set-password email exactly once (idempotent via welcomeReminderSentAt).
+  startWelcomeReminderScheduler(60 * 60 * 1000);
 });

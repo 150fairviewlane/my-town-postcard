@@ -42,6 +42,7 @@ export const dealersTable = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     activatedAt: timestamp("activated_at", { withTimezone: true }),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    welcomeReminderSentAt: timestamp("welcome_reminder_sent_at", { withTimezone: true }),
   },
   (t) => ({
     // Unique on email so a re-attempted signup with the same address surfaces
