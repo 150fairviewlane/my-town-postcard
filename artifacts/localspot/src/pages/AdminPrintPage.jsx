@@ -199,6 +199,8 @@ export default function AdminPrintPage() {
     query: { enabled: !hasValidId },
   });
 
+  const [showIosTip, setShowIosTip] = useState(false);
+
   // While waiting for auto-login to complete, treat the page as loading.
   const tokenPending = hasValidId && !adminToken;
   const isLoading = tokenPending || (hasValidId ? adminQuery.isLoading : activeQuery.isLoading);
@@ -240,8 +242,6 @@ export default function AdminPrintPage() {
     if (area === "bed") return <EDDMBox />;
     return null;
   };
-
-  const [showIosTip, setShowIosTip] = useState(false);
 
   const handlePrint = () => window.print();
 
