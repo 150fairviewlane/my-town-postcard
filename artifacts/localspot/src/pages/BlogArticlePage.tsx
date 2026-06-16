@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Link } from "wouter";
-import { ARTICLES, BlogNav } from "./BlogIndexPage";
+import { ARTICLES } from "./blogData";
+import { BlogNav } from "./BlogIndexPage";
 
 // ─── Shared prose helpers ──────────────────────────────────────────────────────
 function H2({ children }: { children: React.ReactNode }) {

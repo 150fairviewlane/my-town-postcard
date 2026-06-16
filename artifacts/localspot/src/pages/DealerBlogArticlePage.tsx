@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Link } from "wouter";
-import { DEALER_ARTICLES, DealerBlogNav } from "./DealerBlogIndexPage";
+import { DEALER_ARTICLES } from "./dealerBlogData";
+import { DealerBlogNav } from "./DealerBlogIndexPage";
 
 // ─── Shared prose helpers ──────────────────────────────────────────────────────
 function H2({ children }: { children: React.ReactNode }) {
