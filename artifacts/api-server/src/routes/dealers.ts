@@ -30,6 +30,7 @@ import {
   sendDealerPasswordResetEmail,
   sendDealerWelcomeEmail,
   sendAdminNewDealerEmail,
+  sendAdminDealerCancelledEmail,
 } from "../lib/emails";
 import { logger } from "../lib/logger";
 import {
@@ -1414,6 +1415,21 @@ export async function cancelDealerFromSubscription(subscription: any): Promise<n
 
   // Release the territory back to "available" so another dealer can claim it.
   await setTerritoryStatusForDealer(dealer.id, "available");
+
+  // Notify the admin — fire-and-forget so a Resend failure never blocks the
+  // cancellation path. Look up the territory label the same way activation does.
+  const [territory] = await db
+    .select({ cityLabel: dealerTerritoriesTable.cityLabel })
+    .from(dealerTerritoriesTable)
+    .where(eq(dealerTerritoriesTable.dealerId, dealer.id));
+  sendAdminDealerCancelledEmail({
+    dealerId: dealer.id,
+    dealerName: dealer.name,
+    dealerEmail: dealer.email,
+    territoryName: territory?.cityLabel ?? null,
+  }).catch((err: any) =>
+    logger.error({ err: err?.message, dealerId: dealer.id }, "Failed to send admin dealer cancelled email"),
+  );
 
   return dealer.id;
 }
