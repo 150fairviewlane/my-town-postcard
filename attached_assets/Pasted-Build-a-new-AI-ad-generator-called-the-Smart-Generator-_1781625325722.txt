@@ -1,0 +1,213 @@
+Build a new AI ad generator called the "Smart Generator" and make it the default experience when a user clicks "Reserve This Spot" from the postcard picker. Keep the existing generator exactly as-is but move it to a new route /api/grok-ad-generator-classic so it can be retrieved later if needed. The new Smart Generator replaces it at /api/grok-ad-generator.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OVERVIEW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The Smart Generator hides all template selection from the user. Instead:
+- The system automatically picks the best template for the selected industry
+- The user picks from 6 pre-defined color pairs that inform Grok's color treatment
+- The user fills in their business info, uploads optional photo and logo
+- They click "Generate My Ad" up to 6 times, each time getting a new ad using the next-ranked template
+- All generated ads accumulate as thumbnails in a gallery row
+- After 6 generations, the Generate button is disabled
+- The user clicks any thumbnail to enlarge it (lightbox) and select it
+- Selecting an ad goes straight to reservation checkout
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 1 — INDUSTRY-TO-TEMPLATE RANKINGS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Add a data structure (can be a constant in the new generator file) that maps each industry to an ordered list of 6 template keys from best fit to worst fit. Use this ranking table:
+
+Pizza Restaurant:        wok-fire, made-fresh, parchment-classic, neighborhood-pro, at-your-service, health-wellness
+Mexican Restaurant:      wok-fire, made-fresh, parchment-classic, neighborhood-pro, at-your-service, health-wellness
+Chinese Restaurant:      wok-fire, made-fresh, parchment-classic, neighborhood-pro, at-your-service, health-wellness
+Breakfast & Cafe:        made-fresh, parchment-classic, wok-fire, sage-organic, neighborhood-pro, health-wellness
+Bar & Grill:             wok-fire, made-fresh, parchment-classic, neighborhood-pro, at-your-service, brush-stroke
+Italian Restaurant:      wok-fire, made-fresh, parchment-classic, sage-organic, home-elegance, neighborhood-pro
+Bakery:                  made-fresh, parchment-classic, sage-organic, purple-sage, health-wellness, neighborhood-pro
+Coffee Shop:             made-fresh, sage-organic, purple-sage, parchment-classic, health-wellness, home-elegance
+Dentist:                 health-wellness, home-elegance, at-your-service, neighborhood-pro, parchment-classic, brush-stroke
+Medical & Healthcare:    health-wellness, home-elegance, at-your-service, parchment-classic, neighborhood-pro, brush-stroke
+Chiropractor:            health-wellness, home-elegance, at-your-service, neighborhood-pro, parchment-classic, brush-stroke
+Veterinarian:            health-wellness, sage-organic, neighborhood-pro, home-elegance, parchment-classic, at-your-service
+HVAC:                    at-your-service, neighborhood-pro, brush-stroke, heritage-home, home-elegance, parchment-classic
+Plumber:                 at-your-service, neighborhood-pro, brush-stroke, heritage-home, parchment-classic, home-elegance
+Electrician:             at-your-service, neighborhood-pro, brush-stroke, heritage-home, parchment-classic, home-elegance
+Lawn & Landscaping:      neighborhood-pro, sage-organic, at-your-service, brush-stroke, home-elegance, parchment-classic
+Roofing:                 neighborhood-pro, at-your-service, brush-stroke, heritage-home, home-elegance, parchment-classic
+Painting:                neighborhood-pro, brush-stroke, at-your-service, home-elegance, parchment-classic, sage-organic
+Cleaning Service:        neighborhood-pro, at-your-service, health-wellness, home-elegance, parchment-classic, brush-stroke
+Pest Control:            at-your-service, neighborhood-pro, brush-stroke, parchment-classic, home-elegance, heritage-home
+Real Estate:             home-elegance, heritage-home, purple-sage, at-your-service, parchment-classic, neighborhood-pro
+Insurance:               home-elegance, at-your-service, parchment-classic, health-wellness, heritage-home, neighborhood-pro
+Auto Repair:             neighborhood-pro, at-your-service, brush-stroke, parchment-classic, heritage-home, wok-fire
+Salon & Beauty:          purple-sage, sage-organic, health-wellness, made-fresh, home-elegance, parchment-classic
+Barbershop:              parchment-classic, neighborhood-pro, brush-stroke, at-your-service, wok-fire, heritage-home
+Gym & Fitness:           neighborhood-pro, at-your-service, health-wellness, brush-stroke, parchment-classic, wok-fire
+Pet Services:            sage-organic, health-wellness, neighborhood-pro, purple-sage, parchment-classic, home-elegance
+Financial Services:      home-elegance, heritage-home, at-your-service, parchment-classic, health-wellness, purple-sage
+Daycare:                 health-wellness, sage-organic, purple-sage, parchment-classic, home-elegance, neighborhood-pro
+Photography:             purple-sage, sage-organic, home-elegance, made-fresh, parchment-classic, health-wellness
+Retail Shop:             made-fresh, parchment-classic, sage-organic, neighborhood-pro, wok-fire, home-elegance
+Other Service:           parchment-classic, at-your-service, neighborhood-pro, home-elegance, brush-stroke, health-wellness
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 2 — TEMPLATE SELECTION LOGIC
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+When the user clicks Generate My Ad:
+1. Look up the ranked template list for the selected industry
+2. Remove any templates already used on this campaign side (query the same used-templates endpoint the classic generator uses: GET /api/campaigns/:campaignId/used-templates?spotId=:spotId)
+3. Remove any templates already used in THIS generation session (tracked in frontend state as an array of used template keys, reset on page load)
+4. Pick the first remaining template from the ranked list
+5. If all 6 ranked templates are exhausted (extremely rare), loop back to rank 1
+6. Pass the selected template key to the backend exactly as the classic generator does — the backend prompt-building logic is unchanged
+
+Track which template was used for each generated ad and display it as a small label under each thumbnail (e.g. "Neighborhood Pro") so the user can see variety.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 3 — COLOR PAIR SELECTION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Show 6 color pair swatches. Each swatch is two adjacent color circles (primary + accent). The user clicks one to select it. The selected swatch gets a checkmark or highlight ring.
+
+Pre-populate the selected swatch based on the chosen industry's default colors. When the industry changes, update the selection to the closest matching pair from the 6 options.
+
+Use these 6 color pairs:
+1. Navy + Gold       (#1a2744 / #d4a44c)  — Professional Classic
+2. Forest + Lime     (#166534 / #22c55e)  — Natural & Fresh
+3. Deep Red + Cream  (#7c1c2e / #f5e6d3)  — Bold & Warm
+4. Teal + White      (#0d6e6e / #ffffff)  — Clean & Modern
+5. Charcoal + Orange (#2d2d2d / #f97316)  — Bold & Energetic
+6. Purple + Sage     (#5b3d7a / #87a878)  — Elegant & Organic
+
+Industry default color matching (pre-select the closest pair on industry change):
+- Restaurants/Food/Cafe: Deep Red + Cream
+- Medical/Dental/Health/Chiro/Vet: Teal + White
+- Lawn/Landscaping/Pest/Painting/Cleaning: Forest + Lime
+- HVAC/Plumbing/Electric/Roofing/Auto: Charcoal + Orange
+- Real Estate/Insurance/Financial/Legal: Navy + Gold
+- Salon/Beauty/Photography/Daycare: Purple + Sage
+- Everything else: Deep Red + Cream
+
+When passing to the backend, include the color pair as two fields:
+  primaryColor: "#1a2744"
+  accentColor: "#d4a44c"
+
+In the backend, inject these into the Grok prompt's TYPOGRAPHIC RULES section as an additional instruction:
+  "COLOR PALETTE: Use {primaryColor} as the dominant brand color for headers, bars, and backgrounds. Use {accentColor} as the accent color for highlights, icons, coupon borders, and call-to-action elements. Apply these colors consistently throughout the ad."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 4 — FRONTEND UI LAYOUT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The page layout has two columns:
+
+LEFT COLUMN (form panel, same width as classic generator ~400px):
+- Business Name * (required)
+- Industry (select dropdown — same options as classic generator)
+- Tagline / Slogan
+- Phone * (required)
+- City, State
+- Street Address
+- Website / URL
+- Contact Email
+- Menu Items / Services (up to 4, same add/remove UI as classic)
+- Special Offer / Coupon
+- Fine Print
+- COLOR PALETTE section:
+  - Label: "Ad Color Palette"
+  - 6 color pair swatches in a 2×3 grid
+  - Each swatch: two adjacent circles (40px diameter each), pair name below
+  - Selected swatch has a 2px red ring around the whole pair
+- Primary Photo upload (same as classic)
+- Company Logo upload (same as classic)
+- GENERATE MY AD button (disabled until business name filled)
+  - Shows generation count: "Generate My Ad (3 of 6 remaining)"
+  - After 6 generations: button disabled, text changes to "All 6 versions generated — choose below"
+
+RIGHT COLUMN (results panel):
+- Header: "Your Ad Variations"
+- Subtitle: "Each click generates a new version using a different template style. Choose your favorite."
+- Thumbnail gallery: a responsive grid (2 columns on mobile, 3 columns on desktop)
+  - Each thumbnail card contains:
+    - The generated ad image (full width of card, click to enlarge)
+    - Template name label below image (small, muted)
+    - "Select This Ad" button below label (green, full width of card)
+  - Thumbnails appear one by one as generated
+  - Empty state before first generation: dashed border placeholder cards showing "Version 1", "Version 2" etc.
+- Loading state: spinner with "Generating version N of 6..." text while Grok is working
+
+LIGHTBOX:
+- Dark overlay covering full screen
+- Generated ad image centered, max 90vw × 90vh
+- "Select This Ad" button below image (large, green)
+- "Close" button top-right corner (×)
+- Click outside image to close
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 5 — AD SELECTION & CHECKOUT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+When the user clicks "Select This Ad" (from thumbnail or lightbox):
+- Validate that business name and contact email are filled
+- If missing: highlight the empty fields and show error message
+- If valid: call the same postMessage flow the classic generator uses:
+  window.opener.postMessage({ type: 'grok-ad-result', formData: { ...formFields, finishedAdUrl: imageUrl, template: usedTemplateKey } }, '*')
+  then close the window
+- This sends the user directly to reservation checkout in the parent window
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 6 — BACKEND CHANGES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Move the existing generator HTML and route handler from /api/grok-ad-generator to /api/grok-ad-generator-classic. Update the template-preview route prefix to match. The classic generator must continue to work exactly as before at its new URL.
+
+2. Create a new route handler for /api/grok-ad-generator that serves the new Smart Generator HTML page.
+
+3. The /api/grok-ad-generator/generate endpoint stays at the same path and is shared by both generators. Add two new optional fields to the GenerateSchema:
+   primaryColor: z.string().optional().default("")
+   accentColor: z.string().optional().default("")
+
+4. In the prompt-building logic (buildAdPrompt.ts), when primaryColor and accentColor are provided, append this to the TYPOGRAPHIC RULES section of every template's outputRequirements:
+   "\n  • COLOR PALETTE: Use {primaryColor} as the dominant brand color for headers, accent bars, and dark background zones. Use {accentColor} as the accent/highlight color for icons, coupon borders, call-to-action elements, and script text. Apply these colors consistently — they override the template's default palette."
+
+5. The /api/grok-ad-generator/template-preview/:key route stays unchanged and is accessible from both generators.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 7 — ROUTING UPDATE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Wherever the postcard picker opens the ad generator (search for window.open calls referencing grok-ad-generator), the URL must continue to point to /api/grok-ad-generator — which now serves the Smart Generator. No changes needed to the picker itself since the URL is the same.
+
+The classic generator is now at /api/grok-ad-generator-classic and accessible directly via URL for testing or fallback.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 8 — PREFILL BEHAVIOR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The Smart Generator receives the same URL params as the classic generator:
+spotId, spotSize, campaignId, side, bizName, industry, taken
+
+On load:
+- Pre-fill business name and industry from URL params if provided
+- Auto-select the color pair based on industry default
+- Auto-populate tagline, menu items, and offer from industry defaults (same as classic generator)
+- Load the image library for the selected industry
+- Fetch used templates for this campaign side and store in state
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+VERIFICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Click "Reserve This Spot" on a front-side XL spot — Smart Generator opens
+2. Select "Lawn & Landscaping" — color palette auto-selects Forest + Lime, Neighborhood Pro is the first template that will be used
+3. Fill in a business name, click Generate — ad is generated using Neighborhood Pro with Forest + Lime colors
+4. Click Generate again — uses Sage Organic (next in ranking), new thumbnail appears
+5. After 6 generations, Generate button is disabled and shows the count message
+6. Click a thumbnail — lightbox opens with the full ad and a Select button
+7. Click Select This Ad — window closes and parent picker shows reservation checkout
+8. Navigate to /api/grok-ad-generator-classic — classic generator still works exactly as before
+9. Run pnpm --filter @workspace/api-server tsc --noEmit — no TypeScript errors
