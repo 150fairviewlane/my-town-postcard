@@ -107,6 +107,19 @@ export default function AdminDealersPage() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!dealers) return;
+    const params = new URLSearchParams(window.location.search);
+    const idParam = params.get("id");
+    if (!idParam) return;
+    const dealerId = parseInt(idParam, 10);
+    if (!Number.isFinite(dealerId)) return;
+    const exists = dealers.some((d) => d.id === dealerId);
+    if (!exists) return;
+    setExpanded(dealerId);
+    loadPage(dealerId);
+  }, [dealers]);
+
   const baseUrl = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 
   return (

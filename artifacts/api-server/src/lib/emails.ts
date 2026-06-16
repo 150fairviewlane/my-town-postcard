@@ -444,6 +444,48 @@ export async function sendRenewalPostEmail(info: RenewalEmailInfo): Promise<void
   }
 }
 
+interface AdminNewDealerInfo {
+  dealerId: number;
+  dealerName: string;
+  dealerEmail: string;
+  territoryName: string | null;
+}
+
+export async function sendAdminNewDealerEmail(info: AdminNewDealerInfo): Promise<void> {
+  const resend = getResendClient();
+  if (!resend) return;
+
+  const adminUrl = `${APP_URL}/admin/dealers?id=${info.dealerId}`;
+
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: ADMIN_EMAIL,
+      subject: `🎉 New dealer activated: ${info.dealerName}${info.territoryName ? ` — ${info.territoryName}` : ""}`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
+          <h2>New Dealer Activated</h2>
+          <p>A dealer just completed payment and is now live.</p>
+          <table style="border-collapse: collapse; width: 100%; margin-top: 12px;">
+            <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Name</strong></td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(info.dealerName)}</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Email</strong></td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(info.dealerEmail)}</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Territory</strong></td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(info.territoryName ?? "—")}</td></tr>
+            <tr><td style="padding: 8px;"><strong>Dealer ID</strong></td><td style="padding: 8px;">${info.dealerId}</td></tr>
+          </table>
+          <p style="margin-top: 24px;">
+            <a href="${adminUrl}" style="display: inline-block; background: #991b1b; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold;">
+              View Dealers in Admin →
+            </a>
+          </p>
+        </div>
+      `,
+    });
+    logger.info({ dealerId: info.dealerId }, "Admin new dealer email sent");
+  } catch (err) {
+    logger.error({ err, dealerId: info.dealerId }, "Failed to send admin new dealer email");
+  }
+}
+
 export async function sendAdminNewOrder(order: OrderInfo): Promise<void> {
   const resend = getResendClient();
   if (!resend) return;

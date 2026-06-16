@@ -29,6 +29,7 @@ import {
   sendTerritoryConflictEmail,
   sendDealerPasswordResetEmail,
   sendDealerWelcomeEmail,
+  sendAdminNewDealerEmail,
 } from "../lib/emails";
 import { logger } from "../lib/logger";
 import {
@@ -1382,6 +1383,14 @@ export async function activateDealerFromCheckoutSession(
       setPasswordLink: `${appUrl}/dealer/reset-password?token=${rawToken}`,
       loginLink: `${appUrl}/dealer/login`,
     });
+    sendAdminNewDealerEmail({
+      dealerId,
+      dealerName: dealer.name,
+      dealerEmail: dealer.email,
+      territoryName: territory?.cityLabel ?? null,
+    }).catch((err: any) =>
+      logger.error({ err: err?.message, dealerId }, "Failed to send admin new dealer email"),
+    );
   } catch (err: any) {
     logger.error({ err: err?.message, dealerId }, "Failed to send dealer welcome email via webhook");
   }
