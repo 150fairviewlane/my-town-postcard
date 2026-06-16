@@ -84,8 +84,9 @@ function PostcardFace({ side, spots, gridAreas, gridOrder, fixedAreas, renderFix
           gridTemplateColumns: "repeat(12, 1fr)",
           gridTemplateRows: "repeat(9, 1fr)",
           gridTemplateAreas: gridAreas,
-          gap: 0,
+          gap: "3px",
           background: "#c8c8c8",
+          overflow: "hidden",
         }}
       >
         {sortedSpots.map((spot) => {
@@ -107,6 +108,7 @@ function PostcardFace({ side, spots, gridAreas, gridOrder, fixedAreas, renderFix
               style={{
                 gridArea: spot.gridArea,
                 overflow: "hidden",
+                borderRadius: 3,
                 minWidth: 0,
                 minHeight: 0,
               }}
@@ -116,14 +118,14 @@ function PostcardFace({ side, spots, gridAreas, gridOrder, fixedAreas, renderFix
           );
         })}
 
-        {/* Fixed (non-sellable) cells — house ads on both sides, plus the
-            USPS EDDM placeholder on the back. */}
+        {/* Fixed (non-sellable) cells — house ad strip and EDDM block on back. */}
         {fixedAreas.map((area) => (
           <div
             key={area}
             style={{
               gridArea: area,
               overflow: "hidden",
+              borderRadius: 3,
               minWidth: 0,
               minHeight: 0,
             }}
