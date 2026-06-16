@@ -286,7 +286,7 @@ export default function AdminPrintPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
               {[
                 ["1", "Tap the Share button", "The box with an arrow (□↑) in the top-right of the preview"],
-                ["2", "Choose "Save to Files"", "This creates a PDF and saves it to your iPad"],
+                ["2", 'Choose "Save to Files"', "This creates a PDF and saves it to your iPad"],
               ].map(([num, title, desc]) => (
                 <div key={num} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
                   <div style={{
