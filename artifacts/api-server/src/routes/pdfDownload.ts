@@ -1,12 +1,24 @@
 import { Router, type IRouter } from "express";
+import fs from "fs/promises";
+import path from "path";
+import { fileURLToPath } from "url";
 import sharp from "sharp";
 import PDFDocument from "pdfkit";
 import { eq } from "drizzle-orm";
-import { db, spotsTable } from "@workspace/db";
+import { db, spotsTable, campaignsTable } from "@workspace/db";
 import jwt from "jsonwebtoken";
 
 const router: IRouter = Router();
 const JWT_SECRET = process.env.SESSION_SECRET || "localspot-secret";
+
+// Absolute path to the mailbox logo in the frontend public folder.
+// import.meta.url is the source file's URL regardless of CWD, so this
+// resolves correctly whether the API server is launched from the workspace
+// root or from artifacts/api-server.
+const LOGO_PATH = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../../localspot/public/mailbox-logo.png",
+);
 
 function requireAdmin(req: any, res: any, next: any): void {
   const headerToken = req.headers.authorization?.startsWith("Bearer ")
@@ -98,6 +110,17 @@ async function loadImageBuffer(url: string): Promise<Buffer | null> {
   }
 }
 
+async function loadLocalFile(absolutePath: string): Promise<Buffer | null> {
+  try {
+    const buf = await fs.readFile(absolutePath);
+    return buf;
+  } catch (err) {
+    // Log so we can see which path failed in server logs
+    process.stderr.write(`loadLocalFile failed: ${absolutePath} — ${String(err)}\n`);
+    return null;
+  }
+}
+
 type SpotRow = {
   gridArea: string;
   adFileUrl: string | null;
@@ -120,43 +143,187 @@ function resolveImageUrl(dbSpot: SpotRow | undefined): string | null {
 // ─── PDF drawing ──────────────────────────────────────────────────────────────
 
 function drawPageChrome(doc: any): void {
-  // Gray background extends to full bleed
   doc.rect(0, 0, PAGE[0], PAGE[1]).fill(BG_COLOR);
 }
 
-function drawHouseAd(doc: any): void {
+// Draw house ad matching the picker's AdHouse component:
+//   Top ~44%: cream bg (#f4f3ef), mailbox logo, red divider, "My Town Postcard" + tagline
+//   Bottom ~56%: navy bg (#0d1d36), "ADVERTISE HERE!", 3 label columns, QR code
+async function drawHouseAd(
+  doc: any,
+  logoBuffer: Buffer | null,
+  qrBuffer: Buffer | null,
+): Promise<void> {
   const c = toPts(HOUSE_AD);
-  doc.rect(c.x, c.y, c.w, c.h).fill("#0f172a");
-  const midY = c.y + c.h / 2;
-  doc.fillColor("#ffffff")
-    .fontSize(16)
-    .font("Helvetica-Bold")
-    .text("Shop, Dine & Buy Local", c.x, midY - 16, { width: c.w, align: "center" });
-  doc.fontSize(10)
-    .font("Helvetica")
-    .fillColor("#ef4444")
-    .text("mytownpostcard.com", c.x, midY + 4, { width: c.w, align: "center" });
+
+  const topH = Math.round(c.h * 0.44); // ~61 pt  (cream section)
+  const botH = c.h - topH;             // ~78 pt  (navy section)
+  const botY = c.y + topH;
+
+  // ── Top section (cream) ──────────────────────────────────────────────────
+  doc.rect(c.x, c.y, c.w, topH).fill("#f4f3ef");
+
+  let contentStartX = c.x + 8;
+
+  if (logoBuffer) {
+    try {
+      const meta = await sharp(logoBuffer).metadata();
+      const aspect = (meta.width ?? 1) / (meta.height ?? 1);
+      const logoH = topH - 8;
+      const logoW = Math.round(logoH * aspect);
+      const jpgBuf = await sharp(logoBuffer)
+        .resize(logoW * 3, logoH * 3)
+        .jpeg({ quality: 92 })
+        .toBuffer();
+      doc.image(jpgBuf, c.x + 8, c.y + 4, { width: logoW, height: logoH });
+      contentStartX = c.x + 8 + logoW + 8;
+    } catch {
+      // Fall through to text-only brand block
+    }
+  }
+
+  // Red vertical divider
+  const divH = Math.round(topH * 0.65);
+  const divY = c.y + Math.round(topH * 0.175);
+  doc.rect(contentStartX, divY, 2, divH).fill("#991b1b");
+
+  // Brand text to the right of divider
+  const brandX = contentStartX + 7;
+  const brandW = c.x + c.w - brandX - 6;
+
+  // "My Town Postcard" — two-color inline via two text calls on same line
+  const nameY = c.y + Math.round(topH * 0.22);
+  doc.font("Helvetica-Bold").fontSize(14).fillColor("#0d1d36")
+    .text("My Town ", brandX, nameY, { continued: true, lineBreak: false });
+  doc.fillColor("#991b1b").text("Postcard", { lineBreak: false });
+
+  // Tagline
+  doc.font("Helvetica").fontSize(7).fillColor("#0d1d36")
+    .text("LOCAL REACH.  REAL RESULTS.", brandX, nameY + 18, {
+      width: brandW,
+      characterSpacing: 1.5,
+    });
+
+  // ── Bottom section (navy) ────────────────────────────────────────────────
+  doc.rect(c.x, botY, c.w, botH).fill("#0d1d36");
+
+  // "ADVERTISE HERE!" — left side, large Impact-style (Helvetica-Bold)
+  const advX = c.x + 8;
+  const advFontSize = Math.round(botH * 0.21);
+  doc.font("Helvetica-Bold").fontSize(advFontSize).fillColor("#ffffff")
+    .text("ADVERTISE", advX, botY + Math.round(botH * 0.1), { lineBreak: false });
+  doc.text("HERE!", advX, botY + Math.round(botH * 0.1) + advFontSize + 2, { lineBreak: false });
+
+  // QR code — right side
+  const qrSize = Math.round(botH * 0.62); // ~48 pt
+  const qrPad = 4;
+  const qrX = c.x + c.w - qrSize - 10;
+  const qrY = botY + Math.round((botH - qrSize - 12) / 2);
+
+  if (qrBuffer) {
+    try {
+      const qrJpg = await sharp(qrBuffer)
+        .resize(qrSize * 3, qrSize * 3)
+        .jpeg({ quality: 88 })
+        .toBuffer();
+      // White padding box
+      doc.rect(qrX - qrPad, qrY - qrPad, qrSize + qrPad * 2, qrSize + qrPad * 2)
+        .fill("#ffffff");
+      doc.image(qrJpg, qrX, qrY, { width: qrSize, height: qrSize });
+      // "Scan to advertise" caption
+      doc.font("Helvetica").fontSize(5.5).fillColor("#ffffff").fillOpacity(0.65)
+        .text("Scan to advertise", qrX - qrPad, qrY + qrSize + qrPad + 2, {
+          width: qrSize + qrPad * 2,
+          align: "center",
+        });
+      doc.fillOpacity(1);
+    } catch { /* skip QR if resize fails */ }
+  }
+
+  // Three label columns between "ADVERTISE HERE!" and QR
+  const advEndX = advX + 70; // approx right edge of ADVERTISE HERE! text
+  const colsRight = qrBuffer ? qrX - 10 : c.x + c.w - 10;
+  const colsW = colsRight - advEndX;
+
+  if (colsW > 30) {
+    const colW = colsW / 3;
+    const labels = [
+      ["Reach 5,000", "Homes In", "Your Town"],
+      ["USPS Every", "Door Direct", "Mail"],
+      ["Targeted.", "Local.", "Effective."],
+    ];
+
+    labels.forEach((lines, i) => {
+      const colX = advEndX + i * colW;
+
+      // Thin white vertical divider before each column (except first)
+      if (i > 0) {
+        doc.rect(colX, botY + Math.round(botH * 0.14), 1, Math.round(botH * 0.72))
+          .fillOpacity(0.35).fill("#ffffff").fillOpacity(1);
+      }
+
+      // Red circle "icon" placeholder
+      const circR = Math.round(botH * 0.13);
+      const circCX = colX + colW / 2;
+      const circCY = botY + circR + Math.round(botH * 0.1);
+      doc.circle(circCX, circCY, circR).fill("#c41c1c");
+
+      // Column label text
+      const labelY = circCY + circR + 4;
+      doc.font("Helvetica").fontSize(6).fillColor("#ffffff")
+        .text(lines.join("\n"), colX + 2, labelY, {
+          width: colW - 4,
+          align: "center",
+          lineGap: 0.5,
+        });
+    });
+  }
 }
 
-function drawEddm(doc: any): void {
+// Draw EDDM block matching the picker's AdEDDM component:
+//   Light gray bg (#f8f8f8), gray border, two concentric circles at top center,
+//   postal indicia text below with divider before LOCAL POSTAL CUSTOMER / EDDM.
+function drawEddm(doc: any, eddmCity: string, eddmZip: string): void {
   const c = toPts(EDDM_BLOCK);
-  doc.rect(c.x, c.y, c.w, c.h).fill("#ffffff");
-  // Postal circle
+
+  // Background
+  doc.rect(c.x, c.y, c.w, c.h).fill("#f8f8f8");
+  // Border (inset by half lineWidth so it stays inside the rect)
+  doc.rect(c.x + 1, c.y + 1, c.w - 2, c.h - 2).lineWidth(1.5).stroke("#aaaaaa");
+
+  // Two concentric circles centered horizontally in the upper portion
   const cx = c.x + c.w / 2;
-  const circleY = c.y + 28;
-  doc.circle(cx, circleY, 22).lineWidth(2).stroke("#374151");
-  // Indicia text
-  const textTop = c.y + 54;
-  doc.fillColor("#374151")
-    .fontSize(7)
-    .font("Helvetica-Bold")
-    .text("PRESORTED STD",         c.x, textTop,      { width: c.w, align: "center" })
-    .text("U.S. POSTAGE PAID",     c.x, textTop + 11, { width: c.w, align: "center" })
-    .text("CLARKESVILLE, GA 30523",c.x, textTop + 22, { width: c.w, align: "center" })
-    .text("LOCAL POSTAL CUSTOMER", c.x, textTop + 33, { width: c.w, align: "center" })
-    .fontSize(9)
-    .font("Helvetica-Bold")
-    .text("EDDM",                  c.x, textTop + 47, { width: c.w, align: "center" });
+  const outerR = 22;
+  const innerR = 13;
+  const circCY = c.y + 32;
+
+  // Outer circle — solid stroke
+  doc.circle(cx, circCY, outerR).lineWidth(2).stroke("#555555");
+
+  // Inner circle — dashed stroke
+  doc.circle(cx, circCY, innerR).dash(3, { space: 2 }).lineWidth(1.5).stroke("#555555");
+  doc.undash(); // restore solid stroke for subsequent drawing
+
+  // Postal text below circles
+  const textTop = circCY + outerR + 7;
+  const textW = c.w - 16;
+  const textX = c.x + 8;
+
+  doc.font("Helvetica-Bold").fontSize(7.5).fillColor("#333333")
+    .text("PRESORTED STD",     textX, textTop,      { width: textW, align: "center", characterSpacing: 0.8 })
+    .text("U.S. POSTAGE PAID", textX, textTop + 11, { width: textW, align: "center", characterSpacing: 0.8 })
+    .text(`${eddmCity.toUpperCase()}, GA ${eddmZip}`, textX, textTop + 22, { width: textW, align: "center", characterSpacing: 0.8 });
+
+  // Horizontal divider
+  const divY = textTop + 33;
+  doc.moveTo(textX + 12, divY).lineTo(textX + textW - 12, divY)
+    .lineWidth(0.75).stroke("#cccccc");
+
+  // LOCAL POSTAL CUSTOMER + EDDM
+  doc.font("Helvetica-Bold").fontSize(7.5).fillColor("#333333")
+    .text("LOCAL POSTAL CUSTOMER", textX, divY + 5, { width: textW, align: "center", characterSpacing: 0.8 });
+  doc.font("Helvetica-Bold").fontSize(10).fillColor("#333333")
+    .text("EDDM", textX, divY + 17, { width: textW, align: "center", characterSpacing: 2.5 });
 }
 
 async function drawSpots(
@@ -216,8 +383,6 @@ router.get("/pdf-test", async (_req: any, res: any) => {
 
 // ─── Main download route ──────────────────────────────────────────────────────
 // GET /api/admin/campaigns/:campaignId/download-pdf?side=front|back|both&tok=…
-// Fetches as blob on the frontend (fetch → blob URL → <a>.click()), delivered
-// as octet-stream so iOS saves to Files app rather than trying to render inline.
 
 router.get(
   "/admin/campaigns/:campaignId/download-pdf",
@@ -238,23 +403,58 @@ router.get(
     req.log?.info({ campaignId, side }, "pdf: request received");
 
     try {
-      const allSpots = await db
-        .select({
-          gridArea: spotsTable.gridArea,
-          adFileUrl: spotsTable.adFileUrl,
-          templateData: spotsTable.templateData,
-          status: spotsTable.status,
-          side: spotsTable.side,
-        })
-        .from(spotsTable)
-        .where(eq(spotsTable.campaignId, campaignId));
+      const doFront = side === "front" || side === "both";
+      const doBack  = side === "back"  || side === "both";
+
+      // Fetch spots and campaign info in parallel
+      const [allSpots, [campaign]] = await Promise.all([
+        db
+          .select({
+            gridArea: spotsTable.gridArea,
+            adFileUrl: spotsTable.adFileUrl,
+            templateData: spotsTable.templateData,
+            status: spotsTable.status,
+            side: spotsTable.side,
+          })
+          .from(spotsTable)
+          .where(eq(spotsTable.campaignId, campaignId)),
+        db
+          .select({
+            zipCode: campaignsTable.zipCode,
+            cityList: campaignsTable.cityList,
+            territory: campaignsTable.territory,
+          })
+          .from(campaignsTable)
+          .where(eq(campaignsTable.id, campaignId))
+          .limit(1),
+      ]);
 
       req.log?.info({ spotCount: allSpots.length }, "pdf: spots fetched");
 
+      // Derive EDDM city from cityList → territory → fallback
+      const rawCity =
+        campaign?.cityList?.split(",")[0]?.trim() ||
+        campaign?.territory?.split(",")[0]?.trim() ||
+        "Clarkesville";
+      const eddmCity = rawCity;
+      const eddmZip  = campaign?.zipCode || "30523";
+
+      // Pre-fetch assets needed for back-side static blocks
+      let logoBuffer: Buffer | null = null;
+      let qrBuffer: Buffer | null = null;
+      if (doBack) {
+        [logoBuffer, qrBuffer] = await Promise.all([
+          loadLocalFile(LOGO_PATH),
+          loadImageBuffer(
+            "https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=" +
+              encodeURIComponent("https://mytownpostcard.com"),
+          ),
+        ]);
+        req.log?.info({ hasLogo: !!logoBuffer, hasQr: !!qrBuffer }, "pdf: assets loaded");
+      }
+
       const frontSpots = allSpots.filter((s) => (s.side ?? "front") === "front");
       const backSpots  = allSpots.filter((s) => s.side === "back");
-      const doFront = side === "front" || side === "both";
-      const doBack  = side === "back"  || side === "both";
 
       const pdfBuf = await buildPdfBuffer(async (doc) => {
         if (doFront) {
@@ -265,8 +465,8 @@ router.get(
           if (doFront) doc.addPage({ size: PAGE, margin: 0 });
           drawPageChrome(doc);
           await drawSpots(doc, BACK_SPOTS, backSpots);
-          drawHouseAd(doc);
-          drawEddm(doc);
+          await drawHouseAd(doc, logoBuffer, qrBuffer);
+          drawEddm(doc, eddmCity, eddmZip);
         }
       });
 
