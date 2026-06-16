@@ -32,7 +32,6 @@ const PAGE: [number, number] = [882, 666];
 const BLEED_PT = 9;    // 0.125" × 72 = 9 pt
 const INSET_PT = 2.5;  // half of 5pt gray gap between spots
 const BG_COLOR = "#c8c8c8";
-const TRIM_COLOR = "#ff0000";
 
 // ─── Spot definitions in picker's 100px/inch coordinate space ─────────────────
 interface SpotDef { gridArea: string; x: number; y: number; w: number; h: number }
@@ -123,8 +122,6 @@ function resolveImageUrl(dbSpot: SpotRow | undefined): string | null {
 function drawPageChrome(doc: any): void {
   // Gray background extends to full bleed
   doc.rect(0, 0, PAGE[0], PAGE[1]).fill(BG_COLOR);
-  // Red trim-line guide (printer crop marks)
-  doc.rect(BLEED_PT, BLEED_PT, 864, 648).lineWidth(0.5).undash().stroke(TRIM_COLOR);
 }
 
 function drawHouseAd(doc: any): void {
