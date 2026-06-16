@@ -1,0 +1,61 @@
+Add a 0.125 inch bleed on all four sides of the postcard PDF for print production.
+
+WHAT BLEED MEANS:
+The bleed extends the PDF page size beyond the finished trim size so the
+printer can cut without leaving white edges. The postcard trims to 12×9
+inches. With 0.125 inch bleed on all sides the PDF page becomes:
+  Width:  12 + 0.125 + 0.125 = 12.25 inches
+  Height: 9  + 0.125 + 0.125 = 9.25 inches
+
+In PDF points (72 pts/inch):
+  Page width:  12.25 × 72 = 882 points
+  Page height: 9.25  × 72 = 666 points
+
+CHANGES NEEDED:
+
+1. Update the PDFDocument page size:
+   const doc = new PDFDocument({ size: [882, 666], margin: 0, autoFirstPage: true });
+
+2. Offset ALL spot positions by the bleed amount (0.125 inches = 9 points).
+   Every spot's xPts and yPts gets +9 added before applying the 2.5pt gray inset:
+   
+   xPts = (spot.x / 100 * 72) + 9 + 2.5
+   yPts = (spot.y / 100 * 72) + 9 + 2.5
+   wPts = (spot.w / 100 * 72) - 5
+   hPts = (spot.h / 100 * 72) - 5
+
+   The width and height do NOT change — only the x/y origin shifts by the bleed offset.
+
+3. Set the page background color to extend into the bleed area.
+   The gray border (#c8c8c8) should fill the entire page including bleed:
+   doc.rect(0, 0, 882, 666).fill('#c8c8c8');
+
+4. Draw a crop mark guide (optional but helpful for printers) — a thin red
+   rectangle showing the trim line at exactly 9pts in from each edge:
+   doc.rect(9, 9, 864, 648).lineWidth(0.5).stroke('#ff0000');
+   
+   This is a visual guide only and does not affect the ad content.
+
+5. Update the house ad and EDDM positions with the +9pt bleed offset:
+
+   HOUSE AD:
+   xPts = (200/100*72) + 9 + 2.5 = 155.5
+   yPts = (700/100*72) + 9 + 2.5 = 515.5
+   wPts = 427  (unchanged)
+   hPts = 139  (unchanged)
+
+   EDDM:
+   xPts = (800/100*72) + 9 + 2.5 = 587.5
+   yPts = (700/100*72) + 9 + 2.5 = 515.5
+   wPts = 283  (unchanged)
+   hPts = 139  (unchanged)
+
+6. Update the PDF filename to indicate it is print-ready:
+   Content-Disposition: attachment; filename="mytown-postcard-front-PRINT.pdf"
+
+VERIFICATION:
+- PDF page size should be 882×666 points (12.25×9.25 inches)
+- All ad content sits within the inner 864×648 point area (12×9 inches)
+- Gray background extends to all four edges of the page including bleed area
+- Red trim line rectangle visible 9pts in from each edge
+- File size unchanged (~5-15MB)

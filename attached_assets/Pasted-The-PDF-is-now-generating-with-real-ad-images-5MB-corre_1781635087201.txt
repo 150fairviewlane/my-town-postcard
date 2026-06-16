@@ -1,0 +1,131 @@
+The PDF is now generating with real ad images (5MB — correct). Three things are wrong compared to the ad picker display:
+1. Gray border between and around ads is missing
+2. House ad block is missing
+3. EDDM indicia block is missing
+
+Fix all three so the PDF is pixel-identical to the ad picker layout.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FIX 1 — GRAY BORDER SYSTEM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The ad picker uses a 7px gray gap (#c8c8c8) between and around every ad.
+Replicate this in the PDF by:
+
+A) Setting the PDF page background to #c8c8c8 before drawing any spots:
+   doc.rect(0, 0, 864, 648).fill('#c8c8c8');
+
+B) Inset every spot by the equivalent of 3.5px at 100px/inch = 0.035 inches = 2.52 points.
+   Round to 2.5 points for simplicity.
+
+So every spot's PDF position becomes:
+   xPts = (spot.x / 100 * 72) + 2.5
+   yPts = (spot.y / 100 * 72) + 2.5
+   wPts = (spot.w / 100 * 72) - 5
+   hPts = (spot.h / 100 * 72) - 5
+
+This means adjacent spots have a 2.5 + 2.5 = 5pt gap filled by the gray background,
+and the outer edges also have a 2.5pt gray margin.
+
+Apply this inset calculation to EVERY spot including house ad and EDDM.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FIX 2 — HOUSE AD AND EDDM BLOCKS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+These are non-paid spots that must always appear on the back side.
+Add them to the back side spot list with fixed content — they are not
+stored as finishedAdUrl in the database.
+
+HOUSE AD (back side):
+Position (before inset): x=200, y=700, w=600, h=200 (in 100px/inch units)
+After converting to points and applying inset:
+  xPts = (200/100*72) + 2.5 = 146.5
+  yPts = (700/100*72) + 2.5 = 506.5
+  wPts = (600/100*72) - 5   = 427
+  hPts = (200/100*72) - 5   = 139
+
+Draw the house ad as a dark navy rectangle with centered white text:
+  doc.rect(146.5, 506.5, 427, 139).fill('#0f172a');
+  doc.fillColor('#ffffff')
+     .fontSize(16)
+     .font('Helvetica-Bold')
+     .text('Shop, Dine & Buy Local', 146.5, 555, { width: 427, align: 'center' });
+  doc.fontSize(10)
+     .font('Helvetica')
+     .fillColor('#ef4444')
+     .text('mytownpostcard.com', 146.5, 578, { width: 427, align: 'center' });
+
+EDDM INDICIA (back side):
+Position (before inset): x=800, y=700, w=400, h=200 (in 100px/inch units)
+After converting to points and applying inset:
+  xPts = (800/100*72) + 2.5 = 578.5
+  yPts = (700/100*72) + 2.5 = 506.5
+  wPts = (400/100*72) - 5   = 283
+  hPts = (200/100*72) - 5   = 139
+
+Draw the EDDM indicia as a white rectangle with dark centered text:
+  doc.rect(578.5, 506.5, 283, 139).fill('#ffffff');
+
+  // Circular postage indicator
+  doc.circle(578.5 + 283/2, 506.5 + 45, 22)
+     .lineWidth(2)
+     .stroke('#374151');
+
+  doc.fillColor('#374151')
+     .fontSize(7)
+     .font('Helvetica-Bold')
+     .text('PRESORTED STD', 578.5, 506.5 + 75, { width: 283, align: 'center' })
+     .text('U.S. POSTAGE PAID', 578.5, 506.5 + 86, { width: 283, align: 'center' })
+     .text('CLARKESVILLE, GA 30523', 578.5, 506.5 + 97, { width: 283, align: 'center' })
+     .text('', 578.5, 506.5 + 108, { width: 283, align: 'center' })
+     .text('LOCAL POSTAL CUSTOMER', 578.5, 506.5 + 108, { width: 283, align: 'center' })
+     .fontSize(9)
+     .font('Helvetica-Bold')
+     .text('EDDM', 578.5, 506.5 + 122, { width: 283, align: 'center' });
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FIX 3 — COMPLETE SPOT POSITION TABLES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Use this as the definitive spot list. All positions are in the picker's
+100px/inch coordinate system. Convert to PDF points with:
+  pts = (px / 100) * 72
+
+FRONT SIDE (7 paid spots):
+  XL1: x=0,   y=0,   w=400, h=500  →  pts: 0,   0,   288, 360
+  XL2: x=400, y=0,   w=400, h=500  →  pts: 288, 0,   288, 360
+  XL3: x=800, y=0,   w=400, h=500  →  pts: 576, 0,   288, 360
+  L1:  x=0,   y=500, w=300, h=400  →  pts: 0,   360, 216, 288  (portrait Large)
+  L2:  x=300, y=500, w=300, h=400  →  pts: 216, 360, 216, 288
+  L3:  x=600, y=500, w=300, h=400  →  pts: 432, 360, 216, 288
+  L4:  x=900, y=500, w=300, h=400  →  pts: 648, 360, 216, 288
+
+BACK SIDE (8 paid spots + house + EDDM):
+  XL1: x=0,   y=0,   w=400, h=500  →  pts: 0,   0,   288, 360
+  XL2: x=400, y=0,   w=400, h=500  →  pts: 288, 0,   288, 360
+  XL3: x=800, y=0,   w=400, h=500  →  pts: 576, 0,   288, 360
+  M1:  x=0,   y=500, w=300, h=200  →  pts: 0,   360, 216, 144
+  M2:  x=300, y=500, w=300, h=200  →  pts: 216, 360, 216, 144
+  M3:  x=600, y=500, w=300, h=200  →  pts: 432, 360, 216, 144
+  M4:  x=900, y=500, w=300, h=200  →  pts: 648, 360, 216, 144
+  S1:  x=0,   y=700, w=200, h=200  →  pts: 0,   504, 144, 144
+  HSE: x=200, y=700, w=600, h=200  →  pts: 144, 504, 432, 144  (drawn, not from DB)
+  EDM: x=800, y=700, w=400, h=200  →  pts: 576, 504, 288, 144  (drawn, not from DB)
+
+Apply the 2.5pt inset to all of these when drawing.
+
+For each paid spot resize the image buffer to exactly these pixel dimensions at 300 DPI
+before embedding (width = w/100*300, height = h/100*300):
+  XL: 1200×1500px, L portrait: 900×1200px, M: 900×600px, S: 600×600px
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+VERIFICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Download the PDF and compare to the ad picker:
+- Gray gaps visible between all ads and around the outer edges
+- House ad block (dark navy, "Shop Dine & Buy Local") visible in bottom center
+- EDDM indicia block (white with postal text) visible in bottom right
+- All ad images sharp and correctly positioned
+- PDF file size 5-15MB

@@ -4,3 +4,4 @@
 - [Gazetteer CDP filter](gazetteer-cdp-filter.md) — filter Gazetteer places to FUNCSTAT∈{A,B} only (incorporated); FUNCSTAT=S are CDPs that shadow real cities as hub candidates.
 - [territory-finder toast class](territory-finder-toast.md) — toast notifications use `.toast.show` not `.visible`; the modal-bg uses `.visible`. Don't conflate the two when adding feedback UI.
 - [adGenGrok dead-code prompt builder](adgengrok-dead-code.md) — adGenGrok.ts has a large inline prompt builder (lines 327–1086) that is DEAD CODE; line 1088 calls buildAdPrompt(). Always edit buildAdPrompt.ts for prompt/template changes.
+- [PDF ad image storage pattern](pdf-ad-image-storage.md) — Finished ads stored as base64 data URLs in templateData.finishedAdUrl (text column), not in adFileUrl. PDF gen must parse JSON and handle data: URIs directly; never fetch them.
