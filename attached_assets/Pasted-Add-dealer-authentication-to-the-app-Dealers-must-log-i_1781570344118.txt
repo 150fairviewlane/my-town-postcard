@@ -1,0 +1,47 @@
+Add dealer authentication to the app. Dealers must log in with their email and password to access their dealer admin page. Here is everything that needs to be built:
+
+1 — Sign-up flow (dealer onboarding):
+The existing dealer signup form already collects email. Add a password field and a confirm password field to that form. Requirements: minimum 8 characters, at least one number, at least one special character. Show a password strength indicator (weak / fair / strong) that updates as they type. Show a red error if the two password fields do not match. Hash the password using bcrypt before storing it. Never store the plain text password. Store the hashed password in the dealers table in a column called password_hash.
+
+2 — Login page:
+Create a new route at /dealer/login. Show a clean login form with email, password, and a "Sign In" button. Include a "Forgot your password?" link. On successful login, redirect to /dealer/dashboard. On failure, show "Invalid email or password" without specifying which field was wrong (security best practice). After 5 failed attempts from the same IP within 10 minutes, lock the account temporarily and show "Too many attempts, please try again in 10 minutes."
+
+3 — Session management:
+Use JWT tokens stored in an httpOnly cookie (not localStorage). Token expiry: 7 days. On every request to any /dealer/* route, verify the token server-side. If the token is missing, expired, or invalid, redirect to /dealer/login. Include a "Remember me" checkbox on the login form — if unchecked, use a session cookie that expires when the browser closes instead of the 7-day token.
+
+4 — Protected dealer routes:
+Every page under /dealer/* must be protected. Add a server-side middleware function called requireDealerAuth that checks the JWT token on every request. Apply it to all dealer routes. If authentication fails at any point, clear the cookie and redirect to /dealer/login with a query param ?reason=session_expired so the login page can show "Your session has expired, please sign in again."
+
+5 — Logout:
+Add a "Sign Out" button to the dealer dashboard header. When clicked, clear the JWT cookie server-side and redirect to /dealer/login.
+
+6 — Forgot password flow:
+When the dealer clicks "Forgot your password?", show a form asking for their email. If the email exists in the dealers table, send a password reset email using the existing email system. The email should contain a reset link valid for 1 hour. The link should go to /dealer/reset-password?token=XXXXX. On that page, show a new password and confirm password field. On submission, verify the token is valid and not expired, hash the new password, update the dealers table, invalidate the token, and redirect to /dealer/login with a success message "Password updated, please sign in."
+
+Store reset tokens in a table called dealer_password_resets with columns: id, dealer_id, token_hash, expires_at, used_at. Hash the token before storing it — never store raw tokens in the database.
+
+7 — Admin override:
+On the admin page, add a "Log in as dealer" button next to each dealer in the dealers list. Clicking it should generate a short-lived impersonation token (15 minutes) and log the admin into that dealer's dashboard without needing their password. Add an "Impersonation active" banner to the dealer dashboard that shows which admin initiated it and a "End impersonation" button. Log all impersonation events to an audit table called admin_actions with columns: id, admin_id, action, target_dealer_id, timestamp.
+
+8 — Database changes needed:
+- dealers table: add password_hash (text), last_login_at (timestamp), failed_login_attempts (integer default 0), locked_until (timestamp nullable)
+- New table dealer_password_resets: id, dealer_id, token_hash, expires_at, used_at
+- New table admin_actions: id, admin_id, action, target_dealer_id, timestamp
+- New table dealer_sessions if not using stateless JWT: id, dealer_id, token_hash, expires_at, created_at
+
+9 — Security requirements:
+- All auth endpoints must use HTTPS only (set secure flag on cookies)
+- Implement CSRF protection on the login and password reset forms
+- Rate limit the login endpoint to 10 requests per minute per IP
+- Rate limit the forgot-password endpoint to 3 requests per minute per IP to prevent email flooding
+- Sanitize all inputs before database queries
+- Use parameterized queries everywhere, no string concatenation in SQL
+
+10 — Verify it works by testing:
+- A new dealer can sign up, receives a hashed password in the database, and can log in
+- An incorrect password shows the generic error message
+- After 5 failures the account locks for 10 minutes
+- The forgot password email arrives and the reset link works exactly once
+- After the reset link is used a second time it shows "This link has expired or already been used"
+- Logging out clears the session and /dealer/dashboard redirects to /dealer/login
+- The admin impersonation flow works and is logged
