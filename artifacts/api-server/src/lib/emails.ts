@@ -574,6 +574,61 @@ export interface DealerPasswordResetEmailInfo {
   resetLink: string;
 }
 
+export interface DealerWelcomeEmailInfo {
+  dealerName: string;
+  dealerEmail: string;
+  territoryName: string | null;
+  setPasswordLink: string;
+  loginLink: string;
+}
+
+export async function sendDealerWelcomeEmail(
+  info: DealerWelcomeEmailInfo
+): Promise<void> {
+  const resend = getResendClient();
+  if (!resend) {
+    logger.info(
+      { dealer: info.dealerEmail },
+      "Dealer welcome email skipped — RESEND_API_KEY not set"
+    );
+    return;
+  }
+  const territoryPhrase = info.territoryName
+    ? ` for <strong>${escapeHtml(info.territoryName)}</strong>`
+    : "";
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: info.dealerEmail,
+      subject: "Welcome to LocalSpot — set up your dealer account",
+      html: `
+        <div style="font-family:sans-serif;max-width:560px;margin:0 auto;">
+          <h2 style="color:#7B1418;">Welcome, ${escapeHtml(info.dealerName)}!</h2>
+          <p>Your LocalSpot dealer account${territoryPhrase} is now active. Your payment was successful and your territory is reserved.</p>
+          <p>Click the button below to set your password and access your dealer dashboard. This link expires in <strong>72 hours</strong>.</p>
+          <p>
+            <a href="${info.setPasswordLink}"
+               style="display:inline-block;background:#7B1418;color:#fff;padding:12px 22px;border-radius:6px;text-decoration:none;font-weight:700;">
+              Set my password →
+            </a>
+          </p>
+          <p style="color:#666;font-size:13px;">
+            Once your password is set, you can log in any time at
+            <a href="${info.loginLink}" style="color:#7B1418;">your dealer portal</a>.
+          </p>
+          <p style="color:#999;font-size:12px;">
+            Or paste this link in your browser:<br/>
+            <a href="${info.setPasswordLink}" style="color:#7B1418;">${info.setPasswordLink}</a>
+          </p>
+        </div>
+      `,
+    });
+    logger.info({ dealer: info.dealerEmail }, "Dealer welcome email sent");
+  } catch (err) {
+    logger.error({ err, dealer: info.dealerEmail }, "Failed to send dealer welcome email");
+  }
+}
+
 export async function sendDealerPasswordResetEmail(
   info: DealerPasswordResetEmailInfo
 ): Promise<void> {

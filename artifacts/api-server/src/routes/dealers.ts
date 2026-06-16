@@ -28,6 +28,7 @@ import {
   sendTerritoryClaimedEmail,
   sendTerritoryConflictEmail,
   sendDealerPasswordResetEmail,
+  sendDealerWelcomeEmail,
 } from "../lib/emails";
 import { logger } from "../lib/logger";
 import {
@@ -718,6 +719,29 @@ router.get("/dealers/confirm", async (req, res): Promise<void> => {
     } catch (err: any) {
       req.log.error({ err: err?.message, dealerId }, "ensureDealerLandingPage failed in /confirm — webhook will retry");
     }
+    try {
+      const appUrl = getOrigin(req);
+      const rawToken = generateResetToken();
+      const tokenHash = hashResetToken(rawToken);
+      await db.insert(dealerPasswordResetsTable).values({
+        dealerId,
+        tokenHash,
+        expiresAt: new Date(Date.now() + 72 * 60 * 60 * 1000),
+      });
+      const [territory] = await db
+        .select({ cityLabel: dealerTerritoriesTable.cityLabel })
+        .from(dealerTerritoriesTable)
+        .where(eq(dealerTerritoriesTable.dealerId, dealerId));
+      await sendDealerWelcomeEmail({
+        dealerName: dealer.name,
+        dealerEmail: dealer.email,
+        territoryName: territory?.cityLabel ?? null,
+        setPasswordLink: `${appUrl}/dealer/reset-password?token=${rawToken}`,
+        loginLink: `${appUrl}/dealer/login`,
+      });
+    } catch (err: any) {
+      req.log.error({ err: err?.message, dealerId }, "Failed to send dealer welcome email via /confirm");
+    }
   }
 
   const origin = getOrigin(req);
@@ -1333,6 +1357,35 @@ export async function activateDealerFromCheckoutSession(
   } catch (err: any) {
     logger.error({ err: err?.message, dealerId }, "ensureDealerLandingPage failed in webhook activation");
   }
+
+  try {
+    const appUrl =
+      process.env.PUBLIC_APP_URL?.replace(/\/$/, "") ||
+      (process.env.REPLIT_DOMAINS
+        ? `https://${process.env.REPLIT_DOMAINS.split(",")[0].trim()}`
+        : "http://localhost:3000");
+    const rawToken = generateResetToken();
+    const tokenHash = hashResetToken(rawToken);
+    await db.insert(dealerPasswordResetsTable).values({
+      dealerId,
+      tokenHash,
+      expiresAt: new Date(Date.now() + 72 * 60 * 60 * 1000),
+    });
+    const [territory] = await db
+      .select({ cityLabel: dealerTerritoriesTable.cityLabel })
+      .from(dealerTerritoriesTable)
+      .where(eq(dealerTerritoriesTable.dealerId, dealerId));
+    await sendDealerWelcomeEmail({
+      dealerName: dealer.name,
+      dealerEmail: dealer.email,
+      territoryName: territory?.cityLabel ?? null,
+      setPasswordLink: `${appUrl}/dealer/reset-password?token=${rawToken}`,
+      loginLink: `${appUrl}/dealer/login`,
+    });
+  } catch (err: any) {
+    logger.error({ err: err?.message, dealerId }, "Failed to send dealer welcome email via webhook");
+  }
+
   return dealerId;
 }
 
