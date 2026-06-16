@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useParams } from "wouter";
 import {
   useGetActiveCampaign,
@@ -212,13 +213,35 @@ export default function AdminPrintPage() {
   const numericId = campaignIdFromUrl ? Number(campaignIdFromUrl) : NaN;
   const hasValidId = Number.isFinite(numericId) && numericId > 0;
 
+  // Token state — mirrors AdminDashboard so the print page can auto-login
+  // when opened in a new tab where localStorage may not yet have a token
+  // (e.g. direct link, expired token, or first visit).
+  const [adminToken, setAdminToken] = useState(() =>
+    typeof window !== "undefined" ? localStorage.getItem("admin_token") : null,
+  );
+
+  useEffect(() => {
+    if (adminToken) return;
+    fetch("/api/admin/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: "localspot-admin-2025" }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.token) {
+          localStorage.setItem("admin_token", d.token);
+          setAdminToken(d.token);
+        }
+      })
+      .catch(() => {});
+  }, [adminToken]);
+
   // When the URL carries a campaign id (e.g. /admin/campaign/2/print) load
   // that specific campaign through the admin endpoint so any campaign — not
   // just the live "active" one — can be print-previewed. Falls back to the
   // public active-campaign endpoint when no id is present so the legacy
   // /admin/print URL keeps working.
-  const adminToken =
-    typeof window !== "undefined" ? localStorage.getItem("admin_token") : null;
   const adminAuth = adminToken
     ? {
         meta: { headers: { Authorization: `Bearer ${adminToken}` } },
@@ -238,7 +261,9 @@ export default function AdminPrintPage() {
     query: { enabled: !hasValidId },
   });
 
-  const isLoading = hasValidId ? adminQuery.isLoading : activeQuery.isLoading;
+  // While waiting for auto-login to complete, treat the page as loading.
+  const tokenPending = hasValidId && !adminToken;
+  const isLoading = tokenPending || (hasValidId ? adminQuery.isLoading : activeQuery.isLoading);
   const error = hasValidId ? adminQuery.error : activeQuery.error;
   // Both endpoints return slightly different shapes:
   //   - public /campaigns/active → CampaignWithSpots (campaign + spots merged)
