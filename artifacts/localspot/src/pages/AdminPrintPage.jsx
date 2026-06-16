@@ -85,7 +85,7 @@ function PostcardFace({ side, spots, gridAreas, gridOrder, fixedAreas, renderFix
           gridTemplateRows: "repeat(9, 1fr)",
           gridTemplateAreas: gridAreas,
           gap: "7px",
-          padding: "3.5px",
+          padding: "7px",
           background: "#c8c8c8",
           overflow: "hidden",
         }}
