@@ -194,23 +194,34 @@ async function drawSpots(
     const px = toPx300(def);
 
     if (rawBuf) {
-      // QR code: 15% of the spot's shorter side, min 60px, with padding
-      const qrSizePx = Math.max(60, Math.round(Math.min(px.w, px.h) * 0.15));
-      const paddingPx = Math.max(8, Math.round(qrSizePx * 0.08));
-      const qrResized = await sharp(qrPng)
-        .resize(qrSizePx, qrSizePx)
-        .png()
-        .toBuffer();
+      let imgBuf: Buffer;
 
-      const imgBuf = await sharp(rawBuf)
-        .resize(px.w, px.h, { fit: "fill" })
-        .composite([{
-          input: qrResized,
-          left: px.w - qrSizePx - paddingPx,
-          top:  px.h - qrSizePx - paddingPx,
-        }])
-        .jpeg({ quality: 92 })
-        .toBuffer();
+      // Mr. Biscuit's (mb) has its own QR code baked into the artwork — skip
+      // the mytownpostcard.com overlay so it doesn't end up with two QR codes.
+      if (def.gridArea === "mb") {
+        imgBuf = await sharp(rawBuf)
+          .resize(px.w, px.h, { fit: "fill" })
+          .jpeg({ quality: 92 })
+          .toBuffer();
+      } else {
+        // Every other ad gets the mytownpostcard.com QR in the bottom-right corner.
+        const qrSizePx = Math.max(60, Math.round(Math.min(px.w, px.h) * 0.15));
+        const paddingPx = Math.max(8, Math.round(qrSizePx * 0.08));
+        const qrResized = await sharp(qrPng)
+          .resize(qrSizePx, qrSizePx)
+          .png()
+          .toBuffer();
+
+        imgBuf = await sharp(rawBuf)
+          .resize(px.w, px.h, { fit: "fill" })
+          .composite([{
+            input: qrResized,
+            left: px.w - qrSizePx - paddingPx,
+            top:  px.h - qrSizePx - paddingPx,
+          }])
+          .jpeg({ quality: 92 })
+          .toBuffer();
+      }
 
       doc.image(imgBuf, c.x, c.y, { width: c.w, height: c.h });
     } else {
