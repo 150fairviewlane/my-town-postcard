@@ -60,8 +60,16 @@ const BACK_LAYOUT: Record<string, SlotRect> = {
   bs1:  { x: 0,    y: 2100, w: 600,  h: 600  },
 };
 
-async function fetchBuffer(url: string): Promise<Buffer | null> {
+// Load an image from either a data: URI or an https:// URL.
+// Returns null on any failure so the caller can use a placeholder instead.
+async function loadImageBuffer(url: string): Promise<Buffer | null> {
   try {
+    if (url.startsWith("data:")) {
+      // data:image/jpeg;base64,<payload>  or  data:image/png;base64,<payload>
+      const commaIdx = url.indexOf(",");
+      if (commaIdx === -1) return null;
+      return Buffer.from(url.slice(commaIdx + 1), "base64");
+    }
     const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
     if (!res.ok) return null;
     return Buffer.from(await res.arrayBuffer());
@@ -70,7 +78,12 @@ async function fetchBuffer(url: string): Promise<Buffer | null> {
   }
 }
 
-type SpotRow = { gridArea: string; adFileUrl: string | null; status: string };
+type SpotRow = {
+  gridArea: string;
+  adFileUrl: string | null;
+  templateData: string | null;
+  status: string;
+};
 
 async function buildSideImage(
   spots: SpotRow[],
@@ -84,7 +97,19 @@ async function buildSideImage(
 
   for (const [gridArea, pos] of Object.entries(layout)) {
     const spot = spots.find((s) => s.gridArea === gridArea);
-    const rawBuf = spot?.adFileUrl ? await fetchBuffer(spot.adFileUrl) : null;
+
+    // Prefer adFileUrl; fall back to templateData.finishedAdUrl (base64 data URL)
+    let imageUrl: string | null = spot?.adFileUrl ?? null;
+    if (!imageUrl && spot?.templateData) {
+      try {
+        const td = JSON.parse(spot.templateData) as Record<string, unknown>;
+        if (typeof td.finishedAdUrl === "string") imageUrl = td.finishedAdUrl;
+      } catch {
+        // malformed JSON — skip
+      }
+    }
+
+    const rawBuf = imageUrl ? await loadImageBuffer(imageUrl) : null;
 
     let tile: Buffer;
     if (rawBuf) {
@@ -159,6 +184,7 @@ router.get("/admin/campaigns/:campaignId/download-pdf", requireAdmin, async (req
       .select({
         gridArea: spotsTable.gridArea,
         adFileUrl: spotsTable.adFileUrl,
+        templateData: spotsTable.templateData,
         status: spotsTable.status,
         side: spotsTable.side,
       })

@@ -1,0 +1,51 @@
+The PDF downloads successfully but is blank and only 188KB. The ad images are not being embedded — the PDF contains only gray placeholder rectangles. This means finishedAdUrl is not being found in the spot data. We need to find exactly where the data is and fix the query.
+
+STEP 1 — Run this SQL query directly in the database console and paste the results:
+
+  SELECT 
+    id,
+    status,
+    size,
+    template_data IS NOT NULL as has_template_data,
+    template_data::text IS NOT NULL as template_data_is_text,
+    LEFT(template_data::text, 200) as template_data_preview
+  FROM spots
+  WHERE campaign_id = 1
+  ORDER BY id;
+
+This will show us exactly what is stored in template_data for each spot and whether finishedAdUrl is present.
+
+STEP 2 — Also run:
+
+  SELECT DISTINCT jsonb_object_keys(template_data) as keys
+  FROM spots
+  WHERE campaign_id = 1
+  AND template_data IS NOT NULL;
+
+This shows every key that exists inside the template_data jsonb across all spots.
+
+STEP 3 — Based on what the queries show, fix the PDF endpoint to read the correct field:
+
+If template_data contains a key like "finishedAdUrl", "imageUrl", "adImageUrl", or "generatedImageUrl" — update the PDF endpoint to read that exact key name.
+
+If template_data is null for all spots — the issue is that ads were generated but the spot records were never updated with the image data. In that case check the spot reservation handler to find where template_data gets written and confirm it is actually saving.
+
+If template_data exists but finishedAdUrl is an https:// URL pointing to xAI's servers — those URLs may have expired. xAI image URLs typically expire after 1 hour. The fix is to download and store the image in your own storage (or as base64 in the DB) when the ad is generated, not rely on the xAI URL staying valid.
+
+STEP 4 — Quick fix to verify image loading works once we find the right field:
+Add a test route that returns the raw image data for one spot:
+
+  router.get('/api/debug/spot-image/:spotId', async (req, res) => {
+    const spot = await db.select().from(spotsTable).where(eq(spotsTable.id, parseInt(req.params.spotId)));
+    if (!spot[0]) { res.status(404).json({ error: 'not found' }); return; }
+    res.json({
+      id: spot[0].id,
+      status: spot[0].status,
+      templateDataKeys: spot[0].templateData ? Object.keys(spot[0].templateData) : [],
+      templateDataPreview: JSON.stringify(spot[0].templateData)?.substring(0, 500)
+    });
+  });
+
+Navigate to /api/debug/spot-image/[spotId] for a spot that has been reserved with an ad. The response will show exactly what keys are available and what the data looks like.
+
+Fix the PDF endpoint to use whatever key and data format the debug route reveals.
