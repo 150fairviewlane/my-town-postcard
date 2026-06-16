@@ -1,0 +1,42 @@
+Do a complete audit of the current email implementation and report back before making any changes. I need to know exactly what is working, what is wired up but broken, and what hasn't been built yet.
+
+AUDIT CHECKLIST — check each item and report status (DONE / PARTIAL / MISSING):
+
+1. EMAIL PROVIDER SETUP
+   - Is Resend installed as a dependency? (check package.json)
+   - Is RESEND_API_KEY set in environment variables?
+   - Is there a verified sending domain configured in Resend dashboard?
+   - What is the configured FROM address? (search for "from:" in email-related code)
+   - Is there a shared email utility/helper function? (search for sendEmail, resend.emails.send, etc.)
+
+2. TRANSACTIONAL EMAILS — check if each exists and whether it actually sends:
+   a. Dealer welcome email (sent when dealer signs up)
+   b. Dealer password reset email
+   c. Ad spot reservation confirmation (sent to business when they reserve a spot)
+   d. Payment confirmation (sent after Stripe payment succeeds)
+   e. Campaign full notification (sent to dealer when all spots on a side are sold)
+   f. Ad submission confirmation (sent when advertiser submits their finished ad)
+   g. Admin notification (sent to admin when new reservation or payment comes in)
+
+3. STRIPE WEBHOOK EMAILS
+   - Does the Stripe webhook handler (payment_intent.succeeded or checkout.session.completed) trigger any email?
+   - Is the webhook secret configured?
+
+4. TEMPLATE SYSTEM
+   - Are emails sent as plain text, HTML strings inline, or using a template system?
+   - Is there an email templates directory or file?
+
+5. WHAT IS ACTUALLY BROKEN
+   - Send a test email right now using the Resend SDK and report whether it succeeds or fails:
+     import { Resend } from 'resend';
+     const resend = new Resend(process.env.RESEND_API_KEY);
+     const result = await resend.emails.send({
+       from: '[whatever the configured from address is]',
+       to: 'test@example.com',
+       subject: 'Email Test',
+       text: 'This is a test email from My Town Postcard.'
+     });
+     console.log(result);
+   - Report the exact error or success response
+
+Report all findings in a clear list before touching any code. Once I see the audit results I will decide what to build next.
