@@ -2079,8 +2079,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .brand span{color:var(--burg)}
 .brand-logo{height:42px;width:auto;display:block;flex-shrink:0}
 .hdr-badge{background:linear-gradient(135deg,#7C1C2E,#9b2c3e);color:#fff;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:4px 14px;border-radius:20px}
-.layout{display:grid;grid-template-columns:400px 1fr;flex:1;min-height:0;overflow:hidden}
-.fpanel{background:var(--card);border-right:1.5px solid var(--border);padding:18px 18px 60px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+.layout{display:grid;grid-template-columns:1fr 1fr 480px;flex:1;min-height:0;overflow:hidden}
+.fpanel{background:var(--card);border-right:1.5px solid var(--border);padding:18px 18px 24px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+.mpanel{background:var(--surface);border-right:1.5px solid var(--border);padding:18px 18px 24px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
 .ptitle{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.06em;margin-bottom:2px}
 .psub{font-family:'Crimson Pro',serif;font-style:italic;font-size:14px;color:var(--ink-light);line-height:1.4;margin-bottom:4px}
 .sec-label{font-size:12px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--burg);padding-bottom:8px;border-bottom:1.5px solid var(--burg-pale);margin-bottom:8px}
@@ -2147,28 +2148,25 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .field-error{border-color:#ef4444 !important;box-shadow:0 0 0 3px rgba(239,68,68,.25) !important;animation:field-shake .35s ease}
 @keyframes field-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 /* Right panel */
-.rpanel{background:#ECEAE6;padding:18px 22px 22px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
-.var-header{margin-bottom:4px}
-.var-title{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:.05em;color:var(--ink)}
-.var-sub{font-family:'Crimson Pro',serif;font-style:italic;font-size:14px;color:var(--ink-light);line-height:1.4;margin-top:2px}
-/* Variations grid */
-.variations-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.var-slot{border-radius:10px;overflow:hidden;border:2px solid var(--border);background:var(--card);display:flex;flex-direction:column;min-height:180px}
-.var-slot.slot-empty{border-style:dashed;background:transparent;align-items:center;justify-content:center;gap:5px}
-.var-slot.slot-loading{border-style:dashed;border-color:var(--burg);background:rgba(124,28,46,.04);align-items:center;justify-content:center;gap:5px}
-.var-slot.slot-filled{cursor:pointer;transition:border-color .18s,box-shadow .18s}
-.var-slot.slot-filled:hover{border-color:var(--burg);box-shadow:0 4px 16px rgba(124,28,46,.2)}
-.slot-num{font-size:13px;font-weight:700;color:var(--ink-light)}
-.slot-ph-text{font-size:12px;color:var(--ink-light);opacity:.7}
-.slot-spinner{width:26px;height:26px;border:2.5px solid var(--border);border-top-color:var(--burg);border-radius:50%;animation:spin 1s linear infinite}
-.slot-gen-text{font-size:12px;color:var(--burg);font-weight:600;text-align:center;line-height:1.4;padding:0 8px}
+.rpanel{background:#111827;padding:18px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+.preview-area{flex:1;min-height:260px;display:flex;align-items:center;justify-content:center;background:#1f2937;border-radius:12px;overflow:hidden}
+.preview-ph{display:flex;flex-direction:column;align-items:center;gap:10px;color:rgba(255,255,255,.35);font-size:13.5px;text-align:center;padding:24px;line-height:1.5}
+.preview-ph-icon{font-size:44px;opacity:.6}
+.preview-img{width:100%;height:100%;object-fit:contain;display:block}
+.thumb-strip{display:flex;gap:7px;flex-wrap:wrap}
+.thumb-item{width:72px;height:72px;border-radius:8px;overflow:hidden;cursor:pointer;border:2.5px solid transparent;transition:all .18s;flex-shrink:0;background:#1f2937}
+.thumb-item:hover{border-color:rgba(255,255,255,.4)}
+.thumb-item.selected{border-color:#f97316;box-shadow:0 0 0 1px #f97316}
+.thumb-item img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb-loading{width:72px;height:72px;border-radius:8px;background:#1f2937;border:2px dashed #374151;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.slot-spinner{width:22px;height:22px;border:2.5px solid #374151;border-top-color:#f97316;border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.slot-img-wrap{flex:1;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f5f3f0;min-height:130px}
-.slot-img{width:100%;height:100%;object-fit:cover;display:block}
-.slot-footer{padding:8px 10px;border-top:1px solid var(--border);background:#fafaf8;display:flex;flex-direction:column;gap:6px}
-.slot-tmpl-name{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-light)}
-.slot-select-btn{padding:8px 0;background:var(--green);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .2s;width:100%;letter-spacing:.03em}
-.slot-select-btn:hover{background:#144d30}
+.use-btn{width:100%;padding:12px 16px;background:var(--green);color:#fff;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:background .2s;display:none;letter-spacing:.03em}
+.use-btn.visible{display:block}
+.use-btn:hover{background:#144d30}
+.dl-btn-rp{width:100%;padding:10px 16px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.8);border:1.5px solid rgba(255,255,255,.2);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;display:none}
+.dl-btn-rp.visible{display:block}
+.dl-btn-rp:hover{background:rgba(255,255,255,.15)}
 /* Lightbox */
 .lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:9999;align-items:center;justify-content:center;padding:20px}
 .lightbox.visible{display:flex}
@@ -2197,7 +2195,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .tc-btn:last-child{margin-bottom:0}
 .tc-btn.primary{background:#0f1117;color:#fff}
 .tc-btn.secondary{background:#fff;color:#7C1C2E;border:2px solid #7C1C2E}
-@media(max-width:860px){.layout{grid-template-columns:1fr;overflow:auto}html,body{height:auto;overflow:auto}.fpanel,.rpanel{overflow:visible}.photo-logo-row{grid-template-columns:1fr}.variations-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:1100px){.layout{grid-template-columns:1fr 1fr}html,body{height:auto;overflow:auto}.rpanel{grid-column:1/-1}.fpanel,.mpanel,.rpanel{overflow:visible}.thumb-strip{flex-wrap:nowrap;overflow-x:auto}}
+@media(max-width:640px){.layout{grid-template-columns:1fr}.rpanel{grid-column:auto}.photo-logo-row{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -2215,7 +2214,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
   <div class="fpanel">
     <div>
       <div class="ptitle">Smart Ad Studio</div>
-      <div class="psub">Pick your industry and color palette, then click Generate up to 6 times. Each version uses a new template style &mdash; compare them all and select the best.</div>
+      <div class="psub">Enter your business details below. Pick your colors and photo in the middle panel, then click Generate for a print-ready postcard ad.</div>
     </div>
 
     <div>
@@ -2260,64 +2259,70 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
       <div class="field"><label>Fine Print</label><input type="text" id="offerFine" placeholder="1 per visit &middot; with this postcard"></div>
     </div>
 
+  </div>
+
+  <!-- MIDDLE: VISUAL INPUTS -->
+  <div class="mpanel">
     <div>
       <div class="sec-label">&#127775; Brand Color Palette</div>
       <div class="swatches-grid" id="swatchesGrid"></div>
       <p class="fnote">Auto-selected for your industry &mdash; click any pair to switch.</p>
     </div>
 
-    <div class="photo-logo-row">
-      <div>
-        <div class="sec-label" style="margin-top:0">Primary Photo</div>
-        <div class="upload-zone" id="photoZone">
-          <input type="file" accept="image/*" onchange="handlePhotoUpload(this)">
-          <div class="upload-placeholder">
-            <div class="upload-icon">&#128248;</div>
-            <div class="upload-label">Upload a photo</div>
-            <div class="upload-sub">Food, product, or storefront</div>
-          </div>
-          <img class="upload-preview" id="photoPreview" alt="Photo">
-          <button class="upload-clear" title="Remove" onclick="clearPhoto(event)">&#10005;</button>
+    <div>
+      <div class="sec-label" style="margin-top:0">Primary Photo</div>
+      <div class="upload-zone" id="photoZone">
+        <input type="file" accept="image/*" onchange="handlePhotoUpload(this)">
+        <div class="upload-placeholder">
+          <div class="upload-icon">&#128248;</div>
+          <div class="upload-label">Upload a photo</div>
+          <div class="upload-sub">Food, product, or storefront</div>
         </div>
-        <p class="fnote" style="margin-top:5px">Skip to let AI auto-generate a photo.</p>
-        <div class="lib-section">
-          <div class="lib-label">Or pick from library</div>
-          <div id="libGrid" class="img-grid">
-            <div class="img-empty">Select an industry above to load photos.</div>
-          </div>
+        <img class="upload-preview" id="photoPreview" alt="Photo">
+        <button class="upload-clear" title="Remove" onclick="clearPhoto(event)">&#10005;</button>
+      </div>
+      <p class="fnote" style="margin-top:5px">Skip to let AI auto-generate a photo.</p>
+      <div class="lib-section">
+        <div class="lib-label">Or pick from library</div>
+        <div id="libGrid" class="img-grid">
+          <div class="img-empty">Select an industry above to load photos.</div>
         </div>
       </div>
-      <div class="logo-col">
-        <div>
-          <div class="sec-label" style="margin-top:0">Logo</div>
-          <div class="upload-zone logo-zone" id="logoZone">
-            <input type="file" accept="image/*" onchange="handleLogoUpload(this)">
-            <div class="upload-placeholder">
-              <div class="upload-icon">&#127991;&#65039;</div>
-              <div class="upload-label">Upload logo</div>
-              <div class="upload-sub">PNG with transparency preferred</div>
-            </div>
-            <img class="upload-preview" id="logoPreview" alt="Logo">
-            <button class="upload-clear" title="Remove" onclick="clearLogo(event)">&#10005;</button>
-          </div>
-          <p class="fnote" style="margin-top:5px">Placed upper-left exactly as provided.</p>
+    </div>
+
+    <div class="logo-col">
+      <div class="sec-label" style="margin-top:0">Logo <span style="font-weight:400;font-size:11px;color:var(--ink-light);text-transform:none;letter-spacing:0">(optional)</span></div>
+      <div class="upload-zone logo-zone" id="logoZone">
+        <input type="file" accept="image/*" onchange="handleLogoUpload(this)">
+        <div class="upload-placeholder">
+          <div class="upload-icon">&#127991;&#65039;</div>
+          <div class="upload-label">Upload logo</div>
+          <div class="upload-sub">PNG with transparency preferred</div>
         </div>
-        <button class="gen-btn" id="genBtn" onclick="generate()" disabled>
-          <span class="gen-spark">&#9889;</span>
-          <span id="genLabel">Generate My Ad (6 remaining)</span>
-        </button>
-        <div class="err-box" id="errBox"></div>
+        <img class="upload-preview" id="logoPreview" alt="Logo">
+        <button class="upload-clear" title="Remove" onclick="clearLogo(event)">&#10005;</button>
       </div>
+      <p class="fnote" style="margin-top:5px">Placed upper-left exactly as provided.</p>
     </div>
   </div>
 
-  <!-- RIGHT: VARIATIONS PANEL -->
+  <!-- RIGHT: GENERATE + PREVIEW + GALLERY -->
   <div class="rpanel">
-    <div class="var-header">
-      <div class="var-title">Your Ad Variations</div>
-      <div class="var-sub">Each click generates a new template style &mdash; compare up to 6 versions and select the best one.</div>
+    <button class="gen-btn" id="genBtn" onclick="generate()" disabled>
+      <span class="gen-spark">&#9889;</span>
+      <span id="genLabel">Generate My Ad</span>
+    </button>
+    <div class="err-box" id="errBox"></div>
+    <div class="preview-area" id="previewArea">
+      <div class="preview-ph" id="previewPh">
+        <div class="preview-ph-icon">&#127912;</div>
+        <div>Fill in your business info,<br>then click Generate.</div>
+      </div>
+      <img class="preview-img" id="previewImg" alt="Ad preview" style="display:none">
     </div>
-    <div class="variations-grid" id="variationsGrid"></div>
+    <div class="thumb-strip" id="thumbStrip"></div>
+    <button class="use-btn" id="useBtn" onclick="selectCurrentAd()">&#10003; Use This Ad &rarr;</button>
+    <button class="dl-btn-rp" id="dlBtn" onclick="downloadSelected()">&#8595; Download</button>
   </div>
 </div>
 
@@ -2362,6 +2367,7 @@ var _selectedPhotoUrl = '';
 var _logoData = '';
 var _isGenerating = false;
 var _lightboxVariationIdx = -1;
+var _selectedVarIdx = -1;
 
 // ── Data ───────────────────────────────────────────────────────────────────────
 var COLOR_SWATCHES = [
@@ -2552,35 +2558,71 @@ function selectSwatch(i){
   renderSwatches();
 }
 
-// ── Variations grid ────────────────────────────────────────────────────────────
+// ── Preview + thumbnail gallery ────────────────────────────────────────────────
 function renderVariations(){
-  var grid = document.getElementById('variationsGrid');
-  if(!grid) return;
-  var html = '';
-  for(var i = 0; i < 6; i++){
-    var v = _variations[i];
-    var isLoadingSlot = _isGenerating && i === _variations.length;
-    if(v){
-      html += '<div class="var-slot slot-filled" onclick="openLightbox(' + i + ')" title="Click to view full-size">'
-        + '<div class="slot-img-wrap"><img class="slot-img" src="' + esc(v.imageUrl) + '" alt="Version ' + (i+1) + '" loading="lazy"></div>'
-        + '<div class="slot-footer">'
-        + '<div class="slot-tmpl-name">' + esc(v.templateName) + '</div>'
-        + '<button class="slot-select-btn" onclick="event.stopPropagation();selectAd(' + i + ')">&#10003; Select This Ad</button>'
-        + '</div>'
-        + '</div>';
-    } else if(isLoadingSlot){
-      html += '<div class="var-slot slot-loading">'
-        + '<div class="slot-spinner"></div>'
-        + '<div class="slot-gen-text">Generating version ' + (i+1) + ' of 6&hellip;</div>'
-        + '</div>';
-    } else {
-      html += '<div class="var-slot slot-empty">'
-        + '<div class="slot-num">Version ' + (i+1) + '</div>'
-        + '<div class="slot-ph-text">Not yet generated</div>'
-        + '</div>';
-    }
+  var previewPh  = document.getElementById('previewPh');
+  var previewImg = document.getElementById('previewImg');
+  var thumbStrip = document.getElementById('thumbStrip');
+  var useBtn     = document.getElementById('useBtn');
+  var dlBtn      = document.getElementById('dlBtn');
+  if(!previewPh || !previewImg || !thumbStrip) return;
+
+  if(_variations.length === 0 && !_isGenerating){
+    previewPh.style.display  = 'flex';
+    previewImg.style.display = 'none';
+    thumbStrip.innerHTML = '';
+    if(useBtn) useBtn.classList.remove('visible');
+    if(dlBtn)  dlBtn.classList.remove('visible');
+    return;
   }
-  grid.innerHTML = html;
+
+  // Determine which variation to show as main preview
+  var showIdx = (_selectedVarIdx >= 0 && _selectedVarIdx < _variations.length)
+    ? _selectedVarIdx : _variations.length - 1;
+
+  if(_variations.length > 0){
+    var v = _variations[showIdx];
+    previewPh.style.display  = 'none';
+    previewImg.style.display = 'block';
+    previewImg.src = v.imageUrl;
+    if(useBtn) useBtn.classList.add('visible');
+    if(dlBtn)  dlBtn.classList.add('visible');
+  }
+
+  // Thumbnail strip
+  var html = '';
+  for(var i = 0; i < _variations.length; i++){
+    var isSelected = i === showIdx;
+    html += '<div class="thumb-item' + (isSelected ? ' selected' : '') + '" onclick="previewAd(' + i + ')" title="Ad ' + (i+1) + '">'
+      + '<img src="' + esc(_variations[i].imageUrl) + '" alt="" loading="lazy">'
+      + '</div>';
+  }
+  if(_isGenerating){
+    html += '<div class="thumb-loading"><div class="slot-spinner"></div></div>';
+  }
+  thumbStrip.innerHTML = html;
+}
+
+function previewAd(idx){
+  if(idx < 0 || idx >= _variations.length) return;
+  _selectedVarIdx = idx;
+  renderVariations();
+}
+
+function selectCurrentAd(){
+  var idx = (_selectedVarIdx >= 0 && _selectedVarIdx < _variations.length)
+    ? _selectedVarIdx : _variations.length - 1;
+  if(idx < 0) return;
+  selectAd(idx);
+}
+
+function downloadSelected(){
+  var idx = (_selectedVarIdx >= 0 && _selectedVarIdx < _variations.length)
+    ? _selectedVarIdx : _variations.length - 1;
+  if(idx < 0) return;
+  var v = _variations[idx];
+  var bizName = document.getElementById('bizName').value.trim();
+  downloadAd(v.imageUrl, bizName);
 }
 
 // ── Template selection ─────────────────────────────────────────────────────────
@@ -2643,7 +2685,7 @@ async function generate(){
     } else {
       _sessionUsedTemplates.push(templateKey);
       _variations.push({imageUrl:data.imageUrl, templateKey:templateKey, templateName:TEMPLATE_NAMES[templateKey]||templateKey});
-      showToast('Version ' + _variations.length + ' ready! Click to view or select.');
+      showToast('Ad ready! View it in the preview \u2192');
     }
   }catch(err){
     _isGenerating = false;
@@ -2658,13 +2700,12 @@ function updateGenButton(){
   var lbl = document.getElementById('genLabel');
   if(!btn||!lbl) return;
   if(_variations.length >= 6){
-    btn.disabled = true;
-    lbl.textContent = 'All 6 versions generated \u2014 choose below';
+    btn.style.display = 'none';
   } else {
+    btn.style.display = '';
     var biz = document.getElementById('bizName').value.trim();
     btn.disabled = !biz || _isGenerating;
-    var rem = 6 - _variations.length;
-    lbl.textContent = 'Generate My Ad (' + rem + ' remaining)';
+    lbl.textContent = _variations.length === 0 ? 'Generate My Ad' : '\u21ba Regenerate Ad';
   }
 }
 
