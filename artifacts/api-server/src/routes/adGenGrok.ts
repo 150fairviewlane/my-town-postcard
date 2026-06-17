@@ -2149,16 +2149,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 @keyframes field-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 /* Right panel */
 .rpanel{background:#111827;padding:18px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
-.preview-area{flex:1;min-height:260px;display:flex;align-items:center;justify-content:center;background:#1f2937;border-radius:12px;overflow:hidden}
+.preview-area{flex-shrink:0;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;background:#1f2937;border-radius:12px;overflow:hidden}
 .preview-ph{display:flex;flex-direction:column;align-items:center;gap:10px;color:rgba(255,255,255,.35);font-size:13.5px;text-align:center;padding:24px;line-height:1.5}
 .preview-ph-icon{font-size:44px;opacity:.6}
 .preview-img{width:100%;height:100%;object-fit:contain;display:block}
-.thumb-strip{display:flex;gap:7px;flex-wrap:wrap}
-.thumb-item{width:144px;height:144px;border-radius:8px;overflow:hidden;cursor:pointer;border:2.5px solid transparent;transition:all .18s;flex-shrink:0;background:#1f2937}
+.thumb-strip{display:flex;gap:7px;flex-wrap:nowrap}
+.thumb-item{flex:1 1 0;min-width:0;aspect-ratio:1;border-radius:8px;overflow:hidden;cursor:pointer;border:2.5px solid transparent;transition:all .18s;background:#1f2937}
 .thumb-item:hover{border-color:rgba(255,255,255,.4)}
 .thumb-item.selected{border-color:#f97316;box-shadow:0 0 0 1px #f97316}
 .thumb-item img{width:100%;height:100%;object-fit:cover;display:block}
-.thumb-loading{width:144px;height:144px;border-radius:8px;background:#1f2937;border:2px dashed #374151;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.thumb-loading{flex:1 1 0;min-width:0;aspect-ratio:1;border-radius:8px;background:#1f2937;border:2px dashed #374151;display:flex;align-items:center;justify-content:center}
 .slot-spinner{width:22px;height:22px;border:2.5px solid #374151;border-top-color:#f97316;border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .use-btn{width:100%;padding:12px 16px;background:var(--green);color:#fff;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:background .2s;display:none;letter-spacing:.03em}
@@ -2611,16 +2611,20 @@ function renderVariations(){
     if(dlBtn)  dlBtn.classList.add('visible');
   }
 
-  // Thumbnail strip
+  // Thumbnail strip — only show when a 2nd generation has started
+  // (i.e. 2+ variations exist, or 1 variation + currently generating)
+  var showThumbs = _variations.length >= 2 || (_variations.length === 1 && _isGenerating);
   var html = '';
-  for(var i = 0; i < _variations.length; i++){
-    var isSelected = i === showIdx;
-    html += '<div class="thumb-item' + (isSelected ? ' selected' : '') + '" onclick="previewAd(' + i + ')" title="Ad ' + (i+1) + '">'
-      + '<img src="' + esc(_variations[i].imageUrl) + '" alt="" loading="lazy">'
-      + '</div>';
-  }
-  if(_isGenerating){
-    html += '<div class="thumb-loading"><div class="slot-spinner"></div></div>';
+  if(showThumbs){
+    for(var i = 0; i < _variations.length; i++){
+      var isSelected = i === showIdx;
+      html += '<div class="thumb-item' + (isSelected ? ' selected' : '') + '" onclick="previewAd(' + i + ')" title="Ad ' + (i+1) + '">'
+        + '<img src="' + esc(_variations[i].imageUrl) + '" alt="" loading="lazy">'
+        + '</div>';
+    }
+    if(_isGenerating){
+      html += '<div class="thumb-loading"><div class="slot-spinner"></div></div>';
+    }
   }
   thumbStrip.innerHTML = html;
 
