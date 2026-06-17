@@ -2337,7 +2337,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
       <span class="gen-spark">&#9889;</span>
       <span id="genLabel">Generate My Ad</span>
     </button>
-    <div class="err-box" id="errBox"></div>
     <div class="preview-area" id="previewArea">
       <div class="preview-ph" id="previewPh">
         <div class="preview-ph-icon">&#127912;</div>
@@ -2355,6 +2354,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
         <div class="gen-overlay-sub" id="genOverlaySub">This takes about 30 seconds</div>
       </div>
     </div>
+    <div class="err-box" id="errBox"></div>
     <div class="thumb-strip" id="thumbStrip"></div>
     <div class="refine-panel" id="refinePanel">
       <div class="refine-label">Suggest a Change</div>
