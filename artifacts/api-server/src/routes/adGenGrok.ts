@@ -2154,11 +2154,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .preview-ph-icon{font-size:44px;opacity:.6}
 .preview-img{width:100%;height:100%;object-fit:contain;display:block}
 .thumb-strip{display:flex;gap:7px;flex-wrap:wrap}
-.thumb-item{width:72px;height:72px;border-radius:8px;overflow:hidden;cursor:pointer;border:2.5px solid transparent;transition:all .18s;flex-shrink:0;background:#1f2937}
+.thumb-item{width:144px;height:144px;border-radius:8px;overflow:hidden;cursor:pointer;border:2.5px solid transparent;transition:all .18s;flex-shrink:0;background:#1f2937}
 .thumb-item:hover{border-color:rgba(255,255,255,.4)}
 .thumb-item.selected{border-color:#f97316;box-shadow:0 0 0 1px #f97316}
 .thumb-item img{width:100%;height:100%;object-fit:cover;display:block}
-.thumb-loading{width:72px;height:72px;border-radius:8px;background:#1f2937;border:2px dashed #374151;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.thumb-loading{width:144px;height:144px;border-radius:8px;background:#1f2937;border:2px dashed #374151;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .slot-spinner{width:22px;height:22px;border:2.5px solid #374151;border-top-color:#f97316;border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .use-btn{width:100%;padding:12px 16px;background:var(--green);color:#fff;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:background .2s;display:none;letter-spacing:.03em}
@@ -2167,6 +2167,19 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .dl-btn-rp{width:100%;padding:10px 16px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.8);border:1.5px solid rgba(255,255,255,.2);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;display:none}
 .dl-btn-rp.visible{display:block}
 .dl-btn-rp:hover{background:rgba(255,255,255,.15)}
+/* Refine panel */
+.refine-panel{display:none;background:rgba(255,255,255,.06);border-radius:10px;padding:12px 14px}
+.refine-panel.visible{display:block}
+.refine-label{font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:8px}
+.refine-row{display:flex;gap:7px}
+.refine-input{flex:1;padding:9px 11px;border:1.5px solid rgba(255,255,255,.15);border-radius:7px;font-family:'DM Sans',sans-serif;font-size:13px;color:#fff;background:rgba(255,255,255,.08);outline:none;transition:border-color .2s}
+.refine-input:focus{border-color:rgba(255,255,255,.4);background:rgba(255,255,255,.12)}
+.refine-input::placeholder{color:rgba(255,255,255,.3)}
+.refine-btn{padding:9px 16px;background:var(--burg);color:#fff;border:none;border-radius:7px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:background .2s;flex-shrink:0}
+.refine-btn:hover:not(:disabled){background:var(--burg-dark)}
+.refine-btn:disabled{opacity:.5;cursor:not-allowed}
+.refine-err{font-size:12px;color:#fca5a5;margin-top:7px;display:none;line-height:1.4}
+.refine-err.visible{display:block}
 /* Lightbox */
 .lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:9999;align-items:center;justify-content:center;padding:20px}
 .lightbox.visible{display:flex}
@@ -2269,6 +2282,21 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
       <p class="fnote">Auto-selected for your industry &mdash; click any pair to switch.</p>
     </div>
 
+    <div class="logo-col">
+      <div class="sec-label" style="margin-top:0">Logo <span style="font-weight:400;font-size:11px;color:var(--ink-light);text-transform:none;letter-spacing:0">(optional)</span></div>
+      <div class="upload-zone logo-zone" id="logoZone">
+        <input type="file" accept="image/*" onchange="handleLogoUpload(this)">
+        <div class="upload-placeholder">
+          <div class="upload-icon">&#127991;&#65039;</div>
+          <div class="upload-label">Upload logo</div>
+          <div class="upload-sub">PNG with transparency preferred</div>
+        </div>
+        <img class="upload-preview" id="logoPreview" alt="Logo">
+        <button class="upload-clear" title="Remove" onclick="clearLogo(event)">&#10005;</button>
+      </div>
+      <p class="fnote" style="margin-top:5px">Placed upper-left exactly as provided.</p>
+    </div>
+
     <div>
       <div class="sec-label" style="margin-top:0">Primary Photo</div>
       <div class="upload-zone" id="photoZone">
@@ -2289,21 +2317,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
         </div>
       </div>
     </div>
-
-    <div class="logo-col">
-      <div class="sec-label" style="margin-top:0">Logo <span style="font-weight:400;font-size:11px;color:var(--ink-light);text-transform:none;letter-spacing:0">(optional)</span></div>
-      <div class="upload-zone logo-zone" id="logoZone">
-        <input type="file" accept="image/*" onchange="handleLogoUpload(this)">
-        <div class="upload-placeholder">
-          <div class="upload-icon">&#127991;&#65039;</div>
-          <div class="upload-label">Upload logo</div>
-          <div class="upload-sub">PNG with transparency preferred</div>
-        </div>
-        <img class="upload-preview" id="logoPreview" alt="Logo">
-        <button class="upload-clear" title="Remove" onclick="clearLogo(event)">&#10005;</button>
-      </div>
-      <p class="fnote" style="margin-top:5px">Placed upper-left exactly as provided.</p>
-    </div>
   </div>
 
   <!-- RIGHT: GENERATE + PREVIEW + GALLERY -->
@@ -2321,6 +2334,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
       <img class="preview-img" id="previewImg" alt="Ad preview" style="display:none">
     </div>
     <div class="thumb-strip" id="thumbStrip"></div>
+    <div class="refine-panel" id="refinePanel">
+      <div class="refine-label">Suggest a Change</div>
+      <div class="refine-row">
+        <input class="refine-input" id="refineInput" type="text" placeholder='e.g. "Change the font" or "Remove the tagline"' maxlength="500" onkeydown="if(event.key==='Enter')refineCurrentAd()">
+        <button class="refine-btn" id="refineBtn" onclick="refineCurrentAd()">Apply</button>
+      </div>
+      <div class="refine-err" id="refineErr"></div>
+    </div>
     <button class="use-btn" id="useBtn" onclick="selectCurrentAd()">&#10003; Use This Ad &rarr;</button>
     <button class="dl-btn-rp" id="dlBtn" onclick="downloadSelected()">&#8595; Download</button>
   </div>
@@ -2368,6 +2389,7 @@ var _logoData = '';
 var _isGenerating = false;
 var _lightboxVariationIdx = -1;
 var _selectedVarIdx = -1;
+var _isRefining = false;
 
 // ── Data ───────────────────────────────────────────────────────────────────────
 var COLOR_SWATCHES = [
@@ -2601,6 +2623,10 @@ function renderVariations(){
     html += '<div class="thumb-loading"><div class="slot-spinner"></div></div>';
   }
   thumbStrip.innerHTML = html;
+
+  // Show refine panel once there's at least one ad
+  var refinePanel = document.getElementById('refinePanel');
+  if(refinePanel) refinePanel.classList.toggle('visible', _variations.length > 0);
 }
 
 function previewAd(idx){
@@ -2623,6 +2649,53 @@ function downloadSelected(){
   var v = _variations[idx];
   var bizName = document.getElementById('bizName').value.trim();
   downloadAd(v.imageUrl, bizName);
+}
+
+async function refineCurrentAd(){
+  var input = document.getElementById('refineInput');
+  var errEl = document.getElementById('refineErr');
+  var btn   = document.getElementById('refineBtn');
+  var instruction = input ? input.value.trim() : '';
+  if(errEl){ errEl.textContent = ''; errEl.classList.remove('visible'); }
+  if(!instruction){
+    if(errEl){ errEl.textContent = 'Please describe the change you want (e.g. "Change the font to bold").'; errEl.classList.add('visible'); }
+    return;
+  }
+  var idx = (_selectedVarIdx >= 0 && _selectedVarIdx < _variations.length)
+    ? _selectedVarIdx : _variations.length - 1;
+  if(idx < 0 || !_variations[idx]) return;
+  var imageDataUrl = _variations[idx].imageUrl;
+  if(!imageDataUrl) return;
+  if(btn){ btn.disabled = true; btn.textContent = 'Applying\u2026'; }
+  _isRefining = true;
+  try{
+    var resp = await fetch('/api/grok-ad-generator/refine', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ imageDataUrl: imageDataUrl, instruction: instruction, sizeKey: _spotSize || 'XL' }),
+    });
+    var data = await resp.json();
+    if(!resp.ok || data.error){
+      var msg = data.error || 'Refinement failed \u2014 please try again.';
+      if(errEl){
+        errEl.textContent = '\u26a0\ufe0f ' + (msg === 'overloaded'
+          ? 'The AI is busy right now \u2014 please try again in a moment.'
+          : msg === 'moderated'
+          ? 'The content filter blocked this change. Try rewording and click Apply again.'
+          : msg);
+        errEl.classList.add('visible');
+      }
+    } else {
+      _variations[idx].imageUrl = data.imageUrl;
+      if(input) input.value = '';
+      renderVariations();
+      showToast('Change applied!');
+    }
+  } catch(err){
+    if(errEl){ errEl.textContent = '\u26a0\ufe0f Network error: ' + (err instanceof Error ? err.message : String(err)); errEl.classList.add('visible'); }
+  }
+  _isRefining = false;
+  if(btn){ btn.disabled = false; btn.textContent = 'Apply'; }
 }
 
 // ── Template selection ─────────────────────────────────────────────────────────
