@@ -2079,7 +2079,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .brand span{color:var(--burg)}
 .brand-logo{height:42px;width:auto;display:block;flex-shrink:0}
 .hdr-badge{background:linear-gradient(135deg,#7C1C2E,#9b2c3e);color:#fff;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:4px 14px;border-radius:20px}
-.layout{display:grid;grid-template-columns:1fr 1fr 480px;flex:1;min-height:0;overflow:hidden}
+.layout{display:grid;grid-template-columns:1fr 1fr 400px;flex:1;min-height:0;overflow:hidden}
 .fpanel{background:var(--card);border-right:1.5px solid var(--border);padding:18px 18px 24px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
 .mpanel{background:var(--surface);border-right:1.5px solid var(--border);padding:18px 18px 24px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
 .ptitle{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.06em;margin-bottom:2px}
@@ -2138,9 +2138,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .upload-zone.has-file .upload-clear{display:flex}
 .fnote{font-size:11.5px;color:var(--ink-light);line-height:1.4}
 /* Generate button */
-.gen-btn{width:100%;padding:13px 16px;background:linear-gradient(135deg,#1a1a2e,#3D1A6B);color:#fff;border:none;border-radius:10px;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.14em;cursor:pointer;transition:all .25s;display:flex;align-items:center;justify-content:center;gap:8px;flex-shrink:0}
-.gen-btn:hover:not(:disabled){background:linear-gradient(135deg,#2a2a4e,#5a2490);transform:translateY(-1px);box-shadow:0 6px 24px rgba(80,30,180,.35)}
-.gen-btn:disabled{background:#999;cursor:not-allowed;transform:none;box-shadow:none}
+.gen-btn{width:100%;padding:14px 16px;background:linear-gradient(135deg,#b91c1c,#7C1C2E);color:#fff;border:none;border-radius:10px;font-family:'Bebas Neue',sans-serif;font-size:19px;letter-spacing:.16em;cursor:pointer;transition:all .25s;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 18px rgba(124,28,46,.55)}
+.gen-btn:hover:not(:disabled){background:linear-gradient(135deg,#dc2626,#9b2235);transform:translateY(-1px);box-shadow:0 8px 28px rgba(124,28,46,.7)}
+.gen-btn:active:not(:disabled){transform:translateY(0);box-shadow:0 2px 10px rgba(124,28,46,.4)}
+.gen-btn:disabled{background:#4b5563;box-shadow:none;cursor:not-allowed;transform:none;color:rgba(255,255,255,.5)}
 .gen-spark{font-size:17px;animation:sp 2s ease-in-out infinite}
 @keyframes sp{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
 .err-box{padding:14px 16px;background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;font-size:14px;color:#991b1b;line-height:1.5;display:none;margin-top:4px}
@@ -2148,7 +2149,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .field-error{border-color:#ef4444 !important;box-shadow:0 0 0 3px rgba(239,68,68,.25) !important;animation:field-shake .35s ease}
 @keyframes field-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 /* Right panel */
-.rpanel{background:#111827;padding:18px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+.rpanel{background:#111827;display:flex;flex-direction:column;overflow:hidden}
+.rpanel-header{padding:14px 18px 12px;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.1)}
+.rpanel-scroll{flex:1;overflow-y:auto;padding:12px 18px 18px;display:flex;flex-direction:column;gap:12px}
 .preview-area{position:relative;flex-shrink:0;min-height:200px;display:flex;align-items:flex-start;justify-content:center;background:#1f2937;border-radius:12px;overflow:hidden}
 .preview-ph{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:rgba(255,255,255,.35);font-size:13.5px;text-align:center;padding:24px;line-height:1.5;min-height:260px;width:100%}
 .preview-ph-icon{font-size:44px;opacity:.6}
@@ -2220,7 +2223,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .tc-btn:last-child{margin-bottom:0}
 .tc-btn.primary{background:#0f1117;color:#fff}
 .tc-btn.secondary{background:#fff;color:#7C1C2E;border:2px solid #7C1C2E}
-@media(max-width:1100px){.layout{grid-template-columns:1fr 1fr}html,body{height:auto;overflow:auto}.rpanel{grid-column:1/-1}.fpanel,.mpanel,.rpanel{overflow:visible}.thumb-strip{flex-wrap:nowrap;overflow-x:auto}}
+@media(max-width:860px){.layout{grid-template-columns:1fr 1fr}html,body{height:auto;overflow:auto}.rpanel{grid-column:1/-1;height:auto;overflow:visible}.rpanel-scroll{overflow:visible;height:auto}.fpanel,.mpanel{overflow:visible}.thumb-strip{flex-wrap:nowrap;overflow-x:auto}}
 @media(max-width:640px){.layout{grid-template-columns:1fr}.rpanel{grid-column:auto}.photo-logo-row{grid-template-columns:1fr}}
 </style>
 </head>
@@ -2333,39 +2336,43 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 
   <!-- RIGHT: GENERATE + PREVIEW + GALLERY -->
   <div class="rpanel">
-    <button class="gen-btn" id="genBtn" onclick="generate()" disabled>
-      <span class="gen-spark">&#9889;</span>
-      <span id="genLabel">Generate My Ad</span>
-    </button>
-    <div class="preview-area" id="previewArea">
-      <div class="preview-ph" id="previewPh">
-        <div class="preview-ph-icon">&#127912;</div>
-        <div>Fill in your business info,<br>then click Generate.</div>
-      </div>
-      <img class="preview-img" id="previewImg" alt="Ad preview" style="display:none">
-      <div class="gen-overlay" id="genOverlay">
-        <div class="gen-overlay-ring"></div>
-        <div class="gen-overlay-dots">
-          <div class="gen-overlay-dot"></div>
-          <div class="gen-overlay-dot"></div>
-          <div class="gen-overlay-dot"></div>
+    <div class="rpanel-header">
+      <button class="gen-btn" id="genBtn" onclick="generate()" disabled>
+        <span class="gen-spark">&#9889;</span>
+        <span id="genLabel">Generate My Ad</span>
+      </button>
+    </div>
+    <div class="rpanel-scroll">
+      <div class="preview-area" id="previewArea">
+        <div class="preview-ph" id="previewPh">
+          <div class="preview-ph-icon">&#127912;</div>
+          <div>Fill in your business info,<br>then click Generate.</div>
         </div>
-        <div class="gen-overlay-text" id="genOverlayText">Generating&hellip;</div>
-        <div class="gen-overlay-sub" id="genOverlaySub">This takes about 30 seconds</div>
+        <img class="preview-img" id="previewImg" alt="Ad preview" style="display:none">
+        <div class="gen-overlay" id="genOverlay">
+          <div class="gen-overlay-ring"></div>
+          <div class="gen-overlay-dots">
+            <div class="gen-overlay-dot"></div>
+            <div class="gen-overlay-dot"></div>
+            <div class="gen-overlay-dot"></div>
+          </div>
+          <div class="gen-overlay-text" id="genOverlayText">Generating&hellip;</div>
+          <div class="gen-overlay-sub" id="genOverlaySub">This takes about 30 seconds</div>
+        </div>
       </div>
-    </div>
-    <div class="err-box" id="errBox"></div>
-    <div class="thumb-strip" id="thumbStrip"></div>
-    <div class="refine-panel" id="refinePanel">
-      <div class="refine-label">Suggest a Change</div>
-      <div class="refine-row">
-        <input class="refine-input" id="refineInput" type="text" placeholder='e.g. "Change the font" or "Remove the tagline"' maxlength="500" onkeydown="if(event.key==='Enter')refineCurrentAd()">
-        <button class="refine-btn" id="refineBtn" onclick="refineCurrentAd()">Apply</button>
+      <div class="err-box" id="errBox"></div>
+      <div class="thumb-strip" id="thumbStrip"></div>
+      <div class="refine-panel" id="refinePanel">
+        <div class="refine-label">Suggest a Change</div>
+        <div class="refine-row">
+          <input class="refine-input" id="refineInput" type="text" placeholder='e.g. "Change the font" or "Remove the tagline"' maxlength="500" onkeydown="if(event.key==='Enter')refineCurrentAd()">
+          <button class="refine-btn" id="refineBtn" onclick="refineCurrentAd()">Apply</button>
+        </div>
+        <div class="refine-err" id="refineErr"></div>
       </div>
-      <div class="refine-err" id="refineErr"></div>
+      <button class="use-btn" id="useBtn" onclick="selectCurrentAd()">&#10003; Use This Ad &rarr;</button>
+      <button class="dl-btn-rp" id="dlBtn" onclick="downloadSelected()">&#8595; Download</button>
     </div>
-    <button class="use-btn" id="useBtn" onclick="selectCurrentAd()">&#10003; Use This Ad &rarr;</button>
-    <button class="dl-btn-rp" id="dlBtn" onclick="downloadSelected()">&#8595; Download</button>
   </div>
 </div>
 
