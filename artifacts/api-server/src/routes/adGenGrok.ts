@@ -2149,16 +2149,28 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 @keyframes field-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 /* Right panel */
 .rpanel{background:#111827;padding:18px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
-.preview-area{flex-shrink:0;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;background:#1f2937;border-radius:12px;overflow:hidden}
+.preview-area{position:relative;flex-shrink:0;height:calc(100vh - 186px);min-height:280px;display:flex;align-items:center;justify-content:center;background:#1f2937;border-radius:12px;overflow:hidden}
 .preview-ph{display:flex;flex-direction:column;align-items:center;gap:10px;color:rgba(255,255,255,.35);font-size:13.5px;text-align:center;padding:24px;line-height:1.5}
 .preview-ph-icon{font-size:44px;opacity:.6}
 .preview-img{width:100%;height:100%;object-fit:contain;display:block}
-.thumb-strip{display:flex;gap:7px;flex-wrap:nowrap}
-.thumb-item{flex:1 1 0;min-width:0;aspect-ratio:1;border-radius:8px;overflow:hidden;cursor:pointer;border:2.5px solid transparent;transition:all .18s;background:#1f2937}
+/* Generation overlay */
+.gen-overlay{display:none;position:absolute;inset:0;border-radius:12px;flex-direction:column;align-items:center;justify-content:center;gap:18px;z-index:10;background:rgba(15,17,25,.82);backdrop-filter:blur(4px)}
+.gen-overlay.visible{display:flex}
+.gen-overlay-ring{width:56px;height:56px;border:4px solid rgba(255,255,255,.12);border-top-color:#f97316;border-radius:50%;animation:spin 1s linear infinite}
+.gen-overlay-dots{display:flex;gap:8px;align-items:center}
+.gen-overlay-dot{width:8px;height:8px;border-radius:50%;background:#f97316;animation:dot-pulse 1.2s ease-in-out infinite}
+.gen-overlay-dot:nth-child(2){animation-delay:.2s}
+.gen-overlay-dot:nth-child(3){animation-delay:.4s}
+@keyframes dot-pulse{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}
+.gen-overlay-text{font-size:14px;font-weight:600;color:rgba(255,255,255,.75);letter-spacing:.06em;text-transform:uppercase}
+.gen-overlay-sub{font-size:12px;color:rgba(255,255,255,.38);font-weight:400;margin-top:-10px}
+/* Thumb strip */
+.thumb-strip{display:flex;gap:6px;flex-wrap:nowrap}
+.thumb-item{width:80px;height:80px;flex-shrink:1;border-radius:7px;overflow:hidden;cursor:pointer;border:2.5px solid transparent;transition:all .18s;background:#1f2937}
 .thumb-item:hover{border-color:rgba(255,255,255,.4)}
 .thumb-item.selected{border-color:#f97316;box-shadow:0 0 0 1px #f97316}
 .thumb-item img{width:100%;height:100%;object-fit:cover;display:block}
-.thumb-loading{flex:1 1 0;min-width:0;aspect-ratio:1;border-radius:8px;background:#1f2937;border:2px dashed #374151;display:flex;align-items:center;justify-content:center}
+.thumb-loading{width:80px;height:80px;flex-shrink:1;border-radius:7px;background:#1f2937;border:2px dashed #374151;display:flex;align-items:center;justify-content:center}
 .slot-spinner{width:22px;height:22px;border:2.5px solid #374151;border-top-color:#f97316;border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .use-btn{width:100%;padding:12px 16px;background:var(--green);color:#fff;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:background .2s;display:none;letter-spacing:.03em}
@@ -2332,6 +2344,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
         <div>Fill in your business info,<br>then click Generate.</div>
       </div>
       <img class="preview-img" id="previewImg" alt="Ad preview" style="display:none">
+      <div class="gen-overlay" id="genOverlay">
+        <div class="gen-overlay-ring"></div>
+        <div class="gen-overlay-dots">
+          <div class="gen-overlay-dot"></div>
+          <div class="gen-overlay-dot"></div>
+          <div class="gen-overlay-dot"></div>
+        </div>
+        <div class="gen-overlay-text" id="genOverlayText">Generating&hellip;</div>
+        <div class="gen-overlay-sub" id="genOverlaySub">This takes about 30 seconds</div>
+      </div>
     </div>
     <div class="thumb-strip" id="thumbStrip"></div>
     <div class="refine-panel" id="refinePanel">
@@ -2672,6 +2694,7 @@ async function refineCurrentAd(){
   if(!imageDataUrl) return;
   if(btn){ btn.disabled = true; btn.textContent = 'Applying\u2026'; }
   _isRefining = true;
+  showOverlay('Applying your change\u2026', 'Editing the current ad');
   try{
     var resp = await fetch('/api/grok-ad-generator/refine', {
       method:'POST',
@@ -2698,6 +2721,7 @@ async function refineCurrentAd(){
   } catch(err){
     if(errEl){ errEl.textContent = '\u26a0\ufe0f Network error: ' + (err instanceof Error ? err.message : String(err)); errEl.classList.add('visible'); }
   }
+  hideOverlay();
   _isRefining = false;
   if(btn){ btn.disabled = false; btn.textContent = 'Apply'; }
 }
@@ -2711,6 +2735,20 @@ function getNextTemplate(){
   return available.length > 0 ? available[0] : ranked[0];
 }
 
+// ── Overlay helpers ────────────────────────────────────────────────────────────
+function showOverlay(text, sub){
+  var el = document.getElementById('genOverlay');
+  var textEl = document.getElementById('genOverlayText');
+  var subEl  = document.getElementById('genOverlaySub');
+  if(textEl) textEl.textContent = text || 'Generating\u2026';
+  if(subEl)  subEl.textContent  = sub  || 'This takes about 30 seconds';
+  if(el) el.classList.add('visible');
+}
+function hideOverlay(){
+  var el = document.getElementById('genOverlay');
+  if(el) el.classList.remove('visible');
+}
+
 // ── Generate ───────────────────────────────────────────────────────────────────
 async function generate(){
   if(_isGenerating || _variations.length >= 6) return;
@@ -2719,6 +2757,7 @@ async function generate(){
   hideErr();
   _isGenerating = true;
   document.getElementById('genBtn').disabled = true;
+  showOverlay(_variations.length === 0 ? 'Generating your ad\u2026' : 'Generating a new variation\u2026', 'This takes about 30 seconds');
   renderVariations();
   var templateKey = getNextTemplate();
   var sw = COLOR_SWATCHES[_activeSwatchIdx] || COLOR_SWATCHES[1];
@@ -2752,6 +2791,7 @@ async function generate(){
     });
     var data = await resp.json();
     _isGenerating = false;
+    hideOverlay();
     if(!resp.ok || data.error){
       var msg = data.error || 'Generation failed \u2014 please try again.';
       showErr(msg === 'overloaded'
@@ -2766,6 +2806,7 @@ async function generate(){
     }
   }catch(err){
     _isGenerating = false;
+    hideOverlay();
     showErr('Network error: ' + (err instanceof Error ? err.message : String(err)));
   }
   renderVariations();
