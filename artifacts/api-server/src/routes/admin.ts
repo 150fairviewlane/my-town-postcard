@@ -355,6 +355,13 @@ router.delete("/admin/spots/:spotId/clear", requireAdmin, async (req, res): Prom
     })
     .where(eq(spotsTable.id, id));
 
+  // Remove all orders for this spot so the checkout guard (which blocks new
+  // purchases when a paid order exists) doesn't prevent re-purchase.
+  const deletedOrders = await db
+    .delete(ordersTable)
+    .where(eq(ordersTable.spotId, id))
+    .returning({ id: ordersTable.id });
+
   try {
     await db.insert(adminActionsTable).values({
       adminId: "admin",
@@ -365,13 +372,14 @@ router.delete("/admin/spots/:spotId/clear", requireAdmin, async (req, res): Prom
         businessName,
         businessCategory,
         previousStatus,
+        ordersDeleted: deletedOrders.length,
       },
     });
   } catch (err: any) {
     req.log.warn({ err: err?.message, spotId: id }, "Admin audit log insert failed — continuing");
   }
 
-  req.log.info({ spotId: id, previousStatus }, "Spot cleared by admin");
+  req.log.info({ spotId: id, previousStatus, ordersDeleted: deletedOrders.length }, "Spot cleared by admin");
   res.json({ success: true, spotId: id, previousStatus, businessName, businessCategory });
 });
 
