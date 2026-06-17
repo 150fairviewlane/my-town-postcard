@@ -746,6 +746,16 @@ function Dashboard({ token }) {
           >
             🖼 Image Generator
           </a>
+          <button
+            onClick={() => document.getElementById("manage-ad-spots")?.scrollIntoView({ behavior: "smooth" })}
+            style={{
+              fontSize: 13, fontWeight: 700, color: "#b91c1c",
+              background: "#fef2f2", border: "1px solid #fecaca",
+              borderRadius: 8, padding: "7px 12px", cursor: "pointer",
+            }}
+          >
+            🗑 Manage Ads
+          </button>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -934,6 +944,7 @@ function Dashboard({ token }) {
               </div>
             </div>
 
+            <div id="manage-ad-spots" />
             <ManageAdSpots
               spots={spots}
               token={token}
