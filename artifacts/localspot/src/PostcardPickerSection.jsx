@@ -734,6 +734,12 @@ const openGrokGenerator=()=>{
     // Save the complete context so the user can retry if the reserve fails,
     // without losing the ad they just created.
     savedGrokContextRef.current={formData:e.data.formData,sel:capturedSel,side:capturedSide};
+    // Re-assert sel/side/adMethod state — the component may have re-rendered
+    // many times while the popup was open.  Without this the error modal
+    // condition (sel && adMethod==="grok") can silently fail to render.
+    setSel(capturedSel);
+    setSide(capturedSide);
+    setAdMethod("grok");
     // Pass the captured spot so handleComplete never uses a stale closure value
     handleComplete(e.data.formData,capturedSel,capturedSide);
   };
@@ -928,10 +934,26 @@ return(<div style={{fontFamily:"sans-serif"}}>
           </button>
         )}
         <button
-          onClick={()=>{setAdMethod(null);setReserveError(null);localStorage.removeItem(PENDING_AD_KEY);setPendingGrokAd(null);}}
+          onClick={()=>{
+            // Keep the ad in localStorage and restore the banner — the user
+            // wants to pick a different spot, not throw away their ad.
+            try{
+              const raw=localStorage.getItem(PENDING_AD_KEY);
+              if(raw){const p=JSON.parse(raw);setPendingGrokAd(p);}
+            }catch(_){}
+            setAdMethod(null);setReserveError(null);setSel(null);
+          }}
           style={{background:"#fff",color:"#374151",border:"1.5px solid #d1d5db",borderRadius:8,padding:"11px 0",cursor:"pointer",fontWeight:600,fontSize:14,width:"100%"}}>
           Choose a different spot
         </button>
+        {savedGrokContextRef.current?.formData?.finishedAdUrl&&(
+          <a
+            href={savedGrokContextRef.current.formData.finishedAdUrl}
+            download={`my-town-ad-${(savedGrokContextRef.current.formData.businessName||'ad').replace(/\s+/g,'-')}.png`}
+            style={{display:"block",textAlign:"center",color:"#6b7280",fontSize:12,padding:"6px 0",textDecoration:"underline",cursor:"pointer"}}>
+            ↓ Download your ad image to save it
+          </a>
+        )}
       </div>
     </div>
   </div>
