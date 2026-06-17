@@ -25,9 +25,6 @@ const ACCENT_COLORS = [
   "#6B21A8", "#0e7490", "#92400e", "#374151",
 ];
 
-// ── Export pixel ratio: display=480 → native template=1148 → ratio≈2.39 ──────
-// Exporting at 2.4× gives ~1152×1375 px (native parchment template resolution,
-// print-ready at ~300 DPI for a 3.8"×4.6" ad spot).
 const EXPORT_PIXEL_RATIO = Math.round((1148 / W) * 10) / 10; // 2.4
 
 // ── Measure text width via offscreen canvas ───────────────────────────────────
@@ -46,9 +43,6 @@ function fitFontSize(text, maxW, startSize, fontFamily, fontStyle = "normal", mi
   return size;
 }
 
-// ── Two-line headline wrap ────────────────────────────────────────────────────
-// If the headline fits single-line at a comfortable size (≥18px), keep it single.
-// Otherwise find the best word-boundary split that maximises the font size.
 function wrapHeadline(text, maxW, startSize, fontFamily) {
   const upper = (text || "YOUR BUSINESS").toUpperCase();
   const singleSize = fitFontSize(upper, maxW, startSize, fontFamily);
@@ -74,7 +68,6 @@ function wrapHeadline(text, maxW, startSize, fontFamily) {
   };
 }
 
-// ── Load image URL → HTMLImageElement ─────────────────────────────────────────
 function useKonvaImage(src) {
   const [img, setImg] = useState(null);
   useEffect(() => {
@@ -88,7 +81,6 @@ function useKonvaImage(src) {
   return img;
 }
 
-// ── Parse "Item Name $X.XX" → { name, price } ────────────────────────────────
 function parseMenuItem(str) {
   if (!str) return { name: "", price: "" };
   const m = str.match(/^(.+?)\s+(\$[\d.,]+[+]?)$/);
@@ -133,6 +125,8 @@ function PolishedOverlay({ imageUrl, onClose }) {
   );
 }
 
+const MAX_GENERATIONS = 6;
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function AdGenV7Page() {
   const [, navigate] = useLocation();
@@ -161,12 +155,18 @@ export default function AdGenV7Page() {
   const [logoSrc, setLogoSrc]           = useState("");
   const [qrDataUrl, setQrDataUrl]       = useState(null);
 
-  // status
+  // generation status
   const [generating, setGenerating]         = useState(false);
   const [generatingHero, setGeneratingHero] = useState(false);
   const [polishing, setPolishing]           = useState(false);
   const [polishedUrl, setPolishedUrl]       = useState(null);
   const [error, setError]                   = useState("");
+
+  // gallery state
+  const [generatedAds, setGeneratedAds]             = useState([]);
+  const [selectedAdIndex, setSelectedAdIndex]       = useState(null);
+  const [regenerateInstruction, setRegenerateInstruction] = useState("");
+  const [generationCount, setGenerationCount]       = useState(0);
 
   const stageRef = useRef(null);
 
@@ -200,7 +200,7 @@ export default function AdGenV7Page() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [industry]);
 
-  // Generate QR code data URL client-side (no CORS issues in canvas export)
+  // Generate QR code data URL client-side
   useEffect(() => {
     if (!website) { setQrDataUrl(null); return; }
     const url = /^https?:\/\//i.test(website) ? website : "https://" + website;
@@ -210,7 +210,6 @@ export default function AdGenV7Page() {
   }, [website]);
 
   // ── Auto-fit font sizes & two-line wrap ──────────────────────────────────
-  // wrapHeadline returns { lines: string[], fontSize: number }
   const hn1Wrap = useMemo(() =>
     wrapHeadline(bizLine1 || "YOUR BUSINESS", BN1_W - 4, 46, "'Bebas Neue'"),
     [bizLine1]);
@@ -251,18 +250,16 @@ export default function AdGenV7Page() {
     setError("");
     setGenerating(true);
 
-    // Fire layout and hero (if AI tab) in parallel — spec step 9: "runs steps 1 + 2 in parallel"
     const layoutFetch = fetch("/api/ad-gen/layout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         industry, bizLine1, bizLine2, tagline, phone, address, city,
         menu: menuItems.filter(Boolean), offerAmount, offerItem, offerFine, accentColor,
+        changeInstruction: regenerateInstruction.trim() || undefined,
       }),
     });
 
-    // Hero: start immediately with a rich default prompt; layout's heroPrompt is better
-    // but runs concurrently so the image is ready sooner
     let heroFetch = null;
     if (heroTab === "ai") {
       setGeneratingHero(true);
@@ -288,28 +285,65 @@ export default function AdGenV7Page() {
       const layoutData = await layoutResp.json();
       if (!layoutResp.ok) throw new Error(layoutData.error ?? "Layout generation failed");
       const L = layoutData.layout;
-      if (L.headline1)    setBizLine1(L.headline1);
-      // headline2 is NOT applied — no random words should appear below the
-      // business name. The tagline field is the only thing that goes there.
-      if (L.tagline)      setTagline(L.tagline);
-      if (L.menu?.length) setMenuItems(L.menu.map((m) => m.name + (m.price ? " " + m.price : "")));
-      if (L.offer?.amount) setOfferAmount(L.offer.amount);
-      if (L.offer?.item)   setOfferItem(L.offer.item);
-      if (L.offer?.fine)   setOfferFine(L.offer.fine);
-      if (L.heroPrompt)              setHeroPrompt(L.heroPrompt);
-      if (L.palette?.accent)         setAccentColor(L.palette.accent);
+
+      // Resolve next values (needed for snapshot before setState fires)
+      const nextBizLine1    = L.headline1    ?? bizLine1;
+      const nextTagline     = L.tagline      ?? tagline;
+      const nextMenuItems   = L.menu?.length
+        ? L.menu.map((m) => m.name + (m.price ? " " + m.price : ""))
+        : menuItems;
+      const nextOfferAmount = L.offer?.amount ?? offerAmount;
+      const nextOfferItem   = L.offer?.item   ?? offerItem;
+      const nextOfferFine   = L.offer?.fine   ?? offerFine;
+      const nextAccentColor = L.palette?.accent ?? accentColor;
+      let   nextHeroSrc     = heroSrc;
+
+      if (L.headline1)    setBizLine1(nextBizLine1);
+      if (L.tagline)      setTagline(nextTagline);
+      if (L.menu?.length) setMenuItems(nextMenuItems);
+      if (L.offer?.amount) setOfferAmount(nextOfferAmount);
+      if (L.offer?.item)   setOfferItem(nextOfferItem);
+      if (L.offer?.fine)   setOfferFine(nextOfferFine);
+      if (L.heroPrompt)    setHeroPrompt(L.heroPrompt);
+      if (L.palette?.accent) setAccentColor(nextAccentColor);
 
       if (heroResp) {
         const heroData = await heroResp.json();
-        if (heroResp.ok && heroData.imageUrl) setHeroSrc(heroData.imageUrl);
+        if (heroResp.ok && heroData.imageUrl) {
+          nextHeroSrc = heroData.imageUrl;
+          setHeroSrc(heroData.imageUrl);
+        }
       }
+
+      // Snapshot everything needed to restore this version
+      const snapshot = {
+        heroSrc:     nextHeroSrc,
+        accentColor: nextAccentColor,
+        bizLine1:    nextBizLine1,
+        bizLine2,
+        tagline:     nextTagline,
+        menuItems:   nextMenuItems,
+        offerAmount: nextOfferAmount,
+        offerItem:   nextOfferItem,
+        offerFine:   nextOfferFine,
+      };
+
+      setGeneratedAds(prev => {
+        const next = [...prev, snapshot].slice(0, MAX_GENERATIONS);
+        setSelectedAdIndex(next.length - 1);
+        return next;
+      });
+      setGenerationCount(prev => prev + 1);
+      setRegenerateInstruction("");
+
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generation failed");
     } finally {
       setGenerating(false);
       if (heroFetch) setGeneratingHero(false);
     }
-  }, [industry, bizLine1, bizLine2, tagline, phone, address, city, menuItems, offerAmount, offerItem, offerFine, accentColor, heroTab, heroPrompt]);
+  }, [industry, bizLine1, bizLine2, tagline, phone, address, city, menuItems,
+      offerAmount, offerItem, offerFine, accentColor, heroTab, heroPrompt, heroSrc, regenerateInstruction]);
 
   const handleGenerateHeroOnly = useCallback(async () => {
     const p = heroPrompt ||
@@ -360,37 +394,26 @@ export default function AdGenV7Page() {
     const stage = stageRef.current;
     if (!stage) return;
     try {
-      // Step 1: Export portrait canvas at native template resolution (~1152×1375 px)
       const adDataUrl = stage.toDataURL({ pixelRatio: EXPORT_PIXEL_RATIO, mimeType: "image/png" });
-
-      // Step 2: Composite onto 3600×2700 postcard canvas (12"×9" @ 300 DPI per spec)
       const out = document.createElement("canvas");
       out.width = 3600;
       out.height = 2700;
       const ctx = out.getContext("2d");
       if (!ctx) throw new Error("Canvas context unavailable");
-
-      // Parchment-toned background fill
       ctx.fillStyle = "#EDD9AB";
       ctx.fillRect(0, 0, 3600, 2700);
-
-      // Load the rendered ad image
       const adImg = await new Promise((resolve, reject) => {
         const img = new Image();
         img.onload = () => resolve(img);
         img.onerror = () => reject(new Error("Failed to load ad for export"));
         img.src = adDataUrl;
       });
-
-      // Scale portrait ad to fill the full postcard height (2700 px), centered horizontally
-      const adNativeW = Math.round(W * EXPORT_PIXEL_RATIO); // ~1152
-      const adNativeH = Math.round(H * EXPORT_PIXEL_RATIO); // ~1375
-      const scale = 2700 / adNativeH;                        // ~1.96
-      const scaledAdW = Math.round(adNativeW * scale);        // ~2260
-      const adOffsetX = Math.round((3600 - scaledAdW) / 2);  // ~670
-
+      const adNativeW = Math.round(W * EXPORT_PIXEL_RATIO);
+      const adNativeH = Math.round(H * EXPORT_PIXEL_RATIO);
+      const scale = 2700 / adNativeH;
+      const scaledAdW = Math.round(adNativeW * scale);
+      const adOffsetX = Math.round((3600 - scaledAdW) / 2);
       ctx.drawImage(adImg, adOffsetX, 0, scaledAdW, 2700);
-
       const finalUrl = out.toDataURL("image/png");
       const a = document.createElement("a");
       a.download = (bizLine1 || "my-ad").replace(/\s+/g, "-").toLowerCase() + ".png";
@@ -404,21 +427,34 @@ export default function AdGenV7Page() {
     }
   }, [bizLine1]);
 
+  // Restore a previously generated version
+  const handleSelectAd = useCallback((index) => {
+    const ad = generatedAds[index];
+    if (!ad) return;
+    setSelectedAdIndex(index);
+    setHeroSrc(ad.heroSrc);
+    setAccentColor(ad.accentColor);
+    setBizLine1(ad.bizLine1);
+    setBizLine2(ad.bizLine2);
+    setTagline(ad.tagline);
+    setMenuItems(ad.menuItems);
+    setOfferAmount(ad.offerAmount);
+    setOfferItem(ad.offerItem);
+    setOfferFine(ad.offerFine);
+  }, [generatedAds]);
+
   // ── Konva Stage ───────────────────────────────────────────────────────────
   const konvaCanvas = (
     <Stage width={W} height={H} ref={stageRef} style={{ display: "block" }}>
       <Layer>
-        {/* 1 — Template background */}
         {templateImg && <KImage x={0} y={0} width={W} height={H} image={templateImg} />}
 
-        {/* 2 — Hero photo (clipped to photo region) */}
         {heroImg && (
           <Group clipX={PH_X} clipY={PH_Y} clipWidth={PH_W} clipHeight={PH_H}>
             <KImage x={PH_X} y={PH_Y} width={PH_W} height={PH_H} image={heroImg} />
           </Group>
         )}
 
-        {/* 3 — Left gradient blend (softens left edge of photo into parchment) */}
         {heroImg && (
           <Rect
             x={PH_X} y={PH_Y} width={90} height={PH_H}
@@ -428,7 +464,6 @@ export default function AdGenV7Page() {
           />
         )}
 
-        {/* 4 — Bottom gradient blend (darkens photo bottom for text) */}
         {heroImg && (
           <Rect
             x={PH_X} y={Math.round(PH_H * 0.44)} width={PH_W} height={Math.round(PH_H * 0.56)}
@@ -438,7 +473,6 @@ export default function AdGenV7Page() {
           />
         )}
 
-        {/* 5 — Tick marks beside headline (height spans all wrapped lines) */}
         {(() => {
           const tickH = hn1Wrap.lines.length * (hn1Wrap.fontSize * 1.1);
           return (
@@ -451,7 +485,6 @@ export default function AdGenV7Page() {
           );
         })()}
 
-        {/* 6 — Headline row 1 (Bebas Neue) — wraps to two lines for long names */}
         {hn1Wrap.lines.map((line, i) => (
           <Text
             key={"hn1-" + i}
@@ -466,7 +499,6 @@ export default function AdGenV7Page() {
           />
         ))}
 
-        {/* 7 — Headline row 2 (Pacifico script) */}
         {bizLine2 ? (
           <Text
             x={BN2_X} y={BN2_Y} width={BN2_W}
@@ -478,7 +510,6 @@ export default function AdGenV7Page() {
           />
         ) : null}
 
-        {/* 8 — Tagline gradient rule */}
         <Rect
           x={TL_X + 4} y={TL_Y - 8} width={TL_W - 8} height={1.5}
           fillLinearGradientStartPoint={{ x: 0, y: 0 }}
@@ -486,7 +517,6 @@ export default function AdGenV7Page() {
           fillLinearGradientColorStops={[0, "rgba(0,0,0,0)", 0.5, accentColor + "cc", 1, "rgba(0,0,0,0)"]}
         />
 
-        {/* 9 — Tagline (Dancing Script) */}
         <Text
           x={TL_X} y={TL_Y} width={TL_W}
           text={tagline || (ind?.taglines?.[0] ?? "Quality Service")}
@@ -499,7 +529,6 @@ export default function AdGenV7Page() {
           lineHeight={1.2}
         />
 
-        {/* 10 — Menu rows (4 items with dotted leaders) */}
         {parsedMenu.map((item, i) => {
           if (!item.name) return null;
           const ry = MN_Y + i * MN_ROW + Math.round((MN_ROW - 11) / 2);
@@ -537,7 +566,6 @@ export default function AdGenV7Page() {
           );
         })}
 
-        {/* 11 — Coupon box */}
         {offerAmount ? (
           <Group>
             <Rect
@@ -577,7 +605,6 @@ export default function AdGenV7Page() {
           </Group>
         ) : null}
 
-        {/* 12 — Footer phone */}
         {phone ? (
           <Text
             x={FT_X} y={FT_Y}
@@ -598,7 +625,6 @@ export default function AdGenV7Page() {
           />
         ) : null}
 
-        {/* 13 — Logo (optional) with soft drop shadow */}
         {logoImg ? (
           <Group
             shadowColor="rgba(0,0,0,0.42)"
@@ -615,7 +641,6 @@ export default function AdGenV7Page() {
           </Group>
         ) : null}
 
-        {/* 14 — QR code (generated client-side — no CORS issues) */}
         {qrImg ? (
           <Group>
             <Rect
@@ -642,10 +667,21 @@ export default function AdGenV7Page() {
   const smallLabel = {
     fontSize: 11, fontWeight: 600, color: "#6b7280", marginBottom: 3, display: "block",
   };
+  const colPanel = {
+    background: "#fff", padding: "20px 18px",
+    display: "flex", flexDirection: "column", gap: 18,
+    position: "sticky", top: 60,
+    maxHeight: "calc(100vh - 80px)", overflowY: "auto",
+  };
+
+  const canGenerate = !generating && !generatingHero && !!bizLine1;
+  const canRegenerate = canGenerate && generationCount < MAX_GENERATIONS;
+  const hasGenerated = generationCount > 0;
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div style={{ minHeight: "100vh", background: "#f5f0eb", fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#f0ece7", fontFamily: "'DM Sans', sans-serif" }}>
+
       {/* Header */}
       <div style={{
         background: "#fff", borderBottom: "1px solid #e5e7eb",
@@ -665,17 +701,27 @@ export default function AdGenV7Page() {
         }}>v7 · Canvas + Polish</div>
       </div>
 
+      {/* Three-column layout */}
       <div className="adv7-layout" style={{
-        display: "grid", gridTemplateColumns: "340px 1fr",
-        gap: 0, maxWidth: 1080, margin: "0 auto", padding: "20px 16px",
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr 520px",
+        gap: 0,
+        maxWidth: 1400,
+        margin: "0 auto",
+        padding: "20px 16px",
         alignItems: "start",
       }}>
-        {/* ── FORM PANEL ── */}
+
+        {/* ── LEFT: Text fields ── */}
         <div style={{
-          background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb",
-          padding: "20px 16px", display: "flex", flexDirection: "column", gap: 18,
-          position: "sticky", top: 60, maxHeight: "calc(100vh - 80px)", overflowY: "auto",
+          ...colPanel,
+          borderRadius: "12px 0 0 12px",
+          border: "1px solid #e5e7eb",
+          borderRight: "none",
         }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#374151", letterSpacing: "0.05em", textTransform: "uppercase", paddingBottom: 10, borderBottom: "1px solid #f3f4f6" }}>
+            Business Info
+          </div>
 
           {/* Industry */}
           <div>
@@ -688,11 +734,11 @@ export default function AdGenV7Page() {
           {/* Business Name */}
           <div>
             <div style={sectionLabel}>Business Name</div>
-            <label style={smallLabel}>Line 1 (Headline — Bebas Neue)</label>
+            <label style={smallLabel}>Headline (large, block letters)</label>
             <input value={bizLine1} onChange={e => setBizLine1(e.target.value)}
                    placeholder="Tony's Pizza" style={inp} />
             <div style={{ height: 7 }} />
-            <label style={smallLabel}>Line 2 (Script accent, optional — Pacifico)</label>
+            <label style={smallLabel}>Script accent (optional)</label>
             <input value={bizLine2} onChange={e => setBizLine2(e.target.value)}
                    placeholder="Since 1985" style={inp} />
           </div>
@@ -702,6 +748,90 @@ export default function AdGenV7Page() {
             <div style={sectionLabel}>Tagline</div>
             <input value={tagline} onChange={e => setTagline(e.target.value)}
                    placeholder="AI will craft one for you" style={inp} />
+          </div>
+
+          {/* Contact */}
+          <div>
+            <div style={sectionLabel}>Contact Info</div>
+            <label style={smallLabel}>Phone</label>
+            <input value={phone} onChange={e => setPhone(e.target.value)}
+                   placeholder="(706) 555-1234" style={inp} />
+            <div style={{ height: 7 }} />
+            <label style={smallLabel}>Street Address</label>
+            <input value={address} onChange={e => setAddress(e.target.value)}
+                   placeholder="123 Main St" style={inp} />
+            <div style={{ height: 7 }} />
+            <label style={smallLabel}>City / State</label>
+            <input value={city} onChange={e => setCity(e.target.value)}
+                   placeholder="Clarkesville, GA" style={inp} />
+          </div>
+
+          {/* Website / QR */}
+          <div>
+            <div style={sectionLabel}>Website → QR Code</div>
+            <input value={website} onChange={e => setWebsite(e.target.value)}
+                   placeholder="yoursite.com" style={inp} />
+            {qrDataUrl && (
+              <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8 }}>
+                <img src={qrDataUrl} alt="QR preview" style={{ width: 40, height: 40, borderRadius: 4, border: "1px solid #e5e7eb" }} />
+                <span style={{ fontSize: 11, color: "#6b7280" }}>QR code appears on the canvas</span>
+              </div>
+            )}
+          </div>
+
+          {/* Menu / Services */}
+          <div>
+            <div style={sectionLabel}>Menu / Services (up to 4)</div>
+            {menuItems.map((item, i) => (
+              <div key={i} style={{ marginBottom: 5 }}>
+                <input
+                  value={item}
+                  onChange={e => setMenuItems(prev => prev.map((v, j) => j === i ? e.target.value : v))}
+                  placeholder={`Item ${i + 1}  (e.g. Large Pizza $14.99)`}
+                  style={inp}
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Special Offer */}
+          <div>
+            <div style={sectionLabel}>Special Offer</div>
+            <label style={smallLabel}>Offer Headline</label>
+            <input value={offerAmount} onChange={e => setOfferAmount(e.target.value)}
+                   placeholder="$5 OFF" style={inp} />
+            <div style={{ height: 7 }} />
+            <label style={smallLabel}>Item / Description</label>
+            <input value={offerItem} onChange={e => setOfferItem(e.target.value)}
+                   placeholder="Any Large Order" style={inp} />
+            <div style={{ height: 7 }} />
+            <label style={smallLabel}>Fine Print</label>
+            <input value={offerFine} onChange={e => setOfferFine(e.target.value)} style={inp} />
+          </div>
+        </div>
+
+        {/* ── MIDDLE: Visual inputs ── */}
+        <div style={{
+          ...colPanel,
+          border: "1px solid #e5e7eb",
+        }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#374151", letterSpacing: "0.05em", textTransform: "uppercase", paddingBottom: 10, borderBottom: "1px solid #f3f4f6" }}>
+            Visual Style
+          </div>
+
+          {/* Accent Color */}
+          <div>
+            <div style={sectionLabel}>Accent Color</div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {ACCENT_COLORS.map(c => (
+                <button key={c} onClick={() => setAccentColor(c)} style={{
+                  width: 32, height: 32, borderRadius: "50%", background: c,
+                  border: "none", cursor: "pointer",
+                  outline: accentColor === c ? "3px solid #111" : "3px solid transparent",
+                  outlineOffset: 2,
+                }} />
+              ))}
+            </div>
           </div>
 
           {/* Hero Photo */}
@@ -781,117 +911,22 @@ export default function AdGenV7Page() {
               <span style={{ fontSize: 12, color: "#6b7280" }}>{logoSrc ? "Change logo" : "Upload your logo"}</span>
             </label>
           </div>
-
-          {/* Contact Info */}
-          <div>
-            <div style={sectionLabel}>Contact Info</div>
-            <label style={smallLabel}>Phone</label>
-            <input value={phone} onChange={e => setPhone(e.target.value)}
-                   placeholder="(706) 555-1234" style={inp} />
-            <div style={{ height: 7 }} />
-            <label style={smallLabel}>Street Address</label>
-            <input value={address} onChange={e => setAddress(e.target.value)}
-                   placeholder="123 Main St" style={inp} />
-            <div style={{ height: 7 }} />
-            <label style={smallLabel}>City / State</label>
-            <input value={city} onChange={e => setCity(e.target.value)}
-                   placeholder="Clarkesville, GA" style={inp} />
-          </div>
-
-          {/* Website / QR */}
-          <div>
-            <div style={sectionLabel}>Website → QR Code</div>
-            <input value={website} onChange={e => setWebsite(e.target.value)}
-                   placeholder="yoursite.com" style={inp} />
-            {qrDataUrl && (
-              <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8 }}>
-                <img src={qrDataUrl} alt="QR preview" style={{ width: 48, height: 48, borderRadius: 4, border: "1px solid #e5e7eb" }} />
-                <span style={{ fontSize: 11, color: "#6b7280" }}>QR code appears on the canvas</span>
-              </div>
-            )}
-          </div>
-
-          {/* Menu / Services */}
-          <div>
-            <div style={sectionLabel}>Menu / Services (up to 4)</div>
-            {menuItems.map((item, i) => (
-              <div key={i} style={{ marginBottom: 5 }}>
-                <input
-                  value={item}
-                  onChange={e => setMenuItems(prev => prev.map((v, j) => j === i ? e.target.value : v))}
-                  placeholder={`Item ${i + 1}  (e.g. Large Pizza $14.99)`}
-                  style={inp}
-                />
-              </div>
-            ))}
-          </div>
-
-          {/* Special Offer */}
-          <div>
-            <div style={sectionLabel}>Special Offer</div>
-            <label style={smallLabel}>Offer Headline</label>
-            <input value={offerAmount} onChange={e => setOfferAmount(e.target.value)}
-                   placeholder="$5 OFF" style={inp} />
-            <div style={{ height: 7 }} />
-            <label style={smallLabel}>Item / Description</label>
-            <input value={offerItem} onChange={e => setOfferItem(e.target.value)}
-                   placeholder="Any Large Order" style={inp} />
-            <div style={{ height: 7 }} />
-            <label style={smallLabel}>Fine Print</label>
-            <input value={offerFine} onChange={e => setOfferFine(e.target.value)} style={inp} />
-          </div>
-
-          {/* Accent Color */}
-          <div>
-            <div style={sectionLabel}>Accent Color</div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {ACCENT_COLORS.map(c => (
-                <button key={c} onClick={() => setAccentColor(c)} style={{
-                  width: 28, height: 28, borderRadius: "50%", background: c,
-                  border: "none", cursor: "pointer",
-                  outline: accentColor === c ? "2.5px solid #111" : "2.5px solid transparent",
-                  outlineOffset: 2,
-                }} />
-              ))}
-            </div>
-          </div>
-
-          {/* Generate button */}
-          <button
-            onClick={handleGenerate}
-            disabled={generating || generatingHero}
-            style={{
-              width: "100%", padding: "11px 0",
-              background: (generating || generatingHero) ? "#9ca3af" : "#7B1418",
-              color: "#fff", border: "none", borderRadius: 9,
-              fontWeight: 800, fontSize: 14, cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-            }}
-          >
-            {(generating || generatingHero) ? "Generating…" : "✦ Generate with AI"}
-          </button>
-
-          {error && (
-            <div style={{
-              background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8,
-              padding: "9px 12px", fontSize: 12, color: "#991b1b", lineHeight: 1.5,
-            }}>{error}</div>
-          )}
         </div>
 
-        {/* ── PREVIEW PANEL ── */}
-        <div style={{ paddingLeft: 24 }}>
+        {/* ── RIGHT: Canvas + generate + gallery ── */}
+        <div style={{ paddingLeft: 20, position: "sticky", top: 60 }}>
           <div style={{
-            background: "#181010", borderRadius: 16, padding: "22px 20px",
-            display: "flex", flexDirection: "column", alignItems: "center", gap: 16,
+            background: "#181010", borderRadius: 16, padding: "20px 18px",
+            display: "flex", flexDirection: "column", alignItems: "center", gap: 14,
             boxShadow: "0 12px 48px rgba(0,0,0,0.4)",
           }}>
+
             <div style={{
               fontSize: 10, fontWeight: 700, letterSpacing: "0.14em",
               color: "rgba(255,255,255,0.38)", textTransform: "uppercase",
             }}>Live Canvas Preview · {W} × {H} px</div>
 
-            {/* Canvas */}
+            {/* Canvas — scale to fit 480px inside ~484px available */}
             <div style={{
               boxShadow: "0 16px 56px rgba(0,0,0,0.7), 0 2px 8px rgba(0,0,0,0.4)",
               borderRadius: 6, overflow: "hidden", maxWidth: "100%",
@@ -899,40 +934,10 @@ export default function AdGenV7Page() {
               {konvaCanvas}
             </div>
 
-            {/* Action buttons */}
-            <div style={{ display: "flex", gap: 8, width: "100%" }}>
-              <button
-                onClick={handlePolish}
-                disabled={polishing}
-                style={{
-                  flex: 1, padding: "10px 0",
-                  background: polishing ? "#6b7280" : "#92400e",
-                  color: "#fff", border: "none", borderRadius: 8,
-                  fontWeight: 700, fontSize: 13, cursor: "pointer",
-                }}
-              >{polishing ? "Polishing…" : "✦ AI Polish"}</button>
-              <button
-                onClick={handleDownload}
-                style={{
-                  flex: 1, padding: "10px 0",
-                  background: "#1a3d5c",
-                  color: "#fff", border: "none", borderRadius: 8,
-                  fontWeight: 700, fontSize: 13, cursor: "pointer",
-                }}
-              >↓ Download (3600×2700)</button>
-            </div>
-
-            <div style={{
-              fontSize: 10, color: "rgba(255,255,255,0.28)", textAlign: "center", lineHeight: 1.6,
-            }}>
-              Polish blends all canvas layers into a seamless AI-rendered image.<br />
-              Download exports at 3600×2700 px (12"×9" postcard, 300 DPI).
-            </div>
-
-            {/* Hero generation status */}
+            {/* Hero generation spinner */}
             {generatingHero && (
               <div style={{
-                display: "flex", alignItems: "center", gap: 8,
+                display: "flex", alignItems: "center", gap: 8, alignSelf: "stretch",
                 background: "rgba(255,255,255,0.07)", borderRadius: 8, padding: "8px 14px",
               }}>
                 <div style={{
@@ -940,11 +945,179 @@ export default function AdGenV7Page() {
                   borderTopColor: "#C8541A", borderRadius: "50%",
                   animation: "adv7spin 0.8s linear infinite", flexShrink: 0,
                 }} />
-                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }}>Generating hero image with AI…</span>
+                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }}>Generating hero image…</span>
+              </div>
+            )}
+
+            {/* Primary generate / regenerate button */}
+            <button
+              onClick={handleGenerate}
+              disabled={!canGenerate || (!hasGenerated ? false : !canRegenerate)}
+              style={{
+                width: "100%", padding: "12px 0",
+                background: !canGenerate ? "#9ca3af"
+                  : hasGenerated ? "#92400e"
+                  : "#7B1418",
+                color: "#fff", border: "none", borderRadius: 9,
+                fontWeight: 800, fontSize: 14, cursor: canGenerate && (hasGenerated ? canRegenerate : true) ? "pointer" : "not-allowed",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                opacity: !canGenerate || (hasGenerated && !canRegenerate) ? 0.5 : 1,
+              }}
+            >
+              {generating || generatingHero
+                ? "Generating…"
+                : hasGenerated
+                  ? "↺ Regenerate"
+                  : "✦ Generate with AI"}
+            </button>
+
+            {/* Optional change instruction (shown after first generation) */}
+            {hasGenerated && canRegenerate && (
+              <div style={{ width: "100%" }}>
+                <input
+                  value={regenerateInstruction}
+                  onChange={e => setRegenerateInstruction(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && canGenerate && canRegenerate && handleGenerate()}
+                  placeholder="What should change? (leave blank to remix as-is)"
+                  disabled={generating || generatingHero}
+                  style={{
+                    ...inp,
+                    background: "rgba(255,255,255,0.09)",
+                    border: "1.5px solid rgba(255,255,255,0.15)",
+                    color: "#fff",
+                    fontSize: 12,
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Thumbnail gallery — all generated versions */}
+            {generatedAds.length > 0 && (
+              <div style={{ width: "100%" }}>
+                <div style={{
+                  fontSize: 9, fontWeight: 700, letterSpacing: "0.1em",
+                  textTransform: "uppercase", color: "rgba(255,255,255,0.35)",
+                  marginBottom: 8,
+                }}>Your versions — click to switch</div>
+                <div style={{
+                  display: "flex", gap: 8, overflowX: "auto",
+                  paddingBottom: 4,
+                }}>
+                  {generatedAds.map((ad, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleSelectAd(i)}
+                      style={{
+                        flexShrink: 0, padding: 0, background: "none", border: "none",
+                        cursor: "pointer", display: "flex", flexDirection: "column", gap: 0,
+                      }}
+                    >
+                      {/* Thumbnail image (hero photo as visual proxy) */}
+                      <div style={{
+                        width: 72, height: 90,
+                        borderRadius: "5px 5px 0 0",
+                        overflow: "hidden",
+                        outline: selectedAdIndex === i
+                          ? "2.5px solid #C8541A"
+                          : "2.5px solid rgba(255,255,255,0.12)",
+                        outlineOffset: 0,
+                        background: "#2a1f1a",
+                        position: "relative",
+                      }}>
+                        {ad.heroSrc ? (
+                          <img
+                            src={ad.heroSrc}
+                            alt={`Version ${i + 1}`}
+                            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                          />
+                        ) : (
+                          <div style={{
+                            width: "100%", height: "100%",
+                            background: "linear-gradient(160deg, #2a1f1a, #3d2b1f)",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 18, color: "rgba(255,255,255,0.3)",
+                          }}>✦</div>
+                        )}
+                        {/* Version number badge */}
+                        <div style={{
+                          position: "absolute", top: 3, left: 3,
+                          background: "rgba(0,0,0,0.65)",
+                          color: "#fff", fontSize: 8, fontWeight: 800,
+                          padding: "1px 4px", borderRadius: 3, lineHeight: 1.4,
+                        }}>{i + 1}</div>
+                        {/* Selected checkmark */}
+                        {selectedAdIndex === i && (
+                          <div style={{
+                            position: "absolute", inset: 0,
+                            background: "rgba(200,84,26,0.18)",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                          }}>
+                            <div style={{
+                              background: "#C8541A", borderRadius: "50%",
+                              width: 20, height: 20, display: "flex",
+                              alignItems: "center", justifyContent: "center",
+                              fontSize: 11, color: "#fff", fontWeight: 900,
+                            }}>✓</div>
+                          </div>
+                        )}
+                      </div>
+                      {/* Accent color strip */}
+                      <div style={{
+                        width: 72, height: 5,
+                        background: ad.accentColor,
+                        borderRadius: "0 0 4px 4px",
+                      }} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Polish + Download — only after first generation */}
+            {hasGenerated && (
+              <div style={{ display: "flex", gap: 8, width: "100%" }}>
+                <button
+                  onClick={handlePolish}
+                  disabled={polishing}
+                  style={{
+                    flex: 1, padding: "10px 0",
+                    background: polishing ? "#6b7280" : "#92400e",
+                    color: "#fff", border: "none", borderRadius: 8,
+                    fontWeight: 700, fontSize: 13, cursor: "pointer",
+                  }}
+                >{polishing ? "Polishing…" : "✦ AI Polish"}</button>
+                <button
+                  onClick={handleDownload}
+                  style={{
+                    flex: 1, padding: "10px 0",
+                    background: "#1a3d5c",
+                    color: "#fff", border: "none", borderRadius: 8,
+                    fontWeight: 700, fontSize: 13, cursor: "pointer",
+                  }}
+                >↓ Download</button>
+              </div>
+            )}
+
+            {error && (
+              <div style={{
+                width: "100%",
+                background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.35)",
+                borderRadius: 8, padding: "9px 12px", fontSize: 12,
+                color: "#fca5a5", lineHeight: 1.5,
+              }}>{error}</div>
+            )}
+
+            {!hasGenerated && (
+              <div style={{
+                fontSize: 10, color: "rgba(255,255,255,0.25)", textAlign: "center", lineHeight: 1.6,
+              }}>
+                Fill in your business name and click Generate.<br />
+                AI will write your copy and choose colors.
               </div>
             )}
           </div>
         </div>
+
       </div>
 
       {polishedUrl && (
@@ -953,7 +1126,10 @@ export default function AdGenV7Page() {
 
       <style>{`
         @keyframes adv7spin { to { transform: rotate(360deg); } }
-        @media (max-width: 700px) {
+        @media (max-width: 900px) {
+          .adv7-layout { grid-template-columns: 1fr 1fr !important; }
+        }
+        @media (max-width: 640px) {
           .adv7-layout { grid-template-columns: 1fr !important; }
         }
       `}</style>
