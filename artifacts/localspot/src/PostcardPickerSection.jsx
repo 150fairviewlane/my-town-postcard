@@ -11,7 +11,7 @@ const W = 1200, H = 900;
 
 // FRONT: 3 XL (4"x5") top row + 4 Large (3"x4" portrait) bottom row
 const FRONT = [
-{ id:"xl1", dbGridArea:"mb", size:"XL", price:499, x:0,   y:0,   w:400, h:500, sample:"biscuits", tmpl:"photo" },
+{ id:"xl1", dbGridArea:"mb", size:"XL", price:499, x:0,   y:0,   w:400, h:500, sample:null },
 { id:"xl2", dbGridArea:"dn", size:"XL", price:499, x:400, y:0,   w:400, h:500, sample:null       },
 { id:"xl3", dbGridArea:"re", size:"XL", price:499, x:800, y:0,   w:400, h:500, sample:"dental",   tmpl:"clean" },
 { id:"l1",  dbGridArea:"l1", size:"L",  price:399, x:0,   y:500, w:300, h:400, sample:"hvac",    tmpl:"stamp",  imgSrc:"/retro_game_city.png"  },
@@ -454,10 +454,10 @@ if(liveSpot&&liveSpot.status==="paid"&&liveSpot.templateData){
     </div>
   </ScaledCell>);
 }
-// Paid spot without template data → show adFileUrl image, sample ad, or business-name placeholder, never "SOLD"
+// Paid spot without template data → show adFileUrl image or business-name placeholder.
+// Never fall back to a hardcoded demo ad for a real paid spot.
 if(liveSpot&&liveSpot.status==="paid"){
   if(liveSpot.adFileUrl){return(<ScaledCell spot={spot} scale={scale}><div style={{width:spot.w,height:spot.h,pointerEvents:"none",background:"#000",overflow:"hidden"}}><img src={liveSpot.adFileUrl} alt={liveSpot.businessName||""} style={{width:"100%",height:"100%",objectFit:"contain",display:"block"}}/></div></ScaledCell>);}
-  if(k&&ADS[k]){const d=ADS[k];return(<ScaledCell spot={spot} scale={scale}><div style={{width:spot.w,height:spot.h,pointerEvents:"none"}}>{spot.size==="XL"&&<AdXL d={d} tmpl={t}/>}{spot.size==="L"&&<AdL d={d} tmpl={t}/>}{spot.size==="M"&&<AdM d={d} w={spot.w} h={spot.h} tmpl={t}/>}{spot.size==="S"&&<AdS d={d}/>}</div></ScaledCell>);}
   const biz=liveSpot.businessName||"Local Business";
   const fz=spot.size==="XL"?22:spot.size==="L"?18:13;
   return(<ScaledCell spot={spot} scale={scale}><div style={{width:spot.w,height:spot.h,background:"linear-gradient(135deg,#1a2744,#0f1729)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",pointerEvents:"none",padding:12,boxSizing:"border-box",gap:8}}><div style={{color:"rgba(255,255,255,0.35)",fontSize:7,fontWeight:700,letterSpacing:2,textTransform:"uppercase"}}>Community Ad</div><div style={{color:"#fff",fontWeight:900,fontSize:fz,fontFamily:"Georgia,serif",textAlign:"center",lineHeight:1.2}}>{biz}</div><div style={{width:32,height:2,background:"rgba(255,255,255,0.2)",borderRadius:1}}/><div style={{color:"rgba(255,255,255,0.4)",fontSize:8,fontFamily:"sans-serif"}}>mytownpostcard.com</div></div></ScaledCell>);
