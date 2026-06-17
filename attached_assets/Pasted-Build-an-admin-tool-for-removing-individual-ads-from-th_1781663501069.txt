@@ -1,0 +1,121 @@
+Build an admin tool for removing individual ads from the postcard picker.
+Add it as a new section on the existing admin page called "Manage Ad Spots."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+UI — POSTCARD MOCKUP WITH DELETE BUTTONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Render a to-scale visual mockup of both postcard sides (front and back)
+using the exact same layout and spot coordinates as the public ad picker
+(PostcardPickerSection). Use a tab or toggle to switch between Front Side
+and Back Side.
+
+For each spot that has a reserved or sold ad (status = 'reserved' or
+'sold', templateData is not null):
+- Render the actual finished ad image using the finishedAdUrl stored in
+  templateData — the same image the public picker displays. Use an <img>
+  tag with the same ScaledCell positioning the picker uses so the image
+  fills the spot exactly.
+- Overlay a red "Remove Ad" button centered on the spot. The button
+  should be semi-transparent so the ad image is still visible behind it.
+  Style: red background, white text, rounded corners, positioned absolute
+  center of the spot.
+- On hover: the overlay becomes fully opaque so the button is clearly
+  readable.
+
+For each spot that is already available (no ad):
+- Show it as a light green empty placeholder matching the picker's
+  available spot style.
+- No button needed.
+
+Reuse as much of the existing picker rendering code as possible —
+the goal is for this mockup to look identical to the public picker
+except that reserved/sold spots have a "Remove Ad" overlay button
+instead of a "Spot Taken" indicator.
+
+Layout must match the real picker exactly:
+FRONT: 3 XL across top, 4 L portrait across bottom
+BACK:  3 XL across top, 4 M across middle, S + House Ad + EDDM across bottom
+Same pixel coordinate system (100px/inch, 1200x900 canvas scaled to fit).
+Same gray border system (7px #c8c8c8 gaps via boxShadow and ScaledCell
+offset +3.5px / shrink -7px).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DELETE FLOW — CONFIRMATION DIALOG
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+When admin clicks "Remove Ad" on a spot:
+1. Show a confirmation modal (not browser confirm()):
+   Title: "Remove this ad?"
+   Body:  "[Business Name] — [Industry] — [Size] spot — $[price]"
+          "This will permanently remove the ad and make the spot
+           available again. This cannot be undone."
+   If spot status is 'sold' also show:
+   "⚠️ This spot has been paid. Removing it does not issue a refund
+    automatically. Process any refund separately in Stripe."
+   Buttons: "Cancel" (gray) and "Yes, Remove Ad" (red)
+
+2. On confirm: call the delete endpoint, show spinner on button.
+
+3. On success: spot reverts to green available placeholder in the mockup
+   in place (no full page reload). Show green toast "Ad removed — spot
+   is now available."
+
+4. On error: show red error toast with the error message.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BACKEND — DELETE ENDPOINT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Add: DELETE /api/admin/spots/:spotId/clear
+
+This endpoint must:
+
+1. Verify the caller is an authenticated admin.
+
+2. Fetch the spot record to get businessName, industry, email,
+   campaignId, and current status.
+
+3. Update the spots table — reset every field populated during
+   reservation and payment back to null/available:
+   - status             → 'available'
+   - template_data      → NULL
+   - business_name      → NULL
+   - business_email     → NULL
+   - reserved_at        → NULL
+   - paid_at            → NULL
+   - stripe_session_id  → NULL
+   Do NOT delete the spot row itself.
+
+4. Clear any pending reservation hold records for this spot if a
+   reservation_holds or spot_holds table exists.
+
+5. Log to admin_actions audit table:
+   { admin_id, action: 'clear_spot', target_spot_id, target_campaign_id,
+     metadata: { businessName, industry, previousStatus }, timestamp }
+
+6. Return:
+   { success: true, spotId, previousStatus, businessName, industry }
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DOWNSTREAM EFFECTS (automatic — no extra work needed)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+These all fix themselves because they query the spots table live:
+- Public ad picker: shows spot as available on next poll/refresh
+- Industry dropdown in ad generator: cleared industry no longer grayed out
+- Campaign stats on admin page: re-fetch after successful delete to show
+  updated sold count, available count, and revenue total
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+VERIFICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Admin mockup shows actual ad images in filled spots — identical to
+   the public picker — with red Remove overlay buttons
+2. Clicking Remove on a paid spot shows the Stripe refund warning
+3. Confirming removes the ad — spot turns green in the mockup instantly
+4. admin_actions table has a new row for the deletion
+5. Public ad picker shows the spot as available after next refresh
+6. Ad generator industry dropdown shows the cleared industry as available
+7. Admin stats panel shows updated counts after deletion

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   useAdminLogin,
   useApproveAd,
@@ -167,6 +167,337 @@ function NewCampaignForm({ token, onCreated, onCancel }) {
           it active.
         </div>
       </form>
+    </div>
+  );
+}
+
+// ── Postcard layout constants (mirrors PostcardPickerSection.jsx) ─────────────
+const CANVAS_W = 1200, CANVAS_H = 900;
+const MANAGE_FRONT = [
+  { id:"xl1", dbGridArea:"mb",   size:"XL", label:"XL (4×5)", price:49900, x:0,   y:0,   w:400, h:500 },
+  { id:"xl2", dbGridArea:"dn",   size:"XL", label:"XL (4×5)", price:49900, x:400, y:0,   w:400, h:500 },
+  { id:"xl3", dbGridArea:"re",   size:"XL", label:"XL (4×5)", price:49900, x:800, y:0,   w:400, h:500 },
+  { id:"l1",  dbGridArea:"l1",   size:"L",  label:"Large (3×4)", price:39900, x:0,   y:500, w:300, h:400 },
+  { id:"l2",  dbGridArea:"l2",   size:"L",  label:"Large (3×4)", price:39900, x:300, y:500, w:300, h:400 },
+  { id:"l3",  dbGridArea:"l3",   size:"L",  label:"Large (3×4)", price:39900, x:600, y:500, w:300, h:400 },
+  { id:"l4",  dbGridArea:"l4",   size:"L",  label:"Large (3×4)", price:39900, x:900, y:500, w:300, h:400 },
+];
+const MANAGE_BACK = [
+  { id:"bxl1", dbGridArea:"bxl",  size:"XL", label:"XL (4×5)", price:49900, x:0,   y:0,   w:400, h:500 },
+  { id:"bxl2", dbGridArea:"bxl2", size:"XL", label:"XL (4×5)", price:49900, x:400, y:0,   w:400, h:500 },
+  { id:"bxl3", dbGridArea:"bxl3", size:"XL", label:"XL (4×5)", price:49900, x:800, y:0,   w:400, h:500 },
+  { id:"bm1",  dbGridArea:"bm1",  size:"M",  label:"Medium (3×2)", price:29900, x:0,   y:500, w:300, h:200 },
+  { id:"bm2",  dbGridArea:"bm2",  size:"M",  label:"Medium (3×2)", price:29900, x:300, y:500, w:300, h:200 },
+  { id:"bm3",  dbGridArea:"bm3",  size:"M",  label:"Medium (3×2)", price:29900, x:600, y:500, w:300, h:200 },
+  { id:"bm4",  dbGridArea:"bm4",  size:"M",  label:"Medium (3×2)", price:29900, x:900, y:500, w:300, h:200 },
+  { id:"bs1",  dbGridArea:"bs1",  size:"S",  label:"Small (2×2)",  price:19900, x:0,   y:700, w:200, h:200 },
+  { id:"bhs",  dbGridArea:null,   size:"house", label:"House Ad",   price:0,    x:200, y:700, w:600, h:200 },
+  { id:"bed",  dbGridArea:null,   size:"eddm",  label:"EDDM Block", price:0,    x:800, y:700, w:400, h:200 },
+];
+
+function ManageAdSpots({ spots, token, onCleared }) {
+  const [side, setSide] = useState("front");
+  const [hovId, setHovId] = useState(null);
+  const [confirmSpot, setConfirmSpot] = useState(null);
+  const [removing, setRemoving] = useState(false);
+  const [removeError, setRemoveError] = useState(null);
+  const [toast, setToast] = useState(null);
+  const containerRef = useRef(null);
+  const [scale, setScale] = useState(0.5);
+
+  useEffect(() => {
+    function upd() {
+      if (containerRef.current) setScale(containerRef.current.offsetWidth / CANVAS_W);
+    }
+    upd();
+    window.addEventListener("resize", upd);
+    return () => window.removeEventListener("resize", upd);
+  }, []);
+
+  const spotByGridArea = useMemo(() => {
+    const m = {};
+    spots.forEach(s => { if (s.gridArea) m[s.gridArea] = s; });
+    return m;
+  }, [spots]);
+
+  const layout = side === "front" ? MANAGE_FRONT : MANAGE_BACK;
+
+  const showToast = (msg, color = "#15803d") => {
+    setToast({ msg, color });
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  const handleRemove = async () => {
+    if (!confirmSpot) return;
+    setRemoving(true);
+    setRemoveError(null);
+    try {
+      const res = await fetch(`/api/admin/spots/${confirmSpot.dbSpot.id}/clear`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to remove ad");
+      setConfirmSpot(null);
+      showToast(`✓ Ad removed — spot is now available`);
+      onCleared(confirmSpot.dbSpot.id);
+    } catch (err) {
+      setRemoveError(err.message || "Something went wrong");
+    } finally {
+      setRemoving(false);
+    }
+  };
+
+  // ScaledCell: positions and scales a child into spot's natural pixel rect
+  const ScaledCell = ({ spot, children }) => {
+    const cw = spot.w * scale - 7;
+    const ch = spot.h * scale - 7;
+    return (
+      <div style={{ position: "absolute", left: spot.x * scale + 3.5, top: spot.y * scale + 3.5, width: cw, height: ch, overflow: "hidden", borderRadius: 3 }}>
+        <div style={{ width: spot.w, height: spot.h, transform: `scale(${cw / spot.w},${ch / spot.h})`, transformOrigin: "top left" }}>
+          {children}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div style={{ background: "#fff", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", overflow: "hidden", marginTop: 32 }}>
+      {/* Header */}
+      <div style={{ padding: "16px 20px", borderBottom: "1px solid #f3f4f6", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+        <div style={{ fontWeight: 800, fontSize: 16, color: "#111" }}>🗂 Manage Ad Spots</div>
+        {/* Side toggle */}
+        <div style={{ display: "flex", gap: 4, background: "#f1f5f9", borderRadius: 10, padding: 4 }}>
+          {["front", "back"].map(s => (
+            <button key={s} onClick={() => setSide(s)} style={{
+              padding: "6px 18px", borderRadius: 8, border: "none", cursor: "pointer",
+              background: side === s ? "#fff" : "transparent",
+              color: side === s ? "#111" : "#6b7280",
+              fontWeight: side === s ? 700 : 500,
+              fontSize: 13,
+              boxShadow: side === s ? "0 1px 4px rgba(0,0,0,0.12)" : "none",
+              textTransform: "capitalize",
+              transition: "all 0.15s",
+            }}>
+              {s === "front" ? "◻ Front" : "◼ Back"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Postcard mockup */}
+      <div style={{ padding: "20px 24px" }}>
+        <div ref={containerRef} style={{ width: "100%", maxWidth: "100%" }}>
+          <div style={{
+            position: "relative", width: "100%", paddingBottom: "75%",
+            background: "#c8c8c8", borderRadius: 6,
+            boxShadow: "0 0 0 7px #c8c8c8, 0 0 0 8.5px #a8a8a8, 0 16px 48px rgba(0,0,0,0.28)",
+          }}>
+            <div style={{ position: "absolute", inset: 0, overflow: "hidden", borderRadius: 5, background: "#e5e7eb" }}>
+              {layout.map(pSpot => {
+                // Non-sellable static blocks (house ad, EDDM)
+                if (!pSpot.dbGridArea) {
+                  return (
+                    <div key={pSpot.id} style={{
+                      position: "absolute",
+                      left: pSpot.x * scale + 3.5, top: pSpot.y * scale + 3.5,
+                      width: pSpot.w * scale - 7, height: pSpot.h * scale - 7,
+                      background: "#d1d5db", borderRadius: 3,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      <span style={{ fontSize: Math.max(8, 12 * scale), color: "#9ca3af", fontWeight: 700 }}>
+                        {pSpot.size === "house" ? "House Ad" : "EDDM"}
+                      </span>
+                    </div>
+                  );
+                }
+
+                const dbSpot = spotByGridArea[pSpot.dbGridArea];
+                if (!dbSpot || dbSpot.status === "available") {
+                  return (
+                    <ScaledCell key={pSpot.id} spot={pSpot}>
+                      <div style={{
+                        width: pSpot.w, height: pSpot.h,
+                        background: "linear-gradient(135deg,#f0fdf4,#dcfce7)",
+                        border: "3px solid #4ade80", boxSizing: "border-box",
+                        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8,
+                      }}>
+                        <div style={{ color: "#16a34a", fontWeight: 800, fontSize: 20 }}>Available</div>
+                        <div style={{ color: "#4ade80", fontSize: 13 }}>{pSpot.label}</div>
+                      </div>
+                    </ScaledCell>
+                  );
+                }
+
+                // Reserved or paid — show ad with hover overlay
+                const finishedAdUrl = dbSpot.templateData?.finishedAdUrl ?? null;
+                const adFileUrl = dbSpot.adFileUrl ?? null;
+                const isHov = hovId === pSpot.id;
+
+                return (
+                  <ScaledCell key={pSpot.id} spot={pSpot}>
+                    <div
+                      style={{ width: pSpot.w, height: pSpot.h, position: "relative", cursor: "pointer" }}
+                      onMouseEnter={() => setHovId(pSpot.id)}
+                      onMouseLeave={() => setHovId(null)}
+                    >
+                      {/* Ad content */}
+                      {finishedAdUrl ? (
+                        <img src={finishedAdUrl} alt={dbSpot.businessName || ""} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                      ) : adFileUrl ? (
+                        <img src={adFileUrl} alt={dbSpot.businessName || ""} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", background: "#000" }} />
+                      ) : (
+                        <div style={{
+                          width: "100%", height: "100%",
+                          background: "linear-gradient(135deg,#1a2744,#0f1729)",
+                          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10,
+                        }}>
+                          <div style={{ color: "rgba(255,255,255,0.35)", fontSize: 9, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>
+                            {dbSpot.status === "reserved" ? "Reserved" : "Community Ad"}
+                          </div>
+                          <div style={{ color: "#fff", fontWeight: 900, fontSize: 22, fontFamily: "Georgia,serif", textAlign: "center", padding: "0 12px", lineHeight: 1.2 }}>
+                            {dbSpot.businessName || "(no name)"}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Remove overlay */}
+                      <div
+                        onClick={() => setConfirmSpot({ pSpot, dbSpot })}
+                        style={{
+                          position: "absolute", inset: 0,
+                          background: isHov ? "rgba(153,27,27,0.72)" : "rgba(153,27,27,0)",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          transition: "background 0.15s",
+                          pointerEvents: isHov ? "auto" : "none",
+                        }}
+                      >
+                        {isHov && (
+                          <div style={{
+                            background: "#7f1d1d", color: "#fff",
+                            borderRadius: 10, padding: "10px 22px",
+                            fontWeight: 800, fontSize: 15,
+                            boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
+                            border: "2px solid rgba(255,255,255,0.2)",
+                          }}>
+                            🗑 Remove Ad
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </ScaledCell>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+        <div style={{ marginTop: 10, fontSize: 12, color: "#9ca3af" }}>
+          Hover over any filled spot to reveal the remove button. Removing a paid spot does <strong>not</strong> issue a Stripe refund — handle that separately in the Stripe dashboard.
+        </div>
+      </div>
+
+      {/* Confirmation modal */}
+      {confirmSpot && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          zIndex: 2000, padding: 16,
+        }}>
+          <div style={{
+            background: "#fff", borderRadius: 16, padding: "32px 28px",
+            maxWidth: 460, width: "100%",
+            boxShadow: "0 24px 64px rgba(0,0,0,0.35)",
+          }}>
+            <div style={{ fontWeight: 900, fontSize: 18, color: "#111", marginBottom: 16 }}>
+              Remove this ad?
+            </div>
+
+            {/* Spot summary */}
+            <div style={{ background: "#f8fafc", borderRadius: 10, padding: "14px 16px", marginBottom: 16 }}>
+              <div style={{ fontWeight: 700, fontSize: 15, color: "#111", marginBottom: 4 }}>
+                {confirmSpot.dbSpot.businessName || "(no business name)"}
+              </div>
+              <div style={{ fontSize: 13, color: "#6b7280", display: "flex", gap: 16, flexWrap: "wrap" }}>
+                <span>Category: {confirmSpot.dbSpot.businessCategory || "—"}</span>
+                <span>Size: {confirmSpot.pSpot.label}</span>
+                <span>Price: ${confirmSpot.pSpot.price / 100}</span>
+                <span style={{
+                  background: confirmSpot.dbSpot.status === "paid" ? "#f0fdf4" : "#fffbeb",
+                  color: confirmSpot.dbSpot.status === "paid" ? "#15803d" : "#92400e",
+                  borderRadius: 6, padding: "1px 8px", fontWeight: 700, fontSize: 11,
+                }}>
+                  {confirmSpot.dbSpot.status}
+                </span>
+              </div>
+            </div>
+
+            {/* Paid spot warning */}
+            {confirmSpot.dbSpot.status === "paid" && (
+              <div style={{
+                background: "#fef3c7", border: "1px solid #fbbf24",
+                borderRadius: 10, padding: "12px 16px", fontSize: 13,
+                color: "#92400e", marginBottom: 16, lineHeight: 1.6,
+              }}>
+                ⚠️ <strong>Stripe refund required.</strong> This spot was paid. Removing it here does not issue a refund automatically — you must process the refund manually in the{" "}
+                <a href="https://dashboard.stripe.com/payments" target="_blank" rel="noopener noreferrer" style={{ color: "#92400e" }}>Stripe Dashboard</a>.
+              </div>
+            )}
+
+            <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 20, lineHeight: 1.6 }}>
+              The spot row will be kept but reset to <strong>available</strong>. All ad content, business info, and tracking data will be cleared. This action is logged in the audit trail.
+            </div>
+
+            {removeError && (
+              <div style={{
+                background: "#fef2f2", border: "1px solid #fca5a5",
+                borderRadius: 8, padding: "10px 14px", fontSize: 13,
+                color: "#991b1b", marginBottom: 16,
+              }}>
+                {removeError}
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button
+                onClick={() => { setConfirmSpot(null); setRemoveError(null); }}
+                disabled={removing}
+                style={{
+                  padding: "10px 22px", borderRadius: 9, border: "1.5px solid #d1d5db",
+                  background: "#fff", color: "#374151", fontWeight: 600, fontSize: 14, cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRemove}
+                disabled={removing}
+                style={{
+                  padding: "10px 22px", borderRadius: 9, border: "none",
+                  background: removing ? "#b91c1c" : "#991b1b",
+                  color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer",
+                  opacity: removing ? 0.75 : 1,
+                  transition: "opacity 0.15s",
+                }}
+              >
+                {removing ? "Removing…" : "Yes, Remove Ad"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div style={{
+          position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)",
+          background: toast.color, color: "#fff", borderRadius: 10,
+          padding: "13px 28px", fontWeight: 700, fontSize: 14,
+          boxShadow: "0 4px 24px rgba(0,0,0,0.28)", zIndex: 3000,
+          whiteSpace: "nowrap",
+        }}>
+          {toast.msg}
+        </div>
+      )}
     </div>
   );
 }
@@ -602,6 +933,15 @@ function Dashboard({ token }) {
                 </table>
               </div>
             </div>
+
+            <ManageAdSpots
+              spots={spots}
+              token={token}
+              onCleared={() => {
+                queryClient.invalidateQueries({ queryKey: detailQueryKey });
+                queryClient.invalidateQueries({ queryKey: getListAdminCampaignsQueryKey() });
+              }}
+            />
           </>
         )}
       </div>

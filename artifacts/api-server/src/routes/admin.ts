@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, sql } from "drizzle-orm";
-import { db, campaignsTable, spotsTable, ordersTable } from "@workspace/db";
+import { db, campaignsTable, spotsTable, ordersTable, adminActionsTable } from "@workspace/db";
 import {
   AdminLoginBody,
   AdminLoginResponse,
@@ -313,6 +313,66 @@ router.post("/admin/spots/:id/mark-sold", requireAdmin, async (req, res): Promis
     expiresAt: null,
     scanCount,
   });
+});
+
+// Clear a spot — remove the ad and reset the spot to available.
+// Preserves the row but wipes every field populated at reservation/payment time.
+// Writes an admin_actions audit record for traceability.
+router.delete("/admin/spots/:spotId/clear", requireAdmin, async (req, res): Promise<void> => {
+  const id = parseInt(
+    String(Array.isArray(req.params.spotId) ? req.params.spotId[0] : req.params.spotId),
+    10,
+  );
+  if (!Number.isFinite(id)) {
+    res.status(400).json({ error: "Invalid spot id" });
+    return;
+  }
+
+  const [spot] = await db.select().from(spotsTable).where(eq(spotsTable.id, id));
+  if (!spot) {
+    res.status(404).json({ error: "Spot not found" });
+    return;
+  }
+
+  const previousStatus = spot.status;
+  const businessName = spot.businessName ?? null;
+  const businessCategory = spot.businessCategory ?? null;
+
+  await db
+    .update(spotsTable)
+    .set({
+      status: "available",
+      templateData: null,
+      businessName: null,
+      businessCategory: null,
+      contactEmail: null,
+      contactPhone: null,
+      website: null,
+      adFileUrl: null,
+      adStatus: null,
+      trackingCode: null,
+      expiresAt: null,
+    })
+    .where(eq(spotsTable.id, id));
+
+  try {
+    await db.insert(adminActionsTable).values({
+      adminId: "admin",
+      action: "clear_spot",
+      metadata: {
+        targetSpotId: id,
+        targetCampaignId: spot.campaignId,
+        businessName,
+        businessCategory,
+        previousStatus,
+      },
+    });
+  } catch (err: any) {
+    req.log.warn({ err: err?.message, spotId: id }, "Admin audit log insert failed — continuing");
+  }
+
+  req.log.info({ spotId: id, previousStatus }, "Spot cleared by admin");
+  res.json({ success: true, spotId: id, previousStatus, businessName, businessCategory });
 });
 
 // ─── Census county-info test route ───────────────────────────────────────────
