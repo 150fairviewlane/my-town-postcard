@@ -1,6 +1,13 @@
-import sharp from "sharp";
 import * as fs from "fs";
 import * as path from "path";
+
+// Lazy-load sharp so this module can be evaluated at startup without requiring
+// the native binary to be on disk. The binary is only needed at call time.
+let _sharpLoader: Promise<typeof import("sharp")["default"]> | null = null;
+function getSharp(): Promise<typeof import("sharp")["default"]> {
+  if (!_sharpLoader) _sharpLoader = import("sharp").then((m) => m.default);
+  return _sharpLoader;
+}
 
 export const TRANSFORM_FAMILIES = {
   "parchment-classic": {
@@ -110,6 +117,7 @@ export async function generateSurpriseMeTemplate(
   combinationIndex?: number,
 ): Promise<TransformResult | null> {
   try {
+    const sharp = await getSharp();
     const family = getFamilyForIndustry(industry);
     const palettes = getPalettesForFamily(family);
 

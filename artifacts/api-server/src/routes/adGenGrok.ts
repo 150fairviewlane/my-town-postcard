@@ -2,8 +2,15 @@ import { Router, type IRouter } from "express";
 import { z } from "zod/v4";
 import fs from "fs";
 import path from "path";
-import sharp from "sharp";
 import { logger } from "../lib/logger";
+
+// Lazy-load sharp so the module can be evaluated at startup without requiring
+// the native binary to be on disk. Only needed at image-processing call time.
+let _sharpLoader: Promise<typeof import("sharp")["default"]> | null = null;
+function getSharp(): Promise<typeof import("sharp")["default"]> {
+  if (!_sharpLoader) _sharpLoader = import("sharp").then((m) => m.default);
+  return _sharpLoader;
+}
 import { buildAdPrompt } from "../lib/buildAdPrompt";
 import { db, spotsTable } from "@workspace/db";
 import { eq, and, ne, sql as drizzleSql } from "drizzle-orm";
@@ -120,6 +127,7 @@ function extractXaiImageUrl(body: Record<string, unknown>): string | null {
 /** Resize and centre-crop a Grok-returned image URL to exact print pixel dimensions. */
 async function cropToSpotDims(url: string, w: number, h: number): Promise<string> {
   try {
+    const sharp = await getSharp();
     let buf: Buffer;
     if (url.startsWith("data:")) {
       buf = Buffer.from(url.split(",")[1] ?? "", "base64");
@@ -1487,6 +1495,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   // Post-process: resize + centre-crop Grok output to exact print pixel dimensions
   async function cropToSpotDims(url: string, w: number, h: number): Promise<string> {
     try {
+      const sharp = await getSharp();
       let buf: Buffer;
       if (url.startsWith("data:")) {
         const b64 = url.split(",")[1] ?? "";
@@ -1537,6 +1546,9 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     let photoResizedBytes  = 0;
     let logoOriginalBytes  = 0;
     let logoResizedBytes   = 0;
+
+    // Load sharp lazily — only needed when photo/logo images need resizing
+    const sharp = (hasPhoto || hasLogo) ? await getSharp() : null;
 
     if (hasPhoto) {
       const blob = d.photoUrl.startsWith("data:")

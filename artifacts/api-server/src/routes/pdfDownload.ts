@@ -2,8 +2,15 @@ import { Router, type IRouter } from "express";
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
-import sharp from "sharp";
 import PDFDocument from "pdfkit";
+
+// Lazy-load sharp so the module can be evaluated at startup without requiring
+// the native binary to be on disk. Only needed at PDF-generation call time.
+let _sharpLoader: Promise<typeof import("sharp")["default"]> | null = null;
+function getSharp(): Promise<typeof import("sharp")["default"]> {
+  if (!_sharpLoader) _sharpLoader = import("sharp").then((m) => m.default);
+  return _sharpLoader;
+}
 import { eq } from "drizzle-orm";
 import { db, spotsTable, campaignsTable } from "@workspace/db";
 import jwt from "jsonwebtoken";
@@ -154,6 +161,7 @@ async function drawHouseAd(
   logoBuffer: Buffer | null,
   qrBuffer: Buffer | null,
 ): Promise<void> {
+  const sharp = await getSharp();
   const c = toPts(HOUSE_AD);
 
   const topH = Math.round(c.h * 0.44); // ~61 pt  (cream section)
@@ -331,6 +339,7 @@ async function drawSpots(
   defs: SpotDef[],
   dbSpots: SpotRow[],
 ): Promise<void> {
+  const sharp = await getSharp();
   for (const def of defs) {
     const dbSpot = dbSpots.find((s) => s.gridArea === def.gridArea);
     const imageUrl = resolveImageUrl(dbSpot);
