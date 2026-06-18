@@ -3,10 +3,14 @@ import * as path from "path";
 
 // Lazy-load sharp so this module can be evaluated at startup without requiring
 // the native binary to be on disk. The binary is only needed at call time.
-let _sharpLoader: Promise<typeof import("sharp")["default"]> | null = null;
-function getSharp(): Promise<typeof import("sharp")["default"]> {
-  if (!_sharpLoader) _sharpLoader = import("sharp").then((m) => m.default);
-  return _sharpLoader;
+// sharp uses `export =` (CJS), so dynamic import wraps it in { default: ... };
+// we cast through `any` to satisfy TypeScript and unwrap at runtime.
+let _sharpLoader: Promise<typeof import("sharp")> | null = null;
+function getSharp(): Promise<typeof import("sharp")> {
+  if (!_sharpLoader) {
+    _sharpLoader = (import("sharp") as Promise<any>).then((m) => m.default ?? m);
+  }
+  return _sharpLoader!;
 }
 
 export const TRANSFORM_FAMILIES = {
