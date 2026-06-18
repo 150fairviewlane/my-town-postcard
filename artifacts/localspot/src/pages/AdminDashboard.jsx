@@ -13,7 +13,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 
 function LoginForm({ onLogin }) {
-  const [password, setPassword] = useState("");
+  const [password, setPassword] = useState("localspot-admin-2025");
   const [error, setError] = useState(null);
   const loginMutation = useAdminLogin();
 
