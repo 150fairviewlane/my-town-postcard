@@ -502,7 +502,7 @@ function ManageAdSpots({ spots, token, onCleared }) {
   );
 }
 
-function Dashboard({ token }) {
+function Dashboard({ token, onLogout }) {
   const queryClient = useQueryClient();
   const authRequest = { headers: { Authorization: `Bearer ${token}` } };
   const approveMutation = useApproveAd({ request: authRequest });
@@ -593,11 +593,28 @@ function Dashboard({ token }) {
     }
   };
 
+  useEffect(() => {
+    if (listError?.status === 401) {
+      localStorage.removeItem("admin_token");
+      onLogout?.();
+    }
+  }, [listError, onLogout]);
+
   if (listLoading) {
     return <div style={{ padding: 40, textAlign: "center", color: "#6b7280", fontFamily: "sans-serif" }}>Loading…</div>;
   }
   if (listError) {
-    return <div style={{ padding: 40, textAlign: "center", color: "#991b1b", fontFamily: "sans-serif" }}>Failed to load dashboard</div>;
+    return (
+      <div style={{ padding: 40, textAlign: "center", color: "#991b1b", fontFamily: "sans-serif" }}>
+        <div style={{ marginBottom: 16 }}>Failed to load dashboard</div>
+        <button
+          onClick={() => { localStorage.removeItem("admin_token"); onLogout?.(); }}
+          style={{ padding: "8px 18px", borderRadius: 8, border: "1.5px solid #fecaca", background: "#fef2f2", color: "#991b1b", fontWeight: 700, fontSize: 13, cursor: "pointer" }}
+        >
+          Back to login
+        </button>
+      </div>
+    );
   }
 
   const campaign = detail?.campaign;
@@ -963,14 +980,9 @@ function Dashboard({ token }) {
 export default function AdminDashboard() {
   const [token, setToken] = useState(() => localStorage.getItem("admin_token"));
 
-  useEffect(() => {
-    if (token) return;
-    fetch("/api/admin/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: "localspot-admin-2025" }) })
-      .then(r => r.json())
-      .then(d => { if (d.token) { localStorage.setItem("admin_token", d.token); setToken(d.token); } })
-      .catch(() => {});
-  }, []);
+  const handleLogin = (newToken) => setToken(newToken);
+  const handleLogout = () => { localStorage.removeItem("admin_token"); setToken(null); };
 
-  if (!token) return null;
-  return <Dashboard token={token} />;
+  if (!token) return <LoginForm onLogin={handleLogin} />;
+  return <Dashboard token={token} onLogout={handleLogout} />;
 }
