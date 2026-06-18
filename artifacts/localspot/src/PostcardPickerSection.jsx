@@ -535,8 +535,8 @@ const queryClient=useQueryClient();
 // Home page (no slug) loads the single active campaign; a territory/dealer
 // landing page passes its slug and loads that published campaign instead.
 // Both queries are always mounted but only the relevant one is enabled.
-const activeQ=useGetActiveCampaign({query:{enabled:!slug,refetchInterval:10_000}});
-const slugQ=useGetCampaignBySlug(slug||"",{query:{enabled:!!slug,refetchInterval:10_000}});
+const activeQ=useGetActiveCampaign({query:{enabled:!slug,refetchInterval:60_000}});
+const slugQ=useGetCampaignBySlug(slug||"",{query:{enabled:!!slug,refetchInterval:60_000}});
 const campaign=slug?slugQ.data:activeQ.data;
 const campaignFetching=slug?slugQ.isFetching:activeQ.isFetching;
 // Query key used when we need to force-refresh campaign data mid-flow (e.g.
