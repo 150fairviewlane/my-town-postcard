@@ -1,3 +1,5 @@
+import { useState, useEffect, useRef } from "react";
+
 // Back-side postcard layout, house ads, and the USPS EDDM placeholder box.
 //
 // Grid is the same 12-col × 9-row geometry as the front (1 cell = 1 inch on
@@ -54,67 +56,99 @@ export const BACK_GRID_ORDER = ["bxl", "bxl2", "bxl3", "bm1", "bm2", "bm3", "bm4
 // share the brand colors of the front HouseAd so the postcard reads as a
 // single product across both faces.
 
-// bhs — wide banner (6 cols × 2 rows ≈ 3:1 landscape). Mirrors AdHouse in the picker.
-export function HouseAdVertical() {
+// bhs — wide banner (6 cols × 2 rows ≈ 3:1 landscape).
+// Proportionally-scaled so it renders identically to AdHouse in the picker
+// at any container size (screen preview or print).
+function HouseAdScaled({ w = 600, h = 200 }) {
+  const s = h / 200;
+  const topH = Math.round(h * 0.44);
+  const botH = h - topH;
+  const qrSz = Math.round(68 * s);
+  const circSz = Math.round(36 * s);
+  const iconSz = Math.round(20 * s);
+  const px = Math.round(10 * s);
+  const divH = Math.round(botH * 0.72);
   const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=" + encodeURIComponent("https://mytownpostcard.com");
   const HouseIco = () => (
-    <svg width={20} height={20} viewBox="0 0 24 24" fill="white">
+    <svg width={iconSz} height={iconSz} viewBox="0 0 24 24" fill="white">
       <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
     </svg>
   );
   const EnvIco = () => (
-    <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2">
+    <svg width={iconSz} height={iconSz} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2">
       <rect x="2" y="4" width="20" height="16" rx="2" />
       <polyline points="2,8 12,14 22,8" />
     </svg>
   );
   const PinIco = () => (
-    <svg width={20} height={20} viewBox="0 0 24 24" fill="white">
+    <svg width={iconSz} height={iconSz} viewBox="0 0 24 24" fill="white">
       <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
     </svg>
   );
   const Ico = ({ icon, label }) => (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, minWidth: 0 }}>
-      <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#c41c1c", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{icon}</div>
-      <div style={{ color: "#fff", fontSize: 10, textAlign: "center", lineHeight: 1.25, fontFamily: "sans-serif", fontWeight: 500 }}>{label}</div>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: Math.round(3 * s), minWidth: 0 }}>
+      <div style={{ width: circSz, height: circSz, borderRadius: "50%", background: "#c41c1c", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{icon}</div>
+      <div style={{ color: "#fff", fontSize: Math.round(10 * s), textAlign: "center", lineHeight: 1.25, fontFamily: "sans-serif", fontWeight: 500 }}>{label}</div>
     </div>
   );
-  const Div = () => <div style={{ width: 1, height: 80, background: "rgba(255,255,255,0.35)", flexShrink: 0 }} />;
+  const Divider = () => <div style={{ width: 1, height: divH, background: "rgba(255,255,255,0.35)", flexShrink: 0 }} />;
   return (
-    <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: "sans-serif" }}>
-      {/* Top: white section */}
-      <div style={{ height: 88, background: "#f4f3ef", display: "flex", alignItems: "center", padding: "0 10px", gap: 10, flexShrink: 0 }}>
-        <img src="/mailbox-logo.png" alt="My Town Postcard" style={{ height: 80, width: "auto", flexShrink: 0 }} />
-        <div style={{ width: 2, height: 58, background: "#991b1b", flexShrink: 0 }} />
-        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 3 }}>
-          <div style={{ fontSize: 23, fontFamily: "Georgia,serif", fontWeight: 700, lineHeight: 1.05, whiteSpace: "nowrap" }}>
+    <div style={{ width: w, height: h, display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: "sans-serif" }}>
+      {/* Top: white/beige section */}
+      <div style={{ height: topH, background: "#f4f3ef", display: "flex", alignItems: "center", padding: `0 ${px}px`, gap: Math.round(10 * s), flexShrink: 0 }}>
+        <img src="/mailbox-logo.png" alt="My Town Postcard" style={{ height: topH - Math.round(8 * s), width: "auto", flexShrink: 0 }} />
+        <div style={{ width: 2, height: Math.round(58 * s), background: "#991b1b", flexShrink: 0 }} />
+        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: Math.round(3 * s) }}>
+          <div style={{ fontSize: Math.round(23 * s), fontFamily: "Georgia,serif", fontWeight: 700, lineHeight: 1.05, whiteSpace: "nowrap" }}>
             <span style={{ color: "#0d1d36" }}>My Town </span>
             <span style={{ color: "#991b1b" }}>Postcard</span>
           </div>
-          <div style={{ fontSize: 10.5, color: "#0d1d36", letterSpacing: 2, fontWeight: 700, textTransform: "uppercase", whiteSpace: "nowrap" }}>
+          <div style={{ fontSize: Math.round(10.5 * s), color: "#0d1d36", letterSpacing: Math.round(2 * s), fontWeight: 700, textTransform: "uppercase", whiteSpace: "nowrap" }}>
             Local Reach.&nbsp; Real Results.
           </div>
         </div>
       </div>
       {/* Bottom: navy section */}
-      <div style={{ flex: 1, background: "#0d1d36", display: "flex", alignItems: "center", padding: "0 10px", gap: 8, overflow: "hidden" }}>
-        <div style={{ color: "#fff", fontFamily: "Impact,'Arial Black',sans-serif", fontSize: 34, fontWeight: 900, flexShrink: 0, lineHeight: 1, textTransform: "uppercase", letterSpacing: 0.5 }}>
+      <div style={{ height: botH, background: "#0d1d36", display: "flex", alignItems: "center", padding: `0 ${px}px`, gap: Math.round(8 * s), boxSizing: "border-box", overflow: "hidden" }}>
+        <div style={{ color: "#fff", fontFamily: "Impact,'Arial Black',sans-serif", fontSize: Math.round(34 * s), fontWeight: 900, flexShrink: 0, lineHeight: 1, textTransform: "uppercase", letterSpacing: 0.5 }}>
           ADVERTISE<br />HERE!
         </div>
-        <Div />
+        <Divider />
         <Ico icon={<HouseIco />} label={<>Reach 5,000<br />Homes In<br />Your Town</>} />
-        <Div />
+        <Divider />
         <Ico icon={<EnvIco />} label={<>USPS Every<br />Door Direct<br />Mail</>} />
-        <Div />
+        <Divider />
         <Ico icon={<PinIco />} label={<>Targeted.<br />Local.<br />Effective.</>} />
-        <Div />
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, flexShrink: 0 }}>
-          <div style={{ background: "#fff", borderRadius: 3, padding: 4 }}>
-            <img src={qrUrl} style={{ width: 68, height: 68, display: "block" }} alt="QR" />
+        <Divider />
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: Math.round(3 * s), flexShrink: 0 }}>
+          <div style={{ background: "#fff", borderRadius: 3, padding: Math.round(4 * s) }}>
+            <img src={qrUrl} style={{ width: qrSz, height: qrSz, display: "block" }} alt="QR" />
           </div>
-          <div style={{ color: "rgba(255,255,255,0.65)", fontSize: 9.5, textAlign: "center" }}>Scan to advertise</div>
+          <div style={{ color: "rgba(255,255,255,0.65)", fontSize: Math.round(9.5 * s), textAlign: "center" }}>Scan to advertise</div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Self-measuring wrapper — fills its grid cell and passes measured pixel
+// dimensions into HouseAdBanner so the proportional scaling is always correct,
+// whether rendered on-screen (postcard picker or print preview) or in print.
+export function HouseAdVertical() {
+  const ref = useRef(null);
+  const [dims, setDims] = useState({ w: 600, h: 200 });
+  useEffect(() => {
+    if (!ref.current) return;
+    const ro = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect;
+      if (width > 0 && height > 0) setDims({ w: Math.round(width), h: Math.round(height) });
+    });
+    ro.observe(ref.current);
+    return () => ro.disconnect();
+  }, []);
+  return (
+    <div ref={ref} style={{ width: "100%", height: "100%" }}>
+      <HouseAdScaled w={dims.w} h={dims.h} />
     </div>
   );
 }

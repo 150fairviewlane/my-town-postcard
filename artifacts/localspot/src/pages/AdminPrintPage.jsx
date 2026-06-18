@@ -99,8 +99,6 @@ function PostcardFace({ side, spots, gridAreas, gridOrder, fixedAreas, renderFix
             content = <PaidAd spot={spot} />;
           } else if (sampleKey) {
             content = getSampleAd(sampleKey, SIZE_MAP[spot.size] || "S");
-          } else if (side === "front") {
-            content = <HouseAdVertical />;
           } else {
             content = <UnsoldSlot />;
           }

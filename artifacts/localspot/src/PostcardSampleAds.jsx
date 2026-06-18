@@ -836,7 +836,8 @@ export function getSampleAd(configKey, sizeKeyOverride) {
 // mailer with room left for the customer.
 // ─────────────────────────────────────────────────────────────────────────────
 export const SPOT_SAMPLE_MAP = {
-  // Front side: mb=unsold (house ad shown in print), re=dental sample; l1=hvac, l3=lawn
+  // Front side: mb=sold, dn=available, re=dental sample; l1=hvac, l2=available, l3=lawn, l4=available
+  "mb": "ref-mrbiscuits", // XL leftmost  — Mr. Biscuit's (paid)
   "re": "ref-dental",     // XL rightmost — Northview Dental sample
   "l1": "ref-hvac",       // L portrait   — Climate Comfort HVAC
   "l3": "ref-lawn",       // L portrait   — GreenScapes Lawn Care
