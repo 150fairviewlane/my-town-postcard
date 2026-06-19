@@ -1,0 +1,36 @@
+Add a delete capability to `AdminDealersPage` so individual dealers can be removed directly from the admin UI, instead of needing one-off database scripts.
+
+**IMPORTANT — protect the Habersham/house campaign.** Per the schema comment in `lib/db/src/schema/campaigns.ts`, campaigns with `dealerId = null` (like Habersham) are house/legacy pages with no dealer attached. This delete feature only ever applies to a specific dealer's own data — it should never be able to touch a campaign with `dealerId = null`, since those aren't linked to any dealer in the first place. No special-casing needed beyond the natural fact that this flow only queries campaigns WHERE `dealerId = <the dealer being deleted>`.
+
+---
+
+## Backend: new delete endpoint
+
+Add `DELETE /api/admin/dealers/:id` to the dealers route file (protected by the existing `requireAdmin` middleware).
+
+Accept a query param or body field `mode` with three possible values:
+- `"dealer-only"` — delete just the dealer record. Their linked campaign(s) keep existing but get `dealerId` set to `null` (the FK already has `onDelete: set null` behavior for this — confirm the campaign becomes an orphaned/unlinked campaign rather than being deleted itself).
+- `"full"` — delete the dealer AND their linked campaign(s) AND all spots belonging to those campaigns, plus any other child records referencing those campaigns/dealer (ad generations, ad images, outreach records — check the schema for any other FK references to `dealerId` or `campaignId`). Delete in FK-safe order: child records → spots → campaigns → dealer.
+- `"deactivate"` — soft delete: set the dealer's `status` to `"cancelled"` (matching the existing status enum already used elsewhere in the codebase for cancelled dealers) and set their campaign(s) `isPublished` to `false`. Do not delete any rows.
+
+Before performing a `"full"` delete, query and return a summary of what will be deleted (campaign names, spot counts, whether any spots have `status = "paid"`) so the frontend can show a clear confirmation with real numbers — not a generic "are you sure?".
+
+Return the pre-delete summary from a separate lightweight endpoint: `GET /api/admin/dealers/:id/delete-preview` — returns `{ dealerName, campaigns: [{ name, slug, totalSpots, paidSpots }] }`. Call this BEFORE showing the confirmation dialog, not as part of the delete call itself.
+
+## Frontend: AdminDealersPage changes
+
+1. Add a small "Delete" button/icon (trash icon, muted red) to each dealer row/card.
+
+2. On click, first call `GET /api/admin/dealers/:id/delete-preview` to fetch what's linked to this dealer, then show a modal/dialog with three clear options:
+   - **"Remove dealer, keep campaign"** — explains: "The dealer record will be removed. Their territory page will stay live but become unassigned." → calls delete with `mode=dealer-only`
+   - **"Delete everything"** — explains: "This permanently deletes the dealer, their territory page(s), and all N ad spots. This cannot be undone." Show the actual campaign name(s) and spot count(s) from the preview data inline in this text. If any spots have `paidSpots > 0`, show an extra strong warning: "⚠️ N spot(s) have been paid for — deleting will lose that record." → calls delete with `mode=full`
+   - **"Deactivate instead"** — explains: "Marks the dealer as cancelled and unpublishes their page, but keeps all data. Reversible later." → calls delete with `mode=deactivate`
+   - A "Cancel" option that closes the dialog with no action
+
+3. For the "Delete everything" option specifically, require an extra confirmation step (e.g. a second "Yes, permanently delete" button, or a type-to-confirm input) since this is irreversible — don't let one click immediately fire a destructive full delete.
+
+4. After any successful delete/deactivate action, refresh the dealers list so the UI reflects the change immediately, and show a brief success toast/message confirming what happened.
+
+5. Style the modal to match existing admin styling (burgundy/gold/cream, DM Sans). Use clear, plain language in each option's description — not technical jargon — since this will be used quickly during testing without re-reading carefully each time.
+
+After implementing, confirm: the delete-preview endpoint returns accurate campaign/spot data, all three delete modes work correctly, Habersham (or any `dealerId = null` campaign) is structurally impossible to affect through this flow, and a "full" delete correctly removes child records before parent records without FK errors.

@@ -8,9 +8,14 @@ import {
   dealersTable,
   dealerTerritoriesTable,
   dealerPasswordResetsTable,
+  dealerTerritoryClaimsTable,
   adminActionsTable,
   campaignsTable,
   spotsTable,
+  ordersTable,
+  qrScansTable,
+  spotSubscriptionsTable,
+  subscriptionIssueAssignmentsTable,
   territoriesTable,
   territoryProposalsTable,
 } from "@workspace/db";
@@ -964,6 +969,134 @@ router.post("/admin/dealers/:id/rebuild-landing-page", requireAdmin, async (req,
   const campaignIds = await ensureDealerLandingPage(id);
   req.log.info({ dealerId: id, campaignIds }, "Rebuilt dealer landing page via admin");
   res.json({ ok: true, campaignIds });
+});
+
+// ─── GET /api/admin/dealers/:id/delete-preview ────────────────────────────────
+// Returns a summary of what a full delete would remove, without deleting anything.
+router.get("/admin/dealers/:id/delete-preview", requireAdmin, async (req, res): Promise<void> => {
+  const id = parseInt(String(req.params.id), 10);
+  if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid dealer id" }); return; }
+
+  const [dealer] = await db.select({ id: dealersTable.id, name: dealersTable.name })
+    .from(dealersTable).where(eq(dealersTable.id, id));
+  if (!dealer) { res.status(404).json({ error: "Dealer not found" }); return; }
+
+  const campaigns = await db
+    .select({ id: campaignsTable.id, name: campaignsTable.name, slug: campaignsTable.slug })
+    .from(campaignsTable)
+    .where(eq(campaignsTable.dealerId, id));
+
+  const campaignSummaries = await Promise.all(
+    campaigns.map(async (c) => {
+      const spots = await db
+        .select({ id: spotsTable.id, status: spotsTable.status })
+        .from(spotsTable)
+        .where(eq(spotsTable.campaignId, c.id));
+      return {
+        campaignId: c.id,
+        name: c.name,
+        slug: c.slug,
+        totalSpots: spots.length,
+        paidSpots: spots.filter((s) => s.status === "paid").length,
+        reservedSpots: spots.filter((s) => s.status === "reserved").length,
+      };
+    }),
+  );
+
+  res.json({ dealerName: dealer.name, campaigns: campaignSummaries });
+});
+
+// ─── DELETE /api/admin/dealers/:id ────────────────────────────────────────────
+// mode=dealer-only  — delete dealer row only; campaigns get dealerId → null
+// mode=full         — delete dealer + linked campaigns + all child records (FK-safe order)
+// mode=deactivate   — soft cancel: status='cancelled', campaigns isPublished=false
+router.delete("/admin/dealers/:id", requireAdmin, async (req, res): Promise<void> => {
+  const id = parseInt(String(req.params.id), 10);
+  if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid dealer id" }); return; }
+
+  const mode = String(req.query.mode ?? req.body?.mode ?? "");
+  if (!["dealer-only", "full", "deactivate"].includes(mode)) {
+    res.status(400).json({ error: "mode must be dealer-only, full, or deactivate" });
+    return;
+  }
+
+  const [dealer] = await db.select().from(dealersTable).where(eq(dealersTable.id, id));
+  if (!dealer) { res.status(404).json({ error: "Dealer not found" }); return; }
+
+  if (mode === "deactivate") {
+    await db.update(dealersTable).set({ status: "cancelled" }).where(eq(dealersTable.id, id));
+    await db.update(campaignsTable).set({ isPublished: false }).where(eq(campaignsTable.dealerId, id));
+    await setTerritoryStatusForDealer(id, "available");
+    req.log.info({ dealerId: id }, "Dealer deactivated (soft cancel)");
+    res.json({ ok: true, mode: "deactivate", dealerName: dealer.name });
+    return;
+  }
+
+  if (mode === "dealer-only") {
+    // Detach territory before deleting the dealer so the FK doesn't block.
+    await setTerritoryStatusForDealer(id, "available");
+    await db.update(campaignsTable).set({ dealerId: null }).where(eq(campaignsTable.dealerId, id));
+    await db.delete(dealerPasswordResetsTable).where(eq(dealerPasswordResetsTable.dealerId, id));
+    await db.delete(dealerTerritoryClaimsTable).where(eq(dealerTerritoryClaimsTable.dealerId, id));
+    await db.delete(dealerTerritoriesTable).where(eq(dealerTerritoriesTable.dealerId, id));
+    await db.delete(adminActionsTable).where(eq(adminActionsTable.targetDealerId, id));
+    await db.delete(territoryProposalsTable).where(eq(territoryProposalsTable.dealerId, id));
+    await db.delete(dealersTable).where(eq(dealersTable.id, id));
+    req.log.info({ dealerId: id }, "Dealer removed; campaigns kept (dealerId set null)");
+    res.json({ ok: true, mode: "dealer-only", dealerName: dealer.name });
+    return;
+  }
+
+  // mode === "full" — cascade delete everything
+  const campaigns = await db
+    .select({ id: campaignsTable.id })
+    .from(campaignsTable)
+    .where(eq(campaignsTable.dealerId, id));
+  const campaignIds = campaigns.map((c) => c.id);
+
+  if (campaignIds.length > 0) {
+    const spots = await db
+      .select({ id: spotsTable.id })
+      .from(spotsTable)
+      .where(sql`${spotsTable.campaignId} = ANY(${sql.raw(`ARRAY[${campaignIds.join(",")}]::int[]`)})`)
+    const spotIds = spots.map((s) => s.id);
+
+    if (spotIds.length > 0) {
+      const spotArr = sql.raw(`ARRAY[${spotIds.join(",")}]::int[]`);
+      // 1. QR scans
+      await db.execute(sql`DELETE FROM qr_scans WHERE spot_id = ANY(${spotArr})`);
+      // 2. Subscription issue assignments (via spot_id or campaign_id)
+      const campArr = sql.raw(`ARRAY[${campaignIds.join(",")}]::int[]`);
+      await db.execute(sql`DELETE FROM subscription_issue_assignments WHERE spot_id = ANY(${spotArr}) OR campaign_id = ANY(${campArr})`);
+      // 3. Spot subscriptions
+      await db.execute(sql`DELETE FROM spot_subscriptions WHERE initial_spot_id = ANY(${spotArr})`);
+      // 4. Orders
+      await db.execute(sql`DELETE FROM orders WHERE spot_id = ANY(${spotArr})`);
+      // 5. Spots
+      await db.execute(sql`DELETE FROM spots WHERE id = ANY(${spotArr})`);
+    } else {
+      // No spots but still delete subscription_issue_assignments by campaign
+      const campArr = sql.raw(`ARRAY[${campaignIds.join(",")}]::int[]`);
+      await db.execute(sql`DELETE FROM subscription_issue_assignments WHERE campaign_id = ANY(${campArr})`);
+    }
+
+    // 6. Campaigns
+    await db.execute(sql`DELETE FROM campaigns WHERE dealer_id = ${id}`);
+  }
+
+  // 7. Dealer support records
+  await db.delete(dealerPasswordResetsTable).where(eq(dealerPasswordResetsTable.dealerId, id));
+  await db.delete(dealerTerritoryClaimsTable).where(eq(dealerTerritoryClaimsTable.dealerId, id));
+  await db.delete(dealerTerritoriesTable).where(eq(dealerTerritoriesTable.dealerId, id));
+  await db.delete(adminActionsTable).where(eq(adminActionsTable.targetDealerId, id));
+  await db.delete(territoryProposalsTable).where(eq(territoryProposalsTable.dealerId, id));
+  // 8. Release linked territory back to available
+  await setTerritoryStatusForDealer(id, "available");
+  // 9. Delete dealer
+  await db.delete(dealersTable).where(eq(dealersTable.id, id));
+
+  req.log.info({ dealerId: id, campaignCount: campaignIds.length }, "Dealer fully deleted");
+  res.json({ ok: true, mode: "full", dealerName: dealer.name, campaignsDeleted: campaignIds.length });
 });
 
 // ─── GET /api/dealers/portal-data (cookie-auth version of /dealer-portal) ─────

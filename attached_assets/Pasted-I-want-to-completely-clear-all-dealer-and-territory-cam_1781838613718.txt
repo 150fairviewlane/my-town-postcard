@@ -1,0 +1,36 @@
+I want to completely clear all dealer and territory/campaign test data from BOTH the dev database and the production database, so I can restart territory creation testing from a clean slate. The app is pre-launch — no real customers yet — but please check for any payment/reservation data before deleting so nothing is removed blindly.
+
+**IMPORTANT — DO NOT TOUCH HABERSHAM.** The original Habersham campaign was created before the dealer system existed. Per the schema comment in `lib/db/src/schema/campaigns.ts`, campaigns with `dealerId = null` include "the house/Habersham page" — this is intentional, not a bug. Habersham must be EXCLUDED from this entire cleanup. Only delete dealers and campaigns that have a non-null `dealerId` (i.e. were created through the dealer signup flow), plus their associated spots and child records. Explicitly confirm in your report which campaign(s) have `dealerId IS NULL` and verify Habersham is among them and will be skipped.
+
+**Step 1: Report before deleting anything.**
+
+For BOTH the dev database and the production database, query and report:
+- All dealer records (id, name, email, linked campaign if any)
+- All campaign/territory records (id, name, slug, dealerId, isPublished, status) — clearly flag which ones have `dealerId IS NULL` (these are house/legacy pages like Habersham and must NOT be deleted)
+- All spot records linked to those campaigns (count per campaign, and whether any have `paidSpots`/reservation status indicating a real or test Stripe payment was made — check whatever field tracks paid/reserved status, e.g. `status`, `stripePaymentIntentId`, `reservedAt`, etc.)
+- Any other tables with foreign keys pointing to these dealers or campaigns (e.g. ad generations, uploaded ad images, outreach records, anything in the schema that references `dealerId` or `campaignId`)
+
+Show me this report and STOP — do not delete anything yet. I want to see what exists before confirming the wipe, and I want to specifically confirm Habersham is correctly identified as protected.
+
+**Step 2 (only after I confirm): Delete in the correct order to avoid foreign key errors.**
+
+Once I give the go-ahead based on the report, delete ONLY records tied to dealers with a non-null `dealerId` (i.e. real dealer-created campaigns), in this order for BOTH databases:
+1. Any spot/reservation/payment-related child records tied to these dealer-linked campaigns
+2. Any ad generation, ad image, or outreach records tied to these dealers/campaigns
+3. The spots themselves (only for dealer-linked campaigns)
+4. The campaigns/territories (only where `dealerId IS NOT NULL`)
+5. The dealers
+
+Habersham (and any other `dealerId IS NULL` campaign) and its spots must remain completely untouched throughout.
+
+**Step 3: Confirm clean state.**
+
+After deletion, re-query both databases and confirm:
+- Zero dealer records
+- Zero campaign records WHERE `dealerId IS NOT NULL`
+- Habersham (and any other house/legacy campaign) still exists, unchanged, with all its original spots intact
+- No orphaned rows in any related table
+
+Report the final counts for both databases, explicitly confirming Habersham survived intact, so I can see it's fully clean before I start creating new test territories.
+
+Do NOT touch any other data unrelated to dealer-created campaigns/spots (e.g. don't touch admin user accounts, don't touch Habersham, don't touch unrelated app config).

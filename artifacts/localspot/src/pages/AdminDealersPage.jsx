@@ -2,6 +2,7 @@ import { useState, useEffect, Fragment } from "react";
 import { Link } from "wouter";
 
 const RED = "#7B1418";
+const GOLD = "#C9A84C";
 
 const STATUS_COLORS = {
   pending_payment: { bg: "#fffbeb", color: "#92400e", label: "Pending Payment" },
@@ -31,6 +32,250 @@ function formatDate(iso) {
   } catch { return iso; }
 }
 
+function authHeaders() {
+  const token = localStorage.getItem("admin_token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+// ─── Delete modal ─────────────────────────────────────────────────────────────
+
+function DeleteModal({ dealer, preview, onClose, onSuccess }) {
+  const [step, setStep] = useState("choose");   // "choose" | "confirm-full"
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+
+  const baseUrl = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+
+  const totalSpots = preview
+    ? preview.campaigns.reduce((s, c) => s + c.totalSpots, 0)
+    : 0;
+  const paidSpots = preview
+    ? preview.campaigns.reduce((s, c) => s + c.paidSpots, 0)
+    : 0;
+  const hasPaid = paidSpots > 0;
+
+  async function doDelete(mode) {
+    setBusy(true);
+    setErr(null);
+    try {
+      const res = await fetch(`${baseUrl}/api/admin/dealers/${dealer.id}?mode=${mode}`, {
+        method: "DELETE",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || `Server returned ${res.status}`);
+      onSuccess(mode, body.dealerName);
+    } catch (e) {
+      setErr(e.message);
+      setBusy(false);
+    }
+  }
+
+  const overlay = {
+    position: "fixed", inset: 0,
+    background: "rgba(0,0,0,0.55)",
+    zIndex: 9999,
+    display: "flex", alignItems: "center", justifyContent: "center",
+    padding: 16,
+  };
+  const card = {
+    background: "#fff",
+    borderRadius: 14,
+    maxWidth: 480,
+    width: "100%",
+    padding: "28px 28px 24px",
+    boxShadow: "0 24px 64px rgba(0,0,0,0.35)",
+    fontFamily: "DM Sans, sans-serif",
+    position: "relative",
+  };
+  const title = {
+    fontFamily: "Georgia,serif",
+    fontWeight: 900,
+    fontSize: 19,
+    color: "#111",
+    marginBottom: 6,
+    lineHeight: 1.3,
+  };
+  const sub = {
+    fontSize: 13.5,
+    color: "#6b7280",
+    marginBottom: 20,
+    lineHeight: 1.5,
+  };
+  const btn = (bg, color, border) => ({
+    display: "block",
+    width: "100%",
+    padding: "12px 16px",
+    borderRadius: 9,
+    border: border || "none",
+    background: bg,
+    color,
+    fontSize: 13.5,
+    fontWeight: 700,
+    cursor: busy ? "default" : "pointer",
+    textAlign: "left",
+    fontFamily: "DM Sans, sans-serif",
+    marginBottom: 8,
+    opacity: busy ? 0.7 : 1,
+    transition: "opacity .15s",
+  });
+
+  if (step === "confirm-full") {
+    return (
+      <div style={overlay} onClick={(e) => e.target === e.currentTarget && !busy && onClose()}>
+        <div style={card}>
+          <div style={{ ...title, color: "#991b1b" }}>
+            Permanently delete everything?
+          </div>
+          <div style={sub}>
+            This will remove <strong>{dealer.name}</strong>, their{" "}
+            {preview?.campaigns.length ?? 0} territory page
+            {(preview?.campaigns.length ?? 0) !== 1 ? "s" : ""}, and{" "}
+            <strong>{totalSpots} ad spot{totalSpots !== 1 ? "s" : ""}</strong>.
+            {hasPaid && (
+              <span style={{ display: "block", marginTop: 8, color: "#991b1b", fontWeight: 700 }}>
+                ⚠️ {paidSpots} spot{paidSpots !== 1 ? "s" : ""}{" "}
+                {paidSpots === 1 ? "has" : "have"} been paid for — that payment record
+                will be permanently lost.
+              </span>
+            )}{" "}
+            <strong>This cannot be undone.</strong>
+          </div>
+
+          {err && (
+            <div style={{ background: "#fef2f2", color: "#991b1b", borderRadius: 8,
+              padding: "10px 14px", fontSize: 13, marginBottom: 12, fontWeight: 600 }}>
+              {err}
+            </div>
+          )}
+
+          <button
+            style={{ ...btn("#991b1b", "#fff"), marginBottom: 10 }}
+            disabled={busy}
+            onClick={() => doDelete("full")}
+          >
+            {busy ? "Deleting…" : "Yes, permanently delete everything"}
+          </button>
+          <button
+            style={{ ...btn("#f3f4f6", "#374151"), marginBottom: 0 }}
+            disabled={busy}
+            onClick={() => { setStep("choose"); setErr(null); }}
+          >
+            ← Go back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={overlay} onClick={(e) => e.target === e.currentTarget && !busy && onClose()}>
+      <div style={card}>
+        <div style={title}>Remove dealer — {dealer.name}</div>
+        <div style={sub}>
+          Choose how you want to handle this dealer.
+          {preview && preview.campaigns.length > 0 && (
+            <>
+              {" "}They have{" "}
+              <strong>{preview.campaigns.length} territory page
+              {preview.campaigns.length !== 1 ? "s" : ""}</strong>
+              {" "}and <strong>{totalSpots} spot{totalSpots !== 1 ? "s" : ""}</strong>.
+            </>
+          )}
+        </div>
+
+        {err && (
+          <div style={{ background: "#fef2f2", color: "#991b1b", borderRadius: 8,
+            padding: "10px 14px", fontSize: 13, marginBottom: 12, fontWeight: 600 }}>
+            {err}
+          </div>
+        )}
+
+        {/* Option 1: Deactivate */}
+        <button
+          style={{ ...btn("#fffbeb", "#92400e", "1.5px solid #fde68a"), lineHeight: 1.4 }}
+          disabled={busy}
+          onClick={() => doDelete("deactivate")}
+        >
+          <div style={{ fontWeight: 800 }}>
+            {busy ? "Working…" : "⏸ Deactivate (keep all data)"}
+          </div>
+          <div style={{ fontWeight: 400, fontSize: 12.5, marginTop: 3, color: "#92400e" }}>
+            Marks the dealer as cancelled and unpublishes their page. All data
+            stays in the database — reversible later.
+          </div>
+        </button>
+
+        {/* Option 2: Dealer-only delete */}
+        <button
+          style={{ ...btn("#f9fafb", "#374151", "1.5px solid #d1d5db"), lineHeight: 1.4 }}
+          disabled={busy}
+          onClick={() => doDelete("dealer-only")}
+        >
+          <div style={{ fontWeight: 800 }}>
+            {busy ? "Working…" : "🗑 Remove dealer, keep territory page"}
+          </div>
+          <div style={{ fontWeight: 400, fontSize: 12.5, marginTop: 3, color: "#6b7280" }}>
+            Deletes the dealer account only. Their territory page stays live but
+            becomes unassigned (no dealer linked).
+          </div>
+        </button>
+
+        {/* Option 3: Full delete */}
+        <button
+          style={{ ...btn("#fef2f2", "#991b1b", "1.5px solid #fecaca"), lineHeight: 1.4 }}
+          disabled={busy}
+          onClick={() => setStep("confirm-full")}
+        >
+          <div style={{ fontWeight: 800 }}>Delete everything</div>
+          <div style={{ fontWeight: 400, fontSize: 12.5, marginTop: 3, color: "#991b1b" }}>
+            Permanently removes the dealer, their{" "}
+            {preview?.campaigns.length ?? "?"} territory page
+            {(preview?.campaigns.length ?? 0) !== 1 ? "s" : ""}, and{" "}
+            {totalSpots} ad spot{totalSpots !== 1 ? "s" : ""}.
+            {hasPaid && (
+              <> <strong>⚠️ {paidSpots} paid spot{paidSpots !== 1 ? "s" : ""}.</strong></>
+            )}{" "}
+            Cannot be undone.
+          </div>
+        </button>
+
+        <button
+          style={{ ...btn("transparent", "#9ca3af"), marginBottom: 0, textAlign: "center" }}
+          disabled={busy}
+          onClick={onClose}
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+
+function Toast({ message, onDone }) {
+  useEffect(() => {
+    const t = setTimeout(onDone, 3000);
+    return () => clearTimeout(t);
+  }, [onDone]);
+  return (
+    <div style={{
+      position: "fixed", bottom: 24, left: "50%",
+      transform: "translateX(-50%)",
+      background: "#111", color: "#fff",
+      padding: "12px 22px", borderRadius: 30,
+      fontSize: 14, fontWeight: 600,
+      boxShadow: "0 8px 32px rgba(0,0,0,.3)",
+      zIndex: 10000, whiteSpace: "nowrap",
+    }}>
+      {message}
+    </div>
+  );
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
+
 export default function AdminDealersPage() {
   const [dealers, setDealers] = useState(null);
   const [error, setError] = useState(null);
@@ -38,8 +283,27 @@ export default function AdminDealersPage() {
   const [pages, setPages] = useState({});
   const [impersonating, setImpersonating] = useState(null);
 
+  // Delete state
+  const [deleteTarget, setDeleteTarget] = useState(null);  // dealer row
+  const [deletePreview, setDeletePreview] = useState(null); // preview API data
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  const baseUrl = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+
+  const loadDealers = (token) => {
+    fetch(`${baseUrl}/api/admin/dealers`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(async (res) => {
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(body.error || `Server returned ${res.status}`);
+        setDealers(body.dealers || []);
+      })
+      .catch((err) => setError(err.message));
+  };
+
   const loadPage = (dealerId) => {
-    const baseUrl = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
     const token = localStorage.getItem("admin_token");
     setPages((p) => ({ ...p, [dealerId]: { status: "loading" } }));
     return fetch(`${baseUrl}/api/dealers/${dealerId}/landing-page`, {
@@ -65,7 +329,6 @@ export default function AdminDealersPage() {
     if (impersonating) return;
     setImpersonating(dealerId);
     try {
-      const baseUrl = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
       const token = localStorage.getItem("admin_token");
       const res = await fetch(`${baseUrl}/api/admin/dealers/${dealerId}/impersonate`, {
         method: "POST",
@@ -82,27 +345,55 @@ export default function AdminDealersPage() {
     }
   };
 
+  const openDeleteModal = async (dealer) => {
+    setDeleteTarget(dealer);
+    setDeletePreview(null);
+    setPreviewLoading(true);
+    try {
+      const res = await fetch(
+        `${baseUrl}/api/admin/dealers/${dealer.id}/delete-preview`,
+        { headers: authHeaders() },
+      );
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || `Server returned ${res.status}`);
+      setDeletePreview(body);
+    } catch {
+      setDeletePreview({ dealerName: dealer.name, campaigns: [] });
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const handleDeleteSuccess = (mode, dealerName) => {
+    setDeleteTarget(null);
+    setDeletePreview(null);
+    const msg =
+      mode === "deactivate" ? `${dealerName} deactivated` :
+      mode === "dealer-only" ? `${dealerName} removed (campaign kept)` :
+      `${dealerName} fully deleted`;
+    setToast(msg);
+    // Refresh dealers list
+    const token = localStorage.getItem("admin_token");
+    if (token) loadDealers(token);
+  };
+
   useEffect(() => {
     const stored = localStorage.getItem("admin_token");
-    const doFetch = (token) => {
-      const baseUrl = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
-      fetch(`${baseUrl}/api/admin/dealers`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then(async (res) => {
-          const body = await res.json().catch(() => ({}));
-          if (!res.ok) throw new Error(body.error || `Server returned ${res.status}`);
-          setDealers(body.dealers || []);
-        })
-        .catch((err) => setError(err.message));
-    };
-
     if (stored) {
-      doFetch(stored);
+      loadDealers(stored);
     } else {
-      fetch("/api/admin/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: "localspot-admin-2025" }) })
+      fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: "localspot-admin-2025" }),
+      })
         .then(r => r.json())
-        .then(d => { if (d.token) { localStorage.setItem("admin_token", d.token); doFetch(d.token); } })
+        .then(d => {
+          if (d.token) {
+            localStorage.setItem("admin_token", d.token);
+            loadDealers(d.token);
+          }
+        })
         .catch((err) => setError(err.message));
     }
   }, []);
@@ -120,10 +411,21 @@ export default function AdminDealersPage() {
     loadPage(dealerId);
   }, [dealers]);
 
-  const baseUrl = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
-
   return (
     <div style={{ minHeight: "100vh", background: "#f9fafb", fontFamily: "sans-serif" }}>
+      {/* Delete modal */}
+      {deleteTarget && (
+        <DeleteModal
+          dealer={deleteTarget}
+          preview={previewLoading ? null : deletePreview}
+          onClose={() => { setDeleteTarget(null); setDeletePreview(null); }}
+          onSuccess={handleDeleteSuccess}
+        />
+      )}
+
+      {/* Toast */}
+      {toast && <Toast message={`✓ ${toast}`} onDone={() => setToast(null)} />}
+
       <div style={{ background: "#fff", borderBottom: "1px solid #e5e7eb",
         padding: "12px 28px", display: "flex", alignItems: "center", gap: 16,
         flexWrap: "wrap" }}>
@@ -197,7 +499,7 @@ export default function AdminDealersPage() {
               boxShadow: "0 2px 8px rgba(0,0,0,0.04)", overflow: "hidden" }}>
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse",
-                  minWidth: 840 }}>
+                  minWidth: 860 }}>
                   <thead>
                     <tr style={{ background: "#fafafa", textAlign: "left" }}>
                       <Th>Dealer</Th>
@@ -240,24 +542,43 @@ export default function AdminDealersPage() {
                             </button>
                           </Td>
                           <Td>
-                            <button
-                              onClick={() => impersonateDealer(d.id)}
-                              disabled={impersonating === d.id}
-                              style={{
-                                background: "#fffbeb",
-                                color: "#92400e",
-                                border: "1.5px solid #fde68a",
-                                borderRadius: 8,
-                                padding: "6px 12px",
-                                fontSize: 12.5,
-                                fontWeight: 800,
-                                cursor: impersonating === d.id ? "default" : "pointer",
-                                whiteSpace: "nowrap",
-                                opacity: impersonating && impersonating !== d.id ? 0.5 : 1,
-                              }}
-                            >
-                              {impersonating === d.id ? "Opening…" : "🔍 Log in as dealer"}
-                            </button>
+                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                              <button
+                                onClick={() => impersonateDealer(d.id)}
+                                disabled={impersonating === d.id}
+                                style={{
+                                  background: "#fffbeb",
+                                  color: "#92400e",
+                                  border: "1.5px solid #fde68a",
+                                  borderRadius: 8,
+                                  padding: "6px 12px",
+                                  fontSize: 12.5,
+                                  fontWeight: 800,
+                                  cursor: impersonating === d.id ? "default" : "pointer",
+                                  whiteSpace: "nowrap",
+                                  opacity: impersonating && impersonating !== d.id ? 0.5 : 1,
+                                }}
+                              >
+                                {impersonating === d.id ? "Opening…" : "🔍 Log in as dealer"}
+                              </button>
+                              <button
+                                onClick={() => openDeleteModal(d)}
+                                title="Remove this dealer"
+                                style={{
+                                  background: "#fff",
+                                  color: "#991b1b",
+                                  border: "1.5px solid #fecaca",
+                                  borderRadius: 8,
+                                  padding: "6px 10px",
+                                  fontSize: 14,
+                                  fontWeight: 800,
+                                  cursor: "pointer",
+                                  lineHeight: 1,
+                                }}
+                              >
+                                🗑
+                              </button>
+                            </div>
                           </Td>
                         </tr>
                         {expanded === d.id && (
@@ -343,13 +664,14 @@ function LandingPagePanel({ state, onRefresh }) {
     );
   }
   const money = (cents) => `$${((cents || 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 0 })}`;
+  const RED2 = "#7B1418";
   return (
     <div style={{ padding: "16px 0", display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
         {page.url ? (
           <a href={page.url} target="_blank" rel="noreferrer" style={{
-            fontSize: 13.5, fontWeight: 800, color: RED, textDecoration: "none",
-            background: "#fff", border: `1.5px solid ${RED}`, borderRadius: 8, padding: "8px 14px",
+            fontSize: 13.5, fontWeight: 800, color: RED2, textDecoration: "none",
+            background: "#fff", border: `1.5px solid ${RED2}`, borderRadius: 8, padding: "8px 14px",
           }}>
             🔗 {page.url} ↗
           </a>
@@ -416,7 +738,7 @@ function LandingPagePanel({ state, onRefresh }) {
                         onClick={() => markSold(s.id)}
                         disabled={!!pendingSpotId}
                         style={{
-                          background: "#fff", border: `1.5px solid ${RED}`, color: RED,
+                          background: "#fff", border: `1.5px solid ${RED2}`, color: RED2,
                           borderRadius: 7, padding: "4px 10px", fontSize: 11.5, fontWeight: 800,
                           cursor: pendingSpotId ? "default" : "pointer",
                           opacity: pendingSpotId && pendingSpotId !== s.id ? 0.5 : 1,
