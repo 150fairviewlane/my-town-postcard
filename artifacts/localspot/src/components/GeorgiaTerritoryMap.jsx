@@ -71,7 +71,7 @@ export default function GeorgiaTerritoryMap() {
         maxZoom: 18,
         maxBounds: seBounds,
         maxBoundsViscosity: 1.0,
-        scrollWheelZoom: false,
+        scrollWheelZoom: true,
         zoomControl: true,
         attributionControl: false,
       });
