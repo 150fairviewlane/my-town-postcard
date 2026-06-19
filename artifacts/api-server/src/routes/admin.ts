@@ -24,6 +24,7 @@ const router: IRouter = Router();
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "localspot-admin-2025";
 const JWT_SECRET = process.env.SESSION_SECRET || "localspot-secret";
+const APP_URL = process.env.APP_URL || "https://mytownpostcard.com";
 
 function requireAdmin(req: any, res: any, next: any): void {
   const auth = req.headers.authorization;
@@ -414,6 +415,24 @@ router.post("/admin/test-email", requireAdmin, async (req, res): Promise<void> =
           <h2>✅ Test email delivered</h2>
           <p>This is a test email sent from the My Town Postcard admin dashboard to verify that Resend is configured correctly.</p>
           <p style="color: #6b7280; font-size: 13px;">From: ${fromEmail}<br>To: ${to}</p>
+          <div style="margin-top: 32px; padding-top: 18px; border-top: 2px solid #C9A84C;">
+            <table cellpadding="0" cellspacing="0" border="0" style="width: 100%;">
+              <tr>
+                <td style="vertical-align: middle; padding-right: 12px; width: 44px;">
+                  <img src="${APP_URL}/mailbox-logo.png" alt="My Town Postcard" width="36" height="36"
+                       style="display: block; width: 36px; height: 36px; object-fit: contain;" />
+                </td>
+                <td style="vertical-align: middle;">
+                  <span style="font-family: Georgia, serif; font-size: 15px; font-weight: 700; color: #7B1418;">My Town Postcard</span><br/>
+                  <span style="font-size: 12px; color: #9ca3af;">
+                    <a href="https://mytownpostcard.com" style="color: #9ca3af; text-decoration: none;">mytownpostcard.com</a>
+                    &nbsp;&middot;&nbsp;
+                    <a href="mailto:info@mytownpostcard.com" style="color: #9ca3af; text-decoration: none;">info@mytownpostcard.com</a>
+                  </span>
+                </td>
+              </tr>
+            </table>
+          </div>
         </div>
       `,
     });

@@ -1,0 +1,26 @@
+Add a consistent branded footer to all outgoing transactional emails sent via Resend (the same file/module used for sendAdProofEmail, sendAdminNewOrder, sendTerritoryClaimedEmail, sendAdminNewSubscriptionEmail, sendCampaignCompletedAdminEmail, and the test-email endpoint).
+
+**Footer must include:**
+1. **Company logo** — find the logo image already used on the live landing page / site header (check the React components for the header/nav — likely an `<img>` or imported asset referencing the logo file). Use that exact same image source. If it's a local imported asset in the React app, find its public URL on the deployed site (e.g. `https://mytownpostcard.com/path/to/logo.png`) rather than trying to inline/attach the file — emails need an absolute URL for images, not a bundled asset reference.
+2. **Company name** — "My Town Postcard" — displayed next to the logo, matching the same general look as the site header (logo + name side by side)
+3. **Website link** — `mytownpostcard.com`, clickable, opens the live site
+4. **Contact email** — `info@mytownpostcard.com`, as a `mailto:` link
+
+**No unsubscribe link** — these are transactional emails (order confirmations, admin alerts, dealer notifications), not marketing emails, so an unsubscribe link is not appropriate here.
+
+**Implementation:**
+
+1. In the email-sending file (`artifacts/api-server/src/lib/emails.ts` or wherever the Resend client and email templates live), create a single shared footer HTML snippet — a function or constant — so it's defined once and reused across every email template rather than duplicated in each one.
+
+2. Style it simply and cleanly:
+   - Logo on the left (small, e.g. 32-40px height), company name next to it in a readable font
+   - A thin top border or spacing to visually separate it from the email body above
+   - Website and email links below or beside the company name, in a muted/secondary text color (e.g. gray) since this is a footer, not the main content
+   - Use inline CSS styles only (no external stylesheets or `<style>` blocks) since most email clients strip those — standard practice for HTML email
+   - Keep it mobile-friendly: simple table or flex-like inline-block layout, no complex grid
+
+3. Insert this shared footer snippet at the bottom of every existing email template's HTML body — sendAdProofEmail, sendAdminNewOrder, sendTerritoryClaimedEmail, sendAdminNewSubscriptionEmail, sendCampaignCompletedAdminEmail, and the test-email endpoint. Do not duplicate the footer HTML by hand in each one — import/call the shared snippet so future changes only need to happen in one place.
+
+4. Match the brand colors already used elsewhere in the app (burgundy `#7B1418` and gold `#C9A84C`) for any accent styling in the footer (e.g. the top border line or link color), but keep the overall footer text subdued/secondary rather than loud.
+
+After implementing, send a test email via the existing `/api/admin/test-email` endpoint and confirm the footer renders correctly with the logo loading, the company name displayed, and both links working.

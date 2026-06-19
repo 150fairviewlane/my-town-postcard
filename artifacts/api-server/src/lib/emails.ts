@@ -9,13 +9,17 @@ interface OrderInfo {
   orderId: number;
 }
 
-function getResendClient() {
+let _resendLoader: Promise<{ Resend: new (key: string) => any }> | null = null;
+async function getResendClient() {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     logger.warn("RESEND_API_KEY not set — email sending skipped");
     return null;
   }
-  const { Resend } = require("resend");
+  if (!_resendLoader) {
+    _resendLoader = import("resend") as Promise<any>;
+  }
+  const { Resend } = await _resendLoader;
   return new Resend(apiKey);
 }
 
@@ -26,6 +30,29 @@ if (!process.env.FROM_EMAIL) {
 const FROM_EMAIL = process.env.FROM_EMAIL || "info@mytownpostcard.com";
 const APP_URL = process.env.APP_URL || "https://mytownpostcard.com";
 
+function emailFooter(): string {
+  return `
+    <div style="margin-top: 32px; padding-top: 18px; border-top: 2px solid #C9A84C;">
+      <table cellpadding="0" cellspacing="0" border="0" style="width: 100%;">
+        <tr>
+          <td style="vertical-align: middle; padding-right: 12px; width: 44px;">
+            <img src="${APP_URL}/mailbox-logo.png" alt="My Town Postcard" width="36" height="36"
+                 style="display: block; width: 36px; height: 36px; object-fit: contain;" />
+          </td>
+          <td style="vertical-align: middle;">
+            <span style="font-family: Georgia, serif; font-size: 15px; font-weight: 700; color: #7B1418;">My Town Postcard</span><br/>
+            <span style="font-size: 12px; color: #9ca3af;">
+              <a href="https://mytownpostcard.com" style="color: #9ca3af; text-decoration: none;">mytownpostcard.com</a>
+              &nbsp;&middot;&nbsp;
+              <a href="mailto:info@mytownpostcard.com" style="color: #9ca3af; text-decoration: none;">info@mytownpostcard.com</a>
+            </span>
+          </td>
+        </tr>
+      </table>
+    </div>
+  `;
+}
+
 interface AdProofInfo {
   businessName: string;
   contactEmail: string;
@@ -34,10 +61,7 @@ interface AdProofInfo {
   spotId: number;
   orderId: number;
   campaignName: string | null;
-  mailDate: string | null; // YYYY-MM-DD or human-readable string
-  // Anything we have on file that the customer's ad will display.
-  // Phone and website come from the spot row; tagline / offer / address
-  // are visual elements baked into the approved ad design itself.
+  mailDate: string | null;
   contactPhone: string | null;
   website: string | null;
   industry: string | null;
@@ -45,8 +69,6 @@ interface AdProofInfo {
 
 const formatMailDate = (raw: string | null): string => {
   if (!raw) return "TBD";
-  // mail_date is stored as TEXT (free-form), but the admin form writes it
-  // as YYYY-MM-DD. Try to humanize that; otherwise pass it through.
   if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
     const d = new Date(`${raw}T00:00:00Z`);
     if (!Number.isNaN(d.getTime())) {
@@ -72,20 +94,8 @@ const escapeHtml = (s: string | null | undefined): string => {
     .replace(/'/g, "&#39;");
 };
 
-/**
- * Sends the customer's "ad proof" email after their Stripe payment succeeds
- * and the spot has transitioned to paid. Replaces the older plain-text
- * reservation confirmation. The email is intentionally simple: a clean HTML
- * summary of the ad as it will appear in print, a "locked-in" reassurance
- * note, and a CTA back to the confirmation/details page.
- *
- * Idempotency note: the caller (markSpotPaidAndNotify in webhooks.ts and the
- * synchronous /checkout/confirm handler) only invokes this once per order
- * thanks to the unique payment-intent index on `orders`, so we don't dedup
- * here.
- */
 export async function sendAdProofEmail(info: AdProofInfo): Promise<void> {
-  const resend = getResendClient();
+  const resend = await getResendClient();
   if (!resend || !info.contactEmail) return;
 
   const safe = {
@@ -99,11 +109,6 @@ export async function sendAdProofEmail(info: AdProofInfo): Promise<void> {
   };
   const priceStr = `$${(info.spotPrice / 100).toFixed(2)}`;
 
-  // Build the "What will appear on your ad" list. Phone and website are
-  // values we have on file and can display verbatim. Tagline / offer /
-  // address are visual elements built into the approved ad design itself,
-  // so we list them by name with a short reassurance instead of pretending
-  // we have the literal copy stored.
   const adFieldRow = (label: string, value: string, fallback: string) => `
     <tr>
       <td style="padding: 8px 12px; border-bottom: 1px solid #f1f5f9; color: #6b7280; font-size: 13px; width: 35%;">${label}</td>
@@ -117,7 +122,7 @@ export async function sendAdProofEmail(info: AdProofInfo): Promise<void> {
       subject: `Your ad is locked in — ${info.businessName} on ${safe.campaignName}`,
       html: `
         <div style="font-family: Georgia, serif; max-width: 620px; margin: 0 auto; padding: 32px; background: #f9fafb;">
-          <div style="background: #991b1b; padding: 18px 24px; border-radius: 8px 8px 0 0;">
+          <div style="background: #7B1418; padding: 18px 24px; border-radius: 8px 8px 0 0;">
             <h1 style="color: #fff; margin: 0; font-size: 20px;">📮 My Town Postcard</h1>
           </div>
           <div style="background: #fff; border: 1px solid #e5e7eb; padding: 32px; border-radius: 0 0 8px 8px;">
@@ -171,15 +176,12 @@ export async function sendAdProofEmail(info: AdProofInfo): Promise<void> {
 
             <p style="text-align: center; margin: 28px 0;">
               <a href="${APP_URL}/confirmation/${info.spotId}"
-                 style="display: inline-block; background: #991b1b; color: #fff; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: bold; font-size: 15px;">
+                 style="display: inline-block; background: #7B1418; color: #fff; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: bold; font-size: 15px;">
                 View Your Ad Details →
               </a>
             </p>
 
-            <p style="color: #9ca3af; font-size: 12px; margin-top: 32px; text-align: center; line-height: 1.5;">
-              My Town Postcard · mytownpostcard.com<br>
-              Questions? Reply to this email and we'll get right back to you.
-            </p>
+            ${emailFooter()}
           </div>
         </div>
       `,
@@ -207,7 +209,7 @@ interface CampaignCompletedInfo {
 export async function sendCampaignCompletedAdminEmail(
   info: CampaignCompletedInfo,
 ): Promise<void> {
-  const resend = getResendClient();
+  const resend = await getResendClient();
   if (!resend) return;
 
   const dollars = (info.totalRevenueCents / 100).toFixed(2);
@@ -232,6 +234,7 @@ export async function sendCampaignCompletedAdminEmail(
             <tr><td style="padding: 8px;"><strong>Total Revenue</strong></td><td style="padding: 8px;">$${dollars}</td></tr>
           </table>
           <p style="margin-top: 16px;"><a href="${APP_URL}/admin">Open Admin Dashboard →</a></p>
+          ${emailFooter()}
         </div>
       `,
     });
@@ -247,9 +250,6 @@ export async function sendCampaignCompletedAdminEmail(
 
 // =============================================================================
 // Multi-issue subscription emails (Growth Plan / Premium Visibility Plan).
-// These are NEW templates — the single-issue email path (sendAdProofEmail
-// above) is unchanged so the one-time PaymentIntent flow has zero
-// regression risk.
 // =============================================================================
 
 interface SubscriptionConfirmInfo {
@@ -276,7 +276,7 @@ const PLAN_LABEL: Record<string, string> = {
 export async function sendSubscriptionConfirmationEmail(
   info: SubscriptionConfirmInfo,
 ): Promise<void> {
-  const resend = getResendClient();
+  const resend = await getResendClient();
   if (!resend || !info.contactEmail) return;
   const planLabel = PLAN_LABEL[info.commitmentType] ?? "Subscription";
   const monthly = `$${(info.monthlyCents / 100).toFixed(2)}`;
@@ -291,8 +291,8 @@ export async function sendSubscriptionConfirmationEmail(
       subject: `Welcome to the ${planLabel} — ${info.totalIssues} issues locked in`,
       html: `
         <div style="font-family: Georgia, serif; max-width: 620px; margin: 0 auto; padding: 32px; background: #f9fafb;">
-          <div style="background: #991b1b; padding: 18px 24px; border-radius: 8px 8px 0 0;">
-            <h1 style="color: #fff; margin: 0; font-size: 20px;">📮 LocalSpot Mailer</h1>
+          <div style="background: #7B1418; padding: 18px 24px; border-radius: 8px 8px 0 0;">
+            <h1 style="color: #fff; margin: 0; font-size: 20px;">📮 My Town Postcard</h1>
           </div>
           <div style="background: #fff; border: 1px solid #e5e7eb; padding: 32px; border-radius: 0 0 8px 8px;">
             <h2 style="color: #111; font-size: 22px; margin-top: 0;">You're locked in for ${info.totalIssues} consecutive issues 🎉</h2>
@@ -316,9 +316,9 @@ export async function sendSubscriptionConfirmationEmail(
               </p>
             </div>
             <p style="text-align: center; margin: 28px 0;">
-              <a href="${APP_URL}/confirmation/${info.spotId}" style="display: inline-block; background: #991b1b; color: #fff; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: bold; font-size: 15px;">View Your Ad Details →</a>
+              <a href="${APP_URL}/confirmation/${info.spotId}" style="display: inline-block; background: #7B1418; color: #fff; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: bold; font-size: 15px;">View Your Ad Details →</a>
             </p>
-            <p style="color: #9ca3af; font-size: 12px; margin-top: 32px; text-align: center;">LocalSpot Mailer · Reply to this email any time.</p>
+            ${emailFooter()}
           </div>
         </div>
       `,
@@ -345,7 +345,7 @@ interface AdminSubscriptionInfo {
 }
 
 export async function sendAdminNewSubscriptionEmail(info: AdminSubscriptionInfo): Promise<void> {
-  const resend = getResendClient();
+  const resend = await getResendClient();
   if (!resend) return;
   const planLabel = PLAN_LABEL[info.commitmentType] ?? info.commitmentType;
   const monthly = `$${(info.monthlyCents / 100).toFixed(2)}`;
@@ -366,6 +366,7 @@ export async function sendAdminNewSubscriptionEmail(info: AdminSubscriptionInfo)
             <tr><td style="padding: 8px;"><strong>Total Committed</strong></td><td style="padding: 8px;"><strong>${total}</strong></td></tr>
           </table>
           <p style="margin-top: 16px;"><a href="${APP_URL}/admin">Open Admin Dashboard →</a></p>
+          ${emailFooter()}
         </div>
       `,
     });
@@ -387,7 +388,7 @@ interface RenewalEmailInfo {
 }
 
 export async function sendRenewalT30Email(info: RenewalEmailInfo): Promise<void> {
-  const resend = getResendClient();
+  const resend = await getResendClient();
   if (!resend || !info.contactEmail) return;
   const endStr = info.commitmentEndDate.toLocaleDateString("en-US", {
     weekday: "long", year: "numeric", month: "long", day: "numeric",
@@ -396,13 +397,14 @@ export async function sendRenewalT30Email(info: RenewalEmailInfo): Promise<void>
     const { error: sendError } = await resend.emails.send({
       from: FROM_EMAIL,
       to: info.contactEmail,
-      subject: `Your LocalSpot subscription ends ${endStr} — keep your spot?`,
+      subject: `Your My Town Postcard subscription ends ${endStr} — keep your spot?`,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
           <h2>30 days left on your subscription</h2>
           <p>Hi ${escapeHtml(info.businessName)}, your committed run of issues ends on <strong>${endStr}</strong>.</p>
           <p>Renew now to keep the same spot, locked-in pricing, and uninterrupted coverage. Replying to this email is the fastest way to renew.</p>
           <p><a href="${APP_URL}/">Renew or browse the next issue →</a></p>
+          ${emailFooter()}
         </div>
       `,
     });
@@ -417,7 +419,7 @@ export async function sendRenewalT30Email(info: RenewalEmailInfo): Promise<void>
 }
 
 export async function sendRenewalT7Email(info: RenewalEmailInfo): Promise<void> {
-  const resend = getResendClient();
+  const resend = await getResendClient();
   if (!resend || !info.contactEmail) return;
   const endStr = info.commitmentEndDate.toLocaleDateString("en-US", {
     weekday: "long", year: "numeric", month: "long", day: "numeric",
@@ -433,6 +435,7 @@ export async function sendRenewalT7Email(info: RenewalEmailInfo): Promise<void> 
           <p>Hi ${escapeHtml(info.businessName)}, just a heads-up — your run ends on <strong>${endStr}</strong>. After that, your spot opens back up to new advertisers.</p>
           <p>Reply to this email or visit your dashboard to renew at the same plan and price.</p>
           <p><a href="${APP_URL}/">Renew now →</a></p>
+          ${emailFooter()}
         </div>
       `,
     });
@@ -447,18 +450,19 @@ export async function sendRenewalT7Email(info: RenewalEmailInfo): Promise<void> 
 }
 
 export async function sendRenewalPostEmail(info: RenewalEmailInfo): Promise<void> {
-  const resend = getResendClient();
+  const resend = await getResendClient();
   if (!resend || !info.contactEmail) return;
   try {
     const { error: sendError } = await resend.emails.send({
       from: FROM_EMAIL,
       to: info.contactEmail,
-      subject: `Thanks for running with LocalSpot — ready for round two?`,
+      subject: `Thanks for running with My Town Postcard — ready for round two?`,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
           <h2>Your committed run is complete</h2>
           <p>Hi ${escapeHtml(info.businessName)}, thanks for running with us through your full commitment. Many of our best results show up between issues 6 and 12 — would you like to keep going?</p>
           <p><a href="${APP_URL}/">Pick your next plan →</a></p>
+          ${emailFooter()}
         </div>
       `,
     });
@@ -480,7 +484,7 @@ interface AdminNewDealerInfo {
 }
 
 export async function sendAdminNewDealerEmail(info: AdminNewDealerInfo): Promise<void> {
-  const resend = getResendClient();
+  const resend = await getResendClient();
   if (!resend) return;
 
   const adminUrl = `${APP_URL}/admin/dealers?id=${info.dealerId}`;
@@ -501,10 +505,11 @@ export async function sendAdminNewDealerEmail(info: AdminNewDealerInfo): Promise
             <tr><td style="padding: 8px;"><strong>Dealer ID</strong></td><td style="padding: 8px;">${info.dealerId}</td></tr>
           </table>
           <p style="margin-top: 24px;">
-            <a href="${adminUrl}" style="display: inline-block; background: #991b1b; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold;">
+            <a href="${adminUrl}" style="display: inline-block; background: #7B1418; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold;">
               View Dealers in Admin →
             </a>
           </p>
+          ${emailFooter()}
         </div>
       `,
     });
@@ -526,7 +531,7 @@ interface AdminDealerCancelledInfo {
 }
 
 export async function sendAdminDealerCancelledEmail(info: AdminDealerCancelledInfo): Promise<void> {
-  const resend = getResendClient();
+  const resend = await getResendClient();
   if (!resend) return;
 
   const adminUrl = `${APP_URL}/admin/dealers?id=${info.dealerId}`;
@@ -547,10 +552,11 @@ export async function sendAdminDealerCancelledEmail(info: AdminDealerCancelledIn
             <tr><td style="padding: 8px;"><strong>Dealer ID</strong></td><td style="padding: 8px;">${info.dealerId}</td></tr>
           </table>
           <p style="margin-top: 24px;">
-            <a href="${adminUrl}" style="display: inline-block; background: #991b1b; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold;">
+            <a href="${adminUrl}" style="display: inline-block; background: #7B1418; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold;">
               View Dealers in Admin →
             </a>
           </p>
+          ${emailFooter()}
         </div>
       `,
     });
@@ -565,7 +571,7 @@ export async function sendAdminDealerCancelledEmail(info: AdminDealerCancelledIn
 }
 
 export async function sendAdminNewOrder(order: OrderInfo): Promise<void> {
-  const resend = getResendClient();
+  const resend = await getResendClient();
   if (!resend) return;
 
   try {
@@ -584,6 +590,7 @@ export async function sendAdminNewOrder(order: OrderInfo): Promise<void> {
             <tr><td style="padding: 8px;"><strong>Order #</strong></td><td style="padding: 8px;">${order.orderId}</td></tr>
           </table>
           <p><a href="${APP_URL}/admin">View in Admin Dashboard →</a></p>
+          ${emailFooter()}
         </div>
       `,
     });
@@ -607,14 +614,10 @@ export interface TerritoryClaimedEmailInfo {
   portalToken?: string | null;
 }
 
-/**
- * Sent to a dealer the moment their territory is activated (Stripe payment
- * cleared + territory materialized). No admin approval step exists anymore.
- */
 export async function sendTerritoryClaimedEmail(
   info: TerritoryClaimedEmailInfo
 ): Promise<void> {
-  const resend = getResendClient();
+  const resend = await getResendClient();
   if (!resend) {
     logger.info(
       { territory: info.territoryName, dealer: info.dealerEmail },
@@ -631,12 +634,13 @@ export async function sendTerritoryClaimedEmail(
       to: info.dealerEmail,
       subject: `Your territory is live — ${escapeHtml(info.territoryName)}`,
       html: `
-        <div style="font-family:sans-serif;max-width:560px;margin:0 auto;">
+        <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px;">
           <h2 style="color:#1a1a1a;">Welcome aboard, ${escapeHtml(info.dealerName)}! 🎉</h2>
           <p>Your exclusive territory <strong>${escapeHtml(info.territoryName)}</strong> is now active.</p>
           ${info.cities.length > 0 ? `<p><strong>Mailing areas:</strong> ${escapeHtml(info.cities.join(", "))}</p>` : ""}
           <p>Each postcard mailing reaches ≈5,000 households via USPS EDDM.</p>
           <p><a href="${portalUrl}" style="display:inline-block;background:#16a34a;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;">Open your dealer portal →</a></p>
+          ${emailFooter()}
         </div>
       `,
     });
@@ -656,14 +660,10 @@ export interface TerritoryConflictEmailInfo {
   territoryName: string;
 }
 
-/**
- * Sent when a territory claim is refunded because an overlapping territory was
- * taken during checkout (the post-payment 25-mile conflict re-check failed).
- */
 export async function sendTerritoryConflictEmail(
   info: TerritoryConflictEmailInfo
 ): Promise<void> {
-  const resend = getResendClient();
+  const resend = await getResendClient();
   if (!resend) {
     logger.info(
       { territory: info.territoryName, dealer: info.dealerEmail },
@@ -677,7 +677,7 @@ export async function sendTerritoryConflictEmail(
       to: info.dealerEmail,
       subject: `Refund issued — ${escapeHtml(info.territoryName)} was just claimed`,
       html: `
-        <div style="font-family:sans-serif;max-width:560px;margin:0 auto;">
+        <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px;">
           <h2 style="color:#1a1a1a;">We're sorry, ${escapeHtml(info.dealerName)}</h2>
           <p>Another dealer claimed an overlapping area for
           <strong>${escapeHtml(info.territoryName)}</strong> moments before your
@@ -687,6 +687,7 @@ export async function sendTerritoryConflictEmail(
           <p>Please pick a different nearby area on the territory finder, or reply
           to this email and we'll help you find one.</p>
           <p><a href="${APP_URL}/find-territory">Find another territory →</a></p>
+          ${emailFooter()}
         </div>
       `,
     });
@@ -717,7 +718,7 @@ export interface DealerWelcomeEmailInfo {
 export async function sendDealerWelcomeEmail(
   info: DealerWelcomeEmailInfo
 ): Promise<void> {
-  const resend = getResendClient();
+  const resend = await getResendClient();
   if (!resend) {
     logger.info(
       { dealer: info.dealerEmail },
@@ -732,11 +733,11 @@ export async function sendDealerWelcomeEmail(
     const { error: sendError } = await resend.emails.send({
       from: FROM_EMAIL,
       to: info.dealerEmail,
-      subject: "Welcome to LocalSpot — set up your dealer account",
+      subject: "Welcome to My Town Postcard — set up your dealer account",
       html: `
-        <div style="font-family:sans-serif;max-width:560px;margin:0 auto;">
+        <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px;">
           <h2 style="color:#7B1418;">Welcome, ${escapeHtml(info.dealerName)}!</h2>
-          <p>Your LocalSpot dealer account${territoryPhrase} is now active. Your payment was successful and your territory is reserved.</p>
+          <p>Your My Town Postcard dealer account${territoryPhrase} is now active. Your payment was successful and your territory is reserved.</p>
           <p>Click the button below to set your password and access your dealer dashboard. This link expires in <strong>72 hours</strong>.</p>
           <p>
             <a href="${info.setPasswordLink}"
@@ -752,6 +753,7 @@ export async function sendDealerWelcomeEmail(
             Or paste this link in your browser:<br/>
             <a href="${info.setPasswordLink}" style="color:#7B1418;">${info.setPasswordLink}</a>
           </p>
+          ${emailFooter()}
         </div>
       `,
     });
@@ -768,7 +770,7 @@ export async function sendDealerWelcomeEmail(
 export async function sendDealerPasswordResetEmail(
   info: DealerPasswordResetEmailInfo
 ): Promise<void> {
-  const resend = getResendClient();
+  const resend = await getResendClient();
   if (!resend) {
     logger.info(
       { dealer: info.dealerEmail },
@@ -782,7 +784,7 @@ export async function sendDealerPasswordResetEmail(
       to: info.dealerEmail,
       subject: "Reset your My Town Postcard dealer password",
       html: `
-        <div style="font-family:sans-serif;max-width:560px;margin:0 auto;">
+        <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px;">
           <h2 style="color:#1a1a1a;">Hi ${escapeHtml(info.dealerName)},</h2>
           <p>We received a request to reset your dealer portal password.</p>
           <p>Click the button below to set a new password. This link expires in <strong>1 hour</strong>.</p>
@@ -800,6 +802,7 @@ export async function sendDealerPasswordResetEmail(
             Or paste this link in your browser:<br/>
             <a href="${info.resetLink}" style="color:#7B1418;">${info.resetLink}</a>
           </p>
+          ${emailFooter()}
         </div>
       `,
     });
