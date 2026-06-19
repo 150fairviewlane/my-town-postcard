@@ -1,0 +1,23 @@
+The header in `landingSections.tsx` (used by `TerritoryLandingPage` via the shared `NavBar` component) has `position: sticky; top: 0; zIndex: 50` and an opaque background — confirmed correct in a previous pass. However, when actually testing on a live territory page (e.g. `/habersham`) and scrolling down, the header does NOT stick — it scrolls away with the rest of the page.
+
+**Do not re-check or re-confirm the header's own CSS again — it's already verified correct.** The bug is elsewhere. `position: sticky` has a well-known failure mode: it silently stops working if ANY ancestor element between the sticky header and the document root has `overflow: hidden`, `overflow: auto`, `overflow: scroll`, or sets a `transform` property — even just one ancestor breaks it, and there's no console warning when this happens.
+
+**Investigate in this order:**
+
+1. Find every parent/wrapper element that contains the `NavBar`/header component, from the immediate parent all the way up to the root `<div id="root">` or `<body>`. Check `TerritoryLandingPage.jsx`, any layout wrapper component it's rendered inside, and `App.tsx`'s routing wrapper.
+
+2. For EACH ancestor element, check its CSS (inline styles, styled-components, Tailwind classes, or external stylesheet rules) for any of:
+   - `overflow: hidden`
+   - `overflow: auto`
+   - `overflow: scroll`
+   - `overflow-x` / `overflow-y` set to any of the above
+   - `transform` (even `transform: translateZ(0)` or similar, used for GPU acceleration, breaks sticky)
+   - `display: flex` or `display: grid` on a DIRECT parent without the sticky element being a proper flex/grid item that allows it to stick relative to the SCROLLING container, not a nested one
+
+3. Also check whether the actual scrolling container is the `<body>`/`<html>` (normal case, sticky should work against the viewport) or if there's a nested div with a fixed height and its own `overflow-y: auto` acting as the real scroll container (common in app shells) — if so, the sticky header needs to be inside THAT scrolling container, not above it, for `top: 0` to mean anything.
+
+4. Report back exactly which ancestor element (with its file location and the specific CSS property) is breaking the sticky behavior.
+
+5. Once found, fix it — likely by removing the offending `overflow`/`transform` property if it's not actually needed, or if it IS needed for another reason (e.g. a modal/overlay system), restructure so the sticky header sits outside that specific container rather than removing a property that something else depends on. Explain what the property was originally there for before removing it, so we don't break whatever it was protecting against.
+
+6. After the fix, test by scrolling all the way down `/habersham` and confirm the header now visibly stays pinned to the top of the viewport throughout the scroll.
