@@ -1,0 +1,18 @@
+We've confirmed the backend is correct: the Woodstock/Cherokee territory's stored data returns `countyGeoids: ['13057']` (Cherokee County only) — no South Fulton, no bug there. The problem is isolated to the FRONTEND rendering of the polygon on the "Find Your Territory" map screen.
+
+Stop searching by guessing component names (e.g. "DealerSignup", "territoryEngine", generic "Map" searches) — that approach has failed to locate the file across multiple attempts. Instead, search by technology fingerprint:
+
+1. **Search the entire frontend codebase for the string `leaflet`** (case-insensitive) across all `.jsx`/`.tsx`/`.js`/`.ts` files. The screenshot of this exact screen shows a Leaflet attribution badge ("Leaflet | © OpenStreetMap") in the bottom-right corner of the map, plus zoom +/- controls matching Leaflet's default UI — so the component almost certainly imports `react-leaflet` (look for `import { MapContainer, TileLayer, GeoJSON, Polygon }` or similar) or raw `leaflet` (`import L from "leaflet"`).
+
+2. Also search for the string `GeoJSON` and `Polygon` as JSX component tags (react-leaflet's way of rendering shapes) — one of these is very likely how the green territory boundary gets drawn.
+
+3. Also check `package.json` / `node_modules` for `react-leaflet` or `leaflet` as a dependency — confirm it's actually used, and if so, search the codebase for every file that imports from that package. There should only be a small number of files (likely 1-3) that import leaflet anywhere in the project — list all of them.
+
+4. Once found, open the component(s) and look specifically at:
+   - What data prop feeds the green "available" polygon's coordinates (likely `countyGeoids` converted to GeoJSON via a county boundary lookup, or a separate footprint/boundary field)
+   - Whether it's calling `/api/counties-geojson` or `/api/territories/footprints` and filtering by the WRONG territory's geoids (e.g. accidentally rendering ALL counties returned by a broader query instead of filtering to just `['13057']`)
+   - Whether there's any client-side caching (React state, a stale closure, or a memoized value) that could be holding onto a previous/different territory's polygon data and not updating when the Woodstock search runs
+
+5. Report back: the exact file path(s) that render this map, and what's actually causing South Fulton's county geometry to appear in the rendered polygon despite the backend correctly returning only Cherokee County's geoid.
+
+Do not make any fix yet — first locate the file and report what you find in the data flow.

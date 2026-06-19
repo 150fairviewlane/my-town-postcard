@@ -1,0 +1,17 @@
+You found that both GA-003 (Cherokee County / Woodstock territory) and GA-004 have Fulton County's geoid `13121` incorrectly present in their footprint county geoids — this is what's causing the South Fulton bleed on the map. Before fixing anything, investigate and report on the following so we understand if this is one shared root cause or two independent mistakes:
+
+1. **What is GA-004?** Look up its name, associated dealer (if any), state, counties field, and current status. Is it a real claimed territory, a stale test/proposal record, or something else?
+
+2. **Where does the footprint geoid data actually come from for each of these two territories?** Specifically: is `13121` present in the `territory_zip_assignments` table (i.e. some ZIP code mapped to both Cherokee and Fulton got assigned to both territories), or is it coming from the `territories.counties` JSON array itself (i.e. the county name list directly includes something that resolves to Fulton), or computed at request time by `getFootprintCountyGeoids`/hub-selection logic rather than stored directly?
+
+3. **Check whether GA-003 and GA-004 were created around the same time, from the same proposal/dealer-signup flow, or via the same migration/seed script.** Look at `createdAt` timestamps and `source` field (`manual` vs `auto-generated`) for both. If they were created close together or by the same process, that points to one shared bug (e.g. a hub-selection radius bug that ran once and affected multiple proposals that day) rather than two separate manual data-entry mistakes.
+
+4. **Check if any OTHER territories (not just GA-003 and GA-004) also have `13121` or other unexpected/distant county geoids in their footprint data.** Query across all territories' resolved footprint geoids (via whatever `/api/territories/footprints` uses) and flag any territory where a county geoid is more than ~20 miles from that territory's centroid — this tells us if this is an isolated two-record issue or a wider data quality problem across the territories table.
+
+5. **Specifically check the ZIP-to-county mapping function/data used** (`getCountyGeoidFromZip` or similar) — is there a ZIP code that's incorrectly mapped to Fulton County (13121) in your lookup data/table, when it should map to Cherokee or wherever GA-004 actually is? A single bad ZIP→county mapping could explain contamination across multiple territories that happen to share that ZIP in their footprint.
+
+Report back clearly:
+- What GA-004 is
+- Whether this is one shared root cause (e.g. bad ZIP mapping, buggy migration) or two separate issues
+- Whether any other territories are affected
+- Your recommended fix, but DO NOT apply it yet — wait for confirmation once I see the report
