@@ -59,9 +59,18 @@ export default function GeorgiaTerritoryMap() {
 
       if (mapRef.current._leaflet_id) return;
 
+      const seBounds = L.latLngBounds(
+        L.latLng(24.0, -95.0),
+        L.latLng(38.0, -73.0)
+      );
+
       map = L.map(mapRef.current, {
         center: [32.9, -83.4],
         zoom: 7,
+        minZoom: 6,
+        maxZoom: 18,
+        maxBounds: seBounds,
+        maxBoundsViscosity: 1.0,
         scrollWheelZoom: false,
         zoomControl: true,
         attributionControl: false,
