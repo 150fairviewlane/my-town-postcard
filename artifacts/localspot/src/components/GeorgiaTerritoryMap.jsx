@@ -64,7 +64,7 @@ export default function GeorgiaTerritoryMap() {
         zoom: 7,
         scrollWheelZoom: false,
         zoomControl: true,
-        attributionControl: true,
+        attributionControl: false,
       });
 
       L.tileLayer(
