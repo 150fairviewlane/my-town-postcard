@@ -7,7 +7,7 @@ id = "3B4_FFSkEVBkAeYMFRJ2e"
 [[services]]
 localPort = 8080
 name = "API Server"
-paths = ["/api", "/go", "/admin/territories", "/dealer/claim-territory", "/find-territory"]
+paths = ["/api", "/go", "/admin/territories/zip-manager", "/dealer/claim-territory", "/find-territory"]
 
 [services.development]
 run = "pnpm --filter @workspace/api-server run dev"

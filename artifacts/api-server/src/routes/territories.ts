@@ -13,6 +13,9 @@ import {
   selectHubsByCountyFill,
   getFootprintCountyGeoids,
   computeMapDisplayZips,
+  computeHubZipFootprint,
+  checkZipFootprintConflict,
+  findExistingTerritoryWithinMiles,
 } from "../lib/territoryBuilder";
 import {
   getCountyGeoidsByShortNames,
@@ -22,6 +25,7 @@ import {
   findGazetteerCity,
   getCountyGeoidFromZip,
   getCountyGeoidForLocation,
+  getZipsNearLocation,
 } from "../lib/censusApi";
 
 // Works in both ESM dev (tsx watch) and the esbuild production bundle.
@@ -640,6 +644,196 @@ router.get("/territories/footprints", async (req, res): Promise<void> => {
   }));
 
   res.json(result);
+});
+
+// ─── POST /api/admin/territories/custom ───────────────────────────────────────
+// Admin-only: preview or create a territory from up to 4 named cities (any counties).
+// Body: { name, state, cities: string[], preview?: boolean }
+// When preview=true (or omitted), returns derived data + conflict check without DB writes.
+// When preview=false and no conflicts, inserts the territory + ZIP assignments.
+
+const CustomTerritorySchema = z.object({
+  name:    z.string().min(1).max(200),
+  state:   z.string().length(2),
+  cities:  z.array(z.string().trim().min(1)).min(2).max(4),
+  preview: z.boolean().optional(),
+});
+
+const CUSTOM_CONFLICT_RADIUS_MI = 15;
+
+router.post("/admin/territories/custom", requireAdmin, async (req, res): Promise<void> => {
+  const parsed = CustomTerritorySchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const { name, state, cities, preview = false } = parsed.data;
+  const stateAbbr = state.toUpperCase();
+
+  // 1. Resolve each city via Gazetteer
+  const resolved: Array<{ cityName: string; lat: number; lng: number }> = [];
+  const failedCities: string[] = [];
+  for (const cityInput of cities) {
+    const match = findGazetteerCity(cityInput.trim(), stateAbbr);
+    if (!match) {
+      failedCities.push(cityInput.trim());
+    } else {
+      resolved.push({ cityName: cityInput.trim(), lat: match.lat, lng: match.lng });
+    }
+  }
+  if (failedCities.length > 0) {
+    res.status(404).json({
+      error: `Could not locate the following cities in ${stateAbbr}: ${failedCities.join(", ")}. Try a nearby larger town.`,
+      failedCities,
+    });
+    return;
+  }
+
+  // 2. Combined centroid (simple average)
+  const centroidLat = resolved.reduce((s, c) => s + c.lat, 0) / resolved.length;
+  const centroidLng = resolved.reduce((s, c) => s + c.lng, 0) / resolved.length;
+
+  // 3. ZIP footprint — union of all cities' 15-mile radii, nearest-hub assignment
+  const footprintZips = computeHubZipFootprint(resolved);
+
+  // 4. Total households — union of unique ZIPs from each city's 15-mile ring
+  const zipHHMap = new Map<string, number>();
+  for (const city of resolved) {
+    for (const z of getZipsNearLocation(city.lat, city.lng, 15)) {
+      if (!zipHHMap.has(z.zip)) zipHHMap.set(z.zip, z.households);
+    }
+  }
+  const totalHouseholds = [...zipHHMap.values()].reduce((s, v) => s + v, 0);
+
+  // 5. Derive counties from each city's lat/lng
+  const countySet   = new Set<string>();
+  const countyNames: string[] = [];
+  for (const city of resolved) {
+    const geoid = getCountyGeoidForLocation(city.lat, city.lng);
+    if (geoid) {
+      const shortName = getCountyShortNameByGeoid(geoid);
+      if (shortName && !countySet.has(shortName)) {
+        countySet.add(shortName);
+        countyNames.push(shortName);
+      }
+    }
+  }
+
+  // 6. Conflict check
+  type ConflictEntry = { source: string; territoryId: string; territoryName: string; territoryStatus: string };
+  const conflicts: ConflictEntry[] = [];
+
+  // a) ZIP footprint overlap with TAKEN territories
+  const zipConflictId = await checkZipFootprintConflict(resolved);
+  if (zipConflictId) {
+    const [cTerr] = await db
+      .select({ id: territoriesTable.id, name: territoriesTable.name, status: territoriesTable.status })
+      .from(territoriesTable)
+      .where(eq(territoriesTable.id, zipConflictId));
+    if (cTerr) {
+      conflicts.push({
+        source: "ZIP footprint overlap",
+        territoryId: cTerr.id,
+        territoryName: cTerr.name,
+        territoryStatus: cTerr.status,
+      });
+    }
+  }
+
+  // b) Proximity + county check per city (all non-proposed statuses)
+  for (const city of resolved) {
+    const nearby = await findExistingTerritoryWithinMiles(
+      city.lat, city.lng, stateAbbr, CUSTOM_CONFLICT_RADIUS_MI,
+      { statuses: ["available", "pending", "taken"] },
+    );
+    if (!nearby) continue;
+    const nearbyId = nearby.id as string;
+    if (conflicts.find(c => c.territoryId === nearbyId)) continue; // already reported
+
+    // County-guard: only flag when the city shares a county with the existing territory
+    const nearbyCounties: string[] = Array.isArray(nearby.counties)
+      ? (nearby.counties as string[])
+      : [];
+    let isConflict: boolean;
+    if (nearbyCounties.length === 0) {
+      isConflict = true; // legacy territory without county list — conservative
+    } else {
+      const cityGeoid   = getCountyGeoidForLocation(city.lat, city.lng);
+      const cityShort   = cityGeoid ? (getCountyShortNameByGeoid(cityGeoid) ?? "") : "";
+      isConflict = cityShort.length > 0 &&
+        nearbyCounties.some(c => c.toLowerCase() === cityShort.toLowerCase());
+    }
+
+    if (isConflict) {
+      conflicts.push({
+        source: `city "${city.cityName}"`,
+        territoryId: nearbyId,
+        territoryName: nearby.name as string,
+        territoryStatus: nearby.status as string,
+      });
+    }
+  }
+
+  const previewData = {
+    resolvedCities: resolved.map(c => ({ name: c.cityName, lat: c.lat, lng: c.lng })),
+    centroidLat,
+    centroidLng,
+    counties: countyNames,
+    totalZips: footprintZips.length,
+    totalHouseholds,
+    conflicts,
+    hasConflicts: conflicts.length > 0,
+  };
+
+  if (preview !== false) {
+    res.json(previewData);
+    return;
+  }
+
+  // 7. CREATE — reject if conflicts exist
+  if (conflicts.length > 0) {
+    res.status(409).json({ error: "Cannot create territory: conflicts detected", conflicts });
+    return;
+  }
+
+  // Generate next sequential ID inside a transaction so concurrent inserts don't collide
+  const [created] = await db.transaction(async (tx) => {
+    const existingRows = await tx
+      .select({ id: territoriesTable.id })
+      .from(territoriesTable)
+      .where(eq(territoriesTable.state, stateAbbr));
+    const nums = existingRows
+      .map(r => parseInt(r.id.replace(`${stateAbbr}-`, ""), 10))
+      .filter(n => !isNaN(n));
+    const next = nums.length > 0 ? Math.max(...nums) + 1 : 1;
+    const id   = `${stateAbbr}-${String(next).padStart(3, "0")}`;
+
+    const rows = await tx.insert(territoriesTable).values({
+      id,
+      name,
+      state:       stateAbbr,
+      counties:    countyNames,
+      households:  totalHouseholds,
+      zones:       4,
+      status:      "available",
+      zoneNote:    resolved.map(c => c.cityName).join(", "),
+      centroidLat,
+      centroidLng,
+      source:      "manual",
+    }).returning();
+
+    // Write ZIP footprint
+    const CHUNK = 200;
+    for (let i = 0; i < footprintZips.length; i += CHUNK) {
+      const chunk = footprintZips.slice(i, i + CHUNK);
+      await tx.insert(territoryZipAssignmentsTable)
+        .values(chunk.map(({ zip }) => ({ zip, territoryId: id })))
+        .onConflictDoNothing();
+    }
+
+    return rows;
+  });
+
+  req.log.info({ id: created.id, name, cities: resolved.map(c => c.cityName) }, "Admin custom territory created");
+  res.status(201).json({ ...previewData, territoryId: created.id, territory: created });
 });
 
 // ─── GET /api/counties-geojson?stateFips=XX ───────────────────────────────────
