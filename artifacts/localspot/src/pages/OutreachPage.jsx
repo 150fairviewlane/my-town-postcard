@@ -157,8 +157,8 @@ function StatusBadge({ status }) {
 // ─────────────────────────────────────────────────────────────────────────────
 //   Discover New Leads panel
 // ─────────────────────────────────────────────────────────────────────────────
-function DiscoverPanel({ token, onDiscovered }) {
-  const [open, setOpen] = useState(false);
+function DiscoverPanel({ token, onDiscovered, autoOpen = false }) {
+  const [open, setOpen] = useState(autoOpen);
   const [form, setForm] = useState({ category: "", city: "", state: "GA" });
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
@@ -856,7 +856,11 @@ function OutreachContent({ token }) {
         <SummaryBar leads={leads} todayISO={todayISO} />
 
         {/* Discover new leads */}
-        <DiscoverPanel token={token} onDiscovered={handleDiscovered} />
+        <DiscoverPanel
+          token={token}
+          onDiscovered={handleDiscovered}
+          autoOpen={new URLSearchParams(window.location.search).has("discover")}
+        />
 
         {/* Follow-up due today */}
         {dueLeads.length > 0 && (
