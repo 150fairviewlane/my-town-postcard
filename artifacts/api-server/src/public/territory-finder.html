@@ -459,6 +459,7 @@ let map;
 let selectedClaim = null;            // {mode:'existing'|'proposed', ...}
 const _geoCache  = new Map();        // stateFips → Promise<FeatureCollection|null>
 let searchLayers = [];               // polygons drawn for the active search result
+let backgroundLayers = [];           // {layer, status} — territory layers from loadAllTerritories; faded during a search result, restored on clear
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function $(id){ return document.getElementById(id); }
@@ -488,6 +489,18 @@ function hideAllCards(){
 function clearSearchLayers(){
   searchLayers.forEach(l => { try { map.removeLayer(l); } catch(e){} });
   searchLayers = [];
+}
+
+function fadeBackgroundLayers(){
+  for(const {layer} of backgroundLayers){
+    try { layer.setStyle(countyStyle('none')); } catch(e){}
+  }
+}
+
+function restoreBackgroundLayers(){
+  for(const {layer, status} of backgroundLayers){
+    try { layer.setStyle(countyStyle(status)); } catch(e){}
+  }
 }
 
 function stateGeo(stateFips){
@@ -635,7 +648,7 @@ async function loadAllTerritories(){
         if(!features.length) continue;
         const t = terrById.get(tid) || { name: tid };
         const mapStatus = status === 'taken' ? 'taken' : 'available';
-        L.geoJSON({ type:'FeatureCollection', features }, {
+        const bgLayer = L.geoJSON({ type:'FeatureCollection', features }, {
           style: countyStyle(mapStatus),
           onEachFeature: (_, lyr) => {
             lyr.bindTooltip(
@@ -645,6 +658,7 @@ async function loadAllTerritories(){
             lyr.on('click', () => renderExisting(t, abbr));
           },
         }).addTo(map);
+        backgroundLayers.push({ layer: bgLayer, status: mapStatus });
       }
     }
 
@@ -654,7 +668,7 @@ async function loadAllTerritories(){
       const features = pickFeatures(geo, meta[1], [], Array.isArray(t.counties) ? t.counties : []);
       if(!features.length) return;
       const status = t.status === 'taken' ? 'taken' : 'available';
-      L.geoJSON({ type:'FeatureCollection', features }, {
+      const bgLayer = L.geoJSON({ type:'FeatureCollection', features }, {
         style: countyStyle(status),
         onEachFeature: (_, lyr) => {
           lyr.bindTooltip(
@@ -664,6 +678,7 @@ async function loadAllTerritories(){
           lyr.on('click', () => renderExisting(t, abbr));
         },
       }).addTo(map);
+      backgroundLayers.push({ layer: bgLayer, status });
     });
   }
 }
@@ -679,6 +694,7 @@ async function runSearch(){
   const btn = $('searchBtn');
   btn.disabled = true; btn.textContent = '…';
   hideAllCards();
+  restoreBackgroundLayers();
   $('sidebarLoad').style.display = 'block';
   $('mapTip').classList.add('hidden');
 
@@ -790,6 +806,7 @@ async function renderExisting(terr, stateAbbr){
     takenMsg.textContent = 'This territory has already been claimed. Try a nearby city to find available territory.';
   }
 
+  fadeBackgroundLayers();
   loadExistingMailingAreas(terr.id);
   $('selectedDetail').classList.add('visible');
 }
@@ -893,12 +910,14 @@ async function renderProposed(p){
     wrap.style.display = 'none';
   }
 
+  fadeBackgroundLayers();
   $('proposalCard').classList.add('visible');
 }
 
 function showUnavail(msg){
   clearSearchLayers();
   hideAllCards();
+  restoreBackgroundLayers();
   selectedClaim = null;
   $('unavailBody').textContent = msg;
   $('unavailCard').classList.add('visible');
