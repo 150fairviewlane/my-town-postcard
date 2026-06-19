@@ -1,0 +1,36 @@
+Context: GA-003 (Cherokee County, auto-generated, unclaimed, no dealer attached) is being replaced by a new custom territory covering Woodstock, Canton, Holly Springs, and Ball Ground — the 4 largest cities in Cherokee County — created via the new "Create Custom Territory" admin tool. There are currently NO real dealers anywhere in the system, so this is safe cleanup with zero customer-impact risk.
+
+**Step 1: Report before deleting anything.**
+
+Query and show me:
+- GA-003's full record (id, name, counties, status, dealerId, centroid, createdAt)
+- Confirm `dealerId IS NULL` (no dealer attached) and there are no paid spots tied to it
+- Count of `territory_zip_assignments` rows tied to GA-003
+- Any other tables referencing GA-003's id (ad generations, spots, outreach records — whatever else has a foreign key to campaign/territory id)
+
+Show me this and STOP — don't delete yet.
+
+**Step 2 (after I confirm): Delete GA-003 cleanly.**
+
+Delete in FK-safe order:
+1. Any child records (ad generations, spots, etc.) tied to GA-003
+2. `territory_zip_assignments` rows for GA-003
+3. The GA-003 territory record itself
+
+**Step 3: Create the new territory.**
+
+Use the existing "Create Custom Territory" admin tool/endpoint (`POST /api/admin/territories/custom` or equivalent, built previously) to create the new territory:
+- Name: "Cherokee County" (or ask me to confirm naming if the tool requires something more specific)
+- State: GA
+- Cities: ["Woodstock", "Canton", "Holly Springs", "Ball Ground"]
+
+Run it through the PREVIEW mode first if available, and show me the preview (derived counties, combined centroid, total ZIP/household count, and any conflict warnings) before committing. Since this new territory should be entirely within Cherokee County and GA-003 will already be deleted by this point, there should be no conflicts — but confirm this explicitly rather than assuming.
+
+**Step 4: Confirm final state.**
+
+After creating the new territory, report:
+- The new territory's assigned ID, derived counties list, centroid, and total household/ZIP count
+- Confirm GA-003's old id no longer exists and nothing references it
+- Confirm the new territory's footprint reasonably covers Woodstock, Canton, Holly Springs, and Ball Ground without unexpected bleed (sanity-check against the same ~20-mile-from-centroid rule used in the earlier South Fulton investigation — flag if any included ZIP/county is unexpectedly far from the combined centroid)
+
+Do this in BOTH the dev and production databases, matching whichever environment(s) currently have GA-003 — check both before assuming only one needs the change.
