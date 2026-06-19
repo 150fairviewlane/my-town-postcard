@@ -1,0 +1,29 @@
+Fix the Resend email integration so transactional emails actually send. The app already calls email helper functions throughout the codebase (sendAdProofEmail, sendAdminNewOrder, sendTerritoryClaimedEmail, sendAdminNewSubscriptionEmail, sendCampaignCompletedAdminEmail, etc.) but they may be failing silently — these calls are intentionally wrapped in try/catch so a Resend outage never breaks a payment or webhook, which means failures don't surface anywhere visible.
+
+**Your job: find the email sending file (likely `artifacts/api-server/src/lib/emails.ts` or similar) and verify/fix the following:**
+
+1. **Resend client initialization**
+   - Confirm it reads `process.env.RESEND_API_KEY` (the secret has been added in Replit's Secrets panel under this exact name)
+   - If the key is missing, the code should log a clear warning (e.g. `"RESEND_API_KEY not configured — emails will not send"`) rather than failing silently or throwing an unhandled error
+
+2. **"From" address must match the verified domain**
+   - The custom domain `mytownpostcard.com` (replace with my actual domain if different in the code) is now live and verified in Resend
+   - Check every `from:` field used when calling Resend's `send()` method
+   - It must be an address at the verified domain, e.g. `orders@mytownpostcard.com` or `noreply@mytownpostcard.com` — NOT a placeholder, NOT `onboarding@resend.dev` (Resend's sandbox address), and NOT the old Replit subdomain
+   - If multiple "from" addresses are used for different email types (e.g. order confirmations vs admin alerts), make sure they're all consistent and at the verified domain
+
+3. **Add visible logging around every send call**
+   - Wrap each `resend.emails.send()` call so that on success it logs the email type and recipient (e.g. `req.log.info({ to, type: "ad-proof" }, "Email sent successfully")`)
+   - On failure, log the full error object from Resend's response (not just a generic message) so future debugging doesn't require guessing — e.g. `req.log.error({ err, to, type: "ad-proof" }, "Resend send failed")`
+   - Do NOT change the existing behavior of swallowing errors so they don't crash the webhook/payment flow — just make sure they're now loud in the logs
+
+4. **Add a test endpoint for verification**
+   - Create `POST /api/admin/test-email` (protected by the existing `requireAdmin` middleware)
+   - Request body: `{ "to": "your-email@example.com" }`
+   - It should send a simple test email ("This is a test email from My Town Postcard — if you received this, Resend is working correctly.") using the same Resend client and from-address as the rest of the app
+   - Return `{ "success": true }` on success or `{ "success": false, "error": "<message>" }` on failure, with the real Resend error message included so I can see exactly what's wrong if it fails
+
+5. **Double check all existing call sites still work**
+   - Confirm `sendAdProofEmail`, `sendAdminNewOrder`, `sendTerritoryClaimedEmail`, `sendAdminNewSubscriptionEmail`, and `sendCampaignCompletedAdminEmail` all route through the same fixed Resend client and from-address — don't leave any of them on an old/broken path
+
+After making these changes, tell me exactly what "from" address is now being used, and confirm the test endpoint is ready so I can call it to verify.

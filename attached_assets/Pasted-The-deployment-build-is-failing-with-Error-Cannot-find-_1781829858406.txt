@@ -1,0 +1,22 @@
+The deployment build is failing with:
+
+```
+Error: Cannot find module '@swc/helpers/cjs/_define_property.cjs'
+```
+
+This is coming from `fontkit` (a dependency of `pdfkit`), which ships pre-compiled with SWC and contains raw `require("@swc/helpers/cjs/_define_property.cjs")` calls baked into its code. Because these are dynamic/raw require strings rather than static ES imports, esbuild's bundler doesn't trace them and skips bundling `@swc/helpers`, so the module is missing at runtime in the deployed build.
+
+**This is the exact same class of error we already hit and fixed for the `sharp` package.** Before making any changes:
+
+1. First, look at the git history / recent commits around when the `sharp` version of this error was fixed. Find the actual diff — what changed in the esbuild config, package.json, or build script to resolve it for `sharp`. Tell me exactly what that fix was.
+
+2. Apply the same fix pattern to `fontkit` and `pdfkit`. Likely one of these approaches (use whichever matches the sharp fix):
+   - If the sharp fix marked it as `external` in the esbuild build config (so it's not bundled and instead resolved from `node_modules` at runtime) — do the same for `fontkit` and `pdfkit` in that same external list.
+   - If the sharp fix added `@swc/helpers` as a direct dependency in `package.json` (so it's guaranteed present in the deployed `node_modules` regardless of bundling) — confirm `@swc/helpers` is listed as a direct dependency (not just transitive) and that it covers this case too.
+   - If the sharp fix did something else (e.g. a build script step that copies native/problematic modules into the output directory), mirror that same step for `fontkit`.
+
+3. After applying the fix, rebuild and confirm the build output no longer references a missing `@swc/helpers/cjs/_define_property.cjs` path — check the built bundle or build logs directly rather than assuming.
+
+4. Run a full deployment build (not just dev mode) to confirm it succeeds end-to-end this time, since the dev workspace running fine is not a reliable signal — this class of bug only shows up in the bundled/deployed build.
+
+Tell me which fix pattern you used and confirm the deployment build completes successfully.

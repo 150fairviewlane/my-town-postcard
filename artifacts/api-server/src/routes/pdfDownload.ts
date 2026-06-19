@@ -2,7 +2,20 @@ import { Router, type IRouter } from "express";
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
-import PDFDocument from "pdfkit";
+import type PDFDocumentType from "pdfkit";
+
+// Lazy-load pdfkit so the module can be evaluated at startup without requiring
+// fontkit (pdfkit's dep) which ships pre-compiled CJS with hardcoded
+// require("@swc/helpers/cjs/...") calls that are not resolved at bundle-time.
+// pdfkit uses `export =` (CJS), so dynamic import wraps it in { default: ... };
+// we cast through `any` to satisfy TypeScript and unwrap at runtime.
+let _pdfkitLoader: Promise<typeof PDFDocumentType> | null = null;
+function getPdfDocument(): Promise<typeof PDFDocumentType> {
+  if (!_pdfkitLoader) {
+    _pdfkitLoader = (import("pdfkit") as Promise<any>).then((m) => m.default ?? m);
+  }
+  return _pdfkitLoader!;
+}
 
 // Lazy-load sharp so the module can be evaluated at startup without requiring
 // the native binary to be on disk. Only needed at PDF-generation call time.
@@ -366,9 +379,10 @@ async function drawSpots(
 
 // ─── PDF buffer builder ───────────────────────────────────────────────────────
 
-function buildPdfBuffer(
-  drawFn: (doc: InstanceType<typeof PDFDocument>) => Promise<void>,
+async function buildPdfBuffer(
+  drawFn: (doc: InstanceType<typeof PDFDocumentType>) => Promise<void>,
 ): Promise<Buffer> {
+  const PDFDocument = await getPdfDocument();
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: PAGE, margin: 0, autoFirstPage: true });
     const chunks: Buffer[] = [];
