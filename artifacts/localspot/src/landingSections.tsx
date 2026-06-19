@@ -74,6 +74,7 @@ export function NavBar() {
     <header style={{
       position: "sticky", top: 0, zIndex: 50, background: "#fff",
       borderBottom: "1px solid #e5e7eb",
+      boxShadow: "0 2px 4px rgba(0,0,0,0.06)",
       padding: isMobile ? "0 16px" : "0 32px", display: "flex", alignItems: "center",
       justifyContent: "space-between", height: isMobile ? 72 : 92, gap: 12,
     }}>

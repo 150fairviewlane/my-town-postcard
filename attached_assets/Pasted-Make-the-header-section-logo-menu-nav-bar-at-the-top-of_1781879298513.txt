@@ -1,0 +1,19 @@
+Make the header section (logo + menu/nav bar) at the top of `TerritoryLandingPage` (in `artifacts/localspot/src/pages/TerritoryLandingPage.jsx`) stay fixed/visible at the top of the screen while the rest of the page content scrolls underneath it.
+
+**This should become the standard going forward for all territory landing pages** — i.e. fix it directly in the shared `TerritoryLandingPage` component (not a one-off override), so every territory (Habersham, and any future territory created through the admin tools) automatically gets this behavior with no per-territory changes needed.
+
+**Implementation:**
+
+1. Open `artifacts/localspot/src/pages/TerritoryLandingPage.jsx` and find the header/nav element at the top of the rendered page (containing the logo and any navigation links — e.g. the "Not your town?" territory switcher we added recently, if that lives in the header, or wherever the logo currently sits).
+
+2. Apply sticky positioning via CSS: `position: sticky; top: 0; z-index: 50;` (or `position: fixed` if the header isn't already at the very top of the document flow — check which is more appropriate given the existing layout structure; `sticky` is usually simpler and avoids needing to add top-padding to compensate for a fixed element, but use `fixed` + appropriate body/content padding if the header is nested inside a container with `overflow` rules that would break `sticky`).
+
+3. Make sure the header has an opaque background color (not transparent) so scrolling content doesn't show through behind it — use the existing page background color (likely cream/white) or a brand color consistent with the rest of the header's current styling.
+
+4. Add a subtle bottom border or box-shadow to the header once it's sticky, so there's a clear visual separation between the fixed header and the scrolling content beneath it (e.g. `box-shadow: 0 2px 4px rgba(0,0,0,0.06)` or a `1px solid` border in a muted brand-appropriate color).
+
+5. Confirm the header's z-index is high enough to stay above all other page content (modals/dialogs should still be able to render above it if they use a higher z-index — check that we're not breaking the territory-switcher dropdown or any other overlay component by setting the header's z-index too high).
+
+6. Test by scrolling all the way down a territory page (e.g. `/habersham`) and confirm: the logo and menu bar remain visible and fixed at the top throughout the entire scroll, nothing overlaps awkwardly, and the page content scrolls smoothly underneath without jumping or layout shift when the sticky behavior kicks in.
+
+7. Confirm this does NOT affect the root landing page (`/`) or any other page — only `TerritoryLandingPage` should change, since the request is specifically for territory landing pages going forward.
