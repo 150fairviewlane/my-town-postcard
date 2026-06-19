@@ -851,6 +851,95 @@ router.get("/dealers/:id/landing-page", requireAdmin, async (req, res): Promise<
   });
 });
 
+// ─── POST /api/admin/dealers ──────────────────────────────────────────────────
+// Admin-only: create a dealer account that is immediately active (no Stripe
+// payment required). Useful for dealers the admin adds directly rather than
+// ones who self-sign-up through the dealer program checkout flow.
+router.post("/admin/dealers", requireAdmin, async (req, res): Promise<void> => {
+  const schema = z.object({
+    name: z.string().min(1).max(200),
+    email: z.string().email(),
+    phone: z.string().optional(),
+    password: z.string().min(8).max(128),
+    territoryId: z.string().optional(), // e.g. "GA-003"
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid request", issues: parsed.error.issues });
+    return;
+  }
+  const { name, email, phone, password, territoryId } = parsed.data;
+
+  // Check for duplicate email
+  const [existing] = await db.select({ id: dealersTable.id, status: dealersTable.status })
+    .from(dealersTable)
+    .where(eq(dealersTable.email, email));
+  if (existing) {
+    res.status(409).json({ error: `A dealer account for ${email} already exists (id ${existing.id}, status: ${existing.status}).` });
+    return;
+  }
+
+  // Validate territory exists and is available if provided
+  if (territoryId) {
+    const [terr] = await db.select({ id: territoriesTable.id, status: territoriesTable.status })
+      .from(territoriesTable)
+      .where(eq(territoriesTable.id, territoryId));
+    if (!terr) {
+      res.status(404).json({ error: `Territory ${territoryId} not found.` });
+      return;
+    }
+    if (terr.status === "taken") {
+      res.status(409).json({ error: `Territory ${territoryId} is already taken.` });
+      return;
+    }
+  }
+
+  const passwordHash = await hashPassword(password);
+  const now = new Date();
+
+  const dealer = await db.transaction(async (tx) => {
+    const [created] = await tx
+      .insert(dealersTable)
+      .values({
+        name,
+        email,
+        phone: phone ?? null,
+        homeZip: "00000",
+        status: "active",
+        passwordHash,
+        activatedAt: now,
+      })
+      .returning();
+
+    if (territoryId) {
+      const updated = await tx
+        .update(territoriesTable)
+        .set({ status: "taken", dealerId: created.id })
+        .where(and(eq(territoriesTable.id, territoryId), eq(territoriesTable.status, "available")))
+        .returning({ id: territoriesTable.id });
+      if (updated.length === 0) {
+        throw Object.assign(new Error(`Territory ${territoryId} is no longer available.`), { status: 409 });
+      }
+    }
+
+    return created;
+  });
+
+  req.log.info({ dealerId: dealer.id, email, territoryId }, "Admin created dealer (no payment required)");
+  res.status(201).json({
+    dealer: {
+      id: dealer.id,
+      name: dealer.name,
+      email: dealer.email,
+      phone: dealer.phone,
+      status: dealer.status,
+      portalToken: dealer.portalToken,
+      activatedAt: dealer.activatedAt,
+      createdAt: dealer.createdAt,
+    },
+  });
+});
+
 router.get("/admin/dealers", requireAdmin, async (_req, res): Promise<void> => {
   const rows = await db.execute<{
     id: number;

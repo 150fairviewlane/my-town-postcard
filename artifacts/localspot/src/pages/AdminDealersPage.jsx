@@ -284,10 +284,18 @@ export default function AdminDealersPage() {
   const [impersonating, setImpersonating] = useState(null);
 
   // Delete state
-  const [deleteTarget, setDeleteTarget] = useState(null);  // dealer row
-  const [deletePreview, setDeletePreview] = useState(null); // preview API data
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deletePreview, setDeletePreview] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [toast, setToast] = useState(null);
+
+  // Create admin dealer form state
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState({ name: "", email: "", phone: "", password: "", territoryId: "" });
+  const [createBusy, setCreateBusy] = useState(false);
+  const [createError, setCreateError] = useState(null);
+  const [createResult, setCreateResult] = useState(null);
+  const [territories, setTerritories] = useState([]);
 
   const baseUrl = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 
@@ -398,6 +406,41 @@ export default function AdminDealersPage() {
     }
   }, []);
 
+  // Fetch available territories for the create-dealer dropdown
+  useEffect(() => {
+    fetch(`${baseUrl}/api/territories`)
+      .then(r => r.json())
+      .then(d => setTerritories((d.territories || []).filter(t => t.status === "available")))
+      .catch(() => {});
+  }, []);
+
+  const handleCreateDealer = async (e) => {
+    e.preventDefault();
+    setCreateBusy(true);
+    setCreateError(null);
+    setCreateResult(null);
+    try {
+      const token = localStorage.getItem("admin_token");
+      const body = { ...createForm };
+      if (!body.territoryId) delete body.territoryId;
+      if (!body.phone) delete body.phone;
+      const res = await fetch(`${baseUrl}/api/admin/dealers`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
+      setCreateResult(data.dealer);
+      setCreateForm({ name: "", email: "", phone: "", password: "", territoryId: "" });
+      loadDealers(token);
+    } catch (err) {
+      setCreateError(err.message);
+    } finally {
+      setCreateBusy(false);
+    }
+  };
+
   useEffect(() => {
     if (!dealers) return;
     const params = new URLSearchParams(window.location.search);
@@ -438,13 +481,25 @@ export default function AdminDealersPage() {
             <div style={{ fontSize: 11, color: "#9ca3af" }}>Admin · Dealer program</div>
           </div>
         </Link>
-        <a href={`${baseUrl}/admin`} style={{
-          marginLeft: "auto", fontSize: 13, fontWeight: 700, color: "#374151",
-          background: "#fff", border: "1px solid #d1d5db",
-          borderRadius: 8, padding: "7px 12px", textDecoration: "none",
-        }}>
-          ← Back to Admin
-        </a>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+          <button
+            onClick={() => { setShowCreate(v => !v); setCreateResult(null); setCreateError(null); }}
+            style={{
+              fontSize: 13, fontWeight: 700, color: "#fff",
+              background: RED, border: "none",
+              borderRadius: 8, padding: "7px 14px", cursor: "pointer",
+            }}
+          >
+            + Add Dealer
+          </button>
+          <a href={`${baseUrl}/admin`} style={{
+            fontSize: 13, fontWeight: 700, color: "#374151",
+            background: "#fff", border: "1px solid #d1d5db",
+            borderRadius: 8, padding: "7px 12px", textDecoration: "none",
+          }}>
+            ← Back to Admin
+          </a>
+        </div>
       </div>
 
       <div style={{ padding: 28, maxWidth: 1240, margin: "0 auto" }}>
@@ -453,6 +508,171 @@ export default function AdminDealersPage() {
             border: "1px solid #fecaca", borderRadius: 10, padding: 16,
             fontSize: 14, fontWeight: 600, marginBottom: 20 }}>
             {error}
+          </div>
+        )}
+
+        {/* ── Create Admin Dealer form ─────────────────────────────── */}
+        {showCreate && (
+          <div style={{
+            background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12,
+            padding: 24, marginBottom: 24,
+          }}>
+            <div style={{ fontWeight: 800, fontSize: 16, color: "#111", marginBottom: 4 }}>
+              Create Dealer Account
+            </div>
+            <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 18 }}>
+              Creates an active dealer immediately — no Stripe payment required.
+            </div>
+
+            {createResult && (
+              <div style={{
+                background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10,
+                padding: 16, marginBottom: 16,
+              }}>
+                <div style={{ fontWeight: 700, color: "#166534", fontSize: 14, marginBottom: 8 }}>
+                  ✓ Dealer created (ID #{createResult.id})
+                </div>
+                <div style={{ fontSize: 13, color: "#15803d", marginBottom: 4 }}>
+                  <strong>Email:</strong> {createResult.email}
+                </div>
+                <div style={{ fontSize: 13, color: "#15803d", marginBottom: 4 }}>
+                  <strong>Portal login:</strong>{" "}
+                  <a
+                    href={`${baseUrl}/dealer/login`}
+                    target="_blank" rel="noreferrer"
+                    style={{ color: "#15803d" }}
+                  >
+                    {baseUrl || ""}/dealer/login
+                  </a>
+                </div>
+                <div style={{ fontSize: 13, color: "#15803d" }}>
+                  <strong>Portal token (for direct access):</strong>{" "}
+                  <code style={{ fontSize: 12, background: "#dcfce7", padding: "1px 6px", borderRadius: 4 }}>
+                    {createResult.portalToken}
+                  </code>
+                </div>
+                <button
+                  onClick={() => { setCreateResult(null); setShowCreate(false); }}
+                  style={{ marginTop: 12, fontSize: 12, color: "#166534", background: "none",
+                    border: "1px solid #86efac", borderRadius: 6, padding: "4px 10px", cursor: "pointer" }}
+                >
+                  Done
+                </button>
+              </div>
+            )}
+
+            {createError && (
+              <div style={{
+                background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8,
+                padding: 12, marginBottom: 14, fontSize: 13, color: "#991b1b", fontWeight: 600,
+              }}>
+                {createError}
+              </div>
+            )}
+
+            <form onSubmit={handleCreateDealer}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 4 }}>
+                    Name *
+                  </label>
+                  <input
+                    type="text" required
+                    value={createForm.name}
+                    onChange={e => setCreateForm(f => ({ ...f, name: e.target.value }))}
+                    placeholder="Jane Smith"
+                    style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: 8,
+                      padding: "8px 10px", fontSize: 14, boxSizing: "border-box" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 4 }}>
+                    Email *
+                  </label>
+                  <input
+                    type="email" required
+                    value={createForm.email}
+                    onChange={e => setCreateForm(f => ({ ...f, email: e.target.value }))}
+                    placeholder="jane@example.com"
+                    style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: 8,
+                      padding: "8px 10px", fontSize: 14, boxSizing: "border-box" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 4 }}>
+                    Phone
+                  </label>
+                  <input
+                    type="tel"
+                    value={createForm.phone}
+                    onChange={e => setCreateForm(f => ({ ...f, phone: e.target.value }))}
+                    placeholder="(706) 555-1234"
+                    style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: 8,
+                      padding: "8px 10px", fontSize: 14, boxSizing: "border-box" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 4 }}>
+                    Password * (min 8 chars)
+                  </label>
+                  <input
+                    type="text"
+                    required minLength={8}
+                    value={createForm.password}
+                    onChange={e => setCreateForm(f => ({ ...f, password: e.target.value }))}
+                    placeholder="Set a strong password"
+                    style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: 8,
+                      padding: "8px 10px", fontSize: 14, fontFamily: "monospace", boxSizing: "border-box" }}
+                  />
+                </div>
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 4 }}>
+                    Link Territory (optional)
+                  </label>
+                  <select
+                    value={createForm.territoryId}
+                    onChange={e => setCreateForm(f => ({ ...f, territoryId: e.target.value }))}
+                    style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: 8,
+                      padding: "8px 10px", fontSize: 14, boxSizing: "border-box", background: "#fff" }}
+                  >
+                    <option value="">— No territory —</option>
+                    {territories.map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.id} — {t.name || t.id}
+                      </option>
+                    ))}
+                  </select>
+                  {territories.length === 0 && (
+                    <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>
+                      No available territories found.
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  type="submit"
+                  disabled={createBusy}
+                  style={{
+                    background: createBusy ? "#9ca3af" : RED, color: "#fff",
+                    border: "none", borderRadius: 8, padding: "9px 20px",
+                    fontWeight: 700, fontSize: 14, cursor: createBusy ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {createBusy ? "Creating…" : "Create Dealer"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowCreate(false); setCreateError(null); setCreateResult(null); }}
+                  style={{
+                    background: "#f3f4f6", color: "#374151", border: "1px solid #d1d5db",
+                    borderRadius: 8, padding: "9px 16px", fontWeight: 600, fontSize: 14, cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         )}
 
