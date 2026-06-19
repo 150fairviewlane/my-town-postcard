@@ -33,22 +33,22 @@ export type LandingCopy = {
 };
 
 export const DEFAULT_COPY: LandingCopy = {
-  countyPossessive: "Habersham County's",
-  heroCities: "Clarkesville, Demorest, Cornelia and Alto",
+  countyPossessive: "Your Town's",
+  heroCities: "local",
   heroSeason: "Summer",
-  howItWorksMailDesc: "5,000 postcards printed and delivered to Habersham homes via USPS.",
+  howItWorksMailDesc: "5,000 postcards printed and delivered to local homes via USPS Every Door Direct Mail.",
   mailingLabel: "Summer 2026 Mailing",
   mailingDetail:
-    "Timed to reach 5,000 Habersham County homes during peak local shopping season — targeted for mid-July 2026.",
+    "Timed to reach 5,000 local homes during peak shopping season — a precise, targeted drop right to their mailboxes.",
   targetedAreasDesc:
-    "We focus on specific Habersham County neighborhoods where your customers already live.",
+    "We focus on specific neighborhoods where your customers already live — no wasted reach, no guesswork.",
   faqEddm:
-    "We use USPS Every Door Direct Mail (EDDM) to target specific Habersham County postal routes — reaching 5,000 households across Clarkesville, Demorest, Cornelia, and Alto.",
+    "We use USPS Every Door Direct Mail (EDDM) to target specific postal routes in your area — reaching 5,000 local households who already live and shop near your business.",
   faqMailboxes:
-    "The Summer 2026 mailing is targeted for the third week of June 2026. Once all spots are filled, your ad is designed, printed, and mailed.",
+    "The Summer 2026 mailing is targeted for mid-July 2026. Once all spots are filled, your ad is designed, printed, and mailed.",
   faqGoodFit:
-    "Any local business that serves Habersham County residents is a great fit — restaurants, home services, medical, legal, retail, and more.",
-  citiesListAmp: "Clarkesville, Demorest, Cornelia & Alto",
+    "Any local business that serves the surrounding community is a great fit — restaurants, home services, medical, legal, retail, and more.",
+  citiesListAmp: "communities across Georgia",
 };
 
 const NAV_LINKS = [
@@ -680,7 +680,7 @@ export function Footer({ copy = DEFAULT_COPY }: { copy?: LandingCopy }) {
       <div style={{ maxWidth: 1100, margin: "32px auto 0", borderTop: "1px solid #7B1418",
         paddingTop: 20, textAlign: "center" }}>
         <span style={{ fontSize: 12, color: "#9ca3af", fontFamily: "sans-serif" }}>
-          © 2025 My Town Postcard · mytownpostcard.com · Clarkesville, GA
+          © 2025 My Town Postcard · mytownpostcard.com
         </span>
       </div>
     </footer>

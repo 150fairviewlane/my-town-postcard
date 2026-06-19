@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, and, inArray } from "drizzle-orm";
-import { db, campaignsTable, spotsTable } from "@workspace/db";
+import { eq, and, inArray, sql } from "drizzle-orm";
+import { db, campaignsTable, spotsTable, territoriesTable } from "@workspace/db";
 import { GetActiveCampaignResponse } from "@workspace/api-zod";
 import { fetchScanCountsForSpotIds } from "../lib/scanCounts";
 
@@ -100,6 +100,66 @@ router.get("/campaigns/by-slug/:slug", async (req, res): Promise<void> => {
   };
 
   res.json(GetActiveCampaignResponse.parse(response));
+});
+
+// ─── GET /api/territories/public ─────────────────────────────────────────────
+// Returns all active or published campaigns as map-ready territory objects.
+// lat/lng are omitted (not defaulted to 0,0) when no territories table row
+// matches the campaign territory name — so the frontend can safely skip pins
+// for territories that have no centroid yet.
+router.get("/territories/public", async (req, res): Promise<void> => {
+  // Aggregate spot counts grouped by campaign in one query
+  const rows = await db
+    .select({
+      id:          campaignsTable.id,
+      name:        campaignsTable.territory,
+      slug:        campaignsTable.slug,
+      status:      campaignsTable.status,
+      isPublished: campaignsTable.isPublished,
+      centroidLat: territoriesTable.centroidLat,
+      centroidLng: territoriesTable.centroidLng,
+      paidSpots:   sql<number>`COUNT(${spotsTable.id}) FILTER (WHERE ${spotsTable.status} = 'paid')`,
+      totalSpots:  sql<number>`COUNT(${spotsTable.id})`,
+    })
+    .from(campaignsTable)
+    .leftJoin(
+      spotsTable,
+      eq(spotsTable.campaignId, campaignsTable.id),
+    )
+    .leftJoin(
+      territoriesTable,
+      sql`LOWER(${campaignsTable.territory}) LIKE '%' || LOWER(${territoriesTable.name}) || '%'`,
+    )
+    .where(
+      sql`(${campaignsTable.status} = 'active' OR ${campaignsTable.isPublished} = true)
+          AND ${campaignsTable.slug} IS NOT NULL`,
+    )
+    .groupBy(
+      campaignsTable.id,
+      campaignsTable.territory,
+      campaignsTable.slug,
+      campaignsTable.status,
+      campaignsTable.isPublished,
+      territoriesTable.centroidLat,
+      territoriesTable.centroidLng,
+    );
+
+  const result = rows.map(r => {
+    const base: Record<string, unknown> = {
+      slug:       r.slug,
+      name:       r.name,
+      paidSpots:  Number(r.paidSpots ?? 0),
+      totalSpots: Number(r.totalSpots ?? 0),
+    };
+    // Only include coordinates when both are present — never default to 0,0
+    if (r.centroidLat != null && r.centroidLng != null) {
+      base.latitude  = r.centroidLat;
+      base.longitude = r.centroidLng;
+    }
+    return base;
+  });
+
+  res.json(result);
 });
 
 router.get("/campaigns/active/taken-categories", async (req, res): Promise<void> => {

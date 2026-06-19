@@ -11,16 +11,20 @@ import {
   ReserveForm,
   Footer,
 } from "../landingSections";
+// @ts-expect-error JSX module without types
+import GeorgiaTerritoryMap from "../components/GeorgiaTerritoryMap";
 
-// The flagship Habersham County home page. It renders the shared landing
-// sections with their default copy, so it stays identical to the original
-// hand-written page while territory/dealer pages reuse the same sections
-// with their own copy. Loads the single active campaign (no slug).
+// The generic My Town Postcard home page — entry point for all of Georgia.
+// Renders with DEFAULT_COPY (fully generic, no county/city names) so any
+// visitor lands on a page that speaks to them regardless of where they're from.
+// Individual territory pages (/{slug}) use the same sections with city-specific
+// copy passed via the `copy` prop.
 export default function LandingPage() {
   return (
     <div style={{ background: "#fff", minHeight: "100vh" }}>
       <NavBar />
       <Hero />
+      <GeorgiaTerritoryMap />
       <HowItWorks />
       <WhyChooseUs />
       <PostcardBook />
