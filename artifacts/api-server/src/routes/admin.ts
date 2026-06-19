@@ -401,7 +401,7 @@ router.post("/admin/test-email", requireAdmin, async (req, res): Promise<void> =
   }
 
   const fromEmail = process.env.FROM_EMAIL || "info@mytownpostcard.com";
-  const { Resend } = require("resend");
+  const { Resend } = await import("resend");
   const resend = new Resend(apiKey);
 
   try {
