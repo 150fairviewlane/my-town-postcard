@@ -1,37 +1,41 @@
-import { useState, useEffect } from "react";
-
-// ─── Georgia state SVG outline ────────────────────────────────────────────────
-// Simplified polygon of Georgia's border. ViewBox 0 0 340 410.
-// Points computed from actual state boundary lat/lng coordinates:
-//   minLat=30.35 maxLat=35.05 minLng=-85.65 maxLng=-80.80
-// Clockwise from NW corner.
-const GA_PATH =
-  "M 13,15 L 98,14 L 178,14 L 192,56 L 213,114 " +
-  "L 310,214 L 285,307 L 281,362 L 248,390 " +
-  "L 162,390 L 62,390 L 53,337 L 41,210 L 41,90 Z";
-
-const SVG_W = 340;
-const SVG_H = 410;
-const PAD = 10;
-const GA_MIN_LAT = 30.35;
-const GA_MAX_LAT = 35.05;
-const GA_MIN_LNG = -85.65;
-const GA_MAX_LNG = -80.80;
-
-function project(lat, lng) {
-  const x = PAD + ((lng - GA_MIN_LNG) / (GA_MAX_LNG - GA_MIN_LNG)) * (SVG_W - PAD * 2);
-  const y = PAD + ((GA_MAX_LAT - lat) / (GA_MAX_LAT - GA_MIN_LAT)) * (SVG_H - PAD * 2);
-  return { x, y };
-}
+import { useState, useEffect, useRef } from "react";
+import { useLocation } from "wouter";
+import "leaflet/dist/leaflet.css";
 
 const RED = "#7B1418";
 const GOLD = "#C9A84C";
 
-// ─── Main component ───────────────────────────────────────────────────────────
+function cleanName(name) {
+  return name
+    .replace(/\s*&\s*Surrounding\s+Areas?\b/gi, "")
+    .replace(/\s+Counties\b/gi, "")
+    .replace(/\s+County\b/gi, "")
+    .trim();
+}
+
+function makeIcon(L, highlighted = false) {
+  const size = highlighted ? 22 : 16;
+  const border = highlighted ? 3 : 2;
+  return L.divIcon({
+    className: "",
+    html: `<div style="
+      width:${size}px;height:${size}px;border-radius:50%;
+      background:${RED};border:${border}px solid #fff;
+      box-shadow:0 2px 10px rgba(123,20,24,0.55);
+      cursor:pointer;
+    "></div>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    tooltipAnchor: [size / 2 + 4, 0],
+  });
+}
+
 export default function GeorgiaTerritoryMap() {
   const [territories, setTerritories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [hovered, setHovered] = useState(null);
+  const [, navigate] = useLocation();
+  const mapRef = useRef(null);
 
   useEffect(() => {
     const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
@@ -43,189 +47,190 @@ export default function GeorgiaTerritoryMap() {
   }, []);
 
   const pinned = territories.filter(t => t.latitude != null && t.longitude != null);
-  const all = territories;
 
-  const handleClick = (slug) => {
-    window.location.href = `/${slug}`;
-  };
+  useEffect(() => {
+    if (loading) return;
+
+    let L;
+    let map;
+
+    import("leaflet").then(mod => {
+      L = mod.default;
+
+      if (mapRef.current._leaflet_id) return;
+
+      map = L.map(mapRef.current, {
+        center: [32.9, -83.4],
+        zoom: 7,
+        scrollWheelZoom: false,
+        zoomControl: true,
+        attributionControl: true,
+      });
+
+      L.tileLayer(
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
+        {
+          attribution:
+            "Tiles &copy; <a href='https://www.esri.com/'>Esri</a> &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community",
+          maxZoom: 18,
+        }
+      ).addTo(map);
+
+      pinned.forEach(t => {
+        const icon = makeIcon(L, false);
+        const marker = L.marker([t.latitude, t.longitude], { icon })
+          .addTo(map)
+          .on("click", () => navigate(`/${t.slug}`));
+
+        const label = L.tooltip({
+          permanent: true,
+          direction: "right",
+          offset: [12, 0],
+          className: "mtp-territory-label",
+        })
+          .setContent(cleanName(t.name));
+
+        marker.bindTooltip(label).openTooltip();
+
+        marker.on("mouseover", () => {
+          setHovered(t.slug);
+          marker.setIcon(makeIcon(L, true));
+        });
+        marker.on("mouseout", () => {
+          setHovered(null);
+          marker.setIcon(makeIcon(L, false));
+        });
+      });
+    });
+
+    return () => {
+      if (map) map.remove();
+    };
+  }, [loading, pinned.length]);
 
   return (
-    <section style={{ background: "#fafaf8", padding: "72px 24px 60px", textAlign: "center" }}>
-      <div style={{ maxWidth: 1060, margin: "0 auto" }}>
-        {/* Section heading */}
+    <section style={{ background: "#f8f5f0", padding: "80px 24px 72px", textAlign: "center" }}>
+      <style>{`
+        .mtp-territory-label {
+          background: transparent !important;
+          border: none !important;
+          box-shadow: none !important;
+          padding: 0 !important;
+          color: #111 !important;
+          font-family: Georgia, serif !important;
+          font-size: 13px !important;
+          font-weight: 700 !important;
+          white-space: nowrap !important;
+          text-shadow:
+            -1px -1px 0 #fff,  1px -1px 0 #fff,
+            -1px  1px 0 #fff,  1px  1px 0 #fff,
+            0 2px 4px rgba(0,0,0,0.15) !important;
+          pointer-events: none !important;
+        }
+        .mtp-territory-label::before {
+          display: none !important;
+        }
+        .leaflet-tooltip-left.mtp-territory-label::before,
+        .leaflet-tooltip-right.mtp-territory-label::before,
+        .leaflet-tooltip-top.mtp-territory-label::before,
+        .leaflet-tooltip-bottom.mtp-territory-label::before {
+          display: none !important;
+        }
+      `}</style>
+
+      <div style={{ maxWidth: 900, margin: "0 auto" }}>
         <h2 style={{
-          fontFamily: "Georgia,serif", fontWeight: 900, fontSize: "clamp(26px, 3.5vw, 38px)",
+          fontFamily: "Georgia,serif", fontWeight: 900,
+          fontSize: "clamp(26px, 3.5vw, 38px)",
           color: "#111", margin: "0 0 10px",
         }}>
           Find Your Town on the Map
         </h2>
         <p style={{
           fontFamily: "sans-serif", fontSize: 16, color: "#555",
-          margin: "0 auto 40px", maxWidth: 520, lineHeight: 1.6,
+          margin: "0 auto 36px", maxWidth: 520, lineHeight: 1.6,
         }}>
           Click your town to see available ad spots and pricing.
         </p>
 
-        {/* Map + sidebar layout */}
-        <div style={{
-          display: "flex", gap: 32, alignItems: "flex-start", justifyContent: "center",
-          flexWrap: "wrap",
-        }}>
-          {/* SVG map */}
-          <div style={{
-            position: "relative", display: "inline-block",
-            filter: "drop-shadow(0 4px 16px rgba(0,0,0,0.10))",
-            flexShrink: 0,
-          }}>
-            <svg
-              viewBox={`0 0 ${SVG_W} ${SVG_H}`}
-              style={{
-                width: "min(90vw, 340px)", height: "auto",
-                display: "block",
-              }}
-              aria-label="Map of Georgia showing active postcard territories"
-            >
-              {/* State outline */}
-              <path
-                d={GA_PATH}
-                fill="#f0ebe3"
-                stroke="#c8b89a"
-                strokeWidth="2"
-                strokeLinejoin="round"
-              />
-
-              {/* Territory pins */}
-              {pinned.map(t => {
-                const { x, y } = project(t.latitude, t.longitude);
-                const isHovered = hovered === t.slug;
-                return (
-                  <g key={t.slug} style={{ cursor: "pointer" }} onClick={() => handleClick(t.slug)}>
-                    {/* Transparent hit target (≥44×44px) */}
-                    <rect
-                      x={x - 22} y={y - 22} width={44} height={44}
-                      fill="transparent"
-                      onMouseEnter={() => setHovered(t.slug)}
-                      onMouseLeave={() => setHovered(null)}
-                      onTouchStart={() => setHovered(isHovered ? null : t.slug)}
-                    />
-                    {/* Outer ring (shown on hover) */}
-                    {isHovered && (
-                      <circle cx={x} cy={y} r={14}
-                        fill="none" stroke={GOLD} strokeWidth={2.5}
-                        style={{ pointerEvents: "none" }}
-                      />
-                    )}
-                    {/* Pin dot */}
-                    <circle cx={x} cy={y} r={isHovered ? 9 : 7}
-                      fill={RED}
-                      stroke="#fff" strokeWidth={2}
-                      style={{
-                        transition: "r 0.15s",
-                        filter: isHovered ? `drop-shadow(0 2px 6px ${RED}88)` : "none",
-                        pointerEvents: "none",
-                      }}
-                    />
-                  </g>
-                );
-              })}
-
-              {/* Hover tooltip — rendered last so it's on top */}
-              {hovered && (() => {
-                const t = pinned.find(p => p.slug === hovered);
-                if (!t) return null;
-                const { x, y } = project(t.latitude, t.longitude);
-                // Flip tooltip below pin if near top edge
-                const above = y > 60;
-                const ty = above ? y - 16 : y + 24;
-                const label = `${t.name} — ${t.paidSpots} of ${t.totalSpots} spots claimed`;
-                // Estimate tooltip width
-                const tw = Math.min(label.length * 6.5 + 24, 220);
-                const tx = Math.max(PAD + 2, Math.min(SVG_W - tw - PAD - 2, x - tw / 2));
-                return (
-                  <g style={{ pointerEvents: "none" }}>
-                    <rect x={tx} y={above ? ty - 26 : ty}
-                      width={tw} height={28}
-                      rx={6} fill="#111" opacity={0.92}
-                    />
-                    <text
-                      x={tx + tw / 2} y={above ? ty - 7 : ty + 17}
-                      textAnchor="middle"
-                      fill="#fff" fontSize={11} fontFamily="system-ui,sans-serif" fontWeight={600}
-                    >
-                      {label}
-                    </text>
-                  </g>
-                );
-              })()}
-            </svg>
-          </div>
-
-          {/* Territory list / legend */}
-          {all.length > 0 && (
-            <div style={{
-              display: "flex", flexDirection: "column", gap: 10,
-              alignItems: "flex-start", minWidth: 180,
-            }}>
-              <div style={{
-                fontFamily: "sans-serif", fontSize: 12, fontWeight: 700,
-                color: "#9ca3af", textTransform: "uppercase", letterSpacing: 1,
-                marginBottom: 4,
-              }}>
-                Active territories
-              </div>
-              {all.map(t => (
-                <a
-                  key={t.slug}
-                  href={`/${t.slug}`}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 10,
-                    fontFamily: "sans-serif", fontSize: 14, fontWeight: 700,
-                    color: RED, textDecoration: "none",
-                    padding: "10px 16px",
-                    background: "#fff", borderRadius: 10,
-                    border: `1.5px solid #e5e7eb`,
-                    transition: "border-color 0.15s, box-shadow 0.15s",
-                    minWidth: 180,
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.borderColor = RED;
-                    e.currentTarget.style.boxShadow = `0 2px 10px ${RED}22`;
-                    if (t.latitude != null) setHovered(t.slug);
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.borderColor = "#e5e7eb";
-                    e.currentTarget.style.boxShadow = "none";
-                    setHovered(null);
-                  }}
-                >
-                  <span style={{
-                    width: 10, height: 10, borderRadius: "50%",
-                    background: RED, flexShrink: 0, display: "inline-block",
-                  }} />
-                  <span>
-                    {t.name}
-                    <span style={{ display: "block", fontSize: 11, fontWeight: 500, color: "#9ca3af", marginTop: 1 }}>
-                      {t.paidSpots} of {t.totalSpots} spots claimed
-                    </span>
-                  </span>
-                </a>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Loading state */}
         {loading && (
-          <div style={{ fontFamily: "sans-serif", fontSize: 14, color: "#9ca3af", marginTop: 32 }}>
-            Loading territories…
+          <div style={{ fontFamily: "sans-serif", fontSize: 14, color: "#9ca3af", marginBottom: 32 }}>
+            Loading map…
           </div>
         )}
 
-        {/* Empty state */}
-        {!loading && all.length === 0 && (
+        {!loading && (
+          <div
+            ref={mapRef}
+            style={{
+              width: "100%",
+              height: "clamp(380px, 55vw, 560px)",
+              borderRadius: 14,
+              overflow: "hidden",
+              boxShadow: "0 6px 32px rgba(0,0,0,0.14)",
+              margin: "0 auto",
+            }}
+          />
+        )}
+
+        {!loading && territories.length === 0 && (
           <div style={{ fontFamily: "sans-serif", fontSize: 14, color: "#9ca3af", marginTop: 32 }}>
             No active territories yet — check back soon.
           </div>
+        )}
+
+        {!loading && territories.length > 0 && (
+          <>
+            <p style={{
+              fontFamily: "sans-serif", fontSize: 12, fontWeight: 700,
+              color: "#9ca3af", textTransform: "uppercase", letterSpacing: 1,
+              margin: "36px 0 14px",
+            }}>
+              Active Territories
+            </p>
+            <div style={{
+              display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center",
+            }}>
+              {territories.map(t => {
+                const isHov = hovered === t.slug;
+                return (
+                  <a
+                    key={t.slug}
+                    href={`/${t.slug}`}
+                    onMouseEnter={() => setHovered(t.slug)}
+                    onMouseLeave={() => setHovered(null)}
+                    style={{
+                      display: "inline-flex", flexDirection: "column",
+                      alignItems: "center", gap: 2,
+                      fontFamily: "sans-serif", textDecoration: "none",
+                      padding: "12px 22px",
+                      background: isHov ? RED : "#fff",
+                      borderRadius: 10,
+                      border: `1.5px solid ${isHov ? RED : "#e5e7eb"}`,
+                      boxShadow: isHov ? `0 4px 14px ${RED}33` : "0 1px 4px rgba(0,0,0,0.06)",
+                      transition: "background 0.15s, border-color 0.15s, box-shadow 0.15s",
+                      minWidth: 140,
+                    }}
+                  >
+                    <span style={{
+                      fontSize: 15, fontWeight: 800,
+                      color: isHov ? "#fff" : RED,
+                      transition: "color 0.15s",
+                    }}>
+                      {cleanName(t.name)}
+                    </span>
+                    <span style={{
+                      fontSize: 11, fontWeight: 500,
+                      color: isHov ? "rgba(255,255,255,0.75)" : "#9ca3af",
+                      transition: "color 0.15s",
+                    }}>
+                      {t.paidSpots} of {t.totalSpots} spots claimed
+                    </span>
+                  </a>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
     </section>
