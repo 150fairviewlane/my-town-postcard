@@ -11,7 +11,7 @@ const US_STATES = [
   "TX","UT","VT","VA","WA","WV","WI","WY",
 ];
 
-const MILES_15_METERS = 15 * 1609.344;
+const MILES_15_METERS = 5 * 1609.344;
 
 function authToken() {
   return localStorage.getItem("admin_token") || "";
@@ -427,7 +427,7 @@ export default function AdminCreateCustomTerritoryPage() {
             {/* Leaflet map */}
             <div style={{ background: "#fff", borderRadius: 12, boxShadow: "0 1px 6px rgba(0,0,0,0.05)", padding: 16 }}>
               <div style={{ fontWeight: 700, fontSize: 14, color: "#111", marginBottom: 12 }}>
-                Territory Map — dashed circles show 15-mile EDDM radius per city
+                Territory Map — dashed circles show 5-mile mailing radius per city
               </div>
               <TerritoryMap
                 cities={preview.resolvedCities}
