@@ -742,7 +742,7 @@ router.post("/admin/territories/custom", requireAdmin, async (req, res): Promise
   for (const city of resolved) {
     const nearby = await findExistingTerritoryWithinMiles(
       city.lat, city.lng, stateAbbr, CUSTOM_CONFLICT_RADIUS_MI,
-      { statuses: ["available", "pending", "taken"] },
+      { statuses: ["pending", "taken"] },
     );
     if (!nearby) continue;
     const nearbyId = nearby.id as string;
