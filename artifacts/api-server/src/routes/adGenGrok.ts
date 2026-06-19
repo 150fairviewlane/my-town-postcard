@@ -3363,6 +3363,18 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .refine-hint{font-size:12px;color:var(--ink-light);line-height:1.4}
 .refine-revert-btn{background:none;border:none;font-size:13px;color:var(--burg);cursor:pointer;padding:0;font-family:'DM Sans',sans-serif;text-decoration:underline;text-underline-offset:2px;transition:color .2s;white-space:nowrap}
 .refine-revert-btn:hover{color:var(--burg-dark)}
+
+/* ── Portrait-mode hint banner ────────────────────────────── */
+#rotateHint{display:none;background:#fdf8ef;border:1.5px solid #C9A84C;border-radius:8px;padding:10px 14px;margin-bottom:10px;align-items:center;gap:10px;font-size:13px;color:#374151;flex-shrink:0}
+#rotateHint.visible{display:flex}
+.rotate-hint-icon{font-size:18px;flex-shrink:0}
+.rotate-hint-text{flex:1;line-height:1.4}
+.rotate-hint-close{width:22px;height:22px;border:none;background:none;cursor:pointer;color:#9ca3af;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;border-radius:4px;flex-shrink:0;line-height:1;padding:0;font-family:sans-serif}
+.rotate-hint-close:hover{background:#f3f0ea;color:#374151}
+
+/* ── Responsive template grid ─────────────────────────────── */
+@media(max-width:700px){.tmpl-grid{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:480px){.tmpl-grid{grid-template-columns:repeat(3,1fr)}}
 </style>
 </head>
 <body>
@@ -3438,6 +3450,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
         <span id="tmplOrientationLabel" style="font-size:12px;color:var(--ink-light)"></span>
       </div>
       <div class="card-body" style="padding:10px 12px">
+        <!-- Portrait-mode hint: shown only on narrow portrait screens, dismissible for session -->
+        <div id="rotateHint">
+          <span class="rotate-hint-icon">&#8635;</span>
+          <span class="rotate-hint-text">Tip: rotate your phone to landscape for the best view of templates</span>
+          <button class="rotate-hint-close" onclick="dismissRotateHint()" aria-label="Dismiss">&times;</button>
+        </div>
         <!-- Shown when every template on this side is already taken -->
         <div id="tmplAllUsedBanner" style="display:none;margin-bottom:8px;padding:7px 10px;background:#fff7ed;border:1px solid #f59e0b;border-radius:6px;font-size:13px;color:#92400e;font-weight:600;">
           All styles are already in use on this side — choose any to reuse a style.
@@ -3715,6 +3733,23 @@ var _takenCategories = [];
 var _usedTemplates = [];
 var _campaignId = 0;
 var _side = 'front';
+
+// ── Portrait-mode hint banner ────────────────────────────────────────────────
+(function(){
+  if(sessionStorage.getItem('rotateHintDismissed')) return;
+  var hint = document.getElementById('rotateHint');
+  if(!hint) return;
+  var mq = window.matchMedia('(max-width:860px) and (orientation: portrait)');
+  function update(e){ hint.classList.toggle('visible', e.matches); }
+  update(mq);
+  if(typeof mq.addEventListener === 'function') mq.addEventListener('change', update);
+  else mq.addListener(update); // Safari <14 fallback
+})();
+function dismissRotateHint(){
+  sessionStorage.setItem('rotateHintDismissed','1');
+  var hint = document.getElementById('rotateHint');
+  if(hint) hint.classList.remove('visible');
+}
 
 function applyUsedTemplates(){
   var KEYS = ['parchment-classic','made-fresh','health-wellness','at-your-service','neighborhood-pro','home-elegance','sage-organic','purple-sage'];

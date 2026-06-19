@@ -1,0 +1,21 @@
+In `artifacts/api-server/src/routes/adGenGrok.ts`, the ad picker page currently shows a full-screen "please rotate your device" overlay that BLOCKS portrait-mode mobile users from using the page at all until they rotate to landscape.
+
+Change this from a blocking requirement to a dismissible, non-blocking hint.
+
+**Find the rotate/orientation overlay** — likely a fixed-position full-screen div triggered by a `@media (orientation: portrait)` CSS rule or a JS `orientationchange`/`matchMedia` listener, probably styled with something like `position:fixed;inset:0;z-index:9999` to cover the whole page.
+
+**Required changes:**
+
+1. **Remove the blocking behavior.** The overlay must no longer prevent scrolling, tapping, or interacting with the page underneath it. Users in portrait mode should be able to use the ad picker, scroll through templates, and proceed through the rest of the flow exactly as if in landscape — just on a narrower layout.
+
+2. **Convert it to a small dismissible banner instead**, shown only in portrait mode, positioned at the top of the ad picker section (not full-screen). It should:
+   - Say something like: "Tip: rotate your phone to landscape for the best view of templates"
+   - Include a small "↻" rotate icon or similar visual cue
+   - Have a dismiss/close (×) button that hides it for the rest of the session (store dismissal in `sessionStorage` so it doesn't reappear if they scroll past and back, but does reappear on a fresh visit)
+   - Use the existing brand styling (burgundy `#7B1418` / gold `#C9A84C` / cream background) so it looks intentional, not like a leftover dev banner
+
+3. **Make sure the template grid itself still looks reasonable in portrait width.** Since `.tmpl-grid` currently uses `grid-template-columns:repeat(6,1fr)`, 6 columns will be cramped on a narrow portrait screen. Add a responsive rule so the grid drops to fewer columns in narrow viewports — e.g. `repeat(3,1fr)` under ~480px wide, `repeat(4,1fr)` under ~700px wide — so thumbnails stay legible without requiring landscape. Use a `@media (max-width: ...)` rule scoped to `.tmpl-grid` rather than touching unrelated layout.
+
+4. **Confirm the rest of the page (everything before and after the picker) is unaffected** — this change should only touch the orientation overlay and the picker grid's responsive column count. Don't alter any other layout, scroll behavior, or component outside this section.
+
+5. Test by simulating a narrow portrait viewport (e.g. 390px wide) and confirming: the banner shows, can be dismissed, the grid is legible with fewer columns, and the user can scroll freely through the whole page including past the picker to whatever comes after it.
