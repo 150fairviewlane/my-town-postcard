@@ -80,11 +80,10 @@ const forgotPasswordLimiter = rateLimit({
   message: { error: "Too many requests. Please wait before trying again." },
 });
 
-// ─── Pricing for the Phase 1 dealer program. ───────────────────────────────── Setup fee is a one-time line item
-// on the first invoice; the $99/mo subscription is the recurring half. Both
-// are inlined as Stripe `price_data` so we don't have to pre-create Products
-// in the Stripe dashboard for QA / dev.
-const SETUP_FEE_CENTS = 9900;
+// ─── Pricing for the Phase 1 dealer program. ─────────────────────────────────
+// $99/mo covers setup + access. Inlined as Stripe `price_data` so no Products
+// need to be pre-created in the Stripe dashboard for QA / dev.
+
 const MONTHLY_FEE_CENTS = 9900;
 
 function getJwtSecret(): string {
@@ -382,14 +381,6 @@ router.post("/dealers", async (req, res): Promise<void> => {
       {
         price_data: {
           currency: "usd",
-          product_data: { name: "My Town Postcard — Dealer Setup Fee" },
-          unit_amount: SETUP_FEE_CENTS,
-        },
-        quantity: 1,
-      },
-      {
-        price_data: {
-          currency: "usd",
           product_data: { name: subscriptionProductName },
           unit_amount: MONTHLY_FEE_CENTS,
           recurring: { interval: "month" },
@@ -560,14 +551,6 @@ router.post("/dealers/claim-proposal", async (req, res): Promise<void> => {
     mode: "subscription",
     customer_email: email,
     line_items: [
-      {
-        price_data: {
-          currency: "usd",
-          product_data: { name: "My Town Postcard — Dealer Setup Fee" },
-          unit_amount: SETUP_FEE_CENTS,
-        },
-        quantity: 1,
-      },
       {
         price_data: {
           currency: "usd",
