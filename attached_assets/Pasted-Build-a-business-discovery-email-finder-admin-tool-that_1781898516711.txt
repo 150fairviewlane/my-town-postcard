@@ -1,0 +1,76 @@
+Build a business-discovery + email-finder admin tool that replaces the Outscraper approach with two free building blocks: Google's official Places API (Text Search) for discovering businesses, and our own website scraper for finding each business's email address. No paid scraping service involved.
+
+**Important: this writes into the EXISTING `outreachLeadsTable` / `/api/admin/outreach` system already in the codebase** (`artifacts/api-server/src/routes/adminOutreach.ts`, schema in `lib/db/src/schema/outreachLeads.ts`) — don't create a parallel/duplicate leads table. New discoveries should show up as new rows there, using the existing `businessName`, `phone`, `email`, `industry`, `town`, `status` fields. Set `status: "not-contacted"` and `contactMethod` based on what's found (e.g. `"email"` if an email was found, otherwise leave as default).
+
+---
+
+## Part 1: Google Places API setup
+
+1. Add `GOOGLE_PLACES_API_KEY` as a required env var (I'll create this key in Google Cloud Console and add it as a Replit secret separately — just read it from `process.env.GOOGLE_PLACES_API_KEY`).
+
+2. Create a backend function `searchPlacesText(query: string, pageToken?: string)` that calls Google's **Text Search (New)** endpoint:
+   ```
+   POST https://places.googleapis.com/v1/places:searchText
+   Headers:
+     Content-Type: application/json
+     X-Goog-Api-Key: <GOOGLE_PLACES_API_KEY>
+     X-Goog-FieldMask: places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri,places.id,nextPageToken
+   Body: { "textQuery": "<query>", "pageToken": "<pageToken if present>" }
+   ```
+   Use a minimal field mask (as shown) to stay on the cheaper/free-tier-eligible fields — do NOT request `places.reviews`, `places.photos`, `places.priceLevel`, or other Atmosphere-tier fields, since those cost extra and aren't needed here.
+
+3. Handle pagination: Text Search returns up to 20 results per page and a `nextPageToken` if more exist. Follow up to 3 pages per query (Google's documented max) before stopping.
+
+4. Add basic rate-limit/error handling: if Google returns a 429 or quota error, log it clearly and stop further requests for that batch rather than retrying in a tight loop.
+
+---
+
+## Part 2: Website email scraper
+
+Create a function `findEmailOnWebsite(websiteUrl: string): Promise<string | null>` that:
+
+1. Fetches the homepage HTML via `axios` (already a dependency) with a real browser User-Agent header and a reasonable timeout (8-10 seconds).
+2. Searches the HTML for:
+   - Any `mailto:` links — extract the email directly, this is the most reliable signal
+   - Plain-text email patterns in the page body via regex (`[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}`) as a fallback
+3. If no email found on the homepage, try ONE additional fetch: look for a link containing "contact" (case-insensitive, e.g. `/contact`, `/contact-us`) in the homepage's `<a>` tags, follow it, and repeat the email search there.
+4. Filter out obviously generic/junk matches (e.g. `example.com`, `sentry.io`, `wixpress.com`, image filenames that happen to match the regex like `photo@2x.png`-style false positives — exclude anything ending in a common image/font extension).
+5. Add a random delay (700ms–1800ms) between each website fetch to be a polite, non-aggressive crawler.
+6. Wrap in try/catch — if a site times out, blocks, or errors, return `null` rather than throwing, so one bad site doesn't kill the whole batch.
+
+---
+
+## Part 3: Combined discovery endpoint
+
+Add `POST /api/admin/outreach/discover` (protected by the existing `requireAdmin` middleware).
+
+Request body:
+```json
+{ "category": "contractors", "city": "Cleveland", "state": "GA" }
+```
+
+Logic:
+1. Call `searchPlacesText(\`${category} in ${city}, ${state}\`)`, paginating up to 3 pages.
+2. For each result with a `websiteUri`, call `findEmailOnWebsite(websiteUri)`.
+3. For each business found, check if a row with the same `businessName` + `town` already exists in `outreachLeadsTable` (avoid duplicate inserts on repeat runs) — skip if so.
+4. Insert new leads into `outreachLeadsTable`: `businessName` (from `displayName`), `phone` (from `nationalPhoneNumber`), `town` (the city searched), `industry` (the category searched), `email` (from the website scrape, or null), `status: "not-contacted"`.
+5. Return a summary: `{ found: number, newLeads: number, withEmail: number, skippedDuplicates: number }`.
+
+This endpoint will take a while to run for larger batches (each website fetch has a polite delay) — structure it as a simple async function that the frontend awaits with a loading state; no need for a background job queue at this volume.
+
+---
+
+## Part 4: Frontend — add to existing Outreach admin page
+
+Find the existing outreach/leads admin page (check for a page consuming `/api/admin/outreach` — likely `AdminOutreachPage.jsx` or similar). Add a "Discover New Leads" section/panel above or alongside the existing leads table:
+
+1. Three inputs: **Category** (text, e.g. "contractors"), **City** (text, e.g. "Cleveland"), **State** (text, default "GA")
+2. A **"Discover"** button — calls `POST /api/admin/outreach/discover`, shows a loading spinner with a message like "Searching Google Places and checking websites for emails — this may take a minute…" since the website-scraping step takes real time
+3. On completion, show a summary toast/banner: "Found 23 businesses, 14 with emails, 2 already in your list" (using the response's `found`/`withEmail`/`skippedDuplicates`)
+4. Refresh the existing leads table below so new rows appear immediately without a manual page reload
+
+Match existing admin styling (burgundy/gold/cream, DM Sans, Bebas Neue headers) consistent with the rest of the admin panel.
+
+---
+
+After implementing, test with `category: "contractors", city: "Cleveland", state: "GA"` and report: how many businesses were found, how many got an email via the website scrape, and roughly how long the request took — so I know what to expect at larger volumes (multiple cities/categories run back to back).

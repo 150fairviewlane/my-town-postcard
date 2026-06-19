@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
+import { z } from "zod/v4";
 import { db, outreachLeadsTable } from "@workspace/db";
 import {
   CreateOutreachLeadBody,
@@ -10,6 +11,8 @@ import {
   DeleteOutreachLeadResponse,
 } from "@workspace/api-zod";
 import jwt from "jsonwebtoken";
+import { searchAllPages } from "../lib/placesApi.js";
+import { findEmailOnWebsite } from "../lib/emailScraper.js";
 
 const router: IRouter = Router();
 
@@ -98,6 +101,110 @@ router.post("/admin/outreach", requireAdmin, async (req, res): Promise<void> => 
 
   res.json(CreateOutreachLeadResponse.parse(serializeLead(row)));
 });
+
+// ── Business discovery ─────────────────────────────────────────────────────────
+// POST /api/admin/outreach/discover
+// Searches Google Places for businesses matching a category + city/state,
+// scrapes each business website for an email address, and inserts new rows
+// into outreach_leads. Skips rows that already exist (same businessName+town).
+//
+// Body: { category: string, city: string, state: string }
+// Response: { found, newLeads, withEmail, skippedDuplicates }
+const DiscoverBody = z.object({
+  category: z.string().min(1).max(120),
+  city: z.string().min(1).max(100),
+  state: z.string().min(2).max(2),
+});
+
+router.post(
+  "/admin/outreach/discover",
+  requireAdmin,
+  async (req, res): Promise<void> => {
+    const parsed = DiscoverBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: String(parsed.error) });
+      return;
+    }
+    const { category, city, state } = parsed.data;
+
+    if (!process.env.GOOGLE_PLACES_API_KEY) {
+      res.status(503).json({
+        error: "GOOGLE_PLACES_API_KEY is not configured. Add it as a Replit secret.",
+      });
+      return;
+    }
+
+    const query = `${category} in ${city}, ${state}`;
+    req.log.info({ query }, "outreach/discover: starting Places search");
+
+    let places;
+    try {
+      places = await searchAllPages(query);
+    } catch (err: any) {
+      req.log.error({ err }, "outreach/discover: Places API error");
+      const status = err?.status === 429 ? 429 : 502;
+      res.status(status).json({ error: err.message ?? "Google Places API error" });
+      return;
+    }
+
+    req.log.info({ found: places.length }, "outreach/discover: Places results");
+
+    let newLeads = 0;
+    let withEmail = 0;
+    let skippedDuplicates = 0;
+
+    for (const place of places) {
+      // Dedup check — same business name + town already in DB
+      const existing = await db
+        .select({ id: outreachLeadsTable.id })
+        .from(outreachLeadsTable)
+        .where(
+          and(
+            eq(outreachLeadsTable.businessName, place.displayName),
+            eq(outreachLeadsTable.town, city),
+          ),
+        )
+        .limit(1);
+
+      if (existing.length > 0) {
+        skippedDuplicates++;
+        continue;
+      }
+
+      // Polite delay before each website fetch (also spreads DB writes)
+      const delayMs = 700 + Math.random() * 1100;
+      await new Promise((r) => setTimeout(r, delayMs));
+
+      // Try to scrape an email from the business website
+      let email: string | null = null;
+      if (place.website) {
+        try {
+          email = await findEmailOnWebsite(place.website);
+        } catch {
+          // Non-fatal — proceed without email
+        }
+      }
+      if (email) withEmail++;
+
+      const contactMethod =
+        email ? "email" : place.phone ? "phone" : "other";
+
+      await db.insert(outreachLeadsTable).values({
+        businessName: place.displayName,
+        phone: place.phone,
+        email: email ?? null,
+        industry: category,
+        town: city,
+        contactMethod,
+        status: "not-contacted",
+      });
+      newLeads++;
+    }
+
+    req.log.info({ found: places.length, newLeads, withEmail, skippedDuplicates }, "outreach/discover: done");
+    res.json({ found: places.length, newLeads, withEmail, skippedDuplicates });
+  },
+);
 
 router.patch(
   "/admin/outreach/:id",

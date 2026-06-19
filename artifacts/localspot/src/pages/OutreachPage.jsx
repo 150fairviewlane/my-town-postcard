@@ -85,8 +85,6 @@ const STATUS_OPTIONS = [
   { value: "passed",        label: "Passed" },
 ];
 
-// Six-color status palette per the spec — gray / yellow / green / dark green
-// (reserved or paid) / red (passed). Used by the table badge and edit panel.
 const STATUS_BADGE = {
   "not-contacted": { bg: "#f3f4f6", color: "#374151", label: "Not Contacted" },
   "contacted":     { bg: "#fef9c3", color: "#854d0e", label: "Contacted" },
@@ -107,7 +105,7 @@ const CONTACT_METHOD_OPTIONS = [
 const formatDate = (iso) => {
   if (!iso) return "—";
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso; // already YYYY-MM-DD
+  if (Number.isNaN(d.getTime())) return iso;
   return d.toLocaleDateString();
 };
 
@@ -118,8 +116,6 @@ const formatDateTime = (iso) => {
   return d.toLocaleString([], { dateStyle: "short", timeStyle: "short" });
 };
 
-// Today as YYYY-MM-DD in the user's local timezone — matches what the
-// `<input type="date">` returns and the server stores in `follow_up_date`.
 const todayLocalISO = () => {
   const d = new Date();
   const tzOffsetMs = d.getTimezoneOffset() * 60_000;
@@ -134,7 +130,6 @@ const isFollowUpDue = (lead, todayISO) => {
 
 const wasContactedOn = (lead, todayISO) => {
   if (!lead.contactedAt) return false;
-  // contactedAt is an ISO timestamp; compare its local date portion.
   const d = new Date(lead.contactedAt);
   if (Number.isNaN(d.getTime())) return false;
   const localISO = new Date(d.getTime() - d.getTimezoneOffset() * 60_000)
@@ -156,6 +151,174 @@ function StatusBadge({ status }) {
     }}>
       {s.label}
     </span>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//   Discover New Leads panel
+// ─────────────────────────────────────────────────────────────────────────────
+function DiscoverPanel({ token, onDiscovered }) {
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({ category: "", city: "", state: "GA" });
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+
+  const setField = (k) => (e) =>
+    setForm((f) => ({
+      ...f,
+      [k]: k === "state" ? e.target.value.toUpperCase().slice(0, 2) : e.target.value,
+    }));
+
+  const handleDiscover = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    setResult(null);
+    setError(null);
+    try {
+      const basePath = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
+      const resp = await fetch(`${basePath}/api/admin/outreach/discover`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(form),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || `Server error ${resp.status}`);
+      setResult(data);
+      onDiscovered?.();
+    } catch (err) {
+      setError(err.message || "Discovery failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div style={{
+      background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12,
+      marginBottom: 20, overflow: "hidden",
+    }}>
+      {/* Header toggle */}
+      <button
+        onClick={() => { setOpen((o) => !o); setResult(null); setError(null); }}
+        style={{
+          width: "100%", textAlign: "left", padding: "13px 18px",
+          background: "none", border: "none", cursor: "pointer",
+          display: "flex", alignItems: "center", gap: 10,
+          fontFamily: "system-ui, sans-serif",
+        }}
+      >
+        <span style={{ fontSize: 16 }}>🔍</span>
+        <span style={{ fontWeight: 800, fontSize: 14, color: "#111" }}>Discover New Leads</span>
+        <span style={{ fontSize: 12, color: "#9ca3af", marginLeft: 4 }}>
+          Google Places + website email finder
+        </span>
+        <span style={{ marginLeft: "auto", color: "#9ca3af", fontSize: 12 }}>
+          {open ? "▲" : "▾"}
+        </span>
+      </button>
+
+      {open && (
+        <div style={{ padding: "0 18px 18px", borderTop: "1px solid #f3f4f6" }}>
+          <form
+            onSubmit={handleDiscover}
+            style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end", paddingTop: 14 }}
+          >
+            <label style={{ display: "flex", flexDirection: "column", gap: 4, flex: "2 1 200px" }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Category</span>
+              <input
+                required
+                value={form.category}
+                onChange={setField("category")}
+                placeholder="e.g. contractors, restaurants, dentists"
+                style={inputStyle}
+                disabled={busy}
+              />
+            </label>
+            <label style={{ display: "flex", flexDirection: "column", gap: 4, flex: "1 1 140px" }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>City</span>
+              <input
+                required
+                value={form.city}
+                onChange={setField("city")}
+                placeholder="e.g. Cleveland"
+                style={inputStyle}
+                disabled={busy}
+              />
+            </label>
+            <label style={{ display: "flex", flexDirection: "column", gap: 4, flex: "0 1 72px" }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>State</span>
+              <input
+                value={form.state}
+                onChange={setField("state")}
+                maxLength={2}
+                style={inputStyle}
+                disabled={busy}
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={busy || !form.category.trim() || !form.city.trim()}
+              style={{
+                ...btnPrimary,
+                height: 38,
+                whiteSpace: "nowrap",
+                opacity: busy || !form.category.trim() || !form.city.trim() ? 0.6 : 1,
+              }}
+            >
+              {busy ? "Searching…" : "🔍 Discover"}
+            </button>
+          </form>
+
+          {/* Loading hint */}
+          {busy && (
+            <div style={{
+              marginTop: 12, fontSize: 13, color: "#6b7280",
+              background: "#f9fafb", borderRadius: 8, padding: "10px 14px",
+              display: "flex", alignItems: "center", gap: 8,
+            }}>
+              <span style={{ animation: "spin 1s linear infinite", display: "inline-block" }}>⏳</span>
+              Searching Google Places and checking websites for emails — this may take a minute…
+            </div>
+          )}
+
+          {/* Result banner */}
+          {result && !busy && (
+            <div style={{
+              marginTop: 12, background: "#f0fdf4", border: "1px solid #86efac",
+              borderRadius: 8, padding: "12px 16px",
+            }}>
+              <div style={{ fontWeight: 800, color: "#15803d", fontSize: 14, marginBottom: 4 }}>
+                ✅ Discovery complete
+              </div>
+              <div style={{ fontSize: 13, color: "#166534", lineHeight: 1.6 }}>
+                Found <strong>{result.found}</strong> business{result.found !== 1 ? "es" : ""} on Google Places
+                {" · "}
+                <strong>{result.newLeads}</strong> new lead{result.newLeads !== 1 ? "s" : ""} added
+                {" · "}
+                <strong>{result.withEmail}</strong> with email address
+                {result.skippedDuplicates > 0 && (
+                  <> · <strong>{result.skippedDuplicates}</strong> already in your list</>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Error banner */}
+          {error && !busy && (
+            <div style={{
+              marginTop: 12, background: "#fef2f2", border: "1px solid #fecaca",
+              borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#991b1b",
+            }}>
+              ❌ {error}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -190,8 +353,6 @@ function AddLeadModal({ onClose, onCreated, authOptions }) {
       return;
     }
     try {
-      // Treat empty strings as null so the optional columns stay NULL in
-      // the DB instead of becoming literal empty-string values.
       const blank = (s) => (s.trim() === "" ? null : s.trim());
       await createMutation.mutateAsync(
         {
@@ -307,7 +468,6 @@ function EditLeadPanel({ lead, onClose, authOptions }) {
   const [followUpDate, setFollowUpDate] = useState(lead.followUpDate || "");
   const [error, setError] = useState(null);
 
-  // Reset local state if a different lead is opened.
   useEffect(() => {
     setStatus(lead.status);
     setNotes(lead.notes || "");
@@ -346,10 +506,7 @@ function EditLeadPanel({ lead, onClose, authOptions }) {
 
   const handleMarkContactedNow = async () => {
     try {
-      // Bump status to "contacted" only if the user hasn't moved it past
-      // that already; otherwise just stamp the contactedAt time.
-      const nextStatus =
-        status === "not-contacted" ? "contacted" : status;
+      const nextStatus = status === "not-contacted" ? "contacted" : status;
       setStatus(nextStatus);
       await save({ status: nextStatus, markContactedNow: true });
       onClose();
@@ -453,11 +610,9 @@ function QuickActions({ lead, authOptions }) {
   const deleteMutation = useDeleteOutreachLead();
   const [open, setOpen] = useState(false);
 
-  // Close the menu when the user clicks anywhere else.
   useEffect(() => {
     if (!open) return;
     const onDoc = () => setOpen(false);
-    // Defer so the click that opened the menu doesn't immediately close it.
     const t = setTimeout(() => document.addEventListener("click", onDoc), 0);
     return () => {
       clearTimeout(t);
@@ -568,8 +723,6 @@ const CSV_COLUMNS = [
 const csvEscape = (v) => {
   if (v === null || v === undefined) return "";
   const s = String(v);
-  // Wrap any field containing a comma, quote, or newline in double quotes
-  // and double-up internal quotes — RFC 4180.
   if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
   return s;
 };
@@ -579,7 +732,6 @@ function downloadCsv(leads) {
   const rows = leads.map((lead) =>
     CSV_COLUMNS.map(([key]) => csvEscape(lead[key])).join(","),
   );
-  // Prepend a UTF-8 BOM so Excel auto-detects the encoding.
   const csv = "\uFEFF" + [header, ...rows].join("\r\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
@@ -608,11 +760,11 @@ function SummaryBar({ leads, todayISO }) {
   }, [leads, todayISO]);
 
   const cards = [
-    { label: "Total Leads",        value: stats.total,           color: "#111" },
-    { label: "Contacted Today",    value: stats.contactedToday,  color: "#854d0e" },
-    { label: "Interested",         value: stats.interested,      color: "#15803d" },
-    { label: "Reserved / Paid",    value: stats.reservedOrPaid,  color: "#14532d" },
-    { label: "Follow-Up Due Today",value: stats.dueToday,        color: "#991b1b" },
+    { label: "Total Leads",         value: stats.total,           color: "#111" },
+    { label: "Contacted Today",     value: stats.contactedToday,  color: "#854d0e" },
+    { label: "Interested",          value: stats.interested,      color: "#15803d" },
+    { label: "Reserved / Paid",     value: stats.reservedOrPaid,  color: "#14532d" },
+    { label: "Follow-Up Due Today", value: stats.dueToday,        color: "#991b1b" },
   ];
 
   return (
@@ -642,12 +794,11 @@ function SummaryBar({ leads, todayISO }) {
 //   Main page
 // ─────────────────────────────────────────────────────────────────────────────
 function OutreachContent({ token }) {
+  const queryClient = useQueryClient();
   const [editing, setEditing] = useState(null);
   const [adding, setAdding] = useState(false);
   const todayISO = todayLocalISO();
 
-  // Auth payload threaded through every authenticated request — same
-  // pattern as AdminDashboard so the requireAdmin middleware accepts us.
   const authOptions = useMemo(
     () => ({
       query: { meta: { headers: { Authorization: `Bearer ${token}` } } },
@@ -669,6 +820,10 @@ function OutreachContent({ token }) {
     () => leads.filter((l) => isFollowUpDue(l, todayISO)),
     [leads, todayISO],
   );
+
+  const handleDiscovered = () => {
+    queryClient.invalidateQueries({ queryKey: getListOutreachLeadsQueryKey() });
+  };
 
   const onLogout = () => {
     localStorage.removeItem("admin_token");
@@ -699,6 +854,9 @@ function OutreachContent({ token }) {
 
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: "24px 20px" }}>
         <SummaryBar leads={leads} todayISO={todayISO} />
+
+        {/* Discover new leads */}
+        <DiscoverPanel token={token} onDiscovered={handleDiscovered} />
 
         {/* Follow-up due today */}
         {dueLeads.length > 0 && (
@@ -808,7 +966,8 @@ function OutreachContent({ token }) {
                 {!listQuery.isLoading && leads.length === 0 && (
                   <tr>
                     <td colSpan={8} style={{ padding: 40, textAlign: "center", color: "#9ca3af" }}>
-                      No leads yet. Click <strong>+ Add Lead</strong> to start tracking outreach.
+                      No leads yet. Click <strong>+ Add Lead</strong> to start tracking outreach,
+                      or use <strong>Discover New Leads</strong> above to find businesses automatically.
                     </td>
                   </tr>
                 )}
