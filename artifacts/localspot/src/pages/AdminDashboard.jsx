@@ -58,6 +58,108 @@ const STATUS_PILL = {
   completed: { bg: "#fef2f2", color: "#991b1b", label: "Completed" },
 };
 
+function TestEmailWidget({ token }) {
+  const [open, setOpen] = useState(false);
+  const [to, setTo] = useState("");
+  const [status, setStatus] = useState("idle"); // idle | sending | success | error
+  const [errMsg, setErrMsg] = useState("");
+
+  const send = async () => {
+    if (!to.trim()) return;
+    setStatus("sending");
+    setErrMsg("");
+    try {
+      const res = await fetch(`${import.meta.env.BASE_URL}api/admin/test-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ to: to.trim() }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setStatus("success");
+        setTimeout(() => { setStatus("idle"); setOpen(false); setTo(""); }, 3000);
+      } else {
+        setStatus("error");
+        setErrMsg(json.error ?? "Unknown error");
+      }
+    } catch (e) {
+      setStatus("error");
+      setErrMsg(String(e));
+    }
+  };
+
+  return (
+    <div style={{ position: "relative" }}>
+      <button
+        onClick={() => { setOpen((v) => !v); setStatus("idle"); setErrMsg(""); }}
+        style={{
+          fontSize: 13, fontWeight: 700, color: "#065f46",
+          background: "#ecfdf5", border: "1px solid #6ee7b7",
+          borderRadius: 8, padding: "7px 12px", cursor: "pointer",
+        }}
+      >
+        📧 Test Email
+      </button>
+      {open && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 50,
+          background: "#fff", border: "1px solid #d1d5db", borderRadius: 12,
+          padding: 16, boxShadow: "0 4px 20px rgba(0,0,0,0.12)", minWidth: 280,
+        }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 8 }}>
+            Send test email via Resend
+          </div>
+          <input
+            type="email"
+            placeholder="recipient@example.com"
+            value={to}
+            onChange={(e) => { setTo(e.target.value); setStatus("idle"); }}
+            onKeyDown={(e) => e.key === "Enter" && send()}
+            style={{
+              width: "100%", padding: "7px 10px", borderRadius: 7,
+              border: "1px solid #d1d5db", fontSize: 13, outline: "none",
+              boxSizing: "border-box", marginBottom: 8,
+            }}
+          />
+          {status === "success" && (
+            <div style={{ color: "#15803d", fontSize: 12, fontWeight: 700, marginBottom: 8 }}>
+              ✅ Sent! Check your inbox.
+            </div>
+          )}
+          {status === "error" && (
+            <div style={{ color: "#991b1b", fontSize: 12, marginBottom: 8 }}>
+              ❌ {errMsg}
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 6 }}>
+            <button
+              onClick={send}
+              disabled={!to.trim() || status === "sending"}
+              style={{
+                flex: 1, padding: "7px 0", borderRadius: 7, border: "none",
+                background: "#065f46", color: "#fff", fontSize: 13,
+                fontWeight: 700, cursor: "pointer", opacity: (!to.trim() || status === "sending") ? 0.5 : 1,
+              }}
+            >
+              {status === "sending" ? "Sending…" : "Send"}
+            </button>
+            <button
+              onClick={() => setOpen(false)}
+              style={{
+                padding: "7px 12px", borderRadius: 7,
+                border: "1px solid #d1d5db", background: "#fff",
+                fontSize: 13, cursor: "pointer", color: "#374151",
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function StatusPill({ status }) {
   const s = STATUS_PILL[status] || STATUS_PILL.draft;
   return (
@@ -773,6 +875,7 @@ function Dashboard({ token, onLogout }) {
           >
             🗑 Manage Ads
           </button>
+          <TestEmailWidget token={token} />
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
