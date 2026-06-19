@@ -410,7 +410,10 @@ export default function AdminDealersPage() {
   useEffect(() => {
     fetch(`${baseUrl}/api/territories`)
       .then(r => r.json())
-      .then(d => setTerritories((d.territories || []).filter(t => t.status === "available")))
+      .then(d => {
+        const list = Array.isArray(d) ? d : (d.territories || []);
+        setTerritories(list.filter(t => t.status === "available"));
+      })
       .catch(() => {});
   }, []);
 
