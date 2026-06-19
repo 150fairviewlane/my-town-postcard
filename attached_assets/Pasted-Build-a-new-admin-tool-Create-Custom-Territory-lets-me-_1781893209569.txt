@@ -1,0 +1,43 @@
+Build a new admin tool: "Create Custom Territory" — lets me manually create a territory by selecting up to 4 specific cities (which may span more than one county), rather than the existing dealer-facing single-search-term flow.
+
+**Important: do NOT modify the existing dealer-facing "Find Your Territory" signup flow, `territories/propose`, or anything else dealers currently use.** This is a new, separate admin-only tool that composes the SAME underlying helper functions (`findGazetteerCity`, `findCandidateHubs`, `getCountyTerritoryHubs`, `computeHubZipFootprint`, etc. — found in the territories route file and its lib helpers) without touching the existing dealer signup code paths.
+
+**Design principle for this tool: cities are the source of truth, not counties.** The territory's actual boundary/footprint should be built from the 4 selected hub cities (using the existing 15-mile-radius ZIP footprint logic), not from whole-county membership. The `counties` field on the resulting territory record should be auto-derived (a simple list of whichever counties the 4 cities happen to fall into, e.g. `["Cherokee", "Fulton"]`) purely as a display label — it must NOT be used to compute the boundary or determine ZIP assignment. This avoids the "whole Fulton County" bleed problem we already diagnosed elsewhere in the app.
+
+---
+
+## Backend: new endpoint
+
+Add `POST /api/admin/territories/custom` (protected by `requireAdmin`).
+
+Request body:
+```json
+{
+  "name": "Woodstock-Canton-Alpharetta-Roswell",
+  "state": "GA",
+  "cities": ["Woodstock", "Canton", "Alpharetta", "Roswell"]
+}
+```
+
+Logic:
+1. For each city in `cities`, resolve lat/lng using the same `findGazetteerCity(city, stateAbbr)` function the existing propose flow uses. If any city can't be resolved, return a 404 listing which city failed, so I can correct a typo before retrying.
+2. Compute a combined centroid (average lat/lng across all 4 resolved cities).
+3. For EACH city, compute its own ZIP footprint via the existing `computeHubZipFootprint` (or equivalent) logic — same 15-mile-radius approach already used elsewhere — then UNION all 4 cities' ZIP sets together into one combined footprint for the new territory.
+4. Derive the `counties` display label by looking up which county each of the 4 resolved cities' coordinates falls into (reuse `getCountyGeoidForLocation` or equivalent) and deduplicating into a list (e.g. `["Cherokee", "Fulton"]`).
+5. **Conflict check before creating:** for each of the 4 resolved city locations, run the same existing-territory-conflict check the dealer flow uses (the 25-mile centroid proximity check AND/OR ZIP footprint overlap check) against ALL currently active/claimed territories. If ANY of the 4 cities conflicts with an existing territory (e.g. Alpharetta overlapping the existing unclaimed GA-004 Fulton County footprint), return a 409 with a clear message naming which city conflicts with which existing territory — do not silently create an overlapping territory.
+6. If no conflicts, create the territory via the same insertion logic as the existing `POST /api/territories` admin endpoint (reuse that function/logic rather than duplicating it) — auto-assign the next `{STATE}-XXX` id, set `status: "available"`, `source: "manual"`, store the derived `counties` list, the combined centroid, and persist the unioned ZIP list into `territory_zip_assignments` for this new territory id.
+7. Return the created territory record including its derived counties, centroid, and total ZIP/household count.
+
+## Frontend: admin UI
+
+Create a new admin page or modal — `AdminCreateCustomTerritoryPage.jsx`, route `/admin/territories/custom` — matching existing admin styling (burgundy/gold/cream, DM Sans, Bebas Neue headers).
+
+1. **Territory name input** — text field (e.g. "Woodstock-Canton-Alpharetta-Roswell" or whatever I want to call it)
+2. **State selector** — dropdown, default GA
+3. **4 city input fields** — plain text autocomplete-style inputs (reuse whatever city-search/autocomplete pattern already exists in the dealer signup flow if one exists, otherwise plain text inputs are fine for now) — labeled "City 1" through "City 4", though support fewer than 4 if I leave some blank (minimum 2 cities required)
+4. **"Preview Territory" button** — calls the new endpoint in a dry-run/preview mode first (add a `?preview=true` query param to the endpoint that does everything EXCEPT step 6, the actual DB insert — just returns what WOULD be created, including any conflict warnings) so I can see the result before committing
+5. **Preview display**: show the derived county list, combined centroid, total household/ZIP count, and a simple map (reuse the existing Leaflet map component if one is available in the codebase — check for `react-leaflet`/`leaflet` imports — to plot the 4 city points and a faint circle around each showing the 15-mile radius). If there are conflicts, show them clearly in red with the conflicting territory's name.
+6. **"Create Territory" button** — only enabled after a successful preview with no conflicts — calls the real (non-preview) endpoint and creates it for real.
+7. On success, show the new territory's ID and a link to its public landing page slug (once published) or admin view.
+
+After implementing, test by creating a preview for Woodstock, Canton, Alpharetta, Roswell in GA and confirm: the preview shows a combined footprint, correctly derives `counties` as something like `["Cherokee", "Fulton"]`, and correctly flags a conflict if any of these cities overlaps the existing GA-004 (Fulton County, unclaimed) territory's footprint — then report what the conflict check actually shows for this specific combination so I can decide how to proceed.

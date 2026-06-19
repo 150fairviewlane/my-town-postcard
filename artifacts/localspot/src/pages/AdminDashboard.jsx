@@ -933,6 +933,57 @@ function Dashboard({ token, onLogout }) {
       </div>
 
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 24px" }}>
+
+        {/* ── Quick-access tool cards ──────────────────────────────────────── */}
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 28 }}>
+          <a
+            href={`${import.meta.env.BASE_URL}admin/territories/custom`}
+            style={{
+              display: "flex", alignItems: "center", gap: 10,
+              background: "#fff", border: "1.5px solid #d1d5db",
+              borderRadius: 12, padding: "14px 20px", textDecoration: "none",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+              transition: "box-shadow 0.15s",
+            }}
+          >
+            <span style={{ fontSize: 26 }}>🗺</span>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 14, color: "#111" }}>Create Custom Territory</div>
+              <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>Build a multi-city dealer territory</div>
+            </div>
+          </a>
+          <a
+            href={`${import.meta.env.BASE_URL}admin/dealers`}
+            style={{
+              display: "flex", alignItems: "center", gap: 10,
+              background: "#fff", border: "1.5px solid #d1d5db",
+              borderRadius: 12, padding: "14px 20px", textDecoration: "none",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+            }}
+          >
+            <span style={{ fontSize: 26 }}>💼</span>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 14, color: "#111" }}>Dealers</div>
+              <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>Manage dealer accounts</div>
+            </div>
+          </a>
+          <a
+            href={`${import.meta.env.BASE_URL}admin/subscriptions`}
+            style={{
+              display: "flex", alignItems: "center", gap: 10,
+              background: "#fff", border: "1.5px solid #d1d5db",
+              borderRadius: 12, padding: "14px 20px", textDecoration: "none",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+            }}
+          >
+            <span style={{ fontSize: 26 }}>🔁</span>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 14, color: "#111" }}>Subscriptions</div>
+              <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>MRR & active plans</div>
+            </div>
+          </a>
+        </div>
+
         {showNewForm && (
           <NewCampaignForm
             token={token}
