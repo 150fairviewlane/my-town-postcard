@@ -1,0 +1,55 @@
+Update the root landing page (`mytownpostcard.com`, likely `LandingPage.jsx` in `artifacts/localspot/src/pages/`) to add a Georgia map showing active advertiser territories. This is for ADVERTISERS (business owners looking to buy an ad spot) — not for dealer prospects. Do NOT touch the existing dealer "Find Your Territory" signup flow; that's a separate, already-existing tool and is out of scope here.
+
+**Main focus of this page is selling ad spots on local postcards.** The dealer recruitment angle should be minimal and secondary:
+
+---
+
+## Part 1: "Become a Dealer" — minimize to just two small links
+
+1. Add a small **"Become a Dealer"** button/link in the top-right of the page header, alongside or near existing nav items — styled as a secondary/outline button (not competing visually with any primary "advertise" CTA), linking to `/dealers`.
+2. Add a **"Become a Dealer"** text link in the footer as well.
+3. Do NOT add a dedicated dealer-pitch section, banner, or any other dealer-focused content elsewhere on this page. The page's primary content and visual hierarchy should be entirely about advertisers finding their town and buying a spot.
+
+---
+
+## Part 2: Public territories endpoint (create if it doesn't already exist)
+
+Create or confirm `GET /api/territories/public` — returns all active/published territories:
+
+```json
+[
+  { "slug": "habersham", "name": "Habersham", "paidSpots": 9, "totalSpots": 15, "latitude": 34.5, "longitude": -83.5 }
+]
+```
+
+This must reflect whatever territories currently exist in the database — there may be only one (Habersham) or several, depending on what's been created/deleted recently. No hardcoded territory list anywhere — this endpoint is the single source of truth for the map.
+
+If the `latitude`/`longitude` columns added previously to the territories schema aren't populated for any current territory, surface that clearly (e.g. in the API response, omit `latitude`/`longitude` for that record rather than defaulting to 0,0) so the map can skip pins for territories missing coordinates rather than mis-plotting them.
+
+---
+
+## Part 3: Georgia pin map — on-brand styling, no new visual language
+
+Add a map section to the landing page, positioned prominently since this is the primary advertiser-facing content.
+
+1. Use a simple SVG outline of Georgia's state border (no county lines, no terrain detail — just a clean state shape).
+2. Fetch territories from `/api/territories/public`. Render a pin for each territory that has both `latitude` and `longitude` present.
+3. **Styling must stay strictly within the site's EXISTING brand palette and feel** — burgundy `#7B1418`, gold `#C9A84C`, cream background, DM Sans for body text, Bebas Neue for headers. Do not introduce new colors, textures, gradients, dark backgrounds, or illustrated/vintage map styling. This should look like a natural extension of the existing design, not a new visual treatment.
+4. Each pin:
+   - Burgundy fill, gold ring/highlight on hover
+   - On hover/tap, shows the territory name and live fill status (e.g. "Habersham — 9 of 15 spots claimed")
+   - On click, navigates to that territory's landing page (`/{slug}`)
+   - Adequate tap-target size for mobile (min 44x44px tappable area)
+5. Below the map, include a simple text fallback list of all active territories as plain link buttons (e.g. "Or choose your town: [Habersham]") — this list should show ALL territories from the endpoint, including any without coordinates yet, so nothing is unreachable just because a pin couldn't be placed.
+6. The map should look reasonable whether there's only 1 territory (current real state — just Habersham) or many (post-launch) — avoid any layout that assumes a specific number of territories, like a fixed grid that looks empty or sparse with only one pin. Center a single pin attractively; let multiple pins distribute naturally across the state outline.
+7. Responsive: scales cleanly on mobile without horizontal scroll, pins remain tappable at small sizes.
+8. Build this as its own component (e.g. `GeorgiaTerritoryMap.jsx`) so it's cleanly separated from the rest of the landing page and can be revisited independently later if needed.
+
+---
+
+After implementing, confirm:
+- The header and footer "Become a Dealer" links work and are visually secondary, not prominent
+- No other dealer-focused content was added to this page
+- The map correctly renders however many territories currently exist in the database (test with the real current count, whatever that is)
+- The map's visual style matches the existing site exactly — no new colors or design elements introduced
+- Clicking a pin navigates to the correct territory page
