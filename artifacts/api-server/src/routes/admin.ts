@@ -408,11 +408,11 @@ router.post("/admin/test-email", requireAdmin, async (req, res): Promise<void> =
     const { error: sendError } = await resend.emails.send({
       from: fromEmail,
       to,
-      subject: "LocalSpot Mailer — test email",
+      subject: "My Town Postcard — test email",
       html: `
         <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 32px;">
           <h2>✅ Test email delivered</h2>
-          <p>This is a test email sent from the LocalSpot admin dashboard to verify that Resend is configured correctly.</p>
+          <p>This is a test email sent from the My Town Postcard admin dashboard to verify that Resend is configured correctly.</p>
           <p style="color: #6b7280; font-size: 13px;">From: ${fromEmail}<br>To: ${to}</p>
         </div>
       `,
