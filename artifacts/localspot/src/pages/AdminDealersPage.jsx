@@ -1,5 +1,6 @@
 import { useState, useEffect, Fragment } from "react";
 import { Link } from "wouter";
+import CreateTerritoryForm from "../components/CreateTerritoryForm";
 
 const RED = "#7B1418";
 const GOLD = "#C9A84C";
@@ -40,7 +41,7 @@ function authHeaders() {
 // ─── Delete modal ─────────────────────────────────────────────────────────────
 
 function DeleteModal({ dealer, preview, onClose, onSuccess }) {
-  const [step, setStep] = useState("choose");   // "choose" | "confirm-full"
+  const [step, setStep] = useState("choose");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
 
@@ -191,7 +192,6 @@ function DeleteModal({ dealer, preview, onClose, onSuccess }) {
           </div>
         )}
 
-        {/* Option 1: Deactivate */}
         <button
           style={{ ...btn("#fffbeb", "#92400e", "1.5px solid #fde68a"), lineHeight: 1.4 }}
           disabled={busy}
@@ -206,7 +206,6 @@ function DeleteModal({ dealer, preview, onClose, onSuccess }) {
           </div>
         </button>
 
-        {/* Option 2: Dealer-only delete */}
         <button
           style={{ ...btn("#f9fafb", "#374151", "1.5px solid #d1d5db"), lineHeight: 1.4 }}
           disabled={busy}
@@ -221,7 +220,6 @@ function DeleteModal({ dealer, preview, onClose, onSuccess }) {
           </div>
         </button>
 
-        {/* Option 3: Full delete */}
         <button
           style={{ ...btn("#fef2f2", "#991b1b", "1.5px solid #fecaca"), lineHeight: 1.4 }}
           disabled={busy}
@@ -252,11 +250,92 @@ function DeleteModal({ dealer, preview, onClose, onSuccess }) {
   );
 }
 
+// ─── Assign Territory modal (for existing dealers) ─────────────────────────────
+
+function AssignTerritoryModal({ dealer, onClose, onSuccess }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+  const baseUrl = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+
+  async function handleCreated(territory) {
+    setBusy(true);
+    setErr(null);
+    try {
+      const res = await fetch(`${baseUrl}/api/territories/${territory.territoryId}`, {
+        method: "PUT",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ dealerId: dealer.id, status: "taken" }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || `Server returned ${res.status}`);
+      onSuccess(territory);
+    } catch (e) {
+      setErr(e.message);
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0,
+        background: "rgba(0,0,0,0.55)", zIndex: 9999,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: 16, overflowY: "auto",
+      }}
+      onClick={(e) => e.target === e.currentTarget && !busy && onClose()}
+    >
+      <div style={{
+        background: "#fff", borderRadius: 14,
+        maxWidth: 640, width: "100%",
+        padding: "24px 24px 20px",
+        boxShadow: "0 24px 64px rgba(0,0,0,0.35)",
+        fontFamily: "DM Sans, sans-serif",
+        maxHeight: "92vh", overflowY: "auto",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <div>
+            <div style={{ fontWeight: 900, fontSize: 16, color: "#111", fontFamily: "Georgia,serif" }}>
+              Add Territory for {dealer.name}
+            </div>
+            <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>
+              The new territory will be immediately linked to this dealer.
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{ background: "none", border: "none", fontSize: 20, color: "#9ca3af", cursor: "pointer", padding: "2px 6px" }}
+          >
+            ✕
+          </button>
+        </div>
+
+        {err && (
+          <div style={{
+            background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8,
+            padding: "10px 14px", fontSize: 13, color: "#991b1b", fontWeight: 600, marginBottom: 14,
+          }}>
+            ❌ {err}
+          </div>
+        )}
+
+        {busy ? (
+          <div style={{ padding: "24px 0", textAlign: "center", color: "#6b7280", fontSize: 14 }}>
+            Linking territory to dealer…
+          </div>
+        ) : (
+          <CreateTerritoryForm onCreated={handleCreated} onCancel={onClose} compact />
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Toast ────────────────────────────────────────────────────────────────────
 
 function Toast({ message, onDone }) {
   useEffect(() => {
-    const t = setTimeout(onDone, 3000);
+    const t = setTimeout(onDone, 3500);
     return () => clearTimeout(t);
   }, [onDone]);
   return (
@@ -289,8 +368,13 @@ export default function AdminDealersPage() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [toast, setToast] = useState(null);
 
+  // Assign territory to existing dealer
+  const [assigningTerritoryTo, setAssigningTerritoryTo] = useState(null);
+
   // Create admin dealer form state
   const [showCreate, setShowCreate] = useState(false);
+  const [createStep, setCreateStep] = useState(1); // 1 = personal info, 2 = territory form expanded
+  const [newTerritory, setNewTerritory] = useState(null); // territory created inline
   const [createForm, setCreateForm] = useState({ name: "", email: "", phone: "", password: "", territoryId: "" });
   const [createBusy, setCreateBusy] = useState(false);
   const [createError, setCreateError] = useState(null);
@@ -380,7 +464,13 @@ export default function AdminDealersPage() {
       mode === "dealer-only" ? `${dealerName} removed (campaign kept)` :
       `${dealerName} fully deleted`;
     setToast(msg);
-    // Refresh dealers list
+    const token = localStorage.getItem("admin_token");
+    if (token) loadDealers(token);
+  };
+
+  const handleAssignedToDealer = (dealer, territory) => {
+    setAssigningTerritoryTo(null);
+    setToast(`Territory ${territory.territoryId} assigned to ${dealer.name}`);
     const token = localStorage.getItem("admin_token");
     if (token) loadDealers(token);
   };
@@ -425,7 +515,10 @@ export default function AdminDealersPage() {
     try {
       const token = localStorage.getItem("admin_token");
       const body = { ...createForm };
-      if (!body.territoryId) delete body.territoryId;
+      // Prefer the inline-created territory over the dropdown selection
+      const effectiveTerritoryId = newTerritory?.id || body.territoryId;
+      if (effectiveTerritoryId) body.territoryId = effectiveTerritoryId;
+      else delete body.territoryId;
       if (!body.phone) delete body.phone;
       const res = await fetch(`${baseUrl}/api/admin/dealers`, {
         method: "POST",
@@ -436,6 +529,8 @@ export default function AdminDealersPage() {
       if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
       setCreateResult(data.dealer);
       setCreateForm({ name: "", email: "", phone: "", password: "", territoryId: "" });
+      setNewTerritory(null);
+      setCreateStep(1);
       loadDealers(token);
     } catch (err) {
       setCreateError(err.message);
@@ -443,6 +538,21 @@ export default function AdminDealersPage() {
       setCreateBusy(false);
     }
   };
+
+  // Called when territory is created inline in the Add Dealer flow
+  const handleTerritoryCreatedInline = (territory) => {
+    setNewTerritory({ id: territory.territoryId, name: territory.territoryId });
+    setCreateStep(1);
+  };
+
+  function resetCreateForm() {
+    setShowCreate(false);
+    setCreateResult(null);
+    setCreateError(null);
+    setCreateStep(1);
+    setNewTerritory(null);
+    setCreateForm({ name: "", email: "", phone: "", password: "", territoryId: "" });
+  }
 
   useEffect(() => {
     if (!dealers) return;
@@ -469,6 +579,15 @@ export default function AdminDealersPage() {
         />
       )}
 
+      {/* Assign territory modal */}
+      {assigningTerritoryTo && (
+        <AssignTerritoryModal
+          dealer={assigningTerritoryTo}
+          onClose={() => setAssigningTerritoryTo(null)}
+          onSuccess={(territory) => handleAssignedToDealer(assigningTerritoryTo, territory)}
+        />
+      )}
+
       {/* Toast */}
       {toast && <Toast message={`✓ ${toast}`} onDone={() => setToast(null)} />}
 
@@ -486,7 +605,10 @@ export default function AdminDealersPage() {
         </Link>
         <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
           <button
-            onClick={() => { setShowCreate(v => !v); setCreateResult(null); setCreateError(null); }}
+            onClick={() => {
+              if (showCreate) { resetCreateForm(); }
+              else { setShowCreate(true); setCreateResult(null); setCreateError(null); }
+            }}
             style={{
               fontSize: 13, fontWeight: 700, color: "#fff",
               background: RED, border: "none",
@@ -555,7 +677,7 @@ export default function AdminDealersPage() {
                   </code>
                 </div>
                 <button
-                  onClick={() => { setCreateResult(null); setShowCreate(false); }}
+                  onClick={resetCreateForm}
                   style={{ marginTop: 12, fontSize: 12, color: "#166534", background: "none",
                     border: "1px solid #86efac", borderRadius: 6, padding: "4px 10px", cursor: "pointer" }}
                 >
@@ -574,6 +696,7 @@ export default function AdminDealersPage() {
             )}
 
             <form onSubmit={handleCreateDealer}>
+              {/* Step 1 — Personal info (always visible) */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
                 <div>
                   <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 4 }}>
@@ -628,53 +751,104 @@ export default function AdminDealersPage() {
                       padding: "8px 10px", fontSize: 14, fontFamily: "monospace", boxSizing: "border-box" }}
                   />
                 </div>
+
+                {/* Territory row */}
                 <div style={{ gridColumn: "1 / -1" }}>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 4 }}>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 6 }}>
                     Link Territory (optional)
                   </label>
-                  <select
-                    value={createForm.territoryId}
-                    onChange={e => setCreateForm(f => ({ ...f, territoryId: e.target.value }))}
-                    style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: 8,
-                      padding: "8px 10px", fontSize: 14, boxSizing: "border-box", background: "#fff" }}
-                  >
-                    <option value="">— No territory —</option>
-                    {territories.map(t => (
-                      <option key={t.id} value={t.id}>
-                        {t.id} — {t.name || t.id}
-                      </option>
-                    ))}
-                  </select>
-                  {territories.length === 0 && (
-                    <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>
-                      No available territories found.
+
+                  {/* Green chip when a new territory was created inline */}
+                  {newTerritory ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{
+                        display: "inline-flex", alignItems: "center", gap: 8,
+                        background: "#f0fdf4", border: "1.5px solid #86efac",
+                        borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 700, color: "#15803d",
+                      }}>
+                        ✓ {newTerritory.id} — territory created
+                        <button
+                          type="button"
+                          onClick={() => setNewTerritory(null)}
+                          style={{ background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: 16, lineHeight: 1, padding: 0 }}
+                          title="Clear selection"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <select
+                        value={createForm.territoryId}
+                        onChange={e => setCreateForm(f => ({ ...f, territoryId: e.target.value }))}
+                        disabled={createStep === 2}
+                        style={{ flex: 1, border: "1px solid #d1d5db", borderRadius: 8,
+                          padding: "8px 10px", fontSize: 14, boxSizing: "border-box", background: "#fff" }}
+                      >
+                        <option value="">— No territory —</option>
+                        {territories.map(t => (
+                          <option key={t.id} value={t.id}>
+                            {t.id} — {t.name || t.id}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => { setCreateStep(2); setCreateForm(f => ({ ...f, territoryId: "" })); }}
+                        disabled={createStep === 2}
+                        style={{
+                          whiteSpace: "nowrap", background: createStep === 2 ? "#e5e7eb" : "#f0fdf4",
+                          color: createStep === 2 ? "#9ca3af" : "#15803d",
+                          border: `1.5px solid ${createStep === 2 ? "#d1d5db" : "#86efac"}`,
+                          borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 700,
+                          cursor: createStep === 2 ? "default" : "pointer",
+                        }}
+                      >
+                        ＋ Create New Territory
+                      </button>
                     </div>
                   )}
                 </div>
               </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button
-                  type="submit"
-                  disabled={createBusy}
-                  style={{
-                    background: createBusy ? "#9ca3af" : RED, color: "#fff",
-                    border: "none", borderRadius: 8, padding: "9px 20px",
-                    fontWeight: 700, fontSize: 14, cursor: createBusy ? "not-allowed" : "pointer",
-                  }}
-                >
-                  {createBusy ? "Creating…" : "Create Dealer"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setShowCreate(false); setCreateError(null); setCreateResult(null); }}
-                  style={{
-                    background: "#f3f4f6", color: "#374151", border: "1px solid #d1d5db",
-                    borderRadius: 8, padding: "9px 16px", fontWeight: 600, fontSize: 14, cursor: "pointer",
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
+
+              {/* Step 2 — inline territory form */}
+              {createStep === 2 && (
+                <div style={{ marginTop: 8, marginBottom: 16 }}>
+                  <CreateTerritoryForm
+                    onCreated={handleTerritoryCreatedInline}
+                    onCancel={() => setCreateStep(1)}
+                    compact
+                  />
+                </div>
+              )}
+
+              {/* Form footer — hide when in step 2 */}
+              {createStep === 1 && (
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    type="submit"
+                    disabled={createBusy}
+                    style={{
+                      background: createBusy ? "#9ca3af" : RED, color: "#fff",
+                      border: "none", borderRadius: 8, padding: "9px 20px",
+                      fontWeight: 700, fontSize: 14, cursor: createBusy ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    {createBusy ? "Creating…" : "Create Dealer"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={resetCreateForm}
+                    style={{
+                      background: "#f3f4f6", color: "#374151", border: "1px solid #d1d5db",
+                      borderRadius: 8, padding: "9px 16px", fontWeight: 600, fontSize: 14, cursor: "pointer",
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
             </form>
           </div>
         )}
@@ -770,13 +944,9 @@ export default function AdminDealersPage() {
                                 onClick={() => impersonateDealer(d.id)}
                                 disabled={impersonating === d.id}
                                 style={{
-                                  background: "#fffbeb",
-                                  color: "#92400e",
-                                  border: "1.5px solid #fde68a",
-                                  borderRadius: 8,
-                                  padding: "6px 12px",
-                                  fontSize: 12.5,
-                                  fontWeight: 800,
+                                  background: "#fffbeb", color: "#92400e",
+                                  border: "1.5px solid #fde68a", borderRadius: 8,
+                                  padding: "6px 12px", fontSize: 12.5, fontWeight: 800,
                                   cursor: impersonating === d.id ? "default" : "pointer",
                                   whiteSpace: "nowrap",
                                   opacity: impersonating && impersonating !== d.id ? 0.5 : 1,
@@ -785,18 +955,25 @@ export default function AdminDealersPage() {
                                 {impersonating === d.id ? "Opening…" : "🔍 Log in as dealer"}
                               </button>
                               <button
+                                onClick={() => setAssigningTerritoryTo(d)}
+                                title="Add a territory to this dealer"
+                                style={{
+                                  background: "#f0fdf4", color: "#15803d",
+                                  border: "1.5px solid #86efac", borderRadius: 8,
+                                  padding: "6px 10px", fontSize: 12.5, fontWeight: 800,
+                                  cursor: "pointer", whiteSpace: "nowrap",
+                                }}
+                              >
+                                ＋ Territory
+                              </button>
+                              <button
                                 onClick={() => openDeleteModal(d)}
                                 title="Remove this dealer"
                                 style={{
-                                  background: "#fff",
-                                  color: "#991b1b",
-                                  border: "1.5px solid #fecaca",
-                                  borderRadius: 8,
-                                  padding: "6px 10px",
-                                  fontSize: 14,
-                                  fontWeight: 800,
-                                  cursor: "pointer",
-                                  lineHeight: 1,
+                                  background: "#fff", color: "#991b1b",
+                                  border: "1.5px solid #fecaca", borderRadius: 8,
+                                  padding: "6px 10px", fontSize: 14, fontWeight: 800,
+                                  cursor: "pointer", lineHeight: 1,
                                 }}
                               >
                                 🗑
