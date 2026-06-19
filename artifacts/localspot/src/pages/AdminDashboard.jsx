@@ -937,6 +937,36 @@ function Dashboard({ token, onLogout }) {
         {/* ── Quick-access tool cards ──────────────────────────────────────── */}
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 28 }}>
           <a
+            href={`${import.meta.env.BASE_URL}admin/outreach`}
+            style={{
+              display: "flex", alignItems: "center", gap: 10,
+              background: "#fff5f5", border: "1.5px solid #fca5a5",
+              borderRadius: 12, padding: "14px 20px", textDecoration: "none",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+            }}
+          >
+            <span style={{ fontSize: 26 }}>🔍</span>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 14, color: "#991b1b" }}>Discover New Leads</div>
+              <div style={{ fontSize: 12, color: "#b91c1c", marginTop: 2 }}>Google Places + email scraper</div>
+            </div>
+          </a>
+          <a
+            href={`${import.meta.env.BASE_URL}admin/outreach`}
+            style={{
+              display: "flex", alignItems: "center", gap: 10,
+              background: "#fff", border: "1.5px solid #d1d5db",
+              borderRadius: 12, padding: "14px 20px", textDecoration: "none",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+            }}
+          >
+            <span style={{ fontSize: 26 }}>📞</span>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 14, color: "#111" }}>Outreach Tracker</div>
+              <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>Manage & contact leads</div>
+            </div>
+          </a>
+          <a
             href={`${import.meta.env.BASE_URL}admin/territories/custom`}
             style={{
               display: "flex", alignItems: "center", gap: 10,
