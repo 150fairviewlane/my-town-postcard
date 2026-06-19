@@ -132,13 +132,13 @@ export default function AdGenV7Page() {
   const [, navigate] = useLocation();
 
   // form state
-  const [industry, setIndustry]         = useState("Pizza Restaurant");
+  const [industry, setIndustry]         = useState("");
   const [bizLine1, setBizLine1]         = useState("");
   const [bizLine2, setBizLine2]         = useState("");
   const [tagline, setTagline]           = useState("");
   const [phone, setPhone]               = useState("");
   const [address, setAddress]           = useState("");
-  const [city, setCity]                 = useState("Clarkesville, GA");
+  const [city, setCity]                 = useState("");
   const [website, setWebsite]           = useState("");
   const [menuItems, setMenuItems]       = useState(["", "", "", ""]);
   const [offerAmount, setOfferAmount]   = useState("");
