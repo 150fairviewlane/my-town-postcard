@@ -1,0 +1,21 @@
+Bug: On the dealer signup "Find Your Territory" screen, searching "Woodstock, Georgia" correctly lists the 4 mailing areas (Milton, Woodstock, Holly Springs, Canton — all Cherokee County) in the territory card, BUT the green highlighted polygon on the map is wrong — it includes a large swath stretching south through Atlanta into South Fulton, Forest Park, and Riverdale, which has nothing to do with this Cherokee County territory.
+
+**This is a regression** — this exact issue (South Fulton bleeding into a territory it shouldn't be part of) was fixed before on this same proposal screen. Before writing any new fix:
+
+1. **Search git log/blame for prior commits mentioning "South Fulton" or related territory boundary fixes** (e.g. `git log --all --oneline | grep -i fulton`, or search commit messages/diffs touching `territories.ts`, `getFootprintCountyGeoids`, `findCandidateHubs`, or `selectBestHubs`). Find what the previous fix actually changed.
+
+2. **Determine whether the previous fix only updated the mailing-areas TEXT list (`/api/territories/:id/mailing-areas` or the proposal's `topCities`/`hubs` used for display) without also constraining the POLYGON/boundary data (`countyGeoids` / `footprintCountyGeoids` used to draw the map shape).** Based on the code structure: the territory card's 4 listed mailing areas and the green map polygon are populated from different fields — the polygon comes from `result.proposals[0].countyGeoids` and `getFootprintCountyGeoids(p.hubs)` in the `/api/territories/propose` (or equivalent) endpoint in `artifacts/api-server/src/routes/territories.ts`, NOT from the same place that generates the mailing area list. It's likely the prior fix only touched one of these two paths, and the other one regressed or was never fixed.
+
+3. **Trace why South Fulton is being included as a hub for a Cherokee County / Woodstock-centered proposal.** Likely culprits to check:
+   - The centroid used for hub-finding may be miscalculated (pulling south toward Atlanta instead of staying centered on Cherokee County)
+   - `findCandidateHubs` may be using too large a search radius and picking up South Fulton as a "commercial hub" candidate even though it's 30+ miles away
+   - The county-membership filter that should restrict hubs to Cherokee County (and maybe Fulton/Forsyth if genuinely adjacent) may not be correctly excluding South Fulton's specific county GEOID
+   - Check if this is being treated as a "metro split" territory (`isMetroSplit` check based on name containing " — ") when it shouldn't be, which would skip the normal county-boundary filter in favor of a wider 15-mile radius from centroid — if the centroid itself is off, this radius approach would explain a polygon stretching far south
+
+4. **Fix the root cause so the polygon strictly matches the 4 actual mailing areas' county (Cherokee County)** — the displayed boundary should only include Cherokee County (plus only genuinely adjacent counties if by design, but NOT South Fulton/Fulton County's southern portion, which is ~30 miles away and unrelated).
+
+5. **Add a safeguard so this doesn't silently regress a third time**: after fixing, add a sanity check or test that flags if a generated territory polygon's bounding box exceeds a reasonable size for a single-county-cluster territory (e.g. if the resulting countyGeoids list includes counties more than ~20 miles from the centroid, log a warning), so a future regression surfaces in logs instead of silently shipping a wrong map.
+
+After fixing, re-test by searching "Woodstock, Georgia" on the Find Your Territory screen and confirm the green polygon only covers the Cherokee County area (matching Milton, Woodstock, Holly Springs, Canton) with no stretch toward Atlanta/South Fulton/Forest Park/Riverdale.
+
+Report back: what the original fix was, why it didn't hold (regression vs. incomplete fix), and what you changed this time.
