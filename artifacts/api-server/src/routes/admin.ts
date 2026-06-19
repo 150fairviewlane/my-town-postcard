@@ -383,6 +383,53 @@ router.delete("/admin/spots/:spotId/clear", requireAdmin, async (req, res): Prom
   res.json({ success: true, spotId: id, previousStatus, businessName, businessCategory });
 });
 
+// ─── Test email endpoint ──────────────────────────────────────────────────────
+// Lets an admin verify the Resend client and FROM_EMAIL are working end-to-end.
+// Accepts { "to": "..." } and sends a plain test email using the same Resend
+// client and FROM_EMAIL that all transactional emails use.
+router.post("/admin/test-email", requireAdmin, async (req, res): Promise<void> => {
+  const to = typeof req.body?.to === "string" ? req.body.to.trim() : "";
+  if (!to) {
+    res.status(400).json({ success: false, error: "Missing required field: to" });
+    return;
+  }
+
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    res.status(503).json({ success: false, error: "RESEND_API_KEY is not set — email sending is disabled" });
+    return;
+  }
+
+  const fromEmail = process.env.FROM_EMAIL || "info@mytownpostcard.com";
+  const { Resend } = require("resend");
+  const resend = new Resend(apiKey);
+
+  try {
+    const { error: sendError } = await resend.emails.send({
+      from: fromEmail,
+      to,
+      subject: "LocalSpot Mailer — test email",
+      html: `
+        <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 32px;">
+          <h2>✅ Test email delivered</h2>
+          <p>This is a test email sent from the LocalSpot admin dashboard to verify that Resend is configured correctly.</p>
+          <p style="color: #6b7280; font-size: 13px;">From: ${fromEmail}<br>To: ${to}</p>
+        </div>
+      `,
+    });
+    if (sendError) {
+      req.log.error({ err: sendError, to, type: "admin-test" }, "Admin test email failed");
+      res.json({ success: false, error: (sendError as any).message ?? String(sendError) });
+      return;
+    }
+    req.log.info({ to, from: fromEmail, type: "admin-test" }, "Admin test email sent");
+    res.json({ success: true });
+  } catch (err: any) {
+    req.log.error({ err, to, type: "admin-test" }, "Admin test email failed");
+    res.json({ success: false, error: err?.message ?? String(err) });
+  }
+});
+
 // ─── Census county-info test route ───────────────────────────────────────────
 // For testing the Census API module (Prompt 1 of 3). Accepts either:
 //   ?stateFips=13&countyFips=139   — direct FIPS lookup

@@ -20,10 +20,10 @@ function getResendClient() {
 }
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "info@mytownpostcard.com";
-// Default to Resend's always-verified sandbox sender so emails go through
-// out of the box. Override with FROM_EMAIL once mytownpostcard.com is
-// verified in the Resend dashboard.
-const FROM_EMAIL = process.env.FROM_EMAIL || "onboarding@resend.dev";
+if (!process.env.FROM_EMAIL) {
+  logger.warn("FROM_EMAIL not set — defaulting to info@mytownpostcard.com");
+}
+const FROM_EMAIL = process.env.FROM_EMAIL || "info@mytownpostcard.com";
 const APP_URL = process.env.APP_URL || "https://mytownpostcard.com";
 
 interface AdProofInfo {
@@ -111,7 +111,7 @@ export async function sendAdProofEmail(info: AdProofInfo): Promise<void> {
     </tr>`;
 
   try {
-    await resend.emails.send({
+    const { error: sendError } = await resend.emails.send({
       from: FROM_EMAIL,
       to: info.contactEmail,
       subject: `Your ad is locked in — ${info.businessName} on ${safe.campaignName}`,
@@ -184,9 +184,13 @@ export async function sendAdProofEmail(info: AdProofInfo): Promise<void> {
         </div>
       `,
     });
-    logger.info({ orderId: info.orderId, spotId: info.spotId }, "Ad proof email sent");
+    if (sendError) {
+      logger.error({ err: sendError, orderId: info.orderId, to: info.contactEmail, type: "ad-proof" }, "Failed to send ad proof email");
+      return;
+    }
+    logger.info({ orderId: info.orderId, spotId: info.spotId, to: info.contactEmail, type: "ad-proof" }, "Ad proof email sent");
   } catch (err) {
-    logger.error({ err, orderId: info.orderId }, "Failed to send ad proof email");
+    logger.error({ err, orderId: info.orderId, to: info.contactEmail, type: "ad-proof" }, "Failed to send ad proof email");
   }
 }
 
@@ -212,7 +216,7 @@ export async function sendCampaignCompletedAdminEmail(
     : 0;
 
   try {
-    await resend.emails.send({
+    const { error: sendError } = await resend.emails.send({
       from: FROM_EMAIL,
       to: ADMIN_EMAIL,
       subject: `Campaign completed: ${info.name} — $${dollars} (${info.paidSpots}/${info.totalSpots} spots sold)`,
@@ -231,9 +235,13 @@ export async function sendCampaignCompletedAdminEmail(
         </div>
       `,
     });
-    logger.info({ campaignId: info.campaignId }, "Campaign completed admin email sent");
+    if (sendError) {
+      logger.error({ err: sendError, campaignId: info.campaignId, to: ADMIN_EMAIL, type: "admin-campaign-completed" }, "Failed to send campaign completed email");
+      return;
+    }
+    logger.info({ campaignId: info.campaignId, to: ADMIN_EMAIL, type: "admin-campaign-completed" }, "Campaign completed admin email sent");
   } catch (err) {
-    logger.error({ err, campaignId: info.campaignId }, "Failed to send campaign completed email");
+    logger.error({ err, campaignId: info.campaignId, to: ADMIN_EMAIL, type: "admin-campaign-completed" }, "Failed to send campaign completed email");
   }
 }
 
@@ -277,7 +285,7 @@ export async function sendSubscriptionConfirmationEmail(
     weekday: "long", year: "numeric", month: "long", day: "numeric",
   });
   try {
-    await resend.emails.send({
+    const { error: sendError } = await resend.emails.send({
       from: FROM_EMAIL,
       to: info.contactEmail,
       subject: `Welcome to the ${planLabel} — ${info.totalIssues} issues locked in`,
@@ -315,9 +323,13 @@ export async function sendSubscriptionConfirmationEmail(
         </div>
       `,
     });
-    logger.info({ orderId: info.orderId, spotId: info.spotId, commitmentType: info.commitmentType }, "Subscription confirmation email sent");
+    if (sendError) {
+      logger.error({ err: sendError, orderId: info.orderId, to: info.contactEmail, type: "subscription-confirmation" }, "Failed to send subscription confirmation email");
+      return;
+    }
+    logger.info({ orderId: info.orderId, spotId: info.spotId, commitmentType: info.commitmentType, to: info.contactEmail, type: "subscription-confirmation" }, "Subscription confirmation email sent");
   } catch (err) {
-    logger.error({ err, orderId: info.orderId }, "Failed to send subscription confirmation email");
+    logger.error({ err, orderId: info.orderId, to: info.contactEmail, type: "subscription-confirmation" }, "Failed to send subscription confirmation email");
   }
 }
 
@@ -339,7 +351,7 @@ export async function sendAdminNewSubscriptionEmail(info: AdminSubscriptionInfo)
   const monthly = `$${(info.monthlyCents / 100).toFixed(2)}`;
   const total = `$${(info.totalCents / 100).toFixed(2)}`;
   try {
-    await resend.emails.send({
+    const { error: sendError } = await resend.emails.send({
       from: FROM_EMAIL,
       to: ADMIN_EMAIL,
       subject: `🎉 New ${planLabel}: ${info.businessName} (${total} committed)`,
@@ -357,9 +369,13 @@ export async function sendAdminNewSubscriptionEmail(info: AdminSubscriptionInfo)
         </div>
       `,
     });
-    logger.info({ subscriptionRecordId: info.subscriptionRecordId }, "Admin new subscription email sent");
+    if (sendError) {
+      logger.error({ err: sendError, subscriptionRecordId: info.subscriptionRecordId, to: ADMIN_EMAIL, type: "admin-new-subscription" }, "Failed to send admin new subscription email");
+      return;
+    }
+    logger.info({ subscriptionRecordId: info.subscriptionRecordId, to: ADMIN_EMAIL, type: "admin-new-subscription" }, "Admin new subscription email sent");
   } catch (err) {
-    logger.error({ err, subscriptionRecordId: info.subscriptionRecordId }, "Failed to send admin new subscription email");
+    logger.error({ err, subscriptionRecordId: info.subscriptionRecordId, to: ADMIN_EMAIL, type: "admin-new-subscription" }, "Failed to send admin new subscription email");
   }
 }
 
@@ -377,7 +393,7 @@ export async function sendRenewalT30Email(info: RenewalEmailInfo): Promise<void>
     weekday: "long", year: "numeric", month: "long", day: "numeric",
   });
   try {
-    await resend.emails.send({
+    const { error: sendError } = await resend.emails.send({
       from: FROM_EMAIL,
       to: info.contactEmail,
       subject: `Your LocalSpot subscription ends ${endStr} — keep your spot?`,
@@ -390,9 +406,13 @@ export async function sendRenewalT30Email(info: RenewalEmailInfo): Promise<void>
         </div>
       `,
     });
-    logger.info({ contactEmail: info.contactEmail }, "Renewal T-30 email sent");
+    if (sendError) {
+      logger.error({ err: sendError, to: info.contactEmail, type: "renewal-t30" }, "Failed to send T-30 renewal email");
+      return;
+    }
+    logger.info({ to: info.contactEmail, type: "renewal-t30" }, "Renewal T-30 email sent");
   } catch (err) {
-    logger.error({ err }, "Failed to send T-30 renewal email");
+    logger.error({ err, to: info.contactEmail, type: "renewal-t30" }, "Failed to send T-30 renewal email");
   }
 }
 
@@ -403,7 +423,7 @@ export async function sendRenewalT7Email(info: RenewalEmailInfo): Promise<void> 
     weekday: "long", year: "numeric", month: "long", day: "numeric",
   });
   try {
-    await resend.emails.send({
+    const { error: sendError } = await resend.emails.send({
       from: FROM_EMAIL,
       to: info.contactEmail,
       subject: `1 week left — renew before your spot opens up`,
@@ -416,9 +436,13 @@ export async function sendRenewalT7Email(info: RenewalEmailInfo): Promise<void> 
         </div>
       `,
     });
-    logger.info({ contactEmail: info.contactEmail }, "Renewal T-7 email sent");
+    if (sendError) {
+      logger.error({ err: sendError, to: info.contactEmail, type: "renewal-t7" }, "Failed to send T-7 renewal email");
+      return;
+    }
+    logger.info({ to: info.contactEmail, type: "renewal-t7" }, "Renewal T-7 email sent");
   } catch (err) {
-    logger.error({ err }, "Failed to send T-7 renewal email");
+    logger.error({ err, to: info.contactEmail, type: "renewal-t7" }, "Failed to send T-7 renewal email");
   }
 }
 
@@ -426,7 +450,7 @@ export async function sendRenewalPostEmail(info: RenewalEmailInfo): Promise<void
   const resend = getResendClient();
   if (!resend || !info.contactEmail) return;
   try {
-    await resend.emails.send({
+    const { error: sendError } = await resend.emails.send({
       from: FROM_EMAIL,
       to: info.contactEmail,
       subject: `Thanks for running with LocalSpot — ready for round two?`,
@@ -438,9 +462,13 @@ export async function sendRenewalPostEmail(info: RenewalEmailInfo): Promise<void
         </div>
       `,
     });
-    logger.info({ contactEmail: info.contactEmail }, "Renewal post email sent");
+    if (sendError) {
+      logger.error({ err: sendError, to: info.contactEmail, type: "renewal-post" }, "Failed to send post-end renewal email");
+      return;
+    }
+    logger.info({ to: info.contactEmail, type: "renewal-post" }, "Renewal post email sent");
   } catch (err) {
-    logger.error({ err }, "Failed to send post-end renewal email");
+    logger.error({ err, to: info.contactEmail, type: "renewal-post" }, "Failed to send post-end renewal email");
   }
 }
 
@@ -458,7 +486,7 @@ export async function sendAdminNewDealerEmail(info: AdminNewDealerInfo): Promise
   const adminUrl = `${APP_URL}/admin/dealers?id=${info.dealerId}`;
 
   try {
-    await resend.emails.send({
+    const { error: sendError } = await resend.emails.send({
       from: FROM_EMAIL,
       to: ADMIN_EMAIL,
       subject: `🎉 New dealer activated: ${info.dealerName}${info.territoryName ? ` — ${info.territoryName}` : ""}`,
@@ -480,9 +508,13 @@ export async function sendAdminNewDealerEmail(info: AdminNewDealerInfo): Promise
         </div>
       `,
     });
-    logger.info({ dealerId: info.dealerId }, "Admin new dealer email sent");
+    if (sendError) {
+      logger.error({ err: sendError, dealerId: info.dealerId, to: ADMIN_EMAIL, type: "admin-new-dealer" }, "Failed to send admin new dealer email");
+      return;
+    }
+    logger.info({ dealerId: info.dealerId, to: ADMIN_EMAIL, type: "admin-new-dealer" }, "Admin new dealer email sent");
   } catch (err) {
-    logger.error({ err, dealerId: info.dealerId }, "Failed to send admin new dealer email");
+    logger.error({ err, dealerId: info.dealerId, to: ADMIN_EMAIL, type: "admin-new-dealer" }, "Failed to send admin new dealer email");
   }
 }
 
@@ -500,7 +532,7 @@ export async function sendAdminDealerCancelledEmail(info: AdminDealerCancelledIn
   const adminUrl = `${APP_URL}/admin/dealers?id=${info.dealerId}`;
 
   try {
-    await resend.emails.send({
+    const { error: sendError } = await resend.emails.send({
       from: FROM_EMAIL,
       to: ADMIN_EMAIL,
       subject: `⚠️ Dealer subscription cancelled: ${info.dealerName}${info.territoryName ? ` — ${info.territoryName}` : ""}`,
@@ -522,9 +554,13 @@ export async function sendAdminDealerCancelledEmail(info: AdminDealerCancelledIn
         </div>
       `,
     });
-    logger.info({ dealerId: info.dealerId }, "Admin dealer cancelled email sent");
+    if (sendError) {
+      logger.error({ err: sendError, dealerId: info.dealerId, to: ADMIN_EMAIL, type: "admin-dealer-cancelled" }, "Failed to send admin dealer cancelled email");
+      return;
+    }
+    logger.info({ dealerId: info.dealerId, to: ADMIN_EMAIL, type: "admin-dealer-cancelled" }, "Admin dealer cancelled email sent");
   } catch (err) {
-    logger.error({ err, dealerId: info.dealerId }, "Failed to send admin dealer cancelled email");
+    logger.error({ err, dealerId: info.dealerId, to: ADMIN_EMAIL, type: "admin-dealer-cancelled" }, "Failed to send admin dealer cancelled email");
   }
 }
 
@@ -533,7 +569,7 @@ export async function sendAdminNewOrder(order: OrderInfo): Promise<void> {
   if (!resend) return;
 
   try {
-    await resend.emails.send({
+    const { error: sendError } = await resend.emails.send({
       from: FROM_EMAIL,
       to: ADMIN_EMAIL,
       subject: `New paid order: ${order.businessName} — $${(order.spotPrice / 100).toFixed(2)}`,
@@ -551,9 +587,13 @@ export async function sendAdminNewOrder(order: OrderInfo): Promise<void> {
         </div>
       `,
     });
-    logger.info({ orderId: order.orderId }, "Admin new order email sent");
+    if (sendError) {
+      logger.error({ err: sendError, orderId: order.orderId, to: ADMIN_EMAIL, type: "admin-new-order" }, "Failed to send admin email");
+      return;
+    }
+    logger.info({ orderId: order.orderId, to: ADMIN_EMAIL, type: "admin-new-order" }, "Admin new order email sent");
   } catch (err) {
-    logger.error({ err, orderId: order.orderId }, "Failed to send admin email");
+    logger.error({ err, orderId: order.orderId, to: ADMIN_EMAIL, type: "admin-new-order" }, "Failed to send admin email");
   }
 }
 
@@ -586,7 +626,7 @@ export async function sendTerritoryClaimedEmail(
     ? `${APP_URL}/my-territory?token=${encodeURIComponent(info.portalToken)}`
     : `${APP_URL}/my-territory`;
   try {
-    await resend.emails.send({
+    const { error: sendError } = await resend.emails.send({
       from: FROM_EMAIL,
       to: info.dealerEmail,
       subject: `Your territory is live — ${escapeHtml(info.territoryName)}`,
@@ -600,9 +640,13 @@ export async function sendTerritoryClaimedEmail(
         </div>
       `,
     });
-    logger.info({ territory: info.territoryName }, "Territory claimed email sent");
+    if (sendError) {
+      logger.error({ err: sendError, territory: info.territoryName, to: info.dealerEmail, type: "territory-claimed" }, "Failed to send territory claimed email");
+      return;
+    }
+    logger.info({ territory: info.territoryName, to: info.dealerEmail, type: "territory-claimed" }, "Territory claimed email sent");
   } catch (err) {
-    logger.error({ err, territory: info.territoryName }, "Failed to send territory claimed email");
+    logger.error({ err, territory: info.territoryName, to: info.dealerEmail, type: "territory-claimed" }, "Failed to send territory claimed email");
   }
 }
 
@@ -628,7 +672,7 @@ export async function sendTerritoryConflictEmail(
     return;
   }
   try {
-    await resend.emails.send({
+    const { error: sendError } = await resend.emails.send({
       from: FROM_EMAIL,
       to: info.dealerEmail,
       subject: `Refund issued — ${escapeHtml(info.territoryName)} was just claimed`,
@@ -646,9 +690,13 @@ export async function sendTerritoryConflictEmail(
         </div>
       `,
     });
-    logger.info({ territory: info.territoryName }, "Territory conflict email sent");
+    if (sendError) {
+      logger.error({ err: sendError, territory: info.territoryName, to: info.dealerEmail, type: "territory-conflict" }, "Failed to send territory conflict email");
+      return;
+    }
+    logger.info({ territory: info.territoryName, to: info.dealerEmail, type: "territory-conflict" }, "Territory conflict email sent");
   } catch (err) {
-    logger.error({ err, territory: info.territoryName }, "Failed to send territory conflict email");
+    logger.error({ err, territory: info.territoryName, to: info.dealerEmail, type: "territory-conflict" }, "Failed to send territory conflict email");
   }
 }
 
@@ -681,7 +729,7 @@ export async function sendDealerWelcomeEmail(
     ? ` for <strong>${escapeHtml(info.territoryName)}</strong>`
     : "";
   try {
-    await resend.emails.send({
+    const { error: sendError } = await resend.emails.send({
       from: FROM_EMAIL,
       to: info.dealerEmail,
       subject: "Welcome to LocalSpot — set up your dealer account",
@@ -707,9 +755,13 @@ export async function sendDealerWelcomeEmail(
         </div>
       `,
     });
-    logger.info({ dealer: info.dealerEmail }, "Dealer welcome email sent");
+    if (sendError) {
+      logger.error({ err: sendError, to: info.dealerEmail, type: "dealer-welcome" }, "Failed to send dealer welcome email");
+      return;
+    }
+    logger.info({ to: info.dealerEmail, type: "dealer-welcome" }, "Dealer welcome email sent");
   } catch (err) {
-    logger.error({ err, dealer: info.dealerEmail }, "Failed to send dealer welcome email");
+    logger.error({ err, to: info.dealerEmail, type: "dealer-welcome" }, "Failed to send dealer welcome email");
   }
 }
 
@@ -725,7 +777,7 @@ export async function sendDealerPasswordResetEmail(
     return;
   }
   try {
-    await resend.emails.send({
+    const { error: sendError } = await resend.emails.send({
       from: FROM_EMAIL,
       to: info.dealerEmail,
       subject: "Reset your My Town Postcard dealer password",
@@ -751,8 +803,12 @@ export async function sendDealerPasswordResetEmail(
         </div>
       `,
     });
-    logger.info({ dealer: info.dealerEmail }, "Dealer password reset email sent");
+    if (sendError) {
+      logger.error({ err: sendError, to: info.dealerEmail, type: "dealer-password-reset" }, "Failed to send dealer password reset email");
+      return;
+    }
+    logger.info({ to: info.dealerEmail, type: "dealer-password-reset" }, "Dealer password reset email sent");
   } catch (err) {
-    logger.error({ err, dealer: info.dealerEmail }, "Failed to send dealer password reset email");
+    logger.error({ err, to: info.dealerEmail, type: "dealer-password-reset" }, "Failed to send dealer password reset email");
   }
 }
