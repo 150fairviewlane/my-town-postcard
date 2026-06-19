@@ -937,7 +937,7 @@ function Dashboard({ token, onLogout }) {
         {/* ── Quick-access tool cards ──────────────────────────────────────── */}
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 28 }}>
           <a
-            href={`${import.meta.env.BASE_URL}admin/outreach?discover=1`}
+            href={`${import.meta.env.BASE_URL}admin/discover`}
             style={{
               display: "flex", alignItems: "center", gap: 10,
               background: "#fff5f5", border: "1.5px solid #fca5a5",
