@@ -112,31 +112,85 @@ export default function TerritoryLandingPage({ params }: { params: { slug: strin
     },
   });
 
-  // Set page <title> and <meta name="description"> once campaign data is ready.
-  // Restore defaults on unmount so navigating back to the home page isn't affected.
+  // Set page <title>, <meta name="description">, and Open Graph tags once
+  // campaign data is ready. Restore defaults on unmount so navigating back to
+  // the home page isn't affected.
   useEffect(() => {
     if (!campaign) return;
     const place = derivePlaceName(campaign);
     if (!place) return;
 
-    const prevTitle = document.title;
-    document.title = `${place} Postcard Advertising | My Town Postcard`;
+    const ogTitle = `${place} Postcard Advertising | My Town Postcard`;
+    const ogDescription = `Reach 5,000 ${place} homes with a 9×12 co-op postcard. Reserve your spot today.`;
+    const ogImageUrl = `${window.location.origin}/opengraph.jpg`;
 
-    let metaDesc = document.querySelector<HTMLMetaElement>('meta[name="description"]');
-    const prevDesc = metaDesc?.getAttribute("content") ?? null;
-    if (!metaDesc) {
-      metaDesc = document.createElement("meta");
-      metaDesc.name = "description";
-      document.head.appendChild(metaDesc);
+    // --- <title> ---
+    const prevTitle = document.title;
+    document.title = ogTitle;
+
+    // Upsert a <meta name="…"> tag; returns the previous content (or null if new).
+    function upsertNameMeta(name: string, content: string): string | null {
+      let el = document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
+      const prev = el?.getAttribute("content") ?? null;
+      if (!el) {
+        el = document.createElement("meta");
+        el.setAttribute("name", name);
+        document.head.appendChild(el);
+      }
+      el.setAttribute("content", content);
+      return prev;
     }
-    metaDesc.content = `Reach 5,000 ${place} homes with a 9×12 co-op postcard. Reserve your spot today.`;
+
+    // Upsert a <meta property="…"> tag; returns the previous content (or null if new).
+    function upsertPropertyMeta(property: string, content: string): string | null {
+      let el = document.querySelector<HTMLMetaElement>(`meta[property="${property}"]`);
+      const prev = el?.getAttribute("content") ?? null;
+      if (!el) {
+        el = document.createElement("meta");
+        el.setAttribute("property", property);
+        document.head.appendChild(el);
+      }
+      el.setAttribute("content", content);
+      return prev;
+    }
+
+    // --- <meta name="description"> ---
+    const prevDesc = upsertNameMeta("description", ogDescription);
+
+    // --- Open Graph tags ---
+    // Capture previous values so we can restore the home page's static tags on unmount.
+    const prevOgTitle       = upsertPropertyMeta("og:title", ogTitle);
+    const prevOgDescription = upsertPropertyMeta("og:description", ogDescription);
+    const prevOgImage       = upsertPropertyMeta("og:image", ogImageUrl);
+    const prevOgUrl         = upsertPropertyMeta("og:url", window.location.href);
+    const prevOgType        = upsertPropertyMeta("og:type", "website");
 
     return () => {
       document.title = prevTitle;
-      const el = document.querySelector<HTMLMetaElement>('meta[name="description"]');
-      if (el) {
+
+      // Restore or remove <meta name="description">
+      const descEl = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+      if (descEl) {
         if (prevDesc !== null) {
-          el.content = prevDesc;
+          descEl.setAttribute("content", prevDesc);
+        } else {
+          descEl.remove();
+        }
+      }
+
+      // Restore each OG tag to its previous value, or remove it if we created it.
+      const ogRestores: [string, string | null][] = [
+        ["og:title", prevOgTitle],
+        ["og:description", prevOgDescription],
+        ["og:image", prevOgImage],
+        ["og:url", prevOgUrl],
+        ["og:type", prevOgType],
+      ];
+      for (const [property, prev] of ogRestores) {
+        const el = document.querySelector<HTMLMetaElement>(`meta[property="${property}"]`);
+        if (!el) continue;
+        if (prev !== null) {
+          el.setAttribute("content", prev);
         } else {
           el.remove();
         }
