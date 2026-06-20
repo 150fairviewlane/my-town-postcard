@@ -430,6 +430,7 @@ export default function AdminDealersPage() {
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error || `Failed: ${res.status}`);
+      if (body.token) sessionStorage.setItem("dealer_token", body.token);
       window.location.href = `${baseUrl}/dealer/dashboard`;
     } catch (err) {
       alert(`Could not impersonate: ${err.message}`);

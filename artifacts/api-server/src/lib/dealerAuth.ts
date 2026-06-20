@@ -130,9 +130,15 @@ export function clearDealerCookie(res: Response): void {
 // ─── requireDealerAuth middleware ─────────────────────────────────────────────
 
 export async function requireDealerAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
-  const token = (req as any).cookies?.[COOKIE_NAME];
+  // Prefer Authorization: Bearer header (works in iframe / third-party-cookie-blocked contexts).
+  // Fall back to HttpOnly cookie for legacy / server-rendered callers.
+  const authHeader = req.headers.authorization;
+  const token =
+    (authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined) ??
+    (req as any).cookies?.[COOKIE_NAME];
+
   if (!token) {
-    res.status(401).json({ error: "Not authenticated", reason: "no_cookie" });
+    res.status(401).json({ error: "Not authenticated", reason: "no_token" });
     return;
   }
 

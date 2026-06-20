@@ -61,6 +61,7 @@ export default function DealerLogin() {
         setError(body.error || "Sign in failed. Please try again.");
         return;
       }
+      if (body.token) sessionStorage.setItem("dealer_token", body.token);
       navigate("/dealer/dashboard");
     } catch {
       setError("Network error. Please try again.");

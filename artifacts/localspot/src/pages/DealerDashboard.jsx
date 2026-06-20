@@ -15,6 +15,11 @@ export default function DealerDashboard() {
 
   const baseUrl = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 
+  function dealerAuthHeaders(extra = {}) {
+    const t = sessionStorage.getItem("dealer_token");
+    return t ? { Authorization: `Bearer ${t}`, ...extra } : extra;
+  }
+
   const getCsrfToken = useCallback(async () => {
     try {
       const r = await fetch(`${baseUrl}/api/dealers/csrf-token`, { credentials: "include" });
@@ -30,9 +35,10 @@ export default function DealerDashboard() {
       await fetch(`${baseUrl}/api/dealers/logout`, {
         method: "POST",
         credentials: "include",
-        headers: csrfToken ? { "X-CSRF-Token": csrfToken } : {},
+        headers: dealerAuthHeaders(csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
       });
     } catch { /* ignore */ }
+    sessionStorage.removeItem("dealer_token");
     navigate("/dealer/login");
   }, [baseUrl, navigate, getCsrfToken]);
 
@@ -42,9 +48,10 @@ export default function DealerDashboard() {
       await fetch(`${baseUrl}/api/dealers/logout`, {
         method: "POST",
         credentials: "include",
-        headers: csrfToken ? { "X-CSRF-Token": csrfToken } : {},
+        headers: dealerAuthHeaders(csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
       });
     } catch { /* ignore */ }
+    sessionStorage.removeItem("dealer_token");
     window.location.href = `${baseUrl}/admin/dealers`;
   }, [baseUrl, getCsrfToken]);
 
@@ -52,7 +59,10 @@ export default function DealerDashboard() {
     let cancelled = false;
     async function load() {
       try {
-        const meRes = await fetch(`${baseUrl}/api/dealers/me`, { credentials: "include" });
+        const meRes = await fetch(`${baseUrl}/api/dealers/me`, {
+          credentials: "include",
+          headers: dealerAuthHeaders(),
+        });
         if (!meRes.ok) {
           navigate("/dealer/login?reason=session_expired");
           return;
@@ -60,7 +70,10 @@ export default function DealerDashboard() {
         const meData = await meRes.json();
         if (!cancelled) setMe(meData);
 
-        const portalRes = await fetch(`${baseUrl}/api/dealers/portal-data`, { credentials: "include" });
+        const portalRes = await fetch(`${baseUrl}/api/dealers/portal-data`, {
+          credentials: "include",
+          headers: dealerAuthHeaders(),
+        });
         if (portalRes.ok) {
           const portalData = await portalRes.json();
           if (!cancelled) setPortal(portalData);

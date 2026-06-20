@@ -1404,7 +1404,7 @@ router.post("/dealers/login", loginLimiter, csrfProtect, async (req, res): Promi
   setDealerCookie(res, token, !!rememberMe);
 
   req.log.info({ dealerId: dealer.id }, "Dealer logged in");
-  res.json({ ok: true, dealerId: dealer.id });
+  res.json({ ok: true, dealerId: dealer.id, token });
 });
 
 function _recordIpFailure(ip: string): void {
@@ -1575,7 +1575,7 @@ router.post("/admin/dealers/:id/impersonate", requireAdmin, async (req, res): Pr
 
   setDealerCookie(res, token, false);
   req.log.info({ dealerId: dealer.id }, "Admin impersonating dealer");
-  res.json({ ok: true, dealerId: dealer.id });
+  res.json({ ok: true, dealerId: dealer.id, token });
 });
 
 // ─── GET /api/admin/audit-log ─────────────────────────────────────────────────
