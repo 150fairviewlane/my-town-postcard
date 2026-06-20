@@ -1,0 +1,52 @@
+Build a "Dealer Details" admin page that opens when an admin clicks a dealer row on the existing dealers list page. Shows full dealer info, links to ALL of their territory landing pages, and live ad-sales stats per territory.
+
+**This composes EXISTING endpoints/data — do not duplicate logic that already exists:**
+- `GET /api/admin/dealers/:id` already returns the dealer record plus their rows from `dealerTerritoriesTable` (territoryIndex, cityLabel, zipCount, estimatedHouseholds) — this is the base data source.
+- Per-territory ad-sales stats (sold/available/revenue) are already computed elsewhere for campaigns (see the campaign summary pattern in `dealers.ts` / `adminCampaigns.ts` — `sold = spots.filter(s => s.status === "paid")`, `revenueCents = sold.reduce(...)`). Reuse this exact pattern, don't reinvent it.
+
+---
+
+## Backend: extend `GET /api/admin/dealers/:id`
+
+Currently this returns `{ dealer, territories: [...] }` where `territories` only has `territoryIndex`, `cityLabel`, `zipCount`, `estimatedHouseholds` — no link to the actual campaign/landing-page or sales data for each.
+
+Extend the response so each territory in the array ALSO includes:
+- `campaignId` — the linked campaign for this territory (a dealer's territories likely each map to a campaign; find the right join — check `campaignsTable` for a `dealerId` and/or `territoryId`/`cityLabel` match, or however the existing `/dealers/:id/landing-page`-style logic already resolves this)
+- `slug` and `pageUrl` (full URL like `https://mytownpostcard.com/{slug}`) for that territory's landing page
+- `totalSpots`, `soldSpots`, `availableSpots`, `revenueCents` — computed the same way the existing campaign-summary logic does it (query `spotsTable` where `campaignId` matches, filter `status === "paid"` for sold, sum `price` for revenue)
+- `isPublished` status of that territory's landing page
+
+If a dealer has multiple territories (the real scenario this is for), return ALL of them in the array, each with their own independent stats — don't assume just one.
+
+Also add at the top level of the response a `totals` object summarizing across all the dealer's territories combined: `{ totalSpotsAcrossAll, totalSoldAcrossAll, totalRevenueCentsAcrossAll }` — a quick "this dealer overall" snapshot.
+
+---
+
+## Frontend: new page `AdminDealerDetailPage.jsx`
+
+Route: `/admin/dealers/:id`
+
+1. **Make dealer rows on the existing `AdminDealersPage` list clickable** — clicking a row (not the delete button we added earlier, which should still work independently) navigates to `/admin/dealers/:id`.
+
+2. **Header section**: dealer name (large, Bebas Neue), status pill (active/pending/cancelled — match existing status styling conventions), email, phone, home ZIP, created date, activated date.
+
+3. **Overall stats row**: a few stat cards showing the `totals` from the API — total spots across all territories, total sold, total revenue (formatted as `$X,XXX`), and overall fill rate as a percentage.
+
+4. **Territories section** — one card per territory in the dealer's `territories` array:
+   - Territory/city label as the card title
+   - **"View Landing Page" button** — opens `pageUrl` in a new tab
+   - **"Copy Link" button** — copies `pageUrl` to clipboard with a brief "Copied!" confirmation
+   - Published status pill (Live / Draft)
+   - Fill bar: `soldSpots / totalSpots` with the fraction shown (e.g. "6 / 15 sold")
+   - Revenue for this specific territory
+   - Estimated households (from `estimatedHouseholds`) and ZIP count (`zipCount`) as smaller secondary text
+
+5. **Back button** to return to the dealers list.
+
+6. Match existing admin styling — burgundy/gold/cream, DM Sans, Bebas Neue headers, consistent with `AdminDealersPage` and other admin pages already built.
+
+7. Handle the loading and error states (dealer not found → show a clear message with a link back to the dealers list).
+
+---
+
+After implementing, test by clicking into a dealer with multiple territories (or at least one) and confirm: all their territory cards show correct live sold/available/revenue numbers matching what the existing campaign data actually shows, all landing page links work, and the overall totals row correctly sums across all their territories.
