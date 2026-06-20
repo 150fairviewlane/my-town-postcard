@@ -1,0 +1,25 @@
+Revision to Task #309 (Fix Cherokee map pin positions). Steps 1-3 (adding `pin_lat`/`pin_lng` columns, seeding real coordinates, updating `/api/territories/public` to prefer per-campaign coordinates over the shared county centroid) are approved as-is — implement those exactly as written.
+
+**Step 4 is being replaced entirely.** Do NOT nudge pin positions outward from a cluster centroid, even using geographic angles. Pins must always render at their exact true lat/long-derived position, no matter how close together they are to other pins. The collision problem should be solved at the LABEL level only, not the pin level — this is a label-placement problem, not a pin-placement problem.
+
+---
+
+## Replace `spreadClusteredPins()` with label-only collision avoidance
+
+1. **Pins**: render every pin at its true projected x/y position, always — Canton, Woodstock, Ball Ground, and Holly Springs should each sit exactly where their real coordinates place them, even if two dots end up only a few pixels apart. Never move a dot to make room.
+
+2. **Labels**: after all pins are placed at their true positions, run a label-placement pass that:
+   - Starts each label in its default position (e.g. directly to the right of its pin, vertically centered — whatever the current default offset is).
+   - Detects bounding-box overlap between any two labels (a simple rectangle-intersection check using each label's rendered width/height, not just point-distance between pins).
+   - For any overlapping pair/group, try a small set of alternate offset positions for each label — e.g. right, left, above, below, upper-right, lower-right, upper-left, lower-left, in that preference order — and pick the first position for each label that no longer overlaps any other already-placed label or any other pin's dot.
+   - Process labels in a deterministic order (e.g. sort by latitude descending, or alphabetically) so the result is stable across re-renders and doesn't jump around.
+   - If a label genuinely cannot find a non-overlapping position among the candidate offsets (e.g. 4+ labels packed extremely tightly), allow it to render with a short leader line (a thin 1px line connecting the pin to its label) so the label can be placed further away while still being clearly associated with its correct dot. This is the fallback for the truly tight cases — most clusters should resolve without needing this.
+
+3. This must be a general-purpose function usable for ANY current or future cluster of close pins (not hardcoded for the Cherokee 4) — same requirement as the original task.
+
+4. Test specifically with the Cherokee cluster (Canton, Woodstock, Ball Ground, Holly Springs) and confirm:
+   - All 4 dots sit at their exact correct geographic positions relative to each other and to the base map's own town labels (Ball Ground north of Canton, Woodstock south/southwest of Canton, Holly Springs between Woodstock and Canton) — dot positions should require zero further adjustment since they're never moved.
+   - All 4 text labels are fully readable with no overlapping text, using whichever offset direction (or leader line, if needed) resolves the collision for each one.
+   - White/Habersham (already isolated, no collision) renders unaffected, same as before.
+
+Everything else from the original task — schema changes, seeded coordinates, the `/api/territories/public` update — stays exactly as planned.

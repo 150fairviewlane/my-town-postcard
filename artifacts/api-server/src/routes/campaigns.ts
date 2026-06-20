@@ -117,6 +117,8 @@ router.get("/territories/public", async (req, res): Promise<void> => {
       slug:        campaignsTable.slug,
       status:      campaignsTable.status,
       isPublished: campaignsTable.isPublished,
+      pinLat:      campaignsTable.pinLat,
+      pinLng:      campaignsTable.pinLng,
       centroidLat: territoriesTable.centroidLat,
       centroidLng: territoriesTable.centroidLng,
       paidSpots:   sql<number>`COUNT(${spotsTable.id}) FILTER (WHERE ${spotsTable.status} = 'paid')`,
@@ -142,6 +144,8 @@ router.get("/territories/public", async (req, res): Promise<void> => {
       campaignsTable.slug,
       campaignsTable.status,
       campaignsTable.isPublished,
+      campaignsTable.pinLat,
+      campaignsTable.pinLng,
       territoriesTable.centroidLat,
       territoriesTable.centroidLng,
     );
@@ -157,10 +161,14 @@ router.get("/territories/public", async (req, res): Promise<void> => {
       paidSpots:  Number(r.paidSpots ?? 0),
       totalSpots: Number(r.totalSpots ?? 0),
     };
-    // Only include coordinates when both are present — never default to 0,0
-    if (r.centroidLat != null && r.centroidLng != null) {
-      base.latitude  = r.centroidLat;
-      base.longitude = r.centroidLng;
+    // Per-campaign pin_lat/pin_lng takes precedence over the shared territory
+    // centroid — lets sub-zones (e.g. Cherokee: Canton, Woodstock, …) each pin
+    // to their own real city centre instead of a shared county centroid.
+    const lat = r.pinLat ?? r.centroidLat;
+    const lng = r.pinLng ?? r.centroidLng;
+    if (lat != null && lng != null) {
+      base.latitude  = lat;
+      base.longitude = lng;
     }
     return base;
   });

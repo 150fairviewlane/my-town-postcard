@@ -30,6 +30,12 @@ export const campaignsTable = pgTable("campaigns", {
   mailingSeason: text("mailing_season"),
   mailingMonth: text("mailing_month"),
   cityList: text("city_list"),
+  // Per-campaign map pin override. When set these take precedence over the
+  // shared territories-table centroid so individual sub-zones (e.g. Cherokee:
+  // Canton, Woodstock, Ball Ground, Holly Springs) pin to the real city centre
+  // rather than the county centroid.
+  pinLat: doublePrecision("pin_lat"),
+  pinLng: doublePrecision("pin_lng"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
