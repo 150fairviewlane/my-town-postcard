@@ -3,7 +3,6 @@ import { useLocation } from "wouter";
 import "leaflet/dist/leaflet.css";
 
 const RED = "#7B1418";
-const GOLD = "#C9A84C";
 
 function cleanName(name) {
   return name
@@ -28,6 +27,68 @@ function makeIcon(L, highlighted = false) {
     iconAnchor: [size / 2, size / 2],
     tooltipAnchor: [size / 2 + 1, 0],
   });
+}
+
+/**
+ * Detects clusters of pins that land within clusterThresholdDeg of each other
+ * and spreads each cluster into a radial pattern (deterministic: sorted by cleanName).
+ * General-purpose — works for any future territory cluster, not just Cherokee.
+ *
+ * Each returned pin gains a `_labelDirection` field ("right" | "left") so the
+ * tooltip is always rendered away from the cluster centre, keeping labels readable.
+ *
+ * @param {Array}  pins                - array of territory objects with .latitude / .longitude
+ * @param {number} clusterThresholdDeg - pins within this many degrees are treated as a cluster
+ * @param {number} spreadRadiusDeg     - radius of the spread circle in degrees
+ */
+function spreadClusteredPins(pins, clusterThresholdDeg = 0.5, spreadRadiusDeg = 0.25) {
+  if (pins.length <= 1) return pins;
+
+  // Sort alphabetically so angle assignments are stable across re-renders
+  const sorted = [...pins].sort((a, b) =>
+    cleanName(a.name).localeCompare(cleanName(b.name))
+  );
+
+  const visited = new Set();
+  const result = sorted.map(p => ({ ...p, _labelDirection: "right" }));
+
+  for (let i = 0; i < sorted.length; i++) {
+    if (visited.has(i)) continue;
+
+    const cluster = [i];
+    visited.add(i);
+
+    for (let j = i + 1; j < sorted.length; j++) {
+      if (visited.has(j)) continue;
+      const dlat = Math.abs(sorted[i].latitude - sorted[j].latitude);
+      const dlng = Math.abs(sorted[i].longitude - sorted[j].longitude);
+      if (dlat < clusterThresholdDeg && dlng < clusterThresholdDeg) {
+        cluster.push(j);
+        visited.add(j);
+      }
+    }
+
+    if (cluster.length <= 1) continue;
+
+    // Centroid of the cluster
+    const centLat = cluster.reduce((s, k) => s + sorted[k].latitude, 0) / cluster.length;
+    const centLng = cluster.reduce((s, k) => s + sorted[k].longitude, 0) / cluster.length;
+
+    // Place pins evenly around the centroid, starting north (−π/2), clockwise.
+    // Label direction: pins left of centre use "left" so text flows away from cluster.
+    cluster.forEach((pinIdx, nth) => {
+      const angle = (2 * Math.PI * nth) / cluster.length - Math.PI / 2;
+      const newLng = centLng + spreadRadiusDeg * Math.cos(angle);
+      result[pinIdx] = {
+        ...sorted[pinIdx],
+        latitude:        centLat + spreadRadiusDeg * Math.sin(angle),
+        longitude:       newLng,
+        _labelDirection: newLng < centLng ? "left" : "right",
+      };
+    });
+  }
+
+  return result;
 }
 
 export default function GeorgiaTerritoryMap() {
@@ -59,17 +120,18 @@ export default function GeorgiaTerritoryMap() {
 
       if (mapRef.current._leaflet_id) return;
 
-      const seBounds = L.latLngBounds(
-        L.latLng(24.0, -95.0),
-        L.latLng(38.0, -73.0)
+      // North-Georgia-focused bounding box
+      // Chattanooga TN (~35.05N) top, Macon GA (~32.84N) bottom,
+      // Anniston AL (~33.66N -85.83W) left, Augusta GA (~33.47N -81.97W) right
+      const northGaBounds = L.latLngBounds(
+        L.latLng(32.7, -85.9),
+        L.latLng(35.15, -81.9)
       );
 
       map = L.map(mapRef.current, {
-        center: [32.9, -83.4],
-        zoom: 7,
         minZoom: 6,
         maxZoom: 18,
-        maxBounds: seBounds,
+        maxBounds: L.latLngBounds(L.latLng(24.0, -95.0), L.latLng(38.0, -73.0)),
         maxBoundsViscosity: 1.0,
         scrollWheelZoom: true,
         zoomControl: true,
@@ -85,17 +147,24 @@ export default function GeorgiaTerritoryMap() {
         }
       ).addTo(map);
 
-      pinned.forEach(t => {
+      // Zoom to North Georgia reference frame
+      map.fitBounds(northGaBounds, { padding: [24, 24], animate: false });
+
+      // Spread any overlapping pins into a readable radial cluster
+      const spreadPins = spreadClusteredPins(pinned);
+
+      spreadPins.forEach(t => {
         const icon = makeIcon(L, false);
         const marker = L.marker([t.latitude, t.longitude], { icon })
           .addTo(map)
           .on("click", () => navigate(`/${t.slug}#book`));
 
+        const dir = t._labelDirection ?? "right";
         const label = L.tooltip({
           permanent: true,
           interactive: false,
-          direction: "right",
-          offset: [2, 0],
+          direction: dir,
+          offset: dir === "left" ? [-2, 0] : [2, 0],
           className: "mtp-territory-label",
         })
           .setContent(cleanName(t.name));
@@ -174,7 +243,7 @@ export default function GeorgiaTerritoryMap() {
             ref={mapRef}
             style={{
               width: "100%",
-              height: "clamp(380px, 55vw, 560px)",
+              height: "clamp(440px, 58vw, 640px)",
               borderRadius: 14,
               overflow: "hidden",
               boxShadow: "0 6px 32px rgba(0,0,0,0.14)",

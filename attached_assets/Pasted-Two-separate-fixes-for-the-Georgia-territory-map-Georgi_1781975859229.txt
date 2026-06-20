@@ -1,0 +1,42 @@
+Two separate fixes for the Georgia territory map (`GeorgiaTerritoryMap.jsx` or equivalent) on the root landing page.
+
+---
+
+## Part 1: Spread out overlapping pins (Canton, Holly Springs, Woodstock, Ball Ground)
+
+These 4 mailing zones are all part of the same Cherokee-area territory and sit close enough together geographically that their pins/labels currently stack directly on top of each other, making them unreadable.
+
+**Add a collision-avoidance step to the pin-rendering logic:**
+
+1. After converting each territory's lat/long to projected x/y coordinates (the existing projection function), check for pins that land within a minimum pixel distance of each other (e.g. within ~30-40px, tune based on visual testing).
+
+2. For any cluster of colliding pins, apply a small deterministic offset to spread them into a tight radial or grid pattern around their shared geographic area — e.g. arrange colliding pins in a small circle (radius ~20-25px) around their average position, evenly spaced by angle (360° / number of colliding pins). Use a stable/deterministic method (e.g. sort by name alphabetically before assigning angles) so pins don't jump around between page loads or re-renders.
+
+3. **Label placement must follow each pin's NEW offset position**, not its original unoffset coordinate — labels should stay anchored close to their own pin (see Part 2 spacing fix below) even after the pin itself has been nudged to avoid collision.
+
+4. This needs to be general-purpose, not hardcoded for "these 4 specific cities" — any future cluster of nearby territories (not just Cherokee's) should get the same automatic spreading treatment. Write it as a reusable function that takes the full list of projected pin positions and returns adjusted positions wherever collisions are detected.
+
+5. Test by confirming: Canton, Holly Springs, Woodstock, and Ball Ground now render as 4 visually distinct, non-overlapping pins with readable, non-overlapping labels, while still being clearly grouped/close together (reflecting their real geographic proximity) rather than scattered randomly across the map.
+
+---
+
+## Part 2: Adjust map viewport/zoom to focus on North Georgia
+
+Currently the map's projection bounding box covers the full state of Georgia edge-to-edge. Tighten it to focus more on North Georgia, using these reference points so the framing feels natural:
+
+- **Chattanooga, TN** (~35.05°N, -85.31°W) should be visible near the TOP edge
+- **Anniston, AL** (~33.66°N, -85.83°W) should be visible on the LEFT edge
+- **Augusta, GA** (~33.47°N, -81.97°W) should be visible on the RIGHT edge
+- **Macon, GA** (~32.84°N, -83.63°W) should be just barely visible at the BOTTOM edge (slightly increase the overall map size/height if needed to fit this in without cramping the rest of the layout)
+
+Adjust the projection function's bounding box (the lat/long-to-SVG-coordinate scaling) to roughly these bounds:
+- Latitude range: ~32.7 to ~35.15 (Macon to just past Chattanooga)
+- Longitude range: ~-85.9 to ~-81.9 (just past Anniston to just past Augusta)
+
+Re-test that ALL existing pins (Habersham, the 4 Cherokee-area zones, and any others) still fall within this new visible range and render at sensible positions relative to each other — if any current or future territory pin would fall outside this tighter bounding box, make sure it's still handled gracefully (e.g. clamped to the edge, or logged as a warning) rather than disappearing silently off-canvas.
+
+Slightly increase the overall map container's height (a modest increase, just enough to comfortably fit the taller north-to-south span down to Macon) without making the section overwhelm the rest of the landing page.
+
+---
+
+After both fixes, take a screenshot and confirm: the map is zoomed into North Georgia with Chattanooga near the top, Anniston on the left, Augusta on the right, and Macon just visible at the bottom — and the 4 Cherokee-area pins are now visually separated and individually readable rather than stacked.
