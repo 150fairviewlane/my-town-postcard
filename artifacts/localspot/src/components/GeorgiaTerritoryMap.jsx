@@ -202,7 +202,6 @@ export default function GeorgiaTerritoryMap() {
       if (pinned.length > 0) {
         const latlngs = pinned.map(t => [t.latitude, t.longitude]);
         map.fitBounds(L.latLngBounds(latlngs), { padding: [10, 10] });
-        map.setZoom(map.getZoom() + 1);
       } else {
         map.setView([32.9, -83.4], 7);
       }
