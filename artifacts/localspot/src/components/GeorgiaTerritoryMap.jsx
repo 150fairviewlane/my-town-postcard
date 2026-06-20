@@ -93,7 +93,6 @@ export default function GeorgiaTerritoryMap() {
 
         const label = L.tooltip({
           permanent: true,
-          interactive: false,
           direction: "right",
           offset: [12, 0],
           className: "mtp-territory-label",
@@ -135,6 +134,15 @@ export default function GeorgiaTerritoryMap() {
             -1px -1px 0 #fff,  1px -1px 0 #fff,
             -1px  1px 0 #fff,  1px  1px 0 #fff,
             0 2px 4px rgba(0,0,0,0.15) !important;
+          pointer-events: none !important;
+        }
+        .leaflet-tooltip-pane {
+          pointer-events: none !important;
+        }
+        .leaflet-tooltip-pane .leaflet-tooltip {
+          pointer-events: none !important;
+        }
+        .leaflet-tooltip-pane .leaflet-tooltip * {
           pointer-events: none !important;
         }
         .mtp-territory-label::before {
