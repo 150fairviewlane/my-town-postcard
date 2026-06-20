@@ -1,0 +1,44 @@
+Add a small, read-only, live ad-picker grid thumbnail to each mailing-zone section on the dealer dashboard (`DealerDashboard.jsx` or wherever the 4 mailing zones are currently rendered as individual sections). This is NOT the full ad-design tool — it's a compact visual showing real spot status/colors, with a front/back toggle, so the dealer can see at a glance how full their postcard is for each zone.
+
+**Do not embed or iframe the existing ad-generator HTML page** (`adGenGrok.ts`) — that's a heavyweight design tool with controls dealers don't need here. Build a new, small, purpose-built React component instead.
+
+---
+
+## Backend
+
+Check whether an endpoint already returns per-spot status/grid data for a campaign in a lightweight form (e.g. the existing `GET /api/campaigns/:id` or similar, which already includes `spots` with `gridArea`, `side`, `status`, `businessName`). If the dealer-facing endpoints (`GET /api/dealer/me` or equivalent, built in the earlier dealer-auth work) don't already include this spot-level data for each of the dealer's campaigns, extend that endpoint to include a lightweight `spots` array per campaign/territory: `{ gridArea, side, status, businessName }` for each spot (no need for full templateData — just enough to render colored grid cells with a label, since this is a status overview, not a design preview).
+
+Make sure this only returns the DEALER'S OWN campaigns when called via dealer auth (`req.dealerId`-scoped), never another dealer's data.
+
+---
+
+## Frontend: new component `MiniAdPickerGrid.jsx`
+
+Props: `spots` (array of `{ gridArea, side, status, businessName }`), `side` (currently selected "front" or "back").
+
+1. **Front/Back toggle** — two small tab/pill buttons above the grid: "Front" and "Back". Clicking switches which side's spots are displayed. Default to "front".
+
+2. **Grid layout** — render the 15 spots in their actual postcard arrangement (use the same `gridArea` CSS grid-template-areas approach the real picker uses, if you can determine the layout from `adGenGrok.ts`'s existing CSS — check for the grid-template-areas string used there and reuse the same area names/positions so this thumbnail's layout genuinely matches the real postcard, not just an arbitrary grid).
+
+3. **Cell coloring by status:**
+   - `paid` → solid burgundy `#7B1418` fill, show the business name (small, truncated, white text) if it fits, otherwise just the color
+   - `reserved` → gold/amber `#C9A84C` fill (someone's mid-checkout)
+   - `available` → light cream/outline only, muted
+
+4. **Read-only** — no click handlers, no hover-to-edit, no links into the design tool. This is purely a status glance.
+
+5. **Compact sizing** — this needs to fit inside a card alongside other zone info on the dashboard, not take over the page. Roughly 200-280px wide, scaled-down spot cells (no business-name text overflow — truncate or hide text below a certain cell size).
+
+6. **Legend** — a tiny inline legend below or beside the grid: small colored squares with "Sold," "Pending," "Available" labels, so the colors are self-explanatory without needing to check the real picker.
+
+---
+
+## Integration into dealer dashboard
+
+For each of the dealer's mailing-zone sections, render `<MiniAdPickerGrid spots={zone.spots} />` using the live spot data from the dealer's own campaign (matching that zone). Each zone's grid maintains its OWN front/back toggle state independently — toggling one zone's thumbnail to "Back" shouldn't affect the others.
+
+Match existing dashboard styling — burgundy/gold/cream, consistent card padding/borders with the rest of the dealer dashboard.
+
+---
+
+After implementing, test with a zone that has a mix of paid, reserved, and available spots on both front and back — confirm the thumbnail accurately reflects real spot data, the front/back toggle works independently per zone, and no design/edit controls are exposed (this is view-only).
