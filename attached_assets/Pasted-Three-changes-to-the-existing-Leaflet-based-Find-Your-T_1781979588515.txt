@@ -1,0 +1,48 @@
+Three changes to the existing Leaflet-based "Find Your Town on the Map" section on the root landing page.
+
+---
+
+## Part 1: Replace default OSM tiles with a muted, branded-feeling base layer
+
+Currently using the default OpenStreetMap tile layer, which renders heavy terrain texture, elevation labels, river names, and town labels for every town in the visible area (Chattanooga, Anniston, Augusta, etc.) — busy and generic-looking, not aligned with the site's brand.
+
+1. Swap the tile layer URL to **CartoDB Positron** — a free, no-API-key, no-registration tile provider with a clean, minimal, light grayscale style:
+   ```
+   https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png
+   ```
+   Attribution required: `© OpenStreetMap contributors © CARTO`
+
+2. After swapping, apply a subtle CSS filter to the tile layer's container to nudge the grayscale base toward the site's existing cream/tan palette — something like `filter: sepia(8%) saturate(85%) brightness(102%)` (tune visually; the goal is a warm, muted cream-gray that feels like an extension of the page background, not a generic gray map). Test a few filter values and pick whichever looks most cohesive against the existing cream page background and burgundy/gold pins.
+
+3. Confirm the map's own attribution control still displays correctly with the new attribution text (CARTO + OpenStreetMap contributors), positioned unobtrusively in the bottom-right corner as Leaflet does by default.
+
+---
+
+## Part 2: Auto-fit map bounds to active pins instead of a fixed bounding box
+
+Currently the map's viewport is a hand-tuned fixed bounding box (roughly Chattanooga to Macon, Anniston to Augusta). This won't scale gracefully — if a dealer signs up in, say, Chattanooga itself, or further away, pins could fall outside this fixed box or look poorly centered.
+
+1. Replace the fixed bounding box / fixed `setView()` call with Leaflet's `map.fitBounds()`, calculated dynamically from the actual lat/long of all currently active territory pins (fetched from `/api/territories/public`).
+2. Add reasonable padding around the fitted bounds (e.g. `fitBounds(bounds, { padding: [40, 40] })`) so pins near the edge aren't touching the map's border.
+3. Set a sensible `maxZoom` (e.g. 10-11) so that if there's ever only one active territory, the map doesn't zoom in uncomfortably close — pick a value that looks reasonable when tested with just a single pin.
+4. This means the map will now automatically reframe itself correctly any time a new territory is added anywhere, with no manual bounding-box tuning ever required again.
+
+---
+
+## Part 3: Replace the bottom "Active Territories" card grid with a searchable town dropdown
+
+Remove the row of territory cards currently displayed below the map entirely — they're now redundant with the map's own pins and labels, and won't scale well as more territories are added.
+
+Replace with a single, simple "Browse all towns" control:
+
+1. A searchable dropdown/combobox (a simple `<select>` with type-to-filter behavior is fine, or a small custom autocomplete input if a component pattern already exists in the codebase — check for any existing autocomplete/combobox component before building a new one) positioned just below the map, modestly sized and visually secondary to the map itself (smaller text, muted styling) — e.g. a single line: "Don't see your town on the map? [Search all towns ▾]"
+2. Populate it from the same `/api/territories/public` data already powering the map pins — no separate data source.
+3. Selecting a town navigates directly to that territory's landing page (`/{slug}`), same behavior as clicking its pin.
+4. This control should feel like a fallback/accessibility aid for someone who can't easily find or tap their pin (e.g. on a small mobile screen with many clustered pins), not a primary navigation element — keep it visually minor.
+
+---
+
+After implementing all three parts, confirm:
+- The map tiles now show a clean, muted, on-brand style instead of the busy default OSM look
+- The map automatically frames all current pins correctly with reasonable padding (test by temporarily removing one pin's coordinates and confirming the view adjusts) — then restore the data
+- The bottom card grid is gone, replaced by a single simple search/dropdown control that correctly lists and navigates to all active territories
