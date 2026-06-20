@@ -357,7 +357,7 @@ export function WhyChooseUs() {
 
 export function PostcardBook({ slug }: { slug?: string }) {
   return (
-    <section id="book">
+    <section id="book" style={{ scrollMarginTop: "92px" }}>
       <PostcardPickerSection slug={slug} />
     </section>
   );

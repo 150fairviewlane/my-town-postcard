@@ -93,6 +93,7 @@ export default function GeorgiaTerritoryMap() {
 
         const label = L.tooltip({
           permanent: true,
+          interactive: false,
           direction: "right",
           offset: [12, 0],
           className: "mtp-territory-label",
