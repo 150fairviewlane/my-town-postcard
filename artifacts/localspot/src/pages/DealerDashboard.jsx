@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useLocation, Link } from "wouter";
+import DealerTerritoryOverview from "../components/DealerTerritoryOverview";
 
 const RED = "#7B1418";
 const GOLD = "#d4a017";
@@ -100,12 +101,9 @@ export default function DealerDashboard() {
 
   const firstName = me?.name?.split(" ")[0] || "there";
   const isImpersonated = !!me?.impersonatedBy;
-  const money = (cents) => `$${((cents || 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 0 })}`;
 
   const campaigns = portal?.campaigns || [];
-  const totalSlots = campaigns.reduce((s, c) => s + (c.totalSpots ?? 0), 0);
-  const totalSold = campaigns.reduce((s, c) => s + (c.soldSpots ?? 0), 0);
-  const totalRevenue = campaigns.reduce((s, c) => s + (c.revenueCents ?? 0), 0);
+  const portalTotals = portal?.totals ?? {};
 
   return (
     <div style={{ background: "#f9fafb", minHeight: "100vh", fontFamily: "sans-serif", paddingBottom: 64 }}>
@@ -177,57 +175,12 @@ export default function DealerDashboard() {
           </div>
         )}
 
-        {/* Summary stats */}
-        {campaigns.length > 0 && (
-          <div style={{ background: "#fff", borderRadius: 14, padding: "20px 24px", boxShadow: "0 2px 12px rgba(0,0,0,0.05)", marginBottom: 16 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: "#9ca3af", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 14 }}>Mailing Area Summary</div>
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              <StatCard label="Total Slots" value={totalSlots} sub={`across ${campaigns.length} area${campaigns.length !== 1 ? "s" : ""}`} />
-              <StatCard label="Slots Filled" value={totalSold} sub={`${totalSlots > 0 ? Math.round((totalSold / totalSlots) * 100) : 0}% sell-through`} color={totalSold > 0 ? "#15803d" : "#111"} />
-              <StatCard label="Total Revenue" value={money(totalRevenue)} sub="from ad sales" color="#15803d" />
-            </div>
-          </div>
-        )}
-
-        {/* Campaign cards */}
-        {campaigns.length > 0 ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16, marginBottom: 24 }}>
-            {campaigns.map((c) => {
-              const sold = c.soldSpots ?? 0;
-              const total = c.totalSpots ?? 0;
-              const pct = total > 0 ? Math.round((sold / total) * 100) : 0;
-              const isFullySold = sold >= total && total > 0;
-              return (
-                <div key={c.campaignId} style={{ background: "#fff", borderRadius: 14, padding: "22px 24px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: "1.5px solid #e5e7eb" }}>
-                  <div style={{ fontSize: 10, fontWeight: 800, color: "#9ca3af", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 4 }}>Mailing Area</div>
-                  <div style={{ fontWeight: 900, fontSize: 18, color: "#111", fontFamily: "Georgia,serif", marginBottom: 14 }}>{c.cityList || c.campaignName}</div>
-                  <div style={{ marginBottom: 12 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, fontWeight: 600, color: "#6b7280", marginBottom: 5 }}>
-                      <span>Slots Filled</span>
-                      <span style={{ fontWeight: 800, color: "#111" }}>{sold} of {total}</span>
-                    </div>
-                    <div style={{ background: "#e5e7eb", borderRadius: 999, height: 10, overflow: "hidden" }}>
-                      <div style={{ width: `${pct}%`, height: "100%", borderRadius: 999, background: isFullySold ? GOLD : pct >= 50 ? "#16a34a" : RED, transition: "width 0.6s ease" }} />
-                    </div>
-                  </div>
-                  <div style={{ fontSize: 13.5, color: "#374151", marginBottom: 12 }}>
-                    <span style={{ fontWeight: 700 }}>Revenue</span>{" "}
-                    <span style={{ color: "#15803d", fontWeight: 800 }}>{money(c.revenueCents)}</span>
-                  </div>
-                  {c.pageUrl && (
-                    <a href={c.pageUrl} target="_blank" rel="noreferrer" style={{ fontSize: 13, fontWeight: 700, color: RED, border: `1.5px solid ${RED}`, borderRadius: 8, padding: "8px 14px", textDecoration: "none", display: "inline-block" }}>
-                      View Advertiser Page ↗
-                    </a>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div style={{ background: "#fff", borderRadius: 14, padding: "24px 28px", boxShadow: "0 2px 12px rgba(0,0,0,0.05)", color: "#6b7280", fontSize: 14 }}>
-            Your campaign pages will appear here once they're set up — usually within 1 business day of your signup.
-          </div>
-        )}
+        {/* Territory overview (dealer view — shows commission, not raw revenue) */}
+        <DealerTerritoryOverview
+          campaigns={campaigns}
+          totals={portalTotals}
+          showRevenue={false}
+        />
 
         <div style={{ textAlign: "center", marginTop: 16 }}>
           <Link href="/" style={{ fontSize: 13.5, color: "#6b7280", textDecoration: "none", fontWeight: 600 }}>← Back to My Town Postcard</Link>
@@ -237,12 +190,3 @@ export default function DealerDashboard() {
   );
 }
 
-function StatCard({ label, value, sub, color = "#111" }) {
-  return (
-    <div style={{ background: "#f9fafb", borderRadius: 12, padding: "16px 20px", flex: 1, minWidth: 110 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 24, fontWeight: 900, color, fontFamily: "Georgia,serif" }}>{value}</div>
-      {sub && <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>{sub}</div>}
-    </div>
-  );
-}

@@ -21,6 +21,7 @@ import {
   territoryZipAssignmentsTable,
 } from "@workspace/db";
 import { getStripeClient, isStripeConfigured } from "../lib/stripeClient";
+import { computeCommissionCents } from "../lib/commission";
 import { ensureDealerLandingPage } from "../lib/dealerLandingPage";
 import {
   materializeTerritoryFromProposal,
@@ -1059,6 +1060,7 @@ router.get("/admin/dealers/:id", requireAdmin, async (req, res): Promise<void> =
         .from(spotsTable)
         .where(eq(spotsTable.campaignId, c.id));
       const sold = spots.filter((s) => s.status === "paid");
+      const revenueCents = sold.reduce((sum, s) => sum + (s.price ?? 0), 0);
       return {
         campaignId: c.id,
         label: c.cityList || c.territory || c.name,
@@ -1068,17 +1070,20 @@ router.get("/admin/dealers/:id", requireAdmin, async (req, res): Promise<void> =
         totalSpots: spots.length,
         soldSpots: sold.length,
         availableSpots: spots.filter((s) => s.status === "available").length,
-        revenueCents: sold.reduce((sum, s) => sum + (s.price ?? 0), 0),
+        revenueCents,
+        commissionCents: computeCommissionCents(revenueCents),
         estimatedHouseholds: c.homesCount ?? 0,
         zipCount: dealerZipCount,
       };
     }),
   );
 
+  const totalRevenueCentsAcrossAll = campaignStats.reduce((s, c) => s + c.revenueCents, 0);
   const totals = {
     totalSpotsAcrossAll: campaignStats.reduce((s, c) => s + c.totalSpots, 0),
     totalSoldAcrossAll: campaignStats.reduce((s, c) => s + c.soldSpots, 0),
-    totalRevenueCentsAcrossAll: campaignStats.reduce((s, c) => s + c.revenueCents, 0),
+    totalRevenueCentsAcrossAll,
+    totalCommissionCentsAcrossAll: computeCommissionCents(totalRevenueCentsAcrossAll),
   };
 
   res.json({
@@ -1289,9 +1294,12 @@ router.get("/dealers/portal-data", requireDealerAuth, async (req, res): Promise<
         soldSpots: sold.length,
         availableSpots: spots.filter((s) => s.status === "available").length,
         revenueCents,
+        commissionCents: computeCommissionCents(revenueCents),
       };
     }),
   );
+
+  const totalRevenueCents = campaignSummaries.reduce((s, c) => s + c.revenueCents, 0);
 
   res.json({
     dealerId: dealer.id,
@@ -1303,6 +1311,10 @@ router.get("/dealers/portal-data", requireDealerAuth, async (req, res): Promise<
       : null,
     campaigns: campaignSummaries,
     campaign: campaignSummaries[0] ?? null,
+    totals: {
+      totalRevenueCents,
+      totalCommissionCents: computeCommissionCents(totalRevenueCents),
+    },
   });
 });
 
