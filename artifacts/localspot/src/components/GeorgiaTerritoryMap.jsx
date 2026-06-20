@@ -89,7 +89,7 @@ export default function GeorgiaTerritoryMap() {
         const icon = makeIcon(L, false);
         const marker = L.marker([t.latitude, t.longitude], { icon })
           .addTo(map)
-          .on("click", () => navigate(`/${t.slug}`));
+          .on("click", () => navigate(`/${t.slug}#book`));
 
         const label = L.tooltip({
           permanent: true,
@@ -205,7 +205,7 @@ export default function GeorgiaTerritoryMap() {
                 return (
                   <a
                     key={t.slug}
-                    href={`/${t.slug}`}
+                    href={`/${t.slug}#book`}
                     onMouseEnter={() => setHovered(t.slug)}
                     onMouseLeave={() => setHovered(null)}
                     style={{

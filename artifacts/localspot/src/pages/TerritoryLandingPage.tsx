@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useGetCampaignBySlug } from "@workspace/api-client-react";
 import {
   NavBar,
@@ -95,6 +96,21 @@ export default function TerritoryLandingPage({ params }: { params: { slug: strin
       queryKey: ["/api/campaigns/by-slug", slug],
     },
   });
+
+  // Scroll to the ad picker (#book) when the URL contains a hash and the page is fully rendered.
+  useEffect(() => {
+    if (isLoading || isError || !campaign) return;
+    const hash = window.location.hash;
+    if (hash) {
+      const id = hash.replace("#", "");
+      const el = document.getElementById(id);
+      if (el) {
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 150);
+      }
+    }
+  }, [isLoading, isError, campaign]);
 
   if (isLoading) {
     return (
