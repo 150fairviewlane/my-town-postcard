@@ -205,8 +205,8 @@ export function NavBar() {
 export function Hero({ copy = DEFAULT_COPY }: { copy?: LandingCopy }) {
   return (
     <section style={{ background: "#fff", padding: "72px 32px 80px", maxWidth: 1180, margin: "0 auto",
-      display: "flex", alignItems: "center", gap: 64, flexWrap: "wrap" }}>
-      <div style={{ flex: "1 1 420px", minWidth: 300 }}>
+      display: "flex", alignItems: "center", gap: 48, flexWrap: "wrap" }}>
+      <div style={{ flex: "13 1 380px", minWidth: 300 }}>
         {copy.heroCity ? (
           <>
             <h1 style={{ fontSize: "clamp(30px, 4vw, 48px)", fontWeight: 900, color: "#111",
@@ -268,7 +268,7 @@ export function Hero({ copy = DEFAULT_COPY }: { copy?: LandingCopy }) {
         </div>
       </div>
 
-      <div style={{ flex: "1 1 315px", minWidth: 260, position: "relative" }}>
+      <div style={{ flex: "7 1 220px", minWidth: 200, position: "relative" }}>
         <img
           src={`${import.meta.env.BASE_URL}postcard-hero-double.png`}
           alt="Sample 9×12 co-op postcard"
