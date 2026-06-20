@@ -1,0 +1,25 @@
+Bug: On the root landing page's Georgia map and the "Active Territories" cards below it, all 4 Cherokee County mailing zones (Woodstock, Canton, Holly Springs, Ball Ground) are incorrectly displaying as "Cherokee" — the parent territory's name — instead of each one's actual city name. This is wrong on both the map pin labels AND the card titles below the map.
+
+**Important context: each mailing area already has its own correctly-named, working landing page** (e.g. `/woodstock` shows "Woodstock" correctly, `/canton` shows "Canton" correctly). So the per-city names and routing already exist and work correctly elsewhere in the app — this bug is isolated to the `/api/territories/public` endpoint (or whatever feeds the map/cards) pulling the wrong field, likely defaulting to the PARENT territory's `name` column ("Cherokee") instead of each individual mailing zone/landing-page's own name.
+
+**Investigate first:**
+
+1. Find where the 4 Cherokee mailing zones are stored — likely each has its own row in a `dealerTerritoriesTable` or similar (with fields like `cityLabel`, per earlier work on `GET /api/admin/dealers/:id`), OR each has its own `slug` + distinct landing page identity even though they share one parent `campaignId`/`territoryId`. Find the exact field that correctly holds "Woodstock", "Canton", "Holly Springs", "Ball Ground" individually — the same field/source that each mailing zone's own landing page already correctly uses for its display name.
+
+2. Check `/api/territories/public` (or whatever endpoint feeds the map and the "Active Territories" cards) — confirm it's currently returning the PARENT territory's `name` ("Cherokee") for all 4 entries instead of each entry's own city-level name field found in step 1.
+
+**Fix:**
+
+3. Update `/api/territories/public` so each of the 4 mailing zones returns its OWN correct name (Woodstock, Canton, Holly Springs, Ball Ground) — pulling from the same field/source the individual landing pages already correctly use — instead of the shared parent territory name. Each entry should still have its own correct `slug` so clicking it goes to the right page (confirm this is already correct, since you mentioned the landing pages themselves work fine).
+
+4. The map pins and the "Active Territories" cards should now show 4 distinctly labeled entries (Woodstock, Canton, Holly Springs, Ball Ground) instead of 4 entries all labeled "Cherokee."
+
+---
+
+## Also fix: map label spacing
+
+On the map, the text label next to each pin currently sits too far from the red dot — there's noticeable dead space between the pin marker and its label text. Reduce the gap so the label sits close to (almost touching) the dot, similar to how map labels typically hug their marker. This applies to ALL pins on the map, not just Cherokee's.
+
+---
+
+After fixing, confirm: the map shows 4 separately-labeled, correctly-positioned pins for the Cherokee mailing zones (even if some are close together geographically) plus the Habersham pin, all with labels sitting close to their dots, and the "Active Territories" cards below show 5 correctly distinct names (Woodstock, Canton, Holly Springs, Ball Ground, White/Habersham) — not "Cherokee" repeated 4 times.

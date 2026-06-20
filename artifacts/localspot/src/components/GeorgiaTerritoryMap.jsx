@@ -26,7 +26,7 @@ function makeIcon(L, highlighted = false) {
     "></div>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
-    tooltipAnchor: [size / 2 + 4, 0],
+    tooltipAnchor: [size / 2 + 1, 0],
   });
 }
 
@@ -95,7 +95,7 @@ export default function GeorgiaTerritoryMap() {
           permanent: true,
           interactive: false,
           direction: "right",
-          offset: [12, 0],
+          offset: [2, 0],
           className: "mtp-territory-label",
         })
           .setContent(cleanName(t.name));

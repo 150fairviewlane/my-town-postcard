@@ -112,7 +112,8 @@ router.get("/territories/public", async (req, res): Promise<void> => {
   const rows = await db
     .select({
       id:          campaignsTable.id,
-      name:        campaignsTable.territory,
+      territory:   campaignsTable.territory,
+      cityList:    campaignsTable.cityList,
       slug:        campaignsTable.slug,
       status:      campaignsTable.status,
       isPublished: campaignsTable.isPublished,
@@ -137,6 +138,7 @@ router.get("/territories/public", async (req, res): Promise<void> => {
     .groupBy(
       campaignsTable.id,
       campaignsTable.territory,
+      campaignsTable.cityList,
       campaignsTable.slug,
       campaignsTable.status,
       campaignsTable.isPublished,
@@ -145,9 +147,13 @@ router.get("/territories/public", async (req, res): Promise<void> => {
     );
 
   const result = rows.map(r => {
+    // Use hub city name when cityList has exactly one entry (e.g. "Canton"),
+    // otherwise fall back to the parent territory name (e.g. "White / Habersham Counties").
+    const cities = (r.cityList ?? "").split(",").map((c: string) => c.trim()).filter(Boolean);
+    const name = cities.length === 1 ? cities[0] : (r.territory ?? "");
     const base: Record<string, unknown> = {
       slug:       r.slug,
-      name:       r.name,
+      name,
       paidSpots:  Number(r.paidSpots ?? 0),
       totalSpots: Number(r.totalSpots ?? 0),
     };
