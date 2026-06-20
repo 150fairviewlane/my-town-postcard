@@ -191,32 +191,6 @@ export default function GeorgiaTerritoryMap() {
 
         {!loading && territories.length > 0 && (
           <>
-            <div style={{ marginTop: 32 }}>
-              <a
-                href={territories.length === 1 ? `/${territories[0].slug}#book` : "#territories"}
-                style={{
-                  display: "inline-block",
-                  fontFamily: "sans-serif", fontSize: 16, fontWeight: 700,
-                  textDecoration: "none",
-                  padding: "14px 36px",
-                  background: RED,
-                  color: "#fff",
-                  borderRadius: 10,
-                  boxShadow: "0 4px 16px rgba(123,20,24,0.35)",
-                  transition: "transform 0.15s, box-shadow 0.15s",
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.transform = "translateY(-1px)";
-                  e.currentTarget.style.boxShadow = "0 6px 20px rgba(123,20,24,0.45)";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.transform = "translateY(0)";
-                  e.currentTarget.style.boxShadow = "0 4px 16px rgba(123,20,24,0.35)";
-                }}
-              >
-                {territories.length === 1 ? "Reserve Your Spot" : "View Territories"}
-              </a>
-            </div>
             <p style={{
               fontFamily: "sans-serif", fontSize: 12, fontWeight: 700,
               color: "#9ca3af", textTransform: "uppercase", letterSpacing: 1,
