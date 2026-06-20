@@ -18,6 +18,7 @@ import {
   subscriptionIssueAssignmentsTable,
   territoriesTable,
   territoryProposalsTable,
+  territoryZipAssignmentsTable,
 } from "@workspace/db";
 import { getStripeClient, isStripeConfigured } from "../lib/stripeClient";
 import { ensureDealerLandingPage } from "../lib/dealerLandingPage";
@@ -1029,6 +1030,27 @@ router.get("/admin/dealers/:id", requireAdmin, async (req, res): Promise<void> =
 
   const origin = getOrigin(req);
 
+  // ZIP count: prefer territory_zip_assignments (modern county dealers);
+  // fall back to summing dealer_territories.zip_codes lengths (legacy).
+  let dealerZipCount: number | null = null;
+  const [linkedTerritory] = await db
+    .select({ id: territoriesTable.id })
+    .from(territoriesTable)
+    .where(eq(territoriesTable.dealerId, id))
+    .limit(1);
+  if (linkedTerritory) {
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(territoryZipAssignmentsTable)
+      .where(eq(territoryZipAssignmentsTable.territoryId, linkedTerritory.id));
+    dealerZipCount = count ?? 0;
+  } else if (territories.length > 0) {
+    dealerZipCount = territories.reduce(
+      (sum, t) => sum + (Array.isArray(t.zipCodes) ? t.zipCodes.length : 0),
+      0,
+    );
+  }
+
   // Per-campaign spot stats (N queries, but dealer territory counts are small)
   const campaignStats = await Promise.all(
     campaigns.map(async (c) => {
@@ -1048,6 +1070,7 @@ router.get("/admin/dealers/:id", requireAdmin, async (req, res): Promise<void> =
         availableSpots: spots.filter((s) => s.status === "available").length,
         revenueCents: sold.reduce((sum, s) => sum + (s.price ?? 0), 0),
         estimatedHouseholds: c.homesCount ?? 0,
+        zipCount: dealerZipCount,
       };
     }),
   );

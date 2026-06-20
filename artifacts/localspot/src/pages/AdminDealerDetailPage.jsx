@@ -162,6 +162,14 @@ function TerritoryCard({ campaign }) {
             {campaign.totalSpots}
           </div>
         </div>
+        {campaign.zipCount != null && (
+          <div style={{ gridColumn: "1 / -1" }}>
+            <div style={{ fontSize: 11, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4 }}>ZIP Codes Served</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#6b7280" }}>
+              {campaign.zipCount.toLocaleString()} ZIPs
+            </div>
+          </div>
+        )}
       </div>
 
       {campaign.pageUrl && (
