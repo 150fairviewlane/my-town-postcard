@@ -236,7 +236,7 @@ export default function DealerTerritoryOverview({ campaigns = [], totals = {}, s
           label={moneyTotalLabel}
           value={formatMoney(moneyTotal)}
           color={RED}
-          sub={showRevenue ? undefined : "35% of ad sales"}
+          sub={showRevenue ? undefined : "70% of ad profit"}
         />
         <StatCard
           label="Fill Rate"
