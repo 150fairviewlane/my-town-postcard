@@ -1,0 +1,33 @@
+Add a compact but prominent "wrong town?" banner near the top of `TerritoryLandingPage` (the component rendering at the `/:slug` catch-all route, e.g. `/canton`, `/woodstock`, `/habersham`). This solves a real problem: a customer can land on the wrong territory's page (e.g. Canton, when they actually wanted Woodstock) with no way to navigate to the correct one.
+
+**Visibility target: easy to spot within a couple seconds of landing on the page, without competing with the main ad-buying CTA for space.** This is NOT a small footer link and NOT a giant hero banner — a slim horizontal strip is the right size.
+
+---
+
+## Backend
+
+Use the existing `GET /api/territories/public` endpoint (built earlier for the landing-page map) to fetch all active territories. If it doesn't already exist or isn't returning what's needed, create/confirm it returns: `{ slug, name }` for every active/published territory.
+
+---
+
+## Frontend
+
+1. **Placement**: directly below the sticky header, above the main hero/ad-picker content — so it's one of the first things visible on page load, but doesn't push down the primary content by much.
+
+2. **Content**: something like *"Looking for a different town? [Woodstock] [Habersham] [Alpharetta] ..."* — render the other active territories (excluding the current page's own territory) as small clickable pill/chip buttons inline in the sentence, not a dropdown. Pills are more immediately scannable than a dropdown that requires a click-to-open step — matches the "easy to find fast" requirement better than a hidden select menu.
+
+3. **If there are many territories** (more than ~5-6), truncate the inline pills to the first few and add a "+ N more" expandable link, or fall back to a compact dropdown in that case — but for the current handful of territories, inline pills are simpler and more scannable.
+
+4. **Styling**: slim horizontal bar, cream background with a thin burgundy or gold border/accent (not a loud, attention-stealing color — should read as "helpful wayfinding," not a promotional banner). Pills styled as small outlined buttons in the existing gold `#C9A84C` accent, burgundy `#7B1418` on hover. Use DM Sans, small font size (12-13px) so it stays compact.
+
+5. **Behavior**: clicking a town pill navigates directly to that territory's page (`/{slug}`). No page reload flash/jank — standard client-side route navigation.
+
+6. **Dismissible (optional but recommended)**: add a small "×" to let someone dismiss it for their session (`sessionStorage`) if they've already confirmed they're on the right page — re-appears on a fresh visit. This keeps it from feeling like a persistent annoyance to someone who's already on the correct page and just browsing.
+
+7. Make sure this renders correctly on mobile — pills should wrap cleanly to a second line if they don't fit one row at narrow widths, rather than causing horizontal scroll or overflow.
+
+8. This should appear identically across ALL territory landing pages (Canton, Woodstock, Habersham, and any future ones) — it's a property of the shared `TerritoryLandingPage` component, not something to hardcode per-territory.
+
+---
+
+After implementing, test by visiting `/canton` and confirming: the banner is visible without scrolling, shows the other active territories as clickable pills (not including Canton itself in the list), clicking one navigates correctly, and the banner doesn't visually overwhelm or push the main ad-picker content too far down the page.
