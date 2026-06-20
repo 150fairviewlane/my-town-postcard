@@ -60,7 +60,11 @@ function buildCopy(campaign: any): LandingCopy {
   const singleCity = isSingleCity ? citiesOxford : undefined;
 
   return {
-    countyPossessive: territory ? `${territory}'s` : DEFAULT_COPY.countyPossessive,
+    // Rule: if territory ends with "Counties" (plural), use "County's" (possessive singular form).
+    // e.g. "White / Habersham Counties" → "White / Habersham County's"
+    countyPossessive: territory
+      ? `${territory.replace(/\bCounties\b$/, "County")}'s`
+      : DEFAULT_COPY.countyPossessive,
     heroCities: citiesOxford,
     heroSeason: season || DEFAULT_COPY.heroSeason,
     howItWorksMailDesc: `5,000 postcards printed and delivered to ${place} homes via USPS.`,

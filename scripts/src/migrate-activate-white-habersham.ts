@@ -38,7 +38,7 @@ async function run() {
       `UPDATE campaigns
           SET status       = 'active',
               is_published = true,
-              city_list    = 'Cleveland / Helen, Cornelia'
+              city_list    = 'Cleveland, Helen, Clarkesville, Cornelia'
         WHERE slug = 'white-habersham'
        RETURNING id, slug, status, is_published, city_list`,
     );

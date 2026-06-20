@@ -5,3 +5,4 @@
 - [territory-finder toast class](territory-finder-toast.md) — toast notifications use `.toast.show` not `.visible`; the modal-bg uses `.visible`. Don't conflate the two when adding feedback UI.
 - [adGenGrok dead-code prompt builder](adgengrok-dead-code.md) — adGenGrok.ts has a large inline prompt builder (lines 327–1086) that is DEAD CODE; line 1088 calls buildAdPrompt(). Always edit buildAdPrompt.ts for prompt/template changes.
 - [PDF ad image storage pattern](pdf-ad-image-storage.md) — Finished ads stored as base64 data URLs in templateData.finishedAdUrl (text column), not in adFileUrl. PDF gen must parse JSON and handle data: URIs directly; never fetch them.
+- [County possessive naming rule](county-possessive-rule.md) — Territory names ending in "Counties" must use "County's" (not "Counties's") in possessive hero headlines; enforced via regex in TerritoryLandingPage.tsx buildCopy.

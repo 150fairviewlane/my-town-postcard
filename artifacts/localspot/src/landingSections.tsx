@@ -268,11 +268,11 @@ export function Hero({ copy = DEFAULT_COPY }: { copy?: LandingCopy }) {
         </div>
       </div>
 
-      <div style={{ flex: "1 1 420px", minWidth: 300, position: "relative" }}>
+      <div style={{ flex: "1 1 315px", minWidth: 260, position: "relative" }}>
         <img
           src={`${import.meta.env.BASE_URL}postcard-hero-double.png`}
           alt="Sample 9×12 co-op postcard"
-          style={{ width: "100%", maxWidth: 560, borderRadius: 12,
+          style={{ width: "100%", maxWidth: 420, borderRadius: 12,
             boxShadow: "0 24px 60px rgba(0,0,0,0.18)", display: "block" }}
         />
         <div style={{
