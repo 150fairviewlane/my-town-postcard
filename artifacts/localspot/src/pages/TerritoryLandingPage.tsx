@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Link } from "wouter";
 import { useGetCampaignBySlug } from "@workspace/api-client-react";
 import {
   NavBar,
@@ -15,6 +16,153 @@ import {
   DEFAULT_COPY,
   type LandingCopy,
 } from "../landingSections";
+
+// ─── Haversine distance (km) between two lat/lng pairs ───────────────────────
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// ─── "Wrong town?" wayfinding banner ─────────────────────────────────────────
+// Slim strip below the NavBar showing the 5 nearest other published territories
+// as clickable pills. Dismissible for the browser session via sessionStorage.
+const SESSION_KEY = "localspot:wrongtown:dismissed";
+const MAX_VISIBLE = 5;
+
+interface TerritoryPill {
+  slug: string;
+  label: string;
+  lat?: number;
+  lng?: number;
+}
+
+function WrongTownBanner({
+  currentSlug,
+  currentLat,
+  currentLng,
+}: {
+  currentSlug: string;
+  currentLat: number | null;
+  currentLng: number | null;
+}) {
+  const [dismissed, setDismissed] = useState<boolean>(() => {
+    try { return sessionStorage.getItem(SESSION_KEY) === "1"; } catch { return false; }
+  });
+  const [territories, setTerritories] = useState<TerritoryPill[]>([]);
+  const [showAll, setShowAll] = useState(false);
+
+  useEffect(() => {
+    if (dismissed) return;
+    fetch("/api/campaigns/public-territories")
+      .then(r => r.ok ? r.json() : null)
+      .then((data: { territories: TerritoryPill[] } | null) => {
+        if (!data?.territories) return;
+        let others = data.territories.filter(t => t.slug !== currentSlug);
+        if (currentLat != null && currentLng != null) {
+          others = [...others].sort((a, b) => {
+            const aDist = a.lat != null && a.lng != null
+              ? haversineKm(currentLat, currentLng, a.lat, a.lng) : Infinity;
+            const bDist = b.lat != null && b.lng != null
+              ? haversineKm(currentLat, currentLng, b.lat, b.lng) : Infinity;
+            return aDist - bDist;
+          });
+        }
+        setTerritories(others);
+      })
+      .catch(() => {});
+  }, [dismissed, currentSlug, currentLat, currentLng]);
+
+  if (dismissed || territories.length === 0) return null;
+
+  const visible = showAll ? territories : territories.slice(0, MAX_VISIBLE);
+  const hiddenCount = territories.length - MAX_VISIBLE;
+
+  function dismiss() {
+    try { sessionStorage.setItem(SESSION_KEY, "1"); } catch {}
+    setDismissed(true);
+  }
+
+  return (
+    <div style={{
+      background: "#fdf8f3",
+      borderLeft: "3px solid #C9A84C",
+      padding: "8px 16px",
+      display: "flex",
+      alignItems: "flex-start",
+      gap: 10,
+      flexWrap: "wrap",
+      fontFamily: "'DM Sans', sans-serif",
+      fontSize: 13,
+      color: "#555",
+      lineHeight: "1.5",
+    }}>
+      <span style={{ whiteSpace: "nowrap", fontWeight: 500, alignSelf: "center" }}>
+        Looking for a different town?
+      </span>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, flex: 1, alignItems: "center" }}>
+        {visible.map(t => (
+          <Link
+            key={t.slug}
+            href={`/${t.slug}`}
+            style={{
+              display: "inline-block",
+              padding: "2px 10px",
+              border: "1.5px solid #C9A84C",
+              borderRadius: 9999,
+              background: "#fdf8f3",
+              color: "#7B1418",
+              fontWeight: 600,
+              fontSize: 12,
+              textDecoration: "none",
+              cursor: "pointer",
+              transition: "background 0.15s, color 0.15s",
+            }}
+            onMouseEnter={(e: React.MouseEvent<HTMLAnchorElement>) => {
+              (e.currentTarget as HTMLAnchorElement).style.background = "#7B1418";
+              (e.currentTarget as HTMLAnchorElement).style.color = "#fff";
+            }}
+            onMouseLeave={(e: React.MouseEvent<HTMLAnchorElement>) => {
+              (e.currentTarget as HTMLAnchorElement).style.background = "#fdf8f3";
+              (e.currentTarget as HTMLAnchorElement).style.color = "#7B1418";
+            }}
+          >
+            {t.label}
+          </Link>
+        ))}
+        {!showAll && hiddenCount > 0 && (
+          <button
+            onClick={() => setShowAll(true)}
+            style={{
+              background: "none", border: "none", padding: "2px 4px",
+              color: "#C9A84C", fontWeight: 600, fontSize: 12,
+              cursor: "pointer", fontFamily: "inherit",
+            }}
+          >
+            +{hiddenCount} more
+          </button>
+        )}
+      </div>
+      <button
+        onClick={dismiss}
+        aria-label="Dismiss"
+        style={{
+          background: "none", border: "none", padding: "0 2px",
+          color: "#aaa", fontSize: 16, cursor: "pointer",
+          lineHeight: 1, alignSelf: "center", flexShrink: 0,
+        }}
+      >
+        ×
+      </button>
+    </div>
+  );
+}
 
 // Joins a comma-separated city list with an Oxford-style "and"/"&" tail so
 // "Clarkesville, Cornelia, Demorest" reads naturally in body copy.
@@ -248,6 +396,11 @@ export default function TerritoryLandingPage({ params }: { params: { slug: strin
   return (
     <div style={{ background: "#fff", minHeight: "100vh" }}>
       <NavBar />
+      <WrongTownBanner
+        currentSlug={slug}
+        currentLat={(campaign as any)?.latitude ?? null}
+        currentLng={(campaign as any)?.longitude ?? null}
+      />
       <Hero copy={copy} />
       <HowItWorks copy={copy} />
       <WhyChooseUs />

@@ -162,6 +162,46 @@ router.get("/territories/public", async (req, res): Promise<void> => {
   res.json(result);
 });
 
+// ─── GET /api/campaigns/public-territories ────────────────────────────────────
+// Public endpoint (no auth). Returns all published territory pages as a slim
+// list of { slug, label, lat, lng } for the "wrong town?" wayfinding banner.
+// label = hub city when cityList has exactly one entry, else the territory name.
+// lat/lng come from the territories centroid JOIN (may be null for new entries).
+router.get("/campaigns/public-territories", async (req, res): Promise<void> => {
+  const rows = await db
+    .select({
+      slug:        campaignsTable.slug,
+      territory:   campaignsTable.territory,
+      cityList:    campaignsTable.cityList,
+      centroidLat: territoriesTable.centroidLat,
+      centroidLng: territoriesTable.centroidLng,
+    })
+    .from(campaignsTable)
+    .leftJoin(
+      territoriesTable,
+      sql`LOWER(${campaignsTable.territory}) LIKE '%' || LOWER(${territoriesTable.name}) || '%'`,
+    )
+    .where(
+      sql`${campaignsTable.isPublished} = true AND ${campaignsTable.slug} IS NOT NULL`,
+    )
+    .orderBy(campaignsTable.territory);
+
+  const territories = rows
+    .filter(r => r.slug)
+    .map(r => {
+      const cities = (r.cityList ?? "").split(",").map((c: string) => c.trim()).filter(Boolean);
+      const label = cities.length === 1 ? cities[0] : (r.territory ?? r.slug ?? "");
+      const entry: Record<string, unknown> = { slug: r.slug, label };
+      if (r.centroidLat != null && r.centroidLng != null) {
+        entry.lat = r.centroidLat;
+        entry.lng = r.centroidLng;
+      }
+      return entry;
+    });
+
+  res.json({ territories });
+});
+
 router.get("/campaigns/active/taken-categories", async (req, res): Promise<void> => {
   const [campaign] = await db
     .select({ id: campaignsTable.id })
