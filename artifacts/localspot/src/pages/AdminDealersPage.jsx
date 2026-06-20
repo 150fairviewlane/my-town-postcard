@@ -470,7 +470,7 @@ export default function AdminDealersPage() {
 
   const handleAssignedToDealer = (dealer, territory) => {
     setAssigningTerritoryTo(null);
-    setToast(`Territory ${territory.territoryId} assigned to ${dealer.name}`);
+    setToast(`Territory assigned — landing page ready`);
     const token = localStorage.getItem("admin_token");
     if (token) loadDealers(token);
   };

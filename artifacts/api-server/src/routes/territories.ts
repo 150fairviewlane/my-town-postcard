@@ -6,6 +6,7 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { db, territoriesTable, dealerTerritoryClaimsTable, territoryZipAssignmentsTable, territoryProposalsTable } from "@workspace/db";
+import { ensureDealerLandingPage } from "../lib/dealerLandingPage";
 import {
   getTerritoryForLocation,
   findCandidateHubs,
@@ -266,6 +267,25 @@ router.put("/territories/:id", requireAdmin, async (req, res): Promise<void> => 
     .returning();
 
   req.log.info({ id: req.params.id }, "Territory updated");
+
+  // When a territory is assigned to a dealer (status → taken, dealerId set),
+  // provision the landing page immediately so the admin doesn't need a separate
+  // "Rebuild Landing Page" step.
+  if (parsed.data.dealerId != null && parsed.data.status === "taken") {
+    try {
+      const campaignIds = await ensureDealerLandingPage(parsed.data.dealerId);
+      req.log.info(
+        { territoryId: req.params.id, dealerId: parsed.data.dealerId, campaignIds },
+        "ensureDealerLandingPage complete after territory assignment",
+      );
+    } catch (err: any) {
+      req.log.error(
+        { err: err?.message, territoryId: req.params.id, dealerId: parsed.data.dealerId },
+        "ensureDealerLandingPage failed after territory assignment — admin can use Rebuild button",
+      );
+    }
+  }
+
   res.json(updated);
 });
 
