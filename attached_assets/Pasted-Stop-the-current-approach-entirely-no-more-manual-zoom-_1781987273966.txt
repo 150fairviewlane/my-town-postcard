@@ -1,0 +1,18 @@
+Stop the current approach entirely — no more manual zoom-level math, no `getBoundsZoom`, no `zoomend` listeners, no chained `setView` calls. This is overcomplicated for what's actually needed.
+
+**The simple fix:** `fitBounds()` already supports a `padding` option that controls how tightly it zooms to fit the given bounds. To make the initial map view zoom in slightly more than the current default, just REDUCE the padding value (or use negative padding if the Leaflet version supports it) in the existing `fitBounds()` call — do not touch anything else.
+
+1. Find the existing `map.fitBounds(bounds, { padding: [40, 40] })` call (or whatever the current padding values are) in `GeorgiaTerritoryMap.jsx`.
+
+2. Reduce the padding values (e.g. try `[10, 10]` or `[0, 0]`) — smaller padding means Leaflet fits the bounds more tightly, which visually zooms in more, with zero risk of race conditions since this uses `fitBounds()` exactly as originally implemented, just with a different parameter.
+
+3. If reducing padding to `[0, 0]` still isn't zoomed in enough, that means the bounds themselves (the actual lat/long spread between the pins) are simply wide enough that even a tight fit looks zoomed-out — in that case, the better lever is `fitBounds`'s `maxZoom` option: `map.fitBounds(bounds, { padding: [10, 10], maxZoom: 9 })` — wait, actually for zooming IN further than the natural fit, you'd want to call `map.setZoom(map.getZoom() + 1)` ONCE, synchronously, right after the `fitBounds()` call completes in the same code block — `fitBounds()` is synchronous when `animate: false` is NOT explicitly needed for this simple case; just call `setZoom` directly after it in the same function, no event listeners required:
+   ```js
+   map.fitBounds(bounds, { padding: [10, 10] });
+   map.setZoom(map.getZoom() + 1);
+   ```
+   This works because by the time the next line of synchronous JS executes, Leaflet has already updated its internal zoom/center state from the `fitBounds` call — no listener needed for this simple two-line sequence.
+
+4. Test by reloading the page and confirming the map's initial view is zoomed in slightly more than before, with all pins still reasonably visible (don't zoom in so far that a pin clips off-screen — if that happens, back off to the original zoom or try a smaller increment).
+
+Keep this to the smallest possible change — adjust padding and/or add the single `setZoom` line, nothing more.

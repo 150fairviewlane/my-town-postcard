@@ -201,15 +201,8 @@ export default function GeorgiaTerritoryMap() {
 
       if (pinned.length > 0) {
         const latlngs = pinned.map(t => [t.latitude, t.longitude]);
-        const bounds  = L.latLngBounds(latlngs);
-        // After fitBounds animation completes, zoom+1 around the same centre
-        // so the initial view starts one level closer than the natural fit.
-        // zoomend fires after the animation settles — getCenter/getZoom are
-        // accurate at that point (unlike whenReady which fires before anim).
-        map.once("zoomend", () => {
-          map.setView(map.getCenter(), map.getZoom() + 1, { animate: false });
-        });
-        map.fitBounds(bounds, { padding: [40, 40] });
+        map.fitBounds(L.latLngBounds(latlngs), { padding: [10, 10] });
+        map.setZoom(map.getZoom() + 1);
       } else {
         map.setView([32.9, -83.4], 7);
       }

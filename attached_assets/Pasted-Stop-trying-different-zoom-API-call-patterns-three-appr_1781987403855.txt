@@ -1,0 +1,16 @@
+Stop trying different zoom-API call patterns — three approaches (chained setView, getBoundsZoom-based manual calculation, fitBounds + synchronous setZoom) have all hit the identical symptom: the map container has zero width/height when this code runs, so any zoom/center calculation based on the container size returns garbage (0).
+
+This means the REAL bug is upstream: something about WHEN this initialization code runs relative to the DOM actually being laid out and sized. Fixing the zoom call itself is pointless until the container has a real size at the time this code executes.
+
+**Diagnose, don't fix yet:**
+
+1. Find where the Leaflet map is initialized (`L.map(...)` call) in `GeorgiaTerritoryMap.jsx`. Check: is this happening inside a `useEffect` with an empty dependency array (`[]`), running once on mount? Or is it running synchronously during render, or in some other lifecycle spot?
+
+2. Add a temporary `console.log` immediately after `L.map(...)` is created, logging the container element's `clientWidth` and `clientHeight` at that exact moment. Also log them again inside the `fitBounds`/`setZoom` code that's currently failing. Run it and report both sets of values.
+
+3. Check the actual CSS of the map's container div and ALL of its ancestor elements (same kind of check we did for the earlier sticky-header bug) — specifically look for:
+   - Is the container's height ever explicitly set via CSS, or does it rely on its content/children for height (which would be a chicken-and-egg problem if Leaflet itself needs a height to render into)?
+   - Is the map rendered conditionally (e.g. behind a loading state, inside a tab that's not yet "active," or inside a CSS `display: none` block at the moment of mount) — Leaflet is well-known to report zero size if initialized while its container is hidden via `display: none`, even temporarily during a loading flash.
+   - Is there a CSS animation/transition on the container or a parent that could mean the container hasn't reached its final size yet when React's `useEffect` fires (effects run after paint, but CSS transitions can still be mid-flight)?
+
+4. Report back: what are the actual logged clientWidth/clientHeight values at each point, and which of the above (or something else) explains why they're 0. Don't apply a fix until this is confirmed — we've already tried three different "fix the zoom call" approaches and all failed for the same underlying reason, so this time let's find the actual cause first.
