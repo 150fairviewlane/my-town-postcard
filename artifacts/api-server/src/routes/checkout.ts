@@ -472,6 +472,8 @@ router.get("/checkout/spot-session-confirm", async (req, res): Promise<void> => 
     businessName: spot?.businessName ?? null,
     size: spot?.size ?? null,
     amountCents: typeof session.amount_total === "number" ? session.amount_total : spot?.price ?? null,
+    gridArea: spot?.gridArea ?? null,
+    side: spot?.side ?? null,
   });
 });
 

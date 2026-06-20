@@ -104,19 +104,20 @@ export default function SpotConfirmationPage() {
                   </div>
                 </div>
               )}
-              <div style={{ background: "#f0fdf4", borderLeft: "4px solid #15803d", borderRadius: 6, padding: 12, marginTop: 16, fontSize: 13, color: "#14532d" }}>
-                ✓ Next step: upload your ad artwork or request our done-for-you design.
-              </div>
-              <div style={{ marginTop: 20, display: "flex", gap: 10 }}>
+              <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 10 }}>
                 <button
-                  onClick={() => navigate(`/upload/${state.data.spotId}`)}
-                  style={{ flex: 1, padding: 12, borderRadius: 8, border: "none", background: RED, color: "#fff", fontWeight: 700, cursor: "pointer" }}
+                  onClick={() => {
+                    const side = state.data.side || "front";
+                    const area = state.data.gridArea || "";
+                    navigate(`/?side=${side}${area ? `&highlight=${area}` : ""}`);
+                  }}
+                  style={{ width: "100%", padding: 12, borderRadius: 8, border: "none", background: RED, color: "#fff", fontWeight: 700, cursor: "pointer" }}
                 >
-                  Upload Your Ad →
+                  View Your Ad on the Postcard →
                 </button>
                 <button
                   onClick={() => navigate("/")}
-                  style={{ flex: 1, padding: 12, borderRadius: 8, border: "1.5px solid #d1d5db", background: "#fff", color: "#374151", fontWeight: 700, cursor: "pointer" }}
+                  style={{ width: "100%", padding: 12, borderRadius: 8, border: "1.5px solid #d1d5db", background: "#fff", color: "#374151", fontWeight: 700, cursor: "pointer" }}
                 >
                   Back to home
                 </button>
