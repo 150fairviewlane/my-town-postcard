@@ -631,12 +631,17 @@ export function Footer({ copy = DEFAULT_COPY }: { copy?: LandingCopy }) {
               Blog
             </a>
           </div>
+          <div style={{ marginBottom: 8 }}>
+            <a href="/dealers/signup"
+              style={{ fontSize: 13, color: "#555", textDecoration: "none", fontFamily: "sans-serif" }}>
+              Become a Dealer
+            </a>
+          </div>
         </div>
         <div>
           <div style={{ fontWeight: 700, color: "#111", fontSize: 14, marginBottom: 14,
             fontFamily: "sans-serif" }}>Contact</div>
           <p style={{ fontSize: 13, color: "#555", lineHeight: 1.6, fontFamily: "sans-serif" }}>
-            Serving {copy.citiesListAmp}.<br />
             Questions? Email us at info@mytownpostcard.com
           </p>
         </div>
