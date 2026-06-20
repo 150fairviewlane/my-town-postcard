@@ -14,6 +14,7 @@
     "update:ga-zone-notes": "tsx ./src/update-ga-zone-notes.ts",
     "generate-parchment-templates": "tsx ./src/generateParchmentVariantTemplates.ts",
     "purge:orphaned-spots": "tsx ./src/purge-orphaned-spots.ts",
+    "migrate:activate-white-habersham": "tsx ./src/migrate-activate-white-habersham.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
