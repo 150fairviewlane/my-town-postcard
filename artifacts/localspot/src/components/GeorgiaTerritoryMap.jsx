@@ -201,7 +201,7 @@ export default function GeorgiaTerritoryMap() {
 
       if (pinned.length > 0) {
         const latlngs = pinned.map(t => [t.latitude, t.longitude]);
-        map.fitBounds(L.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 11 });
+        map.fitBounds(L.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 12 });
       } else {
         map.setView([32.9, -83.4], 7);
       }
@@ -271,6 +271,11 @@ export default function GeorgiaTerritoryMap() {
 
       // Run once after tiles settle so latLngToContainerPoint is reliable
       map.whenReady(() => {
+        // Zoom in one extra level beyond the natural fitBounds result, keeping
+        // the same centre so all pins stay in view.
+        const centre = map.getCenter();
+        const zoom   = map.getZoom();
+        map.setView(centre, zoom + 1, { animate: false });
         // Small delay so the map has finished its initial layout
         setTimeout(updateLabels, 120);
       });
