@@ -798,7 +798,7 @@ return(<div style={{fontFamily:"sans-serif"}}>
     </div>
   )}
   <div style={{textAlign:"center",marginBottom:2,flexShrink:0}}>
-    <div style={{fontSize:22,fontWeight:900,color:"#111",fontFamily:"Georgia,serif",letterSpacing:-0.3}}>Reserve Your Spot on {(campaign?.territory ?? "Clarkesville").replace(/Counties\b/g, "County")}'s Postcard</div>
+    <div style={{fontSize:22,fontWeight:900,color:"#111",fontFamily:"Georgia,serif",letterSpacing:-0.3}}>Reserve Your Spot on {(campaign?.cityList?.split(",")[0]?.trim() || campaign?.territory || "Clarkesville").replace(/Counties\b/g, "County")}'s Postcard</div>
     <div style={{fontSize:16,color:"#64748b",marginTop:1}}>Click any <span style={{color:"#16a34a",fontWeight:700}}>green spot</span> below to claim yours</div>
   </div>
   <div style={{display:"flex",justifyContent:"center",marginBottom:2,flexShrink:0}}>
