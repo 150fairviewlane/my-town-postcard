@@ -88,6 +88,16 @@ function buildCopy(campaign: any): LandingCopy {
   };
 }
 
+// Derives the primary location label for a campaign — hub city for single-zone
+// pages, territory name for multi-city pages, empty string if unknown.
+function derivePlaceName(campaign: any): string {
+  const territory: string = (campaign?.territory || campaign?.name || "").trim();
+  const cityListRaw: string = (campaign?.cityList || "").trim();
+  const cityCount = cityListRaw.split(",").map((c: string) => c.trim()).filter(Boolean).length;
+  const hubCity = cityCount === 1 ? cityListRaw.trim() : null;
+  return hubCity || territory || "";
+}
+
 // A published per-territory / per-dealer landing page served at a root slug
 // (e.g. /white-habersham). Reuses every shared landing section and the live
 // postcard picker, but feeds them copy derived from the slug's campaign and
@@ -101,6 +111,38 @@ export default function TerritoryLandingPage({ params }: { params: { slug: strin
       queryKey: ["/api/campaigns/by-slug", slug],
     },
   });
+
+  // Set page <title> and <meta name="description"> once campaign data is ready.
+  // Restore defaults on unmount so navigating back to the home page isn't affected.
+  useEffect(() => {
+    if (!campaign) return;
+    const place = derivePlaceName(campaign);
+    if (!place) return;
+
+    const prevTitle = document.title;
+    document.title = `${place} Postcard Advertising | My Town Postcard`;
+
+    let metaDesc = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+    const prevDesc = metaDesc?.getAttribute("content") ?? null;
+    if (!metaDesc) {
+      metaDesc = document.createElement("meta");
+      metaDesc.name = "description";
+      document.head.appendChild(metaDesc);
+    }
+    metaDesc.content = `Reach 5,000 ${place} homes with a 9×12 co-op postcard. Reserve your spot today.`;
+
+    return () => {
+      document.title = prevTitle;
+      const el = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+      if (el) {
+        if (prevDesc !== null) {
+          el.content = prevDesc;
+        } else {
+          el.remove();
+        }
+      }
+    };
+  }, [campaign]);
 
   // Scroll to the ad picker (#book) when the URL contains a hash and the page is fully rendered.
   useEffect(() => {
