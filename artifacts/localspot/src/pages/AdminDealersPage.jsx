@@ -1,5 +1,5 @@
 import { useState, useEffect, Fragment } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import CreateTerritoryForm from "../components/CreateTerritoryForm";
 
 const RED = "#7B1418";
@@ -356,6 +356,7 @@ function Toast({ message, onDone }) {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function AdminDealersPage() {
+  const [, navigate] = useLocation();
   const [dealers, setDealers] = useState(null);
   const [error, setError] = useState(null);
   const [expanded, setExpanded] = useState(null);
@@ -917,9 +918,15 @@ export default function AdminDealersPage() {
                   <tbody>
                     {dealers.map((d) => (
                       <Fragment key={d.id}>
-                        <tr style={{ borderTop: "1px solid #f0f0f0" }}>
+                        <tr
+                          style={{ borderTop: "1px solid #f0f0f0", cursor: "pointer" }}
+                          onClick={() => navigate(`/admin/dealers/${d.id}`)}
+                        >
                           <Td>
-                            <div style={{ fontWeight: 700, color: "#111", fontSize: 13.5 }}>{d.name}</div>
+                            <div style={{ fontWeight: 700, color: RED, fontSize: 13.5, textDecoration: "underline", textDecorationColor: "transparent", transition: "text-decoration-color .15s" }}
+                              onMouseEnter={(e) => e.currentTarget.style.textDecorationColor = RED}
+                              onMouseLeave={(e) => e.currentTarget.style.textDecorationColor = "transparent"}
+                            >{d.name}</div>
                             <div style={{ fontSize: 12, color: "#888" }}>{d.email}</div>
                             {d.phone && (
                               <div style={{ fontSize: 11.5, color: "#888" }}>{d.phone}</div>
@@ -932,7 +939,7 @@ export default function AdminDealersPage() {
                           <Td style={{ fontSize: 12.5, color: "#666" }}>{formatDate(d.createdAt)}</Td>
                           <Td style={{ fontSize: 12.5, color: "#666" }}>{formatDate(d.activatedAt)}</Td>
                           <Td>
-                            <button onClick={() => togglePage(d.id)} style={{
+                            <button onClick={(e) => { e.stopPropagation(); togglePage(d.id); }} style={{
                               background: expanded === d.id ? RED : "#fff",
                               color: expanded === d.id ? "#fff" : RED,
                               border: `1.5px solid ${RED}`, borderRadius: 8,
@@ -945,7 +952,7 @@ export default function AdminDealersPage() {
                           <Td>
                             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                               <button
-                                onClick={() => impersonateDealer(d.id)}
+                                onClick={(e) => { e.stopPropagation(); impersonateDealer(d.id); }}
                                 disabled={impersonating === d.id}
                                 style={{
                                   background: "#fffbeb", color: "#92400e",
@@ -959,7 +966,7 @@ export default function AdminDealersPage() {
                                 {impersonating === d.id ? "Opening…" : "🔍 Log in as dealer"}
                               </button>
                               <button
-                                onClick={() => setAssigningTerritoryTo(d)}
+                                onClick={(e) => { e.stopPropagation(); setAssigningTerritoryTo(d); }}
                                 title="Add a territory to this dealer"
                                 style={{
                                   background: "#f0fdf4", color: "#15803d",
@@ -971,7 +978,7 @@ export default function AdminDealersPage() {
                                 ＋ Territory
                               </button>
                               <button
-                                onClick={() => openDeleteModal(d)}
+                                onClick={(e) => { e.stopPropagation(); openDeleteModal(d); }}
                                 title="Remove this dealer"
                                 style={{
                                   background: "#fff", color: "#991b1b",

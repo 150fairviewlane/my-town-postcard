@@ -1012,11 +1012,51 @@ router.get("/admin/dealers/:id", requireAdmin, async (req, res): Promise<void> =
     res.status(404).json({ error: "Dealer not found" });
     return;
   }
+
+  // Legacy dealer_territories rows (ZIP-cluster dealers)
   const territories = await db
     .select()
     .from(dealerTerritoriesTable)
     .where(eq(dealerTerritoriesTable.dealerId, id))
     .orderBy(desc(dealerTerritoriesTable.territoryIndex));
+
+  // Modern: campaigns linked to this dealer (one per hub city)
+  const campaigns = await db
+    .select()
+    .from(campaignsTable)
+    .where(eq(campaignsTable.dealerId, id))
+    .orderBy(asc(campaignsTable.id));
+
+  const origin = getOrigin(req);
+
+  // Per-campaign spot stats (N queries, but dealer territory counts are small)
+  const campaignStats = await Promise.all(
+    campaigns.map(async (c) => {
+      const spots = await db
+        .select({ status: spotsTable.status, price: spotsTable.price })
+        .from(spotsTable)
+        .where(eq(spotsTable.campaignId, c.id));
+      const sold = spots.filter((s) => s.status === "paid");
+      return {
+        campaignId: c.id,
+        label: c.cityList || c.territory || c.name,
+        slug: c.slug,
+        pageUrl: c.slug ? `${origin}/${c.slug}` : null,
+        isPublished: c.isPublished ?? false,
+        totalSpots: spots.length,
+        soldSpots: sold.length,
+        availableSpots: spots.filter((s) => s.status === "available").length,
+        revenueCents: sold.reduce((sum, s) => sum + (s.price ?? 0), 0),
+        estimatedHouseholds: c.homesCount ?? 0,
+      };
+    }),
+  );
+
+  const totals = {
+    totalSpotsAcrossAll: campaignStats.reduce((s, c) => s + c.totalSpots, 0),
+    totalSoldAcrossAll: campaignStats.reduce((s, c) => s + c.soldSpots, 0),
+    totalRevenueCentsAcrossAll: campaignStats.reduce((s, c) => s + c.revenueCents, 0),
+  };
 
   res.json({
     dealer: {
@@ -1035,6 +1075,8 @@ router.get("/admin/dealers/:id", requireAdmin, async (req, res): Promise<void> =
       cityLabel: t.cityLabel,
       estimatedHouseholds: t.estimatedHouseholds,
     })),
+    campaigns: campaignStats,
+    totals,
   });
 });
 

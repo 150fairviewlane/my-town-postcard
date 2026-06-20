@@ -42,6 +42,8 @@ const DealerDashboard = lazy(() => import("./pages/DealerDashboard"));
 // @ts-expect-error JSX module without types
 const AdminDealersPage = lazy(() => import("./pages/AdminDealersPage"));
 // @ts-expect-error JSX module without types
+const AdminDealerDetailPage = lazy(() => import("./pages/AdminDealerDetailPage"));
+// @ts-expect-error JSX module without types
 const AdminAITestPage = lazy(() => import("./pages/AdminAITestPage"));
 // @ts-expect-error JSX module without types
 const AdGenV7Page = lazy(() => import("./pages/AdGenV7Page"));
@@ -132,6 +134,7 @@ function Router() {
         <Route path="/admin/discover" component={DiscoverLeadsPage} />
         <Route path="/admin/outreach" component={OutreachPage} />
         <Route path="/admin/scans" component={ScanAnalyticsPage} />
+        <Route path="/admin/dealers/:id" component={AdminDealerDetailPage} />
         <Route path="/admin/dealers" component={AdminDealersPage} />
         <Route path="/admin/subscriptions" component={AdminSubscriptionsPage} />
         <Route path="/admin/ai-test" component={AdminAITestPage} />
