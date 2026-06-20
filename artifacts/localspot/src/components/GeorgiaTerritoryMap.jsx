@@ -184,6 +184,9 @@ export default function GeorgiaTerritoryMap() {
         scrollWheelZoom:     true,
         zoomControl:         true,
         attributionControl:  true,
+        // Disable Leaflet's internal tap simulation so iOS/iPadOS fires
+        // the native click event on the FIRST tap instead of the second.
+        tap:                 false,
       });
 
       mapObjRef.current = map;
