@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { HouseAdVertical, EDDMBox } from "../postcardBack";
 
 const RED = "#7B1418";
 const AVAIL_BG = "linear-gradient(135deg,#f8fffe,#f0fdf4)";
@@ -150,9 +151,16 @@ export default function MiniAdPickerGrid({ spots = [], defaultSide = "front" }) 
           {sellable.map((area) => (
             <MiniCell key={area} area={area} spot={spotMap[area]} />
           ))}
-          {staticAreas.map((area) => (
-            <div key={area} style={{ gridArea: area, background: "#e5e7eb" }} />
-          ))}
+          {side === "back" && (
+            <>
+              <div style={{ gridArea: "bhs", overflow: "hidden" }}>
+                <HouseAdVertical />
+              </div>
+              <div style={{ gridArea: "bed", overflow: "hidden" }}>
+                <EDDMBox />
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
