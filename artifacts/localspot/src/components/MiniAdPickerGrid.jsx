@@ -1,7 +1,6 @@
 import { useState } from "react";
 
 const RED = "#7B1418";
-const GOLD = "#C9A84C";
 const AVAIL_BG = "linear-gradient(135deg,#f8fffe,#f0fdf4)";
 const AVAIL_BORDER = "3px solid #4ade80";
 
@@ -36,46 +35,27 @@ const BACK_SELLABLE = ["bxl", "bxl2", "bxl3", "bm1", "bm2", "bm3", "bm4", "bs1"]
 const BACK_STATIC = ["bhs", "bed"];
 
 function MiniCell({ area, spot }) {
-  if (!spot) {
+  const isPaid = spot?.status === "paid";
+
+  if (isPaid && spot.adFileUrl) {
     return (
-      <div style={{
-        gridArea: area,
-        background: AVAIL_BG,
-        border: AVAIL_BORDER,
-        boxSizing: "border-box",
-        overflow: "hidden",
-      }} />
+      <div style={{ gridArea: area, overflow: "hidden", position: "relative" }}>
+        <img
+          src={spot.adFileUrl}
+          loading="lazy"
+          alt={spot.businessName || "ad"}
+          style={{
+            width: "100%", height: "100%",
+            objectFit: "cover",
+            display: "block",
+            position: "absolute", inset: 0,
+          }}
+        />
+      </div>
     );
   }
 
-  if (spot.status === "reserved") {
-    return (
-      <div style={{
-        gridArea: area,
-        background: GOLD,
-        overflow: "hidden",
-      }} />
-    );
-  }
-
-  if (spot.status === "paid") {
-    if (spot.adFileUrl) {
-      return (
-        <div style={{ gridArea: area, overflow: "hidden", position: "relative" }}>
-          <img
-            src={spot.adFileUrl}
-            loading="lazy"
-            alt={spot.businessName || "ad"}
-            style={{
-              width: "100%", height: "100%",
-              objectFit: "cover",
-              display: "block",
-              position: "absolute", inset: 0,
-            }}
-          />
-        </div>
-      );
-    }
+  if (isPaid) {
     return (
       <div style={{
         gridArea: area,
@@ -115,21 +95,6 @@ function MiniCell({ area, spot }) {
       boxSizing: "border-box",
       overflow: "hidden",
     }} />
-  );
-}
-
-function LegendDot({ color, label, border }) {
-  return (
-    <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: "#6b7280", fontWeight: 600 }}>
-      <span style={{
-        width: 9, height: 9, borderRadius: 2, flexShrink: 0,
-        background: color,
-        border: border || "none",
-        boxSizing: "border-box",
-        display: "inline-block",
-      }} />
-      {label}
-    </span>
   );
 }
 
@@ -189,12 +154,6 @@ export default function MiniAdPickerGrid({ spots = [], defaultSide = "front" }) 
             <div key={area} style={{ gridArea: area, background: "#e5e7eb" }} />
           ))}
         </div>
-      </div>
-
-      <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 6 }}>
-        <LegendDot color={RED} label="Sold" />
-        <LegendDot color={GOLD} label="Pending" />
-        <LegendDot color={AVAIL_BG} label="Available" border={`2px solid #4ade80`} />
       </div>
     </div>
   );
