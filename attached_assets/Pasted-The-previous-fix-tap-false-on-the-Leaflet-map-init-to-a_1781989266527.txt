@@ -1,0 +1,17 @@
+The previous fix (`tap: false` on the Leaflet map init, to address the classic iOS double-tap-required issue) did NOT solve the problem. The user reports needing 4-5 taps on iPad to get a pin to navigate — this is a much more severe symptom than the single extra tap `tap: false` is designed to fix, so the root cause is likely something else entirely (or in addition to that).
+
+**Do not re-apply or tweak `tap: false` again — it's already in place and confirmed insufficient. Investigate the actual cause instead.**
+
+**Hypothesis to check first, given this map went through several rounds of changes in this session (pin coordinate updates, label-collision-avoidance logic, zoom/fitBounds changes):**
+
+1. **Check if the label-collision-avoidance function (or anything else touching pin/marker positions) re-runs on every map interaction** — e.g. is it called inside a Leaflet event listener like `moveend`, `zoomend`, or inside a React effect with dependencies that change frequently (like map center/zoom state)? If markers or their click handlers are being destroyed and recreated on every pan/zoom/render, a tap that triggers a re-render mid-gesture could mean the user's finger is no longer over a "live" element by the time the tap completes — requiring multiple attempts to land a tap that doesn't get interrupted.
+
+2. **Check whether multiple overlapping elements sit on top of each pin** — e.g. if a label's bounding box (used for the collision-avoidance check) is positioned with `position: absolute` and might overlap or sit ON TOP of the pin's own clickable area, intercepting taps meant for the pin underneath. With several labels now repositioned via the collision-avoidance logic, it's possible a label element (not the pin itself) is now covering part of the clickable pin area for one or more pins, especially after recent position changes.
+
+3. **Check the actual DOM in the browser dev tools (or via a server-rendered inspection) for what element sits at the exact pixel coordinates of a pin** — confirm whether tapping there actually hits the pin's own click handler, or hits a different element (an invisible/transparent label container, a leader-line SVG element if one was added, or a parent wrapper) that doesn't have the navigation handler attached, requiring repeated taps to "get lucky" and land directly on the real clickable element.
+
+4. **Check z-index stacking** — if labels were given a higher z-index than pins during the collision-avoidance work (to ensure label text renders above other map elements), confirm a label's invisible bounding box / padding isn't extending over a NEARBY pin and silently absorbing taps meant for that other pin.
+
+5. Report back: which of these (or something else) is actually happening — show the relevant DOM structure / z-index values / event-binding code for the pins and labels as they currently exist, so we can see exactly what is intercepting the tap before attempting another fix.
+
+Do not apply a fix yet — diagnose first and report findings.

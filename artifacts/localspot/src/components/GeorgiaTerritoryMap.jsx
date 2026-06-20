@@ -222,14 +222,14 @@ export default function GeorgiaTerritoryMap() {
       svgRef.current = svgEl;
 
       // ── Place dots (no tooltips — labels handled by SVG overlay) ──
+      // mouseover/mouseout setIcon calls are intentionally omitted: on iOS/
+      // iPadOS the synthetic mouseover fires mid-touch (before click), which
+      // calls setIcon and removes/recreates the icon DOM element, causing the
+      // subsequent click to target the detached old element and silently drop.
       pinned.forEach(t => {
-        const icon = makeIcon(L, false);
-        const marker = L.marker([t.latitude, t.longitude], { icon })
+        L.marker([t.latitude, t.longitude], { icon: makeIcon(L, false) })
           .addTo(map)
           .on("click", () => navigate(`/${t.slug}#book`));
-
-        marker.on("mouseover", () => marker.setIcon(makeIcon(L, true)));
-        marker.on("mouseout",  () => marker.setIcon(makeIcon(L, false)));
       });
 
       // ── Label placement function (runs on every move/zoom) ──
