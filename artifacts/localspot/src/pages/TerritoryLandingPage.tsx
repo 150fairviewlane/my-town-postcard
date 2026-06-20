@@ -54,12 +54,6 @@ function buildCopy(campaign: any): LandingCopy {
   const mailingLabel = season ? `${season} Mailing` : DEFAULT_COPY.mailingLabel;
   const mailingWhen = month ? ` — targeted for ${month}` : "";
 
-  // Single-city dealer area pages: the campaign was created with city_list = one
-  // hub city name (no comma). Use the "Advertise in [City]" hero format and add
-  // territory context below the subhead.
-  const isSingleCity = cityCount === 1 && cityListRaw.length > 0;
-  const singleCity = isSingleCity ? citiesOxford : undefined;
-
   return {
     // Rule: if territory ends with "Counties" (plural), use "County's" (possessive singular form).
     // e.g. "White / Habersham Counties" → "White / Habersham County's"
@@ -76,10 +70,6 @@ function buildCopy(campaign: any): LandingCopy {
     faqMailboxes: `The ${mailingLabel.toLowerCase()}${month ? ` is targeted for ${month}` : " is timed for peak local shopping season"}. Once all spots are filled, your ad is designed, printed, and mailed.`,
     faqGoodFit: `Any local business that serves ${place} residents is a great fit — restaurants, home services, medical, legal, retail, and more.`,
     citiesListAmp: citiesAmp,
-    // Single-city hero overrides
-    heroCity: singleCity,
-    heroSubhead: singleCity ? "Reach 5,000 local households via USPS EDDM" : undefined,
-    heroContext: singleCity && territory ? `Part of the ${territory} dealer territory` : undefined,
   };
 }
 
