@@ -36,15 +36,10 @@ function makeIcon(L, highlighted = false) {
  *
  * Each returned pin gains a `_labelDirection` field ("right" | "left") so the
  * tooltip is always rendered away from the cluster centre, keeping labels readable.
- *
- * @param {Array}  pins                - array of territory objects with .latitude / .longitude
- * @param {number} clusterThresholdDeg - pins within this many degrees are treated as a cluster
- * @param {number} spreadRadiusDeg     - radius of the spread circle in degrees
  */
 function spreadClusteredPins(pins, clusterThresholdDeg = 0.5, spreadRadiusDeg = 0.25) {
   if (pins.length <= 1) return pins;
 
-  // Sort alphabetically so angle assignments are stable across re-renders
   const sorted = [...pins].sort((a, b) =>
     cleanName(a.name).localeCompare(cleanName(b.name))
   );
@@ -70,12 +65,9 @@ function spreadClusteredPins(pins, clusterThresholdDeg = 0.5, spreadRadiusDeg = 
 
     if (cluster.length <= 1) continue;
 
-    // Centroid of the cluster
     const centLat = cluster.reduce((s, k) => s + sorted[k].latitude, 0) / cluster.length;
     const centLng = cluster.reduce((s, k) => s + sorted[k].longitude, 0) / cluster.length;
 
-    // Place pins evenly around the centroid, starting north (−π/2), clockwise.
-    // Label direction: pins left of centre use "left" so text flows away from cluster.
     cluster.forEach((pinIdx, nth) => {
       const angle = (2 * Math.PI * nth) / cluster.length - Math.PI / 2;
       const newLng = centLng + spreadRadiusDeg * Math.cos(angle);
@@ -94,7 +86,6 @@ function spreadClusteredPins(pins, clusterThresholdDeg = 0.5, spreadRadiusDeg = 
 export default function GeorgiaTerritoryMap() {
   const [territories, setTerritories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [hovered, setHovered] = useState(null);
   const [, navigate] = useLocation();
   const mapRef = useRef(null);
 
@@ -120,35 +111,38 @@ export default function GeorgiaTerritoryMap() {
 
       if (mapRef.current._leaflet_id) return;
 
-      // North-Georgia reference frame (zoom 8):
-      //   center 33.90°N, -83.97°W places Chattanooga near top,
-      //   Macon near bottom, Anniston on the left, Augusta on the right.
-      const INITIAL_CENTER = [33.9, -83.97];
-      const INITIAL_ZOOM   = 8;
-
       map = L.map(mapRef.current, {
-        center:              INITIAL_CENTER,
-        zoom:                INITIAL_ZOOM,
         minZoom:             6,
         maxZoom:             18,
         maxBounds:           L.latLngBounds(L.latLng(24.0, -95.0), L.latLng(38.0, -73.0)),
         maxBoundsViscosity:  1.0,
         scrollWheelZoom:     true,
         zoomControl:         true,
-        attributionControl:  false,
+        attributionControl:  true,
       });
 
+      // CartoDB Positron — clean grayscale, no API key required
       L.tileLayer(
-        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
+        "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
         {
           attribution:
-            "Tiles &copy; <a href='https://www.esri.com/'>Esri</a> &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community",
-          maxZoom: 18,
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
+          subdomains: "abcd",
+          maxZoom:    20,
         }
       ).addTo(map);
 
-      // Spread any overlapping pins into a readable radial cluster
+      // Spread overlapping pins into a readable radial cluster
       const spreadPins = spreadClusteredPins(pinned);
+
+      if (spreadPins.length > 0) {
+        // Fit bounds dynamically to actual pin positions — auto-adjusts as territories change
+        const latlngs = spreadPins.map(t => [t.latitude, t.longitude]);
+        map.fitBounds(L.latLngBounds(latlngs), { padding: [40, 40], maxZoom: 11 });
+      } else {
+        // Zero-pin fallback: show a wide Georgia-centered view
+        map.setView([32.9, -83.4], 7);
+      }
 
       spreadPins.forEach(t => {
         const icon = makeIcon(L, false);
@@ -158,24 +152,18 @@ export default function GeorgiaTerritoryMap() {
 
         const dir = t._labelDirection ?? "right";
         const label = L.tooltip({
-          permanent: true,
+          permanent:   true,
           interactive: false,
-          direction: dir,
-          offset: dir === "left" ? [-2, 0] : [2, 0],
-          className: "mtp-territory-label",
+          direction:   dir,
+          offset:      dir === "left" ? [-2, 0] : [2, 0],
+          className:   "mtp-territory-label",
         })
           .setContent(cleanName(t.name));
 
         marker.bindTooltip(label).openTooltip();
 
-        marker.on("mouseover", () => {
-          setHovered(t.slug);
-          marker.setIcon(makeIcon(L, true));
-        });
-        marker.on("mouseout", () => {
-          setHovered(null);
-          marker.setIcon(makeIcon(L, false));
-        });
+        marker.on("mouseover", () => marker.setIcon(makeIcon(L, true)));
+        marker.on("mouseout",  () => marker.setIcon(makeIcon(L, false)));
       });
     });
 
@@ -183,6 +171,11 @@ export default function GeorgiaTerritoryMap() {
       if (map) map.remove();
     };
   }, [loading, pinned.length]);
+
+  // Sorted list for the dropdown (alphabetical by display name)
+  const sortedTerritories = [...territories].sort((a, b) =>
+    cleanName(a.name).localeCompare(cleanName(b.name))
+  );
 
   return (
     <section style={{ background: "#f8f5f0", padding: "80px 24px 72px", textAlign: "center" }}>
@@ -203,14 +196,27 @@ export default function GeorgiaTerritoryMap() {
             0 2px 4px rgba(0,0,0,0.15) !important;
           pointer-events: none !important;
         }
-        .mtp-territory-label::before {
-          display: none !important;
-        }
+        .mtp-territory-label::before,
         .leaflet-tooltip-left.mtp-territory-label::before,
         .leaflet-tooltip-right.mtp-territory-label::before,
         .leaflet-tooltip-top.mtp-territory-label::before,
         .leaflet-tooltip-bottom.mtp-territory-label::before {
           display: none !important;
+        }
+        /* Warm the grayscale tiles toward the site's cream palette */
+        .leaflet-tile-pane {
+          filter: sepia(12%) saturate(82%) brightness(103%);
+        }
+        /* Attribution: present and legible, but visually quiet */
+        .leaflet-control-attribution {
+          font-size: 9px !important;
+          color: #aaa !important;
+          opacity: 0.6 !important;
+          background: transparent !important;
+          box-shadow: none !important;
+        }
+        .leaflet-control-attribution a {
+          color: #aaa !important;
         }
       `}</style>
 
@@ -255,58 +261,40 @@ export default function GeorgiaTerritoryMap() {
           </div>
         )}
 
-        {!loading && territories.length > 0 && (
-          <>
-            <p style={{
-              fontFamily: "sans-serif", fontSize: 12, fontWeight: 700,
-              color: "#9ca3af", textTransform: "uppercase", letterSpacing: 1,
-              margin: "36px 0 14px",
+        {!loading && sortedTerritories.length > 0 && (
+          <div style={{
+            marginTop: 28,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            gap: 10, flexWrap: "wrap",
+          }}>
+            <span style={{
+              fontFamily: "sans-serif", fontSize: 13, color: "#9ca3af",
             }}>
-              Active Territories
-            </p>
-            <div style={{
-              display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center",
-            }}>
-              {territories.map(t => {
-                const isHov = hovered === t.slug;
-                return (
-                  <a
-                    key={t.slug}
-                    href={`/${t.slug}#book`}
-                    onMouseEnter={() => setHovered(t.slug)}
-                    onMouseLeave={() => setHovered(null)}
-                    style={{
-                      display: "inline-flex", flexDirection: "column",
-                      alignItems: "center", gap: 2,
-                      fontFamily: "sans-serif", textDecoration: "none",
-                      padding: "12px 22px",
-                      background: isHov ? RED : "#fff",
-                      borderRadius: 10,
-                      border: `1.5px solid ${isHov ? RED : "#e5e7eb"}`,
-                      boxShadow: isHov ? `0 4px 14px ${RED}33` : "0 1px 4px rgba(0,0,0,0.06)",
-                      transition: "background 0.15s, border-color 0.15s, box-shadow 0.15s",
-                      minWidth: 140,
-                    }}
-                  >
-                    <span style={{
-                      fontSize: 15, fontWeight: 800,
-                      color: isHov ? "#fff" : RED,
-                      transition: "color 0.15s",
-                    }}>
-                      {cleanName(t.name)}
-                    </span>
-                    <span style={{
-                      fontSize: 11, fontWeight: 500,
-                      color: isHov ? "rgba(255,255,255,0.75)" : "#9ca3af",
-                      transition: "color 0.15s",
-                    }}>
-                      {t.paidSpots} of {t.totalSpots} spots claimed
-                    </span>
-                  </a>
-                );
-              })}
-            </div>
-          </>
+              Don't see your town on the map?
+            </span>
+            <select
+              defaultValue=""
+              onChange={e => {
+                if (e.target.value) navigate(`/${e.target.value}`);
+              }}
+              style={{
+                fontFamily: "sans-serif", fontSize: 13, color: "#555",
+                border: "1px solid #d1d5db", borderRadius: 6,
+                padding: "4px 28px 4px 10px",
+                background: "#fff",
+                cursor: "pointer",
+                appearance: "auto",
+                outline: "none",
+              }}
+            >
+              <option value="" disabled>Search all towns ▾</option>
+              {sortedTerritories.map(t => (
+                <option key={t.slug} value={t.slug}>
+                  {cleanName(t.name)}
+                </option>
+              ))}
+            </select>
+          </div>
         )}
       </div>
     </section>
