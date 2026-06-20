@@ -1,0 +1,19 @@
+The previous fix (`fitBounds({ padding: [10, 10] })`) clipped the White/Habersham pin off the right edge of the map on initial load — see attached screenshot. However, the pin POSITIONS themselves (Ball Ground north of Canton, Canton/Holly Springs/Woodstock in correct north-to-south order) are now correct and should NOT be touched.
+
+**The known-good reference point:** starting from the ORIGINAL `fitBounds({ padding: [40, 40] })` view (which correctly fit ALL 5 pins, including Habersham, with no clipping) and clicking the "+" zoom button ONCE manually produces exactly the desired result — confirmed visually as "perfect" by the user. This is the exact target state; don't approximate it with different padding values, replicate this precise outcome.
+
+**Fix:**
+
+1. Revert the padding back to the original `[40, 40]` value (the one that correctly fit all 5 pins with no clipping) in the `fitBounds()` call — do NOT keep the `[10, 10]` padding, since that's what caused Habersham to clip.
+
+2. After `fitBounds(bounds, { padding: [40, 40] })` completes, add exactly one line directly after it in the same synchronous block:
+   ```js
+   map.setZoom(map.getZoom() + 1);
+   ```
+   This mirrors exactly what a manual single "+" click does (`zoomIn()` is equivalent to `setZoom(getZoom() + 1)` for the default zoom delta of 1), applied programmatically right after the initial fit — same sequence, same result, just automatic instead of requiring a manual click.
+
+3. Important: based on prior debugging in this same session, calling `setZoom` immediately after `fitBounds` can be silently dropped if `fitBounds` is still mid-animation. To avoid that: either (a) pass `{ padding: [40, 40], animate: false }` to `fitBounds` so it resolves synchronously before the `setZoom` line runs, or (b) confirm via a quick console log that `getZoom()` immediately after `fitBounds` already reflects the fitted zoom level (not the map's initial default) before relying on the synchronous setZoom — if it does, animate:false isn't needed; if it doesn't, add it.
+
+4. Test by reloading the page fresh (not just panning/zooming an already-loaded map) and confirming: ALL 5 pins (White/Habersham, Ball Ground, Canton, Holly Springs, Woodstock) are fully visible with no clipping at any edge, at a zoom level one step closer than the original `padding: [40,40]` view — matching exactly what manually clicking "+" once from that original view looks like.
+
+Do not touch the label-collision-avoidance logic or pin coordinate data — those are confirmed correct now and out of scope for this fix.

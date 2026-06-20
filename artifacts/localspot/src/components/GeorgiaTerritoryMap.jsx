@@ -201,7 +201,11 @@ export default function GeorgiaTerritoryMap() {
 
       if (pinned.length > 0) {
         const latlngs = pinned.map(t => [t.latitude, t.longitude]);
-        map.fitBounds(L.latLngBounds(latlngs), { padding: [10, 10] });
+        // animate:false makes fitBounds synchronous so _animatingZoom stays
+        // false; the subsequent setZoom call then works instead of being
+        // silently dropped by Leaflet's _tryAnimatedZoom guard.
+        map.fitBounds(L.latLngBounds(latlngs), { padding: [40, 40], animate: false });
+        map.setZoom(map.getZoom() + 1, { animate: false });
       } else {
         map.setView([32.9, -83.4], 7);
       }
