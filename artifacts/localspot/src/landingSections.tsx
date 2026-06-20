@@ -252,20 +252,6 @@ export function Hero({ copy = DEFAULT_COPY }: { copy?: LandingCopy }) {
           ))}
         </div>
 
-        <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-          <button onClick={() => scrollTo("book")}
-            style={{ background: RED, color: "#fff", border: "none", borderRadius: 9,
-              padding: "14px 32px", fontSize: 16, fontWeight: 800, cursor: "pointer",
-              fontFamily: "sans-serif", boxShadow: `0 4px 18px ${RED}55` }}>
-            Save Your Spot
-          </button>
-          <button onClick={() => scrollTo("how-it-works")}
-            style={{ background: "#fff", color: RED, border: `2px solid ${RED}`,
-              borderRadius: 9, padding: "14px 28px", fontSize: 16, fontWeight: 700,
-              cursor: "pointer", fontFamily: "sans-serif" }}>
-            How It Works
-          </button>
-        </div>
       </div>
 
       <div style={{ flex: "7 1 220px", minWidth: 200, position: "relative" }}>
@@ -301,7 +287,7 @@ export function HowItWorks({ copy = DEFAULT_COPY }: { copy?: LandingCopy }) {
       desc: "Your ad reaches 5,000 local homes — real customers, not clicks." },
   ];
   return (
-    <section id="how-it-works" style={{ background: "#fff", padding: "80px 32px" }}>
+    <section id="how-it-works" style={{ background: "#fff", padding: "48px 32px 80px" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
         <h2 style={{ textAlign: "center", fontSize: 36, fontWeight: 900, color: "#111",
           fontFamily: "Georgia,serif", marginBottom: 10 }}>How It Works</h2>
