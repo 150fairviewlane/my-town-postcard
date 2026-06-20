@@ -191,13 +191,14 @@ router.get("/campaigns/public-territories", async (req, res): Promise<void> => {
     .map(r => {
       const cities = (r.cityList ?? "").split(",").map((c: string) => c.trim()).filter(Boolean);
       const label = cities.length === 1 ? cities[0] : (r.territory ?? r.slug ?? "");
-      const entry: Record<string, unknown> = { slug: r.slug, label };
-      if (r.centroidLat != null && r.centroidLng != null) {
-        entry.lat = r.centroidLat;
-        entry.lng = r.centroidLng;
-      }
-      return entry;
-    });
+      return {
+        slug:  r.slug as string,
+        label,
+        lat:   r.centroidLat  ?? null,
+        lng:   r.centroidLng  ?? null,
+      };
+    })
+    .sort((a, b) => a.label.localeCompare(b.label));
 
   res.json({ territories });
 });

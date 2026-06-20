@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
 import { useGetCampaignBySlug } from "@workspace/api-client-react";
 import {
@@ -43,46 +43,50 @@ interface TerritoryPill {
   lng?: number;
 }
 
-function WrongTownBanner({
-  currentSlug,
-  currentLat,
-  currentLng,
-}: {
-  currentSlug: string;
-  currentLat: number | null;
-  currentLng: number | null;
-}) {
+function WrongTownBanner({ currentSlug }: { currentSlug: string }) {
   const [dismissed, setDismissed] = useState<boolean>(() => {
     try { return sessionStorage.getItem(SESSION_KEY) === "1"; } catch { return false; }
   });
-  const [territories, setTerritories] = useState<TerritoryPill[]>([]);
+  // Keep the full list (including current slug) so we can look up own coords.
+  const [allTerritories, setAllTerritories] = useState<TerritoryPill[]>([]);
   const [showAll, setShowAll] = useState(false);
 
+  // Fetch in parallel with the campaign load — fully self-contained.
   useEffect(() => {
     if (dismissed) return;
     fetch("/api/campaigns/public-territories")
       .then(r => r.ok ? r.json() : null)
       .then((data: { territories: TerritoryPill[] } | null) => {
         if (!data?.territories) return;
-        let others = data.territories.filter(t => t.slug !== currentSlug);
-        if (currentLat != null && currentLng != null) {
-          others = [...others].sort((a, b) => {
-            const aDist = a.lat != null && a.lng != null
-              ? haversineKm(currentLat, currentLng, a.lat, a.lng) : Infinity;
-            const bDist = b.lat != null && b.lng != null
-              ? haversineKm(currentLat, currentLng, b.lat, b.lng) : Infinity;
-            return aDist - bDist;
-          });
-        }
-        setTerritories(others);
+        setAllTerritories(data.territories);
       })
       .catch(() => {});
-  }, [dismissed, currentSlug, currentLat, currentLng]);
+  }, [dismissed, currentSlug]);
 
-  if (dismissed || territories.length === 0) return null;
+  // Derive origin coordinates from the current territory's own entry in the list.
+  const originCoords = useMemo(() => {
+    const me = allTerritories.find(t => t.slug === currentSlug);
+    return me?.lat != null && me?.lng != null ? { lat: me.lat, lng: me.lng } : null;
+  }, [allTerritories, currentSlug]);
 
-  const visible = showAll ? territories : territories.slice(0, MAX_VISIBLE);
-  const hiddenCount = territories.length - MAX_VISIBLE;
+  // Sort others by proximity; fall back to alphabetical when coords unavailable.
+  const sorted = useMemo(() => {
+    const others = allTerritories.filter(t => t.slug !== currentSlug);
+    if (originCoords == null) return others;
+    return [...others].sort((a, b) => {
+      const aDist = a.lat != null && a.lng != null
+        ? haversineKm(originCoords.lat, originCoords.lng, a.lat, a.lng) : Infinity;
+      const bDist = b.lat != null && b.lng != null
+        ? haversineKm(originCoords.lat, originCoords.lng, b.lat, b.lng) : Infinity;
+      return aDist - bDist;
+    });
+  }, [allTerritories, currentSlug, originCoords]);
+
+  // Do not render if dismissed, no other territories, or current has no coordinates.
+  if (dismissed || sorted.length === 0 || originCoords == null) return null;
+
+  const visible = showAll ? sorted : sorted.slice(0, MAX_VISIBLE);
+  const hiddenCount = sorted.length - MAX_VISIBLE;
 
   function dismiss() {
     try { sessionStorage.setItem(SESSION_KEY, "1"); } catch {}
@@ -361,56 +365,51 @@ export default function TerritoryLandingPage({ params }: { params: { slug: strin
     }
   }, [isLoading, isError, campaign]);
 
-  if (isLoading) {
-    return (
-      <div style={{
-        minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
-        fontFamily: "sans-serif", color: "#374151",
-      }}>
-        Loading…
-      </div>
-    );
-  }
-
-  if (isError || !campaign) {
-    return (
-      <div style={{
-        minHeight: "100vh", display: "flex", flexDirection: "column", gap: 12,
-        alignItems: "center", justifyContent: "center", fontFamily: "sans-serif",
-        color: "#374151", padding: 24, textAlign: "center",
-      }}>
-        <div style={{ fontSize: 48 }}>📭</div>
-        <h1 style={{ fontSize: 24, fontWeight: 900, color: "#111", fontFamily: "Georgia,serif", margin: 0 }}>
-          Page not found
-        </h1>
-        <p style={{ fontSize: 15, color: "#666", maxWidth: 420 }}>
-          There's no published postcard for this address. Visit the{" "}
-          <a href="/" style={{ color: "#7B1418", fontWeight: 700 }}>home page</a> to find an active campaign.
-        </p>
-      </div>
-    );
-  }
-
-  const copy = buildCopy(campaign);
+  const copy = campaign ? buildCopy(campaign) : null;
 
   return (
     <div style={{ background: "#fff", minHeight: "100vh" }}>
       <NavBar />
-      <WrongTownBanner
-        currentSlug={slug}
-        currentLat={(campaign as any)?.latitude ?? null}
-        currentLng={(campaign as any)?.longitude ?? null}
-      />
-      <Hero copy={copy} />
-      <HowItWorks copy={copy} />
-      <WhyChooseUs />
-      <PostcardBook slug={slug} />
-      <Pricing />
-      <Features copy={copy} />
-      <CTABanner />
-      <FAQSection copy={copy} />
-      <ReserveForm />
-      <Footer copy={copy} />
+      {/* WrongTownBanner is outside all loading/error guards — its fetch runs
+          in parallel with the campaign fetch. It stays hidden (returns null)
+          until campaign coordinates arrive, so it never flashes during loading. */}
+      <WrongTownBanner currentSlug={slug} />
+      {isLoading ? (
+        <div style={{
+          minHeight: "80vh", display: "flex", alignItems: "center", justifyContent: "center",
+          fontFamily: "sans-serif", color: "#374151",
+        }}>
+          Loading…
+        </div>
+      ) : isError || !campaign || !copy ? (
+        <div style={{
+          minHeight: "80vh", display: "flex", flexDirection: "column", gap: 12,
+          alignItems: "center", justifyContent: "center", fontFamily: "sans-serif",
+          color: "#374151", padding: 24, textAlign: "center",
+        }}>
+          <div style={{ fontSize: 48 }}>📭</div>
+          <h1 style={{ fontSize: 24, fontWeight: 900, color: "#111", fontFamily: "Georgia,serif", margin: 0 }}>
+            Page not found
+          </h1>
+          <p style={{ fontSize: 15, color: "#666", maxWidth: 420 }}>
+            There's no published postcard for this address. Visit the{" "}
+            <a href="/" style={{ color: "#7B1418", fontWeight: 700 }}>home page</a> to find an active campaign.
+          </p>
+        </div>
+      ) : (
+        <>
+          <Hero copy={copy} />
+          <HowItWorks copy={copy} />
+          <WhyChooseUs />
+          <PostcardBook slug={slug} />
+          <Pricing />
+          <Features copy={copy} />
+          <CTABanner />
+          <FAQSection copy={copy} />
+          <ReserveForm />
+          <Footer copy={copy} />
+        </>
+      )}
     </div>
   );
 }
