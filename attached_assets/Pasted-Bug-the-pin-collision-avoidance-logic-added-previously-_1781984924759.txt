@@ -1,0 +1,22 @@
+Bug: the pin collision-avoidance logic added previously for the Cherokee-area cluster (Woodstock, Canton, Holly Springs, Ball Ground) is placing pins in an equidistant circle pattern that does NOT reflect their real relative geography. Comparing against the actual map base layer (now visible/legible after the CartoDB Positron restyle):
+
+- **Woodstock and Canton appear swapped** — Woodstock's pin is currently positioned where Canton should be (further north/east), and vice versa.
+- **Ball Ground is plotted far south, near Marietta/Roswell/Dunwoody** — nowhere near its real location, which should be north of Canton.
+- Holly Springs and White/Habersham look roughly correct.
+
+**Root cause (likely):** the collision-spreading function is probably arranging ALL colliding pins into a perfect circle around their shared average centroid, by angle only (e.g. assigning each pin a fixed angle like 0°, 90°, 180°, 270° based on alphabetical order or array index) — completely discarding each pin's actual lat/long-derived position in favor of a uniform geometric pattern. This explains the "equidistant, none correctly placed" symptom exactly.
+
+**Required fix — preserve real relative position, only nudge minimally:**
+
+1. Find the collision-avoidance function (likely in `GeorgiaTerritoryMap.jsx` or a shared map-utils file, added during the earlier "Part 1: Spread out overlapping pins" work).
+
+2. Replace the "arrange in a perfect circle by index/alphabetical order" approach with one that respects each pin's ACTUAL projected position:
+   - Start from each pin's true projected x/y (derived correctly from its real lat/long — don't touch the projection math itself, only what happens after).
+   - For pins detected as colliding (within the ~30-40px threshold), nudge each one a SMALL amount AWAY from the cluster's shared centroid, in the direction it's already roughly positioned relative to that centroid — i.e., if Ball Ground's true coordinates put it north of the cluster center, nudge it slightly further north, not to an arbitrary circle position. A simple approach: for each colliding pin, calculate its angle FROM the cluster centroid using its OWN true x/y (not an assigned index-based angle), then push it outward along that same real angle by a small fixed distance (e.g. 15-20px) — this preserves true relative direction while just adding separation.
+   - Do NOT assign angles based on array order, alphabetical sorting, or any method unrelated to each pin's actual geographic position.
+
+3. After the fix, the relative arrangement should look correct on the map: Woodstock should sit south/west of Canton, Canton should sit north of Woodstock, Ball Ground should sit north of Canton (not south near Atlanta), matching their real-world positions — just with enough spacing added that the labels don't overlap.
+
+4. Test by comparing the rendered pin positions directly against the underlying map's own town labels (Woodstock, Canton, Ball Ground, Holly Springs all appear as labels on the CartoDB base layer itself at sufficient zoom) — the colored territory pins should land near their correctly-named counterparts on the base map, not in a generic circle pattern unrelated to the real geography.
+
+Report back with a screenshot or description confirming the corrected relative positions before considering this done.
