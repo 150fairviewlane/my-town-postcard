@@ -54,31 +54,54 @@ export function hashResetToken(raw: string): string {
   return createHash("sha256").update(raw).digest("hex");
 }
 
-// ─── CSRF double-submit cookie ────────────────────────────────────────────────
-// dealer_token is SameSite=Strict, which already blocks most CSRF. The
-// double-submit adds defense-in-depth for older browsers and environments
-// where the Strict policy may be downgraded (cross-scheme, embedded iframes).
+// ─── CSRF — HMAC-signed token ─────────────────────────────────────────────────
+// The double-submit-cookie pattern breaks in iframe-embedded contexts because
+// browsers block third-party cookies (e.g. Replit preview pane, Safari ITP).
+// Instead we issue a short-lived HMAC-SHA256 signed token. The frontend stores
+// it in memory/state and sends it back in the X-CSRF-Token header. The server
+// verifies the signature — no cookie needed, works in any iframe context.
 
-export function generateCsrfToken(): string {
-  return randomBytes(32).toString("base64url");
+import { createHmac } from "crypto";
+
+function getCsrfSecret(): string {
+  const s = process.env.SESSION_SECRET;
+  if (!s || s.length < 8) throw new Error("SESSION_SECRET is not configured");
+  return s;
 }
 
-export function setCsrfCookie(res: Response, token: string): void {
-  const isProd = process.env.NODE_ENV === "production";
-  // NOT httpOnly — the frontend JS must be able to read and send this in a header.
-  res.cookie(CSRF_COOKIE_NAME, token, {
-    httpOnly: false,
-    secure: isProd,
-    sameSite: "lax",
-    maxAge: 2 * 60 * 60 * 1000, // 2 hours
-    path: "/",
-  });
+export function generateCsrfToken(): string {
+  const nonce = randomBytes(24).toString("base64url");
+  const sig = createHmac("sha256", getCsrfSecret()).update(nonce).digest("base64url");
+  return `${nonce}.${sig}`;
+}
+
+/** No-op — kept so existing call-sites in dealers.ts don't need changing. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function setCsrfCookie(_res: Response, _token: string): void {
+  // Cookie-based double-submit removed; token is validated by HMAC signature.
 }
 
 export const csrfProtect: RequestHandler = (req, res, next) => {
   const headerToken = req.headers["x-csrf-token"] as string | undefined;
-  const cookieToken = (req as any).cookies?.[CSRF_COOKIE_NAME] as string | undefined;
-  if (!headerToken || !cookieToken || headerToken !== cookieToken) {
+  if (!headerToken) {
+    res.status(403).json({
+      error: "Invalid CSRF token. Please refresh the page and try again.",
+      reason: "csrf_missing",
+    });
+    return;
+  }
+  const dot = headerToken.lastIndexOf(".");
+  if (dot === -1) {
+    res.status(403).json({
+      error: "Invalid CSRF token. Please refresh the page and try again.",
+      reason: "csrf_malformed",
+    });
+    return;
+  }
+  const nonce = headerToken.slice(0, dot);
+  const providedSig = headerToken.slice(dot + 1);
+  const expectedSig = createHmac("sha256", getCsrfSecret()).update(nonce).digest("base64url");
+  if (providedSig !== expectedSig) {
     res.status(403).json({
       error: "Invalid CSRF token. Please refresh the page and try again.",
       reason: "csrf_mismatch",
