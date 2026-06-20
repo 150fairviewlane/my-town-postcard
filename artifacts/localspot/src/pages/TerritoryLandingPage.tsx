@@ -32,7 +32,7 @@ function buildCopy(campaign: any): LandingCopy {
   const month: string = (campaign?.mailingMonth || "").trim();
 
   // If the campaign carries no territory copy at all, fall back wholesale to the
-  // flagship Habersham copy so the page still reads cleanly.
+  // generic default copy so the page still reads cleanly.
   if (!territory && !cityListRaw && !season && !month) {
     return { ...DEFAULT_COPY };
   }

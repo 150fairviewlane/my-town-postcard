@@ -157,7 +157,7 @@ function CheckoutForm({ spotId, clientSecret, amount, size, businessName, expire
           <div style={{ fontWeight: 700, fontSize: 16, color: "#111" }}>{sizeLabel} Ad Spot</div>
           <div style={{ color: "#6b7280", fontSize: 13, marginTop: 2 }}>{businessName}</div>
           <div style={{ fontWeight: 900, fontSize: 28, color: "#991b1b", marginTop: 8 }}>${(amount / 100).toFixed(2)}</div>
-          <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>Reaches 5,000 Clarkesville-area homes</div>
+          <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>Reaches 5,000 local homes via USPS EDDM</div>
         </div>
 
         <div style={{ border: "1.5px solid #d1d5db", borderRadius: 10, padding: "14px 16px", marginBottom: 16 }}>

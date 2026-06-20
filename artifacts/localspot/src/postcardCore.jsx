@@ -27,7 +27,7 @@ export const GRID_AREAS = [
 ].map(r => `"${r}"`).join(" ");
 
 
-// ─── 2. CLARKESVILLE FAMILY DENTAL — White + Navy/Gold, Badge Logo ─────────
+// ─── 2. VALLEY FAMILY DENTAL — White + Navy/Gold, Badge Logo ────────────────
 // Layout: White background, navy header band, badge logomark, navy coupon strip bottom
 function FamilyDentalAd({ size }) {
   const L = size === "large";
@@ -62,11 +62,11 @@ function FamilyDentalAd({ size }) {
             fontSize: L ? 14 : M ? 11 : 9,
             fontFamily: "Georgia, serif", lineHeight: 1.15,
             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-          }}>Clarkesville Family Dental</div>
+          }}>Valley Family Dental</div>
           <div style={{
             color: "#d4a017", fontSize: L ? 9 : 7.5,
             fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginTop: 1,
-          }}>General Dentistry · Clarkesville, GA</div>
+          }}>General Dentistry · Northeast Georgia</div>
         </div>
       </div>
 
@@ -114,7 +114,7 @@ function FamilyDentalAd({ size }) {
             borderTop: "1px solid #e5e7eb", paddingTop: L ? 8 : 5,
           }}>
             <div>⏰ Mon–Fri 8am–5pm · Sat by appt</div>
-            {L && <div style={{ marginTop: 2 }}>📍 142 Commerce St, Clarkesville, GA</div>}
+            {L && <div style={{ marginTop: 2 }}>📍 Northeast Georgia</div>}
             <div style={{ marginTop: 2, color: "#0a2a5e", fontWeight: 800 }}>☎ (706) 555-0142</div>
           </div>
         )}
@@ -247,7 +247,7 @@ function BlueRidgeAd({ size }) {
         {(L || M) && (
           <div style={{
             color: "#555", fontSize: L ? 9 : 8, textAlign: "right", marginTop: 4, lineHeight: 1.4,
-          }}>Clarkesville, GA<br />{L ? "Licensed & Insured" : ""}</div>
+          }}>Northeast Georgia<br />{L ? "Licensed & Insured" : ""}</div>
         )}
       </div>
 
@@ -442,7 +442,7 @@ function RomasPizzaAd({ size }) {
           <div style={{ color: "#fff", fontWeight: 900, fontSize: L ? 13 : 10.5,
             fontFamily: "Georgia, serif" }}>Roma's Pizza &amp; Subs</div>
           <div style={{ color: "rgba(255,255,255,0.65)", fontSize: L ? 8.5 : 7.5 }}>
-            Italian Restaurant · Clarkesville
+            Italian Restaurant · Northeast Georgia
           </div>
         </div>
       </div>
@@ -638,7 +638,7 @@ export function PaidAd({ spot }) {
       if (renderSize === "large")  return <MrBiscuitsLarge />;
       if (renderSize === "medium") return <MrBiscuitsMedium />;
       return <MrBiscuitsSmall />;
-    case "Clarkesville Family Dental":  return <FamilyDentalAd  {...s} />;
+    case "Valley Family Dental":        return <FamilyDentalAd  {...s} />;
     case "Blue Ridge Air & Heat":       return <BlueRidgeAd     {...s} />;
     case "Tanner Insurance Agency":     return <TannerAd        {...s} />;
     case "Roma's Pizza & Subs":         return <RomasPizzaAd    {...s} />;

@@ -25,7 +25,7 @@ function buildSystemPrompt(formData, sizeKey) {
     M: 'Medium (3×2")', S: 'Small (3×1.5")',
   }[sizeKey] || sizeKey;
 
-  return `You are an expert print advertising consultant helping a local business owner design their ad for the Clarkesville Community Mailer — a 9×12 co-op postcard reaching 5,000 homes in Habersham County, Georgia.
+  return `You are an expert print advertising consultant helping a local business owner design their ad for the My Town Postcard — a 9×12 co-op postcard reaching 5,000 homes in Northeast Georgia.
 
 CURRENT AD STATE:
 - Business Name: ${formData.businessName || "not entered yet"}
@@ -79,7 +79,7 @@ Rules for the FIELDS block:
 PERSONALITY:
 - Direct and specific — write actual copy, not just advice
 - Keep conversational responses SHORT (2-4 sentences)
-- Local-focused — reference Clarkesville and local homeowners naturally
+- Local-focused — reference the local community and homeowners naturally
 - Friendly and encouraging
 - When presenting multiple options, ALWAYS format them as a simple numbered list like this:
   1. Option text here
