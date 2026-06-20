@@ -120,22 +120,22 @@ export default function GeorgiaTerritoryMap() {
 
       if (mapRef.current._leaflet_id) return;
 
-      // North-Georgia-focused bounding box
-      // Chattanooga TN (~35.05N) top, Macon GA (~32.84N) bottom,
-      // Anniston AL (~33.66N -85.83W) left, Augusta GA (~33.47N -81.97W) right
-      const northGaBounds = L.latLngBounds(
-        L.latLng(32.7, -85.9),
-        L.latLng(35.15, -81.9)
-      );
+      // North-Georgia reference frame (zoom 8):
+      //   center 33.90°N, -83.97°W places Chattanooga near top,
+      //   Macon near bottom, Anniston on the left, Augusta on the right.
+      const INITIAL_CENTER = [33.9, -83.97];
+      const INITIAL_ZOOM   = 8;
 
       map = L.map(mapRef.current, {
-        minZoom: 6,
-        maxZoom: 18,
-        maxBounds: L.latLngBounds(L.latLng(24.0, -95.0), L.latLng(38.0, -73.0)),
-        maxBoundsViscosity: 1.0,
-        scrollWheelZoom: true,
-        zoomControl: true,
-        attributionControl: false,
+        center:              INITIAL_CENTER,
+        zoom:                INITIAL_ZOOM,
+        minZoom:             6,
+        maxZoom:             18,
+        maxBounds:           L.latLngBounds(L.latLng(24.0, -95.0), L.latLng(38.0, -73.0)),
+        maxBoundsViscosity:  1.0,
+        scrollWheelZoom:     true,
+        zoomControl:         true,
+        attributionControl:  false,
       });
 
       L.tileLayer(
@@ -146,9 +146,6 @@ export default function GeorgiaTerritoryMap() {
           maxZoom: 18,
         }
       ).addTo(map);
-
-      // Zoom to North Georgia reference frame
-      map.fitBounds(northGaBounds, { padding: [24, 24], animate: false });
 
       // Spread any overlapping pins into a readable radial cluster
       const spreadPins = spreadClusteredPins(pinned);
@@ -243,7 +240,7 @@ export default function GeorgiaTerritoryMap() {
             ref={mapRef}
             style={{
               width: "100%",
-              height: "clamp(440px, 58vw, 640px)",
+              height: "clamp(440px, 61vw, 550px)",
               borderRadius: 14,
               overflow: "hidden",
               boxShadow: "0 6px 32px rgba(0,0,0,0.14)",
