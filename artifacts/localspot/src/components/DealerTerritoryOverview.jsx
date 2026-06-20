@@ -1,4 +1,5 @@
 import { useState } from "react";
+import MiniAdPickerGrid from "./MiniAdPickerGrid";
 
 const RED = "#7B1418";
 const GOLD = "#C9A84C";
@@ -105,6 +106,10 @@ function TerritoryCard({ campaign, showRevenue }) {
       </div>
 
       <FillBar sold={campaign.soldSpots} total={campaign.totalSpots} />
+
+      {campaign.spots && campaign.spots.length > 0 && (
+        <MiniAdPickerGrid spots={campaign.spots} />
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 16px" }}>
         <div>

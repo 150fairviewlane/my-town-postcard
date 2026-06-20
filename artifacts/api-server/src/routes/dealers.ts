@@ -1295,6 +1295,13 @@ router.get("/dealers/portal-data", requireDealerAuth, async (req, res): Promise<
         availableSpots: spots.filter((s) => s.status === "available").length,
         revenueCents,
         commissionCents: computeCommissionCents(revenueCents),
+        spots: spots.map((s) => ({
+          gridArea: s.gridArea,
+          side: s.side,
+          status: s.status,
+          businessName: s.businessName ?? null,
+          adFileUrl: s.adFileUrl ?? null,
+        })),
       };
     }),
   );
