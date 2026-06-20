@@ -926,6 +926,19 @@ router.post("/admin/dealers", requireAdmin, async (req, res): Promise<void> => {
   });
 
   req.log.info({ dealerId: dealer.id, email, territoryId }, "Admin created dealer (no payment required)");
+
+  // Auto-provision landing page campaigns and spots, exactly as the public signup flow does.
+  let landingPageCreated = false;
+  if (territoryId) {
+    try {
+      const campaignIds = await ensureDealerLandingPage(dealer.id);
+      landingPageCreated = campaignIds.length > 0;
+      req.log.info({ dealerId: dealer.id, campaignIds }, "Admin dealer: landing page auto-provisioned");
+    } catch (err: unknown) {
+      req.log.warn({ dealerId: dealer.id, err: (err as Error)?.message }, "Admin dealer: landing page provisioning failed — dealer still created");
+    }
+  }
+
   res.status(201).json({
     dealer: {
       id: dealer.id,
@@ -937,6 +950,7 @@ router.post("/admin/dealers", requireAdmin, async (req, res): Promise<void> => {
       activatedAt: dealer.activatedAt,
       createdAt: dealer.createdAt,
     },
+    landingPageCreated,
   });
 });
 

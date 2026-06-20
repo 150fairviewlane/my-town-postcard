@@ -532,6 +532,10 @@ export default function AdminDealersPage() {
       setNewTerritory(null);
       setCreateStep(1);
       loadDealers(token);
+      const msg = data.landingPageCreated
+        ? `${data.dealer.name} created — landing page ready`
+        : `${data.dealer.name} created`;
+      setToast(msg);
     } catch (err) {
       setCreateError(err.message);
     } finally {
