@@ -95,13 +95,7 @@ function Overview({ token }) {
   const totalPaid = campaigns.reduce((s, c) => s + (c.paidSpots ?? 0), 0);
   const totalSpots = campaigns.reduce((s, c) => s + (c.totalSpots ?? 0), 0);
   const overallFillRate = totalSpots > 0 ? Math.round((totalPaid / totalSpots) * 100) : null;
-  const activeTerritories = territories.filter(t =>
-    campaigns.some(c => {
-      const ct = (c.territory ?? "").toLowerCase().trim();
-      const tn = (t.name ?? "").toLowerCase().trim();
-      return ct === tn || ct.includes(tn) || tn.includes(ct);
-    })
-  ).length;
+  const activeTerritories = territories.filter(t => t.dealerId != null).length;
 
   return (
     <div style={{ padding: "32px 32px 48px" }}>

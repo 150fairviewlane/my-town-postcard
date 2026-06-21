@@ -37,21 +37,27 @@ function matchesTerritoryName(campaignTerritory, territoryName) {
 function TerritoriesContent({ token }) {
   const [territories, setTerritories] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
+  const [dealerMap, setDealerMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
 
   const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
+  const auth = { Authorization: `Bearer ${token}` };
 
   useEffect(() => {
-    const auth = { Authorization: `Bearer ${token}` };
     Promise.all([
       fetch(`${base}/api/territories`).then(r => r.json()),
       fetch(`${base}/api/admin/campaigns`, { headers: auth }).then(r => r.json()),
+      fetch(`${base}/api/admin/dealers`, { headers: auth }).then(r => r.json()),
     ])
-      .then(([tData, cData]) => {
+      .then(([tData, cData, dData]) => {
         setTerritories(Array.isArray(tData) ? tData : []);
         setCampaigns(Array.isArray(cData.campaigns) ? cData.campaigns : []);
+        const dealers = Array.isArray(dData.dealers) ? dData.dealers : [];
+        const map = {};
+        dealers.forEach(d => { map[d.id] = d; });
+        setDealerMap(map);
       })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
@@ -60,15 +66,24 @@ function TerritoriesContent({ token }) {
   const filtered = territories.filter(t => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
+    const dealer = t.dealerId ? dealerMap[t.dealerId] : null;
     return (
       (t.name ?? "").toLowerCase().includes(q) ||
       (t.state ?? "").toLowerCase().includes(q) ||
-      (t.id ?? "").toLowerCase().includes(q)
+      (t.id ?? "").toLowerCase().includes(q) ||
+      (dealer?.name ?? "").toLowerCase().includes(q)
     );
   });
 
   function getCampaignsForTerritory(territory) {
     return campaigns.filter(c => matchesTerritoryName(c.territory, territory.name));
+  }
+
+  function getPrimaryDetailHref(territory) {
+    const tCampaigns = getCampaignsForTerritory(territory);
+    if (tCampaigns.length === 0) return null;
+    const active = tCampaigns.find(c => c.status === "active") ?? tCampaigns[0];
+    return `/admin/territories/detail?id=${active.id}`;
   }
 
   return (
@@ -97,7 +112,7 @@ function TerritoriesContent({ token }) {
       <div style={{ marginBottom: 18 }}>
         <input
           type="text"
-          placeholder="Search by name, state, or ID…"
+          placeholder="Search by name, state, dealer, or ID…"
           value={search}
           onChange={e => setSearch(e.target.value)}
           style={{
@@ -136,7 +151,7 @@ function TerritoriesContent({ token }) {
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead style={{ background: "#f9fafb" }}>
                   <tr>
-                    {["Name", "State", "Status", "Type", "Campaigns", "Actions"].map(h => (
+                    {["Name", "State", "Status", "Dealer", "Campaigns", "Actions"].map(h => (
                       <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "#6b7280", letterSpacing: 0.5, textTransform: "uppercase" }}>{h}</th>
                     ))}
                   </tr>
@@ -144,15 +159,32 @@ function TerritoriesContent({ token }) {
                 <tbody>
                   {filtered.map(t => {
                     const tCampaigns = getCampaignsForTerritory(t);
+                    const dealer = t.dealerId ? dealerMap[t.dealerId] : null;
+                    const primaryHref = getPrimaryDetailHref(t);
                     return (
                       <tr key={t.id} style={{ borderTop: "1px solid #f3f4f6" }}>
-                        <td style={{ padding: "12px 14px", fontSize: 13, fontWeight: 700, color: "#111" }}>{t.name}</td>
+                        <td style={{ padding: "12px 14px", fontSize: 13, fontWeight: 700, color: "#111" }}>
+                          {primaryHref ? (
+                            <Link
+                              href={primaryHref}
+                              style={{ color: BURGUNDY, textDecoration: "none", fontWeight: 700 }}
+                            >
+                              {t.name}
+                            </Link>
+                          ) : (
+                            t.name
+                          )}
+                        </td>
                         <td style={{ padding: "12px 14px", fontSize: 13, color: "#374151" }}>{t.state ?? "—"}</td>
                         <td style={{ padding: "12px 14px" }}>
                           <StatusPill status={t.status} />
                         </td>
-                        <td style={{ padding: "12px 14px", fontSize: 12, color: "#6b7280", textTransform: "capitalize" }}>
-                          {t.source ?? "—"}
+                        <td style={{ padding: "12px 14px", fontSize: 13, color: "#374151" }}>
+                          {dealer ? (
+                            <span style={{ fontWeight: 600 }}>{dealer.name}</span>
+                          ) : (
+                            <span style={{ color: "#d1d5db" }}>—</span>
+                          )}
                         </td>
                         <td style={{ padding: "12px 14px", fontSize: 12, color: "#374151" }}>
                           {tCampaigns.length === 0 ? (
