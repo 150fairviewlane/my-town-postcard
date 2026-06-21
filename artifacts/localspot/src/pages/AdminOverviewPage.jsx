@@ -78,18 +78,23 @@ function Overview({ token }) {
           fetch(`${base}/api/admin/dealers`, { headers: auth }),
           fetch(`${base}/api/territories`),
         ]);
+        if (cRes.status === 401 || dRes.status === 401) {
+          localStorage.removeItem("admin_token");
+          window.location.href = "/admin";
+          return;
+        }
         const [cData, dData, tData] = await Promise.all([cRes.json(), dRes.json(), tRes.json()]);
         setCampaigns(cData.campaigns ?? []);
         setDealers(dData.dealers ?? []);
         setTerritories(Array.isArray(tData) ? tData : []);
       } catch {
-        // silently degrade
+        // network error — degrade gracefully
       } finally {
         setLoading(false);
       }
     };
     run();
-  }, []);
+  }, [token]);
 
   const totalRevenue = campaigns.reduce((s, c) => s + (c.totalRevenue ?? 0), 0);
   const totalPaid = campaigns.reduce((s, c) => s + (c.paidSpots ?? 0), 0);
