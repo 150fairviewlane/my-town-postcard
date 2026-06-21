@@ -17,10 +17,21 @@ const ACTIVE_MODELS = [
     desc: "Claude reads your ad, writes an enhanced prompt, then gpt-image-1 generates the result",
     badge: "#7c3aed", badgeBg: "#f5f3ff",
   },
+  {
+    id: "gpt-image-edit",
+    label: "gpt-image-1 (direct edit)",
+    desc: "Your image is sent directly to gpt-image-1's edit endpoint — no vision bridge or prompt enhancement",
+    badge: "#065f46", badgeBg: "#ecfdf5",
+  },
+  {
+    id: "grok-image-edit",
+    label: "Grok (direct edit)",
+    desc: "Your image is sent directly to Grok's image-edit API — no prompt enhancement step",
+    badge: "#92400e", badgeBg: "#fffbeb",
+  },
 ];
 
 const COMING_SOON = [
-  { label: "Grok Vision",   reason: "API key not configured" },
   { label: "Stability AI",  reason: "API key not configured" },
   { label: "Ideogram",      reason: "API key not configured" },
   { label: "Midjourney",    reason: "No public API available" },
@@ -151,7 +162,7 @@ export default function AdminAITestPage() {
   const [imageData, setImageData]     = useState(null);
   const [imageName, setImageName]     = useState("");
   const [prompt, setPrompt]           = useState(DEFAULT_PROMPT);
-  const [selected, setSelected]       = useState(["gpt4o-enhanced", "claude-enhanced"]);
+  const [selected, setSelected]       = useState(["gpt4o-enhanced", "claude-enhanced", "gpt-image-edit", "grok-image-edit"]);
   const [running, setRunning]         = useState(false);
   const [results, setResults]         = useState([]);
   const [globalError, setGlobalError] = useState(null);

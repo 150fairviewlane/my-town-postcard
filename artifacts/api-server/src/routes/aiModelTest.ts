@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import OpenAI from "openai";
+import OpenAI, { toFile } from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import jwt from "jsonwebtoken";
 import { db, generatedAdsTable } from "@workspace/db";
@@ -13,6 +13,11 @@ function requireAdmin(req: any, res: any, next: any): void {
   if (!auth?.startsWith("Bearer ")) { res.status(401).json({ error: "Unauthorized" }); return; }
   try { jwt.verify(auth.slice(7), JWT_SECRET); next(); }
   catch { res.status(401).json({ error: "Invalid or expired token" }); }
+}
+
+function getXAI(): { apiKey: string } | null {
+  const apiKey = process.env.XAI_API_KEY;
+  return apiKey ? { apiKey } : null;
 }
 
 function getOpenAI(): OpenAI | null {
@@ -90,11 +95,59 @@ async function generateWithGptImage1(openai: OpenAI, prompt: string): Promise<st
   return `data:image/png;base64,${b64}`;
 }
 
+/** Send the uploaded image directly to gpt-image-1's edit endpoint — no vision bridge. */
+async function generateWithGptImageEdit(openai: OpenAI, imageData: string, userPrompt: string): Promise<string> {
+  const match = imageData.match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) throw new Error("Invalid image data URL");
+  const buffer = Buffer.from(match[2], "base64");
+  const file   = await toFile(buffer, "upload.png", { type: match[1] });
+
+  const imgRes = await (openai.images as any).edit({
+    model:  "gpt-image-1",
+    image:  file,
+    prompt: userPrompt,
+    size:   "1024x1536",
+  });
+  const b64 = imgRes.data?.[0]?.b64_json;
+  if (!b64) throw new Error("gpt-image-1 edit returned no image");
+  return `data:image/png;base64,${b64}`;
+}
+
+/** Send the uploaded image directly to Grok's /images/edits — no prompt enhancement. */
+async function generateWithGrokEdit(imageData: string, userPrompt: string): Promise<string> {
+  const xai = getXAI();
+  if (!xai) throw new Error("XAI_API_KEY not configured");
+
+  const body = {
+    model:  "grok-imagine-image-quality",
+    prompt: userPrompt,
+    n:      1,
+    images: [{ type: "image_url", url: imageData }],
+  };
+  const res  = await fetch("https://api.x.ai/v1/images/edits", {
+    method:  "POST",
+    headers: { Authorization: `Bearer ${xai.apiKey}`, "Content-Type": "application/json" },
+    body:    JSON.stringify(body),
+  });
+  const json = await res.json() as Record<string, unknown>;
+  if (!res.ok) {
+    const msg = (json?.error as Record<string, unknown>)?.message;
+    throw new Error(typeof msg === "string" ? msg : `xAI edits error ${res.status}`);
+  }
+  const data = Array.isArray(json?.data) ? (json.data as Record<string, unknown>[]) : [];
+  const item = data[0];
+  if (typeof item?.b64_json === "string") return `data:image/png;base64,${item.b64_json}`;
+  if (typeof item?.url === "string" && item.url) return item.url;
+  throw new Error("No image returned from xAI /images/edits");
+}
+
 // ── Pipeline definitions ────────────────────────────────────────────────────
 
 const MODEL_META: Record<string, { label: string; desc: string }> = {
-  "gpt4o-enhanced":  { label: "GPT-4o → gpt-image-1",  desc: "GPT-4o vision analysis → enhanced prompt → gpt-image-1 generation" },
-  "claude-enhanced": { label: "Claude → gpt-image-1",   desc: "Claude vision analysis → enhanced prompt → gpt-image-1 generation" },
+  "gpt4o-enhanced":  { label: "GPT-4o → gpt-image-1",       desc: "GPT-4o vision analysis → enhanced prompt → gpt-image-1 generation" },
+  "claude-enhanced": { label: "Claude → gpt-image-1",        desc: "Claude vision analysis → enhanced prompt → gpt-image-1 generation" },
+  "gpt-image-edit":  { label: "gpt-image-1 (direct edit)",   desc: "Uploaded image sent directly to gpt-image-1 edit endpoint — no vision bridge" },
+  "grok-image-edit": { label: "Grok (direct edit)",          desc: "Uploaded image sent directly to Grok /images/edits — no prompt enhancement" },
 };
 
 async function runPipeline(
@@ -114,6 +167,10 @@ async function runPipeline(
       const prompt = await enhanceWithClaude(anthropic, imageData, userPrompt);
       return generateWithGptImage1(openai, prompt);
     }
+    case "gpt-image-edit":
+      return generateWithGptImageEdit(openai, imageData, userPrompt);
+    case "grok-image-edit":
+      return generateWithGrokEdit(imageData, userPrompt);
     default:
       throw new Error(`Unknown model: ${modelId}`);
   }
