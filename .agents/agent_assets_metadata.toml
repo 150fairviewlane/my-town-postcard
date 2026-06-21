@@ -23,3 +23,9 @@ id = "apDOFVnPaXYMllTWisimy"
 uri = "file://artifacts/api-server/test-transforms.zip"
 type = "unspecified"
 title = "test-transforms.zip — 60 palette-transformed template images"
+
+[[outputs]]
+id = "ASv9Sx4jCZawjbigdlxUq"
+uri = "file://artifacts/localspot/public/postcard-white-granite-1782007321078.png"
+type = "image"
+title = "Postcard on White Granite"
