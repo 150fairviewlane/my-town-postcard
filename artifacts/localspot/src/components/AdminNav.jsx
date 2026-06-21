@@ -194,12 +194,9 @@ export default function AdminNav() {
           <NavLink href="/admin" icon="🏠" label="Overview" />
         </div>
 
-        <NavSection label="Campaigns" />
-        <NavLink href="/admin/territories/detail" icon="📅" label="Habersham Campaign" />
-
         <NavSection label="Territories" />
         <NavLink href="/admin/territories" icon="🗺" label="All Territories" />
-        <NavLink href="/admin/territories/custom" icon="➕" label="New Territory" />
+        <NavLink href="/admin/territories/detail" icon="📅" label="Spot Tables" />
 
         <NavSection label="Sales" />
         <NavLink href="/admin/outreach" icon="📞" label="Outreach Tracker" />
@@ -232,6 +229,7 @@ export default function AdminNav() {
             <div style={{ paddingBottom: 4 }}>
               <NavLink href="/admin/ai-test" icon="🧪" label="AI Model Testing" />
               <NavLink href="/admin/image-gen" icon="🖼" label="Image Generator" />
+              <NavLink href="/api/admin/image-library" icon="🖼️" label="Manage Ads" external />
               <NavLink href="/api/grok-ad-generator" icon="✦" label="Grok Ad Gen" external />
               <NavLink href="/api/admin/image-library" icon="📷" label="Image Library" external />
               <NavLink href={`/admin/territories/zip-manager?token=${encodeURIComponent(token)}`} icon="📍" label="ZIP Manager" />

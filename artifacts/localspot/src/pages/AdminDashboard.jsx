@@ -613,7 +613,6 @@ function Dashboard({ token, onLogout }) {
   const completeMutation = useCompleteCampaign({ request: authRequest });
   const [approving, setApproving] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
-  const [showNewForm, setShowNewForm] = useState(false);
 
   const authOpts = {
     meta: { headers: { Authorization: `Bearer ${token}` } },
@@ -784,12 +783,6 @@ function Dashboard({ token, onLogout }) {
                 </option>
               ))}
             </select>
-            <button
-              onClick={() => setShowNewForm((v) => !v)}
-              style={{ background: "#111", color: "#fff", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
-            >
-              {showNewForm ? "Close" : "+ New Campaign"}
-            </button>
             {canActivate && (
               <button
                 onClick={handleActivate}
@@ -811,17 +804,6 @@ function Dashboard({ token, onLogout }) {
           </div>
         </div>
 
-        {showNewForm && (
-          <NewCampaignForm
-            token={token}
-            onCreated={(id) => {
-              setShowNewForm(false);
-              setSelectedId(id);
-            }}
-            onCancel={() => setShowNewForm(false)}
-          />
-        )}
-
         {detailLoading && (
           <div style={{ padding: 40, textAlign: "center", color: "#6b7280" }}>Loading campaign…</div>
         )}
@@ -830,7 +812,7 @@ function Dashboard({ token, onLogout }) {
         )}
         {!detailLoading && !detailError && !campaign && campaigns.length === 0 && (
           <div style={{ padding: 40, textAlign: "center", color: "#6b7280" }}>
-            No campaigns yet. Click <strong>+ New Campaign</strong> to create your first one.
+            No campaigns yet.
           </div>
         )}
 

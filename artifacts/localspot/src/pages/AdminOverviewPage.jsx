@@ -91,12 +91,17 @@ function Overview({ token }) {
     run();
   }, []);
 
-  const activeCampaign = campaigns.find(c => c.status === "active");
   const totalRevenue = campaigns.reduce((s, c) => s + (c.totalRevenue ?? 0), 0);
-  const activeDealers = dealers.filter(d => d.status === "active").length;
-  const fillRate = activeCampaign
-    ? Math.round(((activeCampaign.paidSpots ?? 0) / Math.max(activeCampaign.totalSpots ?? 1, 1)) * 100)
-    : null;
+  const totalPaid = campaigns.reduce((s, c) => s + (c.paidSpots ?? 0), 0);
+  const totalSpots = campaigns.reduce((s, c) => s + (c.totalSpots ?? 0), 0);
+  const overallFillRate = totalSpots > 0 ? Math.round((totalPaid / totalSpots) * 100) : null;
+  const activeTerritories = territories.filter(t =>
+    campaigns.some(c => {
+      const ct = (c.territory ?? "").toLowerCase().trim();
+      const tn = (t.name ?? "").toLowerCase().trim();
+      return ct === tn || ct.includes(tn) || tn.includes(ct);
+    })
+  ).length;
 
   return (
     <div style={{ padding: "32px 32px 48px" }}>
@@ -118,23 +123,23 @@ function Overview({ token }) {
               icon="💰"
             />
             <StatCard
-              label="Active Campaign Fill"
-              value={activeCampaign ? `${fillRate}%` : "—"}
-              sub={activeCampaign ? `${activeCampaign.paidSpots ?? 0} of ${activeCampaign.totalSpots ?? 0} spots sold` : "No active campaign"}
+              label="Overall Fill Rate"
+              value={overallFillRate !== null ? `${overallFillRate}%` : "—"}
+              sub={`${totalPaid} of ${totalSpots} spots sold`}
               color="#15803d"
               icon="📮"
             />
             <StatCard
-              label="Active Dealers"
-              value={activeDealers}
-              sub={`${dealers.length} total enrolled`}
+              label="Total Dealers"
+              value={dealers.length}
+              sub="All enrolled dealers"
               color="#1d4ed8"
               icon="💼"
             />
             <StatCard
-              label="Territories"
-              value={territories.length}
-              sub="All registered territories"
+              label="Active Territories"
+              value={activeTerritories}
+              sub={`${territories.length} total registered`}
               color="#7c3aed"
               icon="🗺"
             />
