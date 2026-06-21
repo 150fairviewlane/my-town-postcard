@@ -1,0 +1,57 @@
+Restructure the admin dashboard's navigation and layout. Currently it's a flat row of ~13 unrelated buttons (Outreach Tracker, Scan Analytics, Dealers, Subscriptions, Custom Territory, ZIP Manager, AI Model Testing, Image Library, Grok Ad Generator, Image Generator, Manage Ads, Test Email, + New Campaign) with no hierarchy, and the dashboard currently defaults to showing ONE specific territory's spot table (White/Habersham) as if it were the home page. This made sense when there was only one territory — it doesn't anymore now that there are multiple dealers and territories.
+
+**Do not change any of the underlying pages/functionality being linked to** — every existing tool/page (Dealers list, Territory list, Outreach Tracker, Subscriptions, AI Model Testing, Image Library, Grok Ad Generator, Image Generator, Manage Ads, ZIP Manager, Test Email, Custom Territory creation) keeps working exactly as it does today. This is purely a navigation/information-architecture restructure.
+
+---
+
+## New nav structure
+
+Replace the current flat button row with this grouped hierarchy (sidebar or top-nav, matching whatever pattern fits the existing admin layout best — use your judgement on sidebar vs. top-nav, but it must show clear grouping, not one flat row):
+
+```
+🏠 Overview                  (NEW — see Part 1 below)
+💼 Dealers                   → existing dealers list page
+🗺 Territories                → existing "Territory Landing Pages" admin overview (built earlier) — NOT the single-campaign view
+📞 Outreach                  → existing Outreach Tracker + "Discover New Leads"
+🔁 Subscriptions             → existing MRR/subscriptions page
+🛠 Tools  (collapsible group/dropdown)
+   ├ AI Model Testing
+   ├ Image Library
+   ├ Grok Ad Generator
+   ├ Image Generator
+   ├ Manage Ads
+   ├ ZIP Manager
+   └ Test Email
+```
+
+Delete the "+ New Campaign" button entirely — it's been replaced by the Custom Territory tool. Add "Create Custom Territory" as a clearly-placed action button on the **Territories** page (not in the main nav) — e.g. a prominent button at the top of the territories list, similar to how the Dealers page likely already has a way to add a dealer.
+
+---
+
+## Part 1: New "Overview" home page
+
+This becomes the default landing page when an admin logs in (replacing the current behavior of dropping directly into one territory's detail view).
+
+Show business-wide summary stats, reusing existing data/endpoints wherever possible rather than building new aggregation logic from scratch:
+
+1. **Top stat cards**: Total dealers, Total active territories, Total revenue across ALL territories combined, Total spots sold across all territories / total spots available (an overall fill rate).
+2. **Recent activity** (if reasonably easy to derive from existing data — e.g. most recently created/paid spots across any campaign): a short list of the last 5-10 paid spots system-wide, each showing business name, territory, and amount — skip this section if there's no easy existing data source for it, don't build new tracking just for this.
+3. **Quick links**: small cards/buttons linking to Dealers, Territories, and Outreach — the 3 most common next actions from this home page.
+
+Match existing admin styling (burgundy/gold/cream, DM Sans, Bebas Neue headers).
+
+---
+
+## Part 2: Confirm Territories entry point
+
+The "Territories" nav item should go to the EXISTING territory-landing-pages admin overview screen (built earlier in this project — shows all territories with fill stats and links to each one's individual landing page AND each one's individual admin detail view, i.e. the spot-table page you're currently looking at as "the whole dashboard"). That existing overview page should now be reachable, since clicking a row/card there is how an admin reaches what's currently shown as the default dashboard (the White/Habersham spot table) — that page becomes "Territory Detail," reached via Territories → click one, not the default landing experience.
+
+---
+
+## Part 3: Confirm Dealers entry point
+
+The "Dealers" nav item should go to the dealers list, and clicking a dealer should go to the Dealer Detail page (built earlier — shows all of a dealer's territories, stats, commission, ad-picker thumbnails). Confirm this routing is correct and reachable from the new nav.
+
+---
+
+After implementing, confirm: logging in as admin lands on the new Overview page (not directly on a single territory), the nav clearly groups items into Dealers / Territories / Outreach / Subscriptions / Tools instead of one flat row, "+ New Campaign" is removed, and "Create Custom Territory" is accessible from the Territories page. Report back the final nav structure and home page layout.
