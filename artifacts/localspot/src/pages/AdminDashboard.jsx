@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useSearch } from "wouter";
 import {
   useAdminLogin,
   useApproveAd,
   useListAdminCampaigns,
   useGetAdminCampaignById,
-  useCreateCampaign,
   useActivateCampaign,
   useCompleteCampaign,
   getListAdminCampaignsQueryKey,
@@ -59,107 +59,6 @@ const STATUS_PILL = {
   completed: { bg: "#fef2f2", color: "#991b1b", label: "Completed" },
 };
 
-function TestEmailWidget({ token }) {
-  const [open, setOpen] = useState(false);
-  const [to, setTo] = useState("");
-  const [status, setStatus] = useState("idle"); // idle | sending | success | error
-  const [errMsg, setErrMsg] = useState("");
-
-  const send = async () => {
-    if (!to.trim()) return;
-    setStatus("sending");
-    setErrMsg("");
-    try {
-      const res = await fetch(`${import.meta.env.BASE_URL}api/admin/test-email`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ to: to.trim() }),
-      });
-      const json = await res.json();
-      if (json.success) {
-        setStatus("success");
-        setTimeout(() => { setStatus("idle"); setOpen(false); setTo(""); }, 3000);
-      } else {
-        setStatus("error");
-        setErrMsg(json.error ?? "Unknown error");
-      }
-    } catch (e) {
-      setStatus("error");
-      setErrMsg(String(e));
-    }
-  };
-
-  return (
-    <div style={{ position: "relative" }}>
-      <button
-        onClick={() => { setOpen((v) => !v); setStatus("idle"); setErrMsg(""); }}
-        style={{
-          fontSize: 13, fontWeight: 700, color: "#065f46",
-          background: "#ecfdf5", border: "1px solid #6ee7b7",
-          borderRadius: 8, padding: "7px 12px", cursor: "pointer",
-        }}
-      >
-        📧 Test Email
-      </button>
-      {open && (
-        <div style={{
-          position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 50,
-          background: "#fff", border: "1px solid #d1d5db", borderRadius: 12,
-          padding: 16, boxShadow: "0 4px 20px rgba(0,0,0,0.12)", minWidth: 280,
-        }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 8 }}>
-            Send test email via Resend
-          </div>
-          <input
-            type="email"
-            placeholder="recipient@example.com"
-            value={to}
-            onChange={(e) => { setTo(e.target.value); setStatus("idle"); }}
-            onKeyDown={(e) => e.key === "Enter" && send()}
-            style={{
-              width: "100%", padding: "7px 10px", borderRadius: 7,
-              border: "1px solid #d1d5db", fontSize: 13, outline: "none",
-              boxSizing: "border-box", marginBottom: 8,
-            }}
-          />
-          {status === "success" && (
-            <div style={{ color: "#15803d", fontSize: 12, fontWeight: 700, marginBottom: 8 }}>
-              ✅ Sent! Check your inbox.
-            </div>
-          )}
-          {status === "error" && (
-            <div style={{ color: "#991b1b", fontSize: 12, marginBottom: 8 }}>
-              ❌ {errMsg}
-            </div>
-          )}
-          <div style={{ display: "flex", gap: 6 }}>
-            <button
-              onClick={send}
-              disabled={!to.trim() || status === "sending"}
-              style={{
-                flex: 1, padding: "7px 0", borderRadius: 7, border: "none",
-                background: "#065f46", color: "#fff", fontSize: 13,
-                fontWeight: 700, cursor: "pointer", opacity: (!to.trim() || status === "sending") ? 0.5 : 1,
-              }}
-            >
-              {status === "sending" ? "Sending…" : "Send"}
-            </button>
-            <button
-              onClick={() => setOpen(false)}
-              style={{
-                padding: "7px 12px", borderRadius: 7,
-                border: "1px solid #d1d5db", background: "#fff",
-                fontSize: 13, cursor: "pointer", color: "#374151",
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 function StatusPill({ status }) {
   const s = STATUS_PILL[status] || STATUS_PILL.draft;
@@ -171,106 +70,6 @@ function StatusPill({ status }) {
     }}>
       {s.label}
     </span>
-  );
-}
-
-function NewCampaignForm({ token, onCreated, onCancel }) {
-  const queryClient = useQueryClient();
-  const createMutation = useCreateCampaign({
-    request: { headers: { Authorization: `Bearer ${token}` } },
-  });
-  const [form, setForm] = useState({
-    name: "", territory: "", zipCode: "", homesCount: 5000, mailDate: "",
-  });
-  const [error, setError] = useState(null);
-
-  const set = (k) => (e) =>
-    setForm((f) => ({ ...f, [k]: e.target.value }));
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError(null);
-    if (!form.name.trim() || !form.territory.trim() || !form.zipCode.trim()) {
-      setError("Name, territory, and ZIP are required.");
-      return;
-    }
-    try {
-      const created = await createMutation.mutateAsync({
-        data: {
-          name: form.name.trim(),
-          territory: form.territory.trim(),
-          zipCode: form.zipCode.trim(),
-          homesCount: Number(form.homesCount) || 0,
-          mailDate: form.mailDate ? form.mailDate : null,
-        },
-      });
-      queryClient.invalidateQueries({ queryKey: getListAdminCampaignsQueryKey() });
-      onCreated(created.campaign.id);
-    } catch (err) {
-      setError(err?.message || "Failed to create campaign");
-    }
-  };
-
-  const inputStyle = {
-    width: "100%", padding: "9px 12px", borderRadius: 8,
-    border: "1.5px solid #d1d5db", fontSize: 14, outline: "none",
-    fontFamily: "sans-serif", boxSizing: "border-box",
-  };
-
-  return (
-    <div style={{ background: "#fff", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", padding: 20, marginBottom: 24 }}>
-      <div style={{ fontWeight: 800, fontSize: 16, color: "#111", marginBottom: 12 }}>
-        New Campaign
-      </div>
-      <form onSubmit={handleSubmit}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
-          <label style={{ fontSize: 12, color: "#6b7280", display: "flex", flexDirection: "column", gap: 4 }}>
-            Campaign name
-            <input style={inputStyle} value={form.name} onChange={set("name")} placeholder="Summer 2026" />
-          </label>
-          <label style={{ fontSize: 12, color: "#6b7280", display: "flex", flexDirection: "column", gap: 4 }}>
-            Territory
-            <input style={inputStyle} value={form.territory} onChange={set("territory")} placeholder="Clarkesville & Surrounding" />
-          </label>
-          <label style={{ fontSize: 12, color: "#6b7280", display: "flex", flexDirection: "column", gap: 4 }}>
-            ZIP code
-            <input style={inputStyle} value={form.zipCode} onChange={set("zipCode")} placeholder="30523" />
-          </label>
-          <label style={{ fontSize: 12, color: "#6b7280", display: "flex", flexDirection: "column", gap: 4 }}>
-            Homes mailed
-            <input type="number" style={inputStyle} value={form.homesCount} onChange={set("homesCount")} min="0" />
-          </label>
-          <label style={{ fontSize: 12, color: "#6b7280", display: "flex", flexDirection: "column", gap: 4 }}>
-            Mail date
-            <input type="date" style={inputStyle} value={form.mailDate} onChange={set("mailDate")} />
-          </label>
-        </div>
-        {error && (
-          <div style={{ color: "#991b1b", fontSize: 13, marginTop: 12 }}>{error}</div>
-        )}
-        <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-          <button
-            type="submit"
-            disabled={createMutation.isPending}
-            style={{ background: "#991b1b", color: "#fff", border: "none", borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: createMutation.isPending ? 0.7 : 1 }}
-          >
-            {createMutation.isPending ? "Creating…" : "Create campaign"}
-          </button>
-          <button
-            type="button"
-            onClick={onCancel}
-            style={{ background: "#f3f4f6", color: "#374151", border: "1px solid #e5e7eb", borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
-          >
-            Cancel
-          </button>
-        </div>
-        <div style={{ marginTop: 10, color: "#9ca3af", fontSize: 12 }}>
-          Creating a campaign auto-generates the standard 16-spot postcard
-          layout (9 front + 7 back). It starts as a draft until you mark
-          it active.
-        </div>
-      </form>
-    </div>
   );
 }
 
@@ -607,12 +406,16 @@ function ManageAdSpots({ spots, token, onCleared }) {
 
 function Dashboard({ token, onLogout }) {
   const queryClient = useQueryClient();
+  const search = useSearch();
+  const urlId = new URLSearchParams(search).get("id");
+  const urlCampaignId = urlId ? Number(urlId) : null;
+
   const authRequest = { headers: { Authorization: `Bearer ${token}` } };
   const approveMutation = useApproveAd({ request: authRequest });
   const activateMutation = useActivateCampaign({ request: authRequest });
   const completeMutation = useCompleteCampaign({ request: authRequest });
   const [approving, setApproving] = useState(null);
-  const [selectedId, setSelectedId] = useState(null);
+  const [selectedId, setSelectedId] = useState(urlCampaignId);
 
   const authOpts = {
     meta: { headers: { Authorization: `Bearer ${token}` } },
@@ -631,13 +434,19 @@ function Dashboard({ token, onLogout }) {
   const campaigns = listData?.campaigns || [];
 
   // Auto-select the active campaign on first load (or fall back to the
-  // most recently created one). Once the admin picks something explicitly
-  // we leave their choice alone.
+  // most recently created one). If a campaign id was provided in the URL
+  // (?id=N) we honour that and skip the auto-select entirely.
   useEffect(() => {
     if (selectedId != null || campaigns.length === 0) return;
     const active = campaigns.find((c) => c.status === "active");
     setSelectedId((active ?? campaigns[0]).id);
   }, [campaigns, selectedId]);
+
+  // Keep selectedId in sync when the URL ?id param changes (e.g. the user
+  // navigates between territory rows without leaving the page).
+  useEffect(() => {
+    if (urlCampaignId != null) setSelectedId(urlCampaignId);
+  }, [urlCampaignId]);
 
   const detailEnabled = selectedId != null;
   const detailQueryKey = useMemo(
