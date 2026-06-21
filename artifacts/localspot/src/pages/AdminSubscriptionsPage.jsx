@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useLocation } from "wouter";
+import AdminShell from "../components/AdminShell";
 
 const PLAN_LABEL = {
   "6_issue": "Growth (6)",
@@ -100,12 +101,12 @@ export default function AdminSubscriptionsPage() {
   if (subs === null) return <div style={{ padding: 24, color: "#6b7280" }}>Loading subscriptions…</div>;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f9fafb", fontFamily: "sans-serif", padding: 24 }}>
+    <AdminShell>
+      <div style={{ padding: 24 }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <div>
             <h1 style={{ margin: 0, fontFamily: "Georgia,serif", color: "#111" }}>Subscriptions</h1>
-            <button onClick={() => navigate("/admin")} style={{ background: "none", border: "none", color: "#6b7280", cursor: "pointer", padding: 0, fontSize: 13, marginTop: 4 }}>← Back to admin dashboard</button>
           </div>
           <button
             onClick={handleSync}
@@ -196,7 +197,8 @@ export default function AdminSubscriptionsPage() {
           </table>
         </div>
       </div>
-    </div>
+      </div>
+    </AdminShell>
   );
 }
 

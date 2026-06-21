@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Link } from "wouter";
+import AdminShell from "../components/AdminShell";
 import {
   useAdminLogin,
   useListOutreachLeads,
@@ -831,28 +831,8 @@ function OutreachContent({ token }) {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f9fafb", fontFamily: "system-ui, sans-serif" }}>
-      {/* Top bar */}
-      <div style={{
-        background: "#fff", borderBottom: "1px solid #e5e7eb",
-        padding: "14px 24px", display: "flex", justifyContent: "space-between",
-        alignItems: "center",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-          <div style={{ fontWeight: 900, fontSize: 20, color: "#111", fontFamily: "Georgia,serif" }}>
-            📞 Outreach Tracker
-          </div>
-          <Link href="/admin" style={{ fontSize: 13, color: "#6b7280", textDecoration: "none" }}>
-            ← Back to Dashboard
-          </Link>
-        </div>
-        <button onClick={onLogout} style={{
-          background: "#fff", border: "1px solid #d1d5db", borderRadius: 8,
-          padding: "7px 14px", fontSize: 13, color: "#374151", cursor: "pointer", fontWeight: 700,
-        }}>Logout</button>
-      </div>
-
-      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "24px 20px" }}>
+    <AdminShell>
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "24px 24px" }}>
         <SummaryBar leads={leads} todayISO={todayISO} />
 
         {/* Discover new leads */}
@@ -1001,7 +981,7 @@ function OutreachContent({ token }) {
           onClose={() => setEditing(null)}
         />
       )}
-    </div>
+    </AdminShell>
   );
 }
 

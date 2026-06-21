@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "wouter";
+import AdminShell from "../components/AdminShell";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //   Standalone Discover New Leads page
@@ -74,35 +74,8 @@ export default function DiscoverLeadsPage() {
   if (!token) return null;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f9fafb", fontFamily: "system-ui, sans-serif" }}>
-      {/* Top bar */}
-      <div style={{
-        background: "#fff", borderBottom: "1px solid #e5e7eb",
-        padding: "14px 24px", display: "flex", justifyContent: "space-between", alignItems: "center",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-          <div style={{ fontWeight: 900, fontSize: 20, color: "#111", fontFamily: "Georgia,serif" }}>
-            🔍 Discover New Leads
-          </div>
-          <Link href="/admin" style={{ fontSize: 13, color: "#6b7280", textDecoration: "none" }}>
-            ← Back to Dashboard
-          </Link>
-          <Link href="/admin/outreach" style={{ fontSize: 13, color: "#6b7280", textDecoration: "none" }}>
-            📞 Outreach Tracker
-          </Link>
-        </div>
-        <button
-          onClick={() => { localStorage.removeItem("admin_token"); window.location.reload(); }}
-          style={{
-            background: "#fff", border: "1px solid #d1d5db", borderRadius: 8,
-            padding: "7px 14px", fontSize: 13, color: "#374151", cursor: "pointer", fontWeight: 700,
-          }}
-        >
-          Logout
-        </button>
-      </div>
-
-      <div style={{ maxWidth: 860, margin: "0 auto", padding: "32px 20px" }}>
+    <AdminShell>
+      <div style={{ maxWidth: 860, margin: "0 auto", padding: "32px 24px" }}>
 
         {/* Search card */}
         <div style={{
@@ -290,6 +263,6 @@ export default function DiscoverLeadsPage() {
       </div>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </div>
+    </AdminShell>
   );
 }

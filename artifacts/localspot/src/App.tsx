@@ -72,6 +72,10 @@ const AdminImageGenPage = lazy(() => import("./pages/AdminImageGenPage"));
 const AdminCreateCustomTerritoryPage = lazy(() => import("./pages/AdminCreateCustomTerritoryPage"));
 // @ts-expect-error JSX module without types
 const DiscoverLeadsPage = lazy(() => import("./pages/DiscoverLeadsPage"));
+// @ts-expect-error JSX module without types
+const AdminOverviewPage = lazy(() => import("./pages/AdminOverviewPage"));
+// @ts-expect-error JSX module without types
+const AdminTerritoriesPage = lazy(() => import("./pages/AdminTerritoriesPage"));
 
 import NotFound from "./pages/not-found";
 
@@ -128,7 +132,9 @@ function Router() {
         </Route>
 
         {/* Admin routes — more-specific paths before /admin */}
+        <Route path="/admin/territories/detail" component={AdminDashboard} />
         <Route path="/admin/territories/custom" component={AdminCreateCustomTerritoryPage} />
+        <Route path="/admin/territories" component={AdminTerritoriesPage} />
         <Route path="/admin/image-gen" component={AdminImageGenPage} />
         <Route path="/admin/campaign/:id/print" component={AdminPrintPage} />
         <Route path="/admin/discover" component={DiscoverLeadsPage} />
@@ -138,7 +144,7 @@ function Router() {
         <Route path="/admin/dealers" component={AdminDealersPage} />
         <Route path="/admin/subscriptions" component={AdminSubscriptionsPage} />
         <Route path="/admin/ai-test" component={AdminAITestPage} />
-        <Route path="/admin" component={AdminDashboard} />
+        <Route path="/admin" component={AdminOverviewPage} />
 
         <Route path="/subscription-confirmation" component={SubscriptionConfirmationPage} />
         <Route path="/spot-confirmation" component={SpotConfirmationPage} />

@@ -11,6 +11,7 @@ import {
   getGetAdminCampaignByIdQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import AdminShell from "../components/AdminShell";
 
 function LoginForm({ onLogin }) {
   const [password, setPassword] = useState("localspot-admin-2025");
@@ -751,267 +752,63 @@ function Dashboard({ token, onLogout }) {
   const canComplete = !!campaign && !isCompleted;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f9fafb", fontFamily: "sans-serif" }}>
-      <div style={{ background: "#fff", borderBottom: "1px solid #e5e7eb", padding: "12px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+    <AdminShell>
+      <div style={{ padding: "28px 32px 48px", maxWidth: 1200 }}>
+
+        {/* Page header */}
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 14, marginBottom: 24 }}>
           <div>
-            <div style={{ fontWeight: 900, fontSize: 20, color: "#111", fontFamily: "Georgia,serif" }}>📮 Admin Dashboard</div>
-            <div style={{ fontSize: 12, color: "#9ca3af" }}>
-              {campaign ? `${campaign.name} · ${campaign.territory}` : "My Town Postcard"}
+            <div style={{ fontWeight: 900, fontSize: 24, color: "#111", fontFamily: "Georgia, serif" }}>
+              📅 Habersham Campaign
+            </div>
+            <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 4 }}>
+              {campaign ? `${campaign.name} · ${campaign.territory}` : "Manage campaigns & spots"}
             </div>
           </div>
-          {campaign && <StatusPill status={campaign.status} />}
-          <a
-            href={`${import.meta.env.BASE_URL}admin/outreach`}
-            style={{
-              fontSize: 13, fontWeight: 700, color: "#374151",
-              background: "#fff", border: "1px solid #d1d5db",
-              borderRadius: 8, padding: "7px 12px", textDecoration: "none",
-            }}
-          >
-            📞 Outreach Tracker
-          </a>
-          <a
-            href={`${import.meta.env.BASE_URL}admin/scans`}
-            style={{
-              fontSize: 13, fontWeight: 700, color: "#374151",
-              background: "#fff", border: "1px solid #d1d5db",
-              borderRadius: 8, padding: "7px 12px", textDecoration: "none",
-            }}
-          >
-            📊 Scan Analytics
-          </a>
-          <a
-            href={`${import.meta.env.BASE_URL}admin/dealers`}
-            style={{
-              fontSize: 13, fontWeight: 700, color: "#374151",
-              background: "#fff", border: "1px solid #d1d5db",
-              borderRadius: 8, padding: "7px 12px", textDecoration: "none",
-            }}
-          >
-            💼 Dealers
-          </a>
-          <a
-            href={`${import.meta.env.BASE_URL}admin/subscriptions`}
-            style={{
-              fontSize: 13, fontWeight: 700, color: "#374151",
-              background: "#fff", border: "1px solid #d1d5db",
-              borderRadius: 8, padding: "7px 12px", textDecoration: "none",
-            }}
-          >
-            🔁 Subscriptions
-          </a>
-          <a
-            href={`${import.meta.env.BASE_URL}admin/territories/custom`}
-            style={{
-              fontSize: 13, fontWeight: 700, color: "#374151",
-              background: "#fff", border: "1px solid #d1d5db",
-              borderRadius: 8, padding: "7px 12px", textDecoration: "none",
-            }}
-          >
-            🗺 Custom Territory
-          </a>
-          <a
-            href={`/admin/territories/zip-manager?token=${encodeURIComponent(token)}`}
-            style={{
-              fontSize: 13, fontWeight: 700, color: "#374151",
-              background: "#fff", border: "1px solid #d1d5db",
-              borderRadius: 8, padding: "7px 12px", textDecoration: "none",
-            }}
-          >
-            🗺 ZIP Manager
-          </a>
-          <a
-            href={`${import.meta.env.BASE_URL}admin/ai-test`}
-            style={{
-              fontSize: 13, fontWeight: 700, color: "#7c3aed",
-              background: "#f5f3ff", border: "1px solid #ddd6fe",
-              borderRadius: 8, padding: "7px 12px", textDecoration: "none",
-            }}
-          >
-            🧪 AI Model Testing
-          </a>
-          <a
-            href="/api/admin/image-library"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              fontSize: 13, fontWeight: 700, color: "#1d4ed8",
-              background: "#eff6ff", border: "1px solid #bfdbfe",
-              borderRadius: 8, padding: "7px 12px", textDecoration: "none",
-            }}
-          >
-            📷 Image Library
-          </a>
-          <a
-            href="/api/grok-ad-generator"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              fontSize: 13, fontWeight: 700, color: "#92400e",
-              background: "#fffbeb", border: "1px solid #fde68a",
-              borderRadius: 8, padding: "7px 12px", textDecoration: "none",
-            }}
-          >
-            ✦ Grok Ad Generator
-          </a>
-          <a
-            href={`${import.meta.env.BASE_URL}admin/image-gen`}
-            style={{
-              fontSize: 13, fontWeight: 700, color: "#065f46",
-              background: "#ecfdf5", border: "1px solid #6ee7b7",
-              borderRadius: 8, padding: "7px 12px", textDecoration: "none",
-            }}
-          >
-            🖼 Image Generator
-          </a>
-          <button
-            onClick={() => document.getElementById("manage-ad-spots")?.scrollIntoView({ behavior: "smooth" })}
-            style={{
-              fontSize: 13, fontWeight: 700, color: "#b91c1c",
-              background: "#fef2f2", border: "1px solid #fecaca",
-              borderRadius: 8, padding: "7px 12px", cursor: "pointer",
-            }}
-          >
-            🗑 Manage Ads
-          </button>
-          <TestEmailWidget token={token} />
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          {/* Campaign selector */}
-          <select
-            value={selectedId ?? ""}
-            onChange={(e) => setSelectedId(e.target.value ? Number(e.target.value) : null)}
-            disabled={campaigns.length === 0}
-            style={{
-              padding: "8px 12px", borderRadius: 8, border: "1px solid #d1d5db",
-              background: "#fff", fontSize: 13, color: "#111",
-              fontFamily: "sans-serif", minWidth: 220,
-            }}
-          >
-            {campaigns.length === 0 && <option value="">No campaigns yet</option>}
-            {campaigns.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name} — {c.status} (${(c.totalRevenue / 100).toFixed(0)})
-              </option>
-            ))}
-          </select>
-
-          <button
-            onClick={() => setShowNewForm((v) => !v)}
-            style={{ background: "#111", color: "#fff", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
-          >
-            {showNewForm ? "Close" : "+ New Campaign"}
-          </button>
-
-          {canActivate && (
-            <button
-              onClick={handleActivate}
-              disabled={activateMutation.isPending}
-              style={{ background: "#15803d", color: "#fff", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: activateMutation.isPending ? 0.7 : 1 }}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            {campaign && <StatusPill status={campaign.status} />}
+            <select
+              value={selectedId ?? ""}
+              onChange={(e) => setSelectedId(e.target.value ? Number(e.target.value) : null)}
+              disabled={campaigns.length === 0}
+              style={{
+                padding: "8px 12px", borderRadius: 8, border: "1px solid #d1d5db",
+                background: "#fff", fontSize: 13, color: "#111",
+                fontFamily: "sans-serif", minWidth: 200,
+              }}
             >
-              {activateMutation.isPending ? "Activating…" : "Mark Active"}
-            </button>
-          )}
-          {canComplete && (
+              {campaigns.length === 0 && <option value="">No campaigns yet</option>}
+              {campaigns.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} — {c.status} (${(c.totalRevenue / 100).toFixed(0)})
+                </option>
+              ))}
+            </select>
             <button
-              onClick={handleComplete}
-              disabled={completeMutation.isPending}
-              style={{ background: "#991b1b", color: "#fff", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: completeMutation.isPending ? 0.7 : 1 }}
+              onClick={() => setShowNewForm((v) => !v)}
+              style={{ background: "#111", color: "#fff", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
             >
-              {completeMutation.isPending ? "Completing…" : "Mark Complete"}
+              {showNewForm ? "Close" : "+ New Campaign"}
             </button>
-          )}
-
-          <button
-            onClick={() => { localStorage.removeItem("admin_token"); window.location.reload(); }}
-            style={{ background: "none", border: "1px solid #e5e7eb", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, color: "#6b7280" }}>
-            Logout
-          </button>
-        </div>
-      </div>
-
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 24px" }}>
-
-        {/* ── Quick-access tool cards ──────────────────────────────────────── */}
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 28 }}>
-          <a
-            href={`${import.meta.env.BASE_URL}admin/discover`}
-            style={{
-              display: "flex", alignItems: "center", gap: 10,
-              background: "#fff5f5", border: "1.5px solid #fca5a5",
-              borderRadius: 12, padding: "14px 20px", textDecoration: "none",
-              boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-            }}
-          >
-            <span style={{ fontSize: 26 }}>🔍</span>
-            <div>
-              <div style={{ fontWeight: 800, fontSize: 14, color: "#991b1b" }}>Discover New Leads</div>
-              <div style={{ fontSize: 12, color: "#b91c1c", marginTop: 2 }}>Google Places + email scraper</div>
-            </div>
-          </a>
-          <a
-            href={`${import.meta.env.BASE_URL}admin/outreach`}
-            style={{
-              display: "flex", alignItems: "center", gap: 10,
-              background: "#fff", border: "1.5px solid #d1d5db",
-              borderRadius: 12, padding: "14px 20px", textDecoration: "none",
-              boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-            }}
-          >
-            <span style={{ fontSize: 26 }}>📞</span>
-            <div>
-              <div style={{ fontWeight: 800, fontSize: 14, color: "#111" }}>Outreach Tracker</div>
-              <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>Manage & contact leads</div>
-            </div>
-          </a>
-          <a
-            href={`${import.meta.env.BASE_URL}admin/territories/custom`}
-            style={{
-              display: "flex", alignItems: "center", gap: 10,
-              background: "#fff", border: "1.5px solid #d1d5db",
-              borderRadius: 12, padding: "14px 20px", textDecoration: "none",
-              boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-              transition: "box-shadow 0.15s",
-            }}
-          >
-            <span style={{ fontSize: 26 }}>🗺</span>
-            <div>
-              <div style={{ fontWeight: 800, fontSize: 14, color: "#111" }}>Create Custom Territory</div>
-              <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>Build a multi-city dealer territory</div>
-            </div>
-          </a>
-          <a
-            href={`${import.meta.env.BASE_URL}admin/dealers`}
-            style={{
-              display: "flex", alignItems: "center", gap: 10,
-              background: "#fff", border: "1.5px solid #d1d5db",
-              borderRadius: 12, padding: "14px 20px", textDecoration: "none",
-              boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-            }}
-          >
-            <span style={{ fontSize: 26 }}>💼</span>
-            <div>
-              <div style={{ fontWeight: 800, fontSize: 14, color: "#111" }}>Dealers</div>
-              <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>Manage dealer accounts</div>
-            </div>
-          </a>
-          <a
-            href={`${import.meta.env.BASE_URL}admin/subscriptions`}
-            style={{
-              display: "flex", alignItems: "center", gap: 10,
-              background: "#fff", border: "1.5px solid #d1d5db",
-              borderRadius: 12, padding: "14px 20px", textDecoration: "none",
-              boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-            }}
-          >
-            <span style={{ fontSize: 26 }}>🔁</span>
-            <div>
-              <div style={{ fontWeight: 800, fontSize: 14, color: "#111" }}>Subscriptions</div>
-              <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>MRR & active plans</div>
-            </div>
-          </a>
+            {canActivate && (
+              <button
+                onClick={handleActivate}
+                disabled={activateMutation.isPending}
+                style={{ background: "#15803d", color: "#fff", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: activateMutation.isPending ? 0.7 : 1 }}
+              >
+                {activateMutation.isPending ? "Activating…" : "Mark Active"}
+              </button>
+            )}
+            {canComplete && (
+              <button
+                onClick={handleComplete}
+                disabled={completeMutation.isPending}
+                style={{ background: "#991b1b", color: "#fff", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: completeMutation.isPending ? 0.7 : 1 }}
+              >
+                {completeMutation.isPending ? "Completing…" : "Mark Complete"}
+              </button>
+            )}
+          </div>
         </div>
 
         {showNewForm && (
@@ -1157,7 +954,7 @@ function Dashboard({ token, onLogout }) {
           </>
         )}
       </div>
-    </div>
+    </AdminShell>
   );
 }
 

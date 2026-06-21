@@ -1,5 +1,6 @@
 import { useState, useEffect, Fragment } from "react";
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
+import AdminShell from "../components/AdminShell";
 import CreateTerritoryForm from "../components/CreateTerritoryForm";
 
 const RED = "#7B1418";
@@ -574,7 +575,7 @@ export default function AdminDealersPage() {
   }, [dealers]);
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f9fafb", fontFamily: "sans-serif" }}>
+    <AdminShell>
       {/* Delete modal */}
       {deleteTarget && (
         <DeleteModal
@@ -597,19 +598,9 @@ export default function AdminDealersPage() {
       {/* Toast */}
       {toast && <Toast message={`✓ ${toast}`} onDone={() => setToast(null)} />}
 
-      <div style={{ background: "#fff", borderBottom: "1px solid #e5e7eb",
-        padding: "12px 28px", display: "flex", alignItems: "center", gap: 16,
-        flexWrap: "wrap" }}>
-        <Link href="/admin" style={{ display: "flex", alignItems: "center", gap: 10,
-          textDecoration: "none", color: "inherit" }}>
-          <span style={{ fontSize: 22 }}>📮</span>
-          <div>
-            <div style={{ fontWeight: 900, fontSize: 18, color: "#111",
-              fontFamily: "Georgia,serif" }}>Dealers</div>
-            <div style={{ fontSize: 11, color: "#9ca3af" }}>Admin · Dealer program</div>
-          </div>
-        </Link>
-        <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+      <div style={{ padding: 28, maxWidth: 1240, margin: "0 auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <h1 style={{ margin: 0, fontFamily: "Georgia,serif", fontSize: 22, color: "#111" }}>Dealers</h1>
           <button
             onClick={() => {
               if (showCreate) { resetCreateForm(); }
@@ -623,17 +614,7 @@ export default function AdminDealersPage() {
           >
             + Add Dealer
           </button>
-          <a href={`${baseUrl}/admin`} style={{
-            fontSize: 13, fontWeight: 700, color: "#374151",
-            background: "#fff", border: "1px solid #d1d5db",
-            borderRadius: 8, padding: "7px 12px", textDecoration: "none",
-          }}>
-            ← Back to Admin
-          </a>
         </div>
-      </div>
-
-      <div style={{ padding: 28, maxWidth: 1240, margin: "0 auto" }}>
         {error && (
           <div style={{ background: "#fef2f2", color: "#991b1b",
             border: "1px solid #fecaca", borderRadius: 10, padding: 16,
@@ -1009,7 +990,7 @@ export default function AdminDealersPage() {
           </>
         )}
       </div>
-    </div>
+    </AdminShell>
   );
 }
 

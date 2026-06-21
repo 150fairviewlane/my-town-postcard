@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Link } from "wouter";
+import AdminShell from "../components/AdminShell";
 
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 
@@ -133,18 +133,7 @@ export default function AdminImageGenPage() {
 
   // ── render ────────────────────────────────────────────────────────────────
   return (
-    <div style={{ minHeight: "100vh", background: "#f9fafb", fontFamily: "sans-serif" }}>
-      {/* Nav */}
-      <header style={{ background: "#fff", borderBottom: "1px solid #e5e7eb", padding: "0 24px", height: 56, display: "flex", alignItems: "center", gap: 16 }}>
-        <Link href={`${BASE}/admin`}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: "#6b7280", cursor: "pointer", textDecoration: "none" }}>
-            ← Admin
-          </span>
-        </Link>
-        <span style={{ color: "#e5e7eb" }}>|</span>
-        <span style={{ fontSize: 14, fontWeight: 800, color: "#111" }}>🖼 Grok Image Generator</span>
-      </header>
-
+    <AdminShell>
       <div style={{ maxWidth: 720, margin: "0 auto", padding: "32px 24px 80px" }}>
 
         {/* ── Generation form ─────────────────────────────────────────────── */}
@@ -326,6 +315,6 @@ export default function AdminImageGenPage() {
           </div>
         )}
       </div>
-    </div>
+    </AdminShell>
   );
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
+import AdminShell from "../components/AdminShell";
 
 const DEFAULT_PROMPT =
   "Transform this advertisement into a polished, professional print-ready design. Create a compelling direct-mail postcard ad with strong visual hierarchy, excellent composition, professional photography aesthetic, vivid colors, and a layout that immediately grabs attention and communicates the offer clearly. The image, style, design, layout, fonts,, etc. can be changed, but all data must remain on the new ad. Fonts for the company name and tagline should be oversized. Phone number and address should be easily visible.";
@@ -266,21 +267,11 @@ export default function AdminAITestPage() {
   const repoToShow = repo.filter((a) => !successResults.find((r) => r.id === a.id));
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f9fafb", fontFamily: "sans-serif" }}>
-
+    <AdminShell>
       {/* Lightbox */}
       {lightbox && <Lightbox ad={lightbox} onClose={() => setLightbox(null)} />}
 
-      {/* Header */}
-      <div style={{ background: "#fff", borderBottom: "1px solid #e5e7eb", padding: "12px 28px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-        <button onClick={() => navigate("/admin")} style={HDR_BTN}>← Admin</button>
-        <div>
-          <div style={{ fontWeight: 900, fontSize: 20, color: "#111", fontFamily: "Georgia,serif" }}>🧪 AI Model Testing</div>
-          <div style={{ fontSize: 12, color: "#9ca3af" }}>Upload an ad · enter a prompt · compare model outputs side-by-side</div>
-        </div>
-      </div>
-
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "24px 20px" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "24px 32px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 20, alignItems: "start" }}>
 
           {/* ── LEFT PANEL — controls ── */}
@@ -500,6 +491,6 @@ export default function AdminAITestPage() {
           )}
         </div>
       </div>
-    </div>
+    </AdminShell>
   );
 }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import AdminShell from "../components/AdminShell";
 import CreateTerritoryForm from "../components/CreateTerritoryForm";
 
 const RED = "#7B1418";
@@ -128,28 +128,7 @@ export default function AdminCreateCustomTerritoryPage() {
   const [dealer, setDealer] = useState(null);
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f8f5f0", fontFamily: "DM Sans, sans-serif" }}>
-      {/* Header */}
-      <div style={{
-        background: "#fff", borderBottom: "2px solid #e5e7eb",
-        padding: "14px 28px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap",
-      }}>
-        <Link href="/admin" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", color: "inherit" }}>
-          <span style={{ fontSize: 22 }}>📮</span>
-          <div>
-            <div style={{ fontWeight: 900, fontSize: 18, color: "#111", fontFamily: "Georgia, serif" }}>Custom Territory</div>
-            <div style={{ fontSize: 11, color: "#9ca3af" }}>Admin · Create city-based territory</div>
-          </div>
-        </Link>
-        <a href={`${baseUrl}/admin`} style={{
-          marginLeft: "auto", fontSize: 13, fontWeight: 700, color: "#374151",
-          background: "#fff", border: "1px solid #d1d5db",
-          borderRadius: 8, padding: "7px 12px", textDecoration: "none",
-        }}>
-          ← Back to Admin
-        </a>
-      </div>
-
+    <AdminShell>
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "32px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
         {/* Territory success banner */}
         {created && (
@@ -216,6 +195,6 @@ export default function AdminCreateCustomTerritoryPage() {
           />
         )}
       </div>
-    </div>
+    </AdminShell>
   );
 }

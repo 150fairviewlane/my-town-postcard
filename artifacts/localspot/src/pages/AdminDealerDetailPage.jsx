@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
+import AdminShell from "../components/AdminShell";
 import DealerTerritoryOverview from "../components/DealerTerritoryOverview";
 
 const RED = "#7B1418";
@@ -66,46 +67,7 @@ export default function AdminDealerDetailPage({ params }) {
   const totals = data?.totals ?? {};
 
   return (
-    <div style={{ minHeight: "100vh", background: CREAM, fontFamily: "DM Sans, sans-serif" }}>
-      {/* Top nav */}
-      <div style={{
-        background: "#fff", borderBottom: "1px solid #e5e7eb",
-        padding: "12px 28px", display: "flex", alignItems: "center", gap: 16,
-        flexWrap: "wrap",
-      }}>
-        <Link href="/admin" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", color: "inherit" }}>
-          <span style={{ fontSize: 22 }}>📮</span>
-          <div>
-            <div style={{ fontWeight: 900, fontSize: 18, color: "#111", fontFamily: "Georgia,serif" }}>
-              Dealer Details
-            </div>
-            <div style={{ fontSize: 11, color: "#9ca3af" }}>Admin · Dealer program</div>
-          </div>
-        </Link>
-        <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-          <Link
-            href="/admin/dealers"
-            style={{
-              fontSize: 13, fontWeight: 700, color: "#374151",
-              background: "#fff", border: "1px solid #d1d5db",
-              borderRadius: 8, padding: "7px 14px", textDecoration: "none",
-            }}
-          >
-            ← All Dealers
-          </Link>
-          <a
-            href={`${baseUrl}/admin`}
-            style={{
-              fontSize: 13, fontWeight: 700, color: "#374151",
-              background: "#fff", border: "1px solid #d1d5db",
-              borderRadius: 8, padding: "7px 12px", textDecoration: "none",
-            }}
-          >
-            Admin Home
-          </a>
-        </div>
-      </div>
-
+    <AdminShell>
       <div style={{ padding: "28px 28px 48px", maxWidth: 1100, margin: "0 auto" }}>
 
         {/* Loading */}
@@ -176,7 +138,7 @@ export default function AdminDealerDetailPage({ params }) {
           </>
         )}
       </div>
-    </div>
+    </AdminShell>
   );
 }
 
