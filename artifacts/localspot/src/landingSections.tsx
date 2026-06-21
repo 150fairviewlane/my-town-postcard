@@ -322,10 +322,11 @@ export function WhyChooseUs() {
         </div>
         <div style={{ flex: "1 1 360px" }}>
           <img
-            src={`${import.meta.env.BASE_URL}postcard-hero-single.png`}
+            src={`${import.meta.env.BASE_URL}postcard-sample-front.jpg`}
             alt="9×12 postcard sample"
-            style={{ width: "100%", maxWidth: 520, borderRadius: 12,
-              boxShadow: "0 16px 48px rgba(0,0,0,0.14)", display: "block" }}
+            style={{ width: "100%", maxWidth: 520, borderRadius: 12, display: "block",
+              transform: "rotate(-1deg)",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.10), 0 12px 40px rgba(0,0,0,0.22), 0 32px 64px rgba(0,0,0,0.14)" }}
           />
         </div>
       </div>
