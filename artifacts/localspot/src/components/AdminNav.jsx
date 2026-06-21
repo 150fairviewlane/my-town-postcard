@@ -182,7 +182,7 @@ export default function AdminNav() {
             fontWeight: 900, fontSize: 15, color: BURGUNDY,
             fontFamily: "Georgia, serif", lineHeight: 1.2,
           }}>
-            📮 LocalSpot
+            📮 My Town Postcard
           </div>
           <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>Admin Dashboard</div>
         </div>
