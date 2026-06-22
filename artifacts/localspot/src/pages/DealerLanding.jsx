@@ -262,7 +262,7 @@ function HowItWorks() {
 
 function WhatYouGet() {
   const bullets = [
-    { t: "4 exclusive postcard territories", d: "~20,000 households reachable across your assigned zones." },
+    { t: "4 exclusive postcard territories", d: "with a minimum of 20,000 households reachable across your assigned zones." },
     { t: "Done-for-you ad design", d: "We handle every ad — your job is closing, not designing." },
     { t: "Printing + USPS EDDM mailing", d: "We print, sort, and drop. You never touch a postcard." },
     { t: "Online ordering platform", d: "Send a link, the customer pays online, you get the credit." },
