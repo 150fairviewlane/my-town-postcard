@@ -31,6 +31,17 @@ import { logger } from "./logger";
 // ─── City Hub Constants ───────────────────────────────────────────────────────
 const HUB_MIN_HOUSEHOLDS    = 5_000; // min catchment households within HUB_HOUSEHOLD_RADIUS (pre-Voronoi)
 const HUB_MIN_BUSINESSES    = 25;    // min postcard-industry establishments within HUB_BUSINESS_RADIUS
+/**
+ * Hard viability floor: cities with fewer than this many postcard-industry
+ * businesses in their 10-mile catchment are disqualified as hub anchors before
+ * any distance-based ranking.  Prevents small rural towns (e.g. Mount Airy GA,
+ * own-ZIP postcard-industry businesses — not the 10-mile-radius `nearbyBusinesses`
+ * figure, which is contaminated by neighbour ZIPs in dense rural clusters (e.g.
+ * Mount Airy GA appears to have 359 businesses because Cornelia and Clarkesville's
+ * ZIPs fall inside its 10-mile ring, even though Mount Airy itself has only 12).
+ * Tunable once real sales data is available.
+ */
+const MIN_HUB_BUSINESS_COUNT = 100;
 // After Voronoi+cap, each hub's exclusive zone is naturally smaller than its full
 // 15mi circle (used in findCandidateHubs). Use a lower household floor here so that
 // legitimate coastal/island anchors (e.g. Hilton Head Island, 4 477 hh) pass while
@@ -101,6 +112,13 @@ export interface CityHub {
   localBiz: number;
   distanceFromDealer: number;
   qualifies: boolean;
+  /**
+   * Size-weighted ranking score: distanceFromDealer / Math.log(nearbyBusinesses + 1).
+   * Lower is better (closer OR larger wins).  Set only for candidates that pass
+   * the MIN_HUB_BUSINESS_COUNT viability floor; undefined for below-threshold
+   * fallback cities promoted by the graceful-degradation path.
+   */
+  score?: number;
 }
 
 export interface TerritoryProposal {
@@ -356,23 +374,99 @@ export async function findCandidateHubs(
     });
   }
 
-  // Sort: qualifying first, then by distance
-  candidates.sort((a, b) => {
+  // ── Viability floor ────────────────────────────────────────────────────────
+  // Split candidates into those that clear MIN_HUB_BUSINESS_COUNT and those
+  // that don't, then apply the graceful-degradation fallback per county so
+  // that every county always contributes at least one representative city.
+  //
+  // We use getCityZipBusinessCount (own-USPS-ZIP biz count) rather than
+  // nearbyBusinesses (10-mile-radius sum) because the radius metric is
+  // contaminated in dense rural clusters — every small town within 10 miles
+  // of a larger city borrows its neighbours' establishments into its total.
+  // Own-ZIP counts reflect only the businesses assigned to that city's
+  // actual USPS ZIP codes and are immune to this radius-borrowing effect.
+
+  const viable    = candidates.filter(c => getCityZipBusinessCount(c.cityName, c.stateAbbr) >= MIN_HUB_BUSINESS_COUNT);
+  const nonViable = candidates.filter(c => getCityZipBusinessCount(c.cityName, c.stateAbbr) < MIN_HUB_BUSINESS_COUNT);
+
+  // Determine which counties already have at least one viable representative.
+  const viableCounties = new Set(viable.map(c => c.countyGeoid));
+
+  // For each county that has NO viable city, promote the best (highest
+  // own-ZIP biz count) non-viable city as a below-threshold fallback.
+  const fallbackByCounty = new Map<string, CityHub>();
+  for (const c of nonViable) {
+    const key = c.countyGeoid || `no-county-${c.cityName}`;
+    if (viableCounties.has(key)) continue; // county already covered
+    const existing = fallbackByCounty.get(key);
+    const cBiz = getCityZipBusinessCount(c.cityName, c.stateAbbr);
+    const exBiz = existing ? getCityZipBusinessCount(existing.cityName, existing.stateAbbr) : -1;
+    if (!existing || cBiz > exBiz) {
+      fallbackByCounty.set(key, c);
+    }
+  }
+
+  const fallbacks = Array.from(fallbackByCounty.values());
+  if (fallbacks.length > 0) {
+    logger.warn(
+      {
+        fallbacks: fallbacks.map(c => ({
+          city: c.cityName,
+          county: c.countyGeoid,
+          ownZipBiz: getCityZipBusinessCount(c.cityName, c.stateAbbr),
+        })),
+      },
+      "Territory builder: below-threshold fallback cities promoted (no viable city in county)"
+    );
+  }
+
+  // ── Size-weighted scoring ───────────────────────────────────────────────────
+  // score = distance / log(ownZipBiz + 1)
+  // Lower score = better (smaller distance OR larger own-ZIP biz count wins).
+  // Uses own-ZIP biz count (not nearbyBusinesses) to avoid radius contamination.
+  for (const c of viable) {
+    c.score = c.distanceFromDealer / Math.log(getCityZipBusinessCount(c.cityName, c.stateAbbr) + 1);
+  }
+
+  // Sort order:
+  //   1. Viable cities (pass floor) first, sorted by score ascending.
+  //   2. Below-threshold fallbacks last, sorted by score ascending.
+  //   Within both groups, qualifies=true cities precede qualifies=false.
+  const sortedViable = viable.sort((a, b) => {
     if (a.qualifies !== b.qualifies) return a.qualifies ? -1 : 1;
-    return a.distanceFromDealer - b.distanceFromDealer;
+    return (a.score ?? Infinity) - (b.score ?? Infinity);
   });
+
+  for (const c of fallbacks) {
+    c.score = c.distanceFromDealer / Math.log(c.nearbyBusinesses + 1);
+  }
+  const sortedFallbacks = fallbacks.sort((a, b) => {
+    if (a.qualifies !== b.qualifies) return a.qualifies ? -1 : 1;
+    return (a.score ?? Infinity) - (b.score ?? Infinity);
+  });
+
+  const result = [...sortedViable, ...sortedFallbacks];
 
   logger.info(
     {
       stateAbbr,
       boxCandidates: boxFiltered.length,
       withinRadius: candidates.length,
-      qualified: candidates.filter(c => c.qualifies).length,
+      viableFloor: sortedViable.length,
+      fallbacks: sortedFallbacks.length,
+      qualified: result.filter(c => c.qualifies).length,
+      topCandidates: result.slice(0, 8).map(c => ({
+        city: c.cityName,
+        nearbyBusinesses: c.nearbyBusinesses,
+        distanceMi: +c.distanceFromDealer.toFixed(2),
+        score: c.score !== undefined ? +c.score.toFixed(4) : null,
+        qualifies: c.qualifies,
+      })),
     },
     "Territory builder: candidate hubs evaluated"
   );
 
-  return candidates;
+  return result;
 }
 
 /**
@@ -933,14 +1027,26 @@ async function getCountyTerritoryHubs(
     }
   }
 
-  // Step 4: Score every candidate city with proximity-weighted distance.
-  //   same county    → actual distance × 0.7
-  //   adjacent county → actual distance × 0.85
-  //   other county   → actual distance × 1.0
-  // Sorting is distance-primary; business count is tiebreaker within a 0.5-mile band.
+  // Step 4: Score every candidate city with proximity-weighted, size-adjusted distance.
+  //
+  //   Proximity multiplier (county relationship):
+  //     same county     → actual distance × 0.7
+  //     adjacent county → actual distance × 0.85
+  //     other county    → actual distance × 1.0
+  //
+  //   Size-weighted score (lower = better):
+  //     score = scoredDist / Math.log(nearbyBusinesses + 1)
+  //   This replaces the old pure-distance sort so that a significantly larger
+  //   commercial centre (e.g. Clarkesville, ~700 businesses, 6.5 mi) outranks
+  //   a tiny nearby town (e.g. Mount Airy, ~50 businesses, 2 mi).
+  //
+  //   Viability floor: candidates with nearbyBusinesses < MIN_HUB_BUSINESS_COUNT
+  //   are excluded before sorting.  If no candidate in the entire pool passes the
+  //   floor the algorithm falls back gracefully (promotes the largest available
+  //   city and logs a warning) rather than returning an empty set.
   type ScoredHub = CityHub & { scoredDist: number };
 
-  const candidateHubs: ScoredHub[] = allStateCities
+  const allMapped: ScoredHub[] = allStateCities
     .filter(c => {
       const norm = c.name.toLowerCase().trim();
       if (norm === seedCityNorm) return false;   // seed is handled separately
@@ -966,16 +1072,56 @@ async function getCountyTerritoryHubs(
     // is inflated by surrounding commercial corridors (e.g. Berkeley Lake GA
     // captures Peachtree Corners + Duluth + Norcross), so we require the city
     // to have at least one postcard-industry biz in its own USPS-labeled ZIPs.
-    .filter(h => getCityZipBusinessCount(h.cityName, h.stateAbbr) >= COUNTY_MIN_OWN_ZIP_BIZ)
-    .sort((a, b) => {
-      const diff = a.scoredDist - b.scoredDist;
-      if (Math.abs(diff) > 0.5) return diff;
-      // Tiebreaker: more own-ZIP businesses = higher-value mailing area
-      return (
-        getCityZipBusinessCount(b.cityName, b.stateAbbr) -
-        getCityZipBusinessCount(a.cityName, a.stateAbbr)
-      );
-    });
+    .filter(h => getCityZipBusinessCount(h.cityName, h.stateAbbr) >= COUNTY_MIN_OWN_ZIP_BIZ);
+
+  // Viability floor: keep only cities whose own-ZIP postcard-industry business
+  // count meets MIN_HUB_BUSINESS_COUNT.  Own-ZIP (getCityZipBusinessCount) is
+  // used here — NOT nearbyBusinesses — because the 10-mile radius metric is
+  // contaminated in dense rural clusters where every small town borrows its
+  // neighbours' ZIP codes (e.g. Mount Airy GA: 12 own-ZIP businesses but 359
+  // nearbyBusinesses because Cornelia and Clarkesville's ZIPs fall inside its
+  // 10-mile ring).
+  // If the floor would wipe out the entire pool, fall back to all candidates
+  // (but warn so the data gap is visible in logs).
+  let viablePool = allMapped.filter(h => getCityZipBusinessCount(h.cityName, h.stateAbbr) >= MIN_HUB_BUSINESS_COUNT);
+  if (viablePool.length === 0 && allMapped.length > 0) {
+    logger.warn(
+      {
+        city,
+        stateAbbr,
+        poolSize: allMapped.length,
+        maxOwnZipBiz: Math.max(...allMapped.map(h => getCityZipBusinessCount(h.cityName, h.stateAbbr))),
+      },
+      "County territory: no candidates meet MIN_HUB_BUSINESS_COUNT (own-ZIP) — falling back to full pool"
+    );
+    viablePool = allMapped;
+  }
+
+  // Size-weighted sort: score = scoredDist / log(ownZipBiz + 1)
+  // Uses own-ZIP biz count to avoid radius-borrowing contamination.
+  const candidateHubs: ScoredHub[] = viablePool
+    .map(h => ({ ...h, score: h.scoredDist / Math.log(getCityZipBusinessCount(h.cityName, h.stateAbbr) + 1) }))
+    .sort((a, b) => (a.score ?? Infinity) - (b.score ?? Infinity)) as ScoredHub[];
+
+  logger.info(
+    {
+      city,
+      stateAbbr,
+      totalMapped: allMapped.length,
+      viableAfterFloor: viablePool.length,
+      top8: candidateHubs.slice(0, 8).map(h => {
+        const ownZipBiz = getCityZipBusinessCount(h.cityName, h.stateAbbr);
+        return {
+          name: h.cityName,
+          ownZipBiz,
+          distMi: +h.distanceFromDealer.toFixed(2),
+          scoredDist: +h.scoredDist.toFixed(2),
+          score: +(h.scoredDist / Math.log(ownZipBiz + 1)).toFixed(4),
+        };
+      }),
+    },
+    "County territory: candidate ranking"
+  );
 
   // Step 5: Always pin the seed city as Zone 1.
   const seedHub = buildHub({ name: city, stateAbbr, lat: homePlace.lat, lng: homePlace.lng });

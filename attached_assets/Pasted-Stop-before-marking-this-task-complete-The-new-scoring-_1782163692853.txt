@@ -1,0 +1,17 @@
+Stop before marking this task complete. The new scoring formula executed correctly given its inputs, but the INPUT DATA itself appears to be wrong, and that needs to be investigated before this can be trusted.
+
+**The problem:** the test results show Mount Airy with 359 businesses — ranking it ABOVE Clarkesville (344 businesses) and ahead of being filtered out despite being a real, known to be VERY small town (a few hundred residents). The project owner has direct local knowledge that this number is implausible. A correct scoring formula applied to wrong data still produces a wrong result — so this needs to be treated as a likely data-integrity bug, not just re-validation of the formula.
+
+**Investigate, do not just re-trust the formula:**
+
+1. Find exactly where Mount Airy's `businessCount` of 359 comes from. Trace it back to the raw data source (likely ZBP — ZIP Business Patterns — or whatever census/business dataset feeds `getCountyTerritoryHubs`/`findCandidateHubs`).
+
+2. **Check which ZIP code(s) are being used to compute Mount Airy's business count.** A very plausible root cause: Mount Airy's assigned ZIP code might be large/shared with a wider area that includes a more commercially dense neighboring area, meaning the "359 businesses" reflects the whole ZIP's commercial activity, not Mount Airy's own town center specifically. ZIP codes in rural Georgia often cover a much larger area than the town they're named after — this is a known general problem with ZIP-level business data and could easily explain an inflated count for a small town whose ZIP boundary extends into busier surrounding areas.
+
+3. Cross-check Mount Airy's business count against an independent source if possible (e.g. a web search for Mount Airy, GA's actual population and known commercial activity) to confirm whether 359 is plausible or clearly wrong.
+
+4. Check whether this same ZIP-boundary-attribution issue could be affecting OTHER small towns in the dataset, not just Mount Airy — if the root cause is "ZIP boundaries don't match town boundaries," this could be a systemic data quality issue worth flagging broadly, not a one-off Mount Airy anomaly.
+
+5. Report back: what is the actual source of the 359 figure, is it wrong (and if so why), and what would need to change to get an accurate business count attributable specifically to Mount Airy's own town area rather than its full ZIP code's footprint.
+
+Do NOT mark this task complete or write a commit message until this is resolved — the scoring formula itself (Fix 2) may well be correct, but it can't be validated against data this questionable. Hold off on Fix 1's threshold validation too, since a 200-business floor is meaningless if business counts themselves are unreliable for small towns.
