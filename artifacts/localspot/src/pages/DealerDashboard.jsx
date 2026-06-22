@@ -177,6 +177,35 @@ export default function DealerDashboard() {
           </div>
         </div>
 
+        {/* Payment pending recovery banner */}
+        {me?.status === "pending_payment" && (
+          <div style={{ background: "#fffbeb", border: "1.5px solid #fbbf24", borderRadius: 14, padding: "20px 24px", marginBottom: 20 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 24 }}>⏳</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 800, fontSize: 15, color: "#92400e", marginBottom: 4 }}>
+                  Payment confirmation pending
+                </div>
+                <div style={{ fontSize: 13.5, color: "#78350f", lineHeight: 1.6, marginBottom: 12 }}>
+                  Your account is waiting to be activated. If you already completed payment, click below to finish setup.
+                </div>
+                {me?.stripeCheckoutSessionId ? (
+                  <a
+                    href={`${baseUrl}/dealers/confirmation?session_id=${encodeURIComponent(me.stripeCheckoutSessionId)}`}
+                    style={{ display: "inline-block", background: "#92400e", color: "#fff", borderRadius: 8, padding: "9px 20px", fontSize: 13.5, fontWeight: 800, textDecoration: "none" }}
+                  >
+                    Complete account setup →
+                  </a>
+                ) : (
+                  <div style={{ fontSize: 13, color: "#78350f" }}>
+                    No pending checkout session found. Please contact support if you completed payment.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Territory */}
         {me?.territory && (
           <div style={{ background: `${GOLD}10`, border: `1.5px solid ${GOLD}55`, borderRadius: 14, padding: "20px 24px", marginBottom: 20 }}>

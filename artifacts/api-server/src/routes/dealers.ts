@@ -267,7 +267,14 @@ router.post("/dealers", async (req, res): Promise<void> => {
 
   const [existing] = await db.select().from(dealersTable).where(eq(dealersTable.email, email));
   if (existing && existing.status === "active") {
-    res.status(409).json({ error: "A dealer account with this email is already active." });
+    res.status(409).json({ error: "A dealer account with this email is already active. Please sign in at /dealer/login." });
+    return;
+  }
+  if (existing && existing.status === "pending_payment") {
+    res.status(409).json({
+      error:
+        "An account with this email is already being set up. If you completed payment, please sign in to finish activating your account. If you need help, contact support.",
+    });
     return;
   }
   if (existing && existing.status === "cancelled") {
@@ -395,9 +402,9 @@ router.post("/dealers", async (req, res): Promise<void> => {
       metadata: { kind: "dealer", dealerId: String(dealerId) },
     },
     // {CHECKOUT_SESSION_ID} is replaced by Stripe with the real session ID.
-    // The portal page uses it as a synchronous fallback activation in case
-    // the checkout.session.completed webhook hasn't fired yet.
-    success_url: `${origin}/dealer/login?paid=1`,
+    // DealerConfirmation calls /api/dealers/confirm as a synchronous fallback
+    // so activation always happens even if the webhook hasn't fired yet.
+    success_url: `${origin}/dealers/confirmation?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/dealers/signup?cancelled=1`,
   });
 
@@ -485,7 +492,14 @@ router.post("/dealers/claim-proposal", async (req, res): Promise<void> => {
 
   const [existing] = await db.select().from(dealersTable).where(eq(dealersTable.email, email));
   if (existing && existing.status === "active") {
-    res.status(409).json({ error: "A dealer account with this email is already active." });
+    res.status(409).json({ error: "A dealer account with this email is already active. Please sign in at /dealer/login." });
+    return;
+  }
+  if (existing && existing.status === "pending_payment") {
+    res.status(409).json({
+      error:
+        "An account with this email is already being set up. If you completed payment, please sign in to finish activating your account. If you need help, contact support.",
+    });
     return;
   }
   if (existing && existing.status === "cancelled") {
@@ -565,7 +579,10 @@ router.post("/dealers/claim-proposal", async (req, res): Promise<void> => {
     ],
     metadata: meta,
     subscription_data: { metadata: meta },
-    success_url: `${origin}/dealer/login?paid=1`,
+    // {CHECKOUT_SESSION_ID} is replaced by Stripe with the real session ID.
+    // DealerConfirmation calls /api/dealers/confirm as a synchronous fallback
+    // so activation always happens even if the webhook hasn't fired yet.
+    success_url: `${origin}/dealers/confirmation?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/find-territory?cancelled=1`,
   });
 
@@ -1462,6 +1479,8 @@ router.get("/dealers/me", requireDealerAuth, async (req, res): Promise<void> => 
     email: dealer.email,
     status: dealer.status,
     impersonatedBy: tokenPayload?.impersonatedBy ?? null,
+    // Exposed only while pending so the dashboard can offer a "retry confirm" link.
+    stripeCheckoutSessionId: dealer.status === "pending_payment" ? dealer.stripeCheckoutSessionId : null,
     territory: territory
       ? { id: territory.id, name: territory.name, households: territory.households }
       : null,
