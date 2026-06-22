@@ -70,7 +70,7 @@ function MailingAreaCard({ c, money, baseUrl }) {
               padding: "8px 14px", textDecoration: "none", background: "#fff",
               whiteSpace: "nowrap",
             }}>
-            View Advertiser Page ↗
+            View {cityName} Page ↗
           </a>
         )}
         <button

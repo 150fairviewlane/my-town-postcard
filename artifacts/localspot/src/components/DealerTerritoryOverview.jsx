@@ -160,7 +160,7 @@ function TerritoryCard({ campaign, showRevenue }) {
               textDecoration: "none", cursor: "pointer",
             }}
           >
-            {showRevenue ? "View Landing Page ↗" : "View Advertiser Page ↗"}
+            View {campaignLabel} Page ↗
           </a>
           <button
             onClick={copyLink}
