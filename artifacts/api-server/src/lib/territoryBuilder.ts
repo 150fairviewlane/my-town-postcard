@@ -611,6 +611,14 @@ export function computeMapDisplayZips(
   // Skipped when countyGeoids is empty (county could not be resolved).
   if (countyGeoids.length > 0) {
     const allowed = new Set(countyGeoids);
+    // Always allow the counties that contain a hub city directly.  The ≥2-hub
+    // rule in getCountyTerritoryHubs can leave single-hub counties (e.g.
+    // Gray/Jones County) out of countyGeoids even though the city is an
+    // explicit mailing area — those ZIPs must still appear on the map.
+    for (const hub of hubs) {
+      const geoid = getCountyGeoidForLocation(hub.lat, hub.lng);
+      if (geoid) allowed.add(geoid);
+    }
     return result.filter(zip => {
       const geoid = getCountyGeoidFromZip(zip);
       return geoid != null && allowed.has(geoid);
