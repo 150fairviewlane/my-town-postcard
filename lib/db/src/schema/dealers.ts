@@ -112,6 +112,33 @@ export const adminActionsTable = pgTable("admin_actions", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// Archive of deleted dealer accounts. Written before any dealer row is
+// permanently removed so there is always a record of who was a dealer,
+// what territory they held, and when they were removed. The original
+// dealer id is stored for reference even though the dealers row is gone.
+export const formerDealersTable = pgTable("former_dealers", {
+  id: serial("id").primaryKey(),
+  originalDealerId: integer("original_dealer_id"), // nullable; dealer row is deleted
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone"),
+  homeZip: text("home_zip"),
+  statusAtDeletion: text("status_at_deletion").notNull(),
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  isComped: boolean("is_comped").notNull().default(false),
+  // JSON snapshot of territories at the time of deletion:
+  // Array of { id, name, households } objects.
+  territoriesSnapshot: jsonb("territories_snapshot"),
+  activatedAt: timestamp("activated_at", { withTimezone: true }),
+  originalCreatedAt: timestamp("original_created_at", { withTimezone: true }),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }).notNull().defaultNow(),
+  deletedBy: text("deleted_by").notNull().default("admin"),
+  notes: text("notes"),
+});
+
+export type FormerDealer = typeof formerDealersTable.$inferSelect;
+
 export const insertDealerSchema = createInsertSchema(dealersTable).omit({
   id: true,
   createdAt: true,

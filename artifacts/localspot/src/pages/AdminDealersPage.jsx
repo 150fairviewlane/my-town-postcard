@@ -40,9 +40,10 @@ function authHeaders() {
 }
 
 // ─── Delete modal ─────────────────────────────────────────────────────────────
+// Two-step confirmation: step "warn" shows the warning, step "confirm" fires the delete.
 
 function DeleteModal({ dealer, preview, onClose, onSuccess }) {
-  const [step, setStep] = useState("choose");
+  const [step, setStep] = useState("warn");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
 
@@ -55,18 +56,23 @@ function DeleteModal({ dealer, preview, onClose, onSuccess }) {
     ? preview.campaigns.reduce((s, c) => s + c.paidSpots, 0)
     : 0;
   const hasPaid = paidSpots > 0;
+  const territoryNames = (() => {
+    if (!preview) return null;
+    const names = preview.campaigns.map((c) => c.name).filter(Boolean);
+    return names.length > 0 ? names.join(", ") : null;
+  })();
 
-  async function doDelete(mode) {
+  async function doDelete() {
     setBusy(true);
     setErr(null);
     try {
-      const res = await fetch(`${baseUrl}/api/admin/dealers/${dealer.id}?mode=${mode}`, {
+      const res = await fetch(`${baseUrl}/api/admin/dealers/${dealer.id}?mode=archive`, {
         method: "DELETE",
         headers: { ...authHeaders(), "Content-Type": "application/json" },
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error || `Server returned ${res.status}`);
-      onSuccess(mode, body.dealerName);
+      onSuccess("archive", body.dealerName);
     } catch (e) {
       setErr(e.message);
       setBusy(false);
@@ -83,169 +89,89 @@ function DeleteModal({ dealer, preview, onClose, onSuccess }) {
   const card = {
     background: "#fff",
     borderRadius: 14,
-    maxWidth: 480,
+    maxWidth: 460,
     width: "100%",
     padding: "28px 28px 24px",
     boxShadow: "0 24px 64px rgba(0,0,0,0.35)",
     fontFamily: "DM Sans, sans-serif",
-    position: "relative",
   };
-  const title = {
-    fontFamily: "Georgia,serif",
-    fontWeight: 900,
-    fontSize: 19,
-    color: "#111",
-    marginBottom: 6,
-    lineHeight: 1.3,
-  };
-  const sub = {
-    fontSize: 13.5,
-    color: "#6b7280",
-    marginBottom: 20,
-    lineHeight: 1.5,
-  };
-  const btn = (bg, color, border) => ({
-    display: "block",
-    width: "100%",
-    padding: "12px 16px",
-    borderRadius: 9,
-    border: border || "none",
-    background: bg,
-    color,
-    fontSize: 13.5,
-    fontWeight: 700,
-    cursor: busy ? "default" : "pointer",
-    textAlign: "left",
-    fontFamily: "DM Sans, sans-serif",
-    marginBottom: 8,
-    opacity: busy ? 0.7 : 1,
-    transition: "opacity .15s",
-  });
 
-  if (step === "confirm-full") {
+  if (step === "warn") {
     return (
-      <div style={overlay} onClick={(e) => e.target === e.currentTarget && !busy && onClose()}>
+      <div style={overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
         <div style={card}>
-          <div style={{ ...title, color: "#991b1b" }}>
-            Permanently delete everything?
+          <div style={{ fontFamily: "Georgia,serif", fontWeight: 900, fontSize: 20, color: "#991b1b", marginBottom: 10 }}>
+            Delete dealer?
           </div>
-          <div style={sub}>
-            This will remove <strong>{dealer.name}</strong>, their{" "}
-            {preview?.campaigns.length ?? 0} territory page
-            {(preview?.campaigns.length ?? 0) !== 1 ? "s" : ""}, and{" "}
-            <strong>{totalSpots} ad spot{totalSpots !== 1 ? "s" : ""}</strong>.
-            {hasPaid && (
-              <span style={{ display: "block", marginTop: 8, color: "#991b1b", fontWeight: 700 }}>
-                ⚠️ {paidSpots} spot{paidSpots !== 1 ? "s" : ""}{" "}
-                {paidSpots === 1 ? "has" : "have"} been paid for — that payment record
-                will be permanently lost.
-              </span>
-            )}{" "}
-            <strong>This cannot be undone.</strong>
+          <div style={{ fontSize: 14, color: "#374151", lineHeight: 1.65, marginBottom: 16 }}>
+            You're about to delete <strong>{dealer.name}</strong>
+            {dealer.email && <span style={{ color: "#6b7280" }}> ({dealer.email})</span>}.
           </div>
 
-          {err && (
-            <div style={{ background: "#fef2f2", color: "#991b1b", borderRadius: 8,
-              padding: "10px 14px", fontSize: 13, marginBottom: 12, fontWeight: 600 }}>
-              {err}
-            </div>
-          )}
+          <div style={{ background: "#fef2f2", border: "1.5px solid #fecaca", borderRadius: 10, padding: "14px 16px", marginBottom: 18, fontSize: 13.5, lineHeight: 1.6 }}>
+            <div style={{ fontWeight: 800, color: "#991b1b", marginBottom: 6 }}>⚠️ This will:</div>
+            <ul style={{ margin: 0, paddingLeft: 20, color: "#7f1d1d" }}>
+              <li>Archive this dealer to the Former Dealers record</li>
+              <li>Release their territory{territoryNames ? ` (${territoryNames})` : ""} back to <em>available</em></li>
+              <li>Delete all associated campaigns, spots, and data</li>
+              {hasPaid && <li style={{ fontWeight: 700 }}>Remove {paidSpots} paid ad spot record{paidSpots !== 1 ? "s" : ""}</li>}
+            </ul>
+          </div>
 
-          <button
-            style={{ ...btn("#991b1b", "#fff"), marginBottom: 10 }}
-            disabled={busy}
-            onClick={() => doDelete("full")}
-          >
-            {busy ? "Deleting…" : "Yes, permanently delete everything"}
-          </button>
-          <button
-            style={{ ...btn("#f3f4f6", "#374151"), marginBottom: 0 }}
-            disabled={busy}
-            onClick={() => { setStep("choose"); setErr(null); }}
-          >
-            ← Go back
-          </button>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button
+              onClick={onClose}
+              style={{ flex: 1, padding: "11px 0", borderRadius: 9, border: "1.5px solid #d1d5db", background: "#fff", color: "#374151", fontSize: 14, fontWeight: 700, cursor: "pointer" }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => setStep("confirm")}
+              style={{ flex: 1, padding: "11px 0", borderRadius: 9, border: "none", background: "#991b1b", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer" }}
+            >
+              Yes, delete dealer →
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
+  // step === "confirm" — second click required
   return (
     <div style={overlay} onClick={(e) => e.target === e.currentTarget && !busy && onClose()}>
       <div style={card}>
-        <div style={title}>Remove dealer — {dealer.name}</div>
-        <div style={sub}>
-          Choose how you want to handle this dealer.
-          {preview && preview.campaigns.length > 0 && (
-            <>
-              {" "}They have{" "}
-              <strong>{preview.campaigns.length} territory page
-              {preview.campaigns.length !== 1 ? "s" : ""}</strong>
-              {" "}and <strong>{totalSpots} spot{totalSpots !== 1 ? "s" : ""}</strong>.
-            </>
-          )}
+        <div style={{ fontFamily: "Georgia,serif", fontWeight: 900, fontSize: 20, color: "#991b1b", marginBottom: 10 }}>
+          Are you sure?
+        </div>
+        <div style={{ fontSize: 14, color: "#374151", lineHeight: 1.65, marginBottom: 20 }}>
+          Click <strong>Delete permanently</strong> to confirm. <strong>{dealer.name}</strong> will be
+          archived to Former Dealers, their territory will be released, and all data deleted.
+          This cannot be undone.
         </div>
 
         {err && (
-          <div style={{ background: "#fef2f2", color: "#991b1b", borderRadius: 8,
-            padding: "10px 14px", fontSize: 13, marginBottom: 12, fontWeight: 600 }}>
+          <div style={{ background: "#fef2f2", color: "#991b1b", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 14, fontWeight: 600 }}>
             {err}
           </div>
         )}
 
-        <button
-          style={{ ...btn("#fffbeb", "#92400e", "1.5px solid #fde68a"), lineHeight: 1.4 }}
-          disabled={busy}
-          onClick={() => doDelete("deactivate")}
-        >
-          <div style={{ fontWeight: 800 }}>
-            {busy ? "Working…" : "⏸ Deactivate (keep all data)"}
-          </div>
-          <div style={{ fontWeight: 400, fontSize: 12.5, marginTop: 3, color: "#92400e" }}>
-            Marks the dealer as cancelled and unpublishes their page. All data
-            stays in the database — reversible later.
-          </div>
-        </button>
-
-        <button
-          style={{ ...btn("#f9fafb", "#374151", "1.5px solid #d1d5db"), lineHeight: 1.4 }}
-          disabled={busy}
-          onClick={() => doDelete("dealer-only")}
-        >
-          <div style={{ fontWeight: 800 }}>
-            {busy ? "Working…" : "🗑 Remove dealer, keep territory page"}
-          </div>
-          <div style={{ fontWeight: 400, fontSize: 12.5, marginTop: 3, color: "#6b7280" }}>
-            Deletes the dealer account only. Their territory page stays live but
-            becomes unassigned (no dealer linked).
-          </div>
-        </button>
-
-        <button
-          style={{ ...btn("#fef2f2", "#991b1b", "1.5px solid #fecaca"), lineHeight: 1.4 }}
-          disabled={busy}
-          onClick={() => setStep("confirm-full")}
-        >
-          <div style={{ fontWeight: 800 }}>Delete everything</div>
-          <div style={{ fontWeight: 400, fontSize: 12.5, marginTop: 3, color: "#991b1b" }}>
-            Permanently removes the dealer, their{" "}
-            {preview?.campaigns.length ?? "?"} territory page
-            {(preview?.campaigns.length ?? 0) !== 1 ? "s" : ""}, and{" "}
-            {totalSpots} ad spot{totalSpots !== 1 ? "s" : ""}.
-            {hasPaid && (
-              <> <strong>⚠️ {paidSpots} paid spot{paidSpots !== 1 ? "s" : ""}.</strong></>
-            )}{" "}
-            Cannot be undone.
-          </div>
-        </button>
-
-        <button
-          style={{ ...btn("transparent", "#9ca3af"), marginBottom: 0, textAlign: "center" }}
-          disabled={busy}
-          onClick={onClose}
-        >
-          Cancel
-        </button>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            disabled={busy}
+            onClick={() => { setStep("warn"); setErr(null); }}
+            style={{ flex: 1, padding: "11px 0", borderRadius: 9, border: "1.5px solid #d1d5db", background: "#fff", color: "#374151", fontSize: 14, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}
+          >
+            ← Go back
+          </button>
+          <button
+            disabled={busy}
+            onClick={doDelete}
+            style={{ flex: 1, padding: "11px 0", borderRadius: 9, border: "none", background: busy ? "#9ca3af" : "#7f1d1d", color: "#fff", fontSize: 14, fontWeight: 800, cursor: busy ? "default" : "pointer" }}
+          >
+            {busy ? "Deleting…" : "Delete permanently"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -370,6 +296,10 @@ export default function AdminDealersPage() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [toast, setToast] = useState(null);
 
+  // Former dealers archive
+  const [formerDealers, setFormerDealers] = useState(null);
+  const [showArchive, setShowArchive] = useState(false);
+
   // Assign territory to existing dealer
   const [assigningTerritoryTo, setAssigningTerritoryTo] = useState(null);
 
@@ -395,6 +325,18 @@ export default function AdminDealersPage() {
         setDealers(body.dealers || []);
       })
       .catch((err) => setError(err.message));
+  };
+
+  const loadFormerDealers = (token) => {
+    if (!token) return;
+    fetch(`${baseUrl}/api/admin/former-dealers`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(async (res) => {
+        const body = await res.json().catch(() => ({}));
+        if (res.ok) setFormerDealers(body.formerDealers || []);
+      })
+      .catch(() => {});
   };
 
   const loadPage = (dealerId) => {
@@ -465,10 +407,12 @@ export default function AdminDealersPage() {
     const msg =
       mode === "deactivate" ? `${dealerName} deactivated` :
       mode === "dealer-only" ? `${dealerName} removed (campaign kept)` :
+      mode === "archive"    ? `${dealerName} deleted and archived` :
       `${dealerName} fully deleted`;
     setToast(msg);
     const token = localStorage.getItem("admin_token");
     if (token) loadDealers(token);
+    loadFormerDealers(token || localStorage.getItem("admin_token"));
   };
 
   const handleAssignedToDealer = (dealer, territory) => {
@@ -482,6 +426,7 @@ export default function AdminDealersPage() {
     const stored = localStorage.getItem("admin_token");
     if (stored) {
       loadDealers(stored);
+      loadFormerDealers(stored);
     } else {
       fetch("/api/admin/login", {
         method: "POST",
@@ -493,6 +438,7 @@ export default function AdminDealersPage() {
           if (d.token) {
             localStorage.setItem("admin_token", d.token);
             loadDealers(d.token);
+            loadFormerDealers(d.token);
           }
         })
         .catch((err) => setError(err.message));
@@ -1018,6 +964,119 @@ export default function AdminDealersPage() {
             </div>
           </>
         )}
+
+        {/* ── Former Dealers Archive ──────────────────────────────────── */}
+        <div style={{ marginTop: 40 }}>
+          <button
+            onClick={() => {
+              setShowArchive((v) => !v);
+              if (!showArchive && formerDealers === null) {
+                loadFormerDealers(localStorage.getItem("admin_token"));
+              }
+            }}
+            style={{
+              background: "none", border: "none", cursor: "pointer",
+              display: "flex", alignItems: "center", gap: 8,
+              fontFamily: "Georgia,serif", fontWeight: 900, fontSize: 16, color: "#374151",
+              padding: 0, marginBottom: 12,
+            }}
+          >
+            <span style={{ fontSize: 18 }}>🗄</span>
+            Former Dealers
+            {formerDealers && formerDealers.length > 0 && (
+              <span style={{ fontSize: 11, fontWeight: 800, color: "#6b7280", background: "#f3f4f6", borderRadius: 999, padding: "2px 9px", letterSpacing: 0.3 }}>
+                {formerDealers.length}
+              </span>
+            )}
+            <span style={{ fontSize: 13, color: "#9ca3af", fontFamily: "sans-serif", fontWeight: 400 }}>
+              {showArchive ? "▲ hide" : "▾ show"}
+            </span>
+          </button>
+
+          {showArchive && (
+            <div style={{ background: "#fff", borderRadius: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.04)", overflow: "hidden" }}>
+              {!formerDealers || formerDealers.length === 0 ? (
+                <div style={{ padding: "28px 24px", textAlign: "center", color: "#9ca3af", fontSize: 14 }}>
+                  No former dealers yet. Deleted dealers will appear here.
+                </div>
+              ) : (
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 700 }}>
+                    <thead>
+                      <tr style={{ background: "#fafafa", textAlign: "left" }}>
+                        <Th>Name / Email</Th>
+                        <Th>Territory at Deletion</Th>
+                        <Th>Status</Th>
+                        <Th>Activated</Th>
+                        <Th>Deleted</Th>
+                        <Th>Stripe</Th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {formerDealers.map((fd) => {
+                        const territories = Array.isArray(fd.territoriesSnapshot) ? fd.territoriesSnapshot : [];
+                        const totalHH = territories.reduce((s, t) => s + (t.households || 0), 0);
+                        return (
+                          <tr key={fd.id} style={{ borderTop: "1px solid #f0f0f0" }}>
+                            <Td>
+                              <div style={{ fontWeight: 700, fontSize: 13.5, color: "#374151" }}>{fd.name}</div>
+                              <div style={{ fontSize: 12, color: "#888" }}>{fd.email}</div>
+                              {fd.phone && <div style={{ fontSize: 11.5, color: "#aaa" }}>{fd.phone}</div>}
+                            </Td>
+                            <Td>
+                              {territories.length === 0 ? (
+                                <span style={{ color: "#9ca3af", fontSize: 12.5 }}>—</span>
+                              ) : (
+                                <div>
+                                  {territories.map((t, i) => (
+                                    <div key={i} style={{ fontSize: 12.5, color: "#374151" }}>
+                                      {t.name || t.id || "—"}
+                                      {t.households ? <span style={{ color: "#9ca3af" }}> · ~{Number(t.households).toLocaleString()} HH</span> : null}
+                                    </div>
+                                  ))}
+                                  {totalHH > 0 && (
+                                    <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>
+                                      ~{totalHH.toLocaleString()} total households
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </Td>
+                            <Td>
+                              <span style={{
+                                background: fd.statusAtDeletion === "active" ? "#f0fdf4" : "#fef2f2",
+                                color: fd.statusAtDeletion === "active" ? "#15803d" : "#991b1b",
+                                borderRadius: 999, padding: "3px 10px", fontSize: 11, fontWeight: 800,
+                                textTransform: "uppercase", letterSpacing: 0.4,
+                              }}>
+                                {fd.statusAtDeletion}
+                              </span>
+                              {fd.isComped && (
+                                <span style={{ marginLeft: 6, background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe", borderRadius: 999, padding: "1px 7px", fontSize: 10, fontWeight: 800, textTransform: "uppercase" }}>
+                                  Comped
+                                </span>
+                              )}
+                            </Td>
+                            <Td style={{ fontSize: 12.5, color: "#666" }}>{formatDate(fd.activatedAt)}</Td>
+                            <Td style={{ fontSize: 12.5, color: "#666" }}>{formatDate(fd.deletedAt)}</Td>
+                            <Td>
+                              {fd.stripeCustomerId ? (
+                                <span style={{ fontFamily: "monospace", fontSize: 11, color: "#6b7280" }}>{fd.stripeCustomerId}</span>
+                              ) : (
+                                <span style={{ color: "#d1d5db", fontSize: 12 }}>—</span>
+                              )}
+                            </Td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
       </div>
     </AdminShell>
   );

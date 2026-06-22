@@ -19,6 +19,7 @@ import {
   territoriesTable,
   territoryProposalsTable,
   territoryZipAssignmentsTable,
+  formerDealersTable,
 } from "@workspace/db";
 import { getStripeClient, isStripeConfigured } from "../lib/stripeClient";
 import { computeCommissionCents } from "../lib/commission";
@@ -1195,17 +1196,53 @@ router.get("/admin/dealers/:id/delete-preview", requireAdmin, async (req, res): 
   res.json({ dealerName: dealer.name, campaigns: campaignSummaries });
 });
 
+// ─── Helper: archive a dealer to former_dealers before deletion ───────────────
+async function archiveDealerSnapshot(dealer: typeof dealersTable.$inferSelect): Promise<void> {
+  // Collect territory snapshot from both the territories table (named territories)
+  // and dealer_territories (ZIP-cluster territories from legacy flow).
+  const namedTerritories = await db
+    .select({ id: territoriesTable.id, name: territoriesTable.name, households: territoriesTable.households })
+    .from(territoriesTable)
+    .where(eq(territoriesTable.dealerId, dealer.id));
+
+  const zipTerritories = await db
+    .select({ cityLabel: dealerTerritoriesTable.cityLabel, estimatedHouseholds: dealerTerritoriesTable.estimatedHouseholds })
+    .from(dealerTerritoriesTable)
+    .where(eq(dealerTerritoriesTable.dealerId, dealer.id));
+
+  const territoriesSnapshot = [
+    ...namedTerritories.map((t) => ({ id: t.id, name: t.name, households: t.households })),
+    ...zipTerritories.map((t) => ({ name: t.cityLabel, households: t.estimatedHouseholds })),
+  ];
+
+  await db.insert(formerDealersTable).values({
+    originalDealerId: dealer.id,
+    name: dealer.name,
+    email: dealer.email,
+    phone: dealer.phone ?? null,
+    homeZip: dealer.homeZip ?? null,
+    statusAtDeletion: dealer.status,
+    stripeCustomerId: dealer.stripeCustomerId ?? null,
+    stripeSubscriptionId: dealer.stripeSubscriptionId ?? null,
+    isComped: dealer.isComped,
+    territoriesSnapshot,
+    activatedAt: dealer.activatedAt ?? null,
+    originalCreatedAt: dealer.createdAt,
+  });
+}
+
 // ─── DELETE /api/admin/dealers/:id ────────────────────────────────────────────
-// mode=dealer-only  — delete dealer row only; campaigns get dealerId → null
-// mode=full         — delete dealer + linked campaigns + all child records (FK-safe order)
-// mode=deactivate   — soft cancel: status='cancelled', campaigns isPublished=false
+// mode=archive      — (recommended) archive snapshot → release territories → full cascade delete
+// mode=dealer-only  — archive → delete dealer row only; campaigns get dealerId → null
+// mode=full         — archive → delete dealer + linked campaigns + all child records
+// mode=deactivate   — soft cancel: status='cancelled', campaigns isPublished=false (no archive)
 router.delete("/admin/dealers/:id", requireAdmin, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
   if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid dealer id" }); return; }
 
   const mode = String(req.query.mode ?? req.body?.mode ?? "");
-  if (!["dealer-only", "full", "deactivate"].includes(mode)) {
-    res.status(400).json({ error: "mode must be dealer-only, full, or deactivate" });
+  if (!["archive", "dealer-only", "full", "deactivate"].includes(mode)) {
+    res.status(400).json({ error: "mode must be archive, dealer-only, full, or deactivate" });
     return;
   }
 
@@ -1221,8 +1258,10 @@ router.delete("/admin/dealers/:id", requireAdmin, async (req, res): Promise<void
     return;
   }
 
+  // All destructive modes archive the dealer snapshot first.
+  await archiveDealerSnapshot(dealer);
+
   if (mode === "dealer-only") {
-    // Detach territory before deleting the dealer so the FK doesn't block.
     await setTerritoryStatusForDealer(id, "available");
     await db.update(campaignsTable).set({ dealerId: null }).where(eq(campaignsTable.dealerId, id));
     await db.delete(dealerPasswordResetsTable).where(eq(dealerPasswordResetsTable.dealerId, id));
@@ -1231,12 +1270,12 @@ router.delete("/admin/dealers/:id", requireAdmin, async (req, res): Promise<void
     await db.delete(adminActionsTable).where(eq(adminActionsTable.targetDealerId, id));
     await db.delete(territoryProposalsTable).where(eq(territoryProposalsTable.dealerId, id));
     await db.delete(dealersTable).where(eq(dealersTable.id, id));
-    req.log.info({ dealerId: id }, "Dealer removed; campaigns kept (dealerId set null)");
+    req.log.info({ dealerId: id }, "Dealer archived + removed; campaigns kept (dealerId set null)");
     res.json({ ok: true, mode: "dealer-only", dealerName: dealer.name });
     return;
   }
 
-  // mode === "full" — cascade delete everything
+  // mode === "full" or "archive" — cascade delete everything
   const campaigns = await db
     .select({ id: campaignsTable.id })
     .from(campaignsTable)
@@ -1252,40 +1291,38 @@ router.delete("/admin/dealers/:id", requireAdmin, async (req, res): Promise<void
 
     if (spotIds.length > 0) {
       const spotArr = sql.raw(`ARRAY[${spotIds.join(",")}]::int[]`);
-      // 1. QR scans
       await db.execute(sql`DELETE FROM qr_scans WHERE spot_id = ANY(${spotArr})`);
-      // 2. Subscription issue assignments (via spot_id or campaign_id)
       const campArr = sql.raw(`ARRAY[${campaignIds.join(",")}]::int[]`);
       await db.execute(sql`DELETE FROM subscription_issue_assignments WHERE spot_id = ANY(${spotArr}) OR campaign_id = ANY(${campArr})`);
-      // 3. Spot subscriptions
       await db.execute(sql`DELETE FROM spot_subscriptions WHERE initial_spot_id = ANY(${spotArr})`);
-      // 4. Orders
       await db.execute(sql`DELETE FROM orders WHERE spot_id = ANY(${spotArr})`);
-      // 5. Spots
       await db.execute(sql`DELETE FROM spots WHERE id = ANY(${spotArr})`);
     } else {
-      // No spots but still delete subscription_issue_assignments by campaign
       const campArr = sql.raw(`ARRAY[${campaignIds.join(",")}]::int[]`);
       await db.execute(sql`DELETE FROM subscription_issue_assignments WHERE campaign_id = ANY(${campArr})`);
     }
-
-    // 6. Campaigns
     await db.execute(sql`DELETE FROM campaigns WHERE dealer_id = ${id}`);
   }
 
-  // 7. Dealer support records
   await db.delete(dealerPasswordResetsTable).where(eq(dealerPasswordResetsTable.dealerId, id));
   await db.delete(dealerTerritoryClaimsTable).where(eq(dealerTerritoryClaimsTable.dealerId, id));
   await db.delete(dealerTerritoriesTable).where(eq(dealerTerritoriesTable.dealerId, id));
   await db.delete(adminActionsTable).where(eq(adminActionsTable.targetDealerId, id));
   await db.delete(territoryProposalsTable).where(eq(territoryProposalsTable.dealerId, id));
-  // 8. Release linked territory back to available
   await setTerritoryStatusForDealer(id, "available");
-  // 9. Delete dealer
   await db.delete(dealersTable).where(eq(dealersTable.id, id));
 
-  req.log.info({ dealerId: id, campaignCount: campaignIds.length }, "Dealer fully deleted");
-  res.json({ ok: true, mode: "full", dealerName: dealer.name, campaignsDeleted: campaignIds.length });
+  req.log.info({ dealerId: id, campaignCount: campaignIds.length }, "Dealer archived + fully deleted");
+  res.json({ ok: true, mode, dealerName: dealer.name, campaignsDeleted: campaignIds.length });
+});
+
+// ─── GET /api/admin/former-dealers ────────────────────────────────────────────
+router.get("/admin/former-dealers", requireAdmin, async (req, res): Promise<void> => {
+  const former = await db
+    .select()
+    .from(formerDealersTable)
+    .orderBy(desc(formerDealersTable.deletedAt));
+  res.json({ formerDealers: former });
 });
 
 // ─── GET /api/dealers/portal-data (cookie-auth version of /dealer-portal) ─────
