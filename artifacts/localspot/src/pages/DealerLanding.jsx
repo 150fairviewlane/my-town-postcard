@@ -169,7 +169,7 @@ function Hero() {
           {[
             "4 Postcard Territories",
             "20,000+ Households",
-            "Earn 80% of Profit",
+            "Earn 70% of Profit",
             "Done-For-You Operations",
           ].map(b => (
             <div key={b} style={{ display: "flex", alignItems: "center", gap: 8,
@@ -226,8 +226,8 @@ function HowItWorks() {
       desc: "We assign you 4 distinct postcard zones (~5,000 homes each) clustered around your hometown. Exclusive — no other dealer can sell in your area." },
     { n: "3", icon: "📞", title: "Sell Local Ad Spots",
       desc: "Reach out to local businesses — restaurants, dentists, HVAC, realtors. Use our pricing, our designs, our mailing. You just close the deal." },
-    { n: "4", icon: "💰", title: "Earn ~$2,500 Per Postcard",
-      desc: "A sold-out postcard generates ~$6,000 in ad revenue. After printing and mailing, ~$3,200 in profit remains — and 80% of that ($2,500+) is yours. Fill one card per territory per month and take home $10,000." },
+    { n: "4", icon: "💰", title: "Earn ~$2,240 Per Postcard",
+      desc: "A sold-out postcard generates ~$6,000 in ad revenue. After printing and mailing, ~$3,200 in profit remains — and 70% of that ($2,240+) is yours. Fill one card per territory per month and take home $9,000." },
   ];
   return (
     <section id="how-it-works" style={{ background: "#fff", padding: "80px 32px" }}>
@@ -237,7 +237,7 @@ function HowItWorks() {
         <p style={{ textAlign: "center", color: "#666", fontSize: 16, marginBottom: 56,
           maxWidth: 580, margin: "0 auto 56px", fontFamily: "sans-serif" }}>
           You bring the local relationships. We bring the system, the design,
-          the printing, and the mailing. You keep 80% of the profit on every card.
+          the printing, and the mailing. You keep 70% of the profit on every card.
         </p>
         <div style={{ display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 32 }}>
@@ -296,7 +296,7 @@ const FAQ_ITEMS = [
   { q: "What does the $99/month subscription cover?",
     a: "Your monthly subscription covers your access to the entire dealer platform: your assigned territories stay locked to you, you get our online ordering portal, ad-design system, customer-facing checkout pages, payment processing, QR tracking, and a personal account manager. You sell ads; we do everything else." },
   { q: "How is commission calculated?",
-    a: "A sold-out postcard generates roughly $6,000 in ad revenue. After printing, mailing, and fulfillment (~$2,800), about $3,200 in profit remains. You keep 80% of that — approximately $2,500 per postcard. With 4 territories running one postcard each per month, that's a $10,000/month earning potential. Commissions are paid within 3 business days of the postcard's mail date." },
+    a: "A sold-out postcard generates roughly $6,000 in ad revenue. After printing, mailing, and fulfillment (~$2,800), about $3,200 in profit remains. You keep 70% of that — approximately $2,240 per postcard. With 4 territories running one postcard each per month, that's a $9,000/month earning potential. Commissions are paid within 3 business days of the postcard's mail date." },
   { q: "How exclusive are the territories?",
     a: "Fully exclusive. Once you're assigned a ZIP-code cluster, no other My Town Postcard dealer can be active in those ZIPs. If you cancel, the territories are released back to the pool after a 30-day grace period." },
   { q: "Do I have to provide my own designs or printer?",
