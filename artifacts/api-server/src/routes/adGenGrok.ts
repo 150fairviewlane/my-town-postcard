@@ -2287,7 +2287,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
         <div class="field"><label>City, State</label><input type="text" id="city" placeholder="Clarkesville, GA"></div>
       </div>
       <div class="field"><label>Street Address</label><input type="text" id="address" placeholder="596 W Louise St"></div>
-      <div class="field"><label>Website / URL</label><input type="text" id="website" placeholder="mrbiscuitscafe.com"></div>
+      <div class="field"><label>Website / URL</label><input type="text" id="website" placeholder="mytownpostcard.com"></div>
       <div class="field"><label>Contact Email <span style="font-weight:400;color:var(--ink-light)">(for order)</span></label><input type="email" id="email" placeholder="owner@mrbiscuitscafe.com"></div>
     </div>
 
@@ -3150,9 +3150,9 @@ function showToast(msg){
     onIndustryChange();
   } else {
     var demo = {
-      bizName:"Mr. Biscuit's Cafe",tagline:"From-Scratch Biscuits & Boba!",
+      bizName:"",tagline:"From-Scratch Biscuits & Boba!",
       phone:"(706) 754-0105",city:"Clarkesville, GA",address:"596 W Louise St",
-      website:"mrbiscuitscafe.com",offer:"$1 OFF Any Biscuit",
+      website:"mytownpostcard.com",offer:"$1 OFF Any Biscuit",
       offerFine:"1 per visit \u00b7 with this postcard"
     };
     Object.keys(demo).forEach(function(id){ var e=document.getElementById(id); if(e) e.value=demo[id]; });
@@ -3423,7 +3423,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
         <div class="field"><label>City, State</label><input type="text" id="city" placeholder="Clarkesville, GA"></div>
       </div>
       <div class="field"><label>Street Address</label><input type="text" id="address" placeholder="596 W Louise St"></div>
-      <div class="field"><label>Website / URL</label><input type="text" id="website" placeholder="mrbiscuitscafe.com"></div>
+      <div class="field"><label>Website / URL</label><input type="text" id="website" placeholder="mytownpostcard.com"></div>
       <div class="field"><label>Contact Email <span style="font-weight:400;color:var(--ink-light)">(for reservation)</span></label><input type="email" id="email" placeholder="owner@mrbiscuitscafe.com"></div>
     </div>
 
@@ -4400,9 +4400,9 @@ function showToast(msg){
   } else {
     // No params — load demo prefill
     var f = {
-      bizName:"Mr. Biscuit's Cafe", tagline:"From-Scratch Biscuits & Boba!",
+      bizName:"", tagline:"From-Scratch Biscuits & Boba!",
       phone:"(706) 754-0105", city:"Clarkesville, GA", address:"596 W Louise St",
-      website:"mrbiscuitscafe.com", offer:"$1 OFF Any Biscuit",
+      website:"mytownpostcard.com", offer:"$1 OFF Any Biscuit",
       offerFine:"1 per visit \\u00b7 with this postcard"
     };
     Object.keys(f).forEach(function(id){ var el=document.getElementById(id); if(el) el.value=f[id]; });
