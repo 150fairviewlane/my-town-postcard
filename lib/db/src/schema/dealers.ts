@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp, real, uniqueIndex, uuid, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, boolean, real, uniqueIndex, uuid, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -43,6 +43,12 @@ export const dealersTable = pgTable(
     activatedAt: timestamp("activated_at", { withTimezone: true }),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
     welcomeReminderSentAt: timestamp("welcome_reminder_sent_at", { withTimezone: true }),
+    // Comped dealers have their monthly fee waived — they were gifted the
+    // dealership directly by the admin rather than paying the $99/mo fee.
+    // This flag is purely for bookkeeping (e.g. monthly-fee revenue reports
+    // that need to exclude comped accounts). It has NO effect on commission
+    // calculations, dealer portal access, or spot-sale revenue tracking.
+    isComped: boolean("is_comped").notNull().default(false),
   },
   (t) => ({
     // Unique on email so a re-attempted signup with the same address surfaces

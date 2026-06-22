@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request } from "express";
-import { eq, sql, desc, asc, and, or, isNull, gt } from "drizzle-orm";
+import { eq, sql, desc, asc, and, or, isNull, gt, inArray } from "drizzle-orm";
 import { z } from "zod/v4";
 import jwt from "jsonwebtoken";
 import rateLimit from "express-rate-limit";
@@ -864,13 +864,14 @@ router.post("/admin/dealers", requireAdmin, async (req, res): Promise<void> => {
     phone: z.string().optional(),
     password: z.string().min(8).max(128),
     territoryId: z.string().optional(), // e.g. "GA-003"
+    isComped: z.boolean().optional().default(false),
   });
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid request", issues: parsed.error.issues });
     return;
   }
-  const { name, email, phone, password, territoryId } = parsed.data;
+  const { name, email, phone, password, territoryId, isComped } = parsed.data;
 
   // Check for duplicate email
   const [existing] = await db.select({ id: dealersTable.id, status: dealersTable.status })
@@ -910,6 +911,7 @@ router.post("/admin/dealers", requireAdmin, async (req, res): Promise<void> => {
         status: "active",
         passwordHash,
         activatedAt: now,
+        isComped: isComped ?? false,
       })
       .returning();
 
@@ -927,7 +929,7 @@ router.post("/admin/dealers", requireAdmin, async (req, res): Promise<void> => {
     return created;
   });
 
-  req.log.info({ dealerId: dealer.id, email, territoryId }, "Admin created dealer (no payment required)");
+  req.log.info({ dealerId: dealer.id, email, territoryId, isComped }, "Admin created dealer (no payment required)");
 
   // Auto-provision landing page campaigns and spots, exactly as the public signup flow does.
   let landingPageCreated = false;
@@ -936,6 +938,18 @@ router.post("/admin/dealers", requireAdmin, async (req, res): Promise<void> => {
       const campaignIds = await ensureDealerLandingPage(dealer.id);
       landingPageCreated = campaignIds.length > 0;
       req.log.info({ dealerId: dealer.id, campaignIds }, "Admin dealer: landing page auto-provisioned");
+
+      // Comped dealers get their campaigns immediately set to active so they
+      // show as live (not draft) in the admin UI and on territory pages.
+      // This is safe because dealer territory campaigns are slug-accessed and
+      // don't participate in the single-active-campaign invariant for the house picker.
+      if (isComped && campaignIds.length > 0) {
+        await db
+          .update(campaignsTable)
+          .set({ status: "active", isPublished: true })
+          .where(inArray(campaignsTable.id, campaignIds));
+        req.log.info({ dealerId: dealer.id, campaignIds }, "Admin dealer: comped — campaigns auto-activated");
+      }
     } catch (err: unknown) {
       req.log.warn({ dealerId: dealer.id, err: (err as Error)?.message }, "Admin dealer: landing page provisioning failed — dealer still created");
     }
@@ -964,13 +978,14 @@ router.get("/admin/dealers", requireAdmin, async (_req, res): Promise<void> => {
     phone: string | null;
     home_zip: string;
     status: string;
+    is_comped: boolean;
     created_at: Date | string;
     activated_at: Date | string | null;
     territory_count: number;
     total_households: number | null;
   }>(sql`
     SELECT
-      d.id, d.name, d.email, d.phone, d.home_zip, d.status,
+      d.id, d.name, d.email, d.phone, d.home_zip, d.status, d.is_comped,
       d.created_at, d.activated_at,
       COUNT(t.id)::int                          AS territory_count,
       COALESCE(SUM(t.estimated_households), 0)::int AS total_households
@@ -995,6 +1010,7 @@ router.get("/admin/dealers", requireAdmin, async (_req, res): Promise<void> => {
       phone: r.phone,
       homeZip: r.home_zip,
       status: r.status,
+      isComped: Boolean(r.is_comped),
       createdAt: toIso(r.created_at),
       activatedAt: toIso(r.activated_at),
       territoryCount: Number(r.territory_count ?? 0),

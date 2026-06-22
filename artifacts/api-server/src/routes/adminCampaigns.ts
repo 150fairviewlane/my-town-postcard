@@ -310,6 +310,51 @@ router.post("/admin/campaigns/:id/activate", requireAdmin, async (req, res): Pro
   res.json(ActivateCampaignResponse.parse(detail));
 });
 
+// ─── POST /api/admin/campaigns/:id/activate-dealer ───────────────────────────
+// Activate a dealer territory campaign in-place — sets status="active" and
+// isPublished=true WITHOUT demoting any other campaign.  This is intentionally
+// different from /activate (the house-campaign endpoint) which enforces the
+// one-active-at-a-time invariant needed by /campaigns/active.  Dealer territory
+// campaigns are accessed exclusively by slug, so multiple can be active
+// simultaneously without any conflict.
+router.post("/admin/campaigns/:id/activate-dealer", requireAdmin, async (req, res): Promise<void> => {
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(rawId, 10);
+  if (!Number.isFinite(id) || id <= 0) {
+    res.status(400).json({ error: "Invalid campaign id" });
+    return;
+  }
+
+  const [target] = await db
+    .select()
+    .from(campaignsTable)
+    .where(eq(campaignsTable.id, id));
+
+  if (!target) {
+    res.status(404).json({ error: "Campaign not found" });
+    return;
+  }
+
+  if (target.status === "active") {
+    res.status(409).json({ error: "Campaign is already active" });
+    return;
+  }
+
+  await db
+    .update(campaignsTable)
+    .set({ status: "active", isPublished: true })
+    .where(eq(campaignsTable.id, id));
+
+  req.log.info({ campaignId: id }, "Dealer campaign activated (no demotion)");
+
+  const detail = await buildCampaignDetail(id);
+  if (!detail) {
+    res.status(500).json({ error: "Failed to reload campaign" });
+    return;
+  }
+  res.json(ActivateCampaignResponse.parse(detail));
+});
+
 router.post("/admin/campaigns/:id/complete", requireAdmin, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const params = CompleteCampaignParams.safeParse({ id: rawId });

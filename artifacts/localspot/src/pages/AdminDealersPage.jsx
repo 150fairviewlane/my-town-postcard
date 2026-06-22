@@ -377,7 +377,7 @@ export default function AdminDealersPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [createStep, setCreateStep] = useState(1); // 1 = personal info, 2 = territory form expanded
   const [newTerritory, setNewTerritory] = useState(null); // territory created inline
-  const [createForm, setCreateForm] = useState({ name: "", email: "", phone: "", password: "", territoryId: "" });
+  const [createForm, setCreateForm] = useState({ name: "", email: "", phone: "", password: "", territoryId: "", isComped: false });
   const [createBusy, setCreateBusy] = useState(false);
   const [createError, setCreateError] = useState(null);
   const [createResult, setCreateResult] = useState(null);
@@ -517,7 +517,7 @@ export default function AdminDealersPage() {
     setCreateResult(null);
     try {
       const token = localStorage.getItem("admin_token");
-      const body = { ...createForm };
+      const body = { ...createForm, isComped: createForm.isComped === true };
       // Prefer the inline-created territory over the dropdown selection
       const effectiveTerritoryId = newTerritory?.id || body.territoryId;
       if (effectiveTerritoryId) body.territoryId = effectiveTerritoryId;
@@ -558,7 +558,7 @@ export default function AdminDealersPage() {
     setCreateError(null);
     setCreateStep(1);
     setNewTerritory(null);
-    setCreateForm({ name: "", email: "", phone: "", password: "", territoryId: "" });
+    setCreateForm({ name: "", email: "", phone: "", password: "", territoryId: "", isComped: false });
   }
 
   useEffect(() => {
@@ -739,6 +739,24 @@ export default function AdminDealersPage() {
                   />
                 </div>
 
+                {/* Comped checkbox */}
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={createForm.isComped}
+                      onChange={e => setCreateForm(f => ({ ...f, isComped: e.target.checked }))}
+                      style={{ width: 16, height: 16, cursor: "pointer", accentColor: RED }}
+                    />
+                    <span>
+                      <span style={{ fontSize: 13.5, fontWeight: 700, color: "#111" }}>Comped dealer</span>
+                      <span style={{ fontSize: 12, color: "#6b7280", marginLeft: 6 }}>
+                        Monthly fee waived — campaigns activate immediately (no Stripe subscription needed)
+                      </span>
+                    </span>
+                  </label>
+                </div>
+
                 {/* Territory row */}
                 <div style={{ gridColumn: "1 / -1" }}>
                   <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 6 }}>
@@ -905,10 +923,21 @@ export default function AdminDealersPage() {
                           onClick={() => navigate(`/admin/dealers/${d.id}`)}
                         >
                           <Td>
-                            <div style={{ fontWeight: 700, color: RED, fontSize: 13.5, textDecoration: "underline", textDecorationColor: "transparent", transition: "text-decoration-color .15s" }}
-                              onMouseEnter={(e) => e.currentTarget.style.textDecorationColor = RED}
-                              onMouseLeave={(e) => e.currentTarget.style.textDecorationColor = "transparent"}
-                            >{d.name}</div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                              <span style={{ fontWeight: 700, color: RED, fontSize: 13.5, textDecoration: "underline", textDecorationColor: "transparent", transition: "text-decoration-color .15s" }}
+                                onMouseEnter={(e) => e.currentTarget.style.textDecorationColor = RED}
+                                onMouseLeave={(e) => e.currentTarget.style.textDecorationColor = "transparent"}
+                              >{d.name}</span>
+                              {d.isComped && (
+                                <span style={{
+                                  background: "#eff6ff", color: "#1d4ed8",
+                                  border: "1px solid #bfdbfe",
+                                  borderRadius: 999, padding: "1px 8px",
+                                  fontSize: 10, fontWeight: 800,
+                                  textTransform: "uppercase", letterSpacing: 0.4,
+                                }}>Comped</span>
+                              )}
+                            </div>
                             <div style={{ fontSize: 12, color: "#888" }}>{d.email}</div>
                             {d.phone && (
                               <div style={{ fontSize: 11.5, color: "#888" }}>{d.phone}</div>
