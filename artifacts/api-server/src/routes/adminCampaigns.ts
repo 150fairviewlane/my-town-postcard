@@ -139,6 +139,7 @@ router.get("/admin/campaigns", requireAdmin, async (_req, res): Promise<void> =>
     mail_date: string | null;
     homes_count: number;
     status: string;
+    dealer_id: number | null;
     created_at: Date | string;
     total_spots: number;
     paid_spots: number;
@@ -153,6 +154,7 @@ router.get("/admin/campaigns", requireAdmin, async (_req, res): Promise<void> =>
       c.mail_date,
       c.homes_count,
       c.status,
+      c.dealer_id,
       c.created_at,
       COALESCE(COUNT(s.id)::int, 0)                                                   AS total_spots,
       COALESCE(COUNT(s.id) FILTER (WHERE s.status = 'paid')::int, 0)                  AS paid_spots,
@@ -175,6 +177,7 @@ router.get("/admin/campaigns", requireAdmin, async (_req, res): Promise<void> =>
     mailDate: r.mail_date,
     homesCount: Number(r.homes_count),
     status: r.status,
+    dealerId: r.dealer_id != null ? Number(r.dealer_id) : null,
     createdAt: serializeDate(r.created_at) ?? new Date().toISOString(),
     totalSpots: Number(r.total_spots ?? 0),
     paidSpots: Number(r.paid_spots ?? 0),

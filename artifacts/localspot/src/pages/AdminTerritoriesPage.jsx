@@ -27,11 +27,9 @@ function StatusPill({ status }) {
   );
 }
 
-function matchesTerritoryName(campaignTerritory, territoryName) {
+function matchesTerritoryNameExact(campaignTerritory, territoryName) {
   if (!campaignTerritory || !territoryName) return false;
-  const ct = campaignTerritory.toLowerCase().trim();
-  const tn = territoryName.toLowerCase().trim();
-  return ct === tn || ct.includes(tn) || tn.includes(ct);
+  return campaignTerritory.toLowerCase().trim() === territoryName.toLowerCase().trim();
 }
 
 function TerritoriesContent({ token }) {
@@ -76,7 +74,15 @@ function TerritoriesContent({ token }) {
   });
 
   function getCampaignsForTerritory(territory) {
-    return campaigns.filter(c => matchesTerritoryName(c.territory, territory.name));
+    // Prefer dealer-ID match: if both the territory and the campaign have a
+    // dealerId, use that as the authoritative link. This avoids false positives
+    // when two territory names share a word (e.g. "Cherokee" ↔ "Cherokee County").
+    if (territory.dealerId) {
+      const byDealer = campaigns.filter(c => c.dealerId === territory.dealerId);
+      if (byDealer.length > 0) return byDealer;
+    }
+    // Fall back to exact (case-insensitive) name equality only — no substring.
+    return campaigns.filter(c => matchesTerritoryNameExact(c.territory, territory.name));
   }
 
   function getPrimaryDetailHref(territory) {

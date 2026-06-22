@@ -408,7 +408,13 @@ function Dashboard({ token, onLogout }) {
   const queryClient = useQueryClient();
   const search = useSearch();
   const urlId = new URLSearchParams(search).get("id");
-  const urlCampaignId = urlId ? Number(urlId) : null;
+  const _urlCampaignIdRaw = urlId ? Number(urlId) : null;
+  // Guard against NaN (e.g. ?id=abc): treat NaN or 0 as "no id provided" so
+  // the auto-select fallback fires correctly instead of silently querying with
+  // an invalid id.
+  const urlCampaignId = (_urlCampaignIdRaw != null && Number.isFinite(_urlCampaignIdRaw) && _urlCampaignIdRaw > 0)
+    ? _urlCampaignIdRaw
+    : null;
 
   const authRequest = { headers: { Authorization: `Bearer ${token}` } };
   const approveMutation = useApproveAd({ request: authRequest });
