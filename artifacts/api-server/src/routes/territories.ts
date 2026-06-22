@@ -629,21 +629,6 @@ router.post("/territories/propose", async (req, res): Promise<void> => {
         centroidLng = hubs.reduce((s, h) => s + h.lng, 0) / hubs.length;
       }
 
-      // Step 3: conflict-check the merged footprint.
-      const conflictId = await checkZipFootprintConflict(
-        hubs.map(h => ({ cityName: h.cityName, lat: h.lat, lng: h.lng })),
-      );
-      if (conflictId) {
-        const [conflictTerr] = await db
-          .select({ name: territoriesTable.name })
-          .from(territoriesTable)
-          .where(eq(territoriesTable.id, conflictId));
-        res.status(409).json({
-          error: `This hub set overlaps with the existing territory "${conflictTerr?.name ?? "Unknown"}". Try different hub cities to avoid the conflict.`,
-          conflictingTerritory: conflictTerr?.name ?? null,
-        });
-        return;
-      }
     }
 
     const countyShortNames = countyGeoids
