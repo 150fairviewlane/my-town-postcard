@@ -3156,12 +3156,6 @@ function showToast(msg){
       offerFine:"1 per visit \u00b7 with this postcard"
     };
     Object.keys(demo).forEach(function(id){ var e=document.getElementById(id); if(e) e.value=demo[id]; });
-    var sel2 = document.getElementById('industry');
-    for(var j=0;j<sel2.options.length;j++){
-      if(sel2.options[j].text === 'Breakfast & Cafe'){ sel2.selectedIndex=j; break; }
-    }
-    ['Bacon Egg & Cheese Biscuit $5.99','Boba Tea (any flavor) $4.50','Gravy Biscuit $3.99','Breakfast Plate $7.99']
-      .forEach(function(v){ addMenuItem(v); });
     onIndustryChange();
   }
   onFormChange();
@@ -4406,12 +4400,6 @@ function showToast(msg){
       offerFine:"1 per visit \\u00b7 with this postcard"
     };
     Object.keys(f).forEach(function(id){ var el=document.getElementById(id); if(el) el.value=f[id]; });
-    var sel = document.getElementById('industry');
-    for(var i=0;i<sel.options.length;i++){
-      if(sel.options[i].text === 'Breakfast & Cafe'){ sel.selectedIndex=i; break; }
-    }
-    ['Bacon Egg & Cheese Biscuit $5.99','Boba Tea (any flavor) $4.50','Gravy Biscuit $3.99','Breakfast Plate $7.99']
-      .forEach(function(v){ addMenuItem(v); });
   }
   onFormChange();
   loadLibrary();
