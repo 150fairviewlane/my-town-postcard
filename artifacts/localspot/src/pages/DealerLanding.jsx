@@ -226,8 +226,8 @@ function HowItWorks() {
       desc: "We assign you 4 distinct postcard zones (~5,000 homes each) clustered around your hometown. Exclusive — no other dealer can sell in your area." },
     { n: "3", icon: "📞", title: "Sell Local Ad Spots",
       desc: "Reach out to local businesses — restaurants, dentists, HVAC, realtors. Use our pricing, our designs, our mailing. You just close the deal." },
-    { n: "4", icon: "💰", title: "Earn ~$2,240 Per Postcard",
-      desc: "A sold-out postcard generates ~$6,000 in ad revenue. After printing and mailing, ~$3,200 in profit remains — and 70% of that ($2,240+) is yours. Fill one card per territory per month and take home $9,000." },
+    { n: "4", icon: "💰", title: "Earn ~$2,000+ Per Postcard",
+      desc: "A sold-out postcard generates ~$6,000 in ad revenue. After all costs including software, printing, mailing and payment processing, 70% of all profit (~$2,000+) is yours. Fill all four territory postcards monthly and take home $96,000/year as an independent dealer." },
   ];
   return (
     <section id="how-it-works" style={{ background: "#fff", padding: "80px 32px" }}>
