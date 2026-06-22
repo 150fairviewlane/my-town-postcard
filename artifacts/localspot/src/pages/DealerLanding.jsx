@@ -316,7 +316,7 @@ const FAQ_ITEMS = [
   { q: "When and how are commissions paid?",
     a: "Commissions are paid at the mail date. Once a postcard ships to USPS, your commission is calculated and paid within 3 business days. No waiting, no surprises." },
   { q: "Will I have to make ads?",
-    a: "Not at all. Professional ad design is included with every spot. Provide your logo and photos OR let our Ad Generator create a masterpiece for you!" },
+    a: "Not at all. If you fancy yourself a designer, you can always upload your own ad. Or, just let My Town's Ad Generator create a masterpiece for you!" },
 ];
 
 function FAQSection() {
