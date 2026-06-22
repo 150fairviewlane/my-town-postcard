@@ -199,7 +199,7 @@ function Hero() {
 
       <div style={{ flex: "1 1 420px", minWidth: 300, position: "relative" }}>
         <img
-          src={`${import.meta.env.BASE_URL}postcard-hero-double.png`}
+          src={`${import.meta.env.BASE_URL}postcard-hero.png`}
           alt="My Town Postcard sample"
           style={{ width: "100%", maxWidth: 560, borderRadius: 12,
             boxShadow: "0 24px 60px rgba(0,0,0,0.18)", display: "block" }}
