@@ -1,0 +1,41 @@
+Two related issues on the production Territories admin page for dealer Vincent Ferrari's 4 territories (Ball Ground, Holly Springs, Woodstock, Canton — all under his "Cherokee" dealer record, status TAKEN):
+
+---
+
+## Issue 1: All 4 campaigns stuck in DRAFT status
+
+**Context:** Vincent is a friend being GIFTED this dealership — he is NOT going through Stripe checkout, and should NOT be charged the monthly dealer fee. He was created directly via the admin "create dealer" flow, not the public paid signup flow.
+
+**Hypothesis to confirm:** based on how campaign activation works elsewhere in this codebase, a campaign only becomes `isPublished: true` and sellable after an explicit activation step (`POST /admin/campaigns/:id/activate`) — which normally fires automatically as part of Stripe payment confirmation for a real paying dealer. Since Vincent's dealer/territory was created directly through the admin tool with no Stripe payment involved, that activation step likely never ran, leaving all 4 of his campaigns in their default `draft` status.
+
+1. Confirm this is indeed why these 4 campaigns are stuck in draft (check the actual campaign records' `status` and `isPublished` fields, and confirm there's no other distinct bug causing this).
+
+2. If confirmed: activate all 4 of Vincent's campaigns using the existing activation logic (`POST /admin/campaigns/:id/activate` equivalent) so they become `isPublished: true` and sellable. Do NOT trigger anything Stripe-related — this should be a pure status change, no payment processing involved.
+
+3. **Add a "comped dealer" path going forward** so this doesn't have to be done manually every time: in the admin "create dealer" flow (and/or the Custom Territory tool), add a checkbox or toggle like "Comped dealer (waive monthly fee)". When checked:
+   - Create the dealer with `status: "active"` directly (skip whatever "pending payment" intermediate status a normal signup would have)
+   - Automatically activate and publish all of the dealer's associated campaigns immediately upon creation, without requiring a separate manual activation step
+   - Do NOT create any Stripe subscription or charge the monthly dealer fee for this dealer
+   - **Important: a comped dealer still earns commission normally on every ad spot sold in their territory, at the standard `DEALER_COMMISSION_RATE` (currently 35%) — being comped ONLY waives the monthly fee Vincent would otherwise pay the business, it does NOT affect his payout on sales. Do not exclude comped dealers from commission calculations, revenue tracking, or any dealer-facing stats — their dashboard, fill rates, and commission figures must work exactly the same as a paying dealer's.**
+   - Add an `isComped` boolean field on the dealer record so comped dealers are clearly distinguishable from paying ones in admin views — this is purely for your own bookkeeping (e.g. so a future "monthly fee revenue" report can correctly exclude them), and must NOT be used anywhere to gate or suppress their actual ad-sale commission or revenue data.
+
+4. After fixing, confirm all 4 of Vincent's territory pages are live and show their ad pickers correctly to a public visitor.
+
+---
+
+## Issue 2: "View Spot Table →" links all route to the wrong campaign (Habersham)
+
+This is a separate bug from Issue 1. All 4 "View Spot Table →" buttons on the Territories admin page currently navigate to Habersham's spot table — a campaign that doesn't even exist in production — regardless of which of Vincent's 4 territories the button was clicked from.
+
+1. Find the Territories admin page component rendering this table (likely `AdminTerritoriesPage.jsx`) and locate where the "View Spot Table →" link/button is generated for each campaign row.
+
+2. Check what value is being used to build that link's destination — likely a campaign ID or slug. The fact that ALL FOUR buttons point to the same wrong destination (Habersham) suggests either:
+   - A hardcoded campaign ID/slug somewhere instead of using each row's own data (e.g. `campaignId={someHardcodedValue}` instead of `campaignId={row.id}`)
+   - A closure/mapping bug where all 4 buttons in a `.map()` loop are accidentally capturing the same (likely first-or-last, or a stale/leftover) campaign reference instead of each one's own
+   - A leftover default/fallback value that's being used because something about these specific 4 campaigns' data is unexpectedly null/undefined, causing the link-building logic to fall back to a default Habersham reference
+
+3. Identify the exact cause and fix it so each "View Spot Table →" button correctly links to ITS OWN campaign's spot table, using that row's actual campaign ID/slug — verified by clicking all 4 and confirming each opens the correct corresponding spot table (Ball Ground's button opens Ball Ground's table, etc.), not a shared destination.
+
+4. Also check whether any OTHER territory rows in this admin page (not just Vincent's 4) might have the same bug — test against at least one other existing territory to confirm this isn't a wider issue.
+
+Report back: confirmation of the draft/activation root cause and fix, the comped-dealer toggle implementation, and the exact root cause + fix for the spot-table routing bug.
