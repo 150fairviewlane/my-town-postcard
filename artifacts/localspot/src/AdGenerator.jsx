@@ -1274,7 +1274,7 @@ offerFine: "",
 address: "",
 city: "",
 phone: "",
-website: "",
+website: "mytownpostcard.com",
 logo: null,
 photo: null,
 menuItems: [],
@@ -1418,7 +1418,7 @@ boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
             <input
               value={formData.businessName}
               onChange={e => setFormData(d => ({ ...d, businessName: e.target.value }))}
-              placeholder="e.g. Joe's Pizza"
+              placeholder=""
               style={inputStyle}
             />
           </div>
