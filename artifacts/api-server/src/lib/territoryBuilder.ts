@@ -1066,7 +1066,7 @@ async function getCountyTerritoryHubs(
 /**
  * Builds a territory proposal using the city-hub model.
  */
-async function buildCityHubProposal(
+export async function buildCityHubProposal(
   dealerLat: number,
   dealerLng: number,
   stateAbbr: string,

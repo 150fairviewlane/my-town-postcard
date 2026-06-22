@@ -9,6 +9,7 @@ import { db, territoriesTable, dealerTerritoryClaimsTable, territoryZipAssignmen
 import { ensureDealerLandingPage } from "../lib/dealerLandingPage";
 import {
   getTerritoryForLocation,
+  buildCityHubProposal,
   findCandidateHubs,
   selectBestHubs,
   selectHubsByCountyFill,
@@ -548,29 +549,28 @@ router.post("/territories/propose", async (req, res): Promise<void> => {
     loc.lat, loc.lng, stateAbbr, stateFips, stateName, undefined, city, stateAbbr,
   );
 
+  // When the searched city falls inside an existing territory, capture it so we
+  // can surface a "nearby taken" warning in the proposal card — but still
+  // generate a full proposal so the dealer always sees editable mailing areas.
+  let nearbyExisting: { id: string; name: string; status: string } | null = null;
+  let proposalSource = result.type === "proposed" && result.proposals?.[0]
+    ? result.proposals[0]
+    : null;
+
   if (result.type === "existing" && result.territory) {
     const t = result.territory as Record<string, any>;
-    const counties: string[] = Array.isArray(t.counties) ? t.counties : [];
-    res.json({
-      type: "existing",
-      territory: {
-        id: t.id,
-        name: t.name,
-        status: t.status,
-        state: t.state,
-        counties,
-        countyGeoids: [...getCountyGeoidsByShortNames(stateAbbr, counties)],
-        households: t.households ?? 0,
-        businessCount: t.businessCount ?? 0,
-        centroidLat: t.centroidLat ?? null,
-        centroidLng: t.centroidLng ?? null,
-      },
-    });
-    return;
+    nearbyExisting = { id: t.id, name: t.name, status: t.status };
+    // Generate a fresh proposal (hubs are auto-adjusted away from the claimed area).
+    const freshProposal = await buildCityHubProposal(
+      loc.lat, loc.lng, stateAbbr, stateFips, stateName, city, stateAbbr,
+    );
+    if (freshProposal.isViable) {
+      proposalSource = freshProposal;
+    }
   }
 
-  if (result.type === "proposed" && result.proposals && result.proposals[0]) {
-    const p = result.proposals[0];
+  if (proposalSource) {
+    const p = proposalSource;
 
     // Working copies — may be mutated by hubOverrides below.
     // Use the county GEOIDs resolved by buildCityHubProposal from getCountyTerritoryHubs —
@@ -639,6 +639,7 @@ router.post("/territories/propose", async (req, res): Promise<void> => {
     const proposalZips = computeMapDisplayZips(hubs, stateCities, stateAbbr, countyGeoids);
     res.json({
       type: "proposed",
+      nearbyExisting,
       proposal: {
         proposedName: p.proposedName,
         stateAbbr,

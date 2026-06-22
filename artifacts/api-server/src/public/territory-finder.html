@@ -401,6 +401,7 @@ if(_sp.get('ref')==='signup'){
         <div class="pc-label">🗺 Proposed Territory</div>
         <div class="pc-name" id="pcName"></div>
         <div class="pc-counties" id="pcCounties"></div>
+        <div id="pcNearbyWarning" style="display:none;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.4);border-radius:6px;padding:8px 10px;font-size:11.5px;color:#fbbf24;margin-bottom:8px;line-height:1.4"></div>
         <div class="pc-mailing-areas" id="pcMailing" style="display:none">
           <div class="pc-mailing-areas-label">Mailing Areas</div>
           <div id="pcMailingList"></div>
@@ -739,10 +740,8 @@ async function runSearch(){
     if(resp.status === 429){ showUnavail(data.error || 'Too many lookups — please wait a moment and try again.'); return; }
     if(!resp.ok){ showUnavail(data.error || 'We could not look up that location. Check your city and state.'); return; }
 
-    if(data.type === 'existing' && data.territory){
-      await renderExisting(data.territory, (data.territory.state || state || '').toUpperCase());
-    } else if(data.type === 'proposed' && data.proposal){
-      await renderProposed(data.proposal);
+    if(data.type === 'proposed' && data.proposal){
+      await renderProposed(data.proposal, data.nearbyExisting ?? null);
     } else {
       const unavailCity = $('cityInput')?.value?.trim() ?? '';
       const unavailState = $('stateSelect')?.value ?? '';
@@ -860,7 +859,7 @@ async function loadExistingMailingAreas(id){
 }
 
 // ─── Render: proposed territory ───────────────────────────────────────────────
-async function renderProposed(p){
+async function renderProposed(p, nearbyExisting){
   clearSearchLayers();
   hideAllCards();
   selectedClaim = { mode:'proposed', proposal: p };
@@ -928,6 +927,15 @@ async function renderProposed(p){
   $('pcName').textContent = p.proposedName;
   const cities = Array.isArray(p.cities) ? p.cities : [];
   $('pcCounties').textContent = cities.join(' · ');
+
+  const nearbyWarn = $('pcNearbyWarning');
+  if(nearbyExisting && nearbyExisting.status === 'taken'){
+    nearbyWarn.textContent = '⚠ ' + nearbyExisting.name + ' has already been claimed nearby — your proposed territory may need adjustment before claiming.';
+    nearbyWarn.style.display = 'block';
+  } else {
+    nearbyWarn.style.display = 'none';
+    nearbyWarn.textContent = '';
+  }
 
   const wrap = $('pcMailing');
   const list = $('pcMailingList');
