@@ -2078,7 +2078,7 @@ const SMART_HTML = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>My Town Postcard &#8212; Smart Ad Studio</title>
+<title>My Town Postcard &#8212; Ad Generator</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700&family=Crimson+Pro:ital@0;1&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -2247,7 +2247,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 
 <header class="hdr">
   <div class="brand"><img class="brand-logo" src="/mailbox-logo.png" alt="">My Town <span>Postcard</span></div>
-  <div class="hdr-badge">&#10024; Smart Ad Studio</div>
+  <div class="hdr-badge">&#10024; Ad Generator</div>
 </header>
 
 <div class="toast" id="toast"></div>
@@ -2257,7 +2257,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
   <!-- LEFT: FORM PANEL -->
   <div class="fpanel">
     <div>
-      <div class="ptitle">Smart Ad Studio</div>
+      <div class="ptitle">Ad Generator</div>
       <div class="psub">Enter your business details below. Pick your colors and photo in the middle panel, then click Generate for a print-ready postcard ad.</div>
     </div>
 
