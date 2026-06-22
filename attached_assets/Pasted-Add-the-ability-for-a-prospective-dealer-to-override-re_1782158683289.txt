@@ -1,0 +1,40 @@
+Add the ability for a prospective dealer to override/replace one or more of the proposed hub cities on the "Find Your Territory" results screen, instead of being stuck with whatever the algorithm auto-selected. This is a middle path — keep the existing automated proposal as the default/starting point, but let the user swap out a hub they disagree with for a city they know better, without rebuilding the whole flow from scratch.
+
+**Context:** the current flow (territory-finder HTML page, `propose` endpoint in `territories.ts`) auto-selects hub cities via `selectHubsByCountyFill`/`findCandidateHubs`. This works well most of the time but has known weak spots (e.g. selecting a town with only ~500 households as a hub when a better-known nearby city would serve advertisers better) — a local resident often knows their actual shopping/commerce hub better than the radius-based heuristic does.
+
+---
+
+## Frontend: territory-finder page
+
+1. On the proposal results screen (where the 4 mailing areas are currently shown as a static list — "Mailing Area 1 — X", "Mailing Area 2 — Y", etc.), make each mailing area's city name into an **editable field** — e.g. show the current city name with a small "✎ Change" link/icon next to it.
+
+2. Clicking "Change" turns that one row into a text input (with autocomplete/typeahead against the same city gazetteer the propose endpoint already uses, if a simple lookup endpoint exists or is easy to add — otherwise a plain text input is acceptable as a fallback).
+
+3. Add a "Recalculate" button that appears once at least one hub has been edited. Clicking it re-submits the proposal request, but this time with the user's edited hub list taking precedence over the algorithm's original picks for those specific slots — the un-edited hubs stay as the algorithm originally chose them.
+
+4. Show the updated preview (county list, combined footprint size, total households) after recalculating, same as the original proposal display.
+
+---
+
+## Backend: extend the propose endpoint
+
+1. Extend `POST /api/territories/propose` (or whatever the current endpoint is) to accept an optional `hubOverrides` array — e.g. `{ city: "Cornelia", originalHubIndex: 2 }` — alongside the original search query.
+
+2. When overrides are present: for each overridden slot, resolve the user-provided city via `findGazetteerCity` (same function the custom-territory admin tool already uses) instead of using the algorithm's auto-selected hub for that slot. Keep the non-overridden slots using the original algorithm's picks.
+
+3. Recompute the combined ZIP footprint, derived county list, and centroid using the SAME union-of-hub-radius logic already used elsewhere (the same logic powering the Custom Territory admin tool) — this is the same computation, just fed a mixed list of algorithm-picked + user-picked hubs instead of all-algorithm or all-admin-picked.
+
+4. **Run the existing conflict check** (the same one used everywhere else — comparing against all active/claimed territories) against the recalculated footprint before showing the preview. If the user's override creates a conflict with an existing territory, show a clear error naming the conflicting territory and which of their chosen cities caused it — same pattern as the Custom Territory admin tool's conflict handling.
+
+5. If the user-provided city can't be resolved (typo, not in the gazetteer), return a clear "city not found" error rather than silently falling back to the original algorithm pick.
+
+---
+
+## Constraints
+
+- Do NOT remove or change the default automated proposal — it remains the starting point every time. This is purely an optional override layer on top.
+- Do NOT let a user create more than 4 total hub cities (matching the existing mailing-area structure) — overrides replace existing slots, they don't add additional ones.
+- This must use the SAME conflict-checking and footprint logic already proven elsewhere (admin Custom Territory tool, original propose endpoint) — no new parallel computation logic.
+- Keep this scoped to the proposal/preview stage only — the actual claim/signup/payment flow downstream is unaffected and unchanged.
+
+After implementing, test by proposing a territory, overriding one hub city with a different real nearby town, recalculating, and confirming: the new footprint reflects the change, conflict-checking still runs correctly, and claiming the territory afterward works exactly as it does today.
