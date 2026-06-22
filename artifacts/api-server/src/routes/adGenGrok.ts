@@ -2099,12 +2099,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .fpanel{background:var(--card);border-right:1.5px solid var(--border);padding:18px 18px 24px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
 .mpanel{background:var(--surface);border-right:1.5px solid var(--border);padding:18px 18px 24px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
 .ptitle{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.06em;margin-bottom:2px}
-.psub{font-family:'Crimson Pro',serif;font-style:italic;font-size:14px;color:var(--ink-light);line-height:1.4;margin-bottom:4px}
-.sec-label{font-size:12px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--burg);padding-bottom:8px;border-bottom:1.5px solid var(--burg-pale);margin-bottom:8px}
+.psub{font-family:'Crimson Pro',serif;font-style:italic;font-size:15px;color:var(--ink-light);line-height:1.4;margin-bottom:4px}
+.sec-label{font-size:13px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--burg);padding-bottom:8px;border-bottom:1.5px solid var(--burg-pale);margin-bottom:8px}
 .field{margin-bottom:8px}
 .field:last-child{margin-bottom:0}
-.field label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-mid);margin-bottom:3px;letter-spacing:.05em;text-transform:uppercase}
-.field input,.field select{width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);background:var(--surface);outline:none;transition:border-color .2s}
+.field label{display:block;font-size:13.5px;font-weight:600;color:var(--ink-mid);margin-bottom:3px;letter-spacing:.05em;text-transform:uppercase}
+.field input,.field select{width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--ink);background:var(--surface);outline:none;transition:border-color .2s}
 .field input:focus,.field select:focus{border-color:var(--burg);background:#fff}
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .menu-list{display:flex;flex-direction:column;gap:5px;margin-bottom:7px}
@@ -3194,12 +3194,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 
 .fpanel{background:var(--card);border-right:1.5px solid var(--border);padding:18px 18px 60px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
 .ptitle{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.06em;margin-bottom:2px}
-.psub{font-family:'Crimson Pro',serif;font-style:italic;font-size:14px;color:var(--ink-light);line-height:1.4;margin-bottom:4px}
-.sec-label{font-size:12px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--burg);padding-bottom:8px;border-bottom:1.5px solid var(--burg-pale);margin-bottom:8px}
+.psub{font-family:'Crimson Pro',serif;font-style:italic;font-size:15px;color:var(--ink-light);line-height:1.4;margin-bottom:4px}
+.sec-label{font-size:13px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--burg);padding-bottom:8px;border-bottom:1.5px solid var(--burg-pale);margin-bottom:8px}
 .field{margin-bottom:8px}
 .field:last-child{margin-bottom:0}
-.field label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-mid);margin-bottom:3px;letter-spacing:.05em;text-transform:uppercase}
-.field input,.field select{width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);background:var(--surface);outline:none;transition:border-color .2s}
+.field label{display:block;font-size:13.5px;font-weight:600;color:var(--ink-mid);margin-bottom:3px;letter-spacing:.05em;text-transform:uppercase}
+.field input,.field select{width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--ink);background:var(--surface);outline:none;transition:border-color .2s}
 .field input:focus,.field select:focus{border-color:var(--burg);background:#fff}
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .menu-list{display:flex;flex-direction:column;gap:5px;margin-bottom:7px}
