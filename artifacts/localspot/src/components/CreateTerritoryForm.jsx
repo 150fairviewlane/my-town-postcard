@@ -103,8 +103,7 @@ export default function CreateTerritoryForm({ onCreated, onCancel, compact = fal
     return (e) => { setForm(f => ({ ...f, [k]: e.target.value })); setPreview(null); setError(null); };
   }
 
-  async function handlePreview(e) {
-    e.preventDefault();
+  async function handlePreview() {
     if (!canPreview) return;
     setLoading(true); setError(null); setPreview(null);
     try {
@@ -166,7 +165,7 @@ export default function CreateTerritoryForm({ onCreated, onCancel, compact = fal
 
       {/* Form */}
       <div style={{ border: "1.5px solid #e5e7eb", borderTop: "none", borderRadius: "0 0 10px 10px", padding: compact ? 16 : 22 }}>
-        <form onSubmit={handlePreview}>
+        <div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 120px", gap: 12, marginBottom: 14 }}>
             <label style={lbl}>
               Territory Name *
@@ -208,7 +207,8 @@ export default function CreateTerritoryForm({ onCreated, onCancel, compact = fal
 
           <div style={{ display: "flex", gap: 8 }}>
             <button
-              type="submit"
+              type="button"
+              onClick={handlePreview}
               disabled={!canPreview || loading}
               style={{
                 background: canPreview && !loading ? RED : "#9ca3af",
@@ -232,7 +232,7 @@ export default function CreateTerritoryForm({ onCreated, onCancel, compact = fal
               </button>
             )}
           </div>
-        </form>
+        </div>
 
         {/* Preview results */}
         {preview && (
