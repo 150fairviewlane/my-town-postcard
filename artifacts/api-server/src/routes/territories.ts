@@ -459,6 +459,10 @@ function checkProposeRateLimit(ip: string): boolean {
 const ProposeSchema = z.object({
   city:  z.string().trim().min(1, "City is required").max(120),
   state: z.string().trim().min(2, "Select a state").max(60),
+  hubOverrides: z.array(z.object({
+    slotIndex: z.number().int().min(0).max(3),
+    city: z.string().trim().min(1).max(120),
+  })).max(4).optional(),
 });
 
 /** State abbreviation → [name, FIPS 2-digit string] */
@@ -509,7 +513,7 @@ router.post("/territories/propose", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" });
     return;
   }
-  const { city, state } = parsed.data;
+  const { city, state, hubOverrides: hubOverridesInput } = parsed.data;
 
   // Accept both 2-letter abbreviations ("GA") and full names ("Georgia").
   const stateInput = state.trim();
@@ -567,17 +571,87 @@ router.post("/territories/propose", async (req, res): Promise<void> => {
 
   if (result.type === "proposed" && result.proposals && result.proposals[0]) {
     const p = result.proposals[0];
+
+    // Working copies — may be mutated by hubOverrides below.
     // Use the county GEOIDs resolved by buildCityHubProposal from getCountyTerritoryHubs —
     // these cover ALL counties in the territory (e.g. Union + Towns for Blairsville GA).
-    // The old approach recomputed from display hubs, which drops small counties that fall
-    // below DISPLAY_MIN_HH, causing the map to highlight only the home county.
-    const countyGeoids = p.countyGeoids;
+    let hubs = [...p.hubs];
+    let topCities = [...p.topCities];
+    let countyGeoids = p.countyGeoids;
+    let centroidLat = p.centroidLat;
+    let centroidLng = p.centroidLng;
+    let totalHouseholds = p.totalHouseholds;
+
+    // ── Hub override processing ────────────────────────────────────────────────
+    const overrides = hubOverridesInput ?? [];
+    if (overrides.length > 0) {
+      // Step 1: resolve each override city via the Gazetteer; fail fast on any miss.
+      for (const ov of overrides) {
+        const ovCity = ov.city.trim();
+        const ovMatch = findGazetteerCity(ovCity, stateAbbr);
+        if (!ovMatch) {
+          res.status(422).json({
+            error: `City not found: "${ovCity}" in ${stateAbbr}. Try a nearby larger town.`,
+            city: ovCity,
+          });
+          return;
+        }
+
+        const idx = ov.slotIndex;
+
+        // Replace the display hub at this slot with the resolved override city.
+        if (idx >= 0 && idx < hubs.length) {
+          const nearbyZips = getZipsNearLocation(ovMatch.lat, ovMatch.lng, 15);
+          const approxHH = Math.min(
+            nearbyZips.reduce((s, z) => s + z.households, 0),
+            25000,
+          );
+          hubs[idx] = {
+            ...hubs[idx],
+            cityName: ovCity,
+            lat: ovMatch.lat,
+            lng: ovMatch.lng,
+            catchmentHouseholds: approxHH,
+          };
+        }
+
+        // Mirror into topCities (the text list that becomes proposal.cities in the response).
+        if (idx >= 0 && idx < topCities.length) {
+          topCities[idx] = ovCity;
+        }
+      }
+
+      // Step 2: recompute derived values from the merged hub set.
+      countyGeoids = getFootprintCountyGeoids(hubs);
+      totalHouseholds = hubs.reduce((s, h) => s + h.catchmentHouseholds, 0);
+      if (hubs.length > 0) {
+        centroidLat = hubs.reduce((s, h) => s + h.lat, 0) / hubs.length;
+        centroidLng = hubs.reduce((s, h) => s + h.lng, 0) / hubs.length;
+      }
+
+      // Step 3: conflict-check the merged footprint.
+      const conflictId = await checkZipFootprintConflict(
+        hubs.map(h => ({ cityName: h.cityName, lat: h.lat, lng: h.lng })),
+      );
+      if (conflictId) {
+        const [conflictTerr] = await db
+          .select({ name: territoriesTable.name })
+          .from(territoriesTable)
+          .where(eq(territoriesTable.id, conflictId));
+        res.status(409).json({
+          error: `This hub set overlaps with the existing territory "${conflictTerr?.name ?? "Unknown"}". Try different hub cities to avoid the conflict.`,
+          conflictingTerritory: conflictTerr?.name ?? null,
+        });
+        return;
+      }
+    }
+
     const countyShortNames = countyGeoids
       .map(g => getCountyShortNameByGeoid(g))
       .filter((n): n is string => !!n);
-    const footprintCountyGeoids = getFootprintCountyGeoids(p.hubs);
+    const footprintCountyGeoids = getFootprintCountyGeoids(hubs);
     const stateCities = getCitiesInState(stateAbbr);
-    const proposalZips = computeMapDisplayZips(p.hubs, stateCities, stateAbbr, countyGeoids);
+    const proposalZips = computeMapDisplayZips(hubs, stateCities, stateAbbr, countyGeoids);
     res.json({
       type: "proposed",
       proposal: {
@@ -588,11 +662,11 @@ router.post("/territories/propose", async (req, res): Promise<void> => {
         zipCode: null,
         countyFips: null,
         countyName: null,
-        centroidLat: p.centroidLat,
-        centroidLng: p.centroidLng,
-        households: p.totalHouseholds,
+        centroidLat,
+        centroidLng,
+        households: totalHouseholds,
         businessCount: p.totalBusinesses,
-        cities: p.topCities,
+        cities: topCities,
         countyGeoids,
         countyShortNames,
         footprintCountyGeoids,

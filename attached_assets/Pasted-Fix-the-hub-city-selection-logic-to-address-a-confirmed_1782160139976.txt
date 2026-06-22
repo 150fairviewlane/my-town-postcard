@@ -1,0 +1,39 @@
+Fix the hub-city selection logic to address a confirmed root cause: candidate cities are currently ranked PURELY by distance (with business-count only used as a tiebreaker within a 0.5-mile band), which lets small, commercially-thin towns (e.g. Mount Airy, ~500 households) get selected as a postcard mailing hub ahead of significantly larger nearby commercial centers (e.g. Clarkesville, 112 businesses, 5,231 households) purely because of a few miles of distance.
+
+This needs TWO separate fixes, applied in this order:
+
+---
+
+## Fix 1: Hard minimum-viability floor (apply BEFORE any distance sorting)
+
+A city must have **at least 200 businesses** in its ZIP/area data to be eligible as a hub candidate AT ALL. This is a hard disqualification, not a scoring factor — a city below this floor should never appear as a hub, regardless of how close it is to the search location or how few other candidates exist nearby.
+
+1. Find wherever candidate hubs are gathered (`findCandidateHubs` or equivalent, in `territoryBuilder.ts`) and add this floor as an early filter step — exclude any candidate city with `businessCount < 200` before any further ranking/sorting happens.
+
+2. Add this as a named constant (e.g. `MIN_HUB_BUSINESS_COUNT = 200`) in a shared location, not a magic number inline — this will very likely need tuning later once real postcard sales/close-rate data exists, so it must be a single, easy-to-find value to adjust.
+
+3. **Important edge case to handle:** in a sparse/rural county where NO candidate city clears 200 businesses, the algorithm needs a sane fallback rather than returning zero hubs or crashing. Reasonable options (pick whichever fits the existing code structure better): (a) fall back to selecting the single largest available city even if it's below the floor, with a flag/note that it's a "below-threshold fallback" for visibility in logs or admin, or (b) widen the search radius to look for a qualifying city further away before giving up. Confirm which approach is taken and that it degrades gracefully rather than breaking the proposal flow entirely.
+
+---
+
+## Fix 2: Size-weighted distance scoring (for ranking candidates that DO clear the floor)
+
+Among cities that pass the Fix 1 floor, replace the current pure-distance sort (with size only as a sub-0.5-mile tiebreaker) with a scoring formula that meaningfully weights commercial size, not just proximity.
+
+1. Replace the current scoring (`actualDistance * 0.7` same-county discount, size as a tiebreaker) with something like:
+   ```
+   score = scoredDistance / log(businessCount + 1)
+   ```
+   (the `+1` avoids a divide-by-zero/log(0) issue; tune the exact formula shape if needed, but the goal is that a meaningfully larger business count should be able to outrank a moderately closer smaller town — not just break near-ties).
+
+2. Verify this against the real case that surfaced the bug: re-run the "Cornelia, GA" search and confirm Clarkesville (112 businesses, 6.5 miles away) now outranks Mount Airy (smaller, ~2.1 miles away) and Baldwin/Demorest as appropriate, given their respective business counts — show the actual computed scores for all candidates in that county so the ranking can be sanity-checked, not just trusted blindly.
+
+3. Also re-verify the EARLIER Soddy-Daisy/Chattanooga case from this session (Soddy-Daisy should rank ahead of Signal Mountain) and the South Fulton/Cherokee cluster cases to confirm this scoring change doesn't regress those already-correct or already-fixed outcomes.
+
+---
+
+## After both fixes
+
+Test with at least 3 different city searches across different counties (Cornelia/Habersham, Chattanooga/Hamilton, and one more of your choosing) and report the actual candidate lists with their scores for each, so the new ranking can be reviewed before being trusted as the new default behavior.
+
+This is the algorithmic improvement that complements (not replaces) the separate hub-override feature already planned, where a dealer can manually swap a hub — this fix is about making the DEFAULT automated proposal smarter from the start, so manual overrides are needed less often.

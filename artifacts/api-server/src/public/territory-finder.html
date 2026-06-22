@@ -272,6 +272,22 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
 .pc-mailing-area-item{font-size:12px;color:rgba(255,255,255,.8);padding:5px 0;border-bottom:1px solid rgba(255,255,255,.08);line-height:1.4;padding-left:14px;position:relative}
 .pc-mailing-area-item::before{content:'•';position:absolute;left:0;color:#F59E0B}
 .pc-mailing-area-item:last-child{border-bottom:none}
+/* Hub override — per-row controls */
+.pc-mailing-area-row{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+.pc-mailing-area-row:last-child{border-bottom:none}
+.pc-mailing-area-bullet{color:#F59E0B;font-size:12px;flex-shrink:0}
+.pc-mailing-area-label{font-size:12px;color:rgba(255,255,255,.8);flex:1;line-height:1.4}
+.pc-change-btn{background:none;border:none;cursor:pointer;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#F59E0B;padding:0 4px;opacity:.65;transition:opacity .15s;flex-shrink:0}
+.pc-change-btn:hover{opacity:1}
+.pc-hub-edit-row{display:flex;align-items:center;gap:5px;flex:1}
+.pc-hub-input{flex:1;padding:3px 8px;border-radius:5px;border:1.5px solid #F59E0B;background:rgba(255,255,255,.08);color:#fff;font-size:12px;font-family:'DM Sans',sans-serif;outline:none}
+.pc-hub-input::placeholder{color:rgba(255,255,255,.35)}
+.pc-hub-confirm{padding:3px 9px;background:#F59E0B;color:#000;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;transition:opacity .15s}
+.pc-hub-confirm:hover{opacity:.85}
+/* Recalculate button + override error */
+.recalc-btn{width:100%;margin-top:10px;padding:9px;background:rgba(245,158,11,.12);color:#F59E0B;border:1.5px solid #F59E0B;border-radius:7px;font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:.08em;cursor:pointer;transition:all .2s;display:block}
+.recalc-btn:hover{background:rgba(245,158,11,.25)}
+.pc-override-error{margin-top:8px;padding:8px 12px;background:rgba(220,38,38,.2);border:1px solid rgba(220,38,38,.5);border-radius:6px;font-size:12px;color:#fca5a5;line-height:1.5;display:none}
 </style>
 </head>
 <body>
@@ -388,6 +404,10 @@ if(_sp.get('ref')==='signup'){
         <div class="pc-mailing-areas" id="pcMailing" style="display:none">
           <div class="pc-mailing-areas-label">Mailing Areas</div>
           <div id="pcMailingList"></div>
+          <div class="pc-override-error" id="pcOverrideError"></div>
+          <div id="pcRecalcWrap" style="display:none">
+            <button class="recalc-btn" onclick="recalculateProposal()">↻ Recalculate Territory</button>
+          </div>
           <div class="eddm-footer">≈5,000 households via USPS EDDM</div>
         </div>
         <div class="sd-rows">
@@ -460,6 +480,11 @@ let selectedClaim = null;            // {mode:'existing'|'proposed', ...}
 const _geoCache  = new Map();        // stateFips → Promise<FeatureCollection|null>
 let searchLayers = [];               // polygons drawn for the active search result
 let backgroundLayers = [];           // {layer, status} — territory layers from loadAllTerritories; faded during a search result, restored on clear
+
+// Hub-override state
+let _lastSearchCity  = '';           // city from the most recent runSearch call
+let _lastSearchState = '';           // state abbr from the most recent runSearch call
+let _hubOverrides    = {};           // slotIndex(number) → edited city string
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function $(id){ return document.getElementById(id); }
@@ -691,6 +716,11 @@ async function runSearch(){
   if(!city){ showToast('Enter your city'); return; }
   if(!state){ showToast('Select your state'); return; }
 
+  // Reset override state on every fresh search
+  _lastSearchCity  = city;
+  _lastSearchState = state;
+  _hubOverrides    = {};
+
   const btn = $('searchBtn');
   btn.disabled = true; btn.textContent = '…';
   hideAllCards();
@@ -901,17 +931,133 @@ async function renderProposed(p){
 
   const wrap = $('pcMailing');
   const list = $('pcMailingList');
+  const errEl = $('pcOverrideError');
+  const recalcWrap = $('pcRecalcWrap');
   if(cities.length){
-    list.innerHTML = cities
-      .map((c, i) => `<div class="pc-mailing-area-item">Mailing Area ${i+1} — ${c}</div>`)
-      .join('');
+    list.innerHTML = cities.map((c, i) => renderMailingAreaRow(i, c)).join('');
     wrap.style.display = 'block';
   } else {
     wrap.style.display = 'none';
   }
 
+  // Clear any prior error and hide recalculate button on fresh render.
+  errEl.style.display = 'none';
+  errEl.textContent = '';
+  syncRecalcButton();
+
   fadeBackgroundLayers();
   $('proposalCard').classList.add('visible');
+}
+
+// Build HTML for one mailing area row. In edit-mode the row shows a text input.
+function renderMailingAreaRow(idx, cityName){
+  if(_hubOverrides.hasOwnProperty(idx)){
+    const val = _escHtml(_hubOverrides[idx]);
+    return `<div class="pc-mailing-area-row" id="pcRow${idx}">` +
+      `<span class="pc-mailing-area-bullet">•</span>` +
+      `<div class="pc-hub-edit-row">` +
+        `<input class="pc-hub-input" id="pcHubInput${idx}" type="text" value="${val}" ` +
+          `placeholder="City name…" ` +
+          `onkeypress="if(event.key==='Enter') confirmHubEdit(${idx})">` +
+        `<button class="pc-hub-confirm" onclick="confirmHubEdit(${idx})">✓ Set</button>` +
+        `<button class="pc-change-btn" onclick="cancelHubEdit(${idx},'${_escHtml(cityName)}')" style="opacity:.5">✕</button>` +
+      `</div>` +
+    `</div>`;
+  }
+  return `<div class="pc-mailing-area-row" id="pcRow${idx}">` +
+    `<span class="pc-mailing-area-bullet">•</span>` +
+    `<span class="pc-mailing-area-label">Mailing Area ${idx+1} — ${_escHtml(cityName)}</span>` +
+    `<button class="pc-change-btn" onclick="startHubEdit(${idx},'${_escHtml(cityName)}')">✎ Change</button>` +
+  `</div>`;
+}
+
+function _escHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// Replace a static row with an edit-mode input.
+function startHubEdit(idx, currentName){
+  _hubOverrides[idx] = currentName;
+  const row = $('pcRow' + idx);
+  if(row) row.outerHTML = renderMailingAreaRow(idx, currentName);
+  const inp = $('pcHubInput' + idx);
+  if(inp){ inp.focus(); inp.select(); }
+  syncRecalcButton();
+}
+
+// Commit the typed value into _hubOverrides and re-render the row as static.
+function confirmHubEdit(idx){
+  const inp = $('pcHubInput' + idx);
+  const val = inp ? inp.value.trim() : '';
+  if(!val){ cancelHubEdit(idx, _hubOverrides[idx] || ''); return; }
+  _hubOverrides[idx] = val;
+  const row = $('pcRow' + idx);
+  if(row) row.outerHTML = renderMailingAreaRow(idx, val);
+  syncRecalcButton();
+}
+
+// Revert a row back to static display, discarding the draft.
+function cancelHubEdit(idx, originalName){
+  delete _hubOverrides[idx];
+  const row = $('pcRow' + idx);
+  if(row) row.outerHTML = renderMailingAreaRow(idx, originalName);
+  syncRecalcButton();
+}
+
+// Show the Recalculate button only when at least one slot has been edited.
+function syncRecalcButton(){
+  const hasEdits = Object.keys(_hubOverrides).length > 0;
+  $('pcRecalcWrap').style.display = hasEdits ? 'block' : 'none';
+}
+
+// Re-POST the proposal with the current hub overrides and refresh the card + map.
+async function recalculateProposal(){
+  if(!_lastSearchCity || !_lastSearchState) return;
+  const overridesArr = Object.entries(_hubOverrides)
+    .filter(([,v]) => v.trim())
+    .map(([k,v]) => ({ slotIndex: Number(k), city: v.trim() }));
+  if(!overridesArr.length) return;
+
+  const errEl = $('pcOverrideError');
+  errEl.style.display = 'none';
+  errEl.textContent = '';
+
+  const recalcBtn = $('pcRecalcWrap').querySelector('.recalc-btn');
+  if(recalcBtn){ recalcBtn.disabled = true; recalcBtn.textContent = '↻ Recalculating…'; }
+
+  try {
+    const resp = await fetch('/api/territories/propose', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ city: _lastSearchCity, state: _lastSearchState, hubOverrides: overridesArr }),
+    });
+    const data = await resp.json().catch(() => ({}));
+
+    if(resp.status === 422 || resp.status === 409){
+      errEl.textContent = data.error || 'There was a problem with your hub selection.';
+      errEl.style.display = 'block';
+      return;
+    }
+    if(!resp.ok){
+      errEl.textContent = data.error || 'Could not recalculate — please try again.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    if(data.type === 'proposed' && data.proposal){
+      // Clear overrides so the freshly-rendered card starts clean.
+      _hubOverrides = {};
+      await renderProposed(data.proposal);
+    } else {
+      errEl.textContent = 'Unexpected response — please try a different hub city.';
+      errEl.style.display = 'block';
+    }
+  } catch(e){
+    errEl.textContent = 'Network error — please try again.';
+    errEl.style.display = 'block';
+  } finally {
+    if(recalcBtn){ recalcBtn.disabled = false; recalcBtn.textContent = '↻ Recalculate Territory'; }
+  }
 }
 
 function showUnavail(msg){
