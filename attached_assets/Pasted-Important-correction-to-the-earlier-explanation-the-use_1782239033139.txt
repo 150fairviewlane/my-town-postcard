@@ -1,0 +1,15 @@
+Important correction to the earlier explanation: the user ran the IDENTICAL test in both environments — "create a dealer with territories" — and dev correctly rendered 4 distinct pins, while production showed all 4 collapsed onto one point. This means the earlier theory ("dev has no published territories to trigger the bug") was WRONG. Same test steps, different real outcomes. This needs a genuine, evidence-based explanation, not another plausible-sounding guess.
+
+**Investigate these specific possibilities, with hard evidence for each — do not theorize, show actual data/code:**
+
+1. **Check whether dev and production were running the SAME version of the Custom Territory creation code at the time of each test.** Specifically: did the gazetteer-fallback fix (or any other related fix made earlier today) get applied to dev's running server BEFORE the user's dev test, but reach production only AFTER the user's prod test? Check actual deployment/restart timestamps for both environments against when each test was performed, if that information is available (server logs, process start times, git commit timestamps vs. test timing).
+
+2. **Directly query dev's database right now** for the `pin_lat`/`pin_lng` values on whatever campaigns were created during the user's dev test of "create a dealer with territories." Do these values exist (non-null) in dev? If so, were they set automatically at creation time, or could they have been manually set/leftover from earlier debugging work done in dev earlier today (we were actively working on pin positions and label collision in dev this session)?
+
+3. **Find the actual code path that runs when a dealer/territory is created through the Custom Territory tool** — specifically, does this creation flow include a step that sets `pin_lat`/`pin_lng` at all? If it does, why would that step succeed in dev but fail/be skipped in production for what the user describes as the same action? Check for any environment-specific branching, feature flags, or conditional logic in that creation code path.
+
+4. **Check if dev and production are actually pointed at different databases with different schemas or migration states** — is it possible dev's database has already had a migration applied (e.g. one related to today's earlier `pin_lat`/`pin_lng` column additions) that production has NOT yet received, meaning the column behaves differently or a default-value trigger exists in one environment but not the other?
+
+5. **Re-run the exact same "create a dealer with territories" test fresh, right now, in BOTH environments**, with logging added at the moment of creation to show exactly what `pin_lat`/`pin_lng` values get written (or not written) for each new campaign in each environment. Compare the two directly.
+
+Report back with concrete evidence — actual timestamps, actual query results, actual code differences — not a theory. The goal is to find the literal point where dev and production diverge in behavior for what is supposed to be the identical action.
