@@ -402,7 +402,7 @@ M: {label:"Medium Ad",      dims:'3" x 2"', price:"$299"},
 S: {label:"Small Ad",       dims:'2" x 2"', price:"$199"},
 };
 
-function AvailableSpot({spot,hovered,onClick,onEnter,onLeave}){
+function AvailableSpot({spot,hovered,onClick,onEnter,onLeave,soldOnSide=0}){
 const info=SZ[spot.size]||{};
 const isXL=spot.size==="XL",isL=spot.size==="L",isM=spot.size==="M";
 const csz=isXL?80:isL?60:isM?44:28;
@@ -423,6 +423,7 @@ return(
 <div style={{color:"#666",fontSize:dsz,fontWeight:600,letterSpacing:0.5}}>{info.dims}</div>
 {showBtn&&(<div style={{marginTop:2,height:bh,paddingLeft:isXL?24:16,paddingRight:isXL?24:16,background:hovered?"#15803d":"#16a34a",borderRadius:bh/2,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:800,fontSize:bf,letterSpacing:0.5,textTransform:"uppercase",boxShadow:hovered?"0 4px 14px rgba(21,128,61,0.55)":"0 2px 6px rgba(22,163,74,0.35)",transition:"all 0.18s"}}>Reserve This Spot</div>)}
 {spot.size!=="S"&&<div style={{fontSize:isXL?10:isL?8:7,color:"#9ca3af",fontStyle:"italic",textAlign:"center"}}>Reaches 5,000 local homes</div>}
+{spot.size!=="S"&&<div style={{fontSize:isXL?9:isL?7:6,color:soldOnSide===0?"#b8860b":"#6b7280",fontWeight:soldOnSide===0?700:400,fontStyle:"italic",textAlign:"center",lineHeight:1.3,paddingLeft:4,paddingRight:4}}>{soldOnSide===0?"Be the first in your category":"One per category — no competitor once claimed"}</div>}
 </div>
 );
 }
@@ -432,7 +433,7 @@ const cw=spot.w*scale-7,ch=spot.h*scale-7;
 return(<div style={{position:"absolute",left:spot.x*scale+3.5,top:spot.y*scale+3.5,width:cw,height:ch,overflow:"hidden",borderRadius:3}}><div style={{width:spot.w,height:spot.h,transform:`scale(${cw/spot.w},${ch/spot.h})`,transformOrigin:"top left"}}>{children}</div></div>);
 }
 
-function SpotCell({spot,scale,hov,onHov,onOut,onSel,liveSpot,isHighlighted,territory,eddmCity,eddmZip}){
+function SpotCell({spot,scale,hov,onHov,onOut,onSel,liveSpot,isHighlighted,territory,eddmCity,eddmZip,soldOnSide=0}){
 const k=spot.sample;
 const t=spot.tmpl||"photo";
 if(k==="house")return<ScaledCell spot={spot} scale={scale}><AdHouse w={spot.w} h={spot.h} territory={territory}/></ScaledCell>;
@@ -466,14 +467,14 @@ if(liveSpot&&liveSpot.status==="paid"){
 // If the spot is still held when someone tries to reserve it, the reserve API will
 // return an error and the picker will show "Sorry, that spot was just taken."
 if(liveSpot&&liveSpot.status==="reserved"){
-  return<ScaledCell spot={spot} scale={scale}><AvailableSpot spot={spot} hovered={hov===spot.id} onClick={()=>onSel(spot)} onEnter={()=>onHov(spot.id)} onLeave={onOut}/></ScaledCell>;
+  return<ScaledCell spot={spot} scale={scale}><AvailableSpot spot={spot} hovered={hov===spot.id} onClick={()=>onSel(spot)} onEnter={()=>onHov(spot.id)} onLeave={onOut} soldOnSide={soldOnSide}/></ScaledCell>;
 }
 // Live available slot → always show reservation UI (overrides any demo sample)
 if(liveSpot&&liveSpot.status==="available"){
-  return<ScaledCell spot={spot} scale={scale}><AvailableSpot spot={spot} hovered={hov===spot.id} onClick={()=>onSel(spot)} onEnter={()=>onHov(spot.id)} onLeave={onOut}/></ScaledCell>;
+  return<ScaledCell spot={spot} scale={scale}><AvailableSpot spot={spot} hovered={hov===spot.id} onClick={()=>onSel(spot)} onEnter={()=>onHov(spot.id)} onLeave={onOut} soldOnSide={soldOnSide}/></ScaledCell>;
 }
 if(spot.imgSrc)return(<ScaledCell spot={spot} scale={scale}><div style={{width:spot.w,height:spot.h,pointerEvents:"none",overflow:"hidden"}}><img src={spot.imgSrc} alt="" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/></div></ScaledCell>);
-if(k===null)   return<ScaledCell spot={spot} scale={scale}><AvailableSpot spot={spot} hovered={hov===spot.id} onClick={()=>onSel(spot)} onEnter={()=>onHov(spot.id)} onLeave={onOut}/></ScaledCell>;
+if(k===null)   return<ScaledCell spot={spot} scale={scale}><AvailableSpot spot={spot} hovered={hov===spot.id} onClick={()=>onSel(spot)} onEnter={()=>onHov(spot.id)} onLeave={onOut} soldOnSide={soldOnSide}/></ScaledCell>;
 const d=ADS[k]; if(!d)return null;
 return(<ScaledCell spot={spot} scale={scale}>{spot.size==="XL"&&<AdXL d={d} tmpl={t}/>}{spot.size==="L"&&<AdL d={d} tmpl={t}/>}{spot.size==="M"&&<AdM d={d} w={spot.w} h={spot.h} tmpl={t}/>}{spot.size==="S"&&<AdS d={d}/>}</ScaledCell>);
 }
@@ -797,6 +798,16 @@ return(<div style={{fontFamily:"sans-serif"}}>
       </div>
     </div>
   )}
+  {(()=>{
+    const avail=side==="front"?Math.max(0,totF-soldF):Math.max(0,totB-soldB);
+    if(!avail)return null;
+    return(
+      <div style={{background:"#C9A84C",color:"#7B1418",borderRadius:8,padding:"6px 16px",display:"flex",alignItems:"center",justifyContent:"center",gap:8,flexShrink:0,marginBottom:6,fontFamily:"sans-serif",fontWeight:700,fontSize:13,textAlign:"center"}}>
+        <span style={{fontSize:15}}>⚡</span>
+        <span>Only <strong>{avail}</strong> spot{avail===1?"":"s"} open on the {side} side — one business per category. No competitor once you claim it.</span>
+      </div>
+    );
+  })()}
   <div style={{textAlign:"center",marginBottom:2,flexShrink:0}}>
     <div style={{fontSize:22,fontWeight:900,color:"#111",fontFamily:"Georgia,serif",letterSpacing:-0.3}}>Reserve Your Spot on {(campaign?.cityList?.split(",")[0]?.trim() || campaign?.territory || "Clarkesville").replace(/Counties\b/g, "County")}'s Postcard</div>
     <div style={{fontSize:16,color:"#64748b",marginTop:1}}>Click any <span style={{color:"#16a34a",fontWeight:700}}>green spot</span> below to claim yours</div>
@@ -818,7 +829,7 @@ return(<div style={{fontFamily:"sans-serif"}}>
           {spots.map(spot=>{
             const liveSpot=spot.dbGridArea?spotByGridArea[spot.dbGridArea]:null;
             const isHighlighted=highlighted&&spot.dbGridArea===highlighted;
-            return<SpotCell key={spot.id} spot={spot} scale={scale} hov={hov} onHov={setHov} onOut={()=>setHov(null)} onSel={handleSpotSelect} liveSpot={liveSpot} isHighlighted={isHighlighted} territory={campaign?.territory} eddmCity={(campaign?.cityList||"").split(",")[0].trim().toUpperCase()||undefined} eddmZip={campaign?.zipCode||undefined}/>;
+            return<SpotCell key={spot.id} spot={spot} scale={scale} hov={hov} onHov={setHov} onOut={()=>setHov(null)} onSel={handleSpotSelect} liveSpot={liveSpot} isHighlighted={isHighlighted} territory={campaign?.territory} eddmCity={(campaign?.cityList||"").split(",")[0].trim().toUpperCase()||undefined} eddmZip={campaign?.zipCode||undefined} soldOnSide={side==="front"?soldF:soldB}/>;
           })}
           {campaignFetching&&!reserving&&(
             <div style={{position:"absolute",inset:0,pointerEvents:"none",zIndex:10,display:"flex",alignItems:"center",justifyContent:"center"}}>

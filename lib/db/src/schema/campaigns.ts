@@ -36,6 +36,10 @@ export const campaignsTable = pgTable("campaigns", {
   // rather than the county centroid.
   pinLat: doublePrecision("pin_lat"),
   pinLng: doublePrecision("pin_lng"),
+  // Optional personal note from the dealer shown above the spot picker on their
+  // landing page. Helps build trust when the territory is new and has zero
+  // advertisers yet. Null = no note displayed.
+  dealerWelcomeMessage: text("dealer_welcome_message"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

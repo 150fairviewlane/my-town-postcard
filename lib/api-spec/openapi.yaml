@@ -981,6 +981,8 @@ components:
           type: ["string", "null"]
         cityList:
           type: ["string", "null"]
+        dealerWelcomeMessage:
+          type: ["string", "null"]
         createdAt:
           type: string
       required:

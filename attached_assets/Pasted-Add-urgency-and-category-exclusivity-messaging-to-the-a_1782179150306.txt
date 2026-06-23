@@ -1,0 +1,37 @@
+Add urgency and category-exclusivity messaging to the ad-spot picker section on territory landing pages, to address a real problem: when a territory first launches, every spot shows "available," which can make prospective advertisers hesitant to be the first one to commit. The fix is honest framing — turning emptiness into "claim your category before a competitor does" — not fake/sample ads.
+
+**Do this on the shared territory landing page component** so it applies to every current and future territory automatically, not just Ball Ground.
+
+---
+
+## Part 1: Urgency banner above the ad picker
+
+Add a slim, prominent banner directly above the "Reserve Your Spot" section (where the Front Side / Back Side toggle currently sits), with copy along these lines (refine wording, keep it tight):
+
+> ⚡ Only 15 spots total — and just ONE business per category. Reserve your category now before a competitor locks you out.
+
+Style: use the gold `#C9A84C` accent (urgency/highlight color in your existing palette) for the background or border, burgundy text or icon, consistent with existing brand styling. Should feel energetic but not cheap/spammy — no flashing, no countdown-timer gimmicks, just confident, clear copy.
+
+## Part 2: Category-exclusivity reminder near each spot card
+
+On each individual ad-spot card (the "Extra Large Ad — $499" cards shown in the picker grid), add a small line of secondary text below "Reaches 5,000 local homes" — something like:
+
+> 🔒 Exclusive to your category — once claimed, no competitor can join this postcard
+
+Keep this small/secondary (muted gray, smaller font) — it's a supporting detail, not competing with the main price/CTA hierarchy of the card.
+
+## Part 3: Founder/dealer welcome note (optional per-territory content)
+
+Add an optional short text block that can appear near the top of the picker section — a personal note from the dealer introducing themselves and the new local postcard. Make this driven by a field on the dealer/territory record (e.g. `welcomeMessage`, nullable) rather than hardcoded, so:
+- If a dealer has set a welcome message, it displays (e.g. "Hi, I'm Vincent — bringing local advertising to Ball Ground for the first time. Reserve your spot and I'll personally make sure your ad looks great.")
+- If no message is set, this section simply doesn't render — no awkward empty placeholder
+
+Add a simple text field for this on the existing dealer admin/detail page (or wherever a dealer's profile info is currently editable) so dealers or the admin can add/edit this per territory.
+
+## Part 4: Confirm the example postcard mockup image is clearly labeled
+
+Check the existing example/mockup postcard image shown above the picker (the one with Retro Game City, Weed Whackers, Clarksville Dental, etc.). Add a small, clear caption directly below or overlaid on it: "Example postcard design — your ad could look like this" — to ensure it's unmistakably understood as an illustrative sample, not implying those are real current advertisers on this specific territory's postcard.
+
+---
+
+After implementing, confirm on Ball Ground's (and at least one other territory's) landing page: the urgency banner displays correctly above the picker, each spot card shows the category-exclusivity line, the founder note conditionally renders only when set, and the example mockup image is clearly captioned as a sample.

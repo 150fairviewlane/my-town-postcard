@@ -258,6 +258,23 @@ router.get("/admin/campaigns/:id", requireAdmin, async (req, res): Promise<void>
   res.json(GetAdminCampaignByIdResponse.parse(detail));
 });
 
+// PATCH /admin/campaigns/:id — update mutable campaign fields (welcome message, etc.)
+router.patch("/admin/campaigns/:id", requireAdmin, async (req, res): Promise<void> => {
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = Number(rawId);
+  if (!Number.isFinite(id) || id <= 0) {
+    res.status(400).json({ error: "Invalid campaign id" });
+    return;
+  }
+  const { dealerWelcomeMessage } = req.body as { dealerWelcomeMessage?: string | null };
+  await db
+    .update(campaignsTable)
+    .set({ dealerWelcomeMessage: dealerWelcomeMessage ?? null })
+    .where(eq(campaignsTable.id, id));
+  req.log.info({ campaignId: id }, "Campaign welcome message updated");
+  res.json({ ok: true });
+});
+
 router.post("/admin/campaigns/:id/activate", requireAdmin, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const params = ActivateCampaignParams.safeParse({ id: rawId });

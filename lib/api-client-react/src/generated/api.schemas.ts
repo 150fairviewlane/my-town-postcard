@@ -42,6 +42,8 @@ export interface Campaign {
   mailingMonth?: string | null;
   /** @nullable */
   cityList?: string | null;
+  /** @nullable */
+  dealerWelcomeMessage?: string | null;
   createdAt: string;
 }
 

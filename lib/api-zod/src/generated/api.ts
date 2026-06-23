@@ -32,6 +32,7 @@ export const GetActiveCampaignResponse = zod
     mailingSeason: zod.string().nullish(),
     mailingMonth: zod.string().nullish(),
     cityList: zod.string().nullish(),
+    dealerWelcomeMessage: zod.string().nullish(),
     createdAt: zod.string(),
   })
   .and(
@@ -85,6 +86,7 @@ export const GetCampaignBySlugResponse = zod
     mailingSeason: zod.string().nullish(),
     mailingMonth: zod.string().nullish(),
     cityList: zod.string().nullish(),
+    dealerWelcomeMessage: zod.string().nullish(),
     createdAt: zod.string(),
   })
   .and(
@@ -284,6 +286,7 @@ export const GetAdminCampaignResponse = zod.object({
     mailingSeason: zod.string().nullish(),
     mailingMonth: zod.string().nullish(),
     cityList: zod.string().nullish(),
+    dealerWelcomeMessage: zod.string().nullish(),
     createdAt: zod.string(),
   }),
   spots: zod.array(
@@ -380,6 +383,7 @@ export const ListAdminCampaignsResponse = zod.object({
         mailingSeason: zod.string().nullish(),
         mailingMonth: zod.string().nullish(),
         cityList: zod.string().nullish(),
+        dealerWelcomeMessage: zod.string().nullish(),
         createdAt: zod.string(),
       })
       .and(
@@ -421,6 +425,7 @@ export const CreateCampaignResponse = zod
       mailingSeason: zod.string().nullish(),
       mailingMonth: zod.string().nullish(),
       cityList: zod.string().nullish(),
+      dealerWelcomeMessage: zod.string().nullish(),
       createdAt: zod.string(),
     }),
     spots: zod.array(
@@ -487,6 +492,7 @@ export const GetAdminCampaignByIdResponse = zod
       mailingSeason: zod.string().nullish(),
       mailingMonth: zod.string().nullish(),
       cityList: zod.string().nullish(),
+      dealerWelcomeMessage: zod.string().nullish(),
       createdAt: zod.string(),
     }),
     spots: zod.array(
@@ -553,6 +559,7 @@ export const ActivateCampaignResponse = zod
       mailingSeason: zod.string().nullish(),
       mailingMonth: zod.string().nullish(),
       cityList: zod.string().nullish(),
+      dealerWelcomeMessage: zod.string().nullish(),
       createdAt: zod.string(),
     }),
     spots: zod.array(
@@ -619,6 +626,7 @@ export const CompleteCampaignResponse = zod
       mailingSeason: zod.string().nullish(),
       mailingMonth: zod.string().nullish(),
       cityList: zod.string().nullish(),
+      dealerWelcomeMessage: zod.string().nullish(),
       createdAt: zod.string(),
     }),
     spots: zod.array(

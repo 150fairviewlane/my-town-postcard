@@ -240,6 +240,16 @@ export function Hero({ copy = DEFAULT_COPY }: { copy?: LandingCopy }) {
             objectFit: "cover" }}
         />
         <div style={{
+          position: "absolute", top: 12, left: 12,
+          background: "rgba(0,0,0,0.55)", color: "#fff",
+          borderRadius: 6, padding: "4px 10px",
+          fontSize: 11, fontWeight: 600, fontFamily: "sans-serif",
+          backdropFilter: "blur(4px)",
+          letterSpacing: 0.3,
+        }}>
+          Example design — illustrative only
+        </div>
+        <div style={{
           position: "absolute", bottom: 24, left: -12,
           background: "#d4a017", color: "#fff",
           borderRadius: 10, padding: "14px 20px",
@@ -328,15 +338,77 @@ export function WhyChooseUs() {
               transform: "rotate(-1deg)",
               boxShadow: "0 2px 8px rgba(0,0,0,0.10), 0 12px 40px rgba(0,0,0,0.22), 0 32px 64px rgba(0,0,0,0.14)" }}
           />
+          <p style={{
+            textAlign: "center", fontSize: 11, color: "#aaa",
+            fontFamily: "sans-serif", fontStyle: "italic", marginTop: 12,
+          }}>
+            Example postcard design — your ad could look like this
+          </p>
         </div>
       </div>
     </section>
   );
 }
 
-export function PostcardBook({ slug }: { slug?: string }) {
+// ── Dealer welcome note ───────────────────────────────────────────────────────
+// Shown above the spot picker when the campaign has a dealerWelcomeMessage set.
+// Renders nothing when the message is absent so there's never an empty card.
+function DealerWelcomeNote({ message, placeName }: { message: string; placeName?: string }) {
+  return (
+    <div style={{
+      maxWidth: 760,
+      margin: "0 auto 24px",
+      padding: "20px 24px",
+      background: "#fdf8f3",
+      border: "1.5px solid #C9A84C",
+      borderRadius: 12,
+      display: "flex",
+      gap: 16,
+      alignItems: "flex-start",
+      fontFamily: "sans-serif",
+    }}>
+      <div style={{
+        width: 44, height: 44, borderRadius: "50%",
+        background: "#C9A84C", flexShrink: 0,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 22,
+      }}>
+        👋
+      </div>
+      <div>
+        <div style={{
+          fontSize: 13, fontWeight: 700, color: "#7B1418",
+          textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6,
+        }}>
+          A note from your local {placeName ? `${placeName} ` : ""}postcard coordinator
+        </div>
+        <p style={{
+          fontSize: 15, color: "#374151", lineHeight: 1.65,
+          margin: 0, fontStyle: "italic",
+        }}>
+          "{message}"
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export function PostcardBook({
+  slug,
+  welcomeMessage,
+  placeName,
+}: {
+  slug?: string;
+  welcomeMessage?: string | null;
+  placeName?: string;
+}) {
   return (
     <section id="book" style={{ scrollMarginTop: "92px" }}>
+      {welcomeMessage && (
+        <div style={{ padding: "32px 24px 0" }}>
+          <DealerWelcomeNote message={welcomeMessage} placeName={placeName} />
+        </div>
+      )}
       <PostcardPickerSection slug={slug} />
     </section>
   );

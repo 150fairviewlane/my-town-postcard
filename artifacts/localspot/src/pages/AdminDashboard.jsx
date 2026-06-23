@@ -422,6 +422,9 @@ function Dashboard({ token, onLogout }) {
   const completeMutation = useCompleteCampaign({ request: authRequest });
   const [approving, setApproving] = useState(null);
   const [selectedId, setSelectedId] = useState(urlCampaignId);
+  const [welcomeMsg, setWelcomeMsg] = useState("");
+  const [welcomeSaving, setWelcomeSaving] = useState(false);
+  const [welcomeSaved, setWelcomeSaved] = useState(false);
 
   const authOpts = {
     meta: { headers: { Authorization: `Bearer ${token}` } },
@@ -478,6 +481,32 @@ function Dashboard({ token, onLogout }) {
       alert("Failed to approve ad");
     } finally {
       setApproving(null);
+    }
+  };
+
+  // Sync welcome message textarea when campaign changes
+  useEffect(() => {
+    setWelcomeMsg(campaign?.dealerWelcomeMessage ?? "");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaign?.id]);
+
+  const handleSaveWelcome = async () => {
+    if (!campaign?.id || welcomeSaving) return;
+    setWelcomeSaving(true);
+    try {
+      const res = await fetch(`/api/admin/campaigns/${campaign.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ dealerWelcomeMessage: welcomeMsg.trim() || null }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      setWelcomeSaved(true);
+      setTimeout(() => setWelcomeSaved(false), 2500);
+      queryClient.invalidateQueries({ queryKey: detailQueryKey });
+    } catch {
+      alert("Failed to save welcome message");
+    } finally {
+      setWelcomeSaving(false);
     }
   };
 
@@ -646,6 +675,42 @@ function Dashboard({ token, onLogout }) {
                   <div style={{ fontSize: 28, fontWeight: 900, color }}>{value}</div>
                 </div>
               ))}
+            </div>
+
+            {/* Dealer welcome message editor */}
+            <div style={{ background: "#fff", borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", marginBottom: 20 }}>
+              <div style={{ fontWeight: 800, fontSize: 15, color: "#111", marginBottom: 4 }}>👋 Dealer Welcome Note</div>
+              <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 12 }}>
+                Shown as a personal note above the spot picker on the territory landing page. Leave blank to hide it.
+              </div>
+              <textarea
+                value={welcomeMsg}
+                onChange={(e) => setWelcomeMsg(e.target.value)}
+                placeholder="e.g. Hi! I'm Sarah — your local postcard coordinator for Clarkesville. I hand-select every advertiser to make sure this postcard is valuable for you AND the households it reaches. Grab your spot before a competitor in your category does!"
+                rows={4}
+                style={{
+                  width: "100%", borderRadius: 8, border: "1px solid #d1d5db",
+                  padding: "10px 14px", fontSize: 13, color: "#111", lineHeight: 1.6,
+                  fontFamily: "sans-serif", resize: "vertical", boxSizing: "border-box",
+                  outline: "none",
+                }}
+              />
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
+                <button
+                  onClick={handleSaveWelcome}
+                  disabled={welcomeSaving}
+                  style={{
+                    background: "#7B1418", color: "#fff", border: "none", borderRadius: 8,
+                    padding: "8px 20px", fontSize: 13, fontWeight: 700, cursor: welcomeSaving ? "not-allowed" : "pointer",
+                    opacity: welcomeSaving ? 0.7 : 1,
+                  }}
+                >
+                  {welcomeSaving ? "Saving…" : "Save Note"}
+                </button>
+                {welcomeSaved && (
+                  <span style={{ color: "#15803d", fontWeight: 700, fontSize: 13 }}>✓ Saved!</span>
+                )}
+              </div>
             </div>
 
             <div style={{ background: "#fff", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", overflow: "hidden" }}>

@@ -401,7 +401,11 @@ export default function TerritoryLandingPage({ params }: { params: { slug: strin
           <Hero copy={copy} />
           <HowItWorks copy={copy} />
           <WhyChooseUs />
-          <PostcardBook slug={slug} />
+          <PostcardBook
+            slug={slug}
+            welcomeMessage={campaign?.dealerWelcomeMessage}
+            placeName={derivePlaceName(campaign)}
+          />
           <Pricing />
           <Features copy={copy} />
           <CTABanner />
