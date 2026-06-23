@@ -1,0 +1,17 @@
+Confirmed definitively: this is NOT a caching issue. The site has now been tested on two separate devices and two separate browsers, neither of which had ever cached anything from this domain before, and both show the identical broken zoomed-in single-dot map.
+
+**Your explanation for why a hard refresh would be needed doesn't hold up, and needs to be reconsidered:** you stated the bundle filename (`index-BVXUcnVF.js`) didn't change because "the change was small enough that the hash didn't change." This is not how Vite/content-hashing works — even a one-character change to a file produces a different cryptographic hash and therefore a different output filename. If the bundle filename is unchanged, the most likely explanation is that the SOURCE FILE feeding that bundle does not actually contain your intended fix in the place you think it does — not that a real code change produced an identical hash.
+
+**Re-investigate from scratch, more rigorously this time:**
+
+1. Re-run the same grep against the production bundle, but this time show the FULL surrounding context (not just matched lines) for every `maxZoom` occurrence — there are at least 3 occurrences (`maxZoom:18`, `maxZoom:20`, and the claimed fix `maxZoom:9`). Show enough surrounding code for each to determine: is `maxZoom:9` actually inside the `fitBounds()` call for the territory pins, or could it be appearing in a DIFFERENT, unrelated context (e.g. a default Leaflet config option, a different map instance, or something in a vendor library bundled alongside your code) that coincidentally also uses the value 9?
+
+2. Open the actual source file `GeorgiaTerritoryMap.jsx` directly (not the built bundle) and show the EXACT current state of the `fitBounds` call and surrounding zoom logic, in full, right now. Confirm with certainty: does this specific file currently contain the `maxZoom: 9` fix?
+
+3. Check whether `GeorgiaTerritoryMap.jsx` is actually the component being rendered on the LIVE production homepage at all. Is it possible there are two similar/duplicate map components in this codebase (e.g. one for the dealer territory finder, one for the public homepage — both were mentioned as separate components in earlier debugging this session) and the fix was applied to the correct file, but a DIFFERENT, unfixed component is what's actually being imported and rendered on the homepage route?
+
+4. Check the build process directly: run a fresh local build (`npm run build` or equivalent) right now in this environment, and inspect the freshly-built output bundle's filename and content. Does a deliberate, fresh build produce a DIFFERENT filename than `index-BVXUcnVF.js`? If yes, that confirms the currently-deployed bundle is stale/from before your fix, despite deployment logs claiming the publish succeeded. If the fresh build produces the SAME filename, investigate why the source change isn't affecting the build output at all (e.g. is the file you edited actually part of the build, or is there a duplicate/shadow copy being built from instead).
+
+5. Report back with hard evidence for each of these checks — full code snippets, exact file paths, and a clear statement of which specific theory (wrong component rendered, stale build despite claimed success, fix never actually saved to the right file, or something else) explains why two devices with no possible caching are still seeing the broken zoom.
+
+Do not republish or attempt another fix until the actual root cause of "fix appears to exist somewhere but isn't affecting the live page" is identified with certainty.
