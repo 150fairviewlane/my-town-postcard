@@ -1171,6 +1171,37 @@ router.post("/admin/dealers/:id/rebuild-landing-page", requireAdmin, async (req,
   res.json({ ok: true, campaignIds });
 });
 
+// ─── PATCH /api/admin/dealers/:id/email ───────────────────────────────────────
+router.patch("/admin/dealers/:id/email", requireAdmin, async (req, res): Promise<void> => {
+  const id = parseInt(String(req.params.id), 10);
+  if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid dealer id" }); return; }
+
+  const { email } = req.body ?? {};
+  if (typeof email !== "string" || !email.trim()) {
+    res.status(400).json({ error: "email is required" }); return;
+  }
+  const normalized = email.trim().toLowerCase();
+
+  const [conflict] = await db
+    .select({ id: dealersTable.id })
+    .from(dealersTable)
+    .where(eq(dealersTable.email, normalized));
+  if (conflict && conflict.id !== id) {
+    res.status(409).json({ error: "That email is already in use by another dealer." }); return;
+  }
+
+  const [updated] = await db
+    .update(dealersTable)
+    .set({ email: normalized })
+    .where(eq(dealersTable.id, id))
+    .returning({ email: dealersTable.email });
+
+  if (!updated) { res.status(404).json({ error: "Dealer not found" }); return; }
+
+  req.log.info({ dealerId: id, newEmail: normalized }, "Admin updated dealer email");
+  res.json({ ok: true, email: updated.email });
+});
+
 // ─── GET /api/admin/dealers/:id/delete-preview ────────────────────────────────
 // Returns a summary of what a full delete would remove, without deleting anything.
 router.get("/admin/dealers/:id/delete-preview", requireAdmin, async (req, res): Promise<void> => {
