@@ -1,0 +1,31 @@
+Before completing the GA-005 ZIP footprint repair: GA-003 ("Cherokee County," auto-generated, unclaimed) and GA-004 ("Fulton County," auto-generated, unclaimed) are old, stale records that should be deleted entirely. They are not needed and are currently blocking the GA-005 repair from inserting its correct ZIP assignments (unique constraint: a ZIP can only belong to one territory at a time).
+
+**Step 1: Confirm before deleting.**
+
+Query and confirm:
+- GA-003 and GA-004 both have `dealerId IS NULL` (no dealer attached) and `status` is NOT "taken" (i.e. genuinely unclaimed)
+- Neither has any paid spots, orders, or other real customer data attached
+- List exactly which ZIPs are currently assigned to each, for the record
+
+Show this confirmation. If anything unexpected turns up (e.g. either one somehow has a dealer or paid spots attached), STOP and report back rather than deleting.
+
+**Step 2: Delete GA-003 and GA-004 cleanly.**
+
+Delete in FK-safe order for both records:
+1. Their `territory_zip_assignments` rows
+2. Any other child records referencing their campaign/territory IDs (ad generations, spots, etc. — should be none, but check)
+3. The GA-003 and GA-004 territory/campaign records themselves
+
+**Step 3: Complete the GA-005 repair.**
+
+Now that the ZIP unique-constraint conflict is resolved, proceed with inserting the correct 45 ZIPs (covering Ball Ground, Canton, Woodstock, Holly Springs) into `territory_zip_assignments` for GA-005, as originally planned.
+
+**Step 4: Final verification.**
+
+Confirm:
+- GA-003 and GA-004 no longer exist
+- GA-005 now has all 45 correct ZIPs assigned, with `counties: ["Cherokee"]`
+- Vincent's existing dealer dashboard, landing pages, and any spot/order data remain completely intact and unaffected throughout this process
+- Searching "Ball Ground, GA" on Find Your Territory now correctly shows GA-005 as "already claimed" based on a real ZIP-footprint match
+
+Report back final ZIP count and confirm both deletions and the repair completed successfully.
