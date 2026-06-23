@@ -852,7 +852,7 @@ export default function AdminDealersPage() {
                     <tr style={{ background: "#fafafa", textAlign: "left" }}>
                       <Th>Dealer</Th>
                       <Th>Status</Th>
-                      <Th>Territories</Th>
+                      <Th>Zones</Th>
                       <Th>Households</Th>
                       <Th>Signed Up</Th>
                       <Th>Activated</Th>
