@@ -713,8 +713,14 @@ export interface DealerWelcomeEmailInfo {
   dealerEmail: string;
   territoryName: string | null;
   cities?: string[];
-  households?: number;
-  setPasswordLink: string;
+  /** Number of mailing zones. Displayed as zoneCount × 5,000 households.
+   *  Use proposedCities.length for named-territory dealers, or the count of
+   *  dealerTerritoriesTable rows for legacy ZIP-cluster dealers. Do NOT pass
+   *  the census-derived territory.households field here. */
+  zoneCount?: number;
+  /** When present a "set your password" button is shown (reminder-scheduler path).
+   *  Omit for new dealers who already set their password during signup. */
+  setPasswordLink?: string;
   loginLink: string;
 }
 
@@ -731,14 +737,17 @@ export async function sendDealerWelcomeEmail(
   }
 
   const commissionPct = Math.round(DEALER_COMMISSION_RATE * 100);
+
   const citiesHtml = info.cities && info.cities.length > 0
     ? `<ul style="margin:8px 0 0 0;padding:0;list-style:none;">
         ${info.cities.map((c) => `<li style="padding:3px 0;font-size:14px;">✅ ${escapeHtml(c)}</li>`).join("")}
        </ul>`
     : "";
-  const householdsHtml = info.households
-    ? `<div style="margin-top:6px;font-size:13.5px;color:#555;">Reaching <strong>~${info.households.toLocaleString()} households</strong> per mailing.</div>`
+
+  const householdsHtml = info.zoneCount && info.zoneCount > 0
+    ? `<div style="margin-top:6px;font-size:13.5px;color:#555;">Reaching <strong>~${(info.zoneCount * 5000).toLocaleString()} households</strong> per mailing (${info.zoneCount} zone${info.zoneCount > 1 ? "s" : ""} × 5,000 via USPS EDDM).</div>`
     : "";
+
   const territoryBlock = info.territoryName
     ? `<div style="background:#f9f5f0;border-left:4px solid #C9A84C;border-radius:4px;padding:14px 18px;margin:18px 0;">
         <div style="font-size:11px;font-weight:800;color:#C9A84C;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:4px;">Your Territory</div>
@@ -749,42 +758,55 @@ export async function sendDealerWelcomeEmail(
       </div>`
     : "";
 
+  const citiesInline = info.cities && info.cities.length > 0
+    ? ` in ${info.cities.slice(0, 3).map(escapeHtml).join(", ")}${info.cities.length > 3 ? " and more" : ""}`
+    : "";
+
+  // Primary CTA: login (password already set at signup). Only show the
+  // set-password button when setPasswordLink is explicitly provided
+  // (used by the welcome-reminder scheduler for dealers without a password).
+  const ctaHtml = info.setPasswordLink
+    ? `<p>
+        <a href="${info.setPasswordLink}"
+           style="display:inline-block;background:#7B1418;color:#fff;padding:13px 26px;border-radius:6px;text-decoration:none;font-weight:700;font-size:15px;">
+          Set my password →
+        </a>
+      </p>
+      <p style="color:#999;font-size:12px;">
+        Or paste this link in your browser:<br/>
+        <a href="${info.setPasswordLink}" style="color:#7B1418;">${info.setPasswordLink}</a>
+      </p>`
+    : `<p>
+        <a href="${info.loginLink}"
+           style="display:inline-block;background:#7B1418;color:#fff;padding:13px 26px;border-radius:6px;text-decoration:none;font-weight:700;font-size:15px;">
+          Open my dealer dashboard →
+        </a>
+      </p>`;
+
   try {
     const { error: sendError } = await resend.emails.send({
       from: FROM_EMAIL,
       to: info.dealerEmail,
-      subject: "Welcome to My Town Postcard — your territory is reserved!",
+      subject: "Welcome to My Town Postcard — your territory is live!",
       html: `
         <div style="font-family:sans-serif;max-width:580px;margin:0 auto;padding:32px;">
           <h2 style="color:#7B1418;margin:0 0 6px;">Welcome aboard, ${escapeHtml(info.dealerName)}${info.territoryName ? ` — ${escapeHtml(info.territoryName)} is yours! 🎉` : "!"}</h2>
-          <p style="color:#374151;margin:0 0 16px;">Your payment was successful and your territory is reserved. You're now an official My Town Postcard dealer.</p>
+          <p style="color:#374151;margin:0 0 16px;">Your payment was successful. Your territory and landing page${info.cities && info.cities.length > 1 ? "s are" : " is"} already live — you can start selling right now.</p>
 
           ${territoryBlock}
 
           <h3 style="color:#1a1a1a;margin:20px 0 8px;">Your next steps</h3>
           <ol style="color:#374151;font-size:14px;line-height:1.8;padding-left:20px;margin:0 0 16px;">
-            <li><strong>Set up your account</strong> — click the button below to create your password (link expires in 72 hours).</li>
-            <li><strong>Publish your territory page</strong> — your dashboard has a one-click publish button that puts your landing page live.</li>
-            <li><strong>Start selling</strong> — reach out to local businesses. Dealers who land their first 12 spots within 30 days see the best results.</li>
+            <li><strong>Log into your dashboard</strong> — your territory and landing pages are already live.</li>
+            <li><strong>Start selling</strong> — reach out to local businesses${citiesInline}; share your landing page link(s) directly.</li>
+            <li><strong>Track your progress</strong> — your dashboard shows real-time sales for each of your zones.</li>
           </ol>
 
           <div style="background:#fff8f0;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;margin:0 0 24px;font-size:13.5px;color:#92400e;">
-            🎯 <strong>30-day goal:</strong> Aim for 12 sold spots in your first month — that's when the economics really kick in for you.
+            🎯 <strong>Your goal:</strong> Sell out all 15 spots — dealers who fill their first postcard within 30 days see the strongest results.
           </div>
 
-          <p>
-            <a href="${info.setPasswordLink}"
-               style="display:inline-block;background:#7B1418;color:#fff;padding:13px 26px;border-radius:6px;text-decoration:none;font-weight:700;font-size:15px;">
-              Set up my account →
-            </a>
-          </p>
-          <p style="color:#666;font-size:13px;">
-            Once set, log in any time at <a href="${info.loginLink}" style="color:#7B1418;">your dealer dashboard</a>.
-          </p>
-          <p style="color:#999;font-size:12px;">
-            Or paste this link in your browser:<br/>
-            <a href="${info.setPasswordLink}" style="color:#7B1418;">${info.setPasswordLink}</a>
-          </p>
+          ${ctaHtml}
           ${emailFooter()}
         </div>
       `,

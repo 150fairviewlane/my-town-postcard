@@ -1,0 +1,65 @@
+Fix five issues in the dealer welcome email (sent on dealer/territory activation — likely `sendTerritoryClaimedEmail` or similar in `lib/emails.ts`).
+
+---
+
+## Issue 1: Household reach is wildly wrong (100,000 instead of ~20,000)
+
+The email currently shows "Reaching ~100,000 households per mailing" for a 4-zone territory (Marietta, Kennesaw, Smyrna, Acworth), where each zone individually mails to ~5,000 households. The correct total reach across 4 zones is **4 × 5,000 = 20,000 households**, not 100,000.
+
+1. Find where this email pulls its household figure from. Based on the codebase, the territory record's `households` field is likely a CENSUS-DERIVED county-level estimate used for territory viability SCORING when a territory is proposed — NOT the actual mailing reach per zone. That field should NOT be used for this email's "reaching X households" line.
+
+2. The correct calculation: count the number of mailing-area zones/cities this dealer's territory actually has (likely from `dealerTerritoriesTable` rows or the campaign-per-city structure, whichever this dealer's signup path used), and multiply by 5,000 (the fixed per-zone EDDM mailing size already used consistently elsewhere in the app — see the comment in `territories.ts`: "the frontend displays a fixed 5,000 households via USPS EDDM footer, no per-area count").
+
+3. Fix the email to show this correctly computed total (zones × 5,000), not the unrelated census-derived `households` field. Verify against the Cobb County / Marietta-Kennesaw-Smyrna-Acworth example: 4 zones × 5,000 = 20,000 — confirm the corrected email shows this.
+
+---
+
+## Issue 2: Commission framing — keep it simple, do NOT reframe as "70% of profit"
+
+Keep the commission line as a clear, simple percentage of the ad's sale price: "Your commission: 35% of every ad sold" (pulling from the shared `DEALER_COMMISSION_RATE` constant, not hardcoded). Do NOT change this to "70% of profit" or any profit-based framing — a dealer reading "70%" would likely anchor on that number and expect roughly double their actual payout, since "profit" implies something different to most readers than the intended 50/50 revenue-split convention behind that math. The fixed revenue percentage is the clearer, more trustworthy number for a brand-new dealer relationship, and it's also the number that's actually simple to verify against any given sale.
+
+---
+
+## Issue 3: Remove the "create your password" step — password is already set at signup
+
+The email currently includes a "Set up your account — click the button below to create your password (link expires in 72 hours)" step and a "Set up my account →" button. This does NOT match the actual signup flow — the dealer already chose their email and password during signup itself (built earlier in this project). There is no separate password-creation step after activation.
+
+1. Remove this step entirely from the "next steps" list.
+2. Remove the "Set up my account →" button and its 72-hour-expiry framing.
+3. Replace the primary CTA with the existing "Open your dealer portal" / login button pointing at the dealer's actual login page, since they already have credentials.
+
+---
+
+## Issue 4: Remove the "publish your territory page" step — pages publish automatically
+
+The email currently includes "Publish your territory page — your dashboard has a one-click publish button that puts your landing page live" as a next step. This does NOT match reality — territory/landing pages are published automatically during the signup/activation process, with no manual publish action required from the dealer.
+
+1. Remove this step entirely.
+2. Confirm (don't just assume) that landing pages are indeed auto-published on activation by checking the actual activation code path (`ensureDealerLandingPage` or wherever campaigns get created and `isPublished` is set) — if for any reason this ISN'T actually automatic for some signup paths, flag that discrepancy clearly rather than silently leaving incorrect copy in place.
+
+---
+
+## Issue 5: Fix the clunky 12-vs-15 goal messaging
+
+Current copy mixes "12 spots in 30 days" messaging awkwardly. Clarify the distinction:
+
+- **12 spots is the real internal "minimum to print" operational threshold** (used by the 30/40/45-day admin alert system already built) — this is NOT the number to motivate a NEW dealer toward as their goal; it's a backend safety threshold, not an aspirational target.
+- **15 spots (full sellout) is the actual goal worth celebrating and motivating toward** in a welcome email — it's simpler, more exciting, and avoids implying that 12 is "good enough."
+
+Rewrite the goal-oriented copy to push toward 15, not 12: something like "🎯 Your goal: sell out all 15 spots. Dealers who fill their first postcard within 30 days see the strongest results." Remove any reference to "12 spots" from this email specifically — 12 remains a real, important number used internally (the admin alert system, dealer dashboard progress tracking per the earlier task), but it shouldn't be the number presented to a brand-new dealer as what they're aiming for in their welcome email.
+
+---
+
+## Final "next steps" list should be rewritten to match reality
+
+Given Issues 3 and 4 remove two steps that don't apply, the next-steps list should be simplified to reflect what's actually true: the dealer's territory and landing pages are ALREADY live, they ALREADY have login credentials. Rewrite as something like:
+
+1. **Log into your dashboard** — your territory and landing pages are already live.
+2. **Start selling** — reach out to local businesses in [mailing area cities]; share your landing page link(s) directly.
+3. **Track your progress** — your dashboard shows real-time sales for each of your zones.
+
+With the goal line (per Issue 5) following separately: "🎯 Your goal: sell out all 15 spots — dealers who fill their first postcard within 30 days see the strongest results."
+
+---
+
+After implementing, send a test version of this email for a multi-zone territory (e.g. the Cobb County / Marietta-Kennesaw-Smyrna-Acworth example) and confirm: household reach shows the correct zones × 5,000 total (20,000, not 100,000), commission shows "35% of every ad sold" pulling from the shared constant (not reframed as profit), there is no password-creation step or button, there is no "publish your page" step, and the goal messaging references 15 (full sellout) rather than 12.

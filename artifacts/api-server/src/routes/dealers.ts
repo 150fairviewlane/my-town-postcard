@@ -1752,52 +1752,55 @@ export async function activateDealerFromCheckoutSession(
       tokenHash,
       expiresAt: new Date(Date.now() + 72 * 60 * 60 * 1000),
     });
-    const [territory] = await db
+    // Fetch ALL legacy territory rows so we can count zones for the email.
+    const legacyTerritories = await db
       .select({ cityLabel: dealerTerritoriesTable.cityLabel })
       .from(dealerTerritoriesTable)
       .where(eq(dealerTerritoriesTable.dealerId, dealerId));
 
-    // Named territory (new-style) — fetch cities + households for the welcome email.
+    // Named territory (new-style) — fetch cities for the welcome email.
     const [namedTerritory] = await db
       .select({
         name: territoriesTable.name,
-        households: territoriesTable.households,
         sourceProposalId: territoriesTable.sourceProposalId,
       })
       .from(territoriesTable)
       .where(eq(territoriesTable.dealerId, dealerId));
 
     let welcomeCities: string[] = [];
-    let welcomeHouseholds: number | undefined;
-    const welcomeTerritoryName = namedTerritory?.name ?? territory?.cityLabel ?? null;
+    const welcomeTerritoryName = namedTerritory?.name ?? legacyTerritories[0]?.cityLabel ?? null;
 
-    if (namedTerritory) {
-      welcomeHouseholds = namedTerritory.households > 0 ? namedTerritory.households : undefined;
-      if (namedTerritory.sourceProposalId) {
-        const [proposal] = await db
-          .select({ proposedCities: territoryProposalsTable.proposedCities })
-          .from(territoryProposalsTable)
-          .where(eq(territoryProposalsTable.id, namedTerritory.sourceProposalId));
-        if (Array.isArray(proposal?.proposedCities)) {
-          welcomeCities = proposal.proposedCities;
-        }
+    if (namedTerritory?.sourceProposalId) {
+      const [proposal] = await db
+        .select({ proposedCities: territoryProposalsTable.proposedCities })
+        .from(territoryProposalsTable)
+        .where(eq(territoryProposalsTable.id, namedTerritory.sourceProposalId));
+      if (Array.isArray(proposal?.proposedCities)) {
+        welcomeCities = proposal.proposedCities;
       }
     }
 
+    // Zone count drives the "X households" line: each zone = 5,000 via USPS EDDM.
+    // Named-territory dealers: one zone per proposed city.
+    // Legacy dealers: one zone per dealerTerritoriesTable row.
+    const welcomeZoneCount = namedTerritory
+      ? welcomeCities.length
+      : legacyTerritories.length;
+
+    // Dealer set their password during signup — no setPasswordLink needed.
     await sendDealerWelcomeEmail({
       dealerName: dealer.name,
       dealerEmail: dealer.email,
       territoryName: welcomeTerritoryName,
       cities: welcomeCities,
-      households: welcomeHouseholds,
-      setPasswordLink: `${appUrl}/dealer/reset-password?token=${rawToken}`,
+      zoneCount: welcomeZoneCount > 0 ? welcomeZoneCount : undefined,
       loginLink: `${appUrl}/dealer/login`,
     });
     sendAdminNewDealerEmail({
       dealerId,
       dealerName: dealer.name,
       dealerEmail: dealer.email,
-      territoryName: territory?.cityLabel ?? null,
+      territoryName: welcomeTerritoryName,
     }).catch((err: any) =>
       logger.error({ err: err?.message, dealerId }, "Failed to send admin new dealer email"),
     );
