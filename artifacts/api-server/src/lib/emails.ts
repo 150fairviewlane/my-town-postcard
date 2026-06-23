@@ -790,7 +790,7 @@ export async function sendDealerWelcomeEmail(
       subject: "Welcome to My Town Postcard — your territory is live!",
       html: `
         <div style="font-family:sans-serif;max-width:580px;margin:0 auto;padding:32px;">
-          <h2 style="color:#7B1418;margin:0 0 6px;">Welcome aboard, ${escapeHtml(info.dealerName)}${info.territoryName ? ` — ${escapeHtml(info.territoryName)} is yours! 🎉` : "!"}</h2>
+          <h2 style="color:#7B1418;margin:0 0 6px;">Welcome aboard, ${escapeHtml(info.dealerName)}${info.territoryName ? (() => { const isMulti = info.territoryName!.includes(" / "); const label = isMulti ? info.territoryName!.replace(/ \/ /g, " & ").replace(/Counties$/, "County") : info.territoryName!; const verb = isMulti ? "are" : "is"; return ` — ${escapeHtml(label)} ${verb} yours! 🎉`; })() : "!"}</h2>
           <p style="color:#374151;margin:0 0 16px;">Your payment was successful. Your territory and landing page${info.cities && info.cities.length > 1 ? "s are" : " is"} already live — you can start selling right now.</p>
 
           ${territoryBlock}
