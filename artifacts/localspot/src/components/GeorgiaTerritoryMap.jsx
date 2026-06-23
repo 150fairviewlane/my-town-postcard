@@ -299,7 +299,7 @@ export default function GeorgiaTerritoryMap() {
   );
 
   return (
-    <section style={{ background: "#f8f5f0", padding: "80px 24px 72px", textAlign: "center" }}>
+    <section id="map" style={{ background: "#f8f5f0", padding: "80px 24px 72px", textAlign: "center" }}>
       <style>{`
         /* Warm the grayscale tiles toward the site's cream palette */
         .leaflet-tile-pane {

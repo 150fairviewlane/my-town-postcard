@@ -56,6 +56,13 @@ export function scrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 }
 
+// Scroll to the spot picker on territory pages (#book) or the territory-map
+// chooser on the home page (#map) — whichever is present on the current page.
+export function scrollToSpots() {
+  const el = document.getElementById("map") ?? document.getElementById("book");
+  el?.scrollIntoView({ behavior: "smooth" });
+}
+
 export function NavBar() {
   const isMobile = useIsMobile();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -159,7 +166,7 @@ export function NavBar() {
                   }}>
                   💼 Become a Dealer
                 </a>
-                <button onClick={() => handleNav("book")}
+                <button onClick={() => { setMenuOpen(false); setTimeout(scrollToSpots, 50); }}
                   style={{
                     marginTop: 4, background: RED, color: "#fff", border: "none",
                     borderRadius: 8, padding: "14px 22px", fontSize: 15, fontWeight: 800,
@@ -476,7 +483,7 @@ export function Pricing() {
                   </div>
                 ))}
               </div>
-              <button onClick={() => scrollTo("book")}
+              <button onClick={scrollToSpots}
                 style={{ width: "100%", padding: "12px 0", borderRadius: 9, marginTop: "auto",
                   background: p.highlight ? RED : "#fff",
                   color: p.highlight ? "#fff" : RED,
@@ -526,7 +533,7 @@ export function CTABanner() {
     <section style={{ background: RED, padding: "60px 32px", textAlign: "center" }}>
       <h2 style={{ color: "#fff", fontSize: 32, fontWeight: 900, fontFamily: "Georgia,serif",
         margin: "0 0 20px" }}>Don't Miss Out.</h2>
-      <button onClick={() => scrollTo("book")}
+      <button onClick={scrollToSpots}
         style={{ background: "#fff", color: RED, border: "none", borderRadius: 9,
           padding: "14px 36px", fontSize: 16, fontWeight: 800, cursor: "pointer",
           fontFamily: "sans-serif", boxShadow: "0 4px 16px rgba(0,0,0,0.15)" }}>
