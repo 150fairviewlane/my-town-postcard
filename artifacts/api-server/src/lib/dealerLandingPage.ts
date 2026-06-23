@@ -10,6 +10,7 @@ import { and, eq } from "drizzle-orm";
 import { generateSlug, generateUniqueCampaignSlug } from "./slugify";
 import { STANDARD_SPOT_LAYOUT, validateLayout } from "./standardLayout";
 import { logger } from "./logger";
+import { findGazetteerCity } from "./censusApi";
 
 type LandingPageInfo = {
   territoryName: string;
@@ -151,6 +152,16 @@ export async function ensureDealerLandingPage(dealerId: number): Promise<number[
         return byDealer.id;
       }
 
+      // Resolve pin coordinates for single-city campaigns at creation time so
+      // the map never has to fall back to the runtime Gazetteer lookup for new rows.
+      const singleCityName =
+        info.cityList && !info.cityList.includes(",")
+          ? info.cityList.trim()
+          : null;
+      const cityGeo = singleCityName
+        ? findGazetteerCity(singleCityName, "GA")
+        : undefined;
+
       const [campaign] = await tx
         .insert(campaignsTable)
         .values({
@@ -163,6 +174,7 @@ export async function ensureDealerLandingPage(dealerId: number): Promise<number[
           dealerId,
           isPublished: true,
           cityList: info.cityList,
+          ...(cityGeo ? { pinLat: cityGeo.lat, pinLng: cityGeo.lng } : {}),
         })
         .returning({ id: campaignsTable.id });
 
@@ -228,6 +240,9 @@ export async function ensureDealerLandingPage(dealerId: number): Promise<number[
         continue;
       }
 
+      // Hub-city campaigns are always single-city — resolve pin at creation time.
+      const hubCityGeo = findGazetteerCity(hubCity.trim(), "GA");
+
       const [campaign] = await tx
         .insert(campaignsTable)
         .values({
@@ -240,6 +255,7 @@ export async function ensureDealerLandingPage(dealerId: number): Promise<number[
           dealerId,
           isPublished: true,
           cityList: hubCity,
+          ...(hubCityGeo ? { pinLat: hubCityGeo.lat, pinLng: hubCityGeo.lng } : {}),
         })
         .returning({ id: campaignsTable.id });
 
