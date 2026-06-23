@@ -1,0 +1,81 @@
+Implement a minimum-viable-print-run TRACKING and ADMIN ALERTING system for postcard campaigns (no automatic refunds yet — this is a manual-review-first version; automatic refunds can be added later once there's real operating history). The real target is: a campaign should reach at least 12 of 15 paid spots within 45 days of its FIRST PAID SPOT. Instead of auto-refunding if it doesn't, the system sends escalating admin notification emails at the 30-day, 40-day, and 45-day marks for any campaign that has sales but hasn't hit 12 yet, so the admin can manually decide what to do (extend, refund individually, follow up with the dealer, etc.). Separately, give DEALERS a shorter internal coaching target of 30 days from that same first-sale date, visible only to the dealer, never presented to advertisers as an automatic refund trigger.
+
+**Critical correction to the trigger date:** a dealer may hold multiple territories (e.g. 4) but only be actively selling on 1-2 at a time. The clock must NOT start when a territory/campaign is created — it must start from the date of that specific campaign's FIRST paid spot. A campaign with zero paid spots has no countdown running at all and should display no countdown/deadline anywhere, since the clock hasn't started yet. Each campaign's countdown is independent and based on its own first-sale date, not a shared dealer-level or territory-creation-level date.
+
+**These are two different things for two different audiences — do not let them get confused or merged in any copy:**
+- **30/40/45-day admin alerts, counted from that campaign's first paid spot** = INTERNAL notifications to info@mytownpostcard.com only. Advertisers never see these. No automatic action is taken — this is purely informational, for the admin to review and decide on manually.
+- **30 days, counted from that same campaign's first paid spot** = an internal DEALER-facing coaching target/soft goal, shown only in dealer-facing surfaces (welcome email, dealer dashboard), to motivate faster selling. Never shown to advertisers, never described as a refund deadline (since there is no automatic refund yet).
+
+---
+
+## Part 1: Schema and tracking
+
+1. The trigger date for the 30/40/45-day admin alerts and the dealer's 30-day coaching target is the campaign's FIRST paid spot — not when the territory/campaign was created. This can likely be derived directly from existing data (the earliest `ordersTable` row with `status = "paid"` for a given `spotId` that belongs to that campaign) rather than needing a brand-new column — but if computing this on every check is inefficient, add a cached `firstPaidAt` (nullable timestamp) column to `campaignsTable`, set it the FIRST time any spot on that campaign transitions to paid (in the same place `markSpotPaidAndNotify`/the webhook handler already runs), and never overwrite it afterward.
+
+2. A campaign with `firstPaidAt IS NULL` has not started its clock — no countdown, alert, or reminder should ever be computed or displayed for it anywhere (admin alerts, dealer dashboard, etc.).
+
+3. Add tracking for which admin alert tiers have already been sent for a campaign, so each tier (30/40/45-day) only ever fires once — e.g. three nullable timestamp columns on `campaignsTable` (`adminAlert30SentAt`, `adminAlert40SentAt`, `adminAlert45SentAt`), or a small related table if that fits the existing schema patterns better.
+
+## Part 2: Escalating admin notifications at 30/40/45 days — no automatic action
+
+1. Add a scheduled/periodic check (similar pattern to the existing 30-minute spot-hold expiration sweeper already in the codebase — `expirationCleanup.ts` or similar) that runs daily and checks every campaign where `firstPaidAt IS NOT NULL` and `paidSpots < 12`. **Campaigns where `firstPaidAt IS NULL` (no sales yet) must be skipped entirely** — they have no clock running and are never eligible for any alert.
+
+2. For each qualifying campaign, check days elapsed since `firstPaidAt`:
+   - If `>= 30` days and `adminAlert30SentAt IS NULL`: send the 30-day admin alert, then set `adminAlert30SentAt = now()`.
+   - If `>= 40` days and `adminAlert40SentAt IS NULL`: send the 40-day admin alert, then set `adminAlert40SentAt = now()`.
+   - If `>= 45` days and `adminAlert45SentAt IS NULL`: send the 45-day (final) admin alert, then set `adminAlert45SentAt = now()`.
+   - Each tier fires exactly once per campaign — never resend a tier that's already been marked sent, even if the check runs daily and the campaign remains under 12 spots for weeks afterward.
+   - If a campaign reaches 12+ paid spots at any point, no further alerts should fire for it (the daily check's `paidSpots < 12` filter already handles this naturally, since it'll stop matching once the campaign clears the threshold).
+
+3. **Each admin alert email** (new functions in `lib/emails.ts`, following the existing branded-footer pattern — e.g. `sendCampaignFillAlert30/40/45`) should go to `info@mytownpostcard.com` and include:
+   - Campaign/territory name and which dealer owns it
+   - Current paid-spot count out of 15 (and how far from the 12-spot minimum)
+   - How many days have elapsed since the first sale
+   - A direct link to that campaign's admin spot-table/detail view (the existing `/admin/territories` → campaign detail page) so the admin can immediately see and act on the specific campaign
+   - Clear escalating tone across the three tiers — e.g. 30-day: informational ("worth keeping an eye on"), 40-day: more urgent ("approaching the 45-day mark, may need follow-up with the dealer"), 45-day: clearly flagged as needing a decision now ("this campaign has reached the 45-day mark below the 12-spot minimum — manual review needed: extend, follow up with the dealer, or consider refunds for paid spots").
+
+4. No Stripe refund logic, no automatic cancellation, and no advertiser-facing email should be triggered by any of this — these three emails go ONLY to the admin inbox. The admin decides what to do manually.
+
+## Part 3: Dealer-facing 30-day soft-goal reminder (NOT the real deadline)
+
+1. Add an automated reminder email to the dealer at the 30-day mark FROM `firstPaidAt` (skip entirely if `firstPaidAt IS NULL` — no reminder is sent for a campaign that hasn't sold anything yet, since its clock hasn't started): if `paidSpots < 12` at that point, send something like "It's been 30 days since your first sale on [campaign name] — you'll want to reach 12 sold spots soon to keep this card on track. Here's your current progress: [X] of 12." Frame this as encouragement/coaching only — there is no automatic refund mechanism in this version, so do not imply any automatic consequence.
+
+2. Show this same 30-day-from-first-sale soft target as a progress indicator on the dealer's dashboard (the mini ad-picker / territory overview already built) — but ONLY for campaigns that have at least one paid spot. A campaign with zero sales should show no countdown, no deadline, and no "days remaining" indicator anywhere on the dashboard — just its normal empty/available state. Once the first spot sells, that specific campaign's card can then show something like "Goal: 12 spots sold within 30 days of your first sale (Day [X] of 30)" — independent of any other campaign's countdown.
+
+## Part 4: Advertiser-facing disclosure — HOLD OFF for now
+
+Do NOT add an advertiser-facing refund-policy disclosure yet. The original plan included a checkout-page disclosure promising an automatic refund if a campaign doesn't reach 12 spots in 45 days — since automatic refunds are NOT being built in this version, that promise would not be true and must not be shown to advertisers. Skip this part entirely for now. Once automatic refunds are added in a future phase, this disclosure can be revisited and added accurately at that time.
+
+## Part 5: Dealer welcome email — full redesign
+
+Redesign the dealer welcome email (sent on activation, currently a fairly bare "Your territory is live" email with a generic headline, a plain-text mailing-areas sentence, household count, and a single "Open your dealer portal" button). Find this in `lib/emails.ts` (likely `sendTerritoryClaimedEmail` or whatever function sends this on dealer/territory activation).
+
+**Content changes:**
+
+1. **Merge the headline and the personal welcome into one stronger opening.** Currently it's two separate lines ("Your territory is live — [County]" as the subject/header, then "Welcome aboard, [Name]! 🎉" further down with a lot of space between them). Combine into one prominent opening: something like "Welcome aboard, [Name] — [Territory Name] is yours! 🎉" as the single visual anchor at the top.
+
+2. **Reformat the mailing areas as a real preview list, not a plain sentence.** Instead of "Mailing areas: Gray, Milledgeville, Forsyth, Eatonton" as flowing text, render each city as its own small row/line — e.g. a checkmark or pin icon + city name per line — so it visually previews the distinct landing pages the dealer now owns, rather than reading as a flat data dump. Pull this from the same data source the rest of the dealer record already uses for its mailing-area list (the `dealerTerritoriesTable` / `cityLabel` fields, or the campaign-per-city structure depending on which signup path was used).
+
+3. **Add the commission rate.** Include a clear line stating the dealer's commission rate using the shared `DEALER_COMMISSION_RATE` constant from `lib/commission.ts` (currently 35%) — e.g. "You'll earn 35% commission on every ad spot sold in your territory." Do not hardcode this percentage as a literal string; pull it from the shared constant so it stays correct if the rate ever changes again.
+
+4. **Add concrete next steps.** A short numbered or bulleted list: e.g. "1. Log into your dashboard below. 2. Your landing pages are already live — share them with local businesses. 3. Start reaching out: here's a quick tip sheet [link, if one exists, otherwise omit]." Keep it short — 3 steps max.
+
+5. **Add the 30-day soft-goal coaching line, scoped per the rule established in Part 3** — this should describe the goal generically (since at the moment this welcome email sends, no campaign has any sales yet, so no specific countdown number is running): something like "Tip: dealers who reach 12 sold spots within their first 30 days of selling tend to see the strongest results — once you make your first sale, we'll help you track your progress toward that goal." Do NOT state a specific date or countdown here, since the clock hasn't started for a brand-new dealer with zero sales — this is general encouragement, not a live countdown.
+
+6. **Do NOT mention any refund policy in this email** — there is no automatic refund mechanism in this version, so there's nothing accurate to reference; this email should stay purely motivational.
+
+**Styling changes:**
+
+1. Increase the visual weight/size of the new merged welcome headline (point 1 above) so it's the clear focal point of the email — currently the excitement and the substance are visually split across two disconnected lines.
+
+2. Style the reformatted mailing-areas list (point 2) with small icons or a light background tint per row, consistent with the existing burgundy/gold/cream brand palette — distinct enough to read as a list of "things you now own," not just another paragraph of body text.
+
+3. Add one additional visual anchor besides the CTA button — e.g. a small "snapshot" card/box summarizing territory name + household reach + commission rate together in one compact visual block, so there's a secondary focal point beyond the wall of text before the button.
+
+4. Keep the existing gold horizontal divider and footer block (logo, company name, website, contact email) exactly as-is — that part already works well.
+
+5. Keep the "Open your dealer portal" button as the primary CTA, unchanged in function — point it at the existing `portalUrl` exactly as it does today.
+
+---
+
+After implementing, test: create a test campaign, simulate a first paid spot below 12 total, then simulate that campaign reaching day 30 from that first sale (confirm the dealer reminder fires AND the 30-day admin alert email arrives at info@mytownpostcard.com), day 40 (confirm the 40-day admin alert fires, and that the 30-day alert does NOT fire again), and day 45 (confirm the final 45-day admin alert fires, with appropriately more urgent tone, and that no automatic refund or cancellation action is taken — the campaign and its paid spots remain completely untouched). Also test: (a) the success case — a campaign that DOES reach 12+ spots before any alert tier — confirm no admin alerts fire at all; (b) a completely empty campaign (zero paid spots) — confirm NO countdown, alert, or reminder appears anywhere for it; (c) a dealer with multiple territories where only one has any sales — confirm only the campaign with an actual first sale is eligible for alerts, and the others remain alert-free regardless of how long ago they were created; (d) trigger a fresh dealer welcome email and confirm it matches the Part 5 redesign — correct headline, formatted mailing-areas list, correct commission rate pulled from the shared constant, general (non-dated) 30-day encouragement, and no mention of any refund policy anywhere in it.

@@ -107,6 +107,43 @@ function TerritoryCard({ campaign, showRevenue }) {
 
       <FillBar sold={campaign.soldSpots} total={campaign.totalSpots} />
 
+      {/* 30-day selling goal — only shown when firstPaidAt is set and goal not yet reached */}
+      {campaign.firstPaidAt && campaign.soldSpots < 12 && (() => {
+        const daysElapsed = Math.floor(
+          (Date.now() - new Date(campaign.firstPaidAt).getTime()) / (1000 * 60 * 60 * 24)
+        );
+        const daysLeft = Math.max(0, 30 - daysElapsed);
+        const goalPct = Math.min(100, Math.round((campaign.soldSpots / 12) * 100));
+        const overdue = daysElapsed >= 30;
+        return (
+          <div style={{
+            background: overdue ? "#fff7ed" : "#f9f5f0",
+            border: `1px solid ${overdue ? "#fed7aa" : "#e8e0d4"}`,
+            borderRadius: 10, padding: "12px 14px",
+          }}>
+            <div style={{
+              fontSize: 10.5, fontWeight: 800, color: overdue ? "#c2410c" : GOLD,
+              textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6,
+            }}>
+              {overdue ? `30-Day Goal — Day ${daysElapsed}` : "30-Day Selling Goal"}
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, marginBottom: 5 }}>
+              <span><strong style={{ color: RED }}>{campaign.soldSpots}</strong> of 12 spots filled</span>
+              <span style={{ color: overdue ? "#c2410c" : daysLeft <= 5 ? "#92400e" : "#6b7280", fontWeight: 700 }}>
+                {overdue ? `+${daysElapsed - 30}d over` : `${daysLeft}d left`}
+              </span>
+            </div>
+            <div style={{ background: "#e5e7eb", borderRadius: 999, height: 6, overflow: "hidden" }}>
+              <div style={{
+                width: `${goalPct}%`, height: "100%", borderRadius: 999,
+                background: goalPct >= 80 ? "#15803d" : overdue ? "#c2410c" : GOLD,
+                transition: "width 0.5s ease",
+              }} />
+            </div>
+          </div>
+        );
+      })()}
+
       {campaign.spots && campaign.spots.length > 0 && (
         <MiniAdPickerGrid spots={campaign.spots} />
       )}

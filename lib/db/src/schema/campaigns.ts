@@ -41,6 +41,19 @@ export const campaignsTable = pgTable("campaigns", {
   // advertisers yet. Null = no note displayed.
   dealerWelcomeMessage: text("dealer_welcome_message"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  // Fill-rate tracking. firstPaidAt is set (once, idempotently) when the
+  // campaign's first spot order is confirmed — this is the "clock start" for
+  // all 30/40/45-day alerts and the dealer soft-goal coaching countdown.
+  // Campaigns with firstPaidAt IS NULL have no clock running and are skipped
+  // entirely by the fill-rate alert scheduler.
+  firstPaidAt: timestamp("first_paid_at", { withTimezone: true }),
+  // Each tier fires exactly once per campaign. Set to now() immediately after
+  // the corresponding admin-alert email is sent; never reset.
+  adminAlert30SentAt: timestamp("admin_alert_30_sent_at", { withTimezone: true }),
+  adminAlert40SentAt: timestamp("admin_alert_40_sent_at", { withTimezone: true }),
+  adminAlert45SentAt: timestamp("admin_alert_45_sent_at", { withTimezone: true }),
+  // Dealer 30-day coaching reminder (sent once at the 30-day mark).
+  dealerReminder30SentAt: timestamp("dealer_reminder_30_sent_at", { withTimezone: true }),
 });
 
 export const insertCampaignSchema = createInsertSchema(campaignsTable).omit({ id: true, createdAt: true });

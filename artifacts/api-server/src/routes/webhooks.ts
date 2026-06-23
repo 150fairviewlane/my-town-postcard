@@ -1,5 +1,5 @@
 import { type Request, type Response } from "express";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { db, spotsTable, ordersTable, campaignsTable, spotSubscriptionsTable } from "@workspace/db";
 import { sendAdProofEmail, sendAdminNewOrder } from "../lib/emails";
 import { ensureTrackingCode } from "../lib/trackingCode";
@@ -535,6 +535,17 @@ export async function markSpotPaidAndNotify(
     { orderId: order.id, spotId, paymentRef },
     "Webhook marked spot paid and created order",
   );
+
+  // Set firstPaidAt on the campaign the first time any spot is paid.
+  // Idempotent: WHERE first_paid_at IS NULL means it never overwrites.
+  try {
+    await db
+      .update(campaignsTable)
+      .set({ firstPaidAt: new Date() })
+      .where(and(eq(campaignsTable.id, spot.campaignId), isNull(campaignsTable.firstPaidAt)));
+  } catch (fpErr) {
+    req.log.error({ err: fpErr, campaignId: spot.campaignId }, "Failed to set campaign firstPaidAt — non-critical");
+  }
 
   // Generate a tracking code for the QR redirect. Idempotent — if the
   // synchronous /checkout/confirm path already set one, this is a no-op.

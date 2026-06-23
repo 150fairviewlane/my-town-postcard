@@ -1,4 +1,5 @@
 import { logger } from "./logger";
+import { DEALER_COMMISSION_RATE } from "./commission";
 
 interface OrderInfo {
   businessName: string;
@@ -711,6 +712,8 @@ export interface DealerWelcomeEmailInfo {
   dealerName: string;
   dealerEmail: string;
   territoryName: string | null;
+  cities?: string[];
+  households?: number;
   setPasswordLink: string;
   loginLink: string;
 }
@@ -726,28 +729,57 @@ export async function sendDealerWelcomeEmail(
     );
     return;
   }
-  const territoryPhrase = info.territoryName
-    ? ` for <strong>${escapeHtml(info.territoryName)}</strong>`
+
+  const commissionPct = Math.round(DEALER_COMMISSION_RATE * 100);
+  const citiesHtml = info.cities && info.cities.length > 0
+    ? `<ul style="margin:8px 0 0 0;padding:0;list-style:none;">
+        ${info.cities.map((c) => `<li style="padding:3px 0;font-size:14px;">✅ ${escapeHtml(c)}</li>`).join("")}
+       </ul>`
     : "";
+  const householdsHtml = info.households
+    ? `<div style="margin-top:6px;font-size:13.5px;color:#555;">Reaching <strong>~${info.households.toLocaleString()} households</strong> per mailing.</div>`
+    : "";
+  const territoryBlock = info.territoryName
+    ? `<div style="background:#f9f5f0;border-left:4px solid #C9A84C;border-radius:4px;padding:14px 18px;margin:18px 0;">
+        <div style="font-size:11px;font-weight:800;color:#C9A84C;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:4px;">Your Territory</div>
+        <div style="font-size:18px;font-weight:900;color:#7B1418;font-family:Georgia,serif;">${escapeHtml(info.territoryName)}</div>
+        ${citiesHtml}
+        ${householdsHtml}
+        <div style="margin-top:8px;font-size:13px;color:#374151;">Your commission: <strong>${commissionPct}% of every ad sold</strong></div>
+      </div>`
+    : "";
+
   try {
     const { error: sendError } = await resend.emails.send({
       from: FROM_EMAIL,
       to: info.dealerEmail,
-      subject: "Welcome to My Town Postcard — set up your dealer account",
+      subject: "Welcome to My Town Postcard — your territory is reserved!",
       html: `
-        <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px;">
-          <h2 style="color:#7B1418;">Welcome, ${escapeHtml(info.dealerName)}!</h2>
-          <p>Your My Town Postcard dealer account${territoryPhrase} is now active. Your payment was successful and your territory is reserved.</p>
-          <p>Click the button below to set your password and access your dealer dashboard. This link expires in <strong>72 hours</strong>.</p>
+        <div style="font-family:sans-serif;max-width:580px;margin:0 auto;padding:32px;">
+          <h2 style="color:#7B1418;margin:0 0 6px;">Welcome aboard, ${escapeHtml(info.dealerName)}${info.territoryName ? ` — ${escapeHtml(info.territoryName)} is yours! 🎉` : "!"}</h2>
+          <p style="color:#374151;margin:0 0 16px;">Your payment was successful and your territory is reserved. You're now an official My Town Postcard dealer.</p>
+
+          ${territoryBlock}
+
+          <h3 style="color:#1a1a1a;margin:20px 0 8px;">Your next steps</h3>
+          <ol style="color:#374151;font-size:14px;line-height:1.8;padding-left:20px;margin:0 0 16px;">
+            <li><strong>Set up your account</strong> — click the button below to create your password (link expires in 72 hours).</li>
+            <li><strong>Publish your territory page</strong> — your dashboard has a one-click publish button that puts your landing page live.</li>
+            <li><strong>Start selling</strong> — reach out to local businesses. Dealers who land their first 12 spots within 30 days see the best results.</li>
+          </ol>
+
+          <div style="background:#fff8f0;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;margin:0 0 24px;font-size:13.5px;color:#92400e;">
+            🎯 <strong>30-day goal:</strong> Aim for 12 sold spots in your first month — that's when the economics really kick in for you.
+          </div>
+
           <p>
             <a href="${info.setPasswordLink}"
-               style="display:inline-block;background:#7B1418;color:#fff;padding:12px 22px;border-radius:6px;text-decoration:none;font-weight:700;">
-              Set my password →
+               style="display:inline-block;background:#7B1418;color:#fff;padding:13px 26px;border-radius:6px;text-decoration:none;font-weight:700;font-size:15px;">
+              Set up my account →
             </a>
           </p>
           <p style="color:#666;font-size:13px;">
-            Once your password is set, you can log in any time at
-            <a href="${info.loginLink}" style="color:#7B1418;">your dealer portal</a>.
+            Once set, log in any time at <a href="${info.loginLink}" style="color:#7B1418;">your dealer dashboard</a>.
           </p>
           <p style="color:#999;font-size:12px;">
             Or paste this link in your browser:<br/>
@@ -764,6 +796,159 @@ export async function sendDealerWelcomeEmail(
     logger.info({ to: info.dealerEmail, type: "dealer-welcome" }, "Dealer welcome email sent");
   } catch (err) {
     logger.error({ err, to: info.dealerEmail, type: "dealer-welcome" }, "Failed to send dealer welcome email");
+  }
+}
+
+// ─── Campaign fill-rate alert emails (admin) ───────────────────────────────────
+
+export interface CampaignFillAlertInfo {
+  campaignId: number;
+  campaignName: string;
+  territoryName: string;
+  dealerName: string | null;
+  dealerEmail: string | null;
+  paidSpots: number;
+  daysElapsed: number;
+  campaignLink: string;
+}
+
+function fillAlertHtml(info: CampaignFillAlertInfo, tier: 30 | 40 | 45): string {
+  const spotsNeeded = 12 - info.paidSpots;
+  const toneHeader: Record<number, string> = {
+    30: "📋 30-Day Fill-Rate Update",
+    40: "⚠️ 40-Day Fill-Rate Warning",
+    45: "🚨 45-Day Fill-Rate — Manual Review Required",
+  };
+  const toneBody: Record<number, string> = {
+    30: `This campaign hit its 30-day mark with ${info.paidSpots} of 12 spots sold. No action required yet — this is an early heads-up. A gentle nudge to the dealer may help.`,
+    40: `This campaign is approaching 45 days with ${info.paidSpots} of 12 spots sold (${spotsNeeded} still needed). Consider a direct follow-up with the dealer.`,
+    45: `This campaign has passed 45 days below the 12-spot minimum. Manual review is needed now: consider extending the deadline, following up with the dealer, or reviewing options for the paid advertisers.`,
+  };
+  const toneColor: Record<number, string> = { 30: "#1a1a1a", 40: "#92400e", 45: "#991b1b" };
+  const dealerRow = info.dealerName
+    ? `<tr><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;font-weight:700;width:160px;">Dealer</td><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;">${escapeHtml(info.dealerName)}${info.dealerEmail ? ` &lt;${escapeHtml(info.dealerEmail)}&gt;` : ""}</td></tr>`
+    : "";
+
+  return `
+    <div style="font-family:sans-serif;max-width:580px;margin:0 auto;padding:32px;">
+      <h2 style="color:${toneColor[tier]};margin:0 0 8px;">${toneHeader[tier]}</h2>
+      <p style="color:#555;">${escapeHtml(toneBody[tier])}</p>
+      <table style="width:100%;border-collapse:collapse;margin:20px 0;">
+        <tr><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;font-weight:700;width:160px;">Campaign</td><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;">${escapeHtml(info.campaignName)}</td></tr>
+        <tr><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;font-weight:700;">Territory</td><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;">${escapeHtml(info.territoryName)}</td></tr>
+        ${dealerRow}
+        <tr><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;font-weight:700;">Spots Sold</td><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;"><strong>${info.paidSpots} of 12</strong>${spotsNeeded > 0 ? ` — ${spotsNeeded} still needed` : " — goal reached!"}</td></tr>
+        <tr><td style="padding:7px 0;font-weight:700;">Days Since First Sale</td><td style="padding:7px 0;">${info.daysElapsed} days</td></tr>
+      </table>
+      <p><a href="${info.campaignLink}" style="display:inline-block;background:#7B1418;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:700;">View in Admin →</a></p>
+      ${emailFooter()}
+    </div>
+  `;
+}
+
+export async function sendCampaignFillAlert30(info: CampaignFillAlertInfo): Promise<void> {
+  const resend = await getResendClient();
+  if (!resend) {
+    logger.info({ campaignId: info.campaignId }, "Fill-rate 30-day alert skipped — RESEND_API_KEY not set");
+    return;
+  }
+  try {
+    const { error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: ADMIN_EMAIL,
+      subject: `📋 Fill-rate (30 days): ${info.campaignName} — ${info.paidSpots}/12 spots sold`,
+      html: fillAlertHtml(info, 30),
+    });
+    if (error) logger.error({ err: error, campaignId: info.campaignId }, "Failed to send 30-day fill alert");
+    else logger.info({ campaignId: info.campaignId }, "30-day fill alert sent to admin");
+  } catch (err) {
+    logger.error({ err, campaignId: info.campaignId }, "Failed to send 30-day fill alert");
+  }
+}
+
+export async function sendCampaignFillAlert40(info: CampaignFillAlertInfo): Promise<void> {
+  const resend = await getResendClient();
+  if (!resend) {
+    logger.info({ campaignId: info.campaignId }, "Fill-rate 40-day alert skipped — RESEND_API_KEY not set");
+    return;
+  }
+  try {
+    const { error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: ADMIN_EMAIL,
+      subject: `⚠️ Fill-rate warning (40 days): ${info.campaignName} — ${info.paidSpots}/12 spots sold`,
+      html: fillAlertHtml(info, 40),
+    });
+    if (error) logger.error({ err: error, campaignId: info.campaignId }, "Failed to send 40-day fill alert");
+    else logger.info({ campaignId: info.campaignId }, "40-day fill alert sent to admin");
+  } catch (err) {
+    logger.error({ err, campaignId: info.campaignId }, "Failed to send 40-day fill alert");
+  }
+}
+
+export async function sendCampaignFillAlert45(info: CampaignFillAlertInfo): Promise<void> {
+  const resend = await getResendClient();
+  if (!resend) {
+    logger.info({ campaignId: info.campaignId }, "Fill-rate 45-day alert skipped — RESEND_API_KEY not set");
+    return;
+  }
+  try {
+    const { error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: ADMIN_EMAIL,
+      subject: `🚨 Fill-rate final (45 days): ${info.campaignName} — ${info.paidSpots}/12 spots — review required`,
+      html: fillAlertHtml(info, 45),
+    });
+    if (error) logger.error({ err: error, campaignId: info.campaignId }, "Failed to send 45-day fill alert");
+    else logger.info({ campaignId: info.campaignId }, "45-day fill alert sent to admin");
+  } catch (err) {
+    logger.error({ err, campaignId: info.campaignId }, "Failed to send 45-day fill alert");
+  }
+}
+
+// ─── Dealer 30-day coaching reminder ──────────────────────────────────────────
+
+export interface DealerFillRateReminderInfo {
+  dealerName: string;
+  dealerEmail: string;
+  campaignName: string;
+  paidSpots: number;
+  portalLink: string;
+}
+
+export async function sendDealerFillRateReminder(info: DealerFillRateReminderInfo): Promise<void> {
+  const resend = await getResendClient();
+  if (!resend) {
+    logger.info({ dealer: info.dealerEmail }, "Dealer fill-rate reminder skipped — RESEND_API_KEY not set");
+    return;
+  }
+  const spotsToGo = Math.max(0, 12 - info.paidSpots);
+  try {
+    const { error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: info.dealerEmail,
+      subject: `Your ${info.campaignName} campaign — 30-day progress update`,
+      html: `
+        <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px;">
+          <h2 style="color:#7B1418;">Hi ${escapeHtml(info.dealerName)},</h2>
+          <p>It's been 30 days since the first sale on your <strong>${escapeHtml(info.campaignName)}</strong> campaign — nice work getting things moving!</p>
+          <p>Here's where you stand:</p>
+          <div style="background:#f9f5f0;border-left:4px solid #C9A84C;border-radius:4px;padding:16px 20px;margin:16px 0;">
+            <div style="font-size:30px;font-weight:900;color:#7B1418;font-family:Georgia,serif;">${info.paidSpots} <span style="font-size:16px;font-weight:600;color:#555;">of 12 spots filled</span></div>
+            ${spotsToGo > 0
+              ? `<div style="font-size:13.5px;color:#555;margin-top:6px;">${spotsToGo} more to reach the 12-spot milestone</div>`
+              : `<div style="font-size:13.5px;color:#15803d;margin-top:6px;">🎉 You've hit the 12-spot goal!</div>`}
+          </div>
+          <p>Dealers who reach 12 spots within their first 30 days see the strongest results. Keep reaching out to local businesses — every new ad placed helps the postcard look great and your commission grow.</p>
+          <p><a href="${info.portalLink}" style="display:inline-block;background:#7B1418;color:#fff;padding:12px 22px;border-radius:6px;text-decoration:none;font-weight:700;">Open My Dashboard →</a></p>
+          ${emailFooter()}
+        </div>
+      `,
+    });
+    if (error) logger.error({ err: error, dealer: info.dealerEmail }, "Failed to send dealer fill-rate reminder");
+    else logger.info({ dealer: info.dealerEmail }, "Dealer 30-day fill-rate reminder sent");
+  } catch (err) {
+    logger.error({ err, dealer: info.dealerEmail }, "Failed to send dealer fill-rate reminder");
   }
 }
 

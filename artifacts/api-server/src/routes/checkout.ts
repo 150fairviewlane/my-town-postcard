@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { db, spotsTable, ordersTable, campaignsTable } from "@workspace/db";
 import {
   CreatePaymentIntentBody,
@@ -288,6 +288,17 @@ router.post("/checkout/confirm", async (req, res): Promise<void> => {
   }
 
   req.log.info({ orderId: order.id, spotId: spot.id }, "Payment confirmed, order created");
+
+  // Set firstPaidAt on the campaign the first time any spot is paid.
+  // Idempotent: WHERE first_paid_at IS NULL means it never overwrites.
+  try {
+    await db
+      .update(campaignsTable)
+      .set({ firstPaidAt: new Date() })
+      .where(and(eq(campaignsTable.id, spot.campaignId), isNull(campaignsTable.firstPaidAt)));
+  } catch (fpErr) {
+    req.log.error({ err: fpErr, campaignId: spot.campaignId }, "Failed to set campaign firstPaidAt — non-critical");
+  }
 
   // Assign QR tracking code on the spot (idempotent — webhook may have
   // already done this for the same spot). Don't fail the request if it

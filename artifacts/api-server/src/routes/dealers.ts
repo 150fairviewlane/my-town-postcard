@@ -1363,6 +1363,7 @@ router.get("/dealers/portal-data", requireDealerAuth, async (req, res): Promise<
         slug: c.slug,
         pageUrl: c.slug ? `${origin}/${c.slug}` : null,
         isPublished: c.isPublished,
+        firstPaidAt: c.firstPaidAt?.toISOString() ?? null,
         totalSpots: spots.length,
         soldSpots: sold.length,
         availableSpots: spots.filter((s) => s.status === "available").length,
@@ -1755,10 +1756,40 @@ export async function activateDealerFromCheckoutSession(
       .select({ cityLabel: dealerTerritoriesTable.cityLabel })
       .from(dealerTerritoriesTable)
       .where(eq(dealerTerritoriesTable.dealerId, dealerId));
+
+    // Named territory (new-style) — fetch cities + households for the welcome email.
+    const [namedTerritory] = await db
+      .select({
+        name: territoriesTable.name,
+        households: territoriesTable.households,
+        sourceProposalId: territoriesTable.sourceProposalId,
+      })
+      .from(territoriesTable)
+      .where(eq(territoriesTable.dealerId, dealerId));
+
+    let welcomeCities: string[] = [];
+    let welcomeHouseholds: number | undefined;
+    const welcomeTerritoryName = namedTerritory?.name ?? territory?.cityLabel ?? null;
+
+    if (namedTerritory) {
+      welcomeHouseholds = namedTerritory.households > 0 ? namedTerritory.households : undefined;
+      if (namedTerritory.sourceProposalId) {
+        const [proposal] = await db
+          .select({ proposedCities: territoryProposalsTable.proposedCities })
+          .from(territoryProposalsTable)
+          .where(eq(territoryProposalsTable.id, namedTerritory.sourceProposalId));
+        if (Array.isArray(proposal?.proposedCities)) {
+          welcomeCities = proposal.proposedCities;
+        }
+      }
+    }
+
     await sendDealerWelcomeEmail({
       dealerName: dealer.name,
       dealerEmail: dealer.email,
-      territoryName: territory?.cityLabel ?? null,
+      territoryName: welcomeTerritoryName,
+      cities: welcomeCities,
+      households: welcomeHouseholds,
       setPasswordLink: `${appUrl}/dealer/reset-password?token=${rawToken}`,
       loginLink: `${appUrl}/dealer/login`,
     });

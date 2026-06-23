@@ -3,6 +3,7 @@ import { logger } from "./lib/logger";
 import { startExpirationSweeper } from "./lib/expirationCleanup";
 import { startRenewalScheduler } from "./lib/renewalScheduler";
 import { startWelcomeReminderScheduler } from "./lib/welcomeReminderScheduler";
+import { startFillRateAlertScheduler } from "./lib/fillRateAlertScheduler";
 import { repairOverclaimedCounties } from "./lib/territoryDataRepair";
 
 const rawPort = process.env["PORT"];
@@ -47,4 +48,10 @@ app.listen(port, (err) => {
   // have not set a password within 48 hours of activation and resends the
   // set-password email exactly once (idempotent via welcomeReminderSentAt).
   startWelcomeReminderScheduler(60 * 60 * 1000);
+
+  // Fill-rate alert scheduler — runs every 24 hours. Checks campaigns that
+  // have had at least one paid spot (firstPaidAt IS NOT NULL) and are still
+  // below 12 spots sold. Sends escalating admin emails at 30/40/45 days, and
+  // a single coaching reminder email to the dealer at the 30-day mark.
+  startFillRateAlertScheduler(24 * 60 * 60 * 1000);
 });
