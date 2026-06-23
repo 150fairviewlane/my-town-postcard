@@ -889,7 +889,15 @@ export default function AdminDealersPage() {
                             )}
                           </Td>
                           <Td><StatusPill status={d.status} /></Td>
-                          <Td>{d.territoryCount}</Td>
+                          <Td>
+                            {d.zoneNames && d.zoneNames.length > 0 ? (
+                              <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                                {d.zoneNames.map((name) => (
+                                  <span key={name} style={{ fontSize: 11, color: "#555", lineHeight: 1.5 }}>{name}</span>
+                                ))}
+                              </div>
+                            ) : (d.territoryCount || "—")}
+                          </Td>
                           <Td>~{(d.totalHouseholds || 0).toLocaleString()}</Td>
                           <Td style={{ fontSize: 12.5, color: "#666" }}>{formatDate(d.createdAt)}</Td>
                           <Td style={{ fontSize: 12.5, color: "#666" }}>{formatDate(d.activatedAt)}</Td>

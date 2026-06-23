@@ -1000,6 +1000,7 @@ router.get("/admin/dealers", requireAdmin, async (_req, res): Promise<void> => {
     activated_at: Date | string | null;
     territory_count: number;
     total_households: number | null;
+    zone_names: string | null;
   }>(sql`
     SELECT
       d.id, d.name, d.email, d.phone, d.home_zip, d.status, d.is_comped,
@@ -1011,7 +1012,12 @@ router.get("/admin/dealers", requireAdmin, async (_req, res): Promise<void> => {
       (
         COALESCE((SELECT SUM(estimated_households) FROM dealer_territories WHERE dealer_id = d.id), 0) +
         COALESCE((SELECT SUM(households)            FROM territories         WHERE dealer_id = d.id), 0)
-      )::int AS total_households
+      )::int AS total_households,
+      (
+        SELECT string_agg(city_list, '|' ORDER BY city_list)
+        FROM campaigns
+        WHERE dealer_id = d.id AND city_list IS NOT NULL AND city_list <> ''
+      ) AS zone_names
     FROM dealers d
     ORDER BY d.created_at DESC
   `);
@@ -1036,6 +1042,7 @@ router.get("/admin/dealers", requireAdmin, async (_req, res): Promise<void> => {
       activatedAt: toIso(r.activated_at),
       territoryCount: Number(r.territory_count ?? 0),
       totalHouseholds: Number(r.total_households ?? 0),
+      zoneNames: r.zone_names ? r.zone_names.split("|").filter(Boolean) : [],
     })),
   });
 });
