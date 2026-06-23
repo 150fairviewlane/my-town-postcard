@@ -27,12 +27,33 @@ export type LandingCopy = {
   citiesListAmp: string; // footer city list, comma + "&"
 };
 
+// Returns the current mailing season and year using fixed meteorological month
+// boundaries shifted ~2 weeks early so labels flip before the season arrives,
+// giving copy a "coming up" feel. No external libraries needed.
+//   Spring  starts Feb 15   Summer starts May 15
+//   Fall    starts Aug 15   Winter starts Nov 15
+export function getCurrentMailingSeason(date: Date = new Date()): {
+  season: "Spring" | "Summer" | "Fall" | "Winter";
+  year: number;
+} {
+  const m = date.getMonth(); // 0-indexed
+  const d = date.getDate();
+  const y = date.getFullYear();
+  if (m < 1 || (m === 1 && d < 15)) return { season: "Winter", year: y };
+  if (m < 4 || (m === 4 && d < 15)) return { season: "Spring", year: y };
+  if (m < 7 || (m === 7 && d < 15)) return { season: "Summer", year: y };
+  if (m < 10 || (m === 10 && d < 15)) return { season: "Fall",   year: y };
+  return { season: "Winter", year: y };
+}
+
+const { season: _s, year: _y } = getCurrentMailingSeason();
+
 export const DEFAULT_COPY: LandingCopy = {
   countyPossessive: "Your Town's",
   heroCities: "local",
-  heroSeason: "Summer",
+  heroSeason: _s,
   howItWorksMailDesc: "5,000 postcards printed and delivered to local homes via USPS Every Door Direct Mail.",
-  mailingLabel: "Summer 2026 Mailing",
+  mailingLabel: `${_s} ${_y} Mailing`,
   mailingDetail:
     "Timed to reach 5,000 local homes during peak shopping season — a precise, targeted drop right to their mailboxes.",
   targetedAreasDesc:
@@ -40,7 +61,7 @@ export const DEFAULT_COPY: LandingCopy = {
   faqEddm:
     "We use USPS Every Door Direct Mail (EDDM) to target specific postal routes in your area — reaching 5,000 local households who already live and shop near your business.",
   faqMailboxes:
-    "The Summer 2026 mailing is targeted for mid-July 2026. Once all spots are filled, your ad is designed, printed, and mailed.",
+    `The ${_s.toLowerCase()} ${_y} mailing is timed for peak local shopping season. Once all spots are filled, your ad is designed, printed, and mailed.`,
   faqGoodFit:
     "Any local business that serves the surrounding community is a great fit — restaurants, home services, medical, legal, retail, and more.",
   citiesListAmp: "communities across Georgia",

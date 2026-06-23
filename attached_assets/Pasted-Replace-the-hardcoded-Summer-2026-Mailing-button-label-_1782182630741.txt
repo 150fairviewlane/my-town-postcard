@@ -1,0 +1,33 @@
+Replace the hardcoded "Summer 2026 Mailing" button label (and the corresponding hardcoded season text in the FAQ) with a dynamically computed season + year, based on the current date. The goal is simple: it should never get stuck showing a stale season/year as time passes — precision within about a week is totally fine, no need for exact astronomical calculation.
+
+**Use simple fixed calendar-month boundaries (meteorological seasons), not astronomical equinox/solstice dates** — this avoids any need for date-calculation libraries or year-by-year astronomical math, and the "give or take a week" tolerance means fixed months are perfectly accurate enough:
+
+- **Spring**: March, April, May
+- **Summer**: June, July, August
+- **Fall**: September, October, November
+- **Winter**: December, January, February
+
+To build in the "switch a bit early" feel without needing precise day-counting, just shift the boundary back a couple weeks at the START of each new season — e.g. treat the season as starting on the 15th of the month before its calendar start, rather than the 1st:
+
+- **Spring** starts ~Feb 15 (instead of March 1)
+- **Summer** starts ~May 15 (instead of June 1)
+- **Fall** starts ~Aug 15 (instead of September 1)
+- **Winter** starts ~Nov 15 (instead of December 1)
+
+---
+
+## Implementation
+
+1. Write a simple function `getCurrentMailingSeason(date: Date): { season: "Spring" | "Summer" | "Fall" | "Winter", year: number }` using plain `date.getMonth()` / `date.getDate()` checks against the boundaries above — no external libraries needed.
+
+2. Handle the year boundary correctly: a date in December, or in January/early February before the ~Feb 15 spring cutoff, should show "Winter" with the correct year. Be careful with which year to display — e.g. in January 2027, winter started in December 2026, but use whichever year makes sense for "Winter Mailing" as a label (likely the year in which winter started, OR just the current calendar year — pick whichever reads more naturally as a marketing label and apply it consistently).
+
+3. Replace the hardcoded "Summer 2026 Mailing" button text with `{season} {year} Mailing` using this function.
+
+4. **FAQ section:** find wherever the FAQ references the hardcoded season/mailing text. Remove any targeted/specific copy tied to the old hardcoded reference, and replace it with just the dynamically computed season and year (reuse the same function) substituted into the existing sentence structure — keep it simple.
+
+5. Compute this on each page load — no caching needed, this is cheap to calculate every time.
+
+---
+
+After implementing, quickly sanity-check by testing the function against a few sample dates (e.g. today's date, a date in mid-February, a date in early December, a date in January) and confirm the season/year shown makes sense and never looks stuck on an old period.
