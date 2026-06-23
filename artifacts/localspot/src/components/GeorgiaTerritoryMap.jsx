@@ -207,8 +207,10 @@ export default function GeorgiaTerritoryMap() {
         // animate:false makes fitBounds synchronous so _animatingZoom stays
         // false; the subsequent setZoom call then works instead of being
         // silently dropped by Leaflet's _tryAnimatedZoom guard.
-        map.fitBounds(L.latLngBounds(latlngs), { padding: [40, 40], animate: false });
-        map.setZoom(map.getZoom() - 1, { animate: false });
+        // maxZoom:9 prevents over-zoom when all territories cluster in a small
+        // area (e.g. a single county). Without it, fitBounds on 4 nearby towns
+        // zooms to street level. zoom 9 keeps a comfortable county/region view.
+        map.fitBounds(L.latLngBounds(latlngs), { padding: [40, 40], animate: false, maxZoom: 9 });
       } else {
         map.setView([32.9, -83.4], 7);
       }
