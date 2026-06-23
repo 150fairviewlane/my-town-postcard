@@ -247,16 +247,6 @@ export function Hero({ copy = DEFAULT_COPY }: { copy?: LandingCopy }) {
             objectFit: "cover" }}
         />
         <div style={{
-          position: "absolute", top: 12, left: 12,
-          background: "rgba(0,0,0,0.55)", color: "#fff",
-          borderRadius: 6, padding: "4px 10px",
-          fontSize: 11, fontWeight: 600, fontFamily: "sans-serif",
-          backdropFilter: "blur(4px)",
-          letterSpacing: 0.3,
-        }}>
-          Example design — illustrative only
-        </div>
-        <div style={{
           position: "absolute", bottom: 24, left: -12,
           background: "#d4a017", color: "#fff",
           borderRadius: 10, padding: "14px 20px",
@@ -265,6 +255,12 @@ export function Hero({ copy = DEFAULT_COPY }: { copy?: LandingCopy }) {
           <div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1 }}>9"×12"</div>
           <div style={{ fontSize: 12, fontWeight: 600, opacity: 0.9 }}>Impossible<br />to Miss</div>
         </div>
+        <p style={{
+          textAlign: "center", fontSize: 11, color: "#aaa",
+          fontFamily: "sans-serif", fontStyle: "italic", marginTop: 12,
+        }}>
+          Example postcard design — your ad could look like this
+        </p>
       </div>
     </section>
   );
