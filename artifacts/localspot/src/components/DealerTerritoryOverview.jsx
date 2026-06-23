@@ -310,6 +310,30 @@ export default function DealerTerritoryOverview({ campaigns = [], totals = {}, s
           />
         ))}
       </div>
+
+      {/* ── Dealer guide link (dealer view only) ─────────────────────── */}
+      {!showRevenue && (
+        <div style={{ marginTop: 24, textAlign: "center" }}>
+          <a
+            href="/dealers/guide"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 13.5,
+              fontWeight: 600,
+              color: "#7B1418",
+              textDecoration: "none",
+              padding: "0.45rem 1rem",
+              borderRadius: 7,
+              border: "1px solid #E4D4A8",
+              background: "#FBF7EF",
+            }}
+          >
+            📖 Dealer Guide
+          </a>
+        </div>
+      )}
     </>
   );
 }

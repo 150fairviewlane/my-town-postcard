@@ -1,0 +1,56 @@
+I'm providing a complete, pre-built `DealerGuide.jsx` file (attached). Integrate it into the app as a new public page at `/dealers/guide`. The component is fully built — your job is wiring it into the real app correctly, not redesigning it.
+
+---
+
+## Step 1: Place the file
+
+Copy the attached `DealerGuide.jsx` into `artifacts/localspot/src/pages/DealerGuide.jsx`, matching where the other dealer-facing pages (`DealerLanding.jsx`, `DealerSignup.jsx`) already live.
+
+## Step 2: Connect the commission rate to the real shared constant
+
+The file currently has this near the top, with a comment explaining it's a placeholder:
+
+```js
+const DEALER_COMMISSION_RATE = 0.35;
+```
+
+Replace this with a real import from the actual shared commission constant already used elsewhere in the app:
+
+```js
+import { DEALER_COMMISSION_RATE } from "@/lib/commission";
+```
+
+(Adjust the import path to match wherever `lib/commission.ts` actually resolves from in this project's alias config — check how other files already import shared lib constants and mirror that exact pattern.) Confirm the page's displayed percentage and worked dollar examples update correctly if you temporarily test with a different rate value, then leave it pointing at the real constant.
+
+## Step 3: Register the route
+
+In `App.tsx`, add a lazy import and route for this page alongside the existing dealer routes (`/dealers`, `/dealers/signup`):
+
+```tsx
+const DealerGuide = lazy(() => import("./pages/DealerGuide"));
+```
+
+```tsx
+<Route path="/dealers/guide" component={DealerGuide} />
+```
+
+Place it among the other explicit dealer routes, above the `/:slug` catch-all (same placement convention as the other named routes).
+
+## Step 4: Confirm no reserved-slug conflict
+
+Check `RESERVED_SLUGS` — `/dealers/guide` is a nested path under the fixed `/dealers` prefix, so it shouldn't need any change there, but confirm there's no conflict before moving on.
+
+## Step 5: Link to it from the dealer dashboard
+
+Add a small "📖 Dealer Guide" link (footer or nav area) on the dealer's own dashboard (`DealerTerritoryOverview.jsx` or wherever the dealer-facing nav lives) pointing to `/dealers/guide`, so it's discoverable beyond just the welcome email.
+
+## Step 6: Visual QA
+
+This component was built and syntax-validated outside this codebase, but never rendered in an actual browser. After integrating, load `/dealers/guide` directly and check:
+- All 6 sections render without errors
+- The commission example grid shows correct dollar amounts (e.g. a $399 Large ad should show ~$139.65 commission at the current 35% rate)
+- Typography (Bebas Neue headers, DM Sans body) loads correctly — confirm these fonts are already loaded elsewhere in the app (they should be, since other pages use them) rather than needing a new font import
+- Mobile responsiveness — the grid sections use `repeat(auto-fit, minmax(...))`, confirm these collapse sensibly on a narrow viewport
+- The sticky header behaves consistently with the rest of the site
+
+Report back with a screenshot and flag anything that doesn't render as expected, since this is the first real browser check this component has had.

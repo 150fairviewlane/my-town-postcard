@@ -61,6 +61,10 @@ const TerritoryLandingPage = lazy(() => import("./pages/TerritoryLandingPage"));
 const BlogIndexPage = lazy(() => import("./pages/BlogIndexPage"));
 const BlogArticlePage = lazy(() => import("./pages/BlogArticlePage"));
 
+// ── Dealer guide ──────────────────────────────────────────────────────────────
+// @ts-expect-error JSX module without types
+const DealerGuide = lazy(() => import("./pages/DealerGuide"));
+
 // ── Dealer blog pages ─────────────────────────────────────────────────────────
 const DealerBlogIndexPage = lazy(() => import("./pages/DealerBlogIndexPage"));
 const DealerBlogArticlePage = lazy(() => import("./pages/DealerBlogArticlePage"));
@@ -155,6 +159,7 @@ function Router() {
         <Route path="/dealers" component={DealerLanding} />
         <Route path="/dealers/signup" component={DealerSignup} />
         <Route path="/dealers/confirmation" component={DealerConfirmation} />
+        <Route path="/dealers/guide" component={DealerGuide} />
         <Route path="/my-territory">
           {() => {
             window.location.replace("/dealer/dashboard");
