@@ -1,0 +1,13 @@
+The dealer welcome email for dealer ID 3 (150fairviewlane@gmail.com) was confirmed sent without error from the server's perspective, but the dealer has now confirmed it's NOT in spam/junk/promotions either — so "check spam" is ruled out. "The server successfully called Resend" only proves the request was accepted by Resend's API; it does not prove the email was actually delivered. Stop theorizing about possible causes and check the actual delivery record.
+
+1. **Log into the Resend dashboard (or query Resend's API directly if an API key is available) and find the EXACT email log entry for this specific send** — search by recipient `150fairviewlane@gmail.com` and the approximate timestamp from the server logs. Resend's dashboard shows a real delivery status per email: `delivered`, `bounced`, `complained`, `delayed`, or similar — find out which one this actually is, with the real status, not an assumption.
+
+2. **If the status shows `bounced`**: get the actual bounce reason Resend recorded (e.g. mailbox doesn't exist, domain rejected the message, DNS/SPF/DKIM failure on this specific send). Report the exact bounce message.
+
+3. **If the status shows `delivered`**: this means Resend successfully handed it to Gmail's servers, and the issue is genuinely on the receiving end somewhere Resend itself can't see (e.g. silently dropped by Gmail's filtering, an email forwarding rule on the dealer's account, or a typo in the email address that still happens to be a valid-looking but different real mailbox). Report this clearly so the user knows to check directly with the dealer whether `150fairviewlane@gmail.com` is definitely correct and accessible.
+
+4. **Compare this specific send against the admin notification email's delivery status** (the one that DID arrive) — are they using the same `FROM_EMAIL`/sending domain, or could the dealer welcome email be sent from a different from-address that has different (possibly weaker) domain authentication than whatever the admin alert uses? Check the actual `from:` field used in each of the two email functions.
+
+5. **Double check the literal email address stored for this dealer in the database** — confirm `150fairviewlane@gmail.com` is EXACTLY what's stored, character for character, with no typo, no trailing space, no encoding issue — compare the database value against what the user reports the dealer actually provided at signup.
+
+Report back the actual Resend delivery status for this specific email, not a list of possible explanations.
