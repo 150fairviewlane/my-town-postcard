@@ -18,6 +18,7 @@ import {
   getZipLocation,
   getCountyHouseholds,
   getCountyGeoidForLocation,
+  getCountyGeoidForCity,
   getCountyGeoidFromZip,
   getCountyShortNameByGeoid,
   findGazetteerCity,
@@ -1679,13 +1680,19 @@ export async function materializeTerritoryFromProposal(
 function locationIsInTerritoryCounties(
   lat: number,
   lng: number,
-  territory: Record<string, unknown>
+  territory: Record<string, unknown>,
+  cityName?: string,
+  stateAbbr?: string,
 ): boolean {
   const declared: string[] = Array.isArray(territory.counties)
     ? (territory.counties as string[]).map((c) => String(c).toLowerCase())
     : [];
   if (declared.length === 0) return true; // legacy territory — no county filter
-  const geoid = getCountyGeoidForLocation(lat, lng);
+  // Use city-aware lookup when caller provides city+state so border-city overrides
+  // (e.g. Ball Ground → Cherokee, not Pickens) are applied consistently.
+  const geoid = (cityName && stateAbbr)
+    ? getCountyGeoidForCity(cityName, stateAbbr, lat, lng)
+    : getCountyGeoidForLocation(lat, lng);
   if (!geoid) return false;
   const countyName = getCountyShortNameByGeoid(geoid);
   return !!countyName && declared.includes(countyName.toLowerCase());
@@ -1729,7 +1736,7 @@ export async function getTerritoryForLocation(
   const existing = await findExistingTerritoryWithinMiles(
     lat, lng, stateAbbr, EXISTING_TERRITORY_RADIUS_MI
   );
-  if (existing && locationIsInTerritoryCounties(lat, lng, existing)) {
+  if (existing && locationIsInTerritoryCounties(lat, lng, existing, city || undefined, stateAbbr || undefined)) {
     return { type: "existing", territory: existing };
   }
 
@@ -1754,7 +1761,7 @@ export async function getTerritoryForLocation(
         .select()
         .from(territoriesTable)
         .where(eq(territoriesTable.id, conflictTerritoryId));
-      if (conflictTerritory && locationIsInTerritoryCounties(lat, lng, conflictTerritory as Record<string, unknown>)) {
+      if (conflictTerritory && locationIsInTerritoryCounties(lat, lng, conflictTerritory as Record<string, unknown>, city || undefined, stateAbbr || undefined)) {
         return { type: "existing", territory: conflictTerritory as Record<string, unknown> };
       }
     }

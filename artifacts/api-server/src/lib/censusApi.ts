@@ -239,6 +239,41 @@ export interface GazetteerPlace {
 }
 
 /**
+ * Manual county overrides for cities whose Gazetteer lat/lng centroid geocodes
+ * to the wrong county via the nearest-ZIP-centroid lookup in getCountyGeoidForLocation.
+ * These cities sit close to a county line and the population-weighted Gazetteer
+ * centroid lands on the wrong side of it.
+ *
+ * Key format: "cityname_lowercase:STATE" → correct county short name (title case).
+ * Prefer expanding this list over tweaking the general geocoding algorithm.
+ */
+const CITY_COUNTY_OVERRIDES = new Map<string, string>([
+  ["ball ground:GA", "Cherokee"], // Gazetteer centroid 34.33915,-84.368143 falls in Pickens; city is Cherokee
+]);
+
+/**
+ * County GEOID lookup that is aware of known border-city geocoding errors.
+ * Checks CITY_COUNTY_OVERRIDES first; if the city+state has a manual correction
+ * the GEOID is resolved from that county name rather than from lat/lng proximity.
+ * Falls back to getCountyGeoidForLocation for all other locations.
+ */
+export function getCountyGeoidForCity(
+  cityName: string,
+  stateAbbr: string,
+  lat: number,
+  lng: number
+): string | null {
+  const key = `${cityName.toLowerCase().trim()}:${stateAbbr.toUpperCase()}`;
+  const overrideCounty = CITY_COUNTY_OVERRIDES.get(key);
+  if (overrideCounty) {
+    const geoids = getCountyGeoidsByShortNames(stateAbbr, [overrideCounty]);
+    const first = [...geoids][0];
+    if (first) return first;
+  }
+  return getCountyGeoidForLocation(lat, lng);
+}
+
+/**
  * State abbreviation → array of Gazetteer places with coordinates.
  * Source: src/data/gazetteer-places.txt
  * Key: 2-letter state abbreviation (e.g. "GA")

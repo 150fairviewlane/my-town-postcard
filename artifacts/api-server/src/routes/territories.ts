@@ -27,6 +27,7 @@ import {
   findGazetteerCity,
   getCountyGeoidFromZip,
   getCountyGeoidForLocation,
+  getCountyGeoidForCity,
   getZipsNearLocation,
 } from "../lib/censusApi";
 
@@ -783,11 +784,13 @@ router.post("/admin/territories/custom", requireAdmin, async (req, res): Promise
   }
   const totalHouseholds = [...zipHHMap.values()].reduce((s, v) => s + v, 0);
 
-  // 5. Derive counties from each city's lat/lng
+  // 5. Derive counties from each city's lat/lng.
+  // Use getCountyGeoidForCity so border-city overrides (e.g. Ball Ground → Cherokee)
+  // are applied before falling back to the nearest-ZIP-centroid heuristic.
   const countySet   = new Set<string>();
   const countyNames: string[] = [];
   for (const city of resolved) {
-    const geoid = getCountyGeoidForLocation(city.lat, city.lng);
+    const geoid = getCountyGeoidForCity(city.cityName, stateAbbr, city.lat, city.lng);
     if (geoid) {
       const shortName = getCountyShortNameByGeoid(geoid);
       if (shortName && !countySet.has(shortName)) {

@@ -1,0 +1,38 @@
+Two-part fix based on the completed investigation report for GA-005 (Vincent Ferrari's Cherokee territory). Root cause confirmed: Ball Ground, GA's Gazetteer centroid geocodes to Pickens County (not Cherokee) via the nearest-ZIP-centroid lookup in `getCountyGeoidForLocation`, because Ball Ground sits very close to the Cherokee/Pickens county line. This single geocoding error caused TWO problems: (1) a wrong "Cherokee · Pickens" county label, and (2) — much more seriously — GA-005's actual stored ZIP footprint is corrupted, containing only 3 ZIPs (30148, 30143, 30534) in the Pickens/Dawson area, NONE of which match the real hub cities (Ball Ground/Canton/Woodstock/Holly Springs all need ZIPs like 30107, 30114/30115, 30188/30189, 30142).
+
+**This is currently a LIVE production territory for a real dealer. The footprint being wrong means the postcard mailing list for this territory does not actually cover the right households. This needs to be repaired, not just have its root cause patched going forward.**
+
+---
+
+## Part 1: Fix the root cause (prevent this from happening again)
+
+1. In `getCountyGeoidForLocation`, the nearest-ZIP-centroid approach is fragile for cities sitting near a county border. Rather than relying solely on geocoded coordinates, prefer the city's OWN authoritative county assignment from the Gazetteer data itself if that field exists (many city gazetteers include a county field directly, separate from lat/lng-based inference) — check if `findGazetteerCity` already returns a county field for Ball Ground, and if so, use THAT directly instead of re-deriving county from coordinates via ZIP-centroid proximity.
+
+2. If no authoritative county field exists in the gazetteer data, add a small manual override/correction table for known border-case cities (Ball Ground being the first confirmed case) — a short list of `{ city, state, correctCounty }` overrides that take precedence over the geocoded result. This is a pragmatic patch for known edge cases rather than trying to perfect the general geocoding algorithm.
+
+3. Apply whichever fix is chosen to BOTH the Custom Territory tool's county-derivation logic AND `locationIsInTerritoryCounties` (the function used in `getTerritoryForLocation`'s conflict-checking) — both currently call the same flawed lookup, and both need the same correction so they stay consistent with each other.
+
+4. After fixing, re-verify: does Ball Ground now correctly resolve to Cherokee County (not Pickens) in both the county-label-building logic and the conflict-check logic?
+
+---
+
+## Part 2: Repair Vincent's existing GA-005 territory data
+
+This is the urgent part — his territory's footprint needs to be rebuilt correctly, not left as-is.
+
+1. **Before changing anything, check whether Vincent has any paid spots on this campaign yet.** If he does, those specific spot/order records must be preserved through this repair — do not delete or recreate the campaign itself, only fix its footprint/ZIP-assignment/county data.
+
+2. Recompute GA-005's correct data using the SAME logic the Custom Territory tool uses (now fixed per Part 1) for its 4 actual hub cities: Ball Ground, Canton, Woodstock, Holly Springs.
+   - Correct `counties` should resolve to just `["Cherokee"]` (confirm Fulton isn't also needed — check if any of these 4 specific cities' real ZIPs touch Fulton; if not, Cherokee alone).
+   - Correct ZIP footprint should be the union of the 15-mile-radius computation around all 4 real hub cities — this should produce dozens of ZIPs covering the real Canton/Woodstock/Ball Ground/Holly Springs area, not the 3 incorrect Pickens/Dawson ZIPs currently stored.
+   - Correct centroid should be recalculated from the 4 real hub cities' actual coordinates.
+
+3. Update GA-005's stored `counties`, ZIP footprint (`territory_zip_assignments` or wherever footprint ZIPs are persisted), and `centroid` fields to these corrected values. Do NOT change its `id`, `dealerId`, `name`, or any existing spot/order records.
+
+4. After repairing, confirm:
+   - GA-005's county label now correctly shows "Cherokee" only (not Pickens)
+   - GA-005's ZIP footprint now contains the real ZIPs for Ball Ground, Canton, Woodstock, and Holly Springs
+   - Searching "Ball Ground, GA" on the Find Your Territory screen now correctly shows GA-005 as "already claimed" via a REAL ZIP-footprint match (not the previous centroid-proximity + bad-county-membership coincidence) — and that the conflict message correctly names Ball Ground as one of GA-005's actual cities
+   - Vincent's existing dealer dashboard, landing pages, and any paid spots are completely unaffected by this data correction — this should be invisible to him except that the underlying data is now accurate
+
+Report back: confirm whether Vincent had any paid spots before this repair (and that they were preserved), the corrected ZIP count/list for GA-005, and confirm both parts (root-cause fix + data repair) are complete and verified.
