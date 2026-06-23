@@ -33,7 +33,6 @@ import {
   ZipFootprintConflictError,
 } from "../lib/territoryBuilder";
 import {
-  sendTerritoryClaimedEmail,
   sendTerritoryConflictEmail,
   sendDealerPasswordResetEmail,
   sendDealerWelcomeEmail,
@@ -2024,23 +2023,5 @@ export async function activateTerritoryClaimFromCheckoutSession(session: any): P
     .set({ status: "claimed", territoryId, reviewedAt: new Date() })
     .where(eq(territoryProposalsTable.id, proposalId));
   await activateDealerFromCheckoutSession(session, dealerId);
-
-  let portalToken: string | null = null;
-  if (dealerId) {
-    const [d] = await db
-      .select({ portalToken: dealersTable.portalToken })
-      .from(dealersTable)
-      .where(eq(dealersTable.id, dealerId));
-    portalToken = d?.portalToken ?? null;
-  }
-  if (proposal.dealerEmail) {
-    await sendTerritoryClaimedEmail({
-      dealerName: proposal.dealerName ?? "Dealer",
-      dealerEmail: proposal.dealerEmail,
-      territoryName: proposal.proposedName,
-      cities: Array.isArray(proposal.proposedCities) ? proposal.proposedCities : [],
-      portalToken,
-    });
-  }
   logger.info({ proposalId, dealerId, territoryId }, "Territory claim activated from checkout session");
 }
