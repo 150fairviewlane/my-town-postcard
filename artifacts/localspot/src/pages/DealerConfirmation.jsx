@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 
 const RED = "#7B1418";
+const REDIRECT_DELAY = 5; // seconds before auto-redirect
 
 export default function DealerConfirmation() {
   const [state, setState] = useState({ status: "loading", data: null, error: null });
+  const [countdown, setCountdown] = useState(REDIRECT_DELAY);
 
   useEffect(() => {
     const sessionId = new URLSearchParams(window.location.search).get("session_id");
@@ -22,13 +24,21 @@ export default function DealerConfirmation() {
       .catch((err) => setState({ status: "error", data: null, error: err.message }));
   }, []);
 
-  // As soon as the confirm API responds, redirect the dealer straight to their
-  // self-service portal. The portalUrl is always included in a successful
-  // confirm response.
+  // Give the dealer time to read the congrats screen before redirecting.
   useEffect(() => {
-    if (state.status === "ok" && state.data?.portalUrl) {
-      window.location.replace(state.data.portalUrl);
-    }
+    if (state.status !== "ok" || !state.data?.portalUrl) return;
+    setCountdown(REDIRECT_DELAY);
+    const interval = setInterval(() => {
+      setCountdown((n) => {
+        if (n <= 1) {
+          clearInterval(interval);
+          window.location.replace(state.data.portalUrl);
+          return 0;
+        }
+        return n - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
   }, [state]);
 
   return (
@@ -52,7 +62,6 @@ export default function DealerConfirmation() {
             </>
           )}
 
-          {/* "ok" branch: show a brief redirect notice while the effect fires */}
           {state.status === "ok" && (
             <>
               <div style={{ fontSize: 60, marginBottom: 12 }}>🎉</div>
@@ -60,19 +69,24 @@ export default function DealerConfirmation() {
                 fontFamily: "Georgia,serif", marginBottom: 8 }}>
                 You're in, {state.data.name?.split(" ")[0] || "partner"}!
               </h1>
-              <p style={{ fontSize: 14, color: "#666", lineHeight: 1.6, marginBottom: 20 }}>
-                Taking you to your dealer portal…
+              <p style={{ fontSize: 15, color: "#374151", lineHeight: 1.6, marginBottom: 6 }}>
+                Your territory is live and your dealer account is ready.
               </p>
-              {/* Fallback link if the redirect is blocked (e.g. popup blocker) */}
+              <p style={{ fontSize: 13, color: "#9ca3af", marginBottom: 28 }}>
+                Check your email — we sent your login link and next steps.
+              </p>
               {state.data.portalUrl && (
                 <a href={state.data.portalUrl}
                   style={{ display: "inline-block",
-                    background: RED, color: "#fff", padding: "12px 28px",
+                    background: RED, color: "#fff", padding: "13px 32px",
                     borderRadius: 9, textDecoration: "none",
-                    fontWeight: 800, fontSize: 15 }}>
-                  Go to my portal →
+                    fontWeight: 800, fontSize: 15, marginBottom: 16 }}>
+                  Go to my dealer portal →
                 </a>
               )}
+              <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 4 }}>
+                Redirecting automatically in {countdown}s…
+              </p>
             </>
           )}
 
