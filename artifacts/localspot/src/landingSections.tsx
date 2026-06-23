@@ -556,7 +556,7 @@ export function FAQSection({ copy = DEFAULT_COPY }: { copy?: LandingCopy }) {
     { q: "What happens if another business like mine is already on it?",
       a: "We guarantee exclusivity by category. If a competing business is already in your category, contact us and we'll get you queued up for the next card." },
     { q: "Do I have to design the ad myself?",
-      a: "Not at all. Professional ad design is included with every spot. Provide your logo and photos OR let our Ad Generator create a masterpiece for you!" },
+      a: "Not at all. If you fancy yourself a designer, you can always upload your own ad. Or, just let My Town's Ad Generator create a masterpiece for you!" },
     { q: "How big will my ad be on the postcard?",
       a: "Extra-Large ads are 4\"×5\", Large ads are 3\"×4\", Medium ads are 3\"×2\", and Small ads are 2\"×2\". On the 9\"×12\" postcard, every ad is clearly visible and impactful." },
   ];
