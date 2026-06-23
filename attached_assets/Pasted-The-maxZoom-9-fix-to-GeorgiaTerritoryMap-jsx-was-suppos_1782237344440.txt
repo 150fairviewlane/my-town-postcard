@@ -1,0 +1,13 @@
+The `maxZoom: 9` fix to `GeorgiaTerritoryMap.jsx` was supposedly deployed twice via Publish, but the production homepage map (mytownpostcard.com) still shows the same broken zoomed-in single-dot view. This has been confirmed NOT to be a browser caching issue — verified in a fresh private/incognito tab with the same broken result.
+
+**Do not re-explain the root cause or re-describe the fix — that part is already understood and agreed to be correct. The question now is purely: did the fix actually reach production, and if not, why not.**
+
+1. **Directly verify what code is actually live on production right now** — fetch the production site's actual served JS bundle (not the dev/preview environment) and check whether it contains `maxZoom: 9` or the old `setZoom(-1)` pattern. Do not infer this from git history or local file contents — confirm by checking what's ACTUALLY being served at mytownpostcard.com right now.
+
+2. If the OLD code is still being served: check whether the "Publish" action actually completed a real deployment, or whether it silently failed, is still in progress, or published to a different environment than what mytownpostcard.com's custom domain actually points to. Check Replit's deployment status/history directly, not just whether a publish button was clicked.
+
+3. If the NEW code IS being served but the map still looks broken: re-check the actual `maxZoom: 9` value against the real production data — confirm whether the production database's active territories match what was tested in dev/preview. It's possible production currently has a DIFFERENT set of active territories than what was tested against (e.g. if production has fewer/more/different active territories than dev), which could produce a different zoom outcome than what was verified in preview.
+
+4. Take a fresh screenshot of the actual production map after confirming step 1 or 2's findings, and report back exactly what's being served, whether the deployment genuinely completed, and if the fix code IS live, why it might still be producing the same broken zoom level against real production data.
+
+Do not attempt another "fix and republish" cycle until you've confirmed via direct inspection (not assumption) whether the previous fix is actually live in production.
