@@ -852,7 +852,6 @@ export default function AdminDealersPage() {
                     <tr style={{ background: "#fafafa", textAlign: "left" }}>
                       <Th>Dealer</Th>
                       <Th>Status</Th>
-                      <Th>Home ZIP</Th>
                       <Th>Territories</Th>
                       <Th>Households</Th>
                       <Th>Signed Up</Th>
@@ -890,7 +889,6 @@ export default function AdminDealersPage() {
                             )}
                           </Td>
                           <Td><StatusPill status={d.status} /></Td>
-                          <Td style={{ fontFamily: "monospace", fontSize: 13 }}>{d.homeZip}</Td>
                           <Td>{d.territoryCount}</Td>
                           <Td>~{(d.totalHouseholds || 0).toLocaleString()}</Td>
                           <Td style={{ fontSize: 12.5, color: "#666" }}>{formatDate(d.createdAt)}</Td>

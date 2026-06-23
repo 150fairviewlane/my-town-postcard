@@ -1005,11 +1005,15 @@ router.get("/admin/dealers", requireAdmin, async (_req, res): Promise<void> => {
     SELECT
       d.id, d.name, d.email, d.phone, d.home_zip, d.status, d.is_comped,
       d.created_at, d.activated_at,
-      COUNT(t.id)::int                          AS territory_count,
-      COALESCE(SUM(t.estimated_households), 0)::int AS total_households
+      (
+        (SELECT COUNT(*) FROM dealer_territories WHERE dealer_id = d.id) +
+        (SELECT COUNT(*) FROM territories         WHERE dealer_id = d.id)
+      )::int AS territory_count,
+      (
+        COALESCE((SELECT SUM(estimated_households) FROM dealer_territories WHERE dealer_id = d.id), 0) +
+        COALESCE((SELECT SUM(households)            FROM territories         WHERE dealer_id = d.id), 0)
+      )::int AS total_households
     FROM dealers d
-    LEFT JOIN dealer_territories t ON t.dealer_id = d.id
-    GROUP BY d.id
     ORDER BY d.created_at DESC
   `);
 
