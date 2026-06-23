@@ -3,6 +3,7 @@ import { eq, and, inArray, sql } from "drizzle-orm";
 import { db, campaignsTable, spotsTable, territoriesTable } from "@workspace/db";
 import { GetActiveCampaignResponse } from "@workspace/api-zod";
 import { fetchScanCountsForSpotIds } from "../lib/scanCounts";
+import { findGazetteerCity } from "../lib/censusApi";
 
 const router: IRouter = Router();
 
@@ -161,11 +162,31 @@ router.get("/territories/public", async (req, res): Promise<void> => {
       paidSpots:  Number(r.paidSpots ?? 0),
       totalSpots: Number(r.totalSpots ?? 0),
     };
-    // Per-campaign pin_lat/pin_lng takes precedence over the shared territory
-    // centroid — lets sub-zones (e.g. Cherokee: Canton, Woodstock, …) each pin
-    // to their own real city centre instead of a shared county centroid.
-    const lat = r.pinLat ?? r.centroidLat;
-    const lng = r.pinLng ?? r.centroidLng;
+    // Coordinate resolution priority (highest → lowest):
+    //   1. per-campaign pin_lat/pin_lng  (set by admin or provisioning)
+    //   2. single-city Gazetteer lookup  (when cityList has exactly one entry
+    //      and the DB pin is missing — e.g. sub-zone campaigns created before
+    //      pin_lat was being populated)
+    //   3. shared territory centroid     (multi-city / county-level fallback)
+    let lat = r.pinLat ?? null;
+    let lng = r.pinLng ?? null;
+
+    if ((lat == null || lng == null) && cities.length === 1) {
+      // All Cherokee city campaigns (Canton, Woodstock, Holly Springs, Ball Ground)
+      // currently have null pin_lat — they share a county centroid that makes all
+      // 4 dots render at the same pixel. Look up the real city coords from the
+      // Gazetteer (in-memory, no DB round-trip). Default state = GA since the
+      // platform currently serves Georgia territories only.
+      const stateAbbr = "GA";
+      const place = findGazetteerCity(cities[0], stateAbbr);
+      if (place) { lat = place.lat; lng = place.lng; }
+    }
+
+    if (lat == null || lng == null) {
+      lat = r.centroidLat ?? null;
+      lng = r.centroidLng ?? null;
+    }
+
     if (lat != null && lng != null) {
       base.latitude  = lat;
       base.longitude = lng;
