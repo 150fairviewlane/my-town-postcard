@@ -381,6 +381,77 @@ export async function sendAdminNewSubscriptionEmail(info: AdminSubscriptionInfo)
   }
 }
 
+// ─── Dealer New Subscription Notification ────────────────────────────────────
+
+export interface DealerNewSubscriptionInfo {
+  dealerEmail: string;
+  dealerName: string;
+  cityName: string;
+  businessName: string;
+  spotSize: string;
+  commitmentType: string;
+  totalIssues: number;
+  monthlyCents: number;
+  totalCents: number;
+  commissionCents: number;
+  portalUrl: string;
+}
+
+export async function sendDealerNewSubscriptionEmail(info: DealerNewSubscriptionInfo): Promise<void> {
+  const resend = await getResendClient();
+  if (!resend) return;
+  const planLabel = PLAN_LABEL[info.commitmentType] ?? info.commitmentType;
+  const monthly = `$${(info.monthlyCents / 100).toFixed(2)}`;
+  const total = `$${(info.totalCents / 100).toFixed(2)}`;
+  const commission = `$${(info.commissionCents / 100).toFixed(2)}`;
+  try {
+    const { error: sendError } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: info.dealerEmail,
+      subject: `New subscription on your territory: ${escapeHtml(info.businessName)} — ${planLabel}`,
+      html: `
+        <div style="font-family: Georgia, serif; max-width: 620px; margin: 0 auto; padding: 32px; background: #f9fafb;">
+          <div style="background: #7B1418; padding: 18px 24px; border-radius: 8px 8px 0 0;">
+            <h1 style="color: #fff; margin: 0; font-size: 20px;">📮 My Town Postcard</h1>
+          </div>
+          <div style="background: #fff; border: 1px solid #e5e7eb; padding: 32px; border-radius: 0 0 8px 8px;">
+            <h2 style="color: #111; font-size: 22px; margin-top: 0;">New subscription on your territory 🎉</h2>
+            <p style="color: #374151; font-size: 15px; line-height: 1.55;">
+              Hi <strong>${escapeHtml(info.dealerName.split(" ")[0])}</strong>, a business just committed to a multi-issue plan on your <strong>${escapeHtml(info.cityName)}</strong> postcard.
+            </p>
+            <div style="background: #f0fdf4; border-left: 4px solid #16a34a; border-radius: 4px; padding: 14px 18px; margin: 18px 0;">
+              <div style="font-size: 11px; font-weight: 800; color: #15803d; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px;">Sale Details</div>
+              <table style="border-collapse: collapse; width: 100%; font-family: sans-serif; font-size: 14px;">
+                <tr><td style="padding: 4px 0; color: #6b7280;">Business</td><td style="padding: 4px 0; font-weight: 700; color: #111;">${escapeHtml(info.businessName)}</td></tr>
+                <tr><td style="padding: 4px 0; color: #6b7280;">Plan</td><td style="padding: 4px 0; font-weight: 700; color: #111;">${planLabel} — ${info.totalIssues} consecutive issues</td></tr>
+                <tr><td style="padding: 4px 0; color: #6b7280;">Ad Size</td><td style="padding: 4px 0; color: #111;">${escapeHtml(info.spotSize.toUpperCase())}</td></tr>
+                <tr><td style="padding: 4px 0; color: #6b7280;">Monthly</td><td style="padding: 4px 0; color: #111;">${monthly}/month</td></tr>
+                <tr><td style="padding: 4px 0; color: #6b7280;">Total Committed</td><td style="padding: 4px 0; font-weight: 700; color: #111;">${total}</td></tr>
+              </table>
+            </div>
+            <div style="background: #f9f5f0; border-left: 4px solid #C9A84C; border-radius: 4px; padding: 12px 18px; margin: 16px 0; font-family: sans-serif; font-size: 14px;">
+              <strong style="color: #7B1418;">Your commission: ${commission}</strong> total over this commitment
+            </div>
+            <p style="text-align: center; margin-top: 24px;">
+              <a href="${info.portalUrl}" style="display: inline-block; background: #7B1418; color: #fff; padding: 13px 28px; border-radius: 6px; text-decoration: none; font-family: sans-serif; font-weight: 700; font-size: 15px;">
+                Open my dealer dashboard →
+              </a>
+            </p>
+            ${emailFooter()}
+          </div>
+        </div>
+      `,
+    });
+    if (sendError) {
+      logger.error({ err: sendError, to: info.dealerEmail, type: "dealer-new-subscription" }, "Failed to send dealer new subscription email");
+      return;
+    }
+    logger.info({ to: info.dealerEmail, type: "dealer-new-subscription" }, "Dealer new subscription email sent");
+  } catch (err) {
+    logger.error({ err, to: info.dealerEmail, type: "dealer-new-subscription" }, "Failed to send dealer new subscription email");
+  }
+}
+
 interface RenewalEmailInfo {
   businessName: string;
   contactEmail: string;
@@ -602,6 +673,70 @@ export async function sendAdminNewOrder(order: OrderInfo): Promise<void> {
     logger.info({ orderId: order.orderId, to: ADMIN_EMAIL, type: "admin-new-order" }, "Admin new order email sent");
   } catch (err) {
     logger.error({ err, orderId: order.orderId, to: ADMIN_EMAIL, type: "admin-new-order" }, "Failed to send admin email");
+  }
+}
+
+// ─── Dealer New Sale Notification ────────────────────────────────────────────
+
+export interface DealerNewSaleInfo {
+  dealerEmail: string;
+  dealerName: string;
+  cityName: string;
+  businessName: string;
+  spotSize: string;
+  spotPrice: number;
+  commissionCents: number;
+  portalUrl: string;
+}
+
+export async function sendDealerNewSaleEmail(info: DealerNewSaleInfo): Promise<void> {
+  const resend = await getResendClient();
+  if (!resend) return;
+  const price = `$${(info.spotPrice / 100).toFixed(2)}`;
+  const commission = `$${(info.commissionCents / 100).toFixed(2)}`;
+  try {
+    const { error: sendError } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: info.dealerEmail,
+      subject: `New sale on your territory: ${escapeHtml(info.businessName)} — ${price}`,
+      html: `
+        <div style="font-family: Georgia, serif; max-width: 620px; margin: 0 auto; padding: 32px; background: #f9fafb;">
+          <div style="background: #7B1418; padding: 18px 24px; border-radius: 8px 8px 0 0;">
+            <h1 style="color: #fff; margin: 0; font-size: 20px;">📮 My Town Postcard</h1>
+          </div>
+          <div style="background: #fff; border: 1px solid #e5e7eb; padding: 32px; border-radius: 0 0 8px 8px;">
+            <h2 style="color: #111; font-size: 22px; margin-top: 0;">New ad spot sold on your territory 🎉</h2>
+            <p style="color: #374151; font-size: 15px; line-height: 1.55;">
+              Hi <strong>${escapeHtml(info.dealerName.split(" ")[0])}</strong>, a business just reserved an ad spot on your <strong>${escapeHtml(info.cityName)}</strong> postcard.
+            </p>
+            <div style="background: #f0fdf4; border-left: 4px solid #16a34a; border-radius: 4px; padding: 14px 18px; margin: 18px 0;">
+              <div style="font-size: 11px; font-weight: 800; color: #15803d; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px;">Sale Details</div>
+              <table style="border-collapse: collapse; width: 100%; font-family: sans-serif; font-size: 14px;">
+                <tr><td style="padding: 4px 0; color: #6b7280;">Business</td><td style="padding: 4px 0; font-weight: 700; color: #111;">${escapeHtml(info.businessName)}</td></tr>
+                <tr><td style="padding: 4px 0; color: #6b7280;">Ad Size</td><td style="padding: 4px 0; color: #111;">${escapeHtml(info.spotSize.toUpperCase())}</td></tr>
+                <tr><td style="padding: 4px 0; color: #6b7280;">Spot Price</td><td style="padding: 4px 0; font-weight: 700; color: #111;">${price}</td></tr>
+              </table>
+            </div>
+            <div style="background: #f9f5f0; border-left: 4px solid #C9A84C; border-radius: 4px; padding: 12px 18px; margin: 16px 0; font-family: sans-serif; font-size: 14px;">
+              <strong style="color: #7B1418;">Your commission: ${commission}</strong>
+            </div>
+            <p style="text-align: center; margin-top: 24px;">
+              <a href="${info.portalUrl}" style="display: inline-block; background: #7B1418; color: #fff; padding: 13px 28px; border-radius: 6px; text-decoration: none; font-family: sans-serif; font-weight: 700; font-size: 15px;">
+                Open my dealer dashboard →
+              </a>
+            </p>
+            ${emailFooter()}
+          </div>
+        </div>
+      `,
+    });
+    if (sendError) {
+      logger.error({ err: sendError, to: info.dealerEmail, type: "dealer-new-sale" }, "Failed to send dealer new sale email");
+      return;
+    }
+    logger.info({ to: info.dealerEmail, type: "dealer-new-sale" }, "Dealer new sale email sent");
+  } catch (err) {
+    logger.error({ err, to: info.dealerEmail, type: "dealer-new-sale" }, "Failed to send dealer new sale email");
   }
 }
 

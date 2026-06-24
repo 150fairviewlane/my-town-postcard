@@ -1,7 +1,8 @@
 import { type Request, type Response } from "express";
 import { eq, and, isNull } from "drizzle-orm";
-import { db, spotsTable, ordersTable, campaignsTable, spotSubscriptionsTable } from "@workspace/db";
-import { sendAdProofEmail, sendAdminNewOrder } from "../lib/emails";
+import { db, spotsTable, ordersTable, campaignsTable, spotSubscriptionsTable, dealersTable } from "@workspace/db";
+import { sendAdProofEmail, sendAdminNewOrder, sendDealerNewSaleEmail } from "../lib/emails";
+import { computeCommissionCents } from "../lib/commission";
 import { ensureTrackingCode } from "../lib/trackingCode";
 import { releaseReservedSpot } from "../lib/expirationCleanup";
 import { logger } from "../lib/logger";
@@ -577,6 +578,17 @@ export async function markSpotPaidAndNotify(
     .from(campaignsTable)
     .where(eq(campaignsTable.id, spot.campaignId));
 
+  // Look up the dealer who owns this territory (null for house campaigns).
+  const dealer = campaign?.dealerId
+    ? (await db
+        .select({ email: dealersTable.email, name: dealersTable.name })
+        .from(dealersTable)
+        .where(eq(dealersTable.id, campaign.dealerId))
+        .limit(1))[0] ?? null
+    : null;
+
+  const APP_URL = process.env.APP_URL || "https://mytownpostcard.com";
+
   await Promise.all([
     sendAdProofEmail({
       ...orderInfo,
@@ -587,5 +599,17 @@ export async function markSpotPaidAndNotify(
       industry: spot.businessCategory ?? null,
     }),
     sendAdminNewOrder(orderInfo),
+    ...(dealer
+      ? [sendDealerNewSaleEmail({
+          dealerEmail: dealer.email,
+          dealerName: dealer.name,
+          cityName: (campaign?.cityList ?? "").split(",")[0].trim() || campaign?.territory || "your territory",
+          businessName: spot.businessName ?? "Unknown",
+          spotSize: spot.size,
+          spotPrice: order.amountCents,
+          commissionCents: computeCommissionCents(order.amountCents),
+          portalUrl: `${APP_URL}/dealer/login`,
+        })]
+      : []),
   ]);
 }

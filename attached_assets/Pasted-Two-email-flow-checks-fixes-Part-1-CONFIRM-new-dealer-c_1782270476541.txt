@@ -1,0 +1,36 @@
+Two email-flow checks/fixes:
+
+---
+
+## Part 1: CONFIRM — new dealer creation already emails both dealer and admin
+
+This appears to already be built correctly — confirm, don't rebuild:
+- `sendTerritoryClaimedEmail` fires to the new dealer on territory claim activation (found in `dealers.ts`).
+- Confirm there's also a distinct "new dealer" notification email to the admin (info@mytownpostcard.com) — check for a function like `sendAdminNewDealerEmail` or similar. If one exists, confirm it actually fires in the same place `sendTerritoryClaimedEmail` does. If NO such admin-facing "new dealer" email exists at all, add one now: a simple email to info@mytownpostcard.com with the new dealer's name, email, and territory/cities claimed, sent alongside the existing dealer welcome email in the same activation code path.
+
+---
+
+## Part 2: FIX — ad spot purchases never notify the dealer who owns that territory
+
+**Confirmed gap:** every spot purchase path (`webhooks.ts`'s `markSpotPaidAndNotify`, `checkout.ts`'s `/checkout/confirm` route, and the hosted Stripe Checkout session path) currently sends exactly two emails on a successful purchase:
+
+```js
+await Promise.all([
+  sendAdProofEmail({...}),      // → buyer
+  sendAdminNewOrder(orderInfo), // → admin
+]);
+```
+
+The DEALER who owns the territory the spot was sold on is never notified. This needs to be fixed consistently across ALL THREE purchase paths — they currently duplicate this same two-email block, so the fix must be applied to each one (or better: refactor into one shared function all three call, to prevent this kind of gap recurring if a fourth purchase path is ever added later).
+
+1. Create a new function `sendDealerNewSaleEmail` in `lib/emails.ts`, following the existing branded-footer pattern used by other emails (e.g. `sendTerritoryClaimedEmail`). It should include: which territory/city the sale was on, the business name that bought the spot, the spot size and price, the dealer's commission earned on this specific sale (using the shared `DEALER_COMMISSION_RATE` constant — `price * DEALER_COMMISSION_RATE`), and a link to the dealer's own dashboard.
+
+2. To send this, the purchase-confirmation code needs the DEALER's email for the campaign the spot belongs to — trace the relationship: `spot.campaignId` → `campaignsTable` → whatever links a campaign to its owning dealer (check `dealerId` on the campaign, or however campaigns/territories/dealers are currently joined elsewhere in this codebase, e.g. the existing admin dealer-detail page's query) → `dealersTable.email`.
+
+3. **Handle the case where a campaign has NO dealer** (e.g. the Habersham "house" campaign, which per earlier project history has `dealerId = null` by design) — in that case, simply skip the dealer email (there's no dealer to notify), don't error or send to a null address.
+
+4. Add `sendDealerNewSaleEmail(...)` into the SAME `Promise.all([...])` array alongside the existing `sendAdProofEmail` and `sendAdminNewOrder` calls, in ALL THREE purchase code paths (`webhooks.ts`'s `markSpotPaidAndNotify`, `checkout.ts`'s `/checkout/confirm`, and the hosted-session webhook branch — confirm whether these three paths already converge on one shared function under the hood, since the earlier idempotency design suggests they might; if they do, only ONE code change is needed, not three separate ones — verify this before duplicating the fix three times).
+
+5. Wrap this exactly like the existing emails are wrapped — failure to send must never break the purchase confirmation or retry the webhook unnecessarily (same try/catch-and-log pattern already used for `sendAdProofEmail`/`sendAdminNewOrder`).
+
+After implementing, test: complete a test spot purchase on a dealer-owned territory and confirm THREE emails go out — buyer confirmation, admin notification, and the new dealer sale notification with the correct commission amount. Then test a purchase on the dealer-less Habersham/house campaign and confirm it sends only the buyer + admin emails (no error, no email to a null/missing dealer).

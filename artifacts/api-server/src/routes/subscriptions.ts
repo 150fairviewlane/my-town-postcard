@@ -9,6 +9,7 @@ import {
   spotSubscriptionsTable,
   subscriptionIssueAssignmentsTable,
   stripeWebhookEventsTable,
+  dealersTable,
 } from "@workspace/db";
 import { getStripeClient, isStripeConfigured } from "../lib/stripeClient";
 import {
@@ -31,7 +32,9 @@ import { ensureTrackingCode } from "../lib/trackingCode";
 import {
   sendSubscriptionConfirmationEmail,
   sendAdminNewSubscriptionEmail,
+  sendDealerNewSubscriptionEmail,
 } from "../lib/emails";
+import { computeCommissionCents } from "../lib/commission";
 
 const router: IRouter = Router();
 
@@ -463,6 +466,17 @@ export async function markSubscriptionAndSpotPaid(opts: {
 
   const [campaign] = await db.select().from(campaignsTable).where(eq(campaignsTable.id, spot.campaignId));
 
+  // Look up dealer who owns this territory (null for house campaigns).
+  const dealer = campaign?.dealerId
+    ? (await db
+        .select({ email: dealersTable.email, name: dealersTable.name })
+        .from(dealersTable)
+        .where(eq(dealersTable.id, campaign.dealerId))
+        .limit(1))[0] ?? null
+    : null;
+
+  const APP_URL = process.env.APP_URL || "https://mytownpostcard.com";
+
   try {
     await Promise.all([
       sendSubscriptionConfirmationEmail({
@@ -489,6 +503,21 @@ export async function markSubscriptionAndSpotPaid(opts: {
         totalCents: pending.totalCommitmentValueCents,
         subscriptionRecordId: opts.pendingRecordId,
       }),
+      ...(dealer
+        ? [sendDealerNewSubscriptionEmail({
+            dealerEmail: dealer.email,
+            dealerName: dealer.name,
+            cityName: (campaign?.cityList ?? "").split(",")[0].trim() || campaign?.territory || "your territory",
+            businessName: pending.businessName,
+            spotSize: pending.size,
+            commitmentType: pending.commitmentType,
+            totalIssues: pending.commitmentTotalIssues,
+            monthlyCents: pending.monthlyPriceCents,
+            totalCents: pending.totalCommitmentValueCents,
+            commissionCents: computeCommissionCents(pending.totalCommitmentValueCents),
+            portalUrl: `${APP_URL}/dealer/login`,
+          })]
+        : []),
     ]);
   } catch (err) {
     req.log.error({ err, orderId: order.id }, "Subscription emails failed — continuing");
