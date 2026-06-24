@@ -51,6 +51,19 @@ export default function ConfirmationPage() {
             </div>
           )}
 
+          {spot && spot.templateData?.finishedAdUrl && (
+            <div style={{ background: "#fff", borderRadius: 12, padding: 24, boxShadow: "0 2px 8px rgba(0,0,0,0.06)", marginBottom: 28, textAlign: "center" }}>
+              <div style={{ fontSize: 11, color: "#9ca3af", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 12 }}>
+                Here's Your Ad!
+              </div>
+              <img
+                src={spot.templateData.finishedAdUrl}
+                alt="Your finished ad"
+                style={{ maxWidth: "100%", borderRadius: 8, border: "1px solid #e5e7eb", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}
+              />
+            </div>
+          )}
+
           {spot && (
             <div style={{ background: "#fff", borderRadius: 12, padding: 24, boxShadow: "0 2px 8px rgba(0,0,0,0.06)", marginBottom: 28, textAlign: "left" }}>
               <div style={{ fontSize: 11, color: "#9ca3af", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 10 }}>
@@ -58,7 +71,7 @@ export default function ConfirmationPage() {
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", rowGap: 10, columnGap: 16 }}>
                 <div style={{ color: "#6b7280", fontSize: 14 }}>Business</div>
-                <div style={{ color: "#111", fontWeight: 700, fontSize: 14 }}>{spot.businessName || "—"}</div>
+                <div style={{ color: "#111", fontWeight: 700, fontSize: 14 }}>{spot.businessName || spot.templateData?.businessName || "—"}</div>
 
                 <div style={{ color: "#6b7280", fontSize: 14 }}>Spot Size</div>
                 <div style={{ color: "#111", fontWeight: 700, fontSize: 14 }}>{SIZE_LABELS[spot.size] || spot.size}</div>

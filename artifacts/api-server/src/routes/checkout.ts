@@ -310,6 +310,13 @@ router.post("/checkout/confirm", async (req, res): Promise<void> => {
     req.log.error({ err, spotId: spot.id }, "Failed to assign tracking code — continuing");
   }
 
+  const parsedTemplateData = (() => {
+    try { return spot.templateData ? JSON.parse(spot.templateData) : null; } catch { return null; }
+  })();
+  const finishedAdUrl = typeof parsedTemplateData?.finishedAdUrl === "string" &&
+    !parsedTemplateData.finishedAdUrl.startsWith("data:")
+    ? parsedTemplateData.finishedAdUrl : null;
+
   const orderInfo = {
     businessName: spot.businessName ?? "Unknown",
     contactEmail: spot.contactEmail ?? "",
@@ -339,6 +346,7 @@ router.post("/checkout/confirm", async (req, res): Promise<void> => {
         contactPhone: spot.contactPhone ?? null,
         website: spot.website ?? null,
         industry: spot.businessCategory ?? null,
+        finishedAdUrl,
       }),
       sendAdminNewOrder(orderInfo),
     ]);

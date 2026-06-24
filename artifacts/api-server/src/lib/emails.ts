@@ -66,6 +66,8 @@ interface AdProofInfo {
   contactPhone: string | null;
   website: string | null;
   industry: string | null;
+  /** Finished ad image URL — only included when it's an external URL (not a data: URI) */
+  finishedAdUrl?: string | null;
 }
 
 const formatMailDate = (raw: string | null): string => {
@@ -160,14 +162,11 @@ export async function sendAdProofEmail(info: AdProofInfo): Promise<void> {
               </tr>
             </table>
 
-            <h3 style="color: #111; font-size: 15px; margin-top: 28px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">What Will Appear on Your Ad</h3>
-            <table style="width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #f1f5f9; border-radius: 8px; overflow: hidden;">
-              ${adFieldRow("Tagline", "", "As shown in your approved design")}
-              ${adFieldRow("Offer", "", "As shown in your approved design")}
-              ${adFieldRow("Phone", safe.phone, "Not provided")}
-              ${adFieldRow("Address", "", "As shown in your approved design")}
-              ${adFieldRow("Website", safe.website, "Not provided")}
-            </table>
+            ${info.finishedAdUrl ? `
+            <h3 style="color: #111; font-size: 15px; margin-top: 28px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">Your Ad</h3>
+            <div style="text-align: center; margin-bottom: 16px;">
+              <img src="${info.finishedAdUrl}" alt="Your finished ad" style="max-width: 100%; border-radius: 8px; border: 1px solid #e5e7eb;" />
+            </div>` : ""}
 
             <div style="background: #f0fdf4; border-left: 4px solid #15803d; border-radius: 6px; padding: 14px 16px; margin: 24px 0;">
               <p style="margin: 0; color: #14532d; font-size: 14px; line-height: 1.5;">

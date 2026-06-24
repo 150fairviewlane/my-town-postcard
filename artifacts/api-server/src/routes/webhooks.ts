@@ -589,6 +589,13 @@ export async function markSpotPaidAndNotify(
 
   const APP_URL = process.env.APP_URL || "https://mytownpostcard.com";
 
+  const parsedTd = (() => {
+    try { return spot.templateData ? JSON.parse(spot.templateData) : null; } catch { return null; }
+  })();
+  const finishedAdUrl = typeof parsedTd?.finishedAdUrl === "string" &&
+    !parsedTd.finishedAdUrl.startsWith("data:")
+    ? parsedTd.finishedAdUrl : null;
+
   await Promise.all([
     sendAdProofEmail({
       ...orderInfo,
@@ -597,6 +604,7 @@ export async function markSpotPaidAndNotify(
       contactPhone: spot.contactPhone ?? null,
       website: spot.website ?? null,
       industry: spot.businessCategory ?? null,
+      finishedAdUrl,
     }),
     sendAdminNewOrder(orderInfo),
     ...(dealer

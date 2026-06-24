@@ -1,0 +1,37 @@
+Three fixes to the customer-facing flow after a spot purchase, at `/confirmation/:spotId` (`ConfirmationPage.jsx`, backed by `GET /api/checkout/confirm` in `checkout.ts`).
+
+---
+
+## Issue 1: "What will appear on your ad" section in the confirmation EMAIL — remove it
+
+The post-purchase email (`sendAdProofEmail` in `lib/emails.ts`) includes a "WHAT WILL APPEAR ON YOUR AD" section listing Tagline/Offer/Phone/Address/Website. In practice this section often shows unhelpful placeholder text ("As shown in your approved design") instead of real values, because not all of these fields are reliably available at the point this email sends. Per the project owner: this section isn't helpful and should just be removed entirely from the email template — don't try to fix the data population for it, just delete the section.
+
+---
+
+## Issue 2: ConfirmationPage shows a dash instead of the business name
+
+On `/confirmation/:spotId`, the "Business" field shows a dash instead of the actual business name, even though the same spot's data correctly populates the business name in the purchase confirmation EMAIL (`sendAdProofEmail` reads `spot.businessName` successfully).
+
+1. Check `GET /api/checkout/confirm` in `checkout.ts` — it DOES return `businessName: spot?.businessName ?? null` in its response. Confirm whether `ConfirmationPage.jsx` (the frontend component) is actually reading/rendering this field correctly — check for a possible field name mismatch (e.g. frontend expecting `business_name` or `name` instead of `businessName`) or a rendering bug where the field exists in the API response but isn't wired into the displayed UI correctly.
+
+2. **Also check whether this specific spot's `businessName` is actually NULL in the database** — given this codebase has multiple ad-generator route files (`adGenGrok.ts`, `adGenV7.ts`, `adGeneratorV2/V3/V4.ts`, `aiAdCreator.ts`, `adStudio.ts`), it's possible this particular ad was built through a path that doesn't reliably write `businessName` back to the spot record before checkout. If the database value itself is null for this spot, find which ad-generation path was used and confirm it correctly saves `businessName` to the spot before checkout — this may be a broader gap affecting other fields too, worth flagging if found.
+
+3. Fix whichever of these is the actual cause (frontend display bug vs. missing data at write-time) and confirm the live spot (order #171 / spot from the reported bug) shows correctly once fixed, along with a fresh NEW test purchase to confirm the fix holds going forward, not just for this one historical record.
+
+---
+
+## Issue 3: Add the purchased ad image to ConfirmationPage
+
+`GET /api/checkout/confirm` currently returns NO ad-image field at all — only `businessName`, `size`, and `amountCents`. Add the actual finished ad image to this page so the customer can see exactly what they bought.
+
+1. **Find where the finished ad image URL is actually stored** for a spot. Per `adGenGrok.ts`, the ad-builder popup sends `finishedAdUrl` (the generated image URL) back to the parent window via `postMessage` as part of `formData`. Trace where this value goes after that — is it saved to a column on `spotsTable` (e.g. `adImageUrl` or similar)? If such a column already exists, confirm it's being populated correctly at the point of spot/ad creation. If NO such column exists yet, add one (`adImageUrl`, nullable text) to `spotsTable`, and ensure it gets set wherever the finished ad data is currently saved (the same code path that currently saves `businessName`, `tagline`, etc. to the spot record).
+
+2. Update `GET /api/checkout/confirm` to also return `adImageUrl: spot?.adImageUrl ?? null` in its response.
+
+3. On `ConfirmationPage.jsx`, display this image prominently — e.g. "Here's your ad!" with the image shown at a reasonable size, above or near the existing order summary details. If `adImageUrl` is null (e.g. for older orders predating this field, or an ad-builder path that didn't save it), gracefully hide the image section rather than showing a broken image icon.
+
+4. Apply the same fix to the EMAIL (`sendAdProofEmail`) if it doesn't already include the ad image — check first, since the email template work may already reference an image field; if not, add it there too for consistency, following the same null-safe pattern.
+
+---
+
+After implementing, complete one fresh full test purchase (reserve a spot, design an ad through the actual live ad-builder flow used by the picker, complete checkout) and confirm: the confirmation EMAIL no longer shows the removed "what will appear" section, the CONFIRMATION PAGE shows the correct business name (not a dash), and the confirmation page displays the actual ad image the customer just designed and paid for.
