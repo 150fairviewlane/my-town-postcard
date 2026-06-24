@@ -812,7 +812,7 @@ return(<div style={{fontFamily:"sans-serif"}}>
     <div style={{fontSize:22,fontWeight:900,color:"#111",fontFamily:"Georgia,serif",letterSpacing:-0.3}}>Reserve Your Spot on {(campaign?.cityList?.split(",")[0]?.trim() || campaign?.territory || "Clarkesville").replace(/Counties\b/g, "County")}'s Postcard</div>
     <div style={{fontSize:16,color:"#64748b",marginTop:1}}>Click any <span style={{color:"#16a34a",fontWeight:700}}>green spot</span> below to claim yours</div>
   </div>
-  <div style={{display:"flex",justifyContent:"center",marginBottom:2,flexShrink:0}}>
+  <div style={{display:"flex",justifyContent:"center",marginBottom:10,flexShrink:0}}>
     <div style={{background:"#fff",borderRadius:12,padding:4,display:"flex",gap:3,boxShadow:"0 1px 8px rgba(0,0,0,0.1)"}}>
       {[{id:"front",l:"Front Side",sold:soldF,tot:totF},{id:"back",l:"Back Side",sold:soldB,tot:totB}].map(s=>(
         <button key={s.id} onClick={()=>setSide(s.id)} style={{padding:"7px 22px",borderRadius:9,border:"none",cursor:"pointer",background:side===s.id?"linear-gradient(135deg,#991b1b,#7f1d1d)":"transparent",color:side===s.id?"#fff":"#64748b",fontWeight:700,fontSize:15,transition:"all 0.18s",lineHeight:1.3}}>
