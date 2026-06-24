@@ -1,0 +1,35 @@
+Audit how images are currently handled across all transactional emails (lib/emails.ts) — specifically the branded footer logo used in every email, and the new ad-image feature on the post-purchase confirmation email. Report findings clearly before making any changes; only fix what's actually broken.
+
+---
+
+## Part 1: Footer logo audit
+
+1. Find the branded footer HTML used across email functions (sendAdProofEmail, sendTerritoryClaimedEmail, sendDealerNewSaleEmail, the test-email endpoint, etc.) and check exactly how the logo image is referenced.
+
+2. Confirm it is NOT embedded as a base64 data URI inside the email HTML. It should be a real `<img src="https://mytownpostcard.com/...">` tag pointing to a permanently-hosted static asset.
+
+3. If it IS currently using a data URI (or any non-public-URL reference), fix it:
+   - Confirm the logo file already exists as a static asset in the deployed frontend (check the public/assets folder structure) and get its real, stable production URL.
+   - Update the footer HTML to reference that real URL instead.
+
+4. Confirm the `<img>` tag includes a meaningful `alt="My Town Postcard"` attribute, so the email still makes sense if images are blocked by the recipient's client (common default behavior in Gmail/Outlook).
+
+5. Confirm the logo file itself is reasonably sized/compressed (not an oversized unoptimized image) — report its current dimensions and file size.
+
+---
+
+## Part 2: Ad-image-in-email audit (the feature from the recent "Issue 3" fix)
+
+1. Confirm the current state matches what was described: `sendAdProofEmail` shows the ad image ONLY when an external (non-data-URI) URL is available, and gracefully skips it for base64 data URIs (since email clients like Gmail/Outlook don't render those reliably).
+
+2. Check whether the underlying ad images (currently stored as base64 in `spot.templateData.finishedAdUrl`) have since been moved to real hosted URLs (if a separate CDN-upload task has been completed) — if so, confirm the email now successfully includes the image for newly-generated ads. If not, this is expected/known and no action is needed yet — just confirm the current behavior matches this expectation rather than silently failing or showing a broken image.
+
+---
+
+## Part 3: General deliverability sanity check
+
+1. Confirm no email template anywhere in `lib/emails.ts` embeds a base64 data URI for ANY image (logo, ad photo, or otherwise) — a large embedded data string is a known spam-filter and deliverability risk due to email size/structure anomalies, independent of the image content itself.
+
+2. Confirm every `<img>` tag across all email templates has a real `https://` src and an `alt` attribute.
+
+Report back: current state of the footer logo (was it already correct, or did it need fixing), current state of the ad-image email feature, and confirmation that no email template contains an embedded base64 image anywhere. Only make code changes for genuine problems found — if everything already follows these practices correctly, just confirm that clearly rather than changing anything unnecessarily.
