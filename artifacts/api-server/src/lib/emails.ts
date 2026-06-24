@@ -36,17 +36,16 @@ function emailFooter(): string {
     <div style="margin-top: 32px; padding-top: 18px; border-top: 2px solid #C9A84C;">
       <table cellpadding="0" cellspacing="0" border="0" style="width: 100%;">
         <tr>
-          <td style="vertical-align: middle; padding-right: 24px; width: 88px;">
-            <img src="${APP_URL}/mailbox-logo.png" alt="My Town Postcard" width="72" height="72"
-                 style="display: block; width: 72px; height: 72px; object-fit: contain;" />
+          <td style="vertical-align: middle; padding-right: 14px; width: 56px;">
+            <img src="${APP_URL}/mailbox-logo.png" alt="My Town Postcard" width="48" height="48"
+                 style="display: block; width: 48px; height: 48px; object-fit: contain;" />
           </td>
           <td style="vertical-align: middle;">
-            <span style="font-family: Georgia, serif; font-size: 30px; font-weight: 700; color: #7B1418;">My Town Postcard</span><br/>
-            <span style="font-size: 24px; color: #9ca3af;">
-              <a href="https://mytownpostcard.com" style="color: #9ca3af; text-decoration: none;">mytownpostcard.com</a>
-              &nbsp;&middot;&nbsp;
-              <a href="mailto:info@mytownpostcard.com" style="color: #9ca3af; text-decoration: none;">info@mytownpostcard.com</a>
-            </span>
+            <div style="font-family: Georgia, serif; font-size: 16px; font-weight: 700; color: #7B1418; white-space: nowrap;">My Town Postcard</div>
+            <div style="margin-top: 3px;">
+              <a href="https://mytownpostcard.com" style="display: block; font-size: 13px; color: #9ca3af; text-decoration: none;">mytownpostcard.com</a>
+              <a href="mailto:info@mytownpostcard.com" style="display: block; font-size: 13px; color: #9ca3af; text-decoration: none;">info@mytownpostcard.com</a>
+            </div>
           </td>
         </tr>
       </table>
