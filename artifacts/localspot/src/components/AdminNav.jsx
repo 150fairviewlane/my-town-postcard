@@ -196,13 +196,13 @@ export default function AdminNav() {
 
         <NavSection label="Dealers" />
         <NavLink href="/admin/dealers" icon="💼" label="All Dealers" />
+        <NavLink href="/admin/paid-customers" icon="🧾" label="Paid Customers" />
 
         <NavSection label="Territories" />
         <NavLink href="/admin/territories" icon="🗺" label="All Territories" />
         <NavLink href="/admin/territories/detail" icon="📅" label="Spot Tables" />
 
         <NavSection label="Sales" />
-        <NavLink href="/admin/paid-customers" icon="🧾" label="Paid Customers" />
         <NavLink href="/admin/outreach" icon="📞" label="Outreach Tracker" />
         <NavLink href="/admin/discover" icon="🔍" label="Discover Leads" />
 
