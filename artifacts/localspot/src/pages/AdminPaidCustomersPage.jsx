@@ -168,7 +168,7 @@ function DealerSection({ dealerName, dealerEmail, rows, defaultOpen }) {
                   <td style={{ ...tdStyle, fontWeight: 700, color: "#111" }}>{formatPrice(r.price)}</td>
                   <td style={tdStyle}>
                     <Link
-                      href={`/admin/territories/detail?id=${r.campaignId}`}
+                      href={`/admin/campaign/${r.campaignId}`}
                       style={{ color: RED, textDecoration: "underline", fontWeight: 600 }}
                     >
                       {r.campaignName}

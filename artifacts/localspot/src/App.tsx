@@ -150,6 +150,12 @@ function Router() {
         <Route path="/admin/dealers" component={AdminDealersPage} />
         <Route path="/admin/subscriptions" component={AdminSubscriptionsPage} />
         <Route path="/admin/paid-customers" component={AdminPaidCustomersPage} />
+        <Route path="/admin/campaign/:id">
+          {(params: { id: string }) => {
+            window.location.replace(`/admin/territories/detail?id=${params.id}`);
+            return null;
+          }}
+        </Route>
         <Route path="/admin/ai-test" component={AdminAITestPage} />
         <Route path="/admin" component={AdminOverviewPage} />
 
