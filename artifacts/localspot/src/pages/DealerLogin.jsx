@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, Link } from "wouter";
+import { Eye, EyeOff } from "lucide-react";
 
 const RED = "#7B1418";
 const GOLD = "#d4a017";
@@ -21,6 +22,7 @@ export default function DealerLogin() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [csrfToken, setCsrfToken] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
   const [, navigate] = useLocation();
 
   const baseUrl = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
@@ -113,15 +115,25 @@ export default function DealerLogin() {
 
             <div>
               <label style={{ fontSize: 12.5, fontWeight: 600, color: "#374151", display: "block", marginBottom: 4 }}>Password</label>
-              <input
-                style={inputStyle}
-                type="password"
-                required
-                value={form.password}
-                onChange={set("password")}
-                placeholder="••••••••"
-                autoComplete="current-password"
-              />
+              <div style={{ position: "relative" }}>
+                <input
+                  style={{ ...inputStyle, paddingRight: 40 }}
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={form.password}
+                  onChange={set("password")}
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", padding: 0, cursor: "pointer", color: "#9ca3af", display: "flex", alignItems: "center" }}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
 
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>

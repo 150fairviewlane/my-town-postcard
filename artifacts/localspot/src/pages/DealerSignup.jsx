@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { Link } from "wouter";
+import { Eye, EyeOff } from "lucide-react";
 
 const RED = "#7B1418";
 const GOLD = "#d4a017";
@@ -60,6 +61,8 @@ export default function DealerSignup() {
   const [form, setForm] = useState({ name: "", email: "", phone: "", city: "", state: "", password: "", confirmPassword: "" });
   const [error, setError] = useState(null);
   const [mismatch, setMismatch] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const cancelled = useMemo(
     () => new URLSearchParams(window.location.search).get("cancelled") === "1",
@@ -215,15 +218,25 @@ export default function DealerSignup() {
                 <div>
                   <label style={{ fontSize: 12.5, fontWeight: 600, color: "#374151",
                     display: "block", marginBottom: 4 }}>Password *</label>
-                  <input
-                    style={inputStyle}
-                    type="password"
-                    required
-                    value={form.password}
-                    onChange={set("password")}
-                    placeholder="••••••••"
-                    autoComplete="new-password"
-                  />
+                  <div style={{ position: "relative" }}>
+                    <input
+                      style={{ ...inputStyle, paddingRight: 40 }}
+                      type={showPassword ? "text" : "password"}
+                      required
+                      value={form.password}
+                      onChange={set("password")}
+                      placeholder="••••••••"
+                      autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", padding: 0, cursor: "pointer", color: "#9ca3af", display: "flex", alignItems: "center" }}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                   <PasswordStrengthIndicator password={form.password} />
                   <div style={{ fontSize: 11.5, color: "#9ca3af", marginTop: 4 }}>
                     8+ chars, one number, one special character
@@ -232,16 +245,26 @@ export default function DealerSignup() {
                 <div>
                   <label style={{ fontSize: 12.5, fontWeight: 600, color: "#374151",
                     display: "block", marginBottom: 4 }}>Confirm password *</label>
-                  <input
-                    style={{ ...inputStyle, borderColor: mismatch ? "#ef4444" : "#d1d5db" }}
-                    type="password"
-                    required
-                    value={form.confirmPassword}
-                    onChange={set("confirmPassword")}
-                    onBlur={checkMismatch}
-                    placeholder="••••••••"
-                    autoComplete="new-password"
-                  />
+                  <div style={{ position: "relative" }}>
+                    <input
+                      style={{ ...inputStyle, paddingRight: 40, borderColor: mismatch ? "#ef4444" : "#d1d5db" }}
+                      type={showConfirmPassword ? "text" : "password"}
+                      required
+                      value={form.confirmPassword}
+                      onChange={set("confirmPassword")}
+                      onBlur={checkMismatch}
+                      placeholder="••••••••"
+                      autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword((v) => !v)}
+                      style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", padding: 0, cursor: "pointer", color: "#9ca3af", display: "flex", alignItems: "center" }}
+                      aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                    >
+                      {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                   {mismatch && (
                     <div style={{ fontSize: 12.5, color: "#ef4444", marginTop: 4, fontWeight: 600 }}>
                       Passwords do not match.
