@@ -27,7 +27,10 @@ export default class ErrorBoundary extends Component {
   handleHome = () => {
     try {
       const base = (import.meta.env?.BASE_URL || "/").replace(/\/$/, "") || "/";
-      window.location.href = base === "/" ? "/" : `${base}/`;
+      const isAdmin = window.location.pathname.startsWith(base + "/admin") ||
+        window.location.pathname === base + "/admin";
+      const dest = isAdmin ? `${base}/admin` : (base === "/" ? "/" : `${base}/`);
+      window.location.href = dest;
     } catch {
       window.location.href = "/";
     }
@@ -137,7 +140,7 @@ export default class ErrorBoundary extends Component {
                 cursor: "pointer",
               }}
             >
-              Back to home
+              {typeof window !== "undefined" && window.location.pathname.includes("/admin") ? "Back to admin" : "Back to home"}
             </button>
           </div>
         </div>
