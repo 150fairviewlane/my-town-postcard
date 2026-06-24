@@ -854,6 +854,7 @@ export default function AdminDealersPage() {
                       <Th>Status</Th>
                       <Th>Zones</Th>
                       <Th>Households</Th>
+                      <Th>Paid Ads</Th>
                       <Th>Signed Up</Th>
                       <Th>Activated</Th>
                       <Th>Landing Page</Th>
@@ -899,6 +900,9 @@ export default function AdminDealersPage() {
                             ) : (d.territoryCount || "—")}
                           </Td>
                           <Td>~{(d.totalHouseholds || 0).toLocaleString()}</Td>
+                          <Td style={{ fontWeight: 700, color: (d.paidAdsCount || 0) > 0 ? "#15803d" : "#9ca3af" }}>
+                            {d.paidAdsCount || 0}
+                          </Td>
                           <Td style={{ fontSize: 12.5, color: "#666" }}>{formatDate(d.createdAt)}</Td>
                           <Td style={{ fontSize: 12.5, color: "#666" }}>{formatDate(d.activatedAt)}</Td>
                           <Td>

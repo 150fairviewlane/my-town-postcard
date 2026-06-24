@@ -1001,6 +1001,7 @@ router.get("/admin/dealers", requireAdmin, async (_req, res): Promise<void> => {
     territory_count: number;
     total_households: number | null;
     zone_names: string | null;
+    paid_ads_count: number;
   }>(sql`
     SELECT
       d.id, d.name, d.email, d.phone, d.home_zip, d.status, d.is_comped,
@@ -1017,7 +1018,13 @@ router.get("/admin/dealers", requireAdmin, async (_req, res): Promise<void> => {
         SELECT string_agg(city_list, '|' ORDER BY city_list)
         FROM campaigns
         WHERE dealer_id = d.id AND city_list IS NOT NULL AND city_list <> ''
-      ) AS zone_names
+      ) AS zone_names,
+      (
+        SELECT COUNT(*)
+        FROM spots s
+        JOIN campaigns c ON c.id = s.campaign_id
+        WHERE c.dealer_id = d.id AND s.status = 'paid'
+      )::int AS paid_ads_count
     FROM dealers d
     ORDER BY d.created_at DESC
   `);
@@ -1043,6 +1050,7 @@ router.get("/admin/dealers", requireAdmin, async (_req, res): Promise<void> => {
       territoryCount: Number(r.territory_count ?? 0),
       totalHouseholds: Number(r.total_households ?? 0),
       zoneNames: r.zone_names ? r.zone_names.split("|").filter(Boolean) : [],
+      paidAdsCount: Number(r.paid_ads_count ?? 0),
     })),
   });
 });
