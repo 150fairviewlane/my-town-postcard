@@ -80,6 +80,8 @@ const DiscoverLeadsPage = lazy(() => import("./pages/DiscoverLeadsPage"));
 const AdminOverviewPage = lazy(() => import("./pages/AdminOverviewPage"));
 // @ts-expect-error JSX module without types
 const AdminTerritoriesPage = lazy(() => import("./pages/AdminTerritoriesPage"));
+// @ts-expect-error JSX module without types
+const AdminPaidCustomersPage = lazy(() => import("./pages/AdminPaidCustomersPage"));
 
 import NotFound from "./pages/not-found";
 
@@ -147,6 +149,7 @@ function Router() {
         <Route path="/admin/dealers/:id" component={AdminDealerDetailPage} />
         <Route path="/admin/dealers" component={AdminDealersPage} />
         <Route path="/admin/subscriptions" component={AdminSubscriptionsPage} />
+        <Route path="/admin/paid-customers" component={AdminPaidCustomersPage} />
         <Route path="/admin/ai-test" component={AdminAITestPage} />
         <Route path="/admin" component={AdminOverviewPage} />
 

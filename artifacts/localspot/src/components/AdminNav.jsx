@@ -202,6 +202,7 @@ export default function AdminNav() {
         <NavLink href="/admin/territories/detail" icon="📅" label="Spot Tables" />
 
         <NavSection label="Sales" />
+        <NavLink href="/admin/paid-customers" icon="🧾" label="Paid Customers" />
         <NavLink href="/admin/outreach" icon="📞" label="Outreach Tracker" />
         <NavLink href="/admin/discover" icon="🔍" label="Discover Leads" />
 
