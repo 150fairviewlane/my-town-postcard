@@ -323,10 +323,10 @@ export default function GeorgiaTerritoryMap() {
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
         <h2 style={{
           fontFamily: "Georgia,serif", fontWeight: 900,
-          fontSize: "clamp(26px, 3.5vw, 38px)",
+          fontSize: "clamp(28px, 3.8vw, 42px)",
           color: "#111", margin: "0 0 10px",
         }}>
-          Find Your Town on the Map
+          Find Your Town
         </h2>
         <p style={{
           fontFamily: "sans-serif", fontSize: 16, color: "#555",

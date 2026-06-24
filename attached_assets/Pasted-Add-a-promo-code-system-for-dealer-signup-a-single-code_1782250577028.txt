@@ -1,0 +1,58 @@
+Add a promo code system for dealer signup: a single code, `FOUNDER2026`, that gives 50% off the FIRST MONTH ONLY of the dealer's recurring subscription fee (not the one-time setup fee). Limited to the first 20 total successful redemptions, then the code stops working. This is a private acquisition-channel code (shared manually in targeted outreach, e.g. specific Facebook groups) — it is NOT advertised publicly on the pricing page, and the dealer signup page's default displayed price stays $99/month with no visible mention of any discount unless a code is entered.
+
+---
+
+## Part 1: Schema
+
+1. Add a small `promoCodesTable`: `id`, `code` (text, unique, e.g. "FOUNDER2026"), `discountType` (enum: for now just `"first_month_percent"`), `discountValue` (integer, e.g. 50 for 50%), `maxRedemptions` (integer, e.g. 20), `redemptionCount` (integer, default 0), `active` (boolean, default true), `createdAt`.
+
+2. Add a `promoCodeUsedId` (nullable, FK to `promoCodesTable.id`) column to `dealersTable` so each dealer's redemption (if any) is recorded directly on their own record — simple, queryable, and prevents the same dealer record from redeeming twice.
+
+3. Seed one row: `code: "FOUNDER2026"`, `discountType: "first_month_percent"`, `discountValue: 50`, `maxRedemptions: 20`, `redemptionCount: 0`, `active: true`.
+
+---
+
+## Part 2: Accept and validate the code at dealer signup
+
+1. On the dealer signup form (`DealerSignup.jsx` or wherever the territory-claim flow collects dealer info before Stripe checkout), add an optional "Have a promo code?" input field — collapsed/secondary, not prominently displayed, consistent with this being a private code, not a publicly advertised discount.
+
+2. In the backend dealer-signup endpoint (the one building the Stripe Checkout session in `dealers.ts`), if a code is submitted:
+   - Look it up in `promoCodesTable` by exact code match (case-insensitive comparison is fine, e.g. uppercase both sides before comparing).
+   - Validate: `active === true` AND `redemptionCount < maxRedemptions`.
+   - If invalid/expired/not found: return a clear error ("This promo code is invalid or has reached its redemption limit") so the frontend can show it inline — do NOT silently ignore an invalid code and proceed at full price without telling the user why.
+   - If valid: proceed to Part 3.
+
+---
+
+## Part 3: Apply the discount to the FIRST MONTH only
+
+This is the part requiring care, since Stripe Checkout's `subscription_data` recurring price applies the SAME amount every billing cycle — there's no native "discount the first cycle only" option when building the session inline via `price_data` the way this codebase already does.
+
+**Approach:** keep the recurring subscription line item at the full `MONTHLY_FEE_CENTS` (so months 2+ bill correctly at full price automatically, with zero extra logic needed for renewals) — but apply the discount as a ONE-TIME, separate negative-amount adjustment in the same Checkout Session, OR handle it via a Stripe `coupon`/`discount` scoped to `duration: "once"` if using a real Stripe Coupon object proves simpler than manually computing a negative line item (check the installed Stripe SDK version's support for inline `discounts` on a Checkout Session line item before deciding which approach is cleaner — use whichever requires less custom logic, but the end result must be: first invoice charges full price minus 50%, every invoice after that charges full `MONTHLY_FEE_CENTS` with no discount).
+
+Whichever mechanism is used, the SETUP FEE line item must NOT be discounted — only the monthly subscription's first cycle.
+
+---
+
+## Part 4: Record the redemption
+
+In the same transaction/flow that creates the dealer record (the existing `tx` transaction block in `dealers.ts`), if a valid code was used:
+1. Set `dealersTable.promoCodeUsedId` to the matched promo code's id.
+2. Increment `promoCodesTable.redemptionCount` by 1, inside the SAME transaction, so a race condition (e.g. two people submitting the 20th and 21st redemption at nearly the same moment) can't both succeed past the cap — use a guarded update (e.g. `WHERE redemptionCount < maxRedemptions`) and check the update actually affected a row before proceeding, similar to the existing territory-claim guard pattern already used elsewhere in this file (`territoryClaimGuard`).
+3. If the guarded increment fails (someone else claimed the last slot in the same moment), treat this the same as an invalid code at this point — return a clear error rather than letting the dealer proceed thinking they got the discount when they didn't.
+
+---
+
+## Part 5: Admin visibility
+
+On the existing admin dealers list/detail pages, show a small badge or note if a dealer used `FOUNDER2026` (or any promo code), so you can track which dealers came from this channel. Also add a simple way to check the code's current redemption count (e.g. a small read in the existing admin dealers page, or a simple `GET /api/admin/promo-codes` endpoint returning the code, redemption count, and max) so you can monitor how close it is to running out without needing to query the database directly.
+
+---
+
+## Constraints
+
+- The dealer signup page's DEFAULT displayed price must remain $99/month with no visible discount messaging — this code is never advertised on the page itself, only entered manually by someone who already has it.
+- Do not touch the existing advertiser-facing spot checkout or subscription flows (6/12-issue ad purchases) — this is scoped ONLY to dealer subscription signup.
+- The setup fee is never discounted, only the first month of the recurring subscription.
+
+After implementing, test: redeem the code successfully and confirm the first Stripe invoice is 50% off the monthly fee with the setup fee unchanged, confirm the SECOND month's invoice (simulate via Stripe test clock or by checking the subscription's price configuration) bills at full price, confirm the code stops working after 20 simulated redemptions, and confirm an invalid/expired code shows a clear error rather than silently proceeding at full price.
