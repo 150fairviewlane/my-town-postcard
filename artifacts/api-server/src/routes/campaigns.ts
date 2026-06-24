@@ -48,6 +48,10 @@ router.get("/campaigns/active", async (req, res): Promise<void> => {
     })),
   };
 
+  // Spot statuses change frequently (reservations, payments, expiration sweeper).
+  // Never cache this response — a stale 304 would show available spots that are
+  // already reserved in the DB, causing confusing "spot just taken" errors.
+  res.setHeader("Cache-Control", "no-store");
   res.json(GetActiveCampaignResponse.parse(response));
 });
 
@@ -100,6 +104,7 @@ router.get("/campaigns/by-slug/:slug", async (req, res): Promise<void> => {
     })),
   };
 
+  res.setHeader("Cache-Control", "no-store");
   res.json(GetActiveCampaignResponse.parse(response));
 });
 
