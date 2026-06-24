@@ -472,6 +472,10 @@ function Dashboard({ token, onLogout }) {
       ...authOpts,
     });
 
+  // Declared here (before any hooks that reference it) to avoid a TDZ crash
+  // in production builds where `const` is not transpiled to `var`.
+  const campaign = detail?.campaign;
+
   const handleApprove = async (spotId) => {
     setApproving(spotId);
     try {
@@ -563,7 +567,6 @@ function Dashboard({ token, onLogout }) {
     );
   }
 
-  const campaign = detail?.campaign;
   const VALID_GRID_AREAS = new Set([
     "mb", "dn", "re", "l1", "l2", "l3", "l4",
     "bxl", "bxl2", "bxl3", "bm1", "bm2", "bm3", "bm4", "bs1",
