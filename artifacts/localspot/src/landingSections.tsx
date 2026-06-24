@@ -118,7 +118,7 @@ export function NavBar() {
           // instead of being truncated with "..."
           whiteSpace: "normal",
         }}>
-          <span style={{ color: "#7B1418" }}>My Town </span>Postcard
+          <span style={{ color: "#7B1418", fontSize: "1.1em" }}>My Town </span>Postcard
         </div>
       </div>
 
@@ -704,7 +704,7 @@ export function Footer({ copy = DEFAULT_COPY }: { copy?: LandingCopy }) {
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
             <img src="/mailbox-logo.png" alt="My Town Postcard" height={56} style={{ height: 56, width: "auto" }} />
             <div style={{ fontWeight: 900, fontSize: 18, color: "#111", fontFamily: "Georgia,serif", lineHeight: 1.2 }}>
-              <span style={{ color: "#7B1418" }}>My Town </span>Postcard
+              <span style={{ color: "#7B1418", fontSize: "1.1em" }}>My Town </span>Postcard
             </div>
           </div>
           <p style={{ fontSize: 13, lineHeight: 1.6, color: "#555", fontFamily: "sans-serif", margin: 0, paddingLeft: 68, maxWidth: 300 }}>
