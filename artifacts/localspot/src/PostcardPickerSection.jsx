@@ -822,7 +822,7 @@ return(<div style={{fontFamily:"sans-serif"}}>
       ))}
     </div>
   </div>
-  <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",minHeight:0,padding:"4px 20px 8px"}}>
+  <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",minHeight:0,padding:"10px 20px 8px"}}>
     <div ref={ref} style={{width:"100%",maxWidth:"calc((100vh - 160px) * 12 / 9)"}}>
       <div style={{position:"relative",width:"100%",paddingBottom:"75%",background:"#c8c8c8",borderRadius:6,boxShadow:"0 0 0 7px #c8c8c8, 0 0 0 8.5px #a8a8a8, 0 16px 48px rgba(0,0,0,0.28), 0 4px 12px rgba(0,0,0,0.14)"}}>
         <div style={{position:"absolute",inset:0,overflow:"hidden",borderRadius:5,background:"#c8c8c8"}}>

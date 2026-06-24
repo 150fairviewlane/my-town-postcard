@@ -1,0 +1,15 @@
+Bug: on the territory landing page's ad picker section, the Front Side / Back Side toggle card (the white rounded box showing "0 of 7 sold" / "0 of 8 sold") is overlapping the top of the green ad-spot picker grid below it — the toggle card's own bottom edge (the "sold" count text) is visibly clipped/cut off by the grid starting too soon underneath it.
+
+**Important: a previous fix attempt for this was reverted because it caused a DIFFERENT bug — it ended up clipping/truncating the BOTTOM of the picker grid (cutting off the last row of ad spot cards).** That happened because the previous fix likely changed the grid's own margin-top, height, or position in a way that shifted or compressed the whole grid relative to its container. This fix must NOT touch the grid's height, its own top margin in a way that compresses it, or anything affecting its bottom edge — only the SPACE BETWEEN the toggle card and the grid should change.
+
+**The correct, narrow fix:**
+
+1. Find the Front/Back toggle card component and the ad picker grid component — they're likely siblings or the toggle is absolutely/negatively positioned to visually "float" partway over the grid's top edge (a common pattern for this kind of overlapping-card visual effect, but currently overlapping too far).
+
+2. If the toggle card uses a NEGATIVE margin-bottom or is positioned with a negative offset (e.g. `margin-bottom: -40px` or `transform: translateY(20px)` or similar) to create an intentional slight overlap effect with the grid below it, REDUCE that negative offset (make it less negative) just enough that the toggle card's own content (including the "X of Y sold" text) is no longer clipped — but keep some intentional overlap if that's the original design intent (a card that slightly overlaps the section below it can look fine when proportioned correctly; the current problem is it's overlapping too aggressively, not that overlap itself is wrong).
+
+3. Alternatively, if the grid container has a fixed/explicit `margin-top` or `padding-top` that's too small relative to the toggle card's actual rendered height, increase ONLY that top spacing value — do not adjust the grid's own height, its bottom padding, or anything affecting where its LAST row sits.
+
+4. After adjusting, verify specifically: (a) the toggle card's "X of Y sold" text is fully visible, not clipped, on both Front Side and Back Side tabs, (b) the grid's bottom row of spot cards is fully visible and not compressed/cut off — compare against how it looked before ANY fix was attempted, since that's the known-good baseline for the bottom of the grid, (c) test this on both Ball Ground's page and at least one other territory page to confirm the fix isn't specific to one page's content length, (d) test on a narrow mobile viewport too, since this kind of overlap-positioning often behaves differently at different screen widths.
+
+Keep this as the smallest possible CSS change — adjust only the spacing/positioning between these two specific elements, nothing else on the page.
