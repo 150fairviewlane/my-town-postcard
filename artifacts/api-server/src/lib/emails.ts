@@ -31,7 +31,7 @@ if (!process.env.FROM_EMAIL) {
 const FROM_EMAIL = process.env.FROM_EMAIL || "info@mytownpostcard.com";
 const APP_URL = process.env.APP_URL || "https://mytownpostcard.com";
 
-function emailFooter(): string {
+export function emailFooter(): string {
   return `
     <div style="margin-top: 32px; padding-top: 18px; border-top: 2px solid #C9A84C;">
       <table cellpadding="0" cellspacing="0" border="0" style="width: 100%;">
