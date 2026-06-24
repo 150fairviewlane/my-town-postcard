@@ -105,21 +105,23 @@ export default function SpotConfirmationPage() {
                 </div>
               )}
               <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 10 }}>
+                {state.data.campaignSlug && (
+                  <button
+                    onClick={() => {
+                      const side = state.data.side || "front";
+                      const area = state.data.gridArea || "";
+                      navigate(`/${state.data.campaignSlug}?side=${side}${area ? `&highlight=${area}` : ""}`);
+                    }}
+                    style={{ width: "100%", padding: 12, borderRadius: 8, border: "none", background: RED, color: "#fff", fontWeight: 700, cursor: "pointer" }}
+                  >
+                    View Your Ad on the Postcard →
+                  </button>
+                )}
                 <button
-                  onClick={() => {
-                    const side = state.data.side || "front";
-                    const area = state.data.gridArea || "";
-                    navigate(`/?side=${side}${area ? `&highlight=${area}` : ""}`);
-                  }}
-                  style={{ width: "100%", padding: 12, borderRadius: 8, border: "none", background: RED, color: "#fff", fontWeight: 700, cursor: "pointer" }}
-                >
-                  View Your Ad on the Postcard →
-                </button>
-                <button
-                  onClick={() => navigate("/")}
+                  onClick={() => navigate(state.data.campaignSlug ? `/${state.data.campaignSlug}` : "/")}
                   style={{ width: "100%", padding: 12, borderRadius: 8, border: "1.5px solid #d1d5db", background: "#fff", color: "#374151", fontWeight: 700, cursor: "pointer" }}
                 >
-                  Back to home
+                  Back to territory page
                 </button>
               </div>
             </div>

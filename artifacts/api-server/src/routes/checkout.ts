@@ -476,6 +476,9 @@ router.get("/checkout/spot-session-confirm", async (req, res): Promise<void> => 
   }
 
   const [spot] = await db.select().from(spotsTable).where(eq(spotsTable.id, spotId));
+  const [campaign] = spot?.campaignId
+    ? await db.select({ slug: campaignsTable.slug }).from(campaignsTable).where(eq(campaignsTable.id, spot.campaignId))
+    : [];
   res.json({
     success: isPaid,
     paymentStatus: session.payment_status,
@@ -485,6 +488,7 @@ router.get("/checkout/spot-session-confirm", async (req, res): Promise<void> => 
     amountCents: typeof session.amount_total === "number" ? session.amount_total : spot?.price ?? null,
     gridArea: spot?.gridArea ?? null,
     side: spot?.side ?? null,
+    campaignSlug: campaign?.slug ?? null,
   });
 });
 

@@ -1,0 +1,20 @@
+Bug: on the post-purchase confirmation page (`SpotConfirmationPage` at `/spot-confirmation`, or wherever the "View My Ad on the Postcard" button lives), clicking that button takes the customer back to the root homepage (`/`) instead of the SPECIFIC territory page their ad was actually purchased on (e.g. `/ball-ground`).
+
+**Investigate first:**
+
+1. Find the "View My Ad on the Postcard" button's component and check what URL/href it's currently using. Likely culprits:
+   - It's hardcoded to `/` or some other static path instead of being built from the actual campaign's slug.
+   - It's trying to read a slug from somewhere (e.g. a query param, route state, or API response) but that value is coming back null/undefined, causing a fallback to the homepage.
+   - The confirmation page doesn't actually have the campaign's slug available to it at all — check whether the confirmation route/page fetches the spot's campaign data (via `spot.campaignId` → look up the campaign → get its `slug`), or whether this data was never plumbed through from the checkout flow to the confirmation page in the first place.
+
+2. Check how the confirmation page currently receives its data — does it take a `spotId` as a route/query param and fetch fresh data, or does it rely on data passed forward from the checkout step? Confirm which pattern is used before fixing, since the right fix depends on this (fetch the slug fresh on the confirmation page vs. pass it through from checkout).
+
+**Fix:**
+
+3. Ensure the confirmation page has access to the correct campaign's `slug` (from the `campaignsTable.slug` column, fetched via the spot's `campaignId`) and builds the "View My Ad" button's link as `/${slug}` — pointing to that specific territory's landing page, not the root homepage.
+
+4. Handle the edge case where a campaign might have no slug for some reason (e.g. `slug IS NULL`, per the schema this is allowed for legacy/admin-only campaigns) — in that unlikely case, the button should either be hidden or clearly disabled rather than linking to a broken or generic page; this shouldn't normally happen for a real published, purchasable campaign, but worth guarding against rather than producing another wrong-page bug.
+
+5. Confirm the button ideally deep-links to the ad picker section of that page, not just the top of the page — if the territory landing page supports scrolling/anchoring directly to the picker (check for an existing anchor/hash pattern), use it; otherwise linking to the top of the correct page is an acceptable baseline fix.
+
+After fixing, test by completing a real test purchase on a specific territory (e.g. Ball Ground) and confirming the "View My Ad on the Postcard" button takes you back to THAT exact page — not the homepage — and ideally scrolls to or near the ad picker showing the spot you just bought.
