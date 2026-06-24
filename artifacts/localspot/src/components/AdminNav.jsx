@@ -194,6 +194,9 @@ export default function AdminNav() {
           <NavLink href="/admin" icon="🏠" label="Overview" />
         </div>
 
+        <NavSection label="Dealers" />
+        <NavLink href="/admin/dealers" icon="💼" label="All Dealers" />
+
         <NavSection label="Territories" />
         <NavLink href="/admin/territories" icon="🗺" label="All Territories" />
         <NavLink href="/admin/territories/detail" icon="📅" label="Spot Tables" />
@@ -205,9 +208,6 @@ export default function AdminNav() {
         <NavSection label="Analytics" />
         <NavLink href="/admin/scans" icon="📊" label="Scan Analytics" />
         <NavLink href="/admin/subscriptions" icon="🔁" label="Subscriptions" />
-
-        <NavSection label="Dealers" />
-        <NavLink href="/admin/dealers" icon="💼" label="All Dealers" />
 
         {/* Tools collapsible */}
         <div style={{ borderTop: "1px solid #f3f4f6", marginTop: 12, paddingTop: 4 }}>
