@@ -1,0 +1,55 @@
+Build a new admin page: "Paid Customers" — a single screen showing every paid ad spot across the whole platform, grouped by the dealer who owns that territory, so the admin doesn't have to click into each campaign one at a time to see who's bought ads.
+
+---
+
+## Backend: new endpoint
+
+Add `GET /api/admin/paid-customers` (protected by `requireAdmin`).
+
+Query every PAID spot across all campaigns, joined with: the campaign it belongs to, the dealer that campaign's territory belongs to (if any — some campaigns, like the Habersham house campaign, have no dealer and should be grouped under a clear "House / No Dealer" bucket rather than causing an error), and the order record for payment/timing info.
+
+Return a flat list (the frontend will handle grouping) with one row per paid spot:
+
+```json
+{
+  "spotId": 142,
+  "businessName": "Mr. Biscuit's Cafe",
+  "businessCategory": "Breakfast & Cafe",
+  "contactEmail": "owner@mrbiscuits.com",
+  "contactPhone": "706-555-0123",
+  "size": "xl",
+  "price": 49900,
+  "campaignId": 6,
+  "campaignName": "Ball Ground",
+  "campaignSlug": "ball-ground",
+  "dealerId": 15,
+  "dealerName": "Vincent Ferrari",
+  "dealerEmail": "vincent@example.com",
+  "purchasedAt": "2026-06-20T14:32:00Z",
+  "trackingCode": "ABC123"
+}
+```
+
+For spots on a campaign with no dealer (`dealerId IS NULL`), return `dealerId: null, dealerName: "House / No Dealer"` so the frontend can group these cleanly without special-casing nulls in the UI layer.
+
+Reuse existing query patterns already in `adminCampaigns.ts` (the paid-spot/order join logic already exists there) rather than writing this from scratch — this is largely the same join, just expanded to ALL campaigns instead of one at a time, with the dealer relationship added.
+
+---
+
+## Frontend: new admin page
+
+Create `AdminPaidCustomersPage.jsx`, route `/admin/paid-customers`. Add it to the admin nav (likely under the "Dealers" or "Territories" section, or as its own top-level nav item — use your judgement on the best fit given the existing nav structure).
+
+1. **Group rows by dealer** — render a collapsible section per dealer (dealer name as the section header, with a count like "Vincent Ferrari — 4 paid customers" and a small subtotal of revenue for that dealer). The "House / No Dealer" group, if any rows exist there, renders the same way.
+
+2. **Within each dealer's group, show a table** with columns: Business Name, Category, Contact Email, Contact Phone, Size, Price, Postcard/Campaign Name (linked to that campaign's admin spot-table view), Purchase Date, Tracking Code.
+
+3. **Search/filter bar at the top** — a simple text input that filters across business name, contact email, and dealer name simultaneously (client-side filtering of the already-fetched list is fine at this data volume — no need for server-side search yet).
+
+4. **Sort control** — at minimum, sort by purchase date (newest first, default) and an option to sort alphabetically by dealer name.
+
+5. **Export to CSV button** — exports the currently-filtered/visible rows (respecting any active search filter) with all the same columns shown in the table.
+
+6. Match existing admin styling — burgundy/gold/cream, DM Sans, Bebas Neue headers, consistent with the rest of the admin panel (e.g. `AdminDealersPage`, `AdminTerritoriesPage`).
+
+After implementing, confirm: every paid spot across every campaign appears exactly once, correctly grouped under its real dealer (or "House / No Dealer"), the search filter works across name/email/dealer, the CSV export includes the correct filtered rows, and clicking a campaign name navigates to that campaign's existing admin detail view.
