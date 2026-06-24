@@ -1,0 +1,21 @@
+Change how territory landing page slugs are generated for NEW territories going forward. No migration of existing territories is needed — all current territories/dealers will be deleted before launch, so this is purely a forward-looking change to the slug-generation logic itself.
+
+---
+
+## New slug format: `cityname-st`
+
+Lowercase city name, hyphen, lowercase 2-letter state abbreviation. Example: `watkinsville-ga`.
+
+1. Find wherever territory/campaign slugs are currently generated (the Custom Territory tool's creation logic, `ensureDealerLandingPage`, or wherever a new campaign's `slug` field gets set).
+
+2. Change the default slug-generation logic to: lowercase the city name, strip spaces/special characters from the city name itself (e.g. "Ball Ground" → "ballground" — no separator within a multi-word city name), append a hyphen, then the lowercase 2-letter state abbreviation. Example: `watkinsville-ga`, `ballground-ga`.
+
+3. **Collision handling:** before finalizing a new slug, check whether it already exists among ALL territories in the SAME state (active, draft, or taken — check broadly so it never collides with anything, regardless of status). If a collision is found:
+   - Fall back to inserting the county name (hyphenated) between the city and state: `cityname-countyname-st`. Example: `watkinsville-oconee-ga`.
+   - If THAT also collides (extremely unlikely), append a numeric suffix as a last-resort fallback (`watkinsville-ga-2`).
+
+4. Build this as a single, reusable function (e.g. `generateUniqueTerritorySlug(cityName, stateAbbr, countyName)`) called everywhere a new territory/campaign slug is created — the Custom Territory tool, the standard dealer signup flow, and any admin-driven creation path — so the fallback behaves identically everywhere rather than being implemented multiple times with subtly different logic.
+
+---
+
+After implementing, test: creating a new territory produces a clean `cityname-st` slug; creating a second territory that would collide with an existing one (same city name, same state) correctly falls back to the county-included format; and confirm this function is the ONLY place slug generation happens — no leftover old slug-generation logic still running anywhere in parallel.

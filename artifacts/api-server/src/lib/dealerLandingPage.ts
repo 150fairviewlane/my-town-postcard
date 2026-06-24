@@ -7,7 +7,7 @@ import {
   dealerTerritoriesTable,
 } from "@workspace/db";
 import { and, eq } from "drizzle-orm";
-import { generateSlug, generateUniqueCampaignSlug } from "./slugify";
+import { generateSlug, generateUniqueTerritorySlug } from "./slugify";
 import { STANDARD_SPOT_LAYOUT, validateLayout } from "./standardLayout";
 import { logger } from "./logger";
 import { findGazetteerCity } from "./censusApi";
@@ -21,6 +21,10 @@ type LandingPageInfo = {
   // Legacy dealers whose cityList is synthesized from dealer_territories city labels
   // must NOT enter the per-hub-city multi-campaign path.
   fromZoneNote: boolean;
+  // State abbreviation (e.g. "GA") used for slug generation.
+  stateAbbr: string;
+  // Primary county name (e.g. "Oconee") used as the collision-fallback slug segment.
+  countyName: string | null;
 };
 
 // Pull the best available human metadata for a dealer's territory. County-based
@@ -37,6 +41,7 @@ async function resolveTerritoryInfo(
     .where(eq(territoriesTable.dealerId, dealerId))
     .limit(1);
   if (county) {
+    const counties = Array.isArray(county.counties) ? county.counties : [];
     return {
       territoryName: county.name,
       cityList: county.zoneNote ?? null,
@@ -46,6 +51,8 @@ async function resolveTerritoryInfo(
       // the authoritative source of per-hub-city names. A county row with no
       // zoneNote falls through to the single-campaign fallback.
       fromZoneNote: !!county.zoneNote,
+      stateAbbr: (county.state ?? "GA").toUpperCase(),
+      countyName: counties.length > 0 ? counties[0] : null,
     };
   }
 
@@ -64,6 +71,8 @@ async function resolveTerritoryInfo(
       homesCount: totalHomes > 0 ? totalHomes : 5000,
       zipCode: legacy[0].zipCodes?.[0] ?? dealerHomeZip,
       fromZoneNote: false,
+      stateAbbr: "GA",
+      countyName: null,
     };
   }
 
@@ -73,6 +82,8 @@ async function resolveTerritoryInfo(
     homesCount: 5000,
     zipCode: dealerHomeZip,
     fromZoneNote: false,
+    stateAbbr: "GA",
+    countyName: null,
   };
 }
 
@@ -81,8 +92,9 @@ async function resolveTerritoryInfo(
 // and the synchronous /dealers/confirm path; repeated calls are no-ops.
 //
 // When the territory has N hub cities (comma-separated in zoneNote), N campaigns
-// are created, each with `city_list = hubCityName` and a slug of the form
-// `{territorySlug}-{citySlug}` (e.g. "cherokee-woodstock").
+// are created, each with `city_list = hubCityName` and a slug in the format
+// `{cityname}-{st}` (e.g. "watkinsville-ga"). See generateUniqueTerritorySlug
+// in slugify.ts for the full collision-fallback logic.
 //
 // Fallback: if no hub cities are present (legacy dealers / no zoneNote), the
 // original single-campaign behavior is preserved for backwards compatibility.
@@ -120,7 +132,16 @@ export async function ensureDealerLandingPage(dealerId: number): Promise<number[
 
   // ── Legacy / no-hub-city fallback: create a single territory campaign ───────
   if (hubCities.length === 0) {
-    const candidateSlug = await generateUniqueCampaignSlug(info.territoryName);
+    // Determine the best city name for the slug. Prefer the first city from the
+    // city list (if any), otherwise fall back to the territory name.
+    const primaryCity = info.cityList
+      ? info.cityList.split(",")[0].trim()
+      : info.territoryName;
+    const candidateSlug = await generateUniqueTerritorySlug(
+      primaryCity,
+      info.stateAbbr,
+      info.countyName,
+    );
 
     const campaignId = await db.transaction(async (tx) => {
       const [dealer] = await tx
@@ -159,7 +180,7 @@ export async function ensureDealerLandingPage(dealerId: number): Promise<number[
           ? info.cityList.trim()
           : null;
       const cityGeo = singleCityName
-        ? findGazetteerCity(singleCityName, "GA")
+        ? findGazetteerCity(singleCityName, info.stateAbbr)
         : undefined;
 
       const [campaign] = await tx
@@ -202,14 +223,12 @@ export async function ensureDealerLandingPage(dealerId: number): Promise<number[
 
   // ── Multi-city path: one campaign per hub city ──────────────────────────────
   // Pre-generate unique slugs outside the transaction (best-effort; the UNIQUE
-  // constraint on campaigns.slug is the authoritative guard). Each slug combines
-  // the territory slug with the city slug, e.g. "cherokee-woodstock".
+  // constraint on campaigns.slug is the authoritative guard). Each slug uses
+  // the cityname-st format, e.g. "watkinsville-ga".
   const territorySlugBase = generateSlug(info.territoryName);
   const candidateSlugs: string[] = [];
   for (const city of hubCities) {
-    // Pass the raw territory name + city name together so generateSlug can strip
-    // "County"/"Counties" and "/" separators from both parts in one pass.
-    const slug = await generateUniqueCampaignSlug(`${info.territoryName} ${city}`);
+    const slug = await generateUniqueTerritorySlug(city, info.stateAbbr, info.countyName);
     candidateSlugs.push(slug);
   }
 
@@ -241,7 +260,7 @@ export async function ensureDealerLandingPage(dealerId: number): Promise<number[
       }
 
       // Hub-city campaigns are always single-city — resolve pin at creation time.
-      const hubCityGeo = findGazetteerCity(hubCity.trim(), "GA");
+      const hubCityGeo = findGazetteerCity(hubCity.trim(), info.stateAbbr);
 
       const [campaign] = await tx
         .insert(campaignsTable)
