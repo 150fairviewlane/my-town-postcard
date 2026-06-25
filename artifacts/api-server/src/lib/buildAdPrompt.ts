@@ -949,27 +949,27 @@ export function buildAdPrompt(
     : templateKey === "purple-sage"
     ? (
       "LAYOUT — reproduce Purple Sage template zones exactly:\n\n" +
-      "DECORATIVE ACCENTS (top-left: muted purple circle + dot grid; left: sage green leaf sprig — structural, NOT logo zones).\n\n" +
+      "DECORATIVE ACCENTS (top-left: muted purple circle + dot grid; left: sage green leaf sprig — structural only).\n\n" +
       (hasLogo
-        ? `LOGO (IMAGE ${logoImg} placed inside or beside the white/cream rounded-rect headline panel).\n\n`
+        ? `LOGO (IMAGE ${logoImg} inside or beside the white/cream rounded-rect headline panel).\n\n`
         : "") +
-      `HEADLINE (large white/cream rounded-rect panel, upper-left): business name bold condensed all-caps sans-serif, very large, dark purple/near-black. Each word once.` +
-      (d.tagline ? ` Tagline in clean italic script below, dark purple.` : "") + "\n\n" +
-      "BRUSH STROKES (structural, no text): muted purple below headline; sage green in lower area.\n\n" +
-      "HERO PHOTO (upper-right, large circular frame in sage green ring border):\n" +
+      `HEADLINE (white/cream rounded-rect panel, upper-left): business name bold condensed all-caps sans-serif, large, dark purple/near-black. Each word once.` +
+      (d.tagline ? ` Tagline italic script below, dark purple.` : "") + "\n\n" +
+      "BRUSH STROKES (structural, no text): muted purple below headline; sage green lower area.\n\n" +
+      "HERO PHOTO (upper-right, circular frame, sage green ring border):\n" +
       (hasPhoto
-        ? `  Composite IMAGE 2 — fill circular frame, sage green ring border, no hard rectangular edges. Cinematic lighting.\n\n`
-        : `  ${ipc.hero}. Circular frame with sage green ring border.\n\n`) +
-      `SECONDARY PHOTOS (lower-right, two overlapping circles): ${abbr(ipc.c1)} and ${abbr(ipc.c2)}, perfectly circular.\n\n` +
+        ? `  Composite IMAGE 2 — fill circular frame; sage green ring border; no hard border. Cinematic lighting.\n\n`
+        : `  ${ipc.hero}. Circular frame, sage green ring border.\n\n`) +
+      `SECONDARY PHOTOS (lower-right, two overlapping circles): ${abbr(ipc.c1)}, ${abbr(ipc.c2)}.\n\n` +
       `SERVICE BADGES (middle row): ` +
       (menuCount > 0
-        ? `EXACTLY ${menuCount} muted sage green circular icon badge${menuCount !== 1 ? "s" : ""} with thin vertical dividers and NO MORE — one per service in BUSINESS DETAILS, exactly as written. Ignore extra template slots; do NOT render empty badges.\n\n`
+        ? `EXACTLY ${menuCount} muted sage green circular icon badge${menuCount !== 1 ? "s" : ""} with thin vertical dividers — one per service in BUSINESS DETAILS. Ignore extra slots; no empty badges.\n\n`
         : `four decorative sage green circular icon badge graphics with thin vertical dividers; NO text labels.\n\n`) +
-      `SERVICE TILES (below badges row): ` +
+      `SERVICE TILES (below badges): ` +
       (menuCount > 0
-        ? `EXACTLY ${menuCount} cream rounded-rect tile${menuCount !== 1 ? "s" : ""} — one per service, label inside. Ignore extra template slots; do NOT render empty tiles.\n\n`
+        ? `EXACTLY ${menuCount} cream rounded-rect tile${menuCount !== 1 ? "s" : ""} — one per service, label inside. Ignore extra slots; no empty tiles.\n\n`
         : `four cream rounded-rect tile shapes; NO text labels.\n\n`) +
-      "PURPLE WAVE BAND (lower section): muted lavender-purple wave spanning full width.\n\n" +
+      "PURPLE WAVE BAND (lower): muted lavender-purple wave, full width.\n\n" +
       (d.offer
         ? `SPECIAL OFFER (dashed coupon box, lower area): offer text bold dark, fine print smaller below. No QR inside coupon.\n\n`
         : "") +
@@ -991,13 +991,13 @@ export function buildAdPrompt(
         : `  ${ipc.hero}. Fill upper-right curved zone, blend naturally into cream bg.\n\n`) +
       `SERVICE BADGES (middle row): ` +
       (menuCount > 0
-        ? `EXACTLY ${menuCount} dark olive circular icon badge${menuCount !== 1 ? "s" : ""} with thin vertical dividers and NO MORE — one per service in BUSINESS DETAILS, exactly as written. The template image may show more badge slots — ignore extras; do NOT render empty badges.\n\n`
+        ? `EXACTLY ${menuCount} dark olive circular icon badge${menuCount !== 1 ? "s" : ""} with thin vertical dividers — one per service in BUSINESS DETAILS. Ignore extra slots; no empty badges.\n\n`
         : `four decorative dark olive circular icon badge graphics (award, people, handshake, shield) with thin vertical dividers; NO text labels.\n\n`) +
-      `SERVICE TILES (below badges row): ` +
+      `SERVICE TILES (below badges): ` +
       (menuCount > 0
-        ? `EXACTLY ${menuCount} cream rounded-rect tile${menuCount !== 1 ? "s" : ""} and NO MORE — one per service, label text inside. The template image may show more tile slots — ignore extras; do NOT render empty tiles. No extras.\n\n`
+        ? `EXACTLY ${menuCount} cream rounded-rect tile${menuCount !== 1 ? "s" : ""} — one per service, label inside. Ignore extra slots; no empty tiles.\n\n`
         : `four cream rounded-rect tile shapes; NO text labels.\n\n`) +
-      `PHOTO COLLAGE STRIP (dark olive wave band, lower section): three equal-width photos — ${abbr(ipc.interior)}, ${abbr(ipc.c1)}, ${abbr(ipc.outdoor)}.\n\n` +
+      `PHOTO COLLAGE STRIP (dark olive wave band, lower): three photos — ${abbr(ipc.interior)}, ${abbr(ipc.c1)}, ${abbr(ipc.outdoor)}.\n\n` +
       (d.offer
         ? `COUPON (kraft paper/cardboard textured rectangle with dashed stitched border and scissors icon, lower-right): offer text bold dark, fine print smaller below. No QR inside coupon.\n\n`
         : "") +
@@ -1034,14 +1034,8 @@ export function buildAdPrompt(
       `  PALETTE: ${selectedTheme.palette}\n` +
       `  TYPOGRAPHY: ${selectedTheme.typography}\n` +
       `  LAYOUT: ${selectedTheme.layoutPortrait}\n\n` +
-      "DO NOT recreate any existing LocalSpot template style:\n" +
-      "  Parchment/rustic | Chalkboard/bistro | Forest-green contractor | Navy/gold home services | Teal/sage wellness | Cream/navy circular-photo elegance | Sage/olive botanical kraft | Lavender/sage circular-photo lifestyle\n\n" +
-      "VISUAL RULES (mandatory):\n" +
-      "  • Fill 100% of the canvas to every edge — no blank areas, no outer border, no drop shadow outside the ad.\n" +
-      "  • No hard rectangular photo borders — mask/blend edges with organic shapes, gradients, or diagonal cuts.\n" +
-      "  • Background: gradient, texture, or layered wash — never flat solid color.\n" +
-      "  • Three depth planes: (1) textured bg, (2) graphic mid-layer shapes, (3) foreground text with shadows/glows.\n" +
-      "  • All text clearly readable: opaque backing, heavy drop shadow, or solid text fill — no subtle shadows.\n\n" +
+      "DO NOT recreate any existing LocalSpot style (parchment/rustic, chalkboard/bistro, forest-green, navy/gold, teal/sage, cream/navy, sage/olive, lavender/sage).\n\n" +
+      "VISUAL RULES: fill canvas edge-to-edge; no rectangular photo borders; textured/gradient bg; three depth planes; all text clearly readable.\n\n" +
       "CONTENT ZONES:\n" +
       `  HEADLINE: business name — very large, dominant, instantly readable.\n` +
       (hasPhoto
@@ -1128,9 +1122,9 @@ export function buildAdPrompt(
       (hasPhoto
         ? `  Composite IMAGE 2 into the hero zone. Fill upper-left, right edge dissolves organically into the burgundy brush stroke; no hard border.\n\n`
         : `  ${ipc.hero}. Fill upper-left zone, right edge dissolves into brush stroke; no hard border.\n\n`) +
-      `SERVICE BADGES (middle, horizontal row across full card width): ` +
+      `SERVICE BADGES (middle, horizontal row full width): ` +
       (menuCount > 0
-        ? `EXACTLY ${menuCount} circular dark burgundy icon badge${menuCount !== 1 ? "s" : ""} evenly spaced and NO MORE — one per service in BUSINESS DETAILS, exactly as written. Thin vertical burgundy rule on right side of each badge as divider. Below each badge: brush-stroke-style label with service name and price. The template image may show more badge slots — ignore extras; do NOT render empty badge rows. No extras. No invented services.\n\n`
+        ? `EXACTLY ${menuCount} dark burgundy circular icon badge${menuCount !== 1 ? "s" : ""} evenly spaced — one per service in BUSINESS DETAILS. Thin vertical burgundy rule divider on right of each; brush-stroke label below. Ignore extra slots; no empty badges. No invented services.\n\n`
         : `four decorative dark burgundy circular icon badge shapes with thin vertical burgundy rule dividers; NO text labels.\n\n`) +
       (d.offer
         ? `COUPON (footer area, dashed-border rounded-rect, scissors ✂ icon upper-right corner): offer text bold inside dashed box. Fine print smaller below. No QR inside coupon.\n\n`
