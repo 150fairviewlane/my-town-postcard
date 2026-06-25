@@ -419,6 +419,8 @@ export interface RefineAdRequest {
   instruction: string;
   /** Spot size key (XL, L, M, S) */
   sizeKey?: string;
+  /** Database ID of the spot being refined (used to composite a verified QR) */
+  spotId?: number;
 }
 
 export interface RefineAdResponse {

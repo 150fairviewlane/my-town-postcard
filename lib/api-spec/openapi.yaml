@@ -1448,6 +1448,9 @@ components:
           type: string
           description: Spot size key (XL, L, M, S)
           default: XL
+        spotId:
+          type: integer
+          description: Database ID of the spot being refined (used to composite a verified QR)
       required:
         - imageDataUrl
         - instruction

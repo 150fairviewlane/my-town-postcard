@@ -2804,7 +2804,7 @@ async function refineCurrentAd(){
     var resp = await fetch('/api/grok-ad-generator/refine', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ imageDataUrl: imageDataUrl, instruction: instruction, sizeKey: _spotSize || 'XL' }),
+      body: JSON.stringify({ imageDataUrl: imageDataUrl, instruction: instruction, sizeKey: _spotSize || 'XL', spotId: _spotId || undefined }),
     });
     var data = await resp.json();
     if(!resp.ok || data.error){

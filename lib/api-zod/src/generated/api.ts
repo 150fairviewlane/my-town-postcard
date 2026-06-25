@@ -919,6 +919,12 @@ export const RefineGrokAdBody = zod.object({
     .string()
     .default(refineGrokAdBodySizeKeyDefault)
     .describe("Spot size key (XL, L, M, S)"),
+  spotId: zod
+    .number()
+    .optional()
+    .describe(
+      "Database ID of the spot being refined (used to composite a verified QR)",
+    ),
 });
 
 export const RefineGrokAdResponse = zod.object({
