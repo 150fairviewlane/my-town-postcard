@@ -17,6 +17,7 @@
     "migrate:activate-white-habersham": "tsx ./src/migrate-activate-white-habersham.ts",
     "prerender-zones": "tsx ./src/prerender-zones.ts",
     "generate:granite-photo": "tsx ./src/generateGranitePhoto.ts",
+    "find:broken-qr-ads": "tsx ./src/findBrokenQrAds.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {

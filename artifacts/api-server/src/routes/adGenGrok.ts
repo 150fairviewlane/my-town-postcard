@@ -16,6 +16,7 @@ function getSharp(): Promise<typeof import("sharp")> {
   return _sharpLoader!;
 }
 import { buildAdPrompt } from "../lib/buildAdPrompt";
+import { compositeQrOnto, type SizeKey } from "../lib/compositeQr";
 import { db, spotsTable } from "@workspace/db";
 import { eq, and, ne, sql as drizzleSql } from "drizzle-orm";
 
@@ -594,6 +595,22 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     small:  { w: 600,  h: 600  }, s: { w: 600,  h: 600  },
   };
   const cropDim = CROP_DIMS[d.sizeKey.toLowerCase()] ?? { w: 400, h: 500 };
+
+  // Resolve the spot's tracking code so we can composite a real QR after generation.
+  // Falls back to null for preview/pre-payment generations — QR compositing is skipped gracefully.
+  let spotTrackingCode: string | null = null;
+  if (d.spotId != null) {
+    try {
+      const [spotRow] = await db
+        .select({ trackingCode: spotsTable.trackingCode })
+        .from(spotsTable)
+        .where(eq(spotsTable.id, d.spotId))
+        .limit(1);
+      spotTrackingCode = spotRow?.trackingCode ?? null;
+    } catch (tcErr) {
+      req.log.warn({ tcErr, spotId: d.spotId }, "grok-imagine: failed to load tracking code — QR compositing will be skipped");
+    }
+  }
 
   const menuStr     = d.menu.filter(Boolean).map((m, i) => `  ${i + 1}. ${m}`).join("\n") || "  (none)";
   const menuCount   = d.menu.filter(Boolean).length;
@@ -1521,6 +1538,39 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     }
   }
 
+  /**
+   * Normalise sizeKey strings like "xl", "XL", "large", "l", "medium", "m", "small", "s"
+   * into the canonical SizeKey union used by compositeQrOnto.
+   */
+  function toSizeKey(sk: string): SizeKey {
+    const lower = sk.toLowerCase();
+    if (lower === "xl" || lower === "x-large" || lower === "xlarge") return "xl";
+    if (lower === "l"  || lower === "large")                          return "l";
+    if (lower === "m"  || lower === "medium")                         return "m";
+    if (lower === "s"  || lower === "small")                          return "s";
+    return "xl";
+  }
+
+  /**
+   * Crop image to print dimensions then optionally composite a verified QR code.
+   * Falls back silently (log warn) if the spot has no tracking code or if QR
+   * compositing throws, so a transient failure never blocks ad delivery.
+   */
+  async function cropAndQr(url: string): Promise<string> {
+    const dataUrl = await cropToSpotDims(url, cropDim.w, cropDim.h);
+    if (!spotTrackingCode) return dataUrl;
+    try {
+      const appUrl      = (process.env.APP_URL ?? "").replace(/\/$/, "");
+      const trackingUrl = `${appUrl}/go/${spotTrackingCode}`;
+      const buf         = Buffer.from(dataUrl.split(",")[1] ?? "", "base64");
+      const composited  = await compositeQrOnto(buf, trackingUrl, toSizeKey(d.sizeKey));
+      return `data:image/jpeg;base64,${composited.toString("base64")}`;
+    } catch (qrErr) {
+      req.log.warn({ qrErr, spotTrackingCode, sizeKey: d.sizeKey }, "compositeQrOnto failed — returning ad without QR");
+      return dataUrl;
+    }
+  }
+
   // Start keepalive immediately — before photo/logo fetches AND the xAI call.
   // 2-second interval ensures no more than 2 s of silence between server writes,
   // preventing the Replit proxy from closing the connection during any async gap
@@ -1636,7 +1686,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       );
       if (genRes.ok) {
         const genUrl = extractXaiImageUrl(genBody);
-        if (genUrl) { endJson({ imageUrl: await cropToSpotDims(genUrl, cropDim.w, cropDim.h) }); return; }
+        if (genUrl) { endJson({ imageUrl: await cropAndQr(genUrl) }); return; }
       }
       // Extract error and check for content moderation
       const genErrRaw = genBody["error"];
@@ -1681,7 +1731,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
         );
         if (safeRes.ok) {
           const safeUrl = extractXaiImageUrl(safeBody);
-          if (safeUrl) { endJson({ imageUrl: await cropToSpotDims(safeUrl, cropDim.w, cropDim.h) }); return; }
+          if (safeUrl) { endJson({ imageUrl: await cropAndQr(safeUrl) }); return; }
         }
         req.log.error({ genErrMsg, bizName: d.bizName }, "grok-imagine generations: moderation persists after safe-prompt retry");
         endJson({ error: "moderated" });
@@ -1765,7 +1815,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
         req.log.warn({ errMsg, bizName: d.bizName }, "grok-imagine edits: model not supported — falling back to /generations");
         try {
           const fallbackUrl = await callGenerationsJson(apiKey, finalAdPrompt, d.bizName, req.log);
-          endJson({ imageUrl: await cropToSpotDims(fallbackUrl, cropDim.w, cropDim.h), fallback: true });
+          endJson({ imageUrl: await cropAndQr(fallbackUrl), fallback: true });
           return;
         } catch (fbErr) {
           req.log.error({ editsErr: errMsg, fbErr }, "grok-imagine both edits and generations failed");
@@ -1805,7 +1855,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
         );
         if (retryRes.ok) {
           const retryUrl = extractXaiImageUrl(retryRespBody);
-          if (retryUrl) { endJson({ imageUrl: await cropToSpotDims(retryUrl, cropDim.w, cropDim.h) }); return; }
+          if (retryUrl) { endJson({ imageUrl: await cropAndQr(retryUrl) }); return; }
         }
         req.log.warn({ retryStatus: retryRes.status, origErr: errMsg }, "grok-imagine edits retry also failed");
       }
@@ -1832,7 +1882,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           `Clean, warm, welcoming design with professional typography and a soft colour palette.`;
         try {
           const safeUrl = await callGenerationsJson(apiKey, safeAdPrompt, d.bizName, req.log);
-          endJson({ imageUrl: await cropToSpotDims(safeUrl, cropDim.w, cropDim.h) });
+          endJson({ imageUrl: await cropAndQr(safeUrl) });
           return;
         } catch (safeErr) {
           const safeErrMsg = safeErr instanceof Error ? safeErr.message : String(safeErr);
@@ -1855,7 +1905,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       return;
     }
 
-    endJson({ imageUrl: await cropToSpotDims(imageUrl, cropDim.w, cropDim.h) });
+    endJson({ imageUrl: await cropAndQr(imageUrl) });
   } catch (err) {
     clearInterval(keepAliveTimer);
     const msg = err instanceof Error ? err.message : "Ad generation failed";
