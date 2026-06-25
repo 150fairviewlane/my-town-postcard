@@ -76,22 +76,23 @@ export async function compositeQrOnto(
     .toBuffer();
 
   // ── Decode-verify ─────────────────────────────────────────────────────────
-  // Extract raw RGBA pixels from the composited JPEG and confirm the QR
-  // is scannable and encodes the exact expected URL.
-  const { data: rawPixels, info } = await sharp(compositedBuffer)
+  // Crop to just the QR region before decoding so that complex ad imagery
+  // elsewhere in the image can't confuse jsqr's finder-pattern detection.
+  const { data: qrPixels, info: qrInfo } = await sharp(compositedBuffer)
+    .extract({ left, top, width: placement.qrSize, height: placement.qrSize })
     .raw()
     .ensureAlpha()
     .toBuffer({ resolveWithObject: true });
 
   const decoded = jsqr(
-    new Uint8ClampedArray(rawPixels),
-    info.width,
-    info.height,
+    new Uint8ClampedArray(qrPixels),
+    qrInfo.width,
+    qrInfo.height,
   );
 
   if (!decoded) {
     throw new Error(
-      `compositeQrOnto: QR decode verification failed — the QR was not detected in the composited image. ` +
+      `compositeQrOnto: QR decode verification failed — the QR was not detected after compositing. ` +
       `Check quiet zone, qrSize, and placement for spotSize="${spotSize}". ` +
       `Placement: left=${left}, top=${top}, qrSize=${placement.qrSize}.`,
     );

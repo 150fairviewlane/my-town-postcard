@@ -72,12 +72,9 @@ export function getDefaultThemeIndex(industry: string): number {
 // ── Footer zone builder ──────────────────────────────────────────────────────
 
 export function buildFooterZone(phone: string, address: string, isLandscape = false): string {
-  const qrNote =
-    `RIGHT: a solid plain-colored rectangle (same solid color as the footer bar background) — ` +
-    `leave this area completely empty and flat. ` +
-    `CRITICAL: do NOT draw any QR code, barcode, checkerboard, grid pattern, ` +
-    `or any scannable-looking marks anywhere in the image — not in the footer, ` +
-    `not in any coupon zone, not anywhere. A real QR code will be composited here programmatically after generation.`;
+  // The right corner is reserved for a programmatically composited QR — keep it as a flat,
+  // same-color rectangle. Do NOT instruct the model to draw a QR code here.
+  const qrSlot = `RIGHT: flat solid rect, footer color, NO QR drawn.`;
 
   if (isLandscape) {
     const hasAddr = address !== "(none)";
@@ -88,7 +85,7 @@ export function buildFooterZone(phone: string, address: string, isLandscape = fa
       `CENTER: ` + (hasAddr
         ? `"${address}" bold white, large, split to 2 lines at the comma (street on line 1, city/state on line 2), center-aligned in the bar; `
         : `(centered placeholder); `) +
-      qrNote + ` ` +
+      qrSlot + ` ` +
       `Phone appears EXACTLY ONCE — only inside this footer bar, never elsewhere.\n\n`
     );
   }
@@ -96,7 +93,7 @@ export function buildFooterZone(phone: string, address: string, isLandscape = fa
     `FOOTER (full-width dark bar, 15–20% of card): ` +
     `"${phone}" bold white, very large, left-aligned (the largest text in the footer); ` +
     (address !== "(none)" ? `"${address}" bold white, large, directly below phone (same left column); ` : "") +
-    qrNote + ` ` +
+    qrSlot + ` ` +
     `Phone appears EXACTLY ONCE — only inside this footer bar, never elsewhere.\n\n`
   );
 }

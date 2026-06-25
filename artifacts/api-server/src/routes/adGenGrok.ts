@@ -1552,23 +1552,19 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   }
 
   /**
-   * Crop image to print dimensions then optionally composite a verified QR code.
-   * Falls back silently (log warn) if the spot has no tracking code or if QR
-   * compositing throws, so a transient failure never blocks ad delivery.
+   * Crop image to print dimensions then composite a verified QR code.
+   * Skips QR compositing (returns plain image) only when the spot has no tracking
+   * code yet (pre-payment preview). For tracked spots, compositing/decode failures
+   * are allowed to propagate — shipping an unverified QR is worse than a 502.
    */
   async function cropAndQr(url: string): Promise<string> {
     const dataUrl = await cropToSpotDims(url, cropDim.w, cropDim.h);
     if (!spotTrackingCode) return dataUrl;
-    try {
-      const appUrl      = (process.env.APP_URL ?? "").replace(/\/$/, "");
-      const trackingUrl = `${appUrl}/go/${spotTrackingCode}`;
-      const buf         = Buffer.from(dataUrl.split(",")[1] ?? "", "base64");
-      const composited  = await compositeQrOnto(buf, trackingUrl, toSizeKey(d.sizeKey));
-      return `data:image/jpeg;base64,${composited.toString("base64")}`;
-    } catch (qrErr) {
-      req.log.warn({ qrErr, spotTrackingCode, sizeKey: d.sizeKey }, "compositeQrOnto failed — returning ad without QR");
-      return dataUrl;
-    }
+    const appUrl      = (process.env.APP_URL ?? "").replace(/\/$/, "");
+    const trackingUrl = `${appUrl}/go/${spotTrackingCode}`;
+    const buf         = Buffer.from(dataUrl.split(",")[1] ?? "", "base64");
+    const composited  = await compositeQrOnto(buf, trackingUrl, toSizeKey(d.sizeKey));
+    return `data:image/jpeg;base64,${composited.toString("base64")}`;
   }
 
   // Start keepalive immediately — before photo/logo fetches AND the xAI call.
@@ -1711,7 +1707,6 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           (d.phone ? `Phone number: ${d.phone}. ` : "") +
           (fullAddress !== "(none)" ? `Address: ${fullAddress}. ` : "") +
           (d.offer ? `Feature this special offer: ${d.offer}. ` : "") +
-          `Include a small QR code placeholder in the footer. ` +
           `Clean, warm, welcoming design with professional typography and a soft colour palette.`;
         const safeRes = await fetch("https://api.x.ai/v1/images/generations", {
           method: "POST",
@@ -1878,7 +1873,6 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           (d.phone ? `Phone number: ${d.phone}. ` : "") +
           (fullAddress !== "(none)" ? `Address: ${fullAddress}. ` : "") +
           (d.offer ? `Feature this special offer: ${d.offer}. ` : "") +
-          `Include a small QR code placeholder in the footer. ` +
           `Clean, warm, welcoming design with professional typography and a soft colour palette.`;
         try {
           const safeUrl = await callGenerationsJson(apiKey, safeAdPrompt, d.bizName, req.log);
@@ -1923,6 +1917,7 @@ const RefineSchema = z.object({
   imageDataUrl: z.string().min(1, "imageDataUrl is required"),
   instruction:  z.string().min(1, "instruction is required").max(500),
   sizeKey:      z.string().optional().default("XL"),
+  spotId:       z.number().int().optional(),
 });
 
 router.post("/grok-ad-generator/refine", async (req, res) => {
@@ -1932,7 +1927,7 @@ router.post("/grok-ad-generator/refine", async (req, res) => {
     res.status(400).json({ error: msgs });
     return;
   }
-  const { imageDataUrl, instruction, sizeKey } = parsed.data;
+  const { imageDataUrl, instruction, sizeKey, spotId: refineSpotId } = parsed.data;
 
   const apiKey = process.env["XAI_API_KEY"];
   if (!apiKey) {
@@ -2040,7 +2035,40 @@ router.post("/grok-ad-generator/refine", async (req, res) => {
       return;
     }
 
-    refineEndJson({ imageUrl: await cropToSpotDims(imageUrl, dim.w, dim.h) });
+    const refineCroppedUrl = await cropToSpotDims(imageUrl, dim.w, dim.h);
+
+    // Composite QR onto the refined image if the spot has a tracking code.
+    // Load tracking code here (not earlier) to stay inside the keepalive window.
+    let refineFinalUrl = refineCroppedUrl;
+    if (refineSpotId != null) {
+      try {
+        const [refineSpotRow] = await db
+          .select({ trackingCode: spotsTable.trackingCode })
+          .from(spotsTable)
+          .where(eq(spotsTable.id, refineSpotId))
+          .limit(1);
+        const refineTrackingCode = refineSpotRow?.trackingCode ?? null;
+        if (refineTrackingCode) {
+          const refineAppUrl      = (process.env.APP_URL ?? "").replace(/\/$/, "");
+          const refineTrackingUrl = `${refineAppUrl}/go/${refineTrackingCode}`;
+          const refineSizeKey     = (() => {
+            const lower = sizeKey.toLowerCase();
+            if (lower === "xl" || lower === "x-large" || lower === "xlarge") return "xl" as const;
+            if (lower === "l"  || lower === "large")                          return "l"  as const;
+            if (lower === "m"  || lower === "medium")                         return "m"  as const;
+            if (lower === "s"  || lower === "small")                          return "s"  as const;
+            return "xl" as const;
+          })();
+          const refineBuf     = Buffer.from(refineCroppedUrl.split(",")[1] ?? "", "base64");
+          const refineComp    = await compositeQrOnto(refineBuf, refineTrackingUrl, refineSizeKey);
+          refineFinalUrl      = `data:image/jpeg;base64,${refineComp.toString("base64")}`;
+        }
+      } catch (refineQrErr) {
+        req.log.warn({ refineQrErr, refineSpotId }, "grok-refine: QR compositing failed — returning ad without QR");
+      }
+    }
+
+    refineEndJson({ imageUrl: refineFinalUrl });
   } catch (err) {
     clearInterval(refineKeepAliveTimer);
     const msg = err instanceof Error ? err.message : "Ad generation failed";
