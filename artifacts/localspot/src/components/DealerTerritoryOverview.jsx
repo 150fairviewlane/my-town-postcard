@@ -181,6 +181,12 @@ function TerritoryCard({ campaign, showRevenue }) {
             </div>
           </div>
         )}
+        <div style={{ gridColumn: "1 / -1" }}>
+          <div style={{ fontSize: 11, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4 }}>QR Scans</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: "#374151" }}>
+            {(campaign.qrScans ?? 0).toLocaleString()}
+          </div>
+        </div>
       </div>
 
       {campaign.pageUrl && (
@@ -236,6 +242,7 @@ export default function DealerTerritoryOverview({ campaigns = [], totals = {}, s
 
   const revenueCentsTotal     = totals.totalRevenueCentsAcrossAll ?? totals.totalRevenueCents ?? 0;
   const commissionCentsTotal  = totals.totalCommissionCentsAcrossAll ?? totals.totalCommissionCents ?? 0;
+  const totalQrScans          = totals.totalQrScansAcrossAll ?? totals.totalQrScans ?? campaigns.reduce((s, c) => s + (c.qrScans ?? 0), 0);
 
   const moneyTotal      = showRevenue ? revenueCentsTotal : commissionCentsTotal;
   const moneyTotalLabel = showRevenue ? "Total Revenue" : "Your Commission";
@@ -285,6 +292,11 @@ export default function DealerTerritoryOverview({ campaigns = [], totals = {}, s
           value={`${fillRate}%`}
           color={fillRate >= 80 ? "#15803d" : fillRate >= 50 ? "#92400e" : "#374151"}
           sub={totalSpots > 0 ? `${totalSold} of ${totalSpots}` : "No spots yet"}
+        />
+        <StatCard
+          label="QR Scans"
+          value={totalQrScans.toLocaleString()}
+          sub="total ad engagements"
         />
       </div>
 

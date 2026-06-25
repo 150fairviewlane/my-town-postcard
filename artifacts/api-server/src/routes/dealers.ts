@@ -1422,6 +1422,27 @@ router.get("/dealers/portal-data", requireDealerAuth, async (req, res): Promise<
 
   const origin = getOrigin(req);
 
+  // Fetch QR scan counts for all dealer campaigns in a single query.
+  // All qr_scan rows originate from valid tracking_code lookups, so they
+  // are implicitly from paid spots — no extra join needed.
+  const campaignIds = allCampaigns.map((c) => c.id);
+  const scanCountsByCampaign: Record<number, number> = {};
+  if (campaignIds.length > 0) {
+    const scanRows = await db
+      .select({
+        campaignId: qrScansTable.campaignId,
+        count: sql<number>`cast(count(*) as integer)`,
+      })
+      .from(qrScansTable)
+      .where(inArray(qrScansTable.campaignId, campaignIds))
+      .groupBy(qrScansTable.campaignId);
+    for (const row of scanRows) {
+      if (row.campaignId !== null) {
+        scanCountsByCampaign[row.campaignId] = row.count;
+      }
+    }
+  }
+
   const campaignSummaries = await Promise.all(
     allCampaigns.map(async (c) => {
       const spots = await db
@@ -1443,6 +1464,7 @@ router.get("/dealers/portal-data", requireDealerAuth, async (req, res): Promise<
         availableSpots: spots.filter((s) => s.status === "available").length,
         revenueCents,
         commissionCents: computeCommissionCents(revenueCents),
+        qrScans: scanCountsByCampaign[c.id] ?? 0,
         spots: spots.map((s) => ({
           gridArea: s.gridArea,
           side: s.side,
@@ -1455,6 +1477,7 @@ router.get("/dealers/portal-data", requireDealerAuth, async (req, res): Promise<
   );
 
   const totalRevenueCents = campaignSummaries.reduce((s, c) => s + c.revenueCents, 0);
+  const totalQrScans = campaignSummaries.reduce((s, c) => s + c.qrScans, 0);
 
   res.json({
     dealerId: dealer.id,
@@ -1469,6 +1492,7 @@ router.get("/dealers/portal-data", requireDealerAuth, async (req, res): Promise<
     totals: {
       totalRevenueCents,
       totalCommissionCents: computeCommissionCents(totalRevenueCents),
+      totalQrScans,
     },
   });
 });
