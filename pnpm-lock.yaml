@@ -758,6 +758,9 @@ importers:
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.2(@types/pg@8.18.0)(pg@8.20.0)
+      jsqr:
+        specifier: ^1.4.0
+        version: 1.4.0
       openai:
         specifier: ^6.34.0
         version: 6.34.0(zod@4.3.6)

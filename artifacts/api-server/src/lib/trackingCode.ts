@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db, spotsTable, campaignsTable, type Spot } from "@workspace/db";
+import { compositeQrOnto, type SizeKey } from "./compositeQr";
 
 // Convert any string into a URL-safe lowercase slug. Strips accents, replaces
 // runs of non-alphanumerics with a single dash, trims leading/trailing dashes,
@@ -89,4 +90,58 @@ export async function ensureTrackingCode(spot: Spot): Promise<string> {
   throw new Error(
     `Failed to generate a unique tracking code for spot ${spot.id} after multiple attempts`,
   );
+}
+
+/**
+ * After a spot is marked paid and its tracking code is assigned, if the spot's
+ * Grok-generated ad (stored as a data: URL in templateData.finishedAdUrl) still
+ * carries a generic preview QR (pointing at the business website or the
+ * mytownpostcard.com homepage), this function re-composites the real tracking QR
+ * at the same pixel coordinates and updates the DB row.
+ *
+ * Safe to call concurrently — compositing at fixed coordinates is naturally
+ * idempotent (second write produces identical pixels). Fire-and-forget from
+ * both checkout.ts and webhooks.ts; callers must catch and warn-log.
+ *
+ * The existing order-INSERT race gate already ensures only one of the two callers
+ * reaches this function per spot, but even if both ran the result would be identical.
+ */
+export async function swapGrokQrInTemplateData(spotId: number): Promise<void> {
+  const [spot] = await db
+    .select({
+      trackingCode: spotsTable.trackingCode,
+      templateData: spotsTable.templateData,
+      size:         spotsTable.size,
+    })
+    .from(spotsTable)
+    .where(eq(spotsTable.id, spotId))
+    .limit(1);
+
+  if (!spot?.trackingCode || !spot.templateData) return;
+
+  let parsed: Record<string, unknown>;
+  try { parsed = JSON.parse(spot.templateData) as Record<string, unknown>; }
+  catch { return; }
+
+  const finishedAdUrl = parsed.finishedAdUrl;
+  if (typeof finishedAdUrl !== "string" || !finishedAdUrl.startsWith("data:image")) return;
+
+  // Prefer sizeKey stored in templateData (set by the Grok popup at save time);
+  // fall back to spot.size from the DB if the field is missing.
+  const sizeRaw = (typeof parsed.sizeKey === "string" ? parsed.sizeKey : spot.size ?? "").toLowerCase();
+  const sizeKey: SizeKey =
+    sizeRaw === "xl" || sizeRaw === "x-large" || sizeRaw === "xlarge" ? "xl" :
+    sizeRaw === "l"  || sizeRaw === "large"                           ? "l"  :
+    sizeRaw === "m"  || sizeRaw === "medium"                          ? "m"  :
+    sizeRaw === "s"  || sizeRaw === "small"                           ? "s"  : "xl";
+
+  const trackingUrl = `${(process.env.APP_URL ?? "https://mytownpostcard.com").replace(/\/$/, "")}/go/${spot.trackingCode}`;
+  const buf         = Buffer.from(finishedAdUrl.split(",")[1] ?? "", "base64");
+  const composited  = await compositeQrOnto(buf, trackingUrl, sizeKey);
+  const newDataUrl  = `data:image/jpeg;base64,${composited.toString("base64")}`;
+
+  await db
+    .update(spotsTable)
+    .set({ templateData: JSON.stringify({ ...parsed, finishedAdUrl: newDataUrl }) })
+    .where(eq(spotsTable.id, spotId));
 }

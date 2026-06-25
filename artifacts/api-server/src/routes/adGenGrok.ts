@@ -33,6 +33,30 @@ const WORKSPACE_ROOT = findWorkspaceRoot();
 
 const router: IRouter = Router();
 
+/**
+ * Resolve the QR target URL for a preview (pre-purchase) ad generate/refine pass.
+ *
+ * Edge-case table:
+ *   ""                     → "https://mytownpostcard.com"  (missing/empty)
+ *   "joesplumbing.com"     → "https://joesplumbing.com"   (bare domain, prepend)
+ *   "https://example.com"  → "https://example.com"        (already valid)
+ *   "not a url !!!"        → "https://mytownpostcard.com"  (fails new URL())
+ *   "javascript:alert(1)"  → "https://mytownpostcard.com"  (non-http protocol)
+ */
+function resolvePreviewQrUrl(website: string | undefined | null): string {
+  const FALLBACK = "https://mytownpostcard.com";
+  const raw = (website ?? "").trim();
+  if (!raw) return FALLBACK;
+  const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  try {
+    const u = new URL(withProtocol);
+    if (u.protocol !== "http:" && u.protocol !== "https:") return FALLBACK;
+    return withProtocol;
+  } catch {
+    return FALLBACK;
+  }
+}
+
 const GenerateSchema = z.object({
   bizName:   z.string().min(1, "bizName is required"),
   tagline:   z.string().optional().default(""),
@@ -1553,18 +1577,65 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
 
   /**
    * Crop image to print dimensions then composite a verified QR code.
-   * Skips QR compositing (returns plain image) only when the spot has no tracking
-   * code yet (pre-payment preview). For tracked spots, compositing/decode failures
-   * are allowed to propagate — shipping an unverified QR is worse than a 502.
+   *
+   * Paid spots (spotTrackingCode set):
+   *   Hard gate — propagates on failure → outer catch → 502.
+   *   Shipping an unverified QR is worse than a failed response.
+   *
+   * Previews (no tracking code yet):
+   *   Soft gate — two-level fallback, never fails the generation request.
+   *   Level 1: business website QR (from resolvePreviewQrUrl).
+   *   Level 2: if level 1 fails, homepage QR (logged as product telemetry warn).
+   *   Level 3: if level 2 also fails, plain cropped image (logged as error/bug).
    */
   async function cropAndQr(url: string): Promise<string> {
     const dataUrl = await cropToSpotDims(url, cropDim.w, cropDim.h);
-    if (!spotTrackingCode) return dataUrl;
-    const appUrl      = (process.env.APP_URL ?? "").replace(/\/$/, "");
-    const trackingUrl = `${appUrl}/go/${spotTrackingCode}`;
-    const buf         = Buffer.from(dataUrl.split(",")[1] ?? "", "base64");
-    const composited  = await compositeQrOnto(buf, trackingUrl, toSizeKey(d.sizeKey));
-    return `data:image/jpeg;base64,${composited.toString("base64")}`;
+
+    if (spotTrackingCode) {
+      // ── Paid spot: hard gate ──────────────────────────────────────────
+      const trackingUrl = `${(process.env.APP_URL ?? "https://mytownpostcard.com").replace(/\/$/, "")}/go/${spotTrackingCode}`;
+      const buf        = Buffer.from(dataUrl.split(",")[1] ?? "", "base64");
+      const composited = await compositeQrOnto(buf, trackingUrl, toSizeKey(d.sizeKey));
+      return `data:image/jpeg;base64,${composited.toString("base64")}`;
+    }
+
+    // ── Preview: soft gate with two-level fallback ────────────────────────
+    const previewUrl = resolvePreviewQrUrl(d.website);
+    const buf        = Buffer.from(dataUrl.split(",")[1] ?? "", "base64");
+    const sKey       = toSizeKey(d.sizeKey);
+
+    const tryCompositePreview = async (qrUrl: string): Promise<string | null> => {
+      try {
+        const composited = await compositeQrOnto(buf, qrUrl, sKey);
+        return `data:image/jpeg;base64,${composited.toString("base64")}`;
+      } catch { return null; }
+    };
+
+    const websiteResult = await tryCompositePreview(previewUrl);
+    if (websiteResult) return websiteResult;
+
+    if (previewUrl !== "https://mytownpostcard.com") {
+      // Level 2: website URL caused failure — try homepage fallback.
+      // warn = product telemetry: if this fires often, tighten resolvePreviewQrUrl.
+      req.log.warn(
+        { previewUrl, bizName: d.bizName },
+        "cropAndQr: customer website URL failed QR encoding — falling back to homepage QR",
+      );
+      const homepageResult = await tryCompositePreview("https://mytownpostcard.com");
+      if (homepageResult) return homepageResult;
+      // Level 3: homepage also failed — compositing code itself is broken.
+      req.log.error(
+        { bizName: d.bizName },
+        "cropAndQr: homepage QR also failed — compositing bug; returning plain image",
+      );
+    } else {
+      // previewUrl was already the homepage (empty/invalid website) and failed.
+      req.log.error(
+        { bizName: d.bizName },
+        "cropAndQr: homepage QR failed — compositing bug; returning plain image",
+      );
+    }
+    return dataUrl;
   }
 
   // Start keepalive immediately — before photo/logo fetches AND the xAI call.
@@ -1917,6 +1988,7 @@ const RefineSchema = z.object({
   imageDataUrl: z.string().min(1, "imageDataUrl is required"),
   instruction:  z.string().min(1, "instruction is required").max(500),
   sizeKey:      z.string().optional().default("XL"),
+  website:      z.string().optional().default(""),
   spotId:       z.number().int().optional(),
 });
 
@@ -1927,7 +1999,7 @@ router.post("/grok-ad-generator/refine", async (req, res) => {
     res.status(400).json({ error: msgs });
     return;
   }
-  const { imageDataUrl, instruction, sizeKey, spotId: refineSpotId } = parsed.data;
+  const { imageDataUrl, instruction, sizeKey, website: refineWebsite, spotId: refineSpotId } = parsed.data;
 
   const apiKey = process.env["XAI_API_KEY"];
   if (!apiKey) {
@@ -2037,38 +2109,81 @@ router.post("/grok-ad-generator/refine", async (req, res) => {
 
     const refineCroppedUrl = await cropToSpotDims(imageUrl, dim.w, dim.h);
 
-    // Composite QR onto the refined image if the spot has a tracking code.
-    // Load tracking code inside the keepalive window (after the xAI call returns).
-    // DB failures skip QR gracefully; compositing/verification failures propagate
-    // as hard errors — same gate as generate for tracked spots.
-    let refineFinalUrl = refineCroppedUrl;
+    // Composite QR onto the refined image.
+    // Branch is keyed strictly off tracking-code presence:
+    //   Paid spot (refineIsPreview = false): hard gate — failure propagates → 502.
+    //   Preview  (refineIsPreview = true):  soft gate — two-level fallback.
+    const refineSizeKey = (() => {
+      const lower = sizeKey.toLowerCase();
+      if (lower === "xl" || lower === "x-large" || lower === "xlarge") return "xl" as const;
+      if (lower === "l"  || lower === "large")                          return "l"  as const;
+      if (lower === "m"  || lower === "medium")                         return "m"  as const;
+      if (lower === "s"  || lower === "small")                          return "s"  as const;
+      return "xl" as const;
+    })();
+
+    let refineIsPreview = true;
+    let refineTrackingUrl = resolvePreviewQrUrl(refineWebsite);
     if (refineSpotId != null) {
-      let refineTrackingCode: string | null = null;
       try {
         const [refineSpotRow] = await db
           .select({ trackingCode: spotsTable.trackingCode })
           .from(spotsTable)
           .where(eq(spotsTable.id, refineSpotId))
           .limit(1);
-        refineTrackingCode = refineSpotRow?.trackingCode ?? null;
+        if (refineSpotRow?.trackingCode) {
+          refineTrackingUrl = `${(process.env.APP_URL ?? "https://mytownpostcard.com").replace(/\/$/, "")}/go/${refineSpotRow.trackingCode}`;
+          refineIsPreview   = false;
+        }
       } catch (dbErr) {
-        req.log.warn({ dbErr, refineSpotId }, "grok-refine: DB error loading tracking code — QR compositing skipped");
+        req.log.warn({ dbErr, refineSpotId }, "grok-refine: DB error loading tracking code — using website/homepage fallback QR");
       }
-      if (refineTrackingCode) {
-        // Hard gate: compositeQrOnto throws propagate to the outer catch → 502
-        const refineAppUrl      = (process.env.APP_URL ?? "").replace(/\/$/, "");
-        const refineTrackingUrl = `${refineAppUrl}/go/${refineTrackingCode}`;
-        const refineSizeKey     = (() => {
-          const lower = sizeKey.toLowerCase();
-          if (lower === "xl" || lower === "x-large" || lower === "xlarge") return "xl" as const;
-          if (lower === "l"  || lower === "large")                          return "l"  as const;
-          if (lower === "m"  || lower === "medium")                         return "m"  as const;
-          if (lower === "s"  || lower === "small")                          return "s"  as const;
-          return "xl" as const;
-        })();
-        const refineBuf  = Buffer.from(refineCroppedUrl.split(",")[1] ?? "", "base64");
-        const refineComp = await compositeQrOnto(refineBuf, refineTrackingUrl, refineSizeKey);
-        refineFinalUrl   = `data:image/jpeg;base64,${refineComp.toString("base64")}`;
+    }
+
+    const refineBuf = Buffer.from(refineCroppedUrl.split(",")[1] ?? "", "base64");
+    let refineFinalUrl: string;
+
+    if (!refineIsPreview) {
+      // ── Paid spot: hard gate ──────────────────────────────────────────────
+      const refineComp = await compositeQrOnto(refineBuf, refineTrackingUrl, refineSizeKey);
+      refineFinalUrl   = `data:image/jpeg;base64,${refineComp.toString("base64")}`;
+    } else {
+      // ── Preview: soft gate with two-level fallback ────────────────────────
+      const tryRefineComposite = async (qrUrl: string): Promise<string | null> => {
+        try {
+          const comp = await compositeQrOnto(refineBuf, qrUrl, refineSizeKey);
+          return `data:image/jpeg;base64,${comp.toString("base64")}`;
+        } catch { return null; }
+      };
+
+      const refineWebsiteResult = await tryRefineComposite(refineTrackingUrl);
+      if (refineWebsiteResult) {
+        refineFinalUrl = refineWebsiteResult;
+      } else if (refineTrackingUrl !== "https://mytownpostcard.com") {
+        // Level 2: website URL caused failure — try homepage fallback.
+        // warn = product telemetry: customer-provided URL failed QR encoding.
+        req.log.warn(
+          { refineTrackingUrl, refineSpotId },
+          "grok-refine: customer website URL failed QR encoding — falling back to homepage QR",
+        );
+        const refineHomepageResult = await tryRefineComposite("https://mytownpostcard.com");
+        if (refineHomepageResult) {
+          refineFinalUrl = refineHomepageResult;
+        } else {
+          // Level 3: homepage also failed — compositing bug.
+          req.log.error(
+            { refineSpotId },
+            "grok-refine: homepage QR also failed — compositing bug; returning plain cropped image",
+          );
+          refineFinalUrl = refineCroppedUrl;
+        }
+      } else {
+        // previewUrl was already the homepage (empty/invalid website) and failed.
+        req.log.error(
+          { refineSpotId },
+          "grok-refine: homepage QR failed — compositing bug; returning plain cropped image",
+        );
+        refineFinalUrl = refineCroppedUrl;
       }
     }
 

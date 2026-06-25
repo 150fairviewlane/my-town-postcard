@@ -3,7 +3,7 @@ import { eq, and, isNull, sql } from "drizzle-orm";
 import { db, spotsTable, ordersTable, campaignsTable, spotSubscriptionsTable, dealersTable } from "@workspace/db";
 import { sendAdProofEmail, sendAdminNewOrder, sendDealerNewSaleEmail } from "../lib/emails";
 import { computeCommissionCents } from "../lib/commission";
-import { ensureTrackingCode } from "../lib/trackingCode";
+import { ensureTrackingCode, swapGrokQrInTemplateData } from "../lib/trackingCode";
 import { releaseReservedSpot } from "../lib/expirationCleanup";
 import { logger } from "../lib/logger";
 import { getStripeClient } from "../lib/stripeClient";
@@ -584,6 +584,16 @@ export async function markSpotPaidAndNotify(
     req.log.info({ spotId, trackingCode: code }, "Tracking code ensured for paid spot");
   } catch (err) {
     req.log.error({ err, spotId }, "Failed to assign tracking code — continuing");
+  }
+
+  // Swap the generic preview QR in any Grok-generated ad stored in
+  // templateData.finishedAdUrl with the real tracking QR now that the
+  // tracking code is assigned. Fire-and-forget — must never fail the webhook.
+  try {
+    await swapGrokQrInTemplateData(spotId);
+    logger.info({ spotId }, "Grok preview QR swapped for real tracking QR");
+  } catch (swapErr: any) {
+    logger.warn({ err: swapErr?.message, spotId }, "Grok QR swap in templateData failed — non-critical");
   }
 
   const orderInfo = {

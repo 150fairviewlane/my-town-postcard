@@ -8,7 +8,7 @@ import {
   ConfirmPaymentResponse,
 } from "@workspace/api-zod";
 import { sendAdProofEmail, sendAdminNewOrder } from "../lib/emails";
-import { ensureTrackingCode } from "../lib/trackingCode";
+import { ensureTrackingCode, swapGrokQrInTemplateData } from "../lib/trackingCode";
 import { logger } from "../lib/logger";
 import { markSpotPaidAndNotify } from "./webhooks";
 import {
@@ -308,6 +308,16 @@ router.post("/checkout/confirm", async (req, res): Promise<void> => {
     req.log.info({ spotId: spot.id, trackingCode: code }, "Tracking code ensured for paid spot");
   } catch (err) {
     req.log.error({ err, spotId: spot.id }, "Failed to assign tracking code — continuing");
+  }
+
+  // Swap the generic preview QR in any Grok-generated ad stored in
+  // templateData.finishedAdUrl with the real tracking QR now that the
+  // tracking code is assigned. Fire-and-forget — must never block confirmation.
+  try {
+    await swapGrokQrInTemplateData(spot.id);
+    req.log.info({ spotId: spot.id }, "Grok preview QR swapped for real tracking QR");
+  } catch (swapErr: any) {
+    req.log.warn({ err: swapErr?.message, spotId: spot.id }, "Grok QR swap in templateData failed — non-critical");
   }
 
   const parsedTemplateData = (() => {
