@@ -7,7 +7,10 @@
 //   artifacts/localspot/src/lib/subscriptionPlans.js
 // — keep the two in sync if you tweak discounts or labels.
 
-export type CommitmentType = "single" | "6_issue" | "12_issue";
+// "6_issue" is retained in the type union for backward compatibility with
+// existing DB rows. It is no longer offered at checkout; new subscriptions
+// use "4_issue" (Quarterly Plan) or "12_issue" (Premium Visibility Plan).
+export type CommitmentType = "single" | "4_issue" | "6_issue" | "12_issue";
 
 export type SpotSize = "xl" | "large" | "medium" | "small";
 
@@ -35,9 +38,19 @@ export const PLAN_METADATA: Record<CommitmentType, PlanMetadata> = {
     discount: 0,
     highlight: false,
   },
+  "4_issue": {
+    key: "4_issue",
+    customerLabel: "Quarterly Plan",
+    subtitle: "Runs for 4 consecutive issues — save 10%",
+    totalIssues: 4,
+    discount: 0.1,
+    highlight: false,
+  },
   "6_issue": {
+    // Legacy plan — no longer offered at checkout. Retained so existing DB
+    // rows and admin displays remain functional. Do not add to parseCommitmentType.
     key: "6_issue",
-    customerLabel: "Growth Plan",
+    customerLabel: "Growth Plan (Legacy)",
     subtitle: "Runs for 6 consecutive issues — save 10%",
     totalIssues: 6,
     discount: 0.1,
@@ -65,7 +78,7 @@ export const BASE_PRICE_CENTS: Record<SpotSize, number> = {
 export const HOMES_PER_ISSUE = 5000;
 
 /**
- * Per-month price for a subscription tier. Rounded to the nearest cent so
+ * Per-issue price for a subscription tier. Rounded to the nearest cent so
  * Stripe gets a whole-cent amount. For commitmentType="single" this just
  * returns the base price.
  */
@@ -92,19 +105,18 @@ export function costPerHouseholdCents(size: SpotSize, commitmentType: Commitment
 }
 
 /**
- * Validate / narrow an arbitrary string into a CommitmentType. Used by
- * the API layer to validate request bodies without dragging Zod into
- * every helper.
+ * Validate / narrow an arbitrary string into a CommitmentType that is
+ * currently offered at checkout. "6_issue" is intentionally excluded —
+ * it is a legacy plan and new checkout sessions must not use it.
  */
 export function parseCommitmentType(raw: unknown): CommitmentType | null {
-  if (raw === "single" || raw === "6_issue" || raw === "12_issue") return raw;
+  if (raw === "single" || raw === "4_issue" || raw === "12_issue") return raw;
   return null;
 }
 
 /**
- * Adds N calendar months to `from` and returns the resulting Date. Used
- * to compute the Stripe `cancel_at` timestamp so the subscription
- * auto-cancels at the end of its committed term without auto-renewing.
+ * Adds N calendar months to `from` and returns the resulting Date. Kept
+ * for legacy subscription row compatibility and renewal scheduler.
  */
 export function addMonths(from: Date, months: number): Date {
   const d = new Date(from.getTime());

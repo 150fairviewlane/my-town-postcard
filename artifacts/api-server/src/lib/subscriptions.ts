@@ -15,6 +15,11 @@ import {
   monthlyPriceCents,
   totalCommitmentValueCents,
 } from "./subscriptionPricing";
+import { getStripeClient, isStripeConfigured } from "./stripeClient";
+import {
+  sendSubscriptionMailingSoonEmail,
+  sendSubscriptionPaymentFailedEmail,
+} from "./emails";
 
 /**
  * Atomically claim a Stripe webhook event for processing.
@@ -155,24 +160,23 @@ export async function createPendingSubscription(opts: {
 
 /**
  * Mark a subscription row active after a successful Stripe Checkout
- * Session, capturing the Stripe IDs and commitment window. Idempotent —
- * safe to call from both the webhook and the synchronous /confirm path.
+ * Session (payment mode), capturing the customer id and saved payment
+ * method for future off-session charges. Idempotent — safe to call from
+ * both the webhook and the synchronous /confirm path.
  */
 export async function activateSubscription(opts: {
   subscriptionRecordId: number;
-  stripeSubscriptionId: string;
   stripeCustomerId: string;
+  stripePaymentMethodId: string;
   commitmentStartDate: Date;
-  commitmentEndDate: Date;
 }): Promise<boolean> {
   const result = await db
     .update(spotSubscriptionsTable)
     .set({
       subscriptionStatus: "active",
-      stripeSubscriptionId: opts.stripeSubscriptionId,
       stripeCustomerId: opts.stripeCustomerId,
+      stripePaymentMethodId: opts.stripePaymentMethodId,
       commitmentStartDate: opts.commitmentStartDate,
-      commitmentEndDate: opts.commitmentEndDate,
       updatedAt: new Date(),
     })
     .where(
@@ -325,6 +329,7 @@ export async function findPreCommittedForCampaign(campaignId: number): Promise<
         WHERE x.subscription_id = s.id AND x.campaign_id = ${campaignId}
       )
     GROUP BY s.id
+    HAVING COALESCE(SUM(CASE WHEN a.included_in_print THEN 1 ELSE 0 END), 0) < s.commitment_total_issues
     ORDER BY s.created_at ASC
   `);
 
@@ -432,7 +437,119 @@ export async function markRenewalEmailSent(
     .where(eq(spotSubscriptionsTable.id, subscriptionId));
 }
 
+/**
+ * Fire off-session Stripe charges for every active subscription assigned
+ * to a campaign whose first-issue billing hasn't been triggered yet. Called
+ * by markSpotPaidAndNotify when the 12th spot on a campaign is sold —
+ * at that threshold the campaign is considered "going to print" and all
+ * subscribers are billed for their next issue.
+ *
+ * Idempotent per-assignment via an optimistic-lock UPDATE on chargeTriggeredAt.
+ * Concurrent invocations (webhook retries) claim different rows.
+ */
+export async function triggerSubscriptionBillingForCampaign(
+  campaignId: number,
+): Promise<void> {
+  const result = await db.execute<{
+    assignment_id: number;
+    subscription_id: number;
+    stripe_customer_id: string;
+    stripe_payment_method_id: string;
+    monthly_price_cents: number;
+    business_name: string;
+    contact_email: string;
+  }>(sql`
+    SELECT
+      a.id AS assignment_id,
+      s.id AS subscription_id,
+      s.stripe_customer_id,
+      s.stripe_payment_method_id,
+      s.monthly_price_cents,
+      s.business_name,
+      s.contact_email
+    FROM subscription_issue_assignments a
+    JOIN spot_subscriptions s ON s.id = a.subscription_id
+    WHERE a.campaign_id = ${campaignId}
+      AND a.charge_triggered_at IS NULL
+      AND s.subscription_status = 'active'
+      AND s.stripe_customer_id IS NOT NULL
+      AND s.stripe_payment_method_id IS NOT NULL
+  `);
+
+  if (result.rows.length === 0) return;
+  logger.info({ campaignId, count: result.rows.length }, "Triggering subscription billing for campaign");
+
+  for (const row of result.rows) {
+    const assignmentId = Number(row.assignment_id);
+    const subscriptionId = Number(row.subscription_id);
+
+    // Optimistic lock: only proceed if we can claim charge_triggered_at atomically.
+    const claimed = await db
+      .update(subscriptionIssueAssignmentsTable)
+      .set({ chargeTriggeredAt: new Date() })
+      .where(
+        and(
+          eq(subscriptionIssueAssignmentsTable.id, assignmentId),
+          isNull(subscriptionIssueAssignmentsTable.chargeTriggeredAt),
+        ),
+      )
+      .returning({ id: subscriptionIssueAssignmentsTable.id });
+    if (claimed.length === 0) {
+      logger.info({ assignmentId, subscriptionId }, "Assignment already claimed — skipping");
+      continue;
+    }
+
+    try {
+      if (!(await isStripeConfigured())) {
+        logger.warn({ subscriptionId, campaignId }, "Stripe not configured — skipping off-session billing");
+        continue;
+      }
+      const stripe = await getStripeClient();
+      await stripe.paymentIntents.create({
+        amount: Number(row.monthly_price_cents),
+        currency: "usd",
+        customer: row.stripe_customer_id,
+        payment_method: row.stripe_payment_method_id,
+        confirm: true,
+        off_session: true,
+        description: `My Town Postcard — issue billing for ${row.business_name} (campaign #${campaignId})`,
+        metadata: {
+          kind: "spot_subscription_billing",
+          subscription_id: String(subscriptionId),
+          campaign_id: String(campaignId),
+          assignment_id: String(assignmentId),
+        },
+      });
+      logger.info({ subscriptionId, campaignId, assignmentId }, "Off-session subscription billing succeeded");
+      sendSubscriptionMailingSoonEmail({
+        businessName: row.business_name,
+        contactEmail: row.contact_email,
+        amountCents: Number(row.monthly_price_cents),
+      }).catch((err) =>
+        logger.error({ err, subscriptionId }, "Failed to send mailing-soon email — non-critical"),
+      );
+    } catch (err: any) {
+      logger.error({ err, subscriptionId, campaignId }, "Off-session subscription billing failed — marking past_due");
+      try {
+        await db
+          .update(spotSubscriptionsTable)
+          .set({ subscriptionStatus: "past_due", updatedAt: new Date() })
+          .where(eq(spotSubscriptionsTable.id, subscriptionId));
+      } catch (dbErr) {
+        logger.error({ dbErr, subscriptionId }, "Failed to mark subscription past_due");
+      }
+      sendSubscriptionPaymentFailedEmail({
+        businessName: row.business_name,
+        contactEmail: row.contact_email,
+        amountCents: Number(row.monthly_price_cents),
+      }).catch((e) =>
+        logger.error({ e, subscriptionId }, "Failed to send payment-failed email — non-critical"),
+      );
+    }
+  }
+}
+
 // Reference unused imports to satisfy strict TS without hurting bundle.
-void isNull;
+void inArray;
 void spotsTable;
 void campaignsTable;

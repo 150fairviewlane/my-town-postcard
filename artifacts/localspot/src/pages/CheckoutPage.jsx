@@ -318,7 +318,7 @@ function PlanSelector({ size, value, onChange }) {
                 <div style={{ fontWeight: 800, fontSize: 16, color: "#111" }}>
                   {formatUsd(monthly)}
                   <span style={{ color: "#6b7280", fontWeight: 600, fontSize: 12 }}>
-                    {p.totalIssues > 1 ? "/mo" : ""}
+                    {p.totalIssues > 1 ? "/issue" : ""}
                   </span>
                 </div>
                 {p.totalIssues > 1 && (
@@ -337,7 +337,7 @@ function PlanSelector({ size, value, onChange }) {
         );
       })}
       <div style={{ fontSize: 11, color: "#9ca3af", lineHeight: 1.4 }}>
-        Subscriptions auto-cancel at the end of their committed term — no surprise renewals. We'll email you 30 and 7 days before your run ends.
+        Multi-issue plans are billed per issue when each mailing goes to print — no monthly charges between mailings. Your card is saved for automatic billing on subsequent issues. No auto-renewal after your commitment ends.
       </div>
     </div>
   );

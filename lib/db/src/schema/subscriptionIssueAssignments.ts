@@ -32,6 +32,11 @@ export const subscriptionIssueAssignmentsTable = pgTable(
     includedInPrint: boolean("included_in_print").notNull().default(false),
     mailedAt: timestamp("mailed_at", { withTimezone: true }),
     skippedReason: text("skipped_reason"),
+    // Set to NOW() when an off-session Stripe PaymentIntent is fired for this
+    // assignment. NULL means not yet billed. The first issue is marked at
+    // subscription activation (already paid at checkout); subsequent issues are
+    // marked when the campaign's billing trigger fires (12-spot threshold).
+    chargeTriggeredAt: timestamp("charge_triggered_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({

@@ -3,7 +3,8 @@ import { useLocation } from "wouter";
 import AdminShell from "../components/AdminShell";
 
 const PLAN_LABEL = {
-  "6_issue": "Growth (6)",
+  "4_issue": "Quarterly (4)",
+  "6_issue": "Growth (6 — legacy)",
   "12_issue": "Premium (12)",
   single: "One-Time",
 };
@@ -86,13 +87,26 @@ export default function AdminSubscriptionsPage() {
   };
 
   const handleCancel = async (id) => {
-    if (!window.confirm("Cancel this subscription? Customer will be notified by Stripe and billing will stop.")) return;
+    if (!window.confirm("Cancel this subscription? Billing will stop and the customer will receive no further issues.")) return;
     try {
       const res = await authedFetch(`/api/admin/subscriptions/${id}/cancel`, token, { method: "POST" });
       if (!res.ok) throw new Error("Cancel failed");
       setReloadKey((k) => k + 1);
     } catch (err) {
       alert(err?.message || "Cancel failed");
+    }
+  };
+
+  const handleRetryBilling = async (id) => {
+    if (!window.confirm("Retry billing for this subscription? A new charge will be attempted on the saved card.")) return;
+    try {
+      const res = await authedFetch(`/api/admin/subscriptions/${id}/retry-billing`, token, { method: "POST" });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.error || "Retry failed");
+      alert(body.message || "Billing retry initiated.");
+      setReloadKey((k) => k + 1);
+    } catch (err) {
+      alert(err?.message || "Retry failed");
     }
   };
 
@@ -154,14 +168,24 @@ export default function AdminSubscriptionsPage() {
                     {s.commitmentEndDate ? new Date(s.commitmentEndDate).toLocaleDateString() : "—"}
                   </td>
                   <td style={{ padding: "10px 12px", textAlign: "right" }}>
-                    {(s.subscriptionStatus === "active" || s.subscriptionStatus === "past_due") && (
-                      <button
-                        onClick={() => handleCancel(s.id)}
-                        style={{ padding: "5px 10px", borderRadius: 6, border: "1.5px solid #fecaca", background: "#fff", color: "#991b1b", fontWeight: 700, fontSize: 11, cursor: "pointer" }}
-                      >
-                        Cancel
-                      </button>
-                    )}
+                    <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                      {s.subscriptionStatus === "past_due" && (
+                        <button
+                          onClick={() => handleRetryBilling(s.id)}
+                          style={{ padding: "5px 10px", borderRadius: 6, border: "1.5px solid #fde68a", background: "#fffbeb", color: "#92400e", fontWeight: 700, fontSize: 11, cursor: "pointer" }}
+                        >
+                          Retry Billing
+                        </button>
+                      )}
+                      {(s.subscriptionStatus === "active" || s.subscriptionStatus === "past_due") && (
+                        <button
+                          onClick={() => handleCancel(s.id)}
+                          style={{ padding: "5px 10px", borderRadius: 6, border: "1.5px solid #fecaca", background: "#fff", color: "#991b1b", fontWeight: 700, fontSize: 11, cursor: "pointer" }}
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

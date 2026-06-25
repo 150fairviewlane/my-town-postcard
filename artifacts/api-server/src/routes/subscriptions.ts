@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request } from "express";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, isNull } from "drizzle-orm";
 import jwt from "jsonwebtoken";
 import {
   db,
@@ -17,7 +17,6 @@ import {
   PLAN_METADATA,
   monthlyPriceCents,
   totalCommitmentValueCents,
-  addMonths,
   type CommitmentType,
   type SpotSize,
 } from "../lib/subscriptionPricing";
@@ -82,7 +81,7 @@ router.post("/checkout/create-subscription-session", async (req, res): Promise<v
   const spotId = Number(req.body?.spotId);
   const commitmentType = parseCommitmentType(req.body?.commitmentType);
   if (!Number.isFinite(spotId) || !commitmentType || commitmentType === "single") {
-    res.status(400).json({ error: "spotId and a valid commitmentType (6_issue or 12_issue) are required" });
+    res.status(400).json({ error: "spotId and a valid commitmentType (4_issue or 12_issue) are required" });
     return;
   }
 
@@ -184,27 +183,31 @@ router.post("/checkout/create-subscription-session", async (req, res): Promise<v
     website: spot.website,
   });
 
-  // Stripe cancel_at — auto-cancel the subscription at the end of the
-  // committed term. Customer is NOT auto-renewed; renewal is opt-in via
-  // the T-30/T-7/post email sequence.
-  const startDate = new Date();
-  const endDate = addMonths(startDate, meta.totalIssues);
-  const cancelAtSeconds = Math.floor(endDate.getTime() / 1000);
-
   const origin = getOrigin(req);
   const session = await stripe.checkout.sessions.create({
-    mode: "subscription",
+    // Payment mode (not subscription): charge issue #1 now and save the card
+    // for future off-session charges when subsequent issues go to print.
+    mode: "payment",
     customer_email: spot.contactEmail,
+    payment_intent_data: {
+      setup_future_usage: "off_session",
+      description: `My Town Postcard — ${meta.customerLabel}: ${spot.businessName}`,
+      metadata: {
+        kind: "spot_subscription",
+        subscriptionRecordId: String(pending.id),
+        spotId: String(spot.id),
+        commitmentType,
+      },
+    },
     line_items: [
       {
         price_data: {
           currency: "usd",
           product_data: {
-            name: `LocalSpot Mailer — ${meta.customerLabel}`,
-            description: `${meta.totalIssues} consecutive issues, ${size.toUpperCase()} ad, ${spot.businessName}`,
+            name: `My Town Postcard — ${meta.customerLabel}`,
+            description: `${meta.totalIssues} consecutive issues, ${size.toUpperCase()} ad, ${spot.businessName} (issue 1 of ${meta.totalIssues})`,
           },
           unit_amount: monthlyCents,
-          recurring: { interval: "month" },
         },
         quantity: 1,
       },
@@ -214,18 +217,6 @@ router.post("/checkout/create-subscription-session", async (req, res): Promise<v
       subscriptionRecordId: String(pending.id),
       spotId: String(spot.id),
       commitmentType,
-      cancelAtSeconds: String(cancelAtSeconds),
-    },
-    // cancel_at cannot be set on subscription_data during Checkout Session
-    // creation — Stripe rejects it. We set it on the subscription object
-    // immediately after checkout completes (confirm route + webhook handler).
-    subscription_data: {
-      metadata: {
-        kind: "spot_subscription",
-        subscriptionRecordId: String(pending.id),
-        spotId: String(spot.id),
-        commitmentType,
-      },
     },
     success_url: `${origin}/subscription-confirmation?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/checkout/${spot.id}?cancelled=1`,
@@ -268,7 +259,7 @@ router.get("/checkout/subscription-confirm", async (req, res): Promise<void> => 
   const stripe = await getStripeClient();
   let session: any;
   try {
-    session = await stripe.checkout.sessions.retrieve(sessionId, { expand: ["subscription"] });
+    session = await stripe.checkout.sessions.retrieve(sessionId);
   } catch (err: any) {
     req.log.warn({ err: err?.message, sessionId }, "Could not retrieve subscription session");
     res.status(400).json({ error: "Could not verify checkout session." });
@@ -299,30 +290,35 @@ router.get("/checkout/subscription-confirm", async (req, res): Promise<void> => 
     return;
   }
 
-  const stripeSubObj = typeof session.subscription === "string"
-    ? await stripe.subscriptions.retrieve(session.subscription)
-    : session.subscription;
-  const stripeSubscriptionId = stripeSubObj?.id ?? null;
   const stripeCustomerId = typeof session.customer === "string" ? session.customer : session.customer?.id ?? null;
-  if (!stripeSubscriptionId || !stripeCustomerId) {
-    res.status(500).json({ error: "Stripe session missing subscription or customer references." });
+  const paymentIntentId = typeof session.payment_intent === "string"
+    ? session.payment_intent
+    : (session.payment_intent as any)?.id ?? null;
+  if (!paymentIntentId || !stripeCustomerId) {
+    res.status(500).json({ error: "Stripe session missing payment intent or customer references." });
     return;
   }
 
-  // Set cancel_at on the Stripe subscription now that it exists.
-  // (cancel_at cannot be passed during Checkout Session creation.)
-  const cancelAtSeconds = Math.floor(
-    addMonths(new Date(), pending.commitmentTotalIssues).getTime() / 1000,
-  );
-  await stripe.subscriptions.update(stripeSubscriptionId, { cancel_at: cancelAtSeconds } as any);
+  let stripePaymentMethodId: string | null = null;
+  try {
+    const pi = await stripe.paymentIntents.retrieve(paymentIntentId);
+    stripePaymentMethodId = typeof pi.payment_method === "string"
+      ? pi.payment_method
+      : (pi.payment_method as any)?.id ?? null;
+  } catch (err: any) {
+    req.log.warn({ err: err?.message, paymentIntentId }, "Could not retrieve PaymentIntent for payment method");
+  }
+  if (!stripePaymentMethodId) {
+    res.status(500).json({ error: "Could not retrieve saved payment method from Stripe." });
+    return;
+  }
 
   await markSubscriptionAndSpotPaid({
     pendingRecordId: pending.id,
     spotId: pending.initialSpotId,
-    stripeSubscriptionId,
+    stripePaymentMethodId,
     stripeCustomerId,
-    cancelAtSeconds,
-    paymentRef: stripeSubscriptionId, // store the sub id in orders.stripe_payment_intent_id slot
+    paymentRef: paymentIntentId,
     monthlyCents: pending.monthlyPriceCents,
     req,
   });
@@ -341,13 +337,18 @@ router.get("/checkout/subscription-confirm", async (req, res): Promise<void> => 
 /**
  * Shared writer used by the synchronous confirm path AND the webhook handler.
  * Idempotent on the orders.stripePaymentIntentId unique index.
+ *
+ * On success:
+ *   1. Activates the local subscription row (saves stripeCustomerId + paymentMethodId).
+ *   2. Marks initial assignment chargeTriggeredAt = NOW() (issue #1 already paid here).
+ *   3. Marks spot paid and creates an order row.
+ *   4. Sends customer + admin notification emails.
  */
 export async function markSubscriptionAndSpotPaid(opts: {
   pendingRecordId: number;
   spotId: number;
-  stripeSubscriptionId: string;
+  stripePaymentMethodId: string;
   stripeCustomerId: string;
-  cancelAtSeconds: number | null;
   paymentRef: string;
   monthlyCents: number;
   req: Request | { log: { info: Function; warn: Function; error: Function } };
@@ -383,30 +384,20 @@ export async function markSubscriptionAndSpotPaid(opts: {
   if (otherPaid.length > 0 && otherPaid[0].ref !== opts.paymentRef) {
     req.log.error(
       { spotId: opts.spotId, existingRef: otherPaid[0].ref, duplicateRef: opts.paymentRef },
-      "Duplicate paid order detected — cancelling duplicate Stripe subscription",
+      "Duplicate paid order detected — marking local subscription canceled (no Stripe subscription to cancel)",
     );
-    try {
-      if (await isStripeConfigured()) {
-        const stripe = await getStripeClient();
-        await stripe.subscriptions.cancel(opts.stripeSubscriptionId);
-      }
-    } catch (err) {
-      req.log.error({ err }, "Could not cancel duplicate Stripe subscription — manual refund required");
-    }
     await db
       .update(spotSubscriptionsTable)
       .set({
         subscriptionStatus: "canceled",
-        stripeSubscriptionId: opts.stripeSubscriptionId,
         stripeCustomerId: opts.stripeCustomerId,
+        stripePaymentMethodId: opts.stripePaymentMethodId,
         updatedAt: new Date(),
       })
       .where(eq(spotSubscriptionsTable.id, opts.pendingRecordId));
     return;
   }
 
-  // Compute end date from Stripe cancel_at if present (most accurate),
-  // otherwise from our table's totalIssues.
   const [pending] = await db
     .select()
     .from(spotSubscriptionsTable)
@@ -416,17 +407,29 @@ export async function markSubscriptionAndSpotPaid(opts: {
     return;
   }
   const startDate = pending.commitmentStartDate ?? new Date();
-  const endDate = opts.cancelAtSeconds
-    ? new Date(opts.cancelAtSeconds * 1000)
-    : addMonths(startDate, pending.commitmentTotalIssues);
 
   await activateSubscription({
     subscriptionRecordId: opts.pendingRecordId,
-    stripeSubscriptionId: opts.stripeSubscriptionId,
     stripeCustomerId: opts.stripeCustomerId,
+    stripePaymentMethodId: opts.stripePaymentMethodId,
     commitmentStartDate: startDate,
-    commitmentEndDate: endDate,
   });
+
+  // Mark issue #1 as already billed (paid at Checkout) so the campaign
+  // billing trigger does not double-charge the customer on their first run.
+  try {
+    await db
+      .update(subscriptionIssueAssignmentsTable)
+      .set({ chargeTriggeredAt: new Date() })
+      .where(
+        and(
+          eq(subscriptionIssueAssignmentsTable.subscriptionId, opts.pendingRecordId),
+          isNull(subscriptionIssueAssignmentsTable.chargeTriggeredAt),
+        ),
+      );
+  } catch (err) {
+    req.log.error({ err, pendingRecordId: opts.pendingRecordId }, "Failed to mark initial assignment chargeTriggeredAt — non-critical");
+  }
 
   // Mark the spot paid (clear hold). Same shape as the one-time path.
   const [spot] = await db.select().from(spotsTable).where(eq(spotsTable.id, opts.spotId));
@@ -489,7 +492,7 @@ export async function markSubscriptionAndSpotPaid(opts: {
         totalIssues: pending.commitmentTotalIssues,
         monthlyCents: pending.monthlyPriceCents,
         totalCents: pending.totalCommitmentValueCents,
-        commitmentEndDate: endDate,
+        commitmentEndDate: null,
         campaignName: campaign?.name ?? null,
         mailDate: campaign?.mailDate ?? null,
       }),
@@ -679,6 +682,61 @@ router.get("/admin/campaigns/:id/preCommitted", requireAdmin, async (req, res): 
       })),
     ),
   });
+});
+
+/**
+ * POST /api/admin/subscriptions/:id/retry-billing
+ * Immediately retry the off-session Stripe charge for a past_due subscription.
+ * On success, marks the subscription active. On failure, returns 402.
+ */
+router.post("/admin/subscriptions/:id/retry-billing", requireAdmin, async (req, res): Promise<void> => {
+  const id = parseInt(String(req.params.id), 10);
+  if (!Number.isFinite(id)) {
+    res.status(400).json({ error: "Invalid subscription id" });
+    return;
+  }
+  const [sub] = await db.select().from(spotSubscriptionsTable).where(eq(spotSubscriptionsTable.id, id));
+  if (!sub) {
+    res.status(404).json({ error: "Subscription not found" });
+    return;
+  }
+  if (sub.subscriptionStatus !== "past_due") {
+    res.status(400).json({ error: "Only past_due subscriptions can have billing retried." });
+    return;
+  }
+  if (!sub.stripeCustomerId || !sub.stripePaymentMethodId) {
+    res.status(400).json({ error: "No saved payment method on file for this subscription. Cannot retry billing." });
+    return;
+  }
+  if (!(await isStripeConfigured())) {
+    res.status(503).json({ error: "Stripe not configured." });
+    return;
+  }
+  const stripe = await getStripeClient();
+  try {
+    await stripe.paymentIntents.create({
+      amount: sub.monthlyPriceCents,
+      currency: "usd",
+      customer: sub.stripeCustomerId,
+      payment_method: sub.stripePaymentMethodId,
+      confirm: true,
+      off_session: true,
+      description: `My Town Postcard — retry billing for ${sub.businessName}`,
+      metadata: {
+        kind: "spot_subscription_billing_retry",
+        subscription_id: String(sub.id),
+      },
+    });
+    await db
+      .update(spotSubscriptionsTable)
+      .set({ subscriptionStatus: "active", updatedAt: new Date() })
+      .where(eq(spotSubscriptionsTable.id, id));
+    req.log.info({ subId: id }, "Subscription billing retry succeeded — reactivated");
+    res.json({ success: true, message: "Billing successful. Subscription reactivated." });
+  } catch (err: any) {
+    req.log.error({ err: err?.message, subId: id }, "Subscription billing retry failed");
+    res.status(402).json({ error: `Billing failed: ${err?.message ?? "Card declined"}` });
+  }
 });
 
 router.post(

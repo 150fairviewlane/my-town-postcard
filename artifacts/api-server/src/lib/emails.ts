@@ -257,17 +257,18 @@ interface SubscriptionConfirmInfo {
   spotSize: string;
   spotId: number;
   orderId: number;
-  commitmentType: "single" | "6_issue" | "12_issue";
+  commitmentType: string;
   totalIssues: number;
   monthlyCents: number;
   totalCents: number;
-  commitmentEndDate: Date;
+  commitmentEndDate: Date | null;
   campaignName: string | null;
   mailDate: string | null;
 }
 
 const PLAN_LABEL: Record<string, string> = {
-  "6_issue": "Growth Plan",
+  "4_issue": "Quarterly Plan",
+  "6_issue": "Growth Plan (Legacy)",
   "12_issue": "Premium Visibility Plan",
   single: "One-Time Placement",
 };
@@ -280,9 +281,11 @@ export async function sendSubscriptionConfirmationEmail(
   const planLabel = PLAN_LABEL[info.commitmentType] ?? "Subscription";
   const monthly = `$${(info.monthlyCents / 100).toFixed(2)}`;
   const total = `$${(info.totalCents / 100).toFixed(2)}`;
-  const endStr = info.commitmentEndDate.toLocaleDateString("en-US", {
-    weekday: "long", year: "numeric", month: "long", day: "numeric",
-  });
+  const endStr = info.commitmentEndDate
+    ? info.commitmentEndDate.toLocaleDateString("en-US", {
+        weekday: "long", year: "numeric", month: "long", day: "numeric",
+      })
+    : null;
   try {
     const { error: sendError } = await resend.emails.send({
       from: FROM_EMAIL,
@@ -305,13 +308,13 @@ export async function sendSubscriptionConfirmationEmail(
               <tr><td style="padding: 10px 12px; color: #6b7280; font-size: 13px; width: 40%;">Plan</td><td style="padding: 10px 12px; color: #111; font-size: 14px; font-weight: 600;">${planLabel}</td></tr>
               <tr><td style="padding: 10px 12px; color: #6b7280; font-size: 13px; border-top: 1px solid #e5e7eb;">Issues Included</td><td style="padding: 10px 12px; color: #111; font-size: 14px; border-top: 1px solid #e5e7eb;">${info.totalIssues}</td></tr>
               <tr><td style="padding: 10px 12px; color: #6b7280; font-size: 13px; border-top: 1px solid #e5e7eb;">Ad Size</td><td style="padding: 10px 12px; color: #111; font-size: 14px; border-top: 1px solid #e5e7eb;">${escapeHtml(info.spotSize.toUpperCase())}</td></tr>
-              <tr><td style="padding: 10px 12px; color: #6b7280; font-size: 13px; border-top: 1px solid #e5e7eb;">Billing</td><td style="padding: 10px 12px; color: #111; font-size: 14px; border-top: 1px solid #e5e7eb;">${monthly} / month</td></tr>
+              <tr><td style="padding: 10px 12px; color: #6b7280; font-size: 13px; border-top: 1px solid #e5e7eb;">Per-Issue Billing</td><td style="padding: 10px 12px; color: #111; font-size: 14px; border-top: 1px solid #e5e7eb;">${monthly} / issue (charged when each mailing goes to print)</td></tr>
               <tr><td style="padding: 10px 12px; color: #6b7280; font-size: 13px; border-top: 1px solid #e5e7eb;">Total Commitment</td><td style="padding: 10px 12px; color: #111; font-size: 14px; border-top: 1px solid #e5e7eb; font-weight: 600;">${total}</td></tr>
-              <tr><td style="padding: 10px 12px; color: #6b7280; font-size: 13px; border-top: 1px solid #e5e7eb;">Final Issue Ships</td><td style="padding: 10px 12px; color: #111; font-size: 14px; border-top: 1px solid #e5e7eb;">${endStr}</td></tr>
+              ${endStr ? `<tr><td style="padding: 10px 12px; color: #6b7280; font-size: 13px; border-top: 1px solid #e5e7eb;">Final Issue Ships</td><td style="padding: 10px 12px; color: #111; font-size: 14px; border-top: 1px solid #e5e7eb;">${endStr}</td></tr>` : ""}
             </table>
             <div style="background: #f0fdf4; border-left: 4px solid #15803d; border-radius: 6px; padding: 14px 16px; margin: 24px 0;">
               <p style="margin: 0; color: #14532d; font-size: 14px; line-height: 1.5;">
-                ✓ <strong>No auto-renewal.</strong> Your billing stops automatically after ${info.totalIssues} issues. We'll email you 30 days and 7 days before your term ends if you'd like to renew.
+                ✓ <strong>Billed per issue — not monthly.</strong> Your card will be charged once per mailing, only when each issue goes to print. No charges between mailings, and no auto-renewal after ${info.totalIssues} issues.
               </p>
             </div>
             <p style="text-align: center; margin: 28px 0;">
@@ -336,7 +339,7 @@ interface AdminSubscriptionInfo {
   businessName: string;
   contactEmail: string;
   spotSize: string;
-  commitmentType: "single" | "6_issue" | "12_issue";
+  commitmentType: string;
   totalIssues: number;
   monthlyCents: number;
   totalCents: number;
@@ -543,6 +546,110 @@ export async function sendRenewalPostEmail(info: RenewalEmailInfo): Promise<void
     logger.info({ to: info.contactEmail, type: "renewal-post" }, "Renewal post email sent");
   } catch (err) {
     logger.error({ err, to: info.contactEmail, type: "renewal-post" }, "Failed to send post-end renewal email");
+  }
+}
+
+// =============================================================================
+// Per-mailing subscription billing emails
+// =============================================================================
+
+interface SubscriptionMailingSoonInfo {
+  businessName: string;
+  contactEmail: string;
+  amountCents: number;
+}
+
+export async function sendSubscriptionMailingSoonEmail(
+  info: SubscriptionMailingSoonInfo,
+): Promise<void> {
+  const resend = await getResendClient();
+  if (!resend || !info.contactEmail) return;
+  const amount = `$${(info.amountCents / 100).toFixed(2)}`;
+  try {
+    const { error: sendError } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: info.contactEmail,
+      subject: `Your My Town Postcard issue is going to print — ${amount} charged`,
+      html: `
+        <div style="font-family: Georgia, serif; max-width: 620px; margin: 0 auto; padding: 32px; background: #f9fafb;">
+          <div style="background: #7B1418; padding: 18px 24px; border-radius: 8px 8px 0 0;">
+            <h1 style="color: #fff; margin: 0; font-size: 20px;">📮 My Town Postcard</h1>
+          </div>
+          <div style="background: #fff; border: 1px solid #e5e7eb; padding: 32px; border-radius: 0 0 8px 8px;">
+            <h2 style="color: #111; font-size: 22px; margin-top: 0;">Your ad is going to print 🎉</h2>
+            <p style="color: #374151; font-size: 15px; line-height: 1.55;">
+              Hi <strong>${escapeHtml(info.businessName)}</strong>, great news — the current issue is full and heading to the printer. Your ad is included.
+            </p>
+            <div style="background: #f0fdf4; border-left: 4px solid #15803d; border-radius: 6px; padding: 14px 16px; margin: 24px 0;">
+              <p style="margin: 0; color: #14532d; font-size: 14px; line-height: 1.5;">
+                ✓ <strong>${amount}</strong> has been charged to your saved card for this issue.
+              </p>
+            </div>
+            <p style="color: #374151; font-size: 14px; line-height: 1.55;">
+              5,000 households in your area will receive this postcard within the next few weeks. We'll reach out once it's mailed!
+            </p>
+            ${emailFooter()}
+          </div>
+        </div>
+      `,
+    });
+    if (sendError) {
+      logger.error({ err: sendError, to: info.contactEmail, type: "subscription-mailing-soon" }, "Failed to send mailing-soon email");
+      return;
+    }
+    logger.info({ to: info.contactEmail, type: "subscription-mailing-soon" }, "Subscription mailing-soon email sent");
+  } catch (err) {
+    logger.error({ err, to: info.contactEmail, type: "subscription-mailing-soon" }, "Failed to send mailing-soon email");
+  }
+}
+
+interface SubscriptionPaymentFailedInfo {
+  businessName: string;
+  contactEmail: string;
+  amountCents: number;
+}
+
+export async function sendSubscriptionPaymentFailedEmail(
+  info: SubscriptionPaymentFailedInfo,
+): Promise<void> {
+  const resend = await getResendClient();
+  if (!resend || !info.contactEmail) return;
+  const amount = `$${(info.amountCents / 100).toFixed(2)}`;
+  try {
+    const { error: sendError } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: info.contactEmail,
+      subject: `Action required: payment failed for your My Town Postcard subscription`,
+      html: `
+        <div style="font-family: Georgia, serif; max-width: 620px; margin: 0 auto; padding: 32px; background: #f9fafb;">
+          <div style="background: #7B1418; padding: 18px 24px; border-radius: 8px 8px 0 0;">
+            <h1 style="color: #fff; margin: 0; font-size: 20px;">📮 My Town Postcard</h1>
+          </div>
+          <div style="background: #fff; border: 1px solid #e5e7eb; padding: 32px; border-radius: 0 0 8px 8px;">
+            <h2 style="color: #991b1b; font-size: 22px; margin-top: 0;">Payment issue — action needed</h2>
+            <p style="color: #374151; font-size: 15px; line-height: 1.55;">
+              Hi <strong>${escapeHtml(info.businessName)}</strong>, we were unable to charge <strong>${amount}</strong> to your saved card when this issue went to print.
+            </p>
+            <div style="background: #fef2f2; border-left: 4px solid #991b1b; border-radius: 6px; padding: 14px 16px; margin: 24px 0;">
+              <p style="margin: 0; color: #991b1b; font-size: 14px; line-height: 1.5;">
+                ⚠️ Your subscription has been paused. Please reply to this email or contact us so we can update your payment information.
+              </p>
+            </div>
+            <p style="color: #374151; font-size: 14px; line-height: 1.55;">
+              We want to keep your ad running! Once resolved, our team will re-attempt the charge and include your ad in the next available mailing.
+            </p>
+            ${emailFooter()}
+          </div>
+        </div>
+      `,
+    });
+    if (sendError) {
+      logger.error({ err: sendError, to: info.contactEmail, type: "subscription-payment-failed" }, "Failed to send payment-failed email");
+      return;
+    }
+    logger.info({ to: info.contactEmail, type: "subscription-payment-failed" }, "Subscription payment-failed email sent");
+  } catch (err) {
+    logger.error({ err, to: info.contactEmail, type: "subscription-payment-failed" }, "Failed to send payment-failed email");
   }
 }
 

@@ -1,5 +1,5 @@
 import { type Request, type Response } from "express";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, sql } from "drizzle-orm";
 import { db, spotsTable, ordersTable, campaignsTable, spotSubscriptionsTable, dealersTable } from "@workspace/db";
 import { sendAdProofEmail, sendAdminNewOrder, sendDealerNewSaleEmail } from "../lib/emails";
 import { computeCommissionCents } from "../lib/commission";
@@ -18,8 +18,8 @@ import {
   markWebhookEventProcessed,
   markWebhookEventFailed,
   updateSubscriptionStatusByStripeId,
+  triggerSubscriptionBillingForCampaign,
 } from "../lib/subscriptions";
-import { addMonths } from "../lib/subscriptionPricing";
 import { markSubscriptionAndSpotPaid } from "./subscriptions";
 
 /**
@@ -269,17 +269,29 @@ async function handleSpotSubscriptionCheckoutCompleted(
     return;
   }
 
-  const stripe = await getStripeClient();
-  const stripeSubscription = typeof session.subscription === "string"
-    ? await stripe.subscriptions.retrieve(session.subscription)
-    : session.subscription;
-  if (!stripeSubscription?.id) {
-    req.log.warn({ sessionId: session.id }, "checkout.session.completed for spot_subscription missing subscription");
+  const stripeCustomerId = typeof session.customer === "string" ? session.customer : session.customer?.id ?? null;
+  const paymentIntentId = typeof session.payment_intent === "string"
+    ? session.payment_intent
+    : session.payment_intent?.id ?? null;
+  if (!stripeCustomerId || !paymentIntentId) {
+    req.log.warn({ sessionId: session.id }, "Spot subscription checkout missing customer id or payment intent id");
     return;
   }
-  const stripeCustomerId = typeof session.customer === "string" ? session.customer : session.customer?.id ?? null;
-  if (!stripeCustomerId) {
-    req.log.warn({ sessionId: session.id }, "Spot subscription checkout missing customer id");
+
+  // Retrieve the PaymentIntent to get the saved payment method for future
+  // off-session billing when subsequent issues go to print.
+  const stripe = await getStripeClient();
+  let stripePaymentMethodId: string | null = null;
+  try {
+    const pi = await stripe.paymentIntents.retrieve(paymentIntentId);
+    stripePaymentMethodId = typeof pi.payment_method === "string"
+      ? pi.payment_method
+      : (pi.payment_method as any)?.id ?? null;
+  } catch (err: any) {
+    req.log.warn({ err: err?.message, paymentIntentId, sessionId: session.id }, "Could not retrieve PaymentIntent for subscription webhook");
+  }
+  if (!stripePaymentMethodId) {
+    req.log.warn({ sessionId: session.id, paymentIntentId }, "Spot subscription webhook could not resolve payment method — skipping");
     return;
   }
 
@@ -292,20 +304,12 @@ async function handleSpotSubscriptionCheckoutCompleted(
     return;
   }
 
-  // Set cancel_at on the Stripe subscription now that it exists.
-  // (cancel_at cannot be passed during Checkout Session creation.)
-  const cancelAtSeconds = Math.floor(
-    addMonths(new Date(), pending.commitmentTotalIssues).getTime() / 1000,
-  );
-  await stripe.subscriptions.update(stripeSubscription.id, { cancel_at: cancelAtSeconds } as any);
-
   await markSubscriptionAndSpotPaid({
     pendingRecordId: subscriptionRecordId,
     spotId,
-    stripeSubscriptionId: stripeSubscription.id,
+    stripePaymentMethodId,
     stripeCustomerId,
-    cancelAtSeconds,
-    paymentRef: stripeSubscription.id,
+    paymentRef: paymentIntentId,
     monthlyCents: pending.monthlyPriceCents,
     req,
   });
@@ -536,6 +540,29 @@ export async function markSpotPaidAndNotify(
     { orderId: order.id, spotId, paymentRef },
     "Webhook marked spot paid and created order",
   );
+
+  // When the 12th spot on a campaign sells, trigger off-session billing for
+  // all active subscription assignments (issues 2-N billed per-mailing here).
+  // Wrapped in try/catch so a billing failure never blocks webhook delivery.
+  try {
+    const [paidCountRow] = await db
+      .select({ c: sql<number>`count(*)::int` })
+      .from(ordersTable)
+      .innerJoin(spotsTable, eq(ordersTable.spotId, spotsTable.id))
+      .where(
+        and(
+          eq(spotsTable.campaignId, spot.campaignId),
+          eq(ordersTable.status, "paid"),
+        ),
+      );
+    const paidCount = Number(paidCountRow?.c ?? 0);
+    if (paidCount >= 12) {
+      req.log.info({ campaignId: spot.campaignId, paidCount }, "Campaign reached 12 paid spots — triggering subscription billing");
+      await triggerSubscriptionBillingForCampaign(spot.campaignId);
+    }
+  } catch (err) {
+    req.log.error({ err, campaignId: spot.campaignId }, "Failed to check/trigger subscription billing — non-critical");
+  }
 
   // Set firstPaidAt on the campaign the first time any spot is paid.
   // Idempotent: WHERE first_paid_at IS NULL means it never overwrites.

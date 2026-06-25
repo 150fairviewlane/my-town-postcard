@@ -32,7 +32,7 @@ export const spotSubscriptionsTable = pgTable(
     // Ad size class — future-issue spots must match this size so the
     // subscription can be placed in an equivalent slot on every campaign.
     size: text("size", { enum: ["xl", "large", "medium", "small"] }).notNull(),
-    commitmentType: text("commitment_type", { enum: ["6_issue", "12_issue"] }).notNull(),
+    commitmentType: text("commitment_type", { enum: ["6_issue", "12_issue", "4_issue"] }).notNull(),
     commitmentTotalIssues: integer("commitment_total_issues").notNull(),
     monthlyPriceCents: integer("monthly_price_cents").notNull(),
     totalCommitmentValueCents: integer("total_commitment_value_cents").notNull(),
@@ -41,6 +41,9 @@ export const spotSubscriptionsTable = pgTable(
     // by it idempotently regardless of arrival order.
     stripeCustomerId: text("stripe_customer_id"),
     stripeSubscriptionId: text("stripe_subscription_id"),
+    // Off-session billing: saved from the Stripe Checkout PaymentIntent so we
+    // can charge subsequent issues without requiring the customer to return.
+    stripePaymentMethodId: text("stripe_payment_method_id"),
     commitmentStartDate: timestamp("commitment_start_date", { withTimezone: true }),
     commitmentEndDate: timestamp("commitment_end_date", { withTimezone: true }),
     subscriptionStatus: text("subscription_status", {
