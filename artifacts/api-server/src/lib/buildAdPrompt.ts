@@ -265,7 +265,115 @@ export function getIndustryPhotos(industry: string): IndustryPhotos {
       interior: "bright spacious living room with hardwood floors and large windows",
     };
   }
-  if (ind.includes("restaurant") || ind.includes("food") || ind.includes("cafe") || ind.includes("bakery") || ind.includes("diner") || ind.includes("bistro") || ind.includes("pizza") || ind.includes("grill") || ind.includes("bar")) {
+  if (ind.includes("mexican") || ind.includes("taco") || ind.includes("tex-mex") || ind.includes("burrito") || ind.includes("enchilada") || ind.includes("tamale")) {
+    return {
+      hero:     "a steaming plate of street tacos with grilled carne asada, fresh cilantro, diced onion, lime wedges, and salsa on a colorful ceramic plate",
+      c1:       "a vibrant spread of enchiladas smothered in red sauce and melted cheese, garnished with sour cream and jalapeños",
+      c2:       "fresh handmade guacamole with chunky avocado, tomato, and cilantro served in a molcajete",
+      c3:       "a festive platter of nachos loaded with beans, cheese, pico de gallo, and jalapeños",
+      p1:       "chef pressing fresh masa tortillas by hand in a traditional Mexican kitchen",
+      p2:       "colorful bowls of salsa roja, salsa verde, and pico de gallo with fresh chips",
+      outdoor:  "vibrant Mexican restaurant exterior with colorful folk-art murals and warm string lights",
+      interior: "warm festive Mexican restaurant dining room with bright Talavera tile accents and happy diners",
+    };
+  }
+  if (ind.includes("italian") || ind.includes("pasta") || ind.includes("trattoria") || ind.includes("osteria") || ind.includes("risotto") || ind.includes("gelato")) {
+    return {
+      hero:     "a beautifully plated bowl of fresh handmade pasta with rich Bolognese sauce, Parmigiano-Reggiano, and fresh basil",
+      c1:       "a wood-fired Neapolitan pizza with San Marzano tomato sauce, fresh mozzarella, and basil leaves",
+      c2:       "creamy risotto with sautéed mushrooms and truffle oil in a white ceramic bowl",
+      c3:       "a tiramisu dessert dusted with cocoa powder on an elegant plate",
+      p1:       "Italian chef hand-rolling pasta dough in a traditional kitchen",
+      p2:       "antipasto board with cured meats, olives, artichokes, and fresh bread",
+      outdoor:  "charming Italian trattoria exterior with warm lanterns and ivy-covered walls",
+      interior: "warm rustic Italian restaurant interior with exposed brick, candlelight, and happy diners",
+    };
+  }
+  if (ind.includes("chinese") || ind.includes("asian") || ind.includes("dim sum") || ind.includes("wonton") || ind.includes("stir fry") || ind.includes("stir-fry") || ind.includes("noodle") || ind.includes("dumpling")) {
+    return {
+      hero:     "a wok-tossed stir-fry with fresh vegetables, tender beef, and glossy savory sauce served over steamed rice",
+      c1:       "a bamboo steamer basket filled with delicate dim sum dumplings and har gow",
+      c2:       "lacquered Peking duck with crispy skin served with hoisin sauce and scallions",
+      c3:       "a bowl of rich broth noodle soup garnished with green onions and slow-braised pork",
+      p1:       "chef expertly tossing ingredients in a flaming wok over high heat",
+      p2:       "elegant dim sum spread with bamboo steamers, dipping sauces, and jasmine tea",
+      outdoor:  "welcoming Chinese restaurant exterior with decorative red lanterns and gold signage",
+      interior: "elegant Asian restaurant interior with warm lighting, red lacquer accents, and bustling tables",
+    };
+  }
+  if (ind.includes("bbq") || ind.includes("barbecue") || ind.includes("smokehouse") || ind.includes("smoked") || ind.includes("brisket") || ind.includes("ribs")) {
+    return {
+      hero:     "a platter of slow-smoked beef brisket sliced thick with a dark bark crust, served with pickles and white bread",
+      c1:       "a rack of fall-off-the-bone smoked pork ribs glazed with tangy BBQ sauce",
+      c2:       "a BBQ sampler platter with brisket, pulled pork, sausage links, coleslaw, and beans",
+      c3:       "smoke billowing from a massive offset smoker filled with meat",
+      p1:       "pitmaster pulling tender smoked pork shoulder in a professional smokehouse",
+      p2:       "close-up of smoky charred brisket bark on a butcher-paper-lined tray",
+      outdoor:  "rustic BBQ smokehouse exterior with a large smoker and wooden sign",
+      interior: "casual warm BBQ joint interior with picnic tables, string lights, and diners enjoying plates of smoked meat",
+    };
+  }
+  if (ind.includes("steakhouse") || ind.includes("steak house") || ind.includes("chophouse") || ind.includes("chop house")) {
+    return {
+      hero:     "a perfectly seared prime ribeye steak with a golden crust, served with roasted asparagus and compound butter",
+      c1:       "a filet mignon sliced to reveal a perfect medium-rare pink center, topped with herb butter",
+      c2:       "an elegant steakhouse table setting with a dry-aged porterhouse and a glass of red wine",
+      c3:       "a classic wedge salad with blue cheese crumbles, bacon, and cherry tomatoes",
+      p1:       "chef searing a thick-cut steak on a cast-iron skillet over high flame",
+      p2:       "dry-aged prime cuts displayed in a glass-front aging case",
+      outdoor:  "upscale steakhouse exterior with valet stand and warm entrance lighting",
+      interior: "elegant steakhouse dining room with dark wood paneling, white tablecloths, and intimate lighting",
+    };
+  }
+  if (ind.includes("seafood") || ind.includes("oyster") || ind.includes("lobster") || ind.includes("crab") || ind.includes("shrimp") || ind.includes("fish") || ind.includes("clam")) {
+    return {
+      hero:     "a stunning seafood platter with fresh lobster, crab claws, oysters on the half shell, and shrimp cocktail over crushed ice",
+      c1:       "a dozen freshly shucked oysters on the half shell with mignonette sauce",
+      c2:       "a whole grilled branzino with lemon, capers, and fresh herbs on a white plate",
+      c3:       "steaming bowl of rich New England clam chowder topped with oyster crackers",
+      p1:       "chef shucking fresh oysters at a raw bar station",
+      p2:       "a beautiful whole steamed lobster with drawn butter and lemon",
+      outdoor:  "charming coastal seafood restaurant exterior with nautical decor and ocean views",
+      interior: "breezy seafood restaurant interior with shiplap walls, blue accents, and diners enjoying fresh catches",
+    };
+  }
+  if (ind.includes("sushi") || ind.includes("japanese") || ind.includes("ramen") || ind.includes("udon") || ind.includes("sashimi") || ind.includes("izakaya") || ind.includes("teriyaki") || ind.includes("tempura")) {
+    return {
+      hero:     "an artfully arranged sushi platter with nigiri, maki rolls, sashimi, and edamame on a dark slate board",
+      c1:       "a rich tonkotsu ramen bowl with chashu pork, soft-boiled egg, nori, bamboo shoots, and scallions",
+      c2:       "chef's hands precisely slicing fresh sashimi-grade tuna with a Japanese knife",
+      c3:       "a colorful dragon roll topped with sliced avocado and tobiko",
+      p1:       "itamae chef pressing nigiri rice by hand with precision",
+      p2:       "elegant Japanese presentation of sashimi with shiso, daikon, and wasabi",
+      outdoor:  "sleek modern Japanese restaurant exterior with minimalist signage and warm entry lighting",
+      interior: "serene Japanese restaurant interior with clean lines, wood accents, and sushi bar seating",
+    };
+  }
+  if (ind.includes("burger") || ind.includes("sandwich") || ind.includes("sub") || ind.includes("hoagie") || ind.includes("deli")) {
+    return {
+      hero:     "a towering gourmet burger with a juicy smash patty, melted American cheese, caramelized onions, pickles, and special sauce on a brioche bun",
+      c1:       "a cross-section of a fully loaded club sandwich on toasted sourdough with turkey, bacon, lettuce, and tomato",
+      c2:       "a basket of crispy golden hand-cut fries with dipping sauces alongside a burger",
+      c3:       "a perfectly stacked deli sub piled high with cured meats, provolone, and fresh vegetables",
+      p1:       "cook pressing a smash burger on a flat-top grill until perfectly crispy",
+      p2:       "artisan burger buns and fresh toppings neatly arranged on a prep counter",
+      outdoor:  "lively burger joint exterior with bold signage and a line of hungry customers",
+      interior: "fun casual burger restaurant interior with counter seating, chalkboard menu, and happy diners",
+    };
+  }
+  if (ind.includes("pizza") || ind.includes("pizzeria")) {
+    return {
+      hero:     "a freshly baked New York-style pizza with bubbling mozzarella, San Marzano tomato sauce, and fresh basil pulled from a wood-fired oven",
+      c1:       "a perfectly charred Neapolitan margherita pizza with a puffy cornicione crust",
+      c2:       "a Chicago deep-dish pizza slice with thick layers of sausage, cheese, and chunky tomato sauce",
+      c3:       "close-up of melted cheese stretching from a hot pizza slice",
+      p1:       "pizzaiolo hand-tossing pizza dough in the air in a professional kitchen",
+      p2:       "rows of artisan pizzas baking in a blazing wood-fired brick oven",
+      outdoor:  "welcoming pizzeria exterior with a vintage neon sign and warm street lighting",
+      interior: "lively pizzeria interior with brick walls, open kitchen, and the aroma of fresh pizza",
+    };
+  }
+  if (ind.includes("restaurant") || ind.includes("food") || ind.includes("cafe") || ind.includes("bakery") || ind.includes("diner") || ind.includes("bistro") || ind.includes("grill") || ind.includes("bar")) {
     return {
       hero:     "a beautifully plated signature dish with vibrant colors under warm restaurant lighting",
       c1:       "chef preparing fresh ingredients in a professional kitchen",
