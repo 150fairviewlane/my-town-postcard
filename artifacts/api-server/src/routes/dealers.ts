@@ -386,6 +386,7 @@ router.post("/dealers", async (req, res): Promise<void> => {
   // activation" flow if the webhook hasn't fired yet).
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
+    payment_method_types: ["card"],
     customer_email: email,
     line_items: [
       {
@@ -566,6 +567,7 @@ router.post("/dealers/claim-proposal", async (req, res): Promise<void> => {
 
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
+    payment_method_types: ["card"],
     customer_email: email,
     line_items: [
       {

@@ -189,6 +189,7 @@ router.post("/checkout/create-subscription-session", async (req, res): Promise<v
     // Payment mode (not subscription): charge issue #1 now and save the card
     // for future off-session charges when subsequent issues go to print.
     mode: "payment",
+    payment_method_types: ["card"],
     customer_email: spot.contactEmail,
     payment_intent_data: {
       setup_future_usage: "off_session",
