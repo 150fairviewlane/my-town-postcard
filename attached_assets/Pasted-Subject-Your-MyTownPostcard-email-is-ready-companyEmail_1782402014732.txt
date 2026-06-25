@@ -1,0 +1,48 @@
+Subject: Your MyTownPostcard email is ready — {{companyEmail}}
+
+---
+
+Hi {{dealerName}},
+
+Your branded email address is live:
+
+**{{companyEmail}}**
+
+Anything sent to this address forwards straight to your personal inbox ({{safe.personalEmail}}) — nothing new to check, nothing to log into. It just works in the background starting now.
+
+**Want to send email that looks like it's coming from {{companyEmail}}, not your personal address?** Here's how, depending on what you use:
+
+---
+
+### If you use Gmail
+
+You can set this up in about 5 minutes, and it'll send through your own Gmail account — no new passwords to manage from us.
+
+1. Go to Settings (gear icon) → See all settings → Accounts and Import
+2. Under "Send mail as," click Add another email address
+3. Enter your name and {{companyEmail}}, then click Next Step
+4. For the SMTP server, enter:
+   - SMTP Server: smtp.gmail.com
+   - Username: your own Gmail address (not {{companyEmail}})
+   - Password: you'll need a Google App Password — if you don't have one, go to myaccount.google.com/apppasswords, generate one, and paste it here instead of your regular password
+   - Port: 587, with "Secured connection using TLS" selected
+5. Click Add Account — a confirmation email will land in your inbox (it forwards there automatically). Open it and click the confirmation link.
+6. Done! When composing a new email, click the From field to choose {{companyEmail}} instead of your personal address.
+
+### If you use Outlook, Yahoo, or another provider
+
+Being straight with you: these platforms don't support sending as a forwarding-only address like this without paid business mail hosting attached to it — so we don't want to give you steps that won't actually work.
+
+The good news: you don't need to. Just add this to your email signature, and anyone who replies will be writing to {{companyEmail}} directly:
+
+{{dealerName}}
+MyTownPostcard [IF territoryName present: — {{territoryName}}]
+{{companyEmail}}
+
+That keeps things looking branded and professional without fighting your email provider.
+
+---
+
+Questions? Just reply to this email — it comes straight to us.
+
+— The MyTownPostcard Team

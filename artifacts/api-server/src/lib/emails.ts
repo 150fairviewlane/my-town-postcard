@@ -1319,6 +1319,7 @@ export interface DealerCompanyEmailProvisionedInfo {
   dealerName: string;
   dealerEmail: string;
   companyEmail: string;
+  territoryName?: string;
 }
 
 export async function sendDealerCompanyEmailProvisionedEmail(
@@ -1332,22 +1333,23 @@ export async function sendDealerCompanyEmailProvisionedEmail(
     firstName: escapeHtml(info.dealerName.split(" ")[0]),
     companyEmail: escapeHtml(info.companyEmail),
     personalEmail: escapeHtml(info.dealerEmail),
+    territoryName: info.territoryName ? escapeHtml(info.territoryName) : null,
   };
 
   try {
     const { error: sendError } = await resend.emails.send({
       from: FROM_EMAIL,
       to: info.dealerEmail,
-      subject: `Your My Town Postcard email is ready: ${info.companyEmail}`,
+      subject: `Your MyTownPostcard email is ready — ${info.companyEmail}`,
       html: `
         <div style="font-family: Georgia, serif; max-width: 620px; margin: 0 auto; padding: 32px; background: #f9fafb;">
           <div style="background: #7B1418; padding: 18px 24px; border-radius: 8px 8px 0 0;">
             <h1 style="color: #fff; margin: 0; font-size: 20px;">📮 My Town Postcard</h1>
           </div>
           <div style="background: #fff; border: 1px solid #e5e7eb; padding: 32px; border-radius: 0 0 8px 8px;">
-            <h2 style="color: #111; font-size: 22px; margin-top: 0;">Your branded email address is ready 🎉</h2>
+            <h2 style="color: #111; font-size: 22px; margin-top: 0;">Your branded email address is live 🎉</h2>
             <p style="color: #374151; font-size: 15px; line-height: 1.55;">
-              Hi <strong>${safe.firstName}</strong>! We've set up a professional email address for you under the My Town Postcard brand:
+              Hi <strong>${safe.firstName}</strong>! Your professional MyTownPostcard address is ready to use:
             </p>
 
             <div style="background: #f0fdf4; border: 2px solid #86efac; border-radius: 10px; padding: 18px 22px; margin: 20px 0; text-align: center;">
@@ -1358,17 +1360,51 @@ export async function sendDealerCompanyEmailProvisionedEmail(
 
             <h3 style="color: #111; font-size: 15px; margin-top: 24px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px;">How it works</h3>
             <ul style="color: #374151; font-size: 14px; line-height: 1.8; padding-left: 22px; margin: 0 0 20px;">
-              <li>All mail sent to <strong>${safe.companyEmail}</strong> is forwarded directly to <strong>${safe.personalEmail}</strong> — no new inbox to check.</li>
+              <li>Anything sent to <strong>${safe.companyEmail}</strong> forwards straight to <strong>${safe.personalEmail}</strong> — nothing new to log into, it just works in the background.</li>
               <li><strong>Action required:</strong> Cloudflare will send a one-time verification link to <strong>${safe.personalEmail}</strong>. Click it to activate forwarding.</li>
               <li>Use this address on your business cards, website, and when talking to advertisers.</li>
             </ul>
 
-            <div style="background: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 6px; padding: 14px 16px; margin: 20px 0;">
-              <p style="margin: 0 0 6px; font-weight: 800; color: #92400e; font-size: 14px;">💡 Send mail <em>from</em> this address in Gmail</p>
-              <p style="margin: 0; color: #78350f; font-size: 13.5px; line-height: 1.55;">
-                Go to <strong>Gmail Settings → Accounts and Import → Send mail as</strong> → Add another email address. Enter <code style="background:#fef9c3; padding:1px 5px; border-radius:3px;">${safe.companyEmail}</code> and follow Gmail's verification steps.
+            <div style="background: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 6px; padding: 18px 20px; margin: 24px 0;">
+              <p style="margin: 0 0 10px; font-weight: 800; color: #92400e; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">💡 If you use Gmail — send as this address in ~5 minutes</p>
+              <ol style="color: #78350f; font-size: 13.5px; line-height: 1.7; padding-left: 20px; margin: 0;">
+                <li>Go to <strong>Settings</strong> (gear icon) → <strong>See all settings</strong> → <strong>Accounts and Import</strong></li>
+                <li>Under "Send mail as," click <strong>Add another email address</strong></li>
+                <li>Enter your name and <code style="background:#fef9c3; padding:1px 5px; border-radius:3px;">${safe.companyEmail}</code>, then click <strong>Next Step</strong></li>
+                <li style="margin-top: 4px;">For the SMTP server, enter:
+                  <ul style="margin: 6px 0 6px; padding-left: 18px;">
+                    <li><strong>SMTP Server:</strong> smtp.gmail.com</li>
+                    <li><strong>Username:</strong> your own Gmail address (not ${safe.companyEmail})</li>
+                    <li><strong>Password:</strong> a Google App Password — generate one at <a href="https://myaccount.google.com/apppasswords" style="color: #92400e;">myaccount.google.com/apppasswords</a> and paste it here instead of your regular password</li>
+                    <li><strong>Port:</strong> 587, with "Secured connection using TLS" selected</li>
+                  </ul>
+                </li>
+                <li>Click <strong>Add Account</strong> — a confirmation email will land in your inbox (it forwards there automatically). Open it and click the link.</li>
+                <li>Done! When composing, click the <strong>From</strong> field to choose <code style="background:#fef9c3; padding:1px 5px; border-radius:3px;">${safe.companyEmail}</code> instead of your personal address.</li>
+              </ol>
+            </div>
+
+            <div style="background: #f3f4f6; border-left: 4px solid #9ca3af; border-radius: 6px; padding: 18px 20px; margin: 24px 0;">
+              <p style="margin: 0 0 8px; font-weight: 800; color: #374151; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">If you use Outlook, Yahoo, or another provider</p>
+              <p style="margin: 0 0 10px; color: #4b5563; font-size: 13.5px; line-height: 1.6;">
+                Being straight with you: these platforms don't support sending as a forwarding-only address like this without paid business mail hosting attached — so we don't want to give you steps that won't actually work.
+              </p>
+              <p style="margin: 0 0 8px; color: #4b5563; font-size: 13.5px; line-height: 1.6;">
+                The good news: you don't need to. Just add this to your email signature, and anyone who replies will be writing to <strong>${safe.companyEmail}</strong> directly:
+              </p>
+              <div style="background: #fff; border: 1px solid #d1d5db; border-radius: 6px; padding: 12px 16px; font-family: Georgia, serif; font-size: 13px; color: #374151; line-height: 1.8;">
+                ${safe.name}<br>
+                MyTownPostcard${safe.territoryName ? ` — ${safe.territoryName}` : ""}<br>
+                <span style="color: #7B1418;">${safe.companyEmail}</span>
+              </div>
+              <p style="margin: 10px 0 0; color: #6b7280; font-size: 13px; line-height: 1.5;">
+                That keeps things looking branded and professional without fighting your email provider.
               </p>
             </div>
+
+            <p style="color: #6b7280; font-size: 13.5px; line-height: 1.55; margin: 24px 0 0;">
+              Questions? Just reply to this email — it comes straight to us.
+            </p>
 
             ${emailFooter()}
           </div>
