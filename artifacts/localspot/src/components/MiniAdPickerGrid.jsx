@@ -38,11 +38,13 @@ const BACK_STATIC = ["bhs", "bed"];
 function MiniCell({ area, spot }) {
   const isPaid = spot?.status === "paid";
 
-  if (isPaid && spot.adFileUrl) {
+  const imgSrc = spot?.adFileUrl || spot?.templateData?.finishedAdUrl || null;
+
+  if (isPaid && imgSrc) {
     return (
       <div style={{ gridArea: area, overflow: "hidden", position: "relative" }}>
         <img
-          src={spot.adFileUrl}
+          src={imgSrc}
           loading="lazy"
           alt={spot.businessName || "ad"}
           style={{
