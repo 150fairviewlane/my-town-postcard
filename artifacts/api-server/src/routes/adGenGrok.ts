@@ -2038,33 +2038,37 @@ router.post("/grok-ad-generator/refine", async (req, res) => {
     const refineCroppedUrl = await cropToSpotDims(imageUrl, dim.w, dim.h);
 
     // Composite QR onto the refined image if the spot has a tracking code.
-    // Load tracking code here (not earlier) to stay inside the keepalive window.
+    // Load tracking code inside the keepalive window (after the xAI call returns).
+    // DB failures skip QR gracefully; compositing/verification failures propagate
+    // as hard errors — same gate as generate for tracked spots.
     let refineFinalUrl = refineCroppedUrl;
     if (refineSpotId != null) {
+      let refineTrackingCode: string | null = null;
       try {
         const [refineSpotRow] = await db
           .select({ trackingCode: spotsTable.trackingCode })
           .from(spotsTable)
           .where(eq(spotsTable.id, refineSpotId))
           .limit(1);
-        const refineTrackingCode = refineSpotRow?.trackingCode ?? null;
-        if (refineTrackingCode) {
-          const refineAppUrl      = (process.env.APP_URL ?? "").replace(/\/$/, "");
-          const refineTrackingUrl = `${refineAppUrl}/go/${refineTrackingCode}`;
-          const refineSizeKey     = (() => {
-            const lower = sizeKey.toLowerCase();
-            if (lower === "xl" || lower === "x-large" || lower === "xlarge") return "xl" as const;
-            if (lower === "l"  || lower === "large")                          return "l"  as const;
-            if (lower === "m"  || lower === "medium")                         return "m"  as const;
-            if (lower === "s"  || lower === "small")                          return "s"  as const;
-            return "xl" as const;
-          })();
-          const refineBuf     = Buffer.from(refineCroppedUrl.split(",")[1] ?? "", "base64");
-          const refineComp    = await compositeQrOnto(refineBuf, refineTrackingUrl, refineSizeKey);
-          refineFinalUrl      = `data:image/jpeg;base64,${refineComp.toString("base64")}`;
-        }
-      } catch (refineQrErr) {
-        req.log.warn({ refineQrErr, refineSpotId }, "grok-refine: QR compositing failed — returning ad without QR");
+        refineTrackingCode = refineSpotRow?.trackingCode ?? null;
+      } catch (dbErr) {
+        req.log.warn({ dbErr, refineSpotId }, "grok-refine: DB error loading tracking code — QR compositing skipped");
+      }
+      if (refineTrackingCode) {
+        // Hard gate: compositeQrOnto throws propagate to the outer catch → 502
+        const refineAppUrl      = (process.env.APP_URL ?? "").replace(/\/$/, "");
+        const refineTrackingUrl = `${refineAppUrl}/go/${refineTrackingCode}`;
+        const refineSizeKey     = (() => {
+          const lower = sizeKey.toLowerCase();
+          if (lower === "xl" || lower === "x-large" || lower === "xlarge") return "xl" as const;
+          if (lower === "l"  || lower === "large")                          return "l"  as const;
+          if (lower === "m"  || lower === "medium")                         return "m"  as const;
+          if (lower === "s"  || lower === "small")                          return "s"  as const;
+          return "xl" as const;
+        })();
+        const refineBuf  = Buffer.from(refineCroppedUrl.split(",")[1] ?? "", "base64");
+        const refineComp = await compositeQrOnto(refineBuf, refineTrackingUrl, refineSizeKey);
+        refineFinalUrl   = `data:image/jpeg;base64,${refineComp.toString("base64")}`;
       }
     }
 
