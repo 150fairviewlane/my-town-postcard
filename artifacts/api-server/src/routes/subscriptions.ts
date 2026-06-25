@@ -23,6 +23,7 @@ import {
 import {
   createPendingSubscription,
   activateSubscription,
+  triggerSubscriptionBillingForCampaign,
   countFulfilledIssues,
   computeMrrSummary,
   findPreCommittedForCampaign,
@@ -459,6 +460,29 @@ export async function markSubscriptionAndSpotPaid(opts: {
       return;
     }
     throw err;
+  }
+
+  // Subscription checkout is the order-creation path for multi-issue spots.
+  // Check here whether this sale pushes the campaign to 12 paid spots and
+  // trigger off-session billing for all other active subscribers on this campaign.
+  try {
+    const [paidCountRow] = await db
+      .select({ c: sql<number>`count(*)::int` })
+      .from(ordersTable)
+      .innerJoin(spotsTable, eq(ordersTable.spotId, spotsTable.id))
+      .where(
+        and(
+          eq(spotsTable.campaignId, spot.campaignId),
+          eq(ordersTable.status, "paid"),
+        ),
+      );
+    const paidCount = Number(paidCountRow?.c ?? 0);
+    if (paidCount === 12) {
+      req.log.info({ campaignId: spot.campaignId, paidCount }, "Subscription checkout: campaign reached 12 paid spots — triggering subscription billing");
+      await triggerSubscriptionBillingForCampaign(spot.campaignId);
+    }
+  } catch (err) {
+    req.log.error({ err, campaignId: spot.campaignId }, "Failed to check/trigger subscription billing from subscription checkout — non-critical");
   }
 
   try {

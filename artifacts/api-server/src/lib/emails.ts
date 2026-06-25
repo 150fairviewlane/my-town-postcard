@@ -364,7 +364,7 @@ export async function sendAdminNewSubscriptionEmail(info: AdminSubscriptionInfo)
             <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Business</strong></td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(info.businessName)} (${escapeHtml(info.contactEmail)})</td></tr>
             <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Plan</strong></td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${planLabel} — ${info.totalIssues} issues</td></tr>
             <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Ad Size</strong></td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(info.spotSize.toUpperCase())}</td></tr>
-            <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Monthly</strong></td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${monthly}</td></tr>
+            <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Per Issue</strong></td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${monthly} (billed at print)</td></tr>
             <tr><td style="padding: 8px;"><strong>Total Committed</strong></td><td style="padding: 8px;"><strong>${total}</strong></td></tr>
           </table>
           <p style="margin-top: 16px;"><a href="${APP_URL}/admin">Open Admin Dashboard →</a></p>
@@ -426,7 +426,7 @@ export async function sendDealerNewSubscriptionEmail(info: DealerNewSubscription
                 <tr><td style="padding: 4px 0; color: #6b7280;">Business</td><td style="padding: 4px 0; font-weight: 700; color: #111;">${escapeHtml(info.businessName)}</td></tr>
                 <tr><td style="padding: 4px 0; color: #6b7280;">Plan</td><td style="padding: 4px 0; font-weight: 700; color: #111;">${planLabel} — ${info.totalIssues} consecutive issues</td></tr>
                 <tr><td style="padding: 4px 0; color: #6b7280;">Ad Size</td><td style="padding: 4px 0; color: #111;">${escapeHtml(info.spotSize.toUpperCase())}</td></tr>
-                <tr><td style="padding: 4px 0; color: #6b7280;">Monthly</td><td style="padding: 4px 0; color: #111;">${monthly}/month</td></tr>
+                <tr><td style="padding: 4px 0; color: #6b7280;">Per Issue</td><td style="padding: 4px 0; color: #111;">${monthly}/issue (billed at print)</td></tr>
                 <tr><td style="padding: 4px 0; color: #6b7280;">Total Committed</td><td style="padding: 4px 0; font-weight: 700; color: #111;">${total}</td></tr>
               </table>
             </div>
