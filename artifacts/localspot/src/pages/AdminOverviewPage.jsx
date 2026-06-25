@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAdminLogin } from "@workspace/api-client-react";
 import AdminShell from "../components/AdminShell";
+import SpotProgressRing from "../components/SpotProgressRing";
 
 const BURGUNDY = "#991b1b";
 
@@ -194,7 +195,7 @@ function Overview({ token }) {
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead style={{ background: "#f9fafb" }}>
                     <tr>
-                      {["Name", "Territory", "Status", "Mail Date", "Revenue", "Fill Rate"].map(h => (
+                      {["Name", "Territory", "Status", "Mail Date", "Revenue", "Fill Rate", "Spots"].map(h => (
                         <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "#6b7280", letterSpacing: 0.5, textTransform: "uppercase" }}>{h}</th>
                       ))}
                     </tr>
@@ -214,6 +215,11 @@ function Overview({ token }) {
                           <td style={{ padding: "12px 14px", fontSize: 13, color: "#374151" }}>{c.mailDate ? new Date(c.mailDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}</td>
                           <td style={{ padding: "12px 14px", fontSize: 13, fontWeight: 700, color: "#111" }}>${(c.totalRevenue / 100).toLocaleString()}</td>
                           <td style={{ padding: "12px 14px", fontSize: 13, color: "#374151" }}>{c.totalSpots ? `${fill}%` : "—"}</td>
+                          <td style={{ padding: "8px 14px" }}>
+                            {(c.status === "active" || c.status === "draft") ? (
+                              <SpotProgressRing paidSpots={c.paidSpots ?? 0} size={44} />
+                            ) : "—"}
+                          </td>
                         </tr>
                       );
                     })}

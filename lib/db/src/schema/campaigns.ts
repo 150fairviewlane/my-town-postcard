@@ -54,6 +54,13 @@ export const campaignsTable = pgTable("campaigns", {
   adminAlert45SentAt: timestamp("admin_alert_45_sent_at", { withTimezone: true }),
   // Dealer 30-day coaching reminder (sent once at the 30-day mark).
   dealerReminder30SentAt: timestamp("dealer_reminder_30_sent_at", { withTimezone: true }),
+  // Milestone email tracking (daily-recurring, unlike the one-shot fill-rate alerts).
+  // Set to now() when the milestone email is sent; reset to null is intentionally
+  // NOT done — the scheduler compares the date portion to today's UTC date so it
+  // re-fires once per calendar day for as long as the campaign stays active/draft
+  // and has not been completed. A completed campaign is excluded by the status filter.
+  lastMilestone12EmailSentAt: timestamp("last_milestone_12_email_sent_at", { withTimezone: true }),
+  lastMilestone15EmailSentAt: timestamp("last_milestone_15_email_sent_at", { withTimezone: true }),
 });
 
 export const insertCampaignSchema = createInsertSchema(campaignsTable).omit({ id: true, createdAt: true });

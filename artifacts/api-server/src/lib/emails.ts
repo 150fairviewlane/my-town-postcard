@@ -1155,3 +1155,93 @@ export async function sendDealerPasswordResetEmail(
     logger.error({ err, to: info.dealerEmail, type: "dealer-password-reset" }, "Failed to send dealer password reset email");
   }
 }
+
+// ─── Campaign milestone emails (print-ready & sold-out) ───────────────────────
+// These fire once per calendar day (UTC) for any campaign that has crossed the
+// 12 or 15 paid-spot threshold and has not yet been marked completed.
+
+export interface CampaignMilestoneEmailInfo {
+  campaignId: number;
+  campaignName: string;
+  territoryName: string;
+  dealerName: string | null;
+  paidSpots: number;
+  campaignLink: string;
+}
+
+function milestoneHtml(info: CampaignMilestoneEmailInfo, milestone: 12 | 15): string {
+  const isSoldOut = milestone === 15;
+  const headerColor = isSoldOut ? "#7f1d1d" : "#991b1b";
+  const headerText = isSoldOut
+    ? "🚨 Campaign Sold Out — All 15 Spots Filled"
+    : "🔴 Campaign Print-Ready — 12 Spots Sold";
+  const bodyText = isSoldOut
+    ? `<strong>${escapeHtml(info.campaignName)}</strong> has sold all 15 available ad spots and is completely sold out. Coordinate with your EDDM printer immediately — this postcard is ready to go to press.`
+    : `<strong>${escapeHtml(info.campaignName)}</strong> has reached <strong>${info.paidSpots} paid spots</strong>, which meets the 12-spot minimum required to print. Coordinate with your EDDM printer to get this postcard mailed.`;
+  const ctaText = isSoldOut
+    ? "This postcard is fully sold out. Get it to your printer now."
+    : "This postcard has reached the minimum to print. Coordinate with your EDDM printer to get this mailed.";
+  const dealerRow = info.dealerName
+    ? `<tr><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;font-weight:700;width:160px;">Dealer</td><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;">${escapeHtml(info.dealerName)}</td></tr>`
+    : "";
+
+  return `
+    <div style="font-family:sans-serif;max-width:580px;margin:0 auto;padding:32px;">
+      <h2 style="color:${headerColor};margin:0 0 12px;">${headerText}</h2>
+      <p style="color:#374151;font-size:15px;">${bodyText}</p>
+      <table style="width:100%;border-collapse:collapse;margin:20px 0;">
+        <tr><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;font-weight:700;width:160px;">Campaign</td><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;">${escapeHtml(info.campaignName)}</td></tr>
+        <tr><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;font-weight:700;">Territory</td><td style="padding:7px 0;border-bottom:1px solid #f0f0f0;">${escapeHtml(info.territoryName)}</td></tr>
+        ${dealerRow}
+        <tr><td style="padding:7px 0;font-weight:700;">Spots Sold</td><td style="padding:7px 0;"><strong>${info.paidSpots} of 15</strong>${isSoldOut ? " — 🎉 SOLD OUT" : ` — ${15 - info.paidSpots} remaining`}</td></tr>
+      </table>
+      <div style="background:#fef2f2;border-left:4px solid ${headerColor};border-radius:4px;padding:14px 18px;margin:20px 0;">
+        <p style="margin:0;color:${headerColor};font-weight:700;font-size:14px;">Action Required</p>
+        <p style="margin:6px 0 0;color:#374151;font-size:14px;">${ctaText}</p>
+      </div>
+      <p><a href="${info.campaignLink}" style="display:inline-block;background:#7B1418;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:700;">View in Admin →</a></p>
+      <p style="color:#9ca3af;font-size:12px;margin-top:8px;">This email repeats daily until the campaign is marked complete in the admin dashboard.</p>
+      ${emailFooter()}
+    </div>
+  `;
+}
+
+export async function sendCampaignPrintReadyEmail(info: CampaignMilestoneEmailInfo): Promise<void> {
+  const resend = await getResendClient();
+  if (!resend) {
+    logger.info({ campaignId: info.campaignId }, "Print-ready milestone email skipped — RESEND_API_KEY not set");
+    return;
+  }
+  try {
+    const { error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: ADMIN_EMAIL,
+      subject: `🔴 ${info.campaignName} has reached 12 spots — ready to print`,
+      html: milestoneHtml(info, 12),
+    });
+    if (error) logger.error({ err: error, campaignId: info.campaignId }, "Failed to send print-ready milestone email");
+    else logger.info({ campaignId: info.campaignId }, "Print-ready milestone email sent to admin");
+  } catch (err) {
+    logger.error({ err, campaignId: info.campaignId }, "Failed to send print-ready milestone email");
+  }
+}
+
+export async function sendCampaignSoldOutEmail(info: CampaignMilestoneEmailInfo): Promise<void> {
+  const resend = await getResendClient();
+  if (!resend) {
+    logger.info({ campaignId: info.campaignId }, "Sold-out milestone email skipped — RESEND_API_KEY not set");
+    return;
+  }
+  try {
+    const { error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: ADMIN_EMAIL,
+      subject: `🚨 ${info.campaignName} is SOLD OUT — all 15 spots filled`,
+      html: milestoneHtml(info, 15),
+    });
+    if (error) logger.error({ err: error, campaignId: info.campaignId }, "Failed to send sold-out milestone email");
+    else logger.info({ campaignId: info.campaignId }, "Sold-out milestone email sent to admin");
+  } catch (err) {
+    logger.error({ err, campaignId: info.campaignId }, "Failed to send sold-out milestone email");
+  }
+}

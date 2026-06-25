@@ -1,0 +1,49 @@
+Add two related features to the admin dashboard: (1) a visual countdown indicator per territory showing sold/remaining spots with color escalation, and (2) recurring urgent admin emails when a campaign crosses the 12-spot (print-ready) and 15-spot (sold out) milestones.
+
+---
+
+## Part 1: Schema — track which milestone emails have already fired today
+
+Add two nullable timestamp columns to `campaignsTable`: `lastMilestone12EmailSentAt`, `lastMilestone15EmailSentAt`. These track the last time each milestone email was sent, so the daily re-send logic (Part 3) knows whether today's email has already gone out, without re-sending multiple times in the same day.
+
+---
+
+## Part 2: Color-coded countdown indicator on the admin dashboard
+
+1. On the Admin Overview page and/or the Territories admin list (wherever campaigns are shown at a glance — check `AdminOverviewPage.jsx` and `AdminTerritoriesPage.jsx` for the best fit, possibly both), add a small circular progress indicator per active campaign showing `paidSpots` out of 15 total.
+
+2. **Color thresholds, based on `paidSpots`:**
+   - 0–7 spots sold: **yellow**
+   - 8–11 spots sold: **orange**
+   - 12–14 spots sold: **light red**
+   - 15 spots sold (full): **dark red**
+
+3. Render this as a simple SVG circular progress ring (fill percentage = `paidSpots / 15`) with the color from the thresholds above, and the text `{paidSpots}/15` in the center. A lightweight, dependency-free SVG ring is fine — no need for a charting library for this.
+
+4. Show this only for campaigns with `status` of `"active"` or `"draft"` (i.e. still sellable) — a `"completed"` campaign doesn't need an ongoing countdown since it's already been handled.
+
+5. Add a small label or tooltip on hover: "12+ sold = ready to print. 15 = sold out." so the color meaning is self-explanatory without needing to remember the thresholds.
+
+---
+
+## Part 3: Recurring milestone emails at 12 and 15 sold spots
+
+Add a scheduled/periodic check (same pattern as the existing 30/40/45-day admin alert sweeper and the 30-minute spot-hold expiration cleanup — likely extending `expirationCleanup.ts` or a similar scheduled-task file) that runs at least once daily and checks every campaign with `status` in `("active", "draft")`:
+
+1. **12-spot milestone (print-ready):** if `paidSpots >= 12` AND (`lastMilestone12EmailSentAt` is null OR it was sent on a previous calendar day, not today) → send an urgent email to info@mytownpostcard.com, then set `lastMilestone12EmailSentAt = now()`.
+   - Subject line should clearly convey urgency, e.g. "🔴 [Territory Name] has reached 12 spots — ready to print"
+   - Body: campaign/territory name, dealer name, current paid-spot count, a direct link to that campaign's admin detail/spot-table view, and a clear call to action: "This postcard has reached the minimum to print. Coordinate with your EDDM printer to get this mailed."
+
+2. **15-spot milestone (sold out):** if `paidSpots === 15` AND (`lastMilestone15EmailSentAt` is null OR sent on a previous calendar day) → send a SEPARATE, even more urgent email, then set `lastMilestone15EmailSentAt = now()`.
+   - Subject line: e.g. "🚨 [Territory Name] is SOLD OUT — all 15 spots filled"
+   - Body: same details as above, with messaging emphasizing it's fully sold out, not just print-eligible.
+
+3. **Both milestone emails should re-fire once per calendar day** for as long as the campaign remains in `"active"`/`"draft"` status without being marked complete — this is the mechanism that keeps nagging the admin until the campaign is actually handled. Once the admin marks the campaign `"completed"` (existing `/admin/campaigns/:id/complete` action), the daily check's status filter naturally excludes it from further emails — no extra logic needed for that part, since completed campaigns are already filtered out by the `status IN ("active","draft")` condition.
+
+4. A campaign that hits 15 sold spots should receive ONLY the 15-spot email going forward (not also keep re-sending the 12-spot email it already passed) — once `paidSpots === 15`, skip the 12-spot check entirely for that campaign on subsequent days, since the 15-spot email already supersedes it.
+
+5. Use the existing branded-footer email pattern (`lib/emails.ts`) for both new email functions (e.g. `sendCampaignPrintReadyEmail`, `sendCampaignSoldOutEmail`), following the same structure/style as other admin alert emails already built (the 30/40/45-day alerts).
+
+---
+
+After implementing, test: simulate a campaign crossing 12 sold spots and confirm the email fires once, then run the check again the same day and confirm it does NOT re-send; advance to a new simulated day with still 12-14 spots and confirm it DOES re-send; simulate the same campaign reaching 15 spots and confirm the 15-spot email fires (and the 12-spot email no longer fires for it going forward); and visually confirm the dashboard countdown ring correctly shows yellow at 5/15, orange at 9/15, light red at 13/15, and dark red at 15/15.

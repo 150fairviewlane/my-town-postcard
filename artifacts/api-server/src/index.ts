@@ -4,6 +4,7 @@ import { startExpirationSweeper } from "./lib/expirationCleanup";
 import { startRenewalScheduler } from "./lib/renewalScheduler";
 import { startWelcomeReminderScheduler } from "./lib/welcomeReminderScheduler";
 import { startFillRateAlertScheduler } from "./lib/fillRateAlertScheduler";
+import { startMilestoneEmailScheduler } from "./lib/milestoneEmailScheduler";
 import { repairOverclaimedCounties } from "./lib/territoryDataRepair";
 
 const rawPort = process.env["PORT"];
@@ -54,4 +55,10 @@ app.listen(port, (err) => {
   // below 12 spots sold. Sends escalating admin emails at 30/40/45 days, and
   // a single coaching reminder email to the dealer at the 30-day mark.
   startFillRateAlertScheduler(24 * 60 * 60 * 1000);
+
+  // Milestone email scheduler — runs every hour. Fires a recurring daily admin
+  // alert when a campaign crosses 12 spots (print-ready) or 15 spots (sold out).
+  // Each milestone re-fires once per UTC calendar day until the campaign is
+  // marked completed (which excludes it from the query automatically).
+  startMilestoneEmailScheduler(60 * 60 * 1000);
 });
