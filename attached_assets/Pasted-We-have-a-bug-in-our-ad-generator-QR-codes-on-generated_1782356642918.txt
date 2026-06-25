@@ -1,0 +1,25 @@
+We have a bug in our ad generator: QR codes on generated postcard ads aren't scannable once printed.
+
+Context: api-server/src/routes/adGenGrok.ts generates ad images using Grok image generation. api-server/src/lib/trackingCode.ts already generates a QR/tracking code per spot. My hypothesis is that we're either passing the real QR code to Grok as a reference image and Grok is redrawing/recreating it as a visual pattern (not actual encoded data), or Grok is generating a QR-like pattern on its own. Either way, the QR that ends up in the final ad image is not a functional, scannable QR code — it just looks like one.
+
+Please investigate the current flow in adGenGrok.ts to confirm how the QR code currently gets into the generated image, then fix it as follows:
+
+1. STOP relying on Grok to render the QR code pixel-for-pixel. Do not pass the QR code image to Grok expecting it to reproduce it faithfully — image generation models don't preserve exact encoded data.
+
+2. Update the Grok prompt to reserve clean space instead of trying to place the actual QR:
+   - Add an instruction reserving a clean, empty rectangular area (flat color matching the surrounding background, no text/logos/patterns) in the corner where the QR will go — specify it as a percentage of the image's width/height so it scales across our different spot sizes (XL/L/M/S).
+   - Add a negative instruction telling it not to generate any QR codes, barcodes, or checkerboard/scannable-looking patterns anywhere in the image.
+
+3. After Grok returns the generated image, post-process it server-side:
+   - Generate the real QR code from the spot's actual tracking URL (reuse trackingCode.ts if it already produces this, otherwise use the `qrcode` npm package).
+   - Composite a solid white (or light, high-contrast) backing rectangle at a FIXED pixel position you control for each spot size — don't rely on Grok having honored the reserved-space instruction, paint your own box regardless.
+   - Include a quiet-zone margin around the QR (clear space with no other content touching its edges — roughly 4 QR "modules" wide) so it stays scannable.
+   - Draw the real QR onto that backing box.
+   - Use error correction level Q or H (more redundant, survives print/scan noise better) and true black/white (not brand-color tints) for maximum scan reliability.
+   - Make sure the QR is rendered at full resolution for the final print size, not upscaled from something small.
+
+4. Add a verification step (test or one-off script) that decodes the final composited image's QR programmatically and confirms it returns the expected URL — don't just check it visually. Use a QR-decoding library for this.
+
+5. Structure the QR-generation-and-composite logic as a small reusable function (e.g. compositeQrOnto(image, url, position, size)) rather than inlining it in adGenGrok.ts, since we'll want the same logic for a dealer business card generator feature later.
+
+Show me the diff before applying it, and flag if any existing ad spots currently in production have this same broken-QR issue so we know if we need a backfill/regeneration pass.
