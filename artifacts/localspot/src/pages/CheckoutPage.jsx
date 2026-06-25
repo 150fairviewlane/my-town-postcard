@@ -339,6 +339,10 @@ function PlanSelector({ size, value, onChange }) {
       <div style={{ fontSize: 11, color: "#9ca3af", lineHeight: 1.4 }}>
         Multi-issue plans are billed per issue when each mailing goes to print — no monthly charges between mailings. Your card is saved for automatic billing on subsequent issues. No auto-renewal after your commitment ends.
       </div>
+      <div style={{ fontSize: 11, color: "#6b7280", lineHeight: 1.5, marginTop: 8, padding: "8px 10px", background: "#f8fafc", borderRadius: 6 }}>
+        Want to run your ad across multiple towns? Contact your local dealer or{" "}
+        <a href="mailto:hello@mytownpostcard.com" style={{ color: "#7B1418" }}>reach out to us</a> — we can set up coverage in multiple areas at once.
+      </div>
     </div>
   );
 }
@@ -379,7 +383,7 @@ function SubscriptionRedirect({ spotId, size, planKey, onError }) {
           <strong>{plan?.label}</strong> · {plan?.totalIssues} issues · {SIZE_LABELS[size] ?? size.toUpperCase()}
         </div>
         <div style={{ fontSize: 14, color: "#111" }}>
-          {formatUsd(monthly)}/mo
+          {formatUsd(monthly)}/issue × {plan?.totalIssues} {plan?.totalIssues === 1 ? "issue" : "issues"}
         </div>
       </div>
       <button
@@ -394,7 +398,7 @@ function SubscriptionRedirect({ spotId, size, planKey, onError }) {
         {busy ? "Redirecting to Stripe…" : `Continue to Stripe Checkout →`}
       </button>
       <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 10, textAlign: "center" }}>
-        Secured by Stripe · Your card is charged monthly for {plan?.totalIssues} months, then stops automatically.
+        Secured by Stripe · Billed per issue when each mailing goes to print. Card saved for future issues.
       </div>
     </div>
   );

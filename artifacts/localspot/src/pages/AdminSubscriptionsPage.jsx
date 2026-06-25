@@ -134,7 +134,7 @@ export default function AdminSubscriptionsPage() {
         {/* MRR cards */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, marginBottom: 24 }}>
           <Card label="Active Subscriptions" value={`${mrr?.activeSubscriptionCount ?? 0}`} />
-          <Card label="Monthly Recurring Revenue" value={`$${((mrr?.monthlyRecurringCents ?? 0) / 100).toFixed(0)}`} />
+          <Card label="Est. Revenue per Issue" value={`$${((mrr?.monthlyRecurringCents ?? 0) / 100).toFixed(0)}`} />
           <Card label="Expected Next 30 Days" value={`$${((mrr?.expectedNext30DaysCents ?? 0) / 100).toFixed(0)}`} />
           <Card label="Total Committed (All Time)" value={`$${(totalCommitted / 100).toFixed(0)}`} />
         </div>

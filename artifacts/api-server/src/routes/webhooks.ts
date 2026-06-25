@@ -556,7 +556,7 @@ export async function markSpotPaidAndNotify(
         ),
       );
     const paidCount = Number(paidCountRow?.c ?? 0);
-    if (paidCount >= 12) {
+    if (paidCount === 12) {
       req.log.info({ campaignId: spot.campaignId, paidCount }, "Campaign reached 12 paid spots — triggering subscription billing");
       await triggerSubscriptionBillingForCampaign(spot.campaignId);
     }
