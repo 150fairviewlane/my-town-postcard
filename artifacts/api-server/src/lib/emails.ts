@@ -1313,6 +1313,78 @@ function milestoneHtml(info: CampaignMilestoneEmailInfo, milestone: 12 | 15): st
   `;
 }
 
+// ─── Dealer company email provisioned ────────────────────────────────────────
+
+export interface DealerCompanyEmailProvisionedInfo {
+  dealerName: string;
+  dealerEmail: string;
+  companyEmail: string;
+}
+
+export async function sendDealerCompanyEmailProvisionedEmail(
+  info: DealerCompanyEmailProvisionedInfo,
+): Promise<void> {
+  const resend = await getResendClient();
+  if (!resend) return;
+
+  const safe = {
+    name: escapeHtml(info.dealerName),
+    firstName: escapeHtml(info.dealerName.split(" ")[0]),
+    companyEmail: escapeHtml(info.companyEmail),
+    personalEmail: escapeHtml(info.dealerEmail),
+  };
+
+  try {
+    const { error: sendError } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: info.dealerEmail,
+      subject: `Your My Town Postcard email is ready: ${info.companyEmail}`,
+      html: `
+        <div style="font-family: Georgia, serif; max-width: 620px; margin: 0 auto; padding: 32px; background: #f9fafb;">
+          <div style="background: #7B1418; padding: 18px 24px; border-radius: 8px 8px 0 0;">
+            <h1 style="color: #fff; margin: 0; font-size: 20px;">📮 My Town Postcard</h1>
+          </div>
+          <div style="background: #fff; border: 1px solid #e5e7eb; padding: 32px; border-radius: 0 0 8px 8px;">
+            <h2 style="color: #111; font-size: 22px; margin-top: 0;">Your branded email address is ready 🎉</h2>
+            <p style="color: #374151; font-size: 15px; line-height: 1.55;">
+              Hi <strong>${safe.firstName}</strong>! We've set up a professional email address for you under the My Town Postcard brand:
+            </p>
+
+            <div style="background: #f0fdf4; border: 2px solid #86efac; border-radius: 10px; padding: 18px 22px; margin: 20px 0; text-align: center;">
+              <div style="font-family: monospace; font-size: 22px; font-weight: 900; color: #15803d; letter-spacing: 0.5px;">
+                ${safe.companyEmail}
+              </div>
+            </div>
+
+            <h3 style="color: #111; font-size: 15px; margin-top: 24px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px;">How it works</h3>
+            <ul style="color: #374151; font-size: 14px; line-height: 1.8; padding-left: 22px; margin: 0 0 20px;">
+              <li>All mail sent to <strong>${safe.companyEmail}</strong> is forwarded directly to <strong>${safe.personalEmail}</strong> — no new inbox to check.</li>
+              <li><strong>Action required:</strong> Cloudflare will send a one-time verification link to <strong>${safe.personalEmail}</strong>. Click it to activate forwarding.</li>
+              <li>Use this address on your business cards, website, and when talking to advertisers.</li>
+            </ul>
+
+            <div style="background: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 6px; padding: 14px 16px; margin: 20px 0;">
+              <p style="margin: 0 0 6px; font-weight: 800; color: #92400e; font-size: 14px;">💡 Send mail <em>from</em> this address in Gmail</p>
+              <p style="margin: 0; color: #78350f; font-size: 13.5px; line-height: 1.55;">
+                Go to <strong>Gmail Settings → Accounts and Import → Send mail as</strong> → Add another email address. Enter <code style="background:#fef9c3; padding:1px 5px; border-radius:3px;">${safe.companyEmail}</code> and follow Gmail's verification steps.
+              </p>
+            </div>
+
+            ${emailFooter()}
+          </div>
+        </div>
+      `,
+    });
+    if (sendError) {
+      logger.error({ err: sendError, to: info.dealerEmail, type: "dealer-company-email-provisioned" }, "Failed to send dealer company email provisioned email");
+      return;
+    }
+    logger.info({ to: info.dealerEmail, companyEmail: info.companyEmail, type: "dealer-company-email-provisioned" }, "Dealer company email provisioned email sent");
+  } catch (err) {
+    logger.error({ err, to: info.dealerEmail, type: "dealer-company-email-provisioned" }, "Failed to send dealer company email provisioned email");
+  }
+}
+
 export async function sendCampaignPrintReadyEmail(info: CampaignMilestoneEmailInfo): Promise<void> {
   const resend = await getResendClient();
   if (!resend) {

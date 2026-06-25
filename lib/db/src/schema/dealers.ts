@@ -49,11 +49,19 @@ export const dealersTable = pgTable(
     // that need to exclude comped accounts). It has NO effect on commission
     // calculations, dealer portal access, or spot-sale revenue tracking.
     isComped: boolean("is_comped").notNull().default(false),
+    // Branded forwarding address provisioned via Cloudflare Email Routing
+    // (e.g. vincent@mytownpostcard.com → dealer's personal inbox). Nullable
+    // until provisioned; unique so two dealers can't share an address.
+    companyEmail: text("company_email"),
   },
   (t) => ({
     // Unique on email so a re-attempted signup with the same address surfaces
     // the existing record instead of silently creating duplicates.
     dealerEmailUnique: uniqueIndex("dealers_email_unique").on(t.email),
+    // Unique on company_email so two concurrent activations can never claim the
+    // same Cloudflare routing address. NULL values are excluded from uniqueness
+    // by PostgreSQL partial-unique semantics.
+    dealerCompanyEmailUnique: uniqueIndex("dealers_company_email_unique").on(t.companyEmail),
   }),
 );
 

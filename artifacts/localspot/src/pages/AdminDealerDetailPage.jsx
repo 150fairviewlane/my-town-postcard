@@ -170,6 +170,23 @@ export default function AdminDealerDetailPage({ params }) {
                     </button>
                   </div>
                 </div>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 2 }}>
+                    Company Email
+                  </div>
+                  {dealer.companyEmail ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 13.5, color: "#15803d", fontFamily: "monospace", fontWeight: 700 }}>
+                        {dealer.companyEmail}
+                      </span>
+                      <span style={{ fontSize: 10, fontWeight: 800, color: "#6b7280", background: "#f3f4f6", borderRadius: 999, padding: "1px 7px", letterSpacing: 0.3, textTransform: "uppercase" }}>
+                        Forwarding
+                      </span>
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: 13.5, color: "#9ca3af", fontStyle: "italic" }}>Not provisioned</span>
+                  )}
+                </div>
                 <Field label="Phone" value={dealer.phone || "—"} />
                 <Field label="Home ZIP" value={dealer.homeZip || "—"} mono />
                 <Field label="Dealer ID" value={`#${dealer.id}`} mono />

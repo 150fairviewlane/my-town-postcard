@@ -852,6 +852,7 @@ export default function AdminDealersPage() {
                     <tr style={{ background: "#fafafa", textAlign: "left" }}>
                       <Th>Dealer</Th>
                       <Th>Status</Th>
+                      <Th>Company Email</Th>
                       <Th>Zones</Th>
                       <Th>Households</Th>
                       <Th>Paid Ads</Th>
@@ -890,6 +891,13 @@ export default function AdminDealersPage() {
                             )}
                           </Td>
                           <Td><StatusPill status={d.status} /></Td>
+                          <Td>
+                            {d.companyEmail ? (
+                              <span style={{ fontSize: 12.5, fontFamily: "monospace", color: "#15803d", fontWeight: 700 }}>{d.companyEmail}</span>
+                            ) : (
+                              <span style={{ fontSize: 12, color: "#d1d5db" }}>—</span>
+                            )}
+                          </Td>
                           <Td>
                             {d.zoneNames && d.zoneNames.length > 0 ? (
                               <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
@@ -961,7 +969,7 @@ export default function AdminDealersPage() {
                         </tr>
                         {expanded === d.id && (
                           <tr style={{ background: "#fafafa" }}>
-                            <td colSpan={9} style={{ padding: "0 16px 18px" }}>
+                            <td colSpan={10} style={{ padding: "0 16px 18px" }}>
                               <LandingPagePanel state={pages[d.id]} onRefresh={() => loadPage(d.id)} />
                             </td>
                           </tr>

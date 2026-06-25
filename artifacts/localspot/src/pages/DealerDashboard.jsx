@@ -206,6 +206,20 @@ export default function DealerDashboard() {
           </div>
         )}
 
+        {/* Company email */}
+        {me?.companyEmail && (
+          <div style={{ background: "#f0fdf4", border: "1.5px solid #86efac", borderRadius: 14, padding: "18px 24px", marginBottom: 20, display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 20 }}>📧</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: "#15803d", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>Your LocalSpot Email</div>
+              <div style={{ fontFamily: "monospace", fontWeight: 800, fontSize: 16, color: "#111", marginBottom: 2 }}>{me.companyEmail}</div>
+              <div style={{ fontSize: 12.5, color: "#6b7280", lineHeight: 1.5 }}>
+                Forwards to your personal inbox. Use this address with advertisers and on your business cards.
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Territory */}
         {me?.territory && (
           <div style={{ background: `${GOLD}10`, border: `1.5px solid ${GOLD}55`, borderRadius: 14, padding: "20px 24px", marginBottom: 20 }}>

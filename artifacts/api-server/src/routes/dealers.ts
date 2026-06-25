@@ -39,6 +39,7 @@ import {
   sendAdminNewDealerEmail,
   sendAdminDealerCancelledEmail,
 } from "../lib/emails";
+import { provisionDealerEmail } from "../lib/cloudflareEmailRouting";
 import { logger } from "../lib/logger";
 import {
   hashPassword,
@@ -729,6 +730,11 @@ router.get("/dealers/confirm", async (req, res): Promise<void> => {
       req.log.error({ err: err?.message, dealerId }, "ensureDealerLandingPage failed in /confirm — webhook will retry");
     }
     try {
+      await provisionDealerEmail(dealer);
+    } catch (err: any) {
+      req.log.error({ err: err?.message, dealerId }, "provisionDealerEmail failed in /confirm — skipping");
+    }
+    try {
       const appUrl = getOrigin(req);
       const rawToken = generateResetToken();
       const tokenHash = hashResetToken(rawToken);
@@ -948,6 +954,15 @@ router.post("/admin/dealers", requireAdmin, async (req, res): Promise<void> => {
 
   req.log.info({ dealerId: dealer.id, email, territoryId, isComped }, "Admin created dealer (no payment required)");
 
+  // Provision Cloudflare company email (fire-and-forget). No territory required —
+  // comped dealers get a branded address too. Must happen before landing page so
+  // both run even when territory is absent.
+  try {
+    await provisionDealerEmail(dealer);
+  } catch (err: unknown) {
+    req.log.warn({ dealerId: dealer.id, err: (err as Error)?.message }, "Admin dealer: email provisioning failed — dealer still created");
+  }
+
   // Auto-provision landing page campaigns and spots, exactly as the public signup flow does.
   let landingPageCreated = false;
   if (territoryId) {
@@ -1036,6 +1051,18 @@ router.get("/admin/dealers", requireAdmin, async (_req, res): Promise<void> => {
     return Number.isNaN(d.getTime()) ? String(v) : d.toISOString();
   };
 
+  const dealerIds = rows.rows.map((r) => Number(r.id));
+  let companyEmailMap: Record<number, string | null> = {};
+  if (dealerIds.length > 0) {
+    const emailRows = await db
+      .select({ id: dealersTable.id, companyEmail: dealersTable.companyEmail })
+      .from(dealersTable)
+      .where(sql`id = ANY(ARRAY[${sql.join(dealerIds.map((id) => sql`${id}`), sql`, `)}]::int[])`);
+    for (const r of emailRows) {
+      companyEmailMap[r.id] = r.companyEmail ?? null;
+    }
+  }
+
   res.json({
     dealers: rows.rows.map((r) => ({
       id: Number(r.id),
@@ -1051,6 +1078,7 @@ router.get("/admin/dealers", requireAdmin, async (_req, res): Promise<void> => {
       totalHouseholds: Number(r.total_households ?? 0),
       zoneNames: r.zone_names ? r.zone_names.split("|").filter(Boolean) : [],
       paidAdsCount: Number(r.paid_ads_count ?? 0),
+      companyEmail: companyEmailMap[Number(r.id)] ?? null,
     })),
   });
 });
@@ -1565,6 +1593,7 @@ router.get("/dealers/me", requireDealerAuth, async (req, res): Promise<void> => 
     name: dealer.name,
     email: dealer.email,
     status: dealer.status,
+    companyEmail: dealer.companyEmail ?? null,
     impersonatedBy: tokenPayload?.impersonatedBy ?? null,
     // Exposed only while pending so the dashboard can offer a "retry confirm" link.
     stripeCheckoutSessionId: dealer.status === "pending_payment" ? dealer.stripeCheckoutSessionId : null,
@@ -1783,6 +1812,15 @@ export async function activateDealerFromCheckoutSession(
     logger.info({ dealerId, campaignCount: campaignIds.length, campaignIds }, "ensureDealerLandingPage complete via webhook");
   } catch (err: any) {
     logger.error({ err: err?.message, dealerId }, "ensureDealerLandingPage failed in webhook activation");
+  }
+
+  try {
+    const [freshDealer] = await db.select().from(dealersTable).where(eq(dealersTable.id, dealerId));
+    if (freshDealer) {
+      await provisionDealerEmail(freshDealer);
+    }
+  } catch (err: any) {
+    logger.error({ err: err?.message, dealerId }, "provisionDealerEmail failed in webhook activation — skipping");
   }
 
   try {
