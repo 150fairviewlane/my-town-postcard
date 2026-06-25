@@ -1,0 +1,30 @@
+I want to automate creating a branded company email address for each dealer when their subscription activates, using the Cloudflare Email Routing API.
+
+Naming rule:
+- Default address is the dealer's first name only, e.g. vincent@mytownpostcard.com
+- If that local part is already taken by another dealer, fall back to firstname.lastname@mytownpostcard.com, e.g. vincent.ferrari@mytownpostcard.com
+- If even that's taken (two dealers with the same first and last name), append a numeric suffix as a last resort: vincent.ferrari2@mytownpostcard.com
+- Lowercase everything, strip anything that isn't a-z, a hyphen, or a period from each name part before building the address
+- Use only the first word of the dealer's name field as the first name, and the last word as the last name, ignoring any middle names
+
+Forwarding destination: the personal email address the dealer registered with at signup (dealers.email) — not a new mailbox, just a forward.
+
+What to build:
+
+1. Add a new nullable, unique `companyEmail` text column to the dealers table (Drizzle schema + migration).
+
+2. Create a new lib file (something like `lib/cloudflareEmailRouting.ts`) with:
+   - A function that builds the candidate local part(s) for a dealer following the naming rule above, checking for collisions against the `companyEmail` column of all other dealers in the database (not against Cloudflare directly — this app is the only thing creating these rules, so the DB is the source of truth for "taken").
+   - A function that checks Cloudflare for an existing verified destination address matching the dealer's personal email (list destination addresses, look for a match) and reuses it if found, to avoid re-sending a verification email to a dealer who manages multiple territories.
+   - A function that creates the destination address via the Cloudflare API if one doesn't already exist (POST to the account-level email routing addresses endpoint).
+   - A function that creates the routing rule via the Cloudflare API (POST to the zone-level email routing rules endpoint), matching the new company email address and forwarding to the dealer's personal email.
+   - A top-level `provisionDealerEmail(dealer)` function that orchestrates all of the above, saves the resulting `companyEmail` back onto the dealer's row, and is safe to call multiple times (skip entirely if the dealer already has a `companyEmail` set).
+   - Read the Cloudflare credentials (API token, account ID, zone ID) from environment variables. Add a config-check helper similar to `isStripeConfigured()` — if the credentials aren't set, log a clear warning and skip provisioning rather than throwing, so a missing secret never blocks dealer activation.
+
+3. Hook `provisionDealerEmail` into dealer activation in `dealers.ts` — call it in both `activateDealerFromCheckoutSession` and `activateTerritoryClaimFromCheckoutSession`, right alongside the existing `ensureDealerLandingPage` call, using the same fire-and-forget try/catch pattern (log errors, don't block activation, since the webhook can be retried).
+
+4. Add a new transactional email (via the existing Resend setup) sent once provisioning succeeds, letting the dealer know: their new address, that Cloudflare will email their personal inbox a one-time verification link they need to click to activate forwarding, and a short pointer to setting up "Send mail as" in Gmail if they want to send from the new address too (this can link to or summarize the relevant section of DealerGuide.jsx if that's already covered there).
+
+5. Surface the assigned `companyEmail` in the admin dealers list/detail view and on the dealer's self-service portal page, so it's visible without checking the database directly.
+
+Before writing code, list the exact environment variable names you plan to use for the Cloudflare API token, account ID, and zone ID, and confirm whether they already exist in this Repl's secrets — if not, tell me what to add and where to get each value from the Cloudflare dashboard.

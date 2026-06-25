@@ -1,0 +1,25 @@
+I'm changing the ad-buyer subscription tiers on My Town Postcard. The postcard now mails quarterly (4 editions/year — winter, spring, summer, fall) instead of monthly, so the old 6-month and 12-month subscription tiers no longer make sense.
+
+New tiers:
+- Single issue — unchanged, no changes needed to this path
+- Quarterly Plan (internal commitment type `4_issue`) — 4 consecutive issues (one full annual cycle)
+- 12-Issue Plan (internal commitment type `12_issue`, unchanged id) — exactly 12 consecutive issues, regardless of calendar time elapsed
+
+Remove the `6_issue` option as a buyer-facing choice. Do NOT touch or migrate any existing `spot_subscriptions` rows that already have `commitment_type = '6_issue'` — leave that historical data exactly as-is for record-keeping; just stop offering it as a new purchase option anywhere (checkout API validation, frontend plan picker, PLAN_METADATA).
+
+Billing cadence change: The current system bills subscribers monthly (treating 1 issue = 1 month) via Stripe recurring subscriptions, using something like `addMonths(startDate, commitmentTotalIssues)` to compute the commitment end date. Since issues are now quarterly, introduce a constant (e.g. `ISSUE_INTERVAL_MONTHS = 3`) and:
+- Update the Stripe Checkout Session's recurring price config from monthly (`interval: "month"`) to quarterly (`interval: "month", interval_count: 3`)
+- Update the end-date calculation to `addMonths(startDate, commitmentTotalIssues * ISSUE_INTERVAL_MONTHS)` instead of the current 1:1 month-per-issue math
+- A Quarterly Plan subscriber is now billed 4 times total (once per issue); a 12-Issue Plan subscriber is billed 12 times total, spaced ~3 months apart
+
+Locate and update:
+- `parseCommitmentType` and `PLAN_METADATA` (wherever they live, likely in a `subscriptionPricing.ts` lib file) — replace `6_issue` with `4_issue` (commitmentTotalIssues: 4, display name "Quarterly Plan"), keep `12_issue` (commitmentTotalIssues: 12, display name "12-Issue Plan")
+- The `commitment_type` enum list in the `spot_subscriptions` Drizzle schema — add `4_issue`, keep `6_issue` and `12_issue` in the type list (so historical rows still type-check), but don't allow `6_issue` to be created going forward
+- The `/checkout/create-subscription-session` route — reject `6_issue` and `single` as commitment types for that endpoint (single already goes through the separate payment-intent flow), accept `4_issue` and `12_issue`, and update the Stripe price recurring interval as described above
+- The buyer-facing plan selector on the checkout/spot-confirmation page — update labels, pricing math, and any copy that says "per month" to "per issue" or "billed quarterly"
+- Subscription confirmation and admin notification emails — update plan names and any "monthly" billing language to reflect quarterly billing
+- The admin subscriptions dashboard — update commitment type display labels (so `4_issue` rows show "Quarterly Plan" and old `6_issue` historical rows still render sensibly, e.g. "6-Issue Plan (legacy)")
+
+Also add new messaging (no backend logic yet): On the checkout page, near where the buyer picks their commitment plan, add a small visible notice: "Want to run your ad across multiple towns (e.g. Canton, Woodstock)? Contact your local dealer to coordinate a multi-location buy." This is informational only — there's no multi-location purchase mechanism built yet, so don't try to build one; just surface the notice.
+
+Before making any schema/data changes, first query the `spot_subscriptions` table and report back the count and status of any existing rows with `commitment_type` in (`6_issue`, `12_issue`) so I can confirm nothing live gets disrupted.
