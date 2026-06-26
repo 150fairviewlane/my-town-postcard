@@ -173,3 +173,39 @@ id = "XKyhKvM40TUqvYbMwqaBP"
 uri = "file://samples-qr/sample-s-white-burgundy.jpg"
 type = "image"
 title = "S (600×600) — white + burgundy border (forest green bg)"
+
+[[outputs]]
+id = "EclgG_EoqIytqNqrPde-Y"
+uri = "file://attached_assets/qr-sample-xl-A-white-burgundy.jpg"
+type = "image"
+title = "XL — qrSize=180px, card=238×249 (warm rust bg)"
+
+[[outputs]]
+id = "PEsgMt_n_ivEOCz3dOO0C"
+uri = "file://attached_assets/qr-sample-xl-B-cream-burgundy.jpg"
+type = "image"
+title = "B — Cream (#FFF8F0) fill + burgundy border"
+
+[[outputs]]
+id = "Zc1QH-TPITpe-N1wVAs7J"
+uri = "file://attached_assets/qr-sample-xl-C-white-gray.jpg"
+type = "image"
+title = "C — White fill + gray border"
+
+[[outputs]]
+id = "zBwsRH2gx4DKuauDRwKeI"
+uri = "file://attached_assets/qr-sample-l-A-white-burgundy.jpg"
+type = "image"
+title = "L — qrSize=130px, card=172×180 (dark navy bg)"
+
+[[outputs]]
+id = "DU6flpO3kEHgbvBYjPF7Z"
+uri = "file://attached_assets/qr-sample-m-A-white-burgundy.jpg"
+type = "image"
+title = "M — qrSize=90px, card=118×124 (light cream bg)"
+
+[[outputs]]
+id = "Q4EhYzJgiXG5-KLKxuZBB"
+uri = "file://attached_assets/qr-sample-s-A-white-burgundy.jpg"
+type = "image"
+title = "S — qrSize=90px, card=118×124, font=10px (forest green bg)"
