@@ -669,7 +669,8 @@ export function buildAdPrompt(
       (d.offer
         ? `COUPON (dashed dark box, lower-right): offer text bold white/cream, large. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `QR ZONE HARD CONSTRAINT: The bottom-right corner square reserved for the QR code must NOT contain an orange circular checkmark badge, a dashed coupon box or dashed-border rectangle, or an orange bookmark-ribbon pennant. Those elements are correct elsewhere on the card but must never be recreated or bleed into this corner square.\n\n`
     )
     : isLandscape && templateKey === "made-fresh"
     ? (
@@ -683,7 +684,8 @@ export function buildAdPrompt(
       (d.offer
         ? `GOLDEN TICKET-STUB COUPON (lower-right): offer text bold dark, large. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `QR ZONE HARD CONSTRAINT: The bottom-right corner square reserved for the QR code must NOT contain a golden ticket-stub coupon (dashed border, notched edges), a white paint-stroke panel, or a chalkboard A-frame sign. Those elements are correct elsewhere on the card but must never be recreated or bleed into this corner square.\n\n`
     )
     : isLandscape && templateKey === "neighborhood-pro"
     ? (
@@ -705,7 +707,8 @@ export function buildAdPrompt(
       (d.offer
         ? `OFFER (wide white brush-stroke area, lower section): offer text bold dark-green, large. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `QR ZONE HARD CONSTRAINT: The bottom-right corner square reserved for the QR code must NOT contain a diagonal-cut service panel, a circular lime-green icon badge, or a white brush-stroke offer area. Those elements are correct elsewhere on the card but must never be recreated or bleed into this corner square.\n\n`
     )
     : isLandscape && templateKey === "at-your-service"
     ? (
@@ -726,7 +729,8 @@ export function buildAdPrompt(
       (d.offer
         ? `COUPON (gold/yellow dashed-border box, lower-right): offer text bold dark navy, prominent. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `QR ZONE HARD CONSTRAINT: The bottom-right corner square reserved for the QR code must NOT contain a gold/yellow dashed-border coupon box, a circular white icon badge from the navy band, or a gold/yellow brush-stroke element. Those elements are correct elsewhere on the card but must never be recreated or bleed into this corner square.\n\n`
     )
     : isLandscape && templateKey === "purple-sage"
     ? (
@@ -750,7 +754,8 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (dashed coupon box, lower area): offer text bold dark, fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `QR ZONE HARD CONSTRAINT: The bottom-right corner square reserved for the QR code must NOT contain a muted purple circle or dot-grid accent, a dashed coupon box, a cream rounded-rect tile, or a sage green leaf sprig element. Those elements are correct elsewhere on the card but must never be recreated or bleed into this corner square.\n\n`
     )
     : isLandscape && templateKey === "sage-organic"
     ? (
@@ -773,7 +778,8 @@ export function buildAdPrompt(
       (d.offer
         ? `COUPON (kraft paper dashed-stitch rectangle, lower-right, scissors icon): offer text bold dark, fine print below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `QR ZONE HARD CONSTRAINT: The bottom-right corner square reserved for the QR code must NOT contain a kraft paper dashed-stitch coupon rectangle, a dark olive circular icon badge, or a dark olive wave band element. Those elements are correct elsewhere on the card but must never be recreated or bleed into this corner square.\n\n`
     )
     : isLandscape && templateKey === "home-elegance"
     ? (
@@ -795,7 +801,8 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (dashed coupon box, lower area): offer text bold dark navy, large. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `QR ZONE HARD CONSTRAINT: The bottom-right corner square reserved for the QR code must NOT contain a solid navy filled rectangle, a rounded-rect service tile, or a circular dark navy icon badge. Those elements belong in the SERVICE TILES and dark navy lower area but must never be recreated or bleed into this corner square.\n\n`
     )
     : isLandscape && templateKey === "health-wellness"
     ? (
@@ -815,7 +822,8 @@ export function buildAdPrompt(
       (d.offer
         ? `OFFER (teal-bordered rect or dashed coupon box, visually distinct from service panels): offer text large and bold. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `QR ZONE HARD CONSTRAINT: The bottom-right corner square reserved for the QR code must NOT contain an organic teal blob shape, a circular teal badge, or a white rounded-rect text box or panel. Those elements are correct elsewhere on the card but must never be recreated or bleed into this corner square.\n\n`
     )
     : isLandscape && templateKey === "wok-fire"
     ? (
@@ -839,7 +847,8 @@ export function buildAdPrompt(
       (menuCount > 0
         ? `CHALKBOARD MENU (lower-right, dark A-frame sign): EXACTLY ${menuCount} item${menuCount !== 1 ? "s" : ""} and NO MORE in chalk-style white text — one per service in BUSINESS DETAILS, exactly as written. The template image may show more chalkboard lines — ignore extras; do NOT render empty chalk lines. No extras.\n\n`
         : `CHALKBOARD SIGN (lower-right): A-frame — leave board surface clean.\n\n`) +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `QR ZONE HARD CONSTRAINT: The bottom-right corner square reserved for the QR code must NOT contain a dark chalkboard A-frame sign, a golden ticket-stub coupon, a torn-edge deep red panel element, or a parchment/kraft torn-edge banner. Those elements are correct elsewhere on the card but must never be recreated or bleed into this corner square.\n\n`
     )
     : isLandscape && templateKey === "brush-stroke"
     ? (
@@ -859,7 +868,8 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (visually distinct dashed or bordered box, lower area): offer text bold dark, large. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `QR ZONE HARD CONSTRAINT: The bottom-right corner square reserved for the QR code must NOT contain a circular olive-bordered icon badge, a dark charcoal horizontal brush-stroke shape, or a dark charcoal curved-top footer extension. Those elements are correct elsewhere on the card but must never be recreated or bleed into this corner square.\n\n`
     )
     : isLandscape && templateKey === "heritage-home"
     ? (
@@ -880,7 +890,8 @@ export function buildAdPrompt(
       (d.offer
         ? `COUPON (dashed-border box in footer, scissors ✂ icon at upper-right of box): offer text bold cream inside dashed box. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `QR ZONE HARD CONSTRAINT: The bottom-right corner square reserved for the QR code must NOT contain a cream-background rounded-rect with a thin burgundy border, a headline-style box with a diamond ◆ separator, or any element from the HEADLINE zone. Those elements are correct in the upper-right area of the card but must never be recreated or bleed into this corner square.\n\n`
     )
     : isLandscape
     ? (
@@ -929,7 +940,8 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (wide white brush-stroke area, lower section): offer text bold dark-green, large. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `QR ZONE HARD CONSTRAINT: The bottom-right corner square reserved for the QR code must NOT contain a diagonal-cut service panel, a circular lime-green icon badge, or a white brush-stroke offer area. Those elements are correct elsewhere on the card but must never be recreated or bleed into this corner square.\n\n`
     )
     : templateKey === "at-your-service"
     ? (
@@ -951,7 +963,8 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (gold/yellow dashed-border coupon box, lower-right): offer text bold dark navy, large. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `QR ZONE HARD CONSTRAINT: The bottom-right corner square reserved for the QR code must NOT contain a gold/yellow dashed-border coupon box, a circular white icon badge from the navy band, or a gold/yellow brush-stroke element. Those elements are correct elsewhere on the card but must never be recreated or bleed into this corner square.\n\n`
     )
     : templateKey === "purple-sage"
     ? (
@@ -980,7 +993,8 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (dashed coupon box, lower area): offer text bold dark, fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `QR LOCK: No purple circle/dot-grid, coupon box, cream tile, or leaf sprig in QR corner.\n\n`
     )
     : templateKey === "sage-organic"
     ? (
@@ -1008,7 +1022,8 @@ export function buildAdPrompt(
       (d.offer
         ? `COUPON (kraft paper/cardboard textured rectangle with dashed stitched border and scissors icon, lower-right): offer text bold dark, fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `QR LOCK: No kraft coupon, dark olive badge, or olive wave band in QR corner.\n\n`
     )
     : templateKey === "home-elegance"
     ? (
@@ -1032,7 +1047,8 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (dashed coupon box, lower area): offer text bold dark navy, large. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `QR LOCK — not in QR corner: a solid navy rectangle, a rounded-rect service tile, or a circular dark navy icon badge.\n\n`
     )
     : templateKey === "surprise-me"
     ? (
@@ -1074,7 +1090,8 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER: offer text prominently in teal or dark text in an available white-space area. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `QR ZONE HARD CONSTRAINT: The bottom-right corner square reserved for the QR code must NOT contain an organic teal blob shape, a circular teal badge, or a white rounded-rect text box or panel. Those elements are correct elsewhere on the card but must never be recreated or bleed into this corner square.\n\n`
     )
     : templateKey === "wok-fire"
     ? (
@@ -1097,7 +1114,8 @@ export function buildAdPrompt(
       (menuCount > 0
         ? `CHALKBOARD MENU (lower-right, dark chalkboard A-frame sign): EXACTLY ${menuCount} item${menuCount !== 1 ? "s" : ""} and NO MORE in chalk-style white text — one per service in BUSINESS DETAILS, exactly as written. The template image may show more chalkboard lines — ignore extras; do NOT render empty chalk lines. No extras. No invented items.\n\n`
         : `CHALKBOARD SIGN (lower-right): A-frame sign — leave board surface clean (no services provided).\n\n`) +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `QR ZONE HARD CONSTRAINT: The bottom-right corner square reserved for the QR code must NOT contain a dark chalkboard A-frame sign, a golden ticket-stub coupon, a torn-edge deep red panel element, or a parchment/kraft torn-edge banner. Those elements must never appear in the QR corner square.\n\n`
     )
     : templateKey === "brush-stroke"
     ? (
@@ -1116,7 +1134,8 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (visually distinct dashed or bordered box, lower area): offer text bold dark, large. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `QR ZONE HARD CONSTRAINT: The bottom-right corner square reserved for the QR code must NOT contain a circular olive-bordered icon badge, a dark charcoal horizontal brush-stroke shape, or a dark charcoal curved-top footer extension. Those elements must never appear in the QR corner square.\n\n`
     )
     : templateKey === "heritage-home"
     ? (
@@ -1136,7 +1155,8 @@ export function buildAdPrompt(
       (d.offer
         ? `COUPON (footer area, dashed-border rounded-rect, scissors ✂ icon upper-right corner): offer text bold inside dashed box. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `QR LOCK — must not contain in QR corner: a cream-background rounded-rect with a thin burgundy border, a headline-style box with a diamond ◆ separator, or any element from the HEADLINE zone.\n\n`
     )
     : (
       // Default: parchment-classic portrait
@@ -1158,7 +1178,8 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (dashed coupon box): offer text bold inside dashed rectangle. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `QR ZONE HARD CONSTRAINT: The bottom-right corner square reserved for the QR code must NOT contain an orange circular checkmark badge, a dashed coupon box or dashed-border rectangle, or an orange bookmark-ribbon pennant. Those elements are correct elsewhere on the card but must never be recreated or bleed into this corner square.\n\n`
     );
 
   return (
