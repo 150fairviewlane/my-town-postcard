@@ -2013,7 +2013,7 @@ const RefineSchema = z.object({
   sizeKey:      z.string().optional().default("XL"),
   website:      z.string().optional().default(""),
   spotId:       z.number().int().optional(),
-  template:     z.string().optional().default(""),
+  template:     z.string().optional().default("parchment-classic"),
 });
 
 router.post("/grok-ad-generator/refine", async (req, res) => {

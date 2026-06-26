@@ -421,6 +421,10 @@ export interface RefineAdRequest {
   sizeKey?: string;
   /** Database ID of the spot being refined (used to composite a verified QR) */
   spotId?: number;
+  /** Business website URL — used as fallback QR target when spot has no tracking code */
+  website?: string;
+  /** Ad template key (e.g. "sage-organic") — used to select the QR backing-card style */
+  template?: string;
 }
 
 export interface RefineAdResponse {

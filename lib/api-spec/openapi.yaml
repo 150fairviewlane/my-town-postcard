@@ -1451,6 +1451,14 @@ components:
         spotId:
           type: integer
           description: Database ID of the spot being refined (used to composite a verified QR)
+        website:
+          type: string
+          description: Business website URL — used as fallback QR target when spot has no tracking code
+          default: ""
+        template:
+          type: string
+          description: Ad template key (e.g. "sage-organic") — used to select the QR backing-card style
+          default: parchment-classic
       required:
         - imageDataUrl
         - instruction

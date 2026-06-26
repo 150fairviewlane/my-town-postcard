@@ -906,6 +906,8 @@ export const SubmitInterestResponse = zod.object({
 export const refineGrokAdBodyInstructionMax = 500;
 
 export const refineGrokAdBodySizeKeyDefault = `XL`;
+export const refineGrokAdBodyWebsiteDefault = ``;
+export const refineGrokAdBodyTemplateDefault = `parchment-classic`;
 
 export const RefineGrokAdBody = zod.object({
   imageDataUrl: zod
@@ -924,6 +926,18 @@ export const RefineGrokAdBody = zod.object({
     .optional()
     .describe(
       "Database ID of the spot being refined (used to composite a verified QR)",
+    ),
+  website: zod
+    .string()
+    .default(refineGrokAdBodyWebsiteDefault)
+    .describe(
+      "Business website URL — used as fallback QR target when spot has no tracking code",
+    ),
+  template: zod
+    .string()
+    .default(refineGrokAdBodyTemplateDefault)
+    .describe(
+      'Ad template key (e.g. \"sage-organic\") — used to select the QR backing-card style',
     ),
 });
 

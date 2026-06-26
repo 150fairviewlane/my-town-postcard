@@ -1320,6 +1320,7 @@ const handleRefine = useCallback(async () => {
         imageDataUrl: generatedImageUrl,
         instruction: refineInstruction.trim(),
         sizeKey: sizeKey || "XL",
+        template: selectedTemplate || "parchment-classic",
       },
     });
     setGeneratedImageUrl(result.imageUrl);
