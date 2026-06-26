@@ -269,3 +269,15 @@ id = "zhLBXJ-E-2aRkYlQ4ZZR-"
 uri = "file://artifacts/api-server/test-qr-health-wellness.jpg"
 type = "image"
 title = "health-wellness — white fill, teal border #1f5c5c, 3px, r=22"
+
+[[outputs]]
+id = "7PYvhvceb0CX_4EvLDbO9"
+uri = "file://artifacts/api-server/test-qr-parchment-classic.jpg"
+type = "image"
+title = "parchment-classic — dark fill, burnt-orange border, square corners"
+
+[[outputs]]
+id = "s3Z0AIdwFnzdYfCA3c7kj"
+uri = "file://artifacts/api-server/test-qr-sage-organic.jpg"
+type = "image"
+title = "sage-organic — cream fill, olive dashed border, r=10 rounded corners"

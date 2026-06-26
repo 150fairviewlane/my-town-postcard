@@ -99,24 +99,24 @@ export const GRAY_BORDER_STYLE: CardStyle = {
  *   cornerRadius — SVG rx/ry; 0 = square corners
  *   dashPattern  — stroke-dasharray for dashed/stitched styles; null = solid
  *
- * Only heritage-home and health-wellness have finalized values.
- * All other templates use PLACEHOLDER_QR_STYLE and emit a startup warning.
+ * Finalized: heritage-home, health-wellness, parchment-classic, sage-organic.
+ * Remaining 8 templates use PLACEHOLDER_QR_STYLE and emit a startup warning.
  */
 export const TEMPLATE_QR_STYLES: Record<string, CardStyle> = {
   // ── Finalized ────────────────────────────────────────────────────────────
-  "heritage-home":   { fill: "#f5f0e8", border: "#6b1a2a", borderWidth: 3, cornerRadius: 16, dashPattern: null },
-  "health-wellness": { fill: "#ffffff", border: "#1f5c5c", borderWidth: 3, cornerRadius: 22, dashPattern: null },
+  "heritage-home":     { fill: "#f5f0e8", border: "#6b1a2a", borderWidth: 3, cornerRadius: 16, dashPattern: null },
+  "health-wellness":   { fill: "#ffffff", border: "#1f5c5c", borderWidth: 3, cornerRadius: 22, dashPattern: null },
+  "parchment-classic": { fill: "#1c1a18", border: "#c9742f", borderWidth: 3, cornerRadius: 0,  dashPattern: null },
+  "sage-organic":      { fill: "#f4ede1", border: "#6b7c4f", borderWidth: 3, cornerRadius: 10, dashPattern: [8, 6] },
   // ── TODO: replace with per-template values ───────────────────────────────
-  "parchment-classic":  { ...PLACEHOLDER_QR_STYLE },
-  "made-fresh":         { ...PLACEHOLDER_QR_STYLE },
-  "neighborhood-pro":   { ...PLACEHOLDER_QR_STYLE },
-  "at-your-service":    { ...PLACEHOLDER_QR_STYLE },
-  "home-elegance":      { ...PLACEHOLDER_QR_STYLE },
-  "sage-organic":       { ...PLACEHOLDER_QR_STYLE },
-  "purple-sage":        { ...PLACEHOLDER_QR_STYLE },
-  "brush-stroke":       { ...PLACEHOLDER_QR_STYLE },
-  "wok-fire":           { ...PLACEHOLDER_QR_STYLE },
-  "surprise-me":        { ...PLACEHOLDER_QR_STYLE },
+  "made-fresh":        { ...PLACEHOLDER_QR_STYLE },
+  "neighborhood-pro":  { ...PLACEHOLDER_QR_STYLE },
+  "at-your-service":   { ...PLACEHOLDER_QR_STYLE },
+  "home-elegance":     { ...PLACEHOLDER_QR_STYLE },
+  "purple-sage":       { ...PLACEHOLDER_QR_STYLE },
+  "brush-stroke":      { ...PLACEHOLDER_QR_STYLE },
+  "wok-fire":          { ...PLACEHOLDER_QR_STYLE },
+  "surprise-me":       { ...PLACEHOLDER_QR_STYLE },
 };
 
 /**
