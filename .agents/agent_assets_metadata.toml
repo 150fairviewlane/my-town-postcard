@@ -137,3 +137,39 @@ id = "gWQkWxrejK3iUpmn9dP3o"
 uri = "file://artifacts/api-server/src/assets/qr-backing-textures/mockup-qr-swatch-layered-strokes.png"
 type = "image"
 title = "6 — Layered swatch → QR composite"
+
+[[outputs]]
+id = "9HQiGGY0bk4S0jqgSd64k"
+uri = "file://samples-qr/sample-xl-white-burgundy.jpg"
+type = "image"
+title = "XL (1200×1500) — white + burgundy border"
+
+[[outputs]]
+id = "W2olFgadso3RUlHKzJiWI"
+uri = "file://samples-qr/sample-xl-cream-burgundy.jpg"
+type = "image"
+title = "B — Cream #FFF8F0 fill + burgundy border (XL)"
+
+[[outputs]]
+id = "NeQedQVnTKWxbArWehLzo"
+uri = "file://samples-qr/sample-xl-white-gray.jpg"
+type = "image"
+title = "C — White fill + gray #CCCCCC border (XL)"
+
+[[outputs]]
+id = "ZKFAvhI6vcHaXkmFcPCT-"
+uri = "file://samples-qr/sample-l-white-burgundy.jpg"
+type = "image"
+title = "L (900×1200) — white + burgundy border (dark navy bg)"
+
+[[outputs]]
+id = "4MTxwBSAdaj6RlZChG6jt"
+uri = "file://samples-qr/sample-m-white-burgundy.jpg"
+type = "image"
+title = "M (900×600) — white + burgundy border (light cream bg)"
+
+[[outputs]]
+id = "XKyhKvM40TUqvYbMwqaBP"
+uri = "file://samples-qr/sample-s-white-burgundy.jpg"
+type = "image"
+title = "S (600×600) — white + burgundy border (forest green bg)"

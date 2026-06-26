@@ -755,6 +755,9 @@ importers:
 
   scripts:
     dependencies:
+      '@types/qrcode':
+        specifier: ^1.5.6
+        version: 1.5.6
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.2(@types/pg@8.18.0)(pg@8.20.0)
@@ -767,6 +770,9 @@ importers:
       pg:
         specifier: ^8.20.0
         version: 8.20.0
+      qrcode:
+        specifier: ^1.5.4
+        version: 1.5.4
       sharp:
         specifier: ^0.34.5
         version: 0.34.5

@@ -18,11 +18,13 @@
     "prerender-zones": "tsx ./src/prerender-zones.ts",
     "generate:granite-photo": "tsx ./src/generateGranitePhoto.ts",
     "find:broken-qr-ads": "tsx ./src/findBrokenQrAds.ts",
+    "gen:qr-samples": "tsx ./src/genQrSamples.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "@types/pg": "^8.11.11",
+    "@types/qrcode": "^1.5.5",
     "tsx": "catalog:"
   },
   "dependencies": {
@@ -30,6 +32,7 @@
     "jsqr": "^1.4.0",
     "openai": "^6.34.0",
     "pg": "^8.20.0",
+    "qrcode": "^1.5.4",
     "sharp": "^0.34.5",
     "stripe": "^22.1.0"
   }
