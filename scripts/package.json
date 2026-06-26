@@ -19,6 +19,7 @@
     "generate:granite-photo": "tsx ./src/generateGranitePhoto.ts",
     "find:broken-qr-ads": "tsx ./src/findBrokenQrAds.ts",
     "gen:qr-samples": "tsx ./src/genQrSamples.ts",
+    "measure:qr": "tsx ./src/measureGrokPlaceholder.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {

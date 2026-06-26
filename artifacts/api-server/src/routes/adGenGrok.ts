@@ -238,9 +238,11 @@ function buildFooterZone(
     phoneIconStyle === "inline-icon"    ? "a small phone icon + "           : "";
 
   const qrZone =
-    `  BOTTOM-RIGHT CORNER — reserved square zone: ${qrCardInches.toFixed(2)}"×${qrCardInches.toFixed(2)}" at print size ` +
-    `(a real QR code will be composited here in post-processing). ` +
+    `  BOTTOM-RIGHT CORNER — reserved square zone: ${qrCardInches.toFixed(2)}"×${qrCardInches.toFixed(2)}" at print size. ` +
+    `POSITION IS CRITICAL: the square's RIGHT EDGE must be flush with the image's rightmost pixel column and its BOTTOM EDGE must be flush with the image's bottommost pixel row — zero gap, zero padding, touching the actual image border on both sides. ` +
+    `Do NOT give this square any margin from the image edge; it must sit in the true corner. ` +
     `Fill this exact square with the footer bar's background color — solid, no patterns, no text, no decorative marks. ` +
+    `(A real QR code will be composited here in post-processing.) ` +
     `CRITICAL: do NOT draw a QR code, barcode, or any scannable mark anywhere in the image. ` +
     `The zone must not exceed ${qrCardInches.toFixed(2)}"×${qrCardInches.toFixed(2)}" — if your placeholder is larger it will be visible outside the composited card.\n`;
 
@@ -1608,6 +1610,11 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       // ── Paid spot: hard gate ──────────────────────────────────────────
       const trackingUrl = `${(process.env.APP_URL ?? "https://mytownpostcard.com").replace(/\/$/, "")}/go/${spotTrackingCode}`;
       const buf        = Buffer.from(dataUrl.split(",")[1] ?? "", "base64");
+      // Dev-mode only: save raw Grok output (pre-composite) for QR placeholder offset measurement.
+      if (process.env.NODE_ENV !== "production") {
+        const { writeFile } = await import("fs/promises");
+        await writeFile(`/tmp/grok-raw-${Date.now()}-${d.sizeKey}.jpg`, buf).catch(() => {});
+      }
       const composited = await compositeQrOnto(buf, trackingUrl, toSizeKey(d.sizeKey));
       return `data:image/jpeg;base64,${composited.toString("base64")}`;
     }
@@ -1615,6 +1622,11 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     // ── Preview: soft gate with two-level fallback ────────────────────────
     const previewUrl = resolvePreviewQrUrl(d.website);
     const buf        = Buffer.from(dataUrl.split(",")[1] ?? "", "base64");
+    // Dev-mode only: save raw Grok output (pre-composite) for QR placeholder offset measurement.
+    if (process.env.NODE_ENV !== "production") {
+      const { writeFile } = await import("fs/promises");
+      await writeFile(`/tmp/grok-raw-${Date.now()}-${d.sizeKey}.jpg`, buf).catch(() => {});
+    }
     const sKey       = toSizeKey(d.sizeKey);
 
     const tryCompositePreview = async (qrUrl: string): Promise<string | null> => {
