@@ -2,18 +2,29 @@
  * compositeQr.ts — server-side QR code compositing for Grok-generated ads.
  *
  * Generates a real, scannable QR code (ECL H) and composites it onto an ad
- * image buffer inside a thin-bordered backing card anchored to the bottom-right
- * corner.  After compositing, a jsqr decode step verifies the QR is scannable.
+ * image buffer inside a square backing card anchored flush to the bottom-right
+ * corner.
  *
- * Card sizing:
- *   - Width:  qrSize + 2×PAD (flat horizontal padding on both sides)
- *   - Height: max(qrSize + 2×PAD, imgH × FOOTER_COVER) — whichever is taller,
- *     so the card always covers Grok's full instructed footer zone (upper bound
- *     of the 15–20% prompt range).  The QR is bottom-anchored within the card;
- *     the extra height extends the card's top edge upward to fill the gap.
- *   - Card is inset CARD_INSET px from the image edge.
+ * Card sizing — physical-inch based, always a square:
+ *   cardSize (px) = round(qrSize × 1.15)
+ *   The 1.15× factor adds a 15% margin on every side (QR centered within card).
+ *   DPI cancels out of the formula (qrPx/DPI × 1.15 × DPI = qrPx × 1.15), so
+ *   the same formula holds regardless of which size's DPI we use.
+ *
+ * Physical card sizes by spot size:
+ *   XL  →  207 px  ≈ 0.69" square  (qrSize 180 px, 4"×5" print)
+ *   L   →  150 px  ≈ 0.50" square  (qrSize 130 px, 3"×4" print)
+ *   M   →  104 px  ≈ 0.35" square  (qrSize  90 px, 3"×2" print)
+ *   S   →  104 px  ≈ 0.35" square  (qrSize  90 px, 2"×2" print)
+ *
+ * Telemetry:
+ *   After compositing, a 20-px strip just above the card top edge is sampled.
+ *   If average brightness > BLEED_THRESHOLD the logger emits a WARN so any
+ *   future drift (Grok placeholder exceeding card bounds) is visible in logs
+ *   rather than silently reintroducing the exposed-corner bug.
  */
 
+import { logger } from "./logger";
 import QRCode from "qrcode";
 import jsqr from "jsqr";
 
@@ -55,51 +66,61 @@ export const GRAY_BORDER_STYLE: CardStyle = {
 };
 
 // ── Layout constants ──────────────────────────────────────────────────────
-const CARD_INSET    = 6;    // px from image edge to card outer edge
-const PAD           = 4;    // horizontal padding on each side (QR left/right within card)
-const FOOTER_COVER  = 0.20; // fraction of imgH the card must be at least as tall as
-                            // (upper bound of the 15-20% footer instruction in buildAdPrompt)
+/** px inset from the image edge to the card's outer edge */
+const CARD_INSET = 6;
+
+/** 1.15× physical margin — card is always this multiple of the QR size */
+const CARD_MARGIN = 1.15;
+
+/**
+ * Average pixel brightness threshold (0-255) above which the strip just above
+ * the card is considered suspiciously light — indicating Grok's placeholder
+ * may have bled outside the card's covered zone.
+ */
+const BLEED_THRESHOLD = 220;
+
+/** Height (px) of the bleed-detection strip above the card top edge */
+const BLEED_CHECK_H = 20;
 
 // ── Card layout computed from QR spec ─────────────────────────────────────
 export interface CardLayout {
-  cardW:     number;
-  cardH:     number;
+  /** Side length of the square card in pixels */
+  cardSize:  number;
   cardLeft:  number;
   cardTop:   number;
-  qrLeft:    number; // QR origin in card-local coords
-  qrTop:     number;
-  qrAbsLeft: number; // QR origin in full-image coords (for decode verify)
+  /** QR origin in card-local coordinates (symmetric on all sides) */
+  qrOffset:  number;
+  /** QR origin in full-image coordinates (for decode verify + bleed check) */
+  qrAbsLeft: number;
   qrAbsTop:  number;
 }
 
 export function computeCardLayout(spec: QrSpec): CardLayout {
   const { qrSize, imgW, imgH } = spec;
 
-  const cardW = qrSize + PAD * 2;
-  // Height covers the full footer zone — QR is bottom-anchored inside the card.
-  const cardH = Math.max(qrSize + PAD * 2, Math.round(imgH * FOOTER_COVER));
+  // Square card sized to the QR's physical print size + 15% margin.
+  // DPI cancels: qrSize_inches × 1.15 × DPI = qrSize_px × 1.15.
+  const cardSize = Math.round(qrSize * CARD_MARGIN);
 
-  const cardLeft = imgW - cardW - CARD_INSET;
-  const cardTop  = imgH - cardH - CARD_INSET;
+  // QR centered within the square card (equal margin all sides).
+  const qrOffset = Math.floor((cardSize - qrSize) / 2);
 
-  // QR anchored to bottom-right of card interior.
-  const qrLeft = PAD;
-  const qrTop  = cardH - qrSize - PAD;
+  const cardLeft = imgW - cardSize - CARD_INSET;
+  const cardTop  = imgH - cardSize - CARD_INSET;
 
   return {
-    cardW, cardH, cardLeft, cardTop,
-    qrLeft, qrTop,
-    qrAbsLeft: cardLeft + qrLeft,
-    qrAbsTop:  cardTop  + qrTop,
+    cardSize, cardLeft, cardTop,
+    qrOffset,
+    qrAbsLeft: cardLeft + qrOffset,
+    qrAbsTop:  cardTop  + qrOffset,
   };
 }
 
 // ── SVG backing-card builder ───────────────────────────────────────────────
-function makeCardSvg(layout: CardLayout, style: CardStyle): Buffer {
-  const { cardW, cardH } = layout;
+function makeCardSvg(cardSize: number, style: CardStyle): Buffer {
   const svg =
-    `<svg width="${cardW}" height="${cardH}" xmlns="http://www.w3.org/2000/svg">` +
-    `<rect x="0.5" y="0.5" width="${cardW - 1}" height="${cardH - 1}" ` +
+    `<svg width="${cardSize}" height="${cardSize}" xmlns="http://www.w3.org/2000/svg">` +
+    `<rect x="0.5" y="0.5" width="${cardSize - 1}" height="${cardSize - 1}" ` +
     `fill="${style.fill}" stroke="${style.border}" stroke-width="1"/>` +
     `</svg>`;
   return Buffer.from(svg);
@@ -129,6 +150,12 @@ export async function compositeQrOnto(
   const spec   = QR_PLACEMENT[spotSize] ?? QR_PLACEMENT.xl;
   const layout = computeCardLayout(spec);
 
+  logger.info(
+    { spotSize, cardSize: layout.cardSize, cardLeft: layout.cardLeft, cardTop: layout.cardTop,
+      qrOffset: layout.qrOffset, qrAbsLeft: layout.qrAbsLeft, qrAbsTop: layout.qrAbsTop },
+    "compositeQrOnto: compositing QR backing card",
+  );
+
   // ── 1. Generate QR PNG ────────────────────────────────────────────────────
   // ECL H: 30 % recovery — survives partial obscuring by print imperfections.
   // margin:4 = 4 QR modules of quiet zone on every side (ISO 18004 minimum).
@@ -140,14 +167,13 @@ export async function compositeQrOnto(
     color:  { dark: "#000000", light: "#ffffff" },
   });
 
-  // ── 2. Render SVG backing card to PNG ─────────────────────────────────────
-  const cardBase = await sharp(makeCardSvg(layout, style)).png().toBuffer();
+  // ── 2. Render square SVG backing card to PNG ──────────────────────────────
+  const cardBase = await sharp(makeCardSvg(layout.cardSize, style)).png().toBuffer();
 
-  // ── 3. Composite QR bottom-anchored inside card ───────────────────────────
-  // qrLeft/qrTop are card-local — QR sits PAD from sides and PAD from bottom.
-  // The extra height above the QR covers Grok's full footer reservation zone.
+  // ── 3. Composite QR centered inside square card ───────────────────────────
+  // qrOffset is symmetric on all four sides.
   const cardWithQr = await sharp(cardBase)
-    .composite([{ input: qrPng, left: layout.qrLeft, top: layout.qrTop }])
+    .composite([{ input: qrPng, left: layout.qrOffset, top: layout.qrOffset }])
     .png()
     .toBuffer();
 
@@ -189,6 +215,44 @@ export async function compositeQrOnto(
       `compositeQrOnto: QR content mismatch — ` +
       `expected "${trackingUrl}" but decoded "${decoded.data}".`,
     );
+  }
+
+  // ── 6. Telemetry — detect Grok placeholder bleed above card ──────────────
+  // Sample a strip directly above the card. If Grok's reserved-zone placeholder
+  // extends taller than the card, those pixels will be suspiciously bright
+  // (white/near-white background of the placeholder). This is purely diagnostic;
+  // it does NOT alter the output.
+  const checkH = Math.min(BLEED_CHECK_H, layout.cardTop);
+  if (checkH > 0) {
+    try {
+      const strip = await sharp(compositedBuffer)
+        .extract({
+          left:   layout.cardLeft,
+          top:    layout.cardTop - checkH,
+          width:  layout.cardSize,
+          height: checkH,
+        })
+        .removeAlpha()
+        .raw()
+        .toBuffer();
+
+      let brightnessSum = 0;
+      for (let i = 0; i < strip.length; i++) brightnessSum += strip[i]!;
+      const avgBrightness = brightnessSum / strip.length;
+
+      if (avgBrightness > BLEED_THRESHOLD) {
+        logger.warn(
+          { spotSize, cardLeft: layout.cardLeft, cardTop: layout.cardTop,
+            cardSize: layout.cardSize, avgBrightnessAboveCard: avgBrightness.toFixed(1),
+            threshold: BLEED_THRESHOLD },
+          "compositeQrOnto: bright region detected above card — " +
+          "Grok placeholder may exceed card bounds (exposed corner risk)",
+        );
+      }
+    } catch (err) {
+      // Bleed check is non-blocking telemetry — never fail the whole composite for it.
+      logger.warn({ err, spotSize }, "compositeQrOnto: bleed-check extraction failed (non-fatal)");
+    }
   }
 
   return compositedBuffer;

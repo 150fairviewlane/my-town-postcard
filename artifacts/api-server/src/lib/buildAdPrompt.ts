@@ -71,11 +71,17 @@ export function getDefaultThemeIndex(industry: string): number {
 
 // ── Footer zone builder ──────────────────────────────────────────────────────
 
-export function buildFooterZone(phone: string, address: string, isLandscape = false): string {
-  // Right ~12–15% of card width: a flat same-color rectangle reserved for the
-  // programmatically composited QR. Global negative: no AI-drawn QR/barcode/
-  // scannable marks anywhere in the image.
-  const qrSlot = `RIGHT: blank rect (~15% card width, full footer height) — no QR, barcode, or scannable marks anywhere.`;
+export function buildFooterZone(phone: string, address: string, isLandscape = false, sizeKey?: string): string {
+  // Physical card size for the composited QR square (cardSize = round(qrSize × 1.15)).
+  // Must stay in sync with QR_PLACEMENT in compositeQr.ts.
+  const sk = (sizeKey ?? "").toLowerCase();
+  const qrCardInches = sk === "xl" ? 0.69 : sk === "l" ? 0.50 : 0.35; // m / s / unknown
+
+  // Bottom-right square zone: solid footer-colored fill, no marks — a real QR is composited here.
+  const qrSlot =
+    `BOTTOM-RIGHT: solid-color square ${qrCardInches.toFixed(2)}"×${qrCardInches.toFixed(2)}" ` +
+    `at print size, filled with the footer background color — reserved for composited QR; ` +
+    `no QR, barcode, or scannable marks anywhere in the image; zone must not exceed ${qrCardInches.toFixed(2)}"×${qrCardInches.toFixed(2)}".`;
 
   if (isLandscape) {
     const hasAddr = address !== "(none)";
@@ -662,7 +668,7 @@ export function buildAdPrompt(
       (d.offer
         ? `COUPON (dashed dark box, lower-right): offer text bold white/cream, large. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
     )
     : isLandscape && templateKey === "made-fresh"
     ? (
@@ -676,7 +682,7 @@ export function buildAdPrompt(
       (d.offer
         ? `GOLDEN TICKET-STUB COUPON (lower-right): offer text bold dark, large. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
     )
     : isLandscape && templateKey === "neighborhood-pro"
     ? (
@@ -698,7 +704,7 @@ export function buildAdPrompt(
       (d.offer
         ? `OFFER (wide white brush-stroke area, lower section): offer text bold dark-green, large. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
     )
     : isLandscape && templateKey === "at-your-service"
     ? (
@@ -719,7 +725,7 @@ export function buildAdPrompt(
       (d.offer
         ? `COUPON (gold/yellow dashed-border box, lower-right): offer text bold dark navy, prominent. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
     )
     : isLandscape && templateKey === "purple-sage"
     ? (
@@ -743,7 +749,7 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (dashed coupon box, lower area): offer text bold dark, fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
     )
     : isLandscape && templateKey === "sage-organic"
     ? (
@@ -766,7 +772,7 @@ export function buildAdPrompt(
       (d.offer
         ? `COUPON (kraft paper dashed-stitch rectangle, lower-right, scissors icon): offer text bold dark, fine print below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
     )
     : isLandscape && templateKey === "home-elegance"
     ? (
@@ -788,7 +794,7 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (dashed coupon box, lower area): offer text bold dark navy, large. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
     )
     : isLandscape && templateKey === "health-wellness"
     ? (
@@ -808,7 +814,7 @@ export function buildAdPrompt(
       (d.offer
         ? `OFFER (teal-bordered rect or dashed coupon box, visually distinct from service panels): offer text large and bold. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
     )
     : isLandscape && templateKey === "wok-fire"
     ? (
@@ -832,7 +838,7 @@ export function buildAdPrompt(
       (menuCount > 0
         ? `CHALKBOARD MENU (lower-right, dark A-frame sign): EXACTLY ${menuCount} item${menuCount !== 1 ? "s" : ""} and NO MORE in chalk-style white text — one per service in BUSINESS DETAILS, exactly as written. The template image may show more chalkboard lines — ignore extras; do NOT render empty chalk lines. No extras.\n\n`
         : `CHALKBOARD SIGN (lower-right): A-frame — leave board surface clean.\n\n`) +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
     )
     : isLandscape && templateKey === "brush-stroke"
     ? (
@@ -852,7 +858,7 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (visually distinct dashed or bordered box, lower area): offer text bold dark, large. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
     )
     : isLandscape && templateKey === "heritage-home"
     ? (
@@ -873,7 +879,7 @@ export function buildAdPrompt(
       (d.offer
         ? `COUPON (dashed-border box in footer, scissors ✂ icon at upper-right of box): offer text bold cream inside dashed box. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
     )
     : isLandscape
     ? (
@@ -900,7 +906,7 @@ export function buildAdPrompt(
       (d.offer
         ? `  SPECIAL OFFER (own visually distinct coupon zone — dashed box or bordered panel, clearly separated from services): offer text and fine print from BUSINESS DETAILS. No filler phrases. No QR inside coupon.\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
     )
     : templateKey === "neighborhood-pro"
     ? (
@@ -922,7 +928,7 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (wide white brush-stroke area, lower section): offer text bold dark-green, large. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
     )
     : templateKey === "at-your-service"
     ? (
@@ -944,7 +950,7 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (gold/yellow dashed-border coupon box, lower-right): offer text bold dark navy, large. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
     )
     : templateKey === "purple-sage"
     ? (
@@ -973,7 +979,7 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (dashed coupon box, lower area): offer text bold dark, fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
     )
     : templateKey === "sage-organic"
     ? (
@@ -1001,7 +1007,7 @@ export function buildAdPrompt(
       (d.offer
         ? `COUPON (kraft paper/cardboard textured rectangle with dashed stitched border and scissors icon, lower-right): offer text bold dark, fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
     )
     : templateKey === "home-elegance"
     ? (
@@ -1025,7 +1031,7 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (dashed coupon box, lower area): offer text bold dark navy, large. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
     )
     : templateKey === "surprise-me"
     ? (
@@ -1047,7 +1053,7 @@ export function buildAdPrompt(
       (d.offer
         ? `  SPECIAL OFFER (own visually distinct coupon zone, clearly separated from services): offer text and fine print from BUSINESS DETAILS. No filler phrases. No QR inside coupon.\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape) +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
       "QUALITY: ✗ flat bg | ✗ rectangular frames | ✗ text on bare color | ✗ filler in coupon. ✓ Three depth planes | ✓ cinematic edge blending | ✓ 300 DPI.\n\n"
     )
     : templateKey === "health-wellness"
@@ -1067,7 +1073,7 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER: offer text prominently in teal or dark text in an available white-space area. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
     )
     : templateKey === "wok-fire"
     ? (
@@ -1090,7 +1096,7 @@ export function buildAdPrompt(
       (menuCount > 0
         ? `CHALKBOARD MENU (lower-right, dark chalkboard A-frame sign): EXACTLY ${menuCount} item${menuCount !== 1 ? "s" : ""} and NO MORE in chalk-style white text — one per service in BUSINESS DETAILS, exactly as written. The template image may show more chalkboard lines — ignore extras; do NOT render empty chalk lines. No extras. No invented items.\n\n`
         : `CHALKBOARD SIGN (lower-right): A-frame sign — leave board surface clean (no services provided).\n\n`) +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
     )
     : templateKey === "brush-stroke"
     ? (
@@ -1109,7 +1115,7 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (visually distinct dashed or bordered box, lower area): offer text bold dark, large. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
     )
     : templateKey === "heritage-home"
     ? (
@@ -1129,7 +1135,7 @@ export function buildAdPrompt(
       (d.offer
         ? `COUPON (footer area, dashed-border rounded-rect, scissors ✂ icon upper-right corner): offer text bold inside dashed box. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
     )
     : (
       // Default: parchment-classic portrait
@@ -1151,7 +1157,7 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (dashed coupon box): offer text bold inside dashed rectangle. Fine print smaller below. No QR inside coupon.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
     );
 
   return (

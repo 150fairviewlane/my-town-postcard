@@ -216,7 +216,13 @@ function buildFooterZone(
   phone: string,
   address: string,
   phoneIconStyle: "circular-badge" | "inline-icon" | "minimal",
+  sizeKey?: string,
 ): string {
+  // Physical card size for the composited QR square, per spot size (cardSize = round(qrSize × 1.15)).
+  // These must stay in sync with QR_PLACEMENT in compositeQr.ts.
+  const sk = (sizeKey ?? "").toLowerCase();
+  const qrCardInches = sk === "xl" ? 0.69 : sk === "l" ? 0.50 : 0.35; // m / s / unknown
+
   const hasAddr = address !== "(none)";
   const addrRule = !hasAddr
     ? ""
@@ -230,14 +236,20 @@ function buildFooterZone(
     phoneIconStyle === "circular-badge" ? "a circular phone-icon badge + " :
     phoneIconStyle === "inline-icon"    ? "a small phone icon + "           : "";
 
+  const qrZone =
+    `  BOTTOM-RIGHT CORNER — reserved square zone: ${qrCardInches.toFixed(2)}"×${qrCardInches.toFixed(2)}" at print size ` +
+    `(a real QR code will be composited here in post-processing). ` +
+    `Fill this exact square with the footer bar's background color — solid, no patterns, no text, no decorative marks. ` +
+    `CRITICAL: do NOT draw a QR code, barcode, or any scannable mark anywhere in the image. ` +
+    `The zone must not exceed ${qrCardInches.toFixed(2)}"×${qrCardInches.toFixed(2)}" — if your placeholder is larger it will be visible outside the composited card.\n`;
+
   return (
-    "FOOTER REGION (bottom 15–20% of card): a SOLID DARK BACKGROUND BAR spanning the full card width — opaque, high contrast, no transparency or bleed into imagery above.\n" +
+    "FOOTER REGION (bottom 20% of card): a SOLID DARK BACKGROUND BAR spanning the full card width — opaque, high contrast, no transparency or bleed into imagery above.\n" +
     "  PHONE NUMBER RULE — CRITICAL: the phone number must appear EXACTLY ONCE in the entire ad — ONLY inside this footer bar. NEVER place the phone number in any service panel, coupon zone, headline area, right column, or anywhere else outside the footer.\n" +
     `  LEFT — ${iconPrefix}phone "${phone}" in bold white, large and dominant. Zero digit changes.\n` +
     (hasAddr ? `  ADDRESS — directly below the phone number, left-aligned in the same left column (NEVER drift to a center or right column, NEVER appear in a separate area): ${addrRule}\n` : "") +
-    "  RIGHT — small QR code graphic (max 0.5\"×0.5\" at print size). No coupon box, dashed frame, or decorative border.\n" +
+    qrZone +
     "  QR CODE RULE — CRITICAL: the QR code must appear EXACTLY ONCE in the entire ad — ONLY here in the footer bottom-right corner. NEVER place a QR code anywhere outside this footer — not in any coupon zone, service panel, headline area, or elsewhere.\n" +
-    "  QR QUIET ZONE: 4-unit clear white border on all sides, no overlaps.\n" +
     "  TYPOGRAPHY: phone minimum 18pt bold white — the largest text in the footer bar; address minimum 14pt bold white. NEVER render the address text smaller than 12pt — if space is tight, shrink the coupon or reduce service panel height before reducing the address font size. No website URL text.\n\n"
   );
 }
@@ -811,7 +823,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           (d.offerFine ? `    Fine print: "${d.offerFine}" smaller below.\n` : "") +
           "    NEVER place a QR code inside or adjacent to this coupon zone — the QR code belongs ONLY in the footer bottom-right corner.\n\n"
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, "inline-icon") +
+      buildFooterZone(d.phone || "", fullAddress, "inline-icon", d.sizeKey) +
       "TYPOGRAPHIC RULES:\n" +
       "  • Headline: bold condensed all-caps slab serif, white on dark brush-stroke\n" +
       "  • Script: warm orange, single English category noun only; never proper nouns\n" +
@@ -835,7 +847,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           (d.offerFine ? `    Fine print: "${d.offerFine}" smaller below.\n` : "") +
           "    NEVER place a QR code inside or adjacent to this coupon zone — the QR code belongs ONLY in the footer bottom-right corner.\n\n"
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, "inline-icon") +
+      buildFooterZone(d.phone || "", fullAddress, "inline-icon", d.sizeKey) +
       "TYPOGRAPHIC RULES:\n" +
       "  • Business name: bold condensed all-caps slab serif, dark on white panel\n" +
       "  • Tagline: handwriting-style italic, slightly smaller\n" +
@@ -869,7 +881,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           (d.offerFine ? `    Fine print: "${d.offerFine}" smaller below.\n` : "") +
           "    NEVER place a QR code inside or adjacent to this coupon zone — the QR code belongs ONLY in the footer bottom-right corner.\n\n"
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, "inline-icon") +
+      buildFooterZone(d.phone || "", fullAddress, "inline-icon", d.sizeKey) +
       "TYPOGRAPHIC RULES:\n" +
       "  • Headline: bold condensed all-caps slab serif, dark green or near-black\n" +
       "  • Script: bright lime-green, single English service-category noun only\n" +
@@ -901,7 +913,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           (d.offerFine ? `    Fine print: "${d.offerFine}" smaller below.\n` : "") +
           "    NEVER place a QR code inside or adjacent to this coupon zone — the QR code belongs ONLY in the footer bottom-right corner.\n\n"
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, "circular-badge") +
+      buildFooterZone(d.phone || "", fullAddress, "circular-badge", d.sizeKey) +
       "TYPOGRAPHIC RULES:\n" +
       "  • Headline: bold condensed all-caps slab serif, dark navy blue\n" +
       "  • Script: gold/yellow, single English service-category noun only\n" +
@@ -935,7 +947,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           (d.offerFine ? `    Fine print: "${d.offerFine}" smaller below, inside the same offer zone.\n` : "") +
           "    NEVER place a QR code inside or adjacent to this coupon zone — the QR code belongs ONLY in the footer bottom-right corner.\n\n"
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, "circular-badge") +
+      buildFooterZone(d.phone || "", fullAddress, "circular-badge", d.sizeKey) +
       "TYPOGRAPHIC RULES:\n" +
       "  • Headline: bold condensed all-caps sans-serif, dark teal or near-black\n" +
       "  • NEVER repeat any word from the business name\n" +
@@ -983,7 +995,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           "    NEVER place a QR code inside or adjacent to this offer zone.\n\n"
         : "") +
 
-      buildFooterZone(d.phone || "", fullAddress, "circular-badge") +
+      buildFooterZone(d.phone || "", fullAddress, "circular-badge", d.sizeKey) +
       "TYPOGRAPHIC RULES:\n" +
       "  • Business name: bold condensed all-caps sans-serif, white/cream inside the olive green brush-stroke band\n" +
       "  • Service labels: white/cream text inside dark charcoal brush-stroke shapes\n" +
@@ -1032,7 +1044,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           `    Items: ${menuStr}\n    Each item exactly once.\n\n`
         : "  ZONE 6 — CHALKBOARD SIGN (lower-right): dark chalkboard A-frame with wood frame — leave board surface clean (no services provided).\n\n") +
 
-      buildFooterZone(d.phone || "", fullAddress, "inline-icon") +
+      buildFooterZone(d.phone || "", fullAddress, "inline-icon", d.sizeKey) +
       "TYPOGRAPHIC RULES:\n" +
       "  • Headline: bold condensed all-caps slab serif, white or cream, inside the deep red torn-paper panel\n" +
       "  • NEVER repeat any word from the business name\n" +
@@ -1114,7 +1126,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           "    NEVER place a QR code inside or adjacent to this coupon zone — the QR code belongs ONLY in the footer bottom-right corner.\n\n"
         : "") +
 
-      buildFooterZone(d.phone || "", fullAddress, "inline-icon") +
+      buildFooterZone(d.phone || "", fullAddress, "inline-icon", d.sizeKey) +
       "TYPOGRAPHIC RULES:\n" +
       "  • Headline: bold condensed all-caps slab serif, very large, dark green or near-black\n" +
       "  • Script accent: bright-green cursive ONLY for a single common English service-category noun in the business name — never for proper nouns or brand names; never duplicate any word\n" +
@@ -1161,7 +1173,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           "    NEVER place a QR code inside or adjacent to this coupon zone — the QR code belongs ONLY in the footer bottom-right corner.\n\n"
         : "") +
 
-      buildFooterZone(d.phone || "", fullAddress, "circular-badge") +
+      buildFooterZone(d.phone || "", fullAddress, "circular-badge", d.sizeKey) +
       "TYPOGRAPHIC RULES:\n" +
       "  • Headline: bold condensed all-caps slab serif, very large, dark navy blue\n" +
       "  • Script accent: gold/yellow cursive ONLY for a single common English service-category noun — never for proper nouns or brand names; never duplicate any word\n" +
@@ -1213,7 +1225,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           "    NEVER place a QR code inside or adjacent to this offer zone.\n\n"
         : "") +
 
-      buildFooterZone(d.phone || "", fullAddress, "circular-badge") +
+      buildFooterZone(d.phone || "", fullAddress, "circular-badge", d.sizeKey) +
       "TYPOGRAPHIC RULES:\n" +
       "  • Business name: bold condensed all-caps sans-serif, white or cream inside the olive green brush-stroke band\n" +
       "  • Service labels: white or cream text inside dark charcoal brush-stroke shapes\n" +
@@ -1264,7 +1276,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           "    NEVER place a QR code inside or adjacent to this coupon zone — the QR code belongs ONLY in the footer bottom-right corner.\n\n"
         : "") +
 
-      buildFooterZone(d.phone || "", fullAddress, "circular-badge") +
+      buildFooterZone(d.phone || "", fullAddress, "circular-badge", d.sizeKey) +
       "TYPOGRAPHIC RULES:\n" +
       "  • Business name: bold condensed all-caps sans-serif, very large, dark teal or near-black\n" +
       "  • NEVER repeat any word from the business name — each word appears exactly once across the entire ad\n" +
@@ -1314,7 +1326,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           `    Items: ${menuStr}\n    Each item exactly once.\n\n`
         : "  ZONE 6 — CHALKBOARD SIGN (lower-right): dark chalkboard A-frame with wood frame — leave board surface clean (no services provided).\n\n") +
 
-      buildFooterZone(d.phone || "", fullAddress, "inline-icon") +
+      buildFooterZone(d.phone || "", fullAddress, "inline-icon", d.sizeKey) +
       "TYPOGRAPHIC RULES:\n" +
       "  • Business name: bold condensed all-caps slab serif, white or cream, inside the deep red torn-paper panel\n" +
       "  • NEVER repeat any word from the business name\n" +
@@ -1362,7 +1374,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           "    NEVER place a QR code inside or adjacent to this coupon zone.\n\n"
         : "") +
 
-      buildFooterZone(d.phone || "", fullAddress, "circular-badge") +
+      buildFooterZone(d.phone || "", fullAddress, "circular-badge", d.sizeKey) +
       "TYPOGRAPHIC RULES:\n" +
       "  • Headline: bold condensed all-caps slab serif, dark navy, very large\n" +
       "  • NEVER repeat any word from the business name\n" +
@@ -1410,7 +1422,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           "    NEVER place a QR code inside or adjacent to this coupon zone — the QR code belongs ONLY in the footer bottom-right corner.\n\n"
         : "") +
 
-      buildFooterZone(d.phone || "", fullAddress, "inline-icon") +
+      buildFooterZone(d.phone || "", fullAddress, "inline-icon", d.sizeKey) +
       "TYPOGRAPHIC RULES:\n" +
       "  • Headline: bold condensed all-caps slab/block serif for the full business name. Apply the flowing orange script (angled ≈-8°) ONLY to a common English category noun within the name (e.g. Cafe, Grill, Spa, Pizza, Bar). NEVER split a proper noun, foreign word, or brand name into a second-line script — and NEVER render any word from the business name more than once.\n" +
       "  • Tagline: loose handwriting-style italic script, slight upward angle (+5°–7°), large, confident — never flat/horizontal\n" +

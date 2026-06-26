@@ -7,3 +7,4 @@
 - [PDF ad image storage pattern](pdf-ad-image-storage.md) — Finished ads stored as base64 data URLs in templateData.finishedAdUrl (text column), not in adFileUrl. PDF gen must parse JSON and handle data: URIs directly; never fetch them.
 - [County possessive naming rule](county-possessive-rule.md) — Territory names ending in "Counties" must use "County's" (not "Counties's") in possessive hero headlines; enforced via regex in TerritoryLandingPage.tsx buildCopy.
 - [Leaflet iOS double-tap fix](leaflet-ios-tap.md) — set tap:false in L.map() options; default tap plugin intercepts first touch to focus the map, so click only fires on second tap on iPad/iOS.
+- [QR card sizing — physical-inch square](qr-card-sizing.md) — cardSize = round(qrSize × 1.15) px; DPI cancels; always a square. M spot is 3"×2" (900×600 px), NOT 2"×2" — README was wrong.

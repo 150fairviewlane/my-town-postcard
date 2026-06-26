@@ -1,0 +1,17 @@
+Simplify QR card sizing to a fixed-margin square based on the QR's actual physical print size, replacing the footer-percentage formula entirely.
+
+1. First, confirm the real physical print dimensions (inches) for all 4 spot sizes — XL (4"x5") and Large (3"x4") are confirmed from the pricing doc, but Medium and Small were never confirmed with real inches, only placeholder pixel guesses used in earlier testing. Get the real spec before computing anything, don't assume a DPI.
+
+2. For each size, compute: QR's physical size in inches (from current qrSize px ÷ that size's px-per-inch) → cardSize = QR physical size × 1.15 (15% margin — more generous than 1.1x given Grok's track record of imprecision) → convert back to pixels for that size. Card is always a SQUARE, not a rectangle tied to image height percentage.
+
+3. Position: QR centered within the square card (even margin on all sides), card anchored to the bottom-right corner — reconfirm the ~0px corner-flush fix from last round still holds with the new smaller dimensions.
+
+4. CRITICAL companion change: update the Grok prompt's reserved-space instruction. Replace the current footer-height-percentage instruction with one describing a small SQUARE reserved zone in the bottom-right corner, sized to roughly match the new card's real physical inches at that spot size — not a tall footer band. This must change together with the card size, or Grok will likely keep drawing its old larger rectangle and we'll reintroduce the original exposed-corner bug with a now-smaller card.
+
+5. Validate with REAL generations (not synthetic test swatches) across all 4 sizes: measure Grok's actual drawn placeholder dimensions, and confirm it's no longer larger than the new card in a way that pokes out from behind it. Some imprecision is fine — the card is opaque and will cover anything within its own bounds regardless of what Grok drew underneath; the only failure mode that matters is Grok's placeholder exceeding the card's bounds.
+
+6. Add a lightweight log (telemetry only, not corrective) that flags when Grok's drawn placeholder appears larger than the card's bounds in a real generation, so any future drift is visible rather than silently reintroducing this bug again.
+
+7. Re-confirm jsqr decode-verify still passes 100% at the new, smaller card sizes.
+
+Report the real M/S print dimensions and the computed card sizes for all 4 spots before generating test images.

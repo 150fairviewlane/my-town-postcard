@@ -11,98 +11,91 @@ import { mkdirSync } from "fs";
 const OUT = "/home/runner/workspace/attached_assets";
 mkdirSync(OUT, { recursive: true });
 
-const CARD_INSET   = 6;
-const PAD          = 4;
-const FOOTER_COVER = 0.20;
-const URL          = "https://mytownpostcard.com/go/sample-ad-2026";
+// ── Must stay in sync with compositeQr.ts ─────────────────────────────────
+const CARD_INSET  = 6;
+const CARD_MARGIN = 1.15;
 
-const SPECS: Record<string, { qrSize: number; imgW: number; imgH: number }> = {
+const QR_PLACEMENT = {
   xl: { qrSize: 180, imgW: 1200, imgH: 1500 },
   l:  { qrSize: 130, imgW: 900,  imgH: 1200 },
   m:  { qrSize: 90,  imgW: 900,  imgH: 600  },
   s:  { qrSize: 90,  imgW: 600,  imgH: 600  },
-};
-
-// Contrasting backgrounds so the card + footer zone are clearly visible
-const BG: Record<string, { r: number; g: number; b: number; footerR: number; footerG: number; footerB: number }> = {
-  xl: { r: 115, g: 72,  b: 55,  footerR: 60,  footerG: 30,  footerB: 20  },  // warm rust + dark footer
-  l:  { r: 38,  g: 52,  b: 78,  footerR: 20,  footerG: 30,  footerB: 55  },  // dark navy
-  m:  { r: 205, g: 190, b: 170, footerR: 50,  footerG: 50,  footerB: 50  },  // cream + dark footer
-  s:  { r: 80,  g: 108, b: 70,  footerR: 40,  footerG: 60,  footerB: 35  },  // forest green
-};
-
-const STYLE = { fill: "#FFFFFF", border: "#7B1418" };
+} as const;
 
 function layout(qrSize: number, imgW: number, imgH: number) {
-  const cardW  = qrSize + PAD * 2;
-  const cardH  = Math.max(qrSize + PAD * 2, Math.round(imgH * FOOTER_COVER));
-  const cardLeft = imgW - cardW - CARD_INSET;
-  const cardTop  = imgH - cardH - CARD_INSET;
-  const qrLeft   = PAD;
-  const qrTop    = cardH - qrSize - PAD;        // bottom-anchored
-  return { cardW, cardH, cardLeft, cardTop, qrLeft, qrTop,
-           qrAbsLeft: cardLeft + qrLeft,
-           qrAbsTop:  cardTop  + qrTop };
+  const cardSize = Math.round(qrSize * CARD_MARGIN);
+  const qrOffset = Math.floor((cardSize - qrSize) / 2);
+  const cardLeft = imgW - cardSize - CARD_INSET;
+  const cardTop  = imgH - cardSize - CARD_INSET;
+  return { cardSize, qrOffset, cardLeft, cardTop,
+           qrAbsLeft: cardLeft + qrOffset,
+           qrAbsTop:  cardTop  + qrOffset };
 }
+// ──────────────────────────────────────────────────────────────────────────
 
-function cardSvg(cardW: number, cardH: number): Buffer {
+const STYLE = { fill: "#FFFFFF", border: "#7B1418" };
+const URL   = "https://mytownpostcard.com/go/sample-ad-2026";
+
+const BG = {
+  xl: { c: [115, 72,  55 ] as const, f: [55,  25, 15 ] as const },
+  l:  { c: [38,  52,  78 ] as const, f: [18,  28, 55 ] as const },
+  m:  { c: [205, 190, 170] as const, f: [50,  50, 50 ] as const },
+  s:  { c: [80,  108, 70 ] as const, f: [35,  55, 28 ] as const },
+};
+
+function cardSvg(sz: number): Buffer {
   return Buffer.from(
-    `<svg width="${cardW}" height="${cardH}" xmlns="http://www.w3.org/2000/svg">` +
-    `<rect x="0.5" y="0.5" width="${cardW - 1}" height="${cardH - 1}" ` +
-    `fill="${STYLE.fill}" stroke="${STYLE.border}" stroke-width="1"/>` +
-    `</svg>`,
+    `<svg width="${sz}" height="${sz}" xmlns="http://www.w3.org/2000/svg">` +
+    `<rect x="0.5" y="0.5" width="${sz-1}" height="${sz-1}" ` +
+    `fill="${STYLE.fill}" stroke="${STYLE.border}" stroke-width="1"/></svg>`,
   );
 }
 
-// Draw a realistic dark footer bar so the card-vs-footer alignment is legible
-async function makeTestImage(imgW: number, imgH: number, bg: typeof BG["xl"]): Promise<Buffer> {
-  const footerH = Math.round(imgH * FOOTER_COVER);
-  // content area
-  const content = await sharp({
-    create: { width: imgW, height: imgH - footerH, channels: 3,
-              background: { r: bg.r, g: bg.g, b: bg.b } },
-  }).png().toBuffer();
-  // footer bar
+async function makeTestImage(
+  imgW: number, imgH: number,
+  [cr,cg,cb]: readonly [number,number,number],
+  [fr,fg,fb]: readonly [number,number,number],
+): Promise<Buffer> {
+  const fH = Math.round(imgH * 0.20);
   const footer = await sharp({
-    create: { width: imgW, height: footerH, channels: 3,
-              background: { r: bg.footerR, g: bg.footerG, b: bg.footerB } },
+    create: { width: imgW, height: fH, channels: 3, background: { r: fr, g: fg, b: fb } },
   }).png().toBuffer();
   return sharp({
-    create: { width: imgW, height: imgH, channels: 3,
-              background: { r: bg.r, g: bg.g, b: bg.b } },
+    create: { width: imgW, height: imgH, channels: 3, background: { r: cr, g: cg, b: cb } },
   })
-    .composite([
-      { input: content, top: 0,           left: 0 },
-      { input: footer,  top: imgH - footerH, left: 0 },
-    ])
+    .composite([{ input: footer, top: imgH - fH, left: 0 }])
     .jpeg({ quality: 95 }).toBuffer();
 }
 
-let pass = 0, fail = 0;
-console.log("Size  cardW  cardH  qrLeft  qrTop(in-card)  qrAbsTop  decode");
-console.log("────  ─────  ─────  ──────  ─────────────   ────────  ──────");
+console.log(
+  "\nPhysical print dims at 300 DPI:\n" +
+  "  XL 1200×1500→4\"×5\"   L 900×1200→3\"×4\"   M 900×600→3\"×2\"   S 600×600→2\"×2\"\n" +
+  "  cardSize = round(qrSize × 1.15)  [DPI cancels]\n"
+);
+console.log("Size  qrPx  cardPx  cardIn  qrOff  cardL  cardT  qrAbsL  qrAbsT  decode  bleed");
+console.log("────  ────  ──────  ──────  ─────  ─────  ─────  ──────  ──────  ──────  ─────");
 
-for (const [sz, spec] of Object.entries(SPECS)) {
-  const L  = layout(spec.qrSize, spec.imgW, spec.imgH);
+let pass = 0, fail = 0;
+
+for (const [sz, spec] of Object.entries(QR_PLACEMENT) as [keyof typeof QR_PLACEMENT, typeof QR_PLACEMENT[keyof typeof QR_PLACEMENT]][]) {
+  const L = layout(spec.qrSize, spec.imgW, spec.imgH);
   const bg = BG[sz];
 
-  const bgBuf = await makeTestImage(spec.imgW, spec.imgH, bg);
-  const qrPng = await QRCode.toBuffer(URL, {
+  const bgBuf  = await makeTestImage(spec.imgW, spec.imgH, bg.c, bg.f);
+  const qrPng  = await QRCode.toBuffer(URL, {
     errorCorrectionLevel: "H", type: "png",
     width: spec.qrSize, margin: 4,
     color: { dark: "#000000", light: "#ffffff" },
   });
-
-  const cardBase   = await sharp(cardSvg(L.cardW, L.cardH)).png().toBuffer();
+  const cardBase   = await sharp(cardSvg(L.cardSize)).png().toBuffer();
   const cardWithQr = await sharp(cardBase)
-    .composite([{ input: qrPng, left: L.qrLeft, top: L.qrTop }])
+    .composite([{ input: qrPng, left: L.qrOffset, top: L.qrOffset }])
     .png().toBuffer();
-
   const composite = await sharp(bgBuf)
     .composite([{ input: cardWithQr, left: L.cardLeft, top: L.cardTop }])
     .jpeg({ quality: 98, chromaSubsampling: "4:4:4" }).toBuffer();
 
-  // Decode verify — exact QR region only
+  // Decode verify
   const { data: px, info } = await sharp(composite)
     .extract({ left: L.qrAbsLeft, top: L.qrAbsTop, width: spec.qrSize, height: spec.qrSize })
     .raw().ensureAlpha().toBuffer({ resolveWithObject: true });
@@ -110,15 +103,26 @@ for (const [sz, spec] of Object.entries(SPECS)) {
   const ok = decoded?.data === URL;
   ok ? pass++ : fail++;
 
-  const fname = path.join(OUT, `qr-b-${sz}.jpg`);
-  await sharp(composite).toFile(fname);
+  // Bleed check: strip above card top
+  const checkH = Math.min(20, L.cardTop);
+  let bleedStr = "—";
+  if (checkH > 0) {
+    const strip = await sharp(composite)
+      .extract({ left: L.cardLeft, top: L.cardTop - checkH, width: L.cardSize, height: checkH })
+      .removeAlpha().raw().toBuffer();
+    let s = 0; for (let i = 0; i < strip.length; i++) s += strip[i]!;
+    const avg = s / strip.length;
+    bleedStr = avg > 220 ? `⚠${avg.toFixed(0)}` : `ok(${avg.toFixed(0)})`;
+  }
 
+  await sharp(composite).toFile(path.join(OUT, `qr-c-${sz}.jpg`));
+  const cardIn = (L.cardSize / 300).toFixed(2);
   console.log(
-    `${sz.padEnd(4)}  ${String(L.cardW).padEnd(5)}  ${String(L.cardH).padEnd(5)}  ` +
-    `${String(L.qrLeft).padEnd(6)}  ${String(L.qrTop).padEnd(15)} ` +
-    `${String(L.qrAbsTop).padEnd(8)}  ${ok ? "✅ PASS" : "❌ FAIL"}`,
+    `${sz.padEnd(4)}  ${String(spec.qrSize).padEnd(4)}  ${String(L.cardSize).padEnd(6)}  ${cardIn}"  ` +
+    `${String(L.qrOffset).padEnd(5)}  ${String(L.cardLeft).padEnd(5)}  ${String(L.cardTop).padEnd(5)}  ` +
+    `${String(L.qrAbsLeft).padEnd(6)}  ${String(L.qrAbsTop).padEnd(6)}  ${ok ? "✅" : "❌"}      ${bleedStr}`,
   );
 }
 
-console.log(`\nTotal: ${pass} PASS / ${fail} FAIL`);
+console.log(`\nResult: ${pass}/4 PASS${fail ? `  ⛔ ${fail} FAIL` : "  ✅ all clear"}`);
 if (fail > 0) process.exit(1);

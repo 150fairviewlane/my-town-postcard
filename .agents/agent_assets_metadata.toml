@@ -233,3 +233,27 @@ id = "Sf9B7pLSIQ9Vrk6Kz_hWt"
 uri = "file://attached_assets/qr-b-s.jpg"
 type = "image"
 title = "S — cardH=120px (covers 20% of 600px), qrTop-in-card=26px"
+
+[[outputs]]
+id = "tufE9gX9iyuvx2_y7yUdB"
+uri = "file://attached_assets/qr-c-xl.jpg"
+type = "image"
+title = "XL — 207×207 px (0.69″ sq), qrOffset=13, bleed ok(32)"
+
+[[outputs]]
+id = "F0Ie4NCIEAr5h1GTNdsWD"
+uri = "file://attached_assets/qr-c-l.jpg"
+type = "image"
+title = "L — 150×150 px (0.50″ sq), qrOffset=10, bleed ok(34)"
+
+[[outputs]]
+id = "3Fm3Visl55aKhtpdb9kq-"
+uri = "file://attached_assets/qr-c-m.jpg"
+type = "image"
+title = "M — 103×103 px (0.34″ sq), qrOffset=6, bleed ok(112)"
+
+[[outputs]]
+id = "5iwHtPP9dIx6Ihv1N4JUl"
+uri = "file://attached_assets/qr-c-s.jpg"
+type = "image"
+title = "S — 103×103 px (0.34″ sq), qrOffset=6, bleed ok(60)"
