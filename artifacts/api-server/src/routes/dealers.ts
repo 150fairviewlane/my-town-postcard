@@ -1240,6 +1240,31 @@ router.patch("/admin/dealers/:id/email", requireAdmin, async (req, res): Promise
   res.json({ ok: true, email: updated.email });
 });
 
+// ─── PATCH /api/admin/dealers/:id/password ────────────────────────────────────
+router.patch("/admin/dealers/:id/password", requireAdmin, async (req, res): Promise<void> => {
+  const id = parseInt(String(req.params.id), 10);
+  if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid dealer id" }); return; }
+
+  const { password } = req.body ?? {};
+  if (typeof password !== "string" || !password) {
+    res.status(400).json({ error: "password is required" }); return;
+  }
+  const complexityError = validatePasswordComplexity(password);
+  if (complexityError) { res.status(400).json({ error: complexityError }); return; }
+
+  const newHash = await hashPassword(password);
+  const [updated] = await db
+    .update(dealersTable)
+    .set({ passwordHash: newHash })
+    .where(eq(dealersTable.id, id))
+    .returning({ id: dealersTable.id, name: dealersTable.name, email: dealersTable.email });
+
+  if (!updated) { res.status(404).json({ error: "Dealer not found" }); return; }
+
+  req.log.info({ dealerId: id, name: updated.name }, "Admin reset dealer password");
+  res.json({ ok: true, dealerId: updated.id, name: updated.name, email: updated.email });
+});
+
 // ─── GET /api/admin/dealers/:id/delete-preview ────────────────────────────────
 // Returns a summary of what a full delete would remove, without deleting anything.
 router.get("/admin/dealers/:id/delete-preview", requireAdmin, async (req, res): Promise<void> => {
