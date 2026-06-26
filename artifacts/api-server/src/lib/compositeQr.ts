@@ -74,19 +74,14 @@ export interface CardStyle {
    */
   marginMultiplier?: number;
 
-  /** @internal Marks this as a placeholder pending per-template design. */
+  /**
+   * Sentinel for the startup enforcement guard. Set this to `true` on any
+   * temporary / placeholder entry — the server will refuse to start until a
+   * real style replaces it. Never set on a production entry.
+   */
   _placeholder?: true;
 }
 
-/** Placeholder used for templates not yet assigned a final style. */
-const PLACEHOLDER_QR_STYLE: CardStyle = {
-  fill:         "#FFFFFF",
-  border:       "#CCCCCC",
-  borderWidth:  1,
-  cornerRadius: 0,
-  dashPattern:  null,
-  _placeholder: true,
-};
 
 export const DEFAULT_CARD_STYLE: CardStyle = {
   fill:         "#FFFFFF",
@@ -124,9 +119,8 @@ export const GRAY_BORDER_STYLE: CardStyle = {
  *   circularCard     — if true, cornerRadius is set to Math.floor(cardSize/2) at render time
  *   marginMultiplier — overrides CARD_MARGIN for this template; circular cards use 1.45
  *
- * Finalized: heritage-home, health-wellness, parchment-classic, sage-organic,
- *            at-your-service, brush-stroke.
- * Remaining 6 templates use PLACEHOLDER_QR_STYLE and emit a startup warning.
+ * All 12 templates are finalized. Adding a new template key requires a real
+ * CardStyle entry here — the startup guard below throws if any entry is missing.
  */
 export const TEMPLATE_QR_STYLES: Record<string, CardStyle> = {
   // ── Finalized ────────────────────────────────────────────────────────────
@@ -142,8 +136,7 @@ export const TEMPLATE_QR_STYLES: Record<string, CardStyle> = {
   "home-elegance":     { fill: "#0f1f3d", border: "#c9a84c", borderWidth: 3, cornerRadius: 16, dashPattern: null },
   "purple-sage":       { fill: "#3d2f4a", border: "#9b7fb0", borderWidth: 3, cornerRadius: 16, dashPattern: null },
   "wok-fire":          { fill: "#1a1310", border: "#c9a84c", borderWidth: 3, cornerRadius: 0,  dashPattern: null },
-  // ── TODO: replace with per-template values ───────────────────────────────
-  "surprise-me":       { ...PLACEHOLDER_QR_STYLE },
+  "surprise-me":       { fill: "#1c1a18", border: "#c9a84c", borderWidth: 2, cornerRadius: 0, dashPattern: null },
 };
 
 /**
@@ -214,15 +207,19 @@ export function computeCardLayout(spec: QrSpec, style?: Pick<CardStyle, "marginM
   };
 }
 
-// ── Startup warning for placeholder template styles ───────────────────────
+// ── Startup enforcement: every registered template must have a real CardStyle ─
+// This runs at module-load time. If any template key is missing from
+// TEMPLATE_QR_STYLES (or was accidentally given a _placeholder entry), the
+// server refuses to start rather than silently serving a generic white card.
+// To add a new template: add its key + a real CardStyle to TEMPLATE_QR_STYLES.
 {
-  const pendingTemplates = Object.entries(TEMPLATE_QR_STYLES)
+  const missingStyles = Object.entries(TEMPLATE_QR_STYLES)
     .filter(([, s]) => s._placeholder)
     .map(([k]) => k);
-  if (pendingTemplates.length > 0) {
-    logger.warn(
-      { templates: pendingTemplates },
-      "compositeQr: QR card styles not yet finalized for these templates — using placeholder (white/#CCCCCC border)",
+  if (missingStyles.length > 0) {
+    throw new Error(
+      `compositeQr: missing real CardStyle for template(s): ${missingStyles.join(", ")}. ` +
+      `Add a finalized entry to TEMPLATE_QR_STYLES before starting the server.`,
     );
   }
 }
