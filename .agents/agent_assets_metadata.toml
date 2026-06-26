@@ -257,3 +257,15 @@ id = "5iwHtPP9dIx6Ihv1N4JUl"
 uri = "file://attached_assets/qr-c-s.jpg"
 type = "image"
 title = "S — 93×93 px, 1 px border"
+
+[[outputs]]
+id = "0SQRieYVJQEklIad0ZA_1"
+uri = "file://artifacts/api-server/test-qr-heritage-home.jpg"
+type = "image"
+title = "heritage-home — cream fill #f5f0e8, burgundy border #6b1a2a, 3px, r=16"
+
+[[outputs]]
+id = "zhLBXJ-E-2aRkYlQ4ZZR-"
+uri = "file://artifacts/api-server/test-qr-health-wellness.jpg"
+type = "image"
+title = "health-wellness — white fill, teal border #1f5c5c, 3px, r=22"

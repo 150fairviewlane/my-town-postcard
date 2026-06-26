@@ -16,7 +16,7 @@ function getSharp(): Promise<typeof import("sharp")> {
   return _sharpLoader!;
 }
 import { buildAdPrompt } from "../lib/buildAdPrompt";
-import { compositeQrOnto, type SizeKey } from "../lib/compositeQr";
+import { compositeQrOnto, getTemplateQrStyle, type SizeKey } from "../lib/compositeQr";
 import { db, spotsTable } from "@workspace/db";
 import { eq, and, ne, sql as drizzleSql } from "drizzle-orm";
 
@@ -1613,7 +1613,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
         const { writeFile } = await import("fs/promises");
         await writeFile(`/tmp/grok-raw-${Date.now()}-${d.sizeKey}.jpg`, buf).catch(() => {});
       }
-      const composited = await compositeQrOnto(buf, trackingUrl, toSizeKey(d.sizeKey));
+      const composited = await compositeQrOnto(buf, trackingUrl, toSizeKey(d.sizeKey), getTemplateQrStyle(templateKey));
       return `data:image/jpeg;base64,${composited.toString("base64")}`;
     }
 
@@ -1629,7 +1629,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
 
     const tryCompositePreview = async (qrUrl: string): Promise<string | null> => {
       try {
-        const composited = await compositeQrOnto(buf, qrUrl, sKey);
+        const composited = await compositeQrOnto(buf, qrUrl, sKey, getTemplateQrStyle(templateKey));
         return `data:image/jpeg;base64,${composited.toString("base64")}`;
       } catch { return null; }
     };
@@ -2013,6 +2013,7 @@ const RefineSchema = z.object({
   sizeKey:      z.string().optional().default("XL"),
   website:      z.string().optional().default(""),
   spotId:       z.number().int().optional(),
+  template:     z.string().optional().default(""),
 });
 
 router.post("/grok-ad-generator/refine", async (req, res) => {
@@ -2022,7 +2023,7 @@ router.post("/grok-ad-generator/refine", async (req, res) => {
     res.status(400).json({ error: msgs });
     return;
   }
-  const { imageDataUrl, instruction, sizeKey, website: refineWebsite, spotId: refineSpotId } = parsed.data;
+  const { imageDataUrl, instruction, sizeKey, website: refineWebsite, spotId: refineSpotId, template: refineTemplate } = parsed.data;
 
   const apiKey = process.env["XAI_API_KEY"];
   if (!apiKey) {
@@ -2166,15 +2167,16 @@ router.post("/grok-ad-generator/refine", async (req, res) => {
     const refineBuf = Buffer.from(refineCroppedUrl.split(",")[1] ?? "", "base64");
     let refineFinalUrl: string;
 
+    const refineQrStyle = getTemplateQrStyle(refineTemplate);
     if (!refineIsPreview) {
       // ── Paid spot: hard gate ──────────────────────────────────────────────
-      const refineComp = await compositeQrOnto(refineBuf, refineTrackingUrl, refineSizeKey);
+      const refineComp = await compositeQrOnto(refineBuf, refineTrackingUrl, refineSizeKey, refineQrStyle);
       refineFinalUrl   = `data:image/jpeg;base64,${refineComp.toString("base64")}`;
     } else {
       // ── Preview: soft gate with two-level fallback ────────────────────────
       const tryRefineComposite = async (qrUrl: string): Promise<string | null> => {
         try {
-          const comp = await compositeQrOnto(refineBuf, qrUrl, refineSizeKey);
+          const comp = await compositeQrOnto(refineBuf, qrUrl, refineSizeKey, refineQrStyle);
           return `data:image/jpeg;base64,${comp.toString("base64")}`;
         } catch { return null; }
       };

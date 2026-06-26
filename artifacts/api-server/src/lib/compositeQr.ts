@@ -46,24 +46,86 @@ export const QR_PLACEMENT: Record<SizeKey, QrSpec> = {
 
 // ── Backing-card visual style ──────────────────────────────────────────────
 export interface CardStyle {
-  fill:   string; // card background hex (e.g. "#FFFFFF")
-  border: string; // border stroke hex   (e.g. "#7B1418")
+  fill:          string;        // card background hex (e.g. "#FFFFFF")
+  border:        string;        // border stroke hex   (e.g. "#7B1418")
+  borderWidth:   number;        // stroke width in px
+  cornerRadius:  number;        // SVG rx/ry — 0 = sharp corners
+  dashPattern:   number[] | null; // SVG stroke-dasharray; null = solid
+  /** @internal Marks this as a placeholder pending per-template design. */
+  _placeholder?: true;
 }
 
+/** Placeholder used for templates not yet assigned a final style. */
+const PLACEHOLDER_QR_STYLE: CardStyle = {
+  fill:         "#FFFFFF",
+  border:       "#CCCCCC",
+  borderWidth:  1,
+  cornerRadius: 0,
+  dashPattern:  null,
+  _placeholder: true,
+};
+
 export const DEFAULT_CARD_STYLE: CardStyle = {
-  fill:   "#FFFFFF",
-  border: "#7B1418",
+  fill:         "#FFFFFF",
+  border:       "#7B1418",
+  borderWidth:  1,
+  cornerRadius: 0,
+  dashPattern:  null,
 };
 
 export const CREAM_CARD_STYLE: CardStyle = {
-  fill:   "#FFF8F0",
-  border: "#7B1418",
+  fill:         "#FFF8F0",
+  border:       "#7B1418",
+  borderWidth:  1,
+  cornerRadius: 0,
+  dashPattern:  null,
 };
 
 export const GRAY_BORDER_STYLE: CardStyle = {
-  fill:   "#FFFFFF",
-  border: "#CCCCCC",
+  fill:         "#FFFFFF",
+  border:       "#CCCCCC",
+  borderWidth:  1,
+  cornerRadius: 0,
+  dashPattern:  null,
 };
+
+// ── Per-template QR card styles ───────────────────────────────────────────
+/**
+ * Maps each ad template key to its QR backing-card visual style.
+ * Fields:
+ *   fill         — card background (matches footer bar color for seamless blend)
+ *   border       — accent outline color matching the template's design language
+ *   borderWidth  — stroke width in px
+ *   cornerRadius — SVG rx/ry; 0 = square corners
+ *   dashPattern  — stroke-dasharray for dashed/stitched styles; null = solid
+ *
+ * Only heritage-home and health-wellness have finalized values.
+ * All other templates use PLACEHOLDER_QR_STYLE and emit a startup warning.
+ */
+export const TEMPLATE_QR_STYLES: Record<string, CardStyle> = {
+  // ── Finalized ────────────────────────────────────────────────────────────
+  "heritage-home":   { fill: "#f5f0e8", border: "#6b1a2a", borderWidth: 3, cornerRadius: 16, dashPattern: null },
+  "health-wellness": { fill: "#ffffff", border: "#1f5c5c", borderWidth: 3, cornerRadius: 22, dashPattern: null },
+  // ── TODO: replace with per-template values ───────────────────────────────
+  "parchment-classic":  { ...PLACEHOLDER_QR_STYLE },
+  "made-fresh":         { ...PLACEHOLDER_QR_STYLE },
+  "neighborhood-pro":   { ...PLACEHOLDER_QR_STYLE },
+  "at-your-service":    { ...PLACEHOLDER_QR_STYLE },
+  "home-elegance":      { ...PLACEHOLDER_QR_STYLE },
+  "sage-organic":       { ...PLACEHOLDER_QR_STYLE },
+  "purple-sage":        { ...PLACEHOLDER_QR_STYLE },
+  "brush-stroke":       { ...PLACEHOLDER_QR_STYLE },
+  "wok-fire":           { ...PLACEHOLDER_QR_STYLE },
+  "surprise-me":        { ...PLACEHOLDER_QR_STYLE },
+};
+
+/**
+ * Returns the finalized (or placeholder) QR card style for a given template.
+ * Unknown keys fall back to DEFAULT_CARD_STYLE.
+ */
+export function getTemplateQrStyle(templateKey: string): CardStyle {
+  return TEMPLATE_QR_STYLES[templateKey] ?? DEFAULT_CARD_STYLE;
+}
 
 // ── Layout constants ──────────────────────────────────────────────────────
 /** px inset from the image edge to the card's outer edge */
@@ -121,12 +183,31 @@ export function computeCardLayout(spec: QrSpec): CardLayout {
   };
 }
 
+// ── Startup warning for placeholder template styles ───────────────────────
+{
+  const pendingTemplates = Object.entries(TEMPLATE_QR_STYLES)
+    .filter(([, s]) => s._placeholder)
+    .map(([k]) => k);
+  if (pendingTemplates.length > 0) {
+    logger.warn(
+      { templates: pendingTemplates },
+      "compositeQr: QR card styles not yet finalized for these templates — using placeholder (white/#CCCCCC border)",
+    );
+  }
+}
+
 // ── SVG backing-card builder ───────────────────────────────────────────────
 function makeCardSvg(cardSize: number, style: CardStyle): Buffer {
+  const sw   = style.borderWidth;
+  const r    = style.cornerRadius;
+  const half = sw / 2;
+  const dash = style.dashPattern
+    ? ` stroke-dasharray="${style.dashPattern.join(" ")}"`
+    : "";
   const svg =
     `<svg width="${cardSize}" height="${cardSize}" xmlns="http://www.w3.org/2000/svg">` +
-    `<rect x="0.5" y="0.5" width="${cardSize - 1}" height="${cardSize - 1}" ` +
-    `fill="${style.fill}" stroke="${style.border}" stroke-width="1"/>` +
+    `<rect x="${half}" y="${half}" width="${cardSize - sw}" height="${cardSize - sw}" ` +
+    `rx="${r}" ry="${r}" fill="${style.fill}" stroke="${style.border}" stroke-width="${sw}"${dash}/>` +
     `</svg>`;
   return Buffer.from(svg);
 }
