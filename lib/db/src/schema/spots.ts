@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, uniqueIndex, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -35,6 +35,10 @@ export const spotsTable = pgTable("spots", {
   // picker can render the exact ad the customer designed.
   templateData: text("template_data"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  // Denormalized copy of the parent campaign's is_qa_test flag. Stored on the
+  // spot row so every query touching spots can filter without a JOIN back to
+  // campaigns. Set once at seed/insert time; never changed.
+  isQaTest: boolean("is_qa_test").notNull().default(false),
 }, (table) => ({
   // Prevent two spots with the same grid area from being inserted for the
   // same campaign. This is the DB-level enforcement of the layout invariant —

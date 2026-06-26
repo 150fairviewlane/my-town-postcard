@@ -183,6 +183,7 @@ router.get("/admin/scans", requireAdmin, async (req, res): Promise<void> => {
       ${fromCond}
       ${toCond}
     WHERE s.tracking_code IS NOT NULL
+      AND s.is_qa_test = false
       ${campaignCond}
     GROUP BY s.id, s.business_name, s.business_category, s.size,
              s.campaign_id, c.name, s.tracking_code

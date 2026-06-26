@@ -840,7 +840,7 @@ router.get("/dealers/:id/landing-page", requireAdmin, async (req, res): Promise<
     .from(spotsTable)
     .where(eq(spotsTable.campaignId, campaign.id));
 
-  const sold = spots.filter((s) => s.status === "paid");
+  const sold = spots.filter((s) => s.status === "paid" && !s.isQaTest);
   const frontSold = sold.filter((s) => s.side === "front").length;
   const backSold = sold.filter((s) => s.side === "back").length;
   const revenueCents = sold.reduce((sum, s) => sum + (s.price || 0), 0);
@@ -1040,7 +1040,7 @@ router.get("/admin/dealers", requireAdmin, async (_req, res): Promise<void> => {
         SELECT COUNT(*)
         FROM spots s
         JOIN campaigns c ON c.id = s.campaign_id
-        WHERE c.dealer_id = d.id AND s.status = 'paid'
+        WHERE c.dealer_id = d.id AND s.status = 'paid' AND s.is_qa_test = false
       )::int AS paid_ads_count
     FROM dealers d
     ORDER BY d.created_at DESC
@@ -1138,10 +1138,10 @@ router.get("/admin/dealers/:id", requireAdmin, async (req, res): Promise<void> =
   const campaignStats = await Promise.all(
     campaigns.map(async (c) => {
       const spots = await db
-        .select({ status: spotsTable.status, price: spotsTable.price })
+        .select({ status: spotsTable.status, price: spotsTable.price, isQaTest: spotsTable.isQaTest })
         .from(spotsTable)
         .where(eq(spotsTable.campaignId, c.id));
-      const sold = spots.filter((s) => s.status === "paid");
+      const sold = spots.filter((s) => s.status === "paid" && !s.isQaTest);
       const revenueCents = sold.reduce((sum, s) => sum + (s.price ?? 0), 0);
       return {
         campaignId: c.id,
@@ -1476,7 +1476,7 @@ router.get("/dealers/portal-data", requireDealerAuth, async (req, res): Promise<
         .select()
         .from(spotsTable)
         .where(eq(spotsTable.campaignId, c.id));
-      const sold = spots.filter((s) => s.status === "paid");
+      const sold = spots.filter((s) => s.status === "paid" && !s.isQaTest);
       const revenueCents = sold.reduce((sum, s) => sum + (s.price || 0), 0);
       return {
         campaignId: c.id,

@@ -120,3 +120,34 @@ export async function getStripePublishableKey(): Promise<string> {
   const { publishableKey } = await getCredentials();
   return publishableKey;
 }
+
+/**
+ * Returns a synchronous Stripe client configured with STRIPE_QA_SECRET_KEY.
+ * Used ONLY by the admin QA bot endpoints (/api/admin/qa/*).
+ *
+ * Rules enforced at call time:
+ *  - Key must be set (STRIPE_QA_SECRET_KEY).
+ *  - Key must start with "sk_test_" — live keys are rejected hard so the bot
+ *    can never accidentally charge real cards.
+ *  - In production deployments (REPLIT_DEPLOYMENT=1 without STRIPE_FORCE_TEST_MODE=1)
+ *    the calling route must already have blocked the request before reaching here.
+ *
+ * Returns a plain Stripe instance (not async) because the key is static —
+ * unlike the main client there is no Replit connector token to refresh.
+ */
+export function getQaStripeClient(): Stripe {
+  const key = process.env.STRIPE_QA_SECRET_KEY;
+  if (!key) {
+    throw new Error(
+      "STRIPE_QA_SECRET_KEY is not set. " +
+        "Add the Stripe test-mode secret key (sk_test_...) to run QA bot tests.",
+    );
+  }
+  if (!key.startsWith("sk_test_")) {
+    throw new Error(
+      "STRIPE_QA_SECRET_KEY must be a Stripe test-mode key (sk_test_...). " +
+        "Never configure a live key for QA bot tests.",
+    );
+  }
+  return new Stripe(key, { apiVersion: "2025-08-27.basil" as never });
+}

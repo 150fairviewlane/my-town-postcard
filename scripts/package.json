@@ -23,9 +23,11 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@types/node": "catalog:",
     "@types/pg": "^8.11.11",
     "@types/qrcode": "^1.5.5",
+    "playwright": "^1.61.1",
     "tsx": "catalog:"
   },
   "dependencies": {

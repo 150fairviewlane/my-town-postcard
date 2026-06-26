@@ -1,0 +1,27 @@
+Build the QA purchase bot. Resolve one outstanding decision first, then test one hypothesis before finalizing the design, then build.
+
+PREREQUISITE (resolve now, don't leave open): the permanent QA campaign stays status='draft' permanently, with a dedicated admin-only POST /api/admin/qa/reserve endpoint that bypasses the active-only check (as originally designed). This is simpler and lower-risk than making it 'active' and having to maintain a separate exclusion filter on the public territory-listing query indefinitely. Confirm this is implemented and that a real visitor browsing the live site has zero path to see or land on this campaign.
+
+STEP 1 — Test before building: does loading a hosted Checkout Session's URL (without filling or submitting anything — just a page load / GET) trigger Stripe to lazily attach a PaymentIntent to the session, even without form submission?
+
+Test directly: create a real test-mode session via create-spot-session, then have Playwright navigate to the returned URL and wait for the page to fully load (no field filling, no clicking), then re-retrieve the session via the Stripe API and check whether payment_intent is now populated. Report the actual result — don't assume either way.
+
+STEP 2A — If the page-load DOES populate payment_intent: build the bot using the REAL end-to-end flow:
+1. Playwright drives the actual UI: navigate to the QA territory landing page, click an available spot in the picker, go through real ad generation (this part has zero Stripe involvement and zero bot-detection risk — it's our own UI).
+2. Trigger real purchase initiation, capturing the resulting Stripe session URL.
+3. Playwright navigates to that URL and waits for load (triggering lazy PI attachment) — does NOT fill or submit Stripe's form.
+4. Confirm the now-attached PaymentIntent via direct API call (qaStripe.paymentIntents.confirm with pm_card_visa), using the QA test key.
+5. Call the real spot-session-confirm endpoint (the one matching the checkout.session.completed webhook branch) to complete fulfillment.
+6. Poll for webhook delivery as informational logging (not a pass/fail gate), per the earlier design.
+7. Assert spot.status === 'paid', order exists, no real milestone emails fired.
+8. finally block: call the QA cleanup endpoint regardless of outcome.
+
+This path validates the actual territory-page flow end-to-end, including the checkout.session.completed webhook branch specifically — which no other approach in this whole investigation has covered.
+
+STEP 2B — If the page-load does NOT populate payment_intent: fall back to this design instead, and DOCUMENT THE GAP explicitly (in a code comment at the top of the bot script, AND as a line item in the QA sanity checklist):
+1. Playwright still drives the real picker + ad generation UI on the QA territory page (same as above — no reason to skip this part, it's fully reliable).
+2. For the purchase step specifically, switch to the embedded PaymentIntent path already proven clean in live testing: POST /api/checkout/create-payment-intent → confirm via API with pm_card_visa → POST /api/checkout/confirm.
+3. Same assertions and cleanup as above.
+4. Explicitly note in both the code comment and the checklist: this bot does NOT exercise the checkout.session.completed webhook branch or the hosted-Checkout fulfillment path — only the embedded PaymentIntent path. Recommend the separate synthetic signed-webhook-POST test (to /api/webhooks/stripe) as the only current coverage for that specific gap, and note it as a known limitation, not a solved problem.
+
+Build the DB migration (is_qa_test on campaigns + spots), the six filter-location patches, the two-layer cleanup (explicit + periodic sweep extension), the dual Stripe key setup, and the seed data as prerequisites before the Playwright script itself, per the sequencing already agreed. Show me the result of STEP 1's test before writing the final script, then proceed with whichever path it confirms.

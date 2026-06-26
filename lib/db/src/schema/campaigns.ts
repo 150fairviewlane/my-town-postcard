@@ -61,6 +61,11 @@ export const campaignsTable = pgTable("campaigns", {
   // and has not been completed. A completed campaign is excluded by the status filter.
   lastMilestone12EmailSentAt: timestamp("last_milestone_12_email_sent_at", { withTimezone: true }),
   lastMilestone15EmailSentAt: timestamp("last_milestone_15_email_sent_at", { withTimezone: true }),
+  // QA bot flag. When true this campaign and its spots are permanently excluded
+  // from all milestone emails, revenue rollups, commission calculations, and QR
+  // scan analytics. The dedicated bot campaign is never counted toward real
+  // milestones — it exists only for automated QA runs.
+  isQaTest: boolean("is_qa_test").notNull().default(false),
 });
 
 export const insertCampaignSchema = createInsertSchema(campaignsTable).omit({ id: true, createdAt: true });

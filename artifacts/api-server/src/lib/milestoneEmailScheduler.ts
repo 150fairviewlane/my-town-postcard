@@ -51,10 +51,11 @@ async function checkMilestones(): Promise<void> {
     LEFT JOIN (
       SELECT s.campaign_id, COUNT(*) AS cnt
       FROM spots s
-      WHERE s.status = 'paid'
+      WHERE s.status = 'paid' AND s.is_qa_test = false
       GROUP BY s.campaign_id
     ) paid ON paid.campaign_id = c.id
     WHERE c.status IN ('active', 'draft')
+      AND c.is_qa_test = false
       AND COALESCE(paid.cnt, 0) >= 12
   `);
 

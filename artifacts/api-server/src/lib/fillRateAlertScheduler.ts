@@ -56,6 +56,7 @@ async function checkFillRates(): Promise<void> {
     ) paid ON paid.campaign_id = c.id
     WHERE c.first_paid_at IS NOT NULL
       AND c.status != 'completed'
+      AND c.is_qa_test = false
       AND COALESCE(paid.cnt, 0) < 12
   `);
 
