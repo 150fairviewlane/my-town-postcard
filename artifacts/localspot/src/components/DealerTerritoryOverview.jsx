@@ -260,7 +260,7 @@ export default function DealerTerritoryOverview({ campaigns = [], totals = {}, s
         <div style={{ fontSize: 13.5, color: "#9ca3af" }}>
           {showRevenue
             ? "Landing page campaigns will appear here once the dealer's territory is provisioned."
-            : "Your campaign pages will appear here once they're set up — usually within 1 business day of your signup."}
+            : "Your campaign pages will appear here once your territory is confirmed."}
         </div>
       </div>
     );

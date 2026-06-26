@@ -1608,16 +1608,21 @@ export async function materializeTerritoryFromProposal(
     const VCHUNK = 500;
     for (let i = 0; i < ourZips.length; i += VCHUNK) {
       const chunk = ourZips.slice(i, i + VCHUNK);
+      // Only flag ZIPs owned by TAKEN territories — available territories have
+      // pre-seeded footprints but hold no exclusive claim, so they must not
+      // block a concurrent materialization (mirrors the checkZipFootprintConflict filter).
       const stolen = await tx
         .select({
           zip: territoryZipAssignmentsTable.zip,
           ownerTerritoryId: territoryZipAssignmentsTable.territoryId,
         })
         .from(territoryZipAssignmentsTable)
+        .innerJoin(territoriesTable, eq(territoryZipAssignmentsTable.territoryId, territoriesTable.id))
         .where(
           and(
             inArray(territoryZipAssignmentsTable.zip, chunk),
             ne(territoryZipAssignmentsTable.territoryId, id),
+            eq(territoriesTable.status, "taken"),
           )
         )
         .limit(1);

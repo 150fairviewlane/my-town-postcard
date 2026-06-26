@@ -384,8 +384,7 @@ export default function DealerPortal() {
                     Your Mailing Areas
                   </div>
                   <div style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.6 }}>
-                    Your campaign pages will appear here once they're set up — usually
-                    within 1 business day of your signup.
+                    Your campaign pages will appear here once your territory is confirmed.
                   </div>
                 </div>
               )}
@@ -401,7 +400,7 @@ export default function DealerPortal() {
                   fontSize: 13.5, color: "#5a4708", lineHeight: 1.7 }}>
                   <li>
                     Our team will send your dealer kit and onboarding call details
-                    to <strong>{email}</strong> within 1 business day.
+                    to <strong>{email}</strong> shortly.
                   </li>
                   <li>
                     Once your campaign pages are live, share them with local businesses
