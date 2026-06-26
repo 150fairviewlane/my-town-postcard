@@ -2,12 +2,11 @@
  * compositeQr.ts — server-side QR code compositing for Grok-generated ads.
  *
  * Generates a real, scannable QR code (ECL H) and composites it onto an ad
- * image buffer inside a plain backing card (white fill, thin burgundy border,
- * "SCAN ME" label) anchored to the bottom-right corner.  After compositing, a
- * programmatic jsqr decode step verifies the QR is scannable — throws on fail.
+ * image buffer inside a thin-bordered backing card anchored to the bottom-right
+ * corner.  After compositing, a jsqr decode step verifies the QR is scannable.
  *
- * Card sizing: ~16% of qrSize as side/bottom padding, ~22% as top padding
- * (label area).  Card is inset 8 px from the image edge.
+ * Card sizing: 4 px uniform padding on all sides (the QR itself already carries
+ * a 4-module quiet zone via margin:4).  Card is inset 6 px from the image edge.
  */
 
 import QRCode from "qrcode";
@@ -31,81 +30,58 @@ export const QR_PLACEMENT: Record<SizeKey, QrSpec> = {
 
 // ── Backing-card visual style ──────────────────────────────────────────────
 export interface CardStyle {
-  fill:        string; // card background hex  (e.g. "#FFFFFF")
-  border:      string; // 1 px stroke hex      (e.g. "#7B1418")
-  labelColor:  string; // "SCAN ME" text hex   (e.g. "#7B1418")
+  fill:   string; // card background hex (e.g. "#FFFFFF")
+  border: string; // border stroke hex   (e.g. "#7B1418")
 }
 
 export const DEFAULT_CARD_STYLE: CardStyle = {
-  fill:       "#FFFFFF",
-  border:     "#7B1418",
-  labelColor: "#7B1418",
+  fill:   "#FFFFFF",
+  border: "#7B1418",
 };
 
 export const CREAM_CARD_STYLE: CardStyle = {
-  fill:       "#FFF8F0",
-  border:     "#7B1418",
-  labelColor: "#7B1418",
+  fill:   "#FFF8F0",
+  border: "#7B1418",
 };
 
 export const GRAY_BORDER_STYLE: CardStyle = {
-  fill:       "#FFFFFF",
-  border:     "#CCCCCC",
-  labelColor: "#555555",
+  fill:   "#FFFFFF",
+  border: "#CCCCCC",
 };
 
 // ── Card layout computed from QR spec ─────────────────────────────────────
-const CARD_INSET = 8; // px from image edge to card outer edge
+const CARD_INSET = 6; // px from image edge to card outer edge
+const PAD        = 4; // uniform padding on all 4 sides
 
 export interface CardLayout {
-  cardW:      number;
-  cardH:      number;
-  sidePad:    number;
-  topPad:     number;
-  bottomPad:  number;
-  cardLeft:   number;
-  cardTop:    number;
-  qrAbsLeft:  number; // QR origin in full-image coords (for decode verify)
-  qrAbsTop:   number;
-  fontSize:   number;
-  labelCY:    number; // label centre-Y in card-local coords
+  cardW:     number;
+  cardH:     number;
+  cardLeft:  number;
+  cardTop:   number;
+  qrAbsLeft: number; // QR origin in full-image coords (for decode verify)
+  qrAbsTop:  number;
 }
 
 export function computeCardLayout(spec: QrSpec): CardLayout {
   const { qrSize, imgW, imgH } = spec;
-  const sidePad   = Math.max(12, Math.round(qrSize * 0.16));
-  const topPad    = Math.max(18, Math.round(qrSize * 0.22));
-  const bottomPad = sidePad;
-  const cardW     = qrSize + 2 * sidePad;
-  const cardH     = qrSize + topPad + bottomPad;
-  const cardLeft  = imgW - cardW - CARD_INSET;
-  const cardTop   = imgH - cardH - CARD_INSET;
+  const cardW    = qrSize + PAD * 2;
+  const cardH    = qrSize + PAD * 2;
+  const cardLeft = imgW - cardW - CARD_INSET;
+  const cardTop  = imgH - cardH - CARD_INSET;
   return {
-    cardW, cardH, sidePad, topPad, bottomPad,
-    cardLeft, cardTop,
-    qrAbsLeft: cardLeft + sidePad,
-    qrAbsTop:  cardTop  + topPad,
-    fontSize:  Math.max(10, Math.round(qrSize * 0.11)),
-    labelCY:   topPad / 2,
+    cardW, cardH, cardLeft, cardTop,
+    qrAbsLeft: cardLeft + PAD,
+    qrAbsTop:  cardTop  + PAD,
   };
 }
 
 // ── SVG backing-card builder ───────────────────────────────────────────────
 function makeCardSvg(layout: CardLayout, style: CardStyle): Buffer {
-  const { cardW, cardH, fontSize, labelCY } = layout;
-  const { fill, border, labelColor } = style;
-  const letterSpacing = Math.max(1, Math.round(fontSize * 0.18));
-  const svg = `\
-<svg width="${cardW}" height="${cardH}" xmlns="http://www.w3.org/2000/svg">
-  <rect x="0.5" y="0.5" width="${cardW - 1}" height="${cardH - 1}"
-        fill="${fill}" stroke="${border}" stroke-width="1"/>
-  <text x="${cardW / 2}" y="${labelCY}"
-        text-anchor="middle" dominant-baseline="central"
-        font-family="Arial, Helvetica, sans-serif"
-        font-size="${fontSize}" font-weight="700"
-        letter-spacing="${letterSpacing}"
-        fill="${labelColor}">SCAN ME</text>
-</svg>`;
+  const { cardW, cardH } = layout;
+  const svg = `<svg width="${cardW}" height="${cardH}" xmlns="http://www.w3.org/2000/svg">` +
+    `<rect x="0.5" y="0.5" width="${cardW - 1}" height="${cardH - 1}" ` +
+    `fill="${style.fill}" stroke="${style.border}" stroke-width="1"/>` +
+    `</svg>`;
   return Buffer.from(svg);
 }
 
@@ -147,9 +123,9 @@ export async function compositeQrOnto(
   // ── 2. Render SVG backing card to PNG ─────────────────────────────────────
   const cardBase = await sharp(makeCardSvg(layout, style)).png().toBuffer();
 
-  // ── 3. Composite QR centred inside card (offset = sidePad / topPad) ───────
+  // ── 3. Composite QR inside card (PAD offset on all sides) ─────────────────
   const cardWithQr = await sharp(cardBase)
-    .composite([{ input: qrPng, left: layout.sidePad, top: layout.topPad }])
+    .composite([{ input: qrPng, left: PAD, top: PAD }])
     .png()
     .toBuffer();
 
