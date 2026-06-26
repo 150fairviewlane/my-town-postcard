@@ -218,10 +218,11 @@ function buildFooterZone(
   phoneIconStyle: "circular-badge" | "inline-icon" | "minimal",
   sizeKey?: string,
 ): string {
-  // Physical card size for the composited QR square, per spot size (cardSize = round(qrSize × 1.15)).
-  // These must stay in sync with QR_PLACEMENT in compositeQr.ts.
+  // Physical card size for the composited QR square, per spot size (cardSize = round(qrSize × 1.075)).
+  // These must stay in sync with CARD_MARGIN in compositeQr.ts.
   const sk = (sizeKey ?? "").toLowerCase();
-  const qrCardInches = sk === "xl" ? 0.69 : sk === "l" ? 0.50 : 0.35; // m / s / unknown
+  // cardSize = round(qrSize × 1.075) / 300 DPI — must stay in sync with compositeQr.ts CARD_MARGIN
+  const qrCardInches = sk === "xl" ? 0.65 : sk === "l" ? 0.47 : 0.32; // m / s / unknown
 
   const hasAddr = address !== "(none)";
   const addrRule = !hasAddr

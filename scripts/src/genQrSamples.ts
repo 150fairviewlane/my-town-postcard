@@ -13,7 +13,7 @@ mkdirSync(OUT, { recursive: true });
 
 // ── Must stay in sync with compositeQr.ts ─────────────────────────────────
 const CARD_INSET  = 6;
-const CARD_MARGIN = 1.15;
+const CARD_MARGIN = 1.075;
 
 const QR_PLACEMENT = {
   xl: { qrSize: 180, imgW: 1200, imgH: 1500 },

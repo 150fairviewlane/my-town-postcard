@@ -238,22 +238,22 @@ title = "S — cardH=120px (covers 20% of 600px), qrTop-in-card=26px"
 id = "tufE9gX9iyuvx2_y7yUdB"
 uri = "file://attached_assets/qr-c-xl.jpg"
 type = "image"
-title = "XL — 207×207 px (0.69″ sq), qrOffset=13, bleed ok(32)"
+title = "XL — 194×194 px (0.65″), 7 px margin/side"
 
 [[outputs]]
 id = "F0Ie4NCIEAr5h1GTNdsWD"
 uri = "file://attached_assets/qr-c-l.jpg"
 type = "image"
-title = "L — 150×150 px (0.50″ sq), qrOffset=10, bleed ok(34)"
+title = "L — 140×140 px (0.47″), 5 px margin/side"
 
 [[outputs]]
 id = "3Fm3Visl55aKhtpdb9kq-"
 uri = "file://attached_assets/qr-c-m.jpg"
 type = "image"
-title = "M — 103×103 px (0.34″ sq), qrOffset=6, bleed ok(112)"
+title = "M — 97×97 px (0.32″), 3 px margin/side"
 
 [[outputs]]
 id = "5iwHtPP9dIx6Ihv1N4JUl"
 uri = "file://attached_assets/qr-c-s.jpg"
 type = "image"
-title = "S — 103×103 px (0.34″ sq), qrOffset=6, bleed ok(60)"
+title = "S — 97×97 px (0.32″), 3 px margin/side"
