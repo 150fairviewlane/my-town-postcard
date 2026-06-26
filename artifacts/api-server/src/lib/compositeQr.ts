@@ -5,8 +5,13 @@
  * image buffer inside a thin-bordered backing card anchored to the bottom-right
  * corner.  After compositing, a jsqr decode step verifies the QR is scannable.
  *
- * Card sizing: 4 px uniform padding on all sides (the QR itself already carries
- * a 4-module quiet zone via margin:4).  Card is inset 6 px from the image edge.
+ * Card sizing:
+ *   - Width:  qrSize + 2×PAD (flat horizontal padding on both sides)
+ *   - Height: max(qrSize + 2×PAD, imgH × FOOTER_COVER) — whichever is taller,
+ *     so the card always covers Grok's full instructed footer zone (upper bound
+ *     of the 15–20% prompt range).  The QR is bottom-anchored within the card;
+ *     the extra height extends the card's top edge upward to fill the gap.
+ *   - Card is inset CARD_INSET px from the image edge.
  */
 
 import QRCode from "qrcode";
@@ -49,36 +54,51 @@ export const GRAY_BORDER_STYLE: CardStyle = {
   border: "#CCCCCC",
 };
 
-// ── Card layout computed from QR spec ─────────────────────────────────────
-const CARD_INSET = 6; // px from image edge to card outer edge
-const PAD        = 4; // uniform padding on all 4 sides
+// ── Layout constants ──────────────────────────────────────────────────────
+const CARD_INSET    = 6;    // px from image edge to card outer edge
+const PAD           = 4;    // horizontal padding on each side (QR left/right within card)
+const FOOTER_COVER  = 0.20; // fraction of imgH the card must be at least as tall as
+                            // (upper bound of the 15-20% footer instruction in buildAdPrompt)
 
+// ── Card layout computed from QR spec ─────────────────────────────────────
 export interface CardLayout {
   cardW:     number;
   cardH:     number;
   cardLeft:  number;
   cardTop:   number;
+  qrLeft:    number; // QR origin in card-local coords
+  qrTop:     number;
   qrAbsLeft: number; // QR origin in full-image coords (for decode verify)
   qrAbsTop:  number;
 }
 
 export function computeCardLayout(spec: QrSpec): CardLayout {
   const { qrSize, imgW, imgH } = spec;
-  const cardW    = qrSize + PAD * 2;
-  const cardH    = qrSize + PAD * 2;
+
+  const cardW = qrSize + PAD * 2;
+  // Height covers the full footer zone — QR is bottom-anchored inside the card.
+  const cardH = Math.max(qrSize + PAD * 2, Math.round(imgH * FOOTER_COVER));
+
   const cardLeft = imgW - cardW - CARD_INSET;
   const cardTop  = imgH - cardH - CARD_INSET;
+
+  // QR anchored to bottom-right of card interior.
+  const qrLeft = PAD;
+  const qrTop  = cardH - qrSize - PAD;
+
   return {
     cardW, cardH, cardLeft, cardTop,
-    qrAbsLeft: cardLeft + PAD,
-    qrAbsTop:  cardTop  + PAD,
+    qrLeft, qrTop,
+    qrAbsLeft: cardLeft + qrLeft,
+    qrAbsTop:  cardTop  + qrTop,
   };
 }
 
 // ── SVG backing-card builder ───────────────────────────────────────────────
 function makeCardSvg(layout: CardLayout, style: CardStyle): Buffer {
   const { cardW, cardH } = layout;
-  const svg = `<svg width="${cardW}" height="${cardH}" xmlns="http://www.w3.org/2000/svg">` +
+  const svg =
+    `<svg width="${cardW}" height="${cardH}" xmlns="http://www.w3.org/2000/svg">` +
     `<rect x="0.5" y="0.5" width="${cardW - 1}" height="${cardH - 1}" ` +
     `fill="${style.fill}" stroke="${style.border}" stroke-width="1"/>` +
     `</svg>`;
@@ -123,9 +143,11 @@ export async function compositeQrOnto(
   // ── 2. Render SVG backing card to PNG ─────────────────────────────────────
   const cardBase = await sharp(makeCardSvg(layout, style)).png().toBuffer();
 
-  // ── 3. Composite QR inside card (PAD offset on all sides) ─────────────────
+  // ── 3. Composite QR bottom-anchored inside card ───────────────────────────
+  // qrLeft/qrTop are card-local — QR sits PAD from sides and PAD from bottom.
+  // The extra height above the QR covers Grok's full footer reservation zone.
   const cardWithQr = await sharp(cardBase)
-    .composite([{ input: qrPng, left: PAD, top: PAD }])
+    .composite([{ input: qrPng, left: layout.qrLeft, top: layout.qrTop }])
     .png()
     .toBuffer();
 

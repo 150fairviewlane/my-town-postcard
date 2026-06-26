@@ -75,12 +75,12 @@ export function buildFooterZone(phone: string, address: string, isLandscape = fa
   // Right ~12–15% of card width: a flat same-color rectangle reserved for the
   // programmatically composited QR. Global negative: no AI-drawn QR/barcode/
   // scannable marks anywhere in the image.
-  const qrSlot = `RIGHT: blank rect (~12–15% card width) — no QR, barcode, or scannable marks anywhere.`;
+  const qrSlot = `RIGHT: blank rect (~15% card width, full footer height) — no QR, barcode, or scannable marks anywhere.`;
 
   if (isLandscape) {
     const hasAddr = address !== "(none)";
     return (
-      `FOOTER (full-width dark bar, 15–20% of card height): ` +
+      `FOOTER (full-width dark bar, 20% of card height): ` +
       `THREE inline columns left to right — ` +
       `LEFT: "${phone}" bold white, very large (the largest text in the footer); ` +
       `CENTER: ` + (hasAddr
@@ -91,7 +91,7 @@ export function buildFooterZone(phone: string, address: string, isLandscape = fa
     );
   }
   return (
-    `FOOTER (full-width dark bar, 15–20% of card): ` +
+    `FOOTER (full-width dark bar, 20% of card height): ` +
     `"${phone}" bold white, very large, left-aligned (the largest text in the footer); ` +
     (address !== "(none)" ? `"${address}" bold white, large, directly below phone (same left column); ` : "") +
     qrSlot + ` ` +

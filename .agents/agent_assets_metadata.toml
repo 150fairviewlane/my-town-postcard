@@ -209,3 +209,27 @@ id = "Q4EhYzJgiXG5-KLKxuZBB"
 uri = "file://attached_assets/qr-sample-s-A-white-burgundy.jpg"
 type = "image"
 title = "S — qrSize=90px, card=118×124, font=10px (forest green bg)"
+
+[[outputs]]
+id = "jdZ3rQQnprSbJ1gvdnIYN"
+uri = "file://attached_assets/qr-b-xl.jpg"
+type = "image"
+title = "XL — cardH=300px (covers 20% of 1500px), qrTop-in-card=116px"
+
+[[outputs]]
+id = "FTVSoZGpyi2OZAvPtBui-"
+uri = "file://attached_assets/qr-b-l.jpg"
+type = "image"
+title = "L — cardH=240px (covers 20% of 1200px), qrTop-in-card=106px"
+
+[[outputs]]
+id = "b_gOOjGTwGjNU9C4pBO-v"
+uri = "file://attached_assets/qr-b-m.jpg"
+type = "image"
+title = "M — cardH=120px (covers 20% of 600px), qrTop-in-card=26px"
+
+[[outputs]]
+id = "Sf9B7pLSIQ9Vrk6Kz_hWt"
+uri = "file://attached_assets/qr-b-s.jpg"
+type = "image"
+title = "S — cardH=120px (covers 20% of 600px), qrTop-in-card=26px"
