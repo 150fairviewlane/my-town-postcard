@@ -70,12 +70,12 @@ export const GRAY_BORDER_STYLE: CardStyle = {
 const CARD_INSET = 6;
 
 /**
- * 1.075× physical margin — card is this multiple of the QR size.
- * Gives ~7 px per side at XL, ~5 px at L, ~3 px at M/S.
- * The QR library's own margin:4 quiet zone is baked inside the QR PNG;
- * this outer margin is purely the card-background gap outside the PNG.
+ * 1.0375× physical margin — card is this multiple of the QR size.
+ * Gives ~3 px per side at XL, ~2 px at L, ~1 px at M/S.
+ * The QR library's own margin:4 quiet zone (~12 px) is baked inside the
+ * QR PNG — this outer margin is purely a thin card-background border strip.
  */
-const CARD_MARGIN = 1.075;
+const CARD_MARGIN = 1.0375;
 
 /**
  * Average pixel brightness threshold (0-255) above which the strip just above

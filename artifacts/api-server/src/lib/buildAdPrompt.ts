@@ -75,8 +75,8 @@ export function buildFooterZone(phone: string, address: string, isLandscape = fa
   // Physical card size for the composited QR square (cardSize = round(qrSize × 1.075)).
   // Must stay in sync with CARD_MARGIN in compositeQr.ts.
   const sk = (sizeKey ?? "").toLowerCase();
-  // cardSize = round(qrSize × 1.075) / 300 DPI — must stay in sync with compositeQr.ts CARD_MARGIN
-  const qrCardInches = sk === "xl" ? 0.65 : sk === "l" ? 0.47 : 0.32; // m / s / unknown
+  // cardSize = round(qrSize × 1.0375) / 300 DPI — must stay in sync with compositeQr.ts CARD_MARGIN
+  const qrCardInches = sk === "xl" ? 0.62 : sk === "l" ? 0.45 : 0.31; // m / s / unknown
 
   // Bottom-right square zone: solid footer-colored fill, no marks — a real QR is composited here.
   const qrSlot =
