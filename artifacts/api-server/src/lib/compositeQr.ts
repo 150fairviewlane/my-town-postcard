@@ -139,10 +139,10 @@ export const TEMPLATE_QR_STYLES: Record<string, CardStyle> = {
   "made-fresh":        { fill: "#1f1a14", border: "#c9a84c", borderWidth: 3, cornerRadius: 0,  dashPattern: null },
   // borderWidth: 0 — flat fill, no outline; stroke attrs omitted entirely in makeCardSvg
   "neighborhood-pro":  { fill: "#1d3a23", border: "#1d3a23", borderWidth: 0, cornerRadius: 0,  dashPattern: null },
+  "home-elegance":     { fill: "#0f1f3d", border: "#c9a84c", borderWidth: 3, cornerRadius: 16, dashPattern: null },
+  "purple-sage":       { fill: "#3d2f4a", border: "#9b7fb0", borderWidth: 3, cornerRadius: 16, dashPattern: null },
+  "wok-fire":          { fill: "#1a1310", border: "#c9a84c", borderWidth: 3, cornerRadius: 0,  dashPattern: null },
   // ── TODO: replace with per-template values ───────────────────────────────
-  "home-elegance":     { ...PLACEHOLDER_QR_STYLE },
-  "purple-sage":       { ...PLACEHOLDER_QR_STYLE },
-  "wok-fire":          { ...PLACEHOLDER_QR_STYLE },
   "surprise-me":       { ...PLACEHOLDER_QR_STYLE },
 };
 

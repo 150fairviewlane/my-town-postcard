@@ -317,3 +317,21 @@ id = "Ig3GoQPuFCkZhTXRkU_KY"
 uri = "file://.local/qr-preview/neighborhood-pro-m-corner.jpg"
 type = "image"
 title = "neighborhood-pro M — corner crop (flat dark-green, no border)"
+
+[[outputs]]
+id = "uh2BIaBm3y7BDfZK7Nion"
+uri = "file://.local/qr-preview/home-elegance-xl-corner.jpg"
+type = "image"
+title = "home-elegance XL — navy fill, gold border, r16 corners"
+
+[[outputs]]
+id = "csaUU46YalgZ1WZ6UVUox"
+uri = "file://.local/qr-preview/purple-sage-xl-corner.jpg"
+type = "image"
+title = "purple-sage XL — plum fill, lavender border, r16 corners"
+
+[[outputs]]
+id = "dJhn0RpwumaXkrJgAkPWR"
+uri = "file://.local/qr-preview/wok-fire-xl-corner.jpg"
+type = "image"
+title = "wok-fire XL — near-black fill, gold border, square corners"
