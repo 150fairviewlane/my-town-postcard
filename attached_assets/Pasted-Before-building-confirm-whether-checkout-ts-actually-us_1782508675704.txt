@@ -1,0 +1,11 @@
+Before building: confirm whether checkout.ts actually uses stripe.checkout.sessions.create (hosted, full-page redirect — matches the cs_test_ URL pattern observed earlier) or Stripe Elements (embedded iframe). 
+
+If it's Checkout Sessions (hosted redirect): redesign the purchase step to actually navigate Playwright to the real Stripe-hosted checkout page after reserving a QA spot through the normal (non-admin-shortcut) flow, fill Stripe's own test card fields there, and let the EXISTING webhook handler complete the purchase exactly as it would for a real customer — no admin-only checkout/confirm shortcut. This means the bot validates real webhook delivery and processing, which is where this session's actual production bugs have lived (dev webhook URL rotation, double-payment-protection, off-session billing). Confirm Stripe's test mode still fires real webhook events end-to-end when driven this way, and that the existing webhook signing/verification works against whatever test-mode webhook secret is configured.
+
+If it turns out to genuinely be Stripe Elements with embedded iframes (re-verify this rather than assume): the original PaymentIntent-confirm shortcut is reasonable, but flag clearly in code comments that this bot does NOT validate the webhook path, and recommend a separate, even lighter-weight check elsewhere to confirm webhook health periodically.
+
+Separately, two smaller confirmations:
+1. STRIPE_QA_SECRET_KEY — confirm this only requires the EXISTING Stripe account's already-available test-mode secret key, not a new/separate Stripe account. Every Stripe account has live and test keys simultaneously.
+2. The cleanup route's order deletion — given we already hit FK-ordering issues during the manual test-data wipe earlier this session, confirm the QA cleanup endpoint deletes in the correct FK-respecting order (any subscription-related tables before orders, orders before spots) every time it runs, not just on a one-off manual pass — this route fires automatically and repeatedly, so a wrong order would fail silently/repeatedly rather than once.
+
+Report back on the Checkout Sessions vs Elements question specifically before writing the Playwright script — this determines the actual design, not just an implementation detail.
