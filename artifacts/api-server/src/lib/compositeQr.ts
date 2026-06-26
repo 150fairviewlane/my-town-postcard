@@ -136,9 +136,10 @@ export const TEMPLATE_QR_STYLES: Record<string, CardStyle> = {
   "sage-organic":      { fill: "#f4ede1", border: "#6b7c4f", borderWidth: 3, cornerRadius: 10, dashPattern: [8, 6] },
   "at-your-service":   { fill: "#1a2744", border: "#c9a84c", borderWidth: 3, cornerRadius: 0,  dashPattern: [10, 5] },
   "brush-stroke":      { fill: "#2b2620", border: "#7a8c4a", borderWidth: 3, cornerRadius: 0,  dashPattern: null, circularCard: true, marginMultiplier: 1.45 },
+  "made-fresh":        { fill: "#1f1a14", border: "#c9a84c", borderWidth: 3, cornerRadius: 0,  dashPattern: null },
+  // borderWidth: 0 — flat fill, no outline; stroke attrs omitted entirely in makeCardSvg
+  "neighborhood-pro":  { fill: "#1d3a23", border: "#1d3a23", borderWidth: 0, cornerRadius: 0,  dashPattern: null },
   // ── TODO: replace with per-template values ───────────────────────────────
-  "made-fresh":        { ...PLACEHOLDER_QR_STYLE },
-  "neighborhood-pro":  { ...PLACEHOLDER_QR_STYLE },
   "home-elegance":     { ...PLACEHOLDER_QR_STYLE },
   "purple-sage":       { ...PLACEHOLDER_QR_STYLE },
   "wok-fire":          { ...PLACEHOLDER_QR_STYLE },
@@ -235,15 +236,24 @@ export function computeCardLayout(spec: QrSpec, style?: Pick<CardStyle, "marginM
  *                               when circularCard=true sets it to Math.floor(cardSize/2))
  */
 function makeCardSvg(cardSize: number, style: CardStyle, effectiveCornerRadius: number): Buffer {
-  const sw   = style.borderWidth;
-  const half = sw / 2;
-  const dash = style.dashPattern
-    ? ` stroke-dasharray="${style.dashPattern.join(" ")}"`
+  const sw = style.borderWidth;
+
+  // When borderWidth is 0 we omit stroke/stroke-width entirely rather than
+  // emitting stroke-width="0". Even though the SVG spec says a zero-width
+  // stroke is not painted, some rasterizers may still produce a sub-pixel
+  // anti-aliasing artifact when the stroke attribute is present with a color.
+  // Skipping the attribute is the only safe guarantee of a clean flat fill.
+  const hasBorder = sw > 0;
+  const half = hasBorder ? sw / 2 : 0;
+  const inset = hasBorder ? sw : 0;
+  const strokeAttrs = hasBorder
+    ? ` stroke="${style.border}" stroke-width="${sw}"${style.dashPattern ? ` stroke-dasharray="${style.dashPattern.join(" ")}"` : ""}`
     : "";
+
   const svg =
     `<svg width="${cardSize}" height="${cardSize}" xmlns="http://www.w3.org/2000/svg">` +
-    `<rect x="${half}" y="${half}" width="${cardSize - sw}" height="${cardSize - sw}" ` +
-    `rx="${effectiveCornerRadius}" ry="${effectiveCornerRadius}" fill="${style.fill}" stroke="${style.border}" stroke-width="${sw}"${dash}/>` +
+    `<rect x="${half}" y="${half}" width="${cardSize - inset}" height="${cardSize - inset}" ` +
+    `rx="${effectiveCornerRadius}" ry="${effectiveCornerRadius}" fill="${style.fill}"${strokeAttrs}/>` +
     `</svg>`;
   return Buffer.from(svg);
 }

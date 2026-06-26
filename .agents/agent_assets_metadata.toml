@@ -299,3 +299,21 @@ id = "iMwB2GOoJwWoFKlUmnTyv"
 uri = "file://.local/qr-preview/brush-stroke-m-corner.jpg"
 type = "image"
 title = "brush-stroke M — corner crop (circular card, 131×131 px)"
+
+[[outputs]]
+id = "yTk6q6Xnu2SnjzNHefcYC"
+uri = "file://.local/qr-preview/made-fresh-xl.jpg"
+type = "image"
+title = "made-fresh XL — dark espresso fill, gold solid border"
+
+[[outputs]]
+id = "y38-DbrtbCT1auTqQ5hT6"
+uri = "file://.local/qr-preview/neighborhood-pro-xl-corner.jpg"
+type = "image"
+title = "neighborhood-pro XL — corner crop (flat dark-green, no border)"
+
+[[outputs]]
+id = "Ig3GoQPuFCkZhTXRkU_KY"
+uri = "file://.local/qr-preview/neighborhood-pro-m-corner.jpg"
+type = "image"
+title = "neighborhood-pro M — corner crop (flat dark-green, no border)"
