@@ -80,10 +80,9 @@ export function buildFooterZone(phone: string, address: string, isLandscape = fa
 
   // Bottom-right square zone: solid footer-colored fill, no marks — a real QR is composited here.
   const qrSlot =
-    `BOTTOM-RIGHT: solid-color square ${qrCardInches.toFixed(2)}"×${qrCardInches.toFixed(2)}" at print size. ` +
-    `POSITION IS CRITICAL: RIGHT EDGE flush with the image's rightmost pixel column, BOTTOM EDGE flush with the image's bottommost pixel row — zero gap, zero padding, touching the actual image border. ` +
-    `Do NOT add any margin or offset from the image edge. ` +
-    `Fill with footer background color — no QR, barcode, or scannable marks anywhere in the image; zone must not exceed ${qrCardInches.toFixed(2)}"×${qrCardInches.toFixed(2)}".`;
+    `BOTTOM-RIGHT: solid square ${qrCardInches.toFixed(2)}"×${qrCardInches.toFixed(2)}" at print size — ` +
+    `RIGHT and BOTTOM edges flush with image border, zero margin. ` +
+    `Fill with footer bg color — no QR/barcode marks; zone max ${qrCardInches.toFixed(2)}"×${qrCardInches.toFixed(2)}".`;
 
   if (isLandscape) {
     const hasAddr = address !== "(none)";

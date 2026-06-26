@@ -238,13 +238,11 @@ function buildFooterZone(
     phoneIconStyle === "inline-icon"    ? "a small phone icon + "           : "";
 
   const qrZone =
-    `  BOTTOM-RIGHT CORNER — reserved square zone: ${qrCardInches.toFixed(2)}"×${qrCardInches.toFixed(2)}" at print size. ` +
-    `POSITION IS CRITICAL: the square's RIGHT EDGE must be flush with the image's rightmost pixel column and its BOTTOM EDGE must be flush with the image's bottommost pixel row — zero gap, zero padding, touching the actual image border on both sides. ` +
-    `Do NOT give this square any margin from the image edge; it must sit in the true corner. ` +
-    `Fill this exact square with the footer bar's background color — solid, no patterns, no text, no decorative marks. ` +
-    `(A real QR code will be composited here in post-processing.) ` +
-    `CRITICAL: do NOT draw a QR code, barcode, or any scannable mark anywhere in the image. ` +
-    `The zone must not exceed ${qrCardInches.toFixed(2)}"×${qrCardInches.toFixed(2)}" — if your placeholder is larger it will be visible outside the composited card.\n`;
+    `  BOTTOM-RIGHT CORNER — reserved square zone: ${qrCardInches.toFixed(2)}"×${qrCardInches.toFixed(2)}" at print size — ` +
+    `RIGHT and BOTTOM edges flush with image border, zero gap, zero margin. ` +
+    `Fill with footer bar's background color — solid, no patterns, no text, no marks. ` +
+    `(QR will be composited here in post-processing — do NOT draw a QR code, barcode, or scannable mark anywhere in the image.) ` +
+    `Zone must not exceed ${qrCardInches.toFixed(2)}"×${qrCardInches.toFixed(2)}" — if larger, it bleeds outside the composited card.\n`;
 
   return (
     "FOOTER REGION (bottom 20% of card): a SOLID DARK BACKGROUND BAR spanning the full card width — opaque, high contrast, no transparency or bleed into imagery above.\n" +
