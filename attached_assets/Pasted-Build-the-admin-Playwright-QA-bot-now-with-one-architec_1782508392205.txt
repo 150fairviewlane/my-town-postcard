@@ -1,0 +1,15 @@
+Build the admin Playwright QA bot now, with one architectural requirement locked in from the start: this bot must ALWAYS execute its purchase step using Stripe TEST-mode (test secret key, test card numbers), regardless of whether the rest of production is running in sandbox or live mode. Confirm the codebase can support having a test-mode key available for this specific tool even after the main checkout flow switches to a live-mode key for real customers — this needs to keep working unchanged the day production goes live, since that's actually the most valuable time to run it.
+
+Beyond that, same investigation/design points as before, now slightly revised:
+
+1. Add an isQaTest boolean flag to campaigns and/or spots. This matters regardless of Stripe mode — the database doesn't distinguish test-mode vs live-mode Stripe sessions once a webhook completes, so a bot purchase (even test-mode) writes a normal-looking spot/order row unless explicitly flagged.
+
+2. The milestone email scheduler (12-spot, 15-spot alerts) and any admin-facing aggregate totals (commission, QR scan counts) must explicitly EXCLUDE anything flagged isQaTest. This protection matters MORE once production goes live, not less — a real dealer must never get a "ready to print" email triggered by a bot's test purchase.
+
+3. Use a single PERMANENT dedicated test territory/campaign for this bot, created once, reused every run, flagged isQaTest, never counted toward real milestones — confirm feasibility given current campaign/spot structure.
+
+4. Design cleanup to be robust to mid-run failure: a crash after purchase but before cleanup must not leave permanent orphaned data. Propose a guaranteed final cleanup step plus a periodic sweep as a safety net for anything flagged isQaTest older than a few hours.
+
+5. Confirm Stripe test card numbers work cleanly against the existing payment_method_types: ['card'] restriction.
+
+Report back on all five, plus confirmation on the dual-key test-mode requirement, before writing the Playwright script itself.
