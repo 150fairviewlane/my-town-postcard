@@ -6,16 +6,23 @@
  * corner.
  *
  * Card sizing — physical-inch based, always a square:
- *   cardSize (px) = round(qrSize × 1.15)
- *   The 1.15× factor adds a 15% margin on every side (QR centered within card).
- *   DPI cancels out of the formula (qrPx/DPI × 1.15 × DPI = qrPx × 1.15), so
- *   the same formula holds regardless of which size's DPI we use.
+ *   cardSize (px) = round(qrSize × marginMultiplier)
+ *   The default multiplier (CARD_MARGIN = 1.0375) adds a thin border strip on
+ *   every side. Per-template styles may override via the optional
+ *   `marginMultiplier` field on CardStyle (e.g. circular cards need ≥1.45×
+ *   so the QR's square corners stay inside the inscribed circle).
+ *   DPI cancels out of the formula, so the result is DPI-independent.
  *
- * Physical card sizes by spot size:
- *   XL  →  207 px  ≈ 0.69" square  (qrSize 180 px, 4"×5" print)
- *   L   →  150 px  ≈ 0.50" square  (qrSize 130 px, 3"×4" print)
- *   M   →  104 px  ≈ 0.35" square  (qrSize  90 px, 3"×2" print)
- *   S   →  104 px  ≈ 0.35" square  (qrSize  90 px, 2"×2" print)
+ * Physical card sizes by spot size (default 1.0375× multiplier):
+ *   XL  →  187 px  ≈ 0.62" square  (qrSize 180 px, 4"×5" print)
+ *   L   →  135 px  ≈ 0.45" square  (qrSize 130 px, 3"×4" print)
+ *   M   →   93 px  ≈ 0.31" square  (qrSize  90 px, 3"×2" print)
+ *   S   →   93 px  ≈ 0.31" square  (qrSize  90 px, 2"×2" print)
+ *
+ * Circular cards (circularCard: true):
+ *   cornerRadius is overridden to Math.floor(cardSize / 2) at render time.
+ *   Use marginMultiplier ≥ 1.45 — at the default 1.0375× the QR's diagonal
+ *   (side × √2) would exceed the circle's diameter and corners would clip.
  *
  * Telemetry:
  *   After compositing, a 20-px strip just above the card top edge is sampled.
@@ -46,11 +53,27 @@ export const QR_PLACEMENT: Record<SizeKey, QrSpec> = {
 
 // ── Backing-card visual style ──────────────────────────────────────────────
 export interface CardStyle {
-  fill:          string;        // card background hex (e.g. "#FFFFFF")
-  border:        string;        // border stroke hex   (e.g. "#7B1418")
-  borderWidth:   number;        // stroke width in px
-  cornerRadius:  number;        // SVG rx/ry — 0 = sharp corners
+  fill:          string;          // card background hex (e.g. "#FFFFFF")
+  border:        string;          // border stroke hex   (e.g. "#7B1418")
+  borderWidth:   number;          // stroke width in px
+  cornerRadius:  number;          // SVG rx/ry — 0 = sharp corners; ignored when circularCard=true
   dashPattern:   number[] | null; // SVG stroke-dasharray; null = solid
+
+  /**
+   * When true, cornerRadius is overridden to Math.floor(cardSize / 2) at
+   * render time, producing a true circle. Requires marginMultiplier ≥ 1.45 so
+   * the QR's square corners clear the circle's edge.
+   */
+  circularCard?: true;
+
+  /**
+   * Multiplier applied to qrSize to compute the square card side length.
+   * Defaults to CARD_MARGIN (1.0375×) when absent.
+   * Circular cards should use ≥ 1.45× — at 1.0375× the QR diagonal exceeds
+   * the circle diameter and corners poke outside the fill area.
+   */
+  marginMultiplier?: number;
+
   /** @internal Marks this as a placeholder pending per-template design. */
   _placeholder?: true;
 }
@@ -93,14 +116,17 @@ export const GRAY_BORDER_STYLE: CardStyle = {
 /**
  * Maps each ad template key to its QR backing-card visual style.
  * Fields:
- *   fill         — card background (matches footer bar color for seamless blend)
- *   border       — accent outline color matching the template's design language
- *   borderWidth  — stroke width in px
- *   cornerRadius — SVG rx/ry; 0 = square corners
- *   dashPattern  — stroke-dasharray for dashed/stitched styles; null = solid
+ *   fill             — card background (matches footer bar color for seamless blend)
+ *   border           — accent outline color matching the template's design language
+ *   borderWidth      — stroke width in px
+ *   cornerRadius     — SVG rx/ry; 0 = square corners; ignored when circularCard=true
+ *   dashPattern      — stroke-dasharray for dashed/stitched styles; null = solid
+ *   circularCard     — if true, cornerRadius is set to Math.floor(cardSize/2) at render time
+ *   marginMultiplier — overrides CARD_MARGIN for this template; circular cards use 1.45
  *
- * Finalized: heritage-home, health-wellness, parchment-classic, sage-organic.
- * Remaining 8 templates use PLACEHOLDER_QR_STYLE and emit a startup warning.
+ * Finalized: heritage-home, health-wellness, parchment-classic, sage-organic,
+ *            at-your-service, brush-stroke.
+ * Remaining 6 templates use PLACEHOLDER_QR_STYLE and emit a startup warning.
  */
 export const TEMPLATE_QR_STYLES: Record<string, CardStyle> = {
   // ── Finalized ────────────────────────────────────────────────────────────
@@ -108,13 +134,13 @@ export const TEMPLATE_QR_STYLES: Record<string, CardStyle> = {
   "health-wellness":   { fill: "#ffffff", border: "#1f5c5c", borderWidth: 3, cornerRadius: 22, dashPattern: null },
   "parchment-classic": { fill: "#1c1a18", border: "#c9742f", borderWidth: 3, cornerRadius: 0,  dashPattern: null },
   "sage-organic":      { fill: "#f4ede1", border: "#6b7c4f", borderWidth: 3, cornerRadius: 10, dashPattern: [8, 6] },
+  "at-your-service":   { fill: "#1a2744", border: "#c9a84c", borderWidth: 3, cornerRadius: 0,  dashPattern: [10, 5] },
+  "brush-stroke":      { fill: "#2b2620", border: "#7a8c4a", borderWidth: 3, cornerRadius: 0,  dashPattern: null, circularCard: true, marginMultiplier: 1.45 },
   // ── TODO: replace with per-template values ───────────────────────────────
   "made-fresh":        { ...PLACEHOLDER_QR_STYLE },
   "neighborhood-pro":  { ...PLACEHOLDER_QR_STYLE },
-  "at-your-service":   { ...PLACEHOLDER_QR_STYLE },
   "home-elegance":     { ...PLACEHOLDER_QR_STYLE },
   "purple-sage":       { ...PLACEHOLDER_QR_STYLE },
-  "brush-stroke":      { ...PLACEHOLDER_QR_STYLE },
   "wok-fire":          { ...PLACEHOLDER_QR_STYLE },
   "surprise-me":       { ...PLACEHOLDER_QR_STYLE },
 };
@@ -132,10 +158,9 @@ export function getTemplateQrStyle(templateKey: string): CardStyle {
 const CARD_INSET = 6;
 
 /**
- * 1.0375× physical margin — card is this multiple of the QR size.
- * Gives ~3 px per side at XL, ~2 px at L, ~1 px at M/S.
- * The QR library's own margin:4 quiet zone (~12 px) is baked inside the
- * QR PNG — this outer margin is purely a thin card-background border strip.
+ * Default card size multiplier — card side = round(qrSize × CARD_MARGIN).
+ * Gives a thin background strip (~3 px at XL) beyond the QR's own quiet zone.
+ * Override per-template via CardStyle.marginMultiplier.
  */
 const CARD_MARGIN = 1.0375;
 
@@ -162,12 +187,17 @@ export interface CardLayout {
   qrAbsTop:  number;
 }
 
-export function computeCardLayout(spec: QrSpec): CardLayout {
+/**
+ * Compute the card and QR placement for a given QR spec and optional style.
+ * When style.marginMultiplier is set it overrides the global CARD_MARGIN,
+ * allowing circular cards to use a wider multiplier (≥ 1.45) so the QR's
+ * square corners clear the inscribed circle's edge.
+ */
+export function computeCardLayout(spec: QrSpec, style?: Pick<CardStyle, "marginMultiplier">): CardLayout {
   const { qrSize, imgW, imgH } = spec;
+  const multiplier = style?.marginMultiplier ?? CARD_MARGIN;
 
-  // Square card sized to the QR's physical print size + 15% margin.
-  // DPI cancels: qrSize_inches × 1.15 × DPI = qrSize_px × 1.15.
-  const cardSize = Math.round(qrSize * CARD_MARGIN);
+  const cardSize = Math.round(qrSize * multiplier);
 
   // QR centered within the square card (equal margin all sides).
   const qrOffset = Math.floor((cardSize - qrSize) / 2);
@@ -197,9 +227,15 @@ export function computeCardLayout(spec: QrSpec): CardLayout {
 }
 
 // ── SVG backing-card builder ───────────────────────────────────────────────
-function makeCardSvg(cardSize: number, style: CardStyle): Buffer {
+/**
+ * Render the backing card as an SVG buffer.
+ * @param cardSize  Side length in px (card is always square)
+ * @param style     Visual style
+ * @param effectiveCornerRadius  Computed corner radius (may differ from style.cornerRadius
+ *                               when circularCard=true sets it to Math.floor(cardSize/2))
+ */
+function makeCardSvg(cardSize: number, style: CardStyle, effectiveCornerRadius: number): Buffer {
   const sw   = style.borderWidth;
-  const r    = style.cornerRadius;
   const half = sw / 2;
   const dash = style.dashPattern
     ? ` stroke-dasharray="${style.dashPattern.join(" ")}"`
@@ -207,7 +243,7 @@ function makeCardSvg(cardSize: number, style: CardStyle): Buffer {
   const svg =
     `<svg width="${cardSize}" height="${cardSize}" xmlns="http://www.w3.org/2000/svg">` +
     `<rect x="${half}" y="${half}" width="${cardSize - sw}" height="${cardSize - sw}" ` +
-    `rx="${r}" ry="${r}" fill="${style.fill}" stroke="${style.border}" stroke-width="${sw}"${dash}/>` +
+    `rx="${effectiveCornerRadius}" ry="${effectiveCornerRadius}" fill="${style.fill}" stroke="${style.border}" stroke-width="${sw}"${dash}/>` +
     `</svg>`;
   return Buffer.from(svg);
 }
@@ -234,11 +270,19 @@ export async function compositeQrOnto(
   const sharp    = (sharpMod.default ?? sharpMod) as typeof import("sharp");
 
   const spec   = QR_PLACEMENT[spotSize] ?? QR_PLACEMENT.xl;
-  const layout = computeCardLayout(spec);
+  const layout = computeCardLayout(spec, style);
+
+  // For circularCard styles, override cornerRadius to exactly half the card side.
+  // This produces a true circle: rx = ry = width/2 = height/2 on a square element.
+  const effectiveCornerRadius = style.circularCard
+    ? Math.floor(layout.cardSize / 2)
+    : style.cornerRadius;
 
   logger.info(
     { spotSize, cardSize: layout.cardSize, cardLeft: layout.cardLeft, cardTop: layout.cardTop,
-      qrOffset: layout.qrOffset, qrAbsLeft: layout.qrAbsLeft, qrAbsTop: layout.qrAbsTop },
+      qrOffset: layout.qrOffset, qrAbsLeft: layout.qrAbsLeft, qrAbsTop: layout.qrAbsTop,
+      cornerRadius: effectiveCornerRadius, circularCard: style.circularCard ?? false,
+      marginMultiplier: style.marginMultiplier ?? CARD_MARGIN },
     "compositeQrOnto: compositing QR backing card",
   );
 
@@ -254,7 +298,7 @@ export async function compositeQrOnto(
   });
 
   // ── 2. Render square SVG backing card to PNG ──────────────────────────────
-  const cardBase = await sharp(makeCardSvg(layout.cardSize, style)).png().toBuffer();
+  const cardBase = await sharp(makeCardSvg(layout.cardSize, style, effectiveCornerRadius)).png().toBuffer();
 
   // ── 3. Composite QR centered inside square card ───────────────────────────
   // qrOffset is symmetric on all four sides.

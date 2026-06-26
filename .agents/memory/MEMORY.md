@@ -9,3 +9,4 @@
 - [Leaflet iOS double-tap fix](leaflet-ios-tap.md) — set tap:false in L.map() options; default tap plugin intercepts first touch to focus the map, so click only fires on second tap on iPad/iOS.
 - [QR card sizing — physical-inch square](qr-card-sizing.md) — cardSize = round(qrSize × 1.15) px; DPI cancels; always a square. M spot is 3"×2" (900×600 px), NOT 2"×2" — README was wrong.
 - [QR card style hard-failure enforcement](qr-style-hard-failure-todo.md) — once all 11 templates have real TEMPLATE_QR_STYLES entries, convert startup logger.warn to throw; delete PLACEHOLDER_QR_STYLE.
+- [QR circular card margin rule](qr-circular-card-margin.md) — circularCard=true requires marginMultiplier≥1.45; default 1.0375 lets QR diagonal exceed circle diameter. cornerRadius is computed at render time (Math.floor(cardSize/2)), not stored statically.

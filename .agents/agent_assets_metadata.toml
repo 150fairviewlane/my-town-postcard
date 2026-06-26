@@ -281,3 +281,21 @@ id = "s3Z0AIdwFnzdYfCA3c7kj"
 uri = "file://artifacts/api-server/test-qr-sage-organic.jpg"
 type = "image"
 title = "sage-organic — cream fill, olive dashed border, r=10 rounded corners"
+
+[[outputs]]
+id = "12yaTiRf7urHjCyNvhvOW"
+uri = "file://.local/qr-preview/at-your-service-xl.jpg"
+type = "image"
+title = "at-your-service XL — navy/gold dashed border, square card"
+
+[[outputs]]
+id = "gIvappNLNztOl5C2PvTp7"
+uri = "file://.local/qr-preview/brush-stroke-xl-corner.jpg"
+type = "image"
+title = "brush-stroke XL — corner crop (circular card, 261×261 px)"
+
+[[outputs]]
+id = "iMwB2GOoJwWoFKlUmnTyv"
+uri = "file://.local/qr-preview/brush-stroke-m-corner.jpg"
+type = "image"
+title = "brush-stroke M — corner crop (circular card, 131×131 px)"
