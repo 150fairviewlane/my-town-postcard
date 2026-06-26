@@ -2944,7 +2944,7 @@ async function refineCurrentAd(){
     var resp = await fetch('/api/grok-ad-generator/refine', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ imageDataUrl: imageDataUrl, instruction: instruction, sizeKey: _spotSize || 'XL', spotId: _spotId || undefined }),
+      body: JSON.stringify({ imageDataUrl: imageDataUrl, instruction: instruction, sizeKey: _spotSize || 'XL', spotId: _spotId || undefined, template: (_variations[idx] && _variations[idx].templateKey) || 'parchment-classic' }),
     });
     var data = await resp.json();
     if(!resp.ok || data.error){
@@ -4428,6 +4428,8 @@ async function refineAd(){
         imageDataUrl: _resultUrl,
         instruction:  instruction,
         sizeKey:      _spotSize || 'XL',
+        spotId:       _spotId || undefined,
+        template:     _activeTemplate || 'parchment-classic',
       }),
     });
     var data = await resp.json();
