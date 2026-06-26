@@ -12,6 +12,42 @@ uri = "file://attached_assets/surprise_me_template.png"
 type = "image"
 title = "surprise me template"
 
+[[generated]]
+id = "Dd2nWsLhjesPzTNmzj0_R"
+uri = "file://artifacts/api-server/src/assets/qr-backing-textures/stroke-horizontal-bold.png"
+type = "image"
+title = "burgundy horizontal bold brush stroke"
+
+[[generated]]
+id = "qdSAgDCcqW__gJbjIK1KH"
+uri = "file://artifacts/api-server/src/assets/qr-backing-textures/stroke-diagonal-sweep.png"
+type = "image"
+title = "burgundy diagonal sweep stroke"
+
+[[generated]]
+id = "WkEvFLtS1ZpAstu-KHHB4"
+uri = "file://artifacts/api-server/src/assets/qr-backing-textures/swatch-palette-knife.png"
+type = "image"
+title = "burgundy palette knife swatch"
+
+[[generated]]
+id = "lbJv942AuXAgoKidLxlbn"
+uri = "file://artifacts/api-server/src/assets/qr-backing-textures/stroke-calligraphic-arc.png"
+type = "image"
+title = "burgundy calligraphic arc stroke"
+
+[[generated]]
+id = "0bAYC90Hpd2n-7D2Mje2l"
+uri = "file://artifacts/api-server/src/assets/qr-backing-textures/stroke-watercolor-wash.png"
+type = "image"
+title = "burgundy watercolor wash"
+
+[[generated]]
+id = "uPXUSMikvuZFf6a9C8rxW"
+uri = "file://artifacts/api-server/src/assets/qr-backing-textures/swatch-layered-strokes.png"
+type = "image"
+title = "burgundy layered test swatch"
+
 [[outputs]]
 id = "PFielsSQtDhpuVmd1ITB4"
 uri = "file://postcard_picker_code_dump.txt"
@@ -29,3 +65,75 @@ id = "ASv9Sx4jCZawjbigdlxUq"
 uri = "file://artifacts/localspot/public/postcard-white-granite-1782007321078.png"
 type = "image"
 title = "Postcard on White Granite"
+
+[[outputs]]
+id = "1B0P6zO5VhqOLOUIMk7LH"
+uri = "file://artifacts/api-server/src/assets/qr-backing-textures/stroke-horizontal-bold.png"
+type = "image"
+title = "1 — Horizontal bold stroke"
+
+[[outputs]]
+id = "hHXiBVkRMK7PgEuE6ZSHk"
+uri = "file://artifacts/api-server/src/assets/qr-backing-textures/stroke-diagonal-sweep.png"
+type = "image"
+title = "2 — Diagonal sweep stroke"
+
+[[outputs]]
+id = "QIzK-KVgxQjefHSXvV-YN"
+uri = "file://artifacts/api-server/src/assets/qr-backing-textures/swatch-palette-knife.png"
+type = "image"
+title = "3 — Palette knife swatch"
+
+[[outputs]]
+id = "Ndnq8hQW4nTJbjQq8hn8M"
+uri = "file://artifacts/api-server/src/assets/qr-backing-textures/stroke-calligraphic-arc.png"
+type = "image"
+title = "4 — Calligraphic arc stroke"
+
+[[outputs]]
+id = "GgIi3C-6oKhKn2imsUZXF"
+uri = "file://artifacts/api-server/src/assets/qr-backing-textures/stroke-watercolor-wash.png"
+type = "image"
+title = "5 — Watercolor wash"
+
+[[outputs]]
+id = "6j1YzJyLmWD7WMaWD1Bsa"
+uri = "file://artifacts/api-server/src/assets/qr-backing-textures/swatch-layered-strokes.png"
+type = "image"
+title = "6 — Layered test swatch"
+
+[[outputs]]
+id = "ICrSFRv4MBfdw9vZp6vP2"
+uri = "file://artifacts/api-server/src/assets/qr-backing-textures/mockup-qr-stroke-horizontal-bold.png"
+type = "image"
+title = "1 — Horizontal bold → QR composite"
+
+[[outputs]]
+id = "M70YBoGwZ5YC9WpYweTGc"
+uri = "file://artifacts/api-server/src/assets/qr-backing-textures/mockup-qr-stroke-diagonal-sweep.png"
+type = "image"
+title = "2 — Diagonal sweep → QR composite"
+
+[[outputs]]
+id = "o4zMSYTRxoXvbrLlnWqJh"
+uri = "file://artifacts/api-server/src/assets/qr-backing-textures/mockup-qr-swatch-palette-knife.png"
+type = "image"
+title = "3 — Palette knife → QR composite"
+
+[[outputs]]
+id = "E28wBUzJOK8A5wfhXrROO"
+uri = "file://artifacts/api-server/src/assets/qr-backing-textures/mockup-qr-stroke-calligraphic-arc.png"
+type = "image"
+title = "4 — Calligraphic arc → QR composite"
+
+[[outputs]]
+id = "B2o0VaIgo5tDlGmnDVSxs"
+uri = "file://artifacts/api-server/src/assets/qr-backing-textures/mockup-qr-stroke-watercolor-wash.png"
+type = "image"
+title = "5 — Watercolor wash → QR composite"
+
+[[outputs]]
+id = "gWQkWxrejK3iUpmn9dP3o"
+uri = "file://artifacts/api-server/src/assets/qr-backing-textures/mockup-qr-swatch-layered-strokes.png"
+type = "image"
+title = "6 — Layered swatch → QR composite"
