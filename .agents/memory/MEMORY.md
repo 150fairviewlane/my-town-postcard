@@ -8,3 +8,4 @@
 - [County possessive naming rule](county-possessive-rule.md) — Territory names ending in "Counties" must use "County's" (not "Counties's") in possessive hero headlines; enforced via regex in TerritoryLandingPage.tsx buildCopy.
 - [Leaflet iOS double-tap fix](leaflet-ios-tap.md) — set tap:false in L.map() options; default tap plugin intercepts first touch to focus the map, so click only fires on second tap on iPad/iOS.
 - [QR card sizing — physical-inch square](qr-card-sizing.md) — cardSize = round(qrSize × 1.15) px; DPI cancels; always a square. M spot is 3"×2" (900×600 px), NOT 2"×2" — README was wrong.
+- [QR card style hard-failure enforcement](qr-style-hard-failure-todo.md) — once all 11 templates have real TEMPLATE_QR_STYLES entries, convert startup logger.warn to throw; delete PLACEHOLDER_QR_STYLE.
