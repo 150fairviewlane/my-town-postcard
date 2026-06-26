@@ -27,6 +27,7 @@ import territoriesRouter from "./territories";
 import adminImageGenRouter from "./adminImageGen";
 import pdfDownloadRouter from "./pdfDownload";
 import adminPaidCustomersRouter from "./adminPaidCustomers";
+import adminQaRouter from "./adminQa";
 
 const router: IRouter = Router();
 
@@ -58,5 +59,6 @@ router.use(territoriesRouter);
 router.use(adminImageGenRouter);
 router.use(pdfDownloadRouter);
 router.use(adminPaidCustomersRouter);
+router.use(adminQaRouter);
 
 export default router;

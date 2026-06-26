@@ -136,16 +136,25 @@ export async function getStripePublishableKey(): Promise<string> {
  * unlike the main client there is no Replit connector token to refresh.
  */
 export function getQaStripeClient(): Stripe {
-  const key = process.env.STRIPE_QA_SECRET_KEY;
+  // Prefer the dedicated QA key; fall back to the main key only when it is
+  // already test-mode (sk_test_...).  This gives zero-config developer UX —
+  // in dev the main key is always a test key, so STRIPE_QA_SECRET_KEY doesn't
+  // need to be set separately.  In production the calling route already blocks
+  // requests before this is reached, so the fallback path never runs live.
+  const dedicated = process.env.STRIPE_QA_SECRET_KEY;
+  const main = process.env.STRIPE_SECRET_KEY;
+
+  const key = dedicated ?? (main?.startsWith("sk_test_") ? main : undefined);
+
   if (!key) {
     throw new Error(
-      "STRIPE_QA_SECRET_KEY is not set. " +
-        "Add the Stripe test-mode secret key (sk_test_...) to run QA bot tests.",
+      "STRIPE_QA_SECRET_KEY is not set and STRIPE_SECRET_KEY is not a test-mode key. " +
+        "Add a Stripe test-mode secret key (sk_test_...) as STRIPE_QA_SECRET_KEY to run QA bot tests.",
     );
   }
   if (!key.startsWith("sk_test_")) {
     throw new Error(
-      "STRIPE_QA_SECRET_KEY must be a Stripe test-mode key (sk_test_...). " +
+      "The QA Stripe key must be test-mode (sk_test_...). " +
         "Never configure a live key for QA bot tests.",
     );
   }

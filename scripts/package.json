@@ -20,6 +20,8 @@
     "find:broken-qr-ads": "tsx ./src/findBrokenQrAds.ts",
     "gen:qr-samples": "tsx ./src/genQrSamples.ts",
     "measure:qr": "tsx ./src/measureGrokPlaceholder.ts",
+    "seed:qa": "tsx ./src/seedQaCampaign.ts",
+    "qa:bot": "tsx ./src/qaBot.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
@@ -31,6 +33,7 @@
     "tsx": "catalog:"
   },
   "dependencies": {
+    "@workspace/db": "workspace:*",
     "drizzle-orm": "catalog:",
     "jsqr": "^1.4.0",
     "openai": "^6.34.0",
