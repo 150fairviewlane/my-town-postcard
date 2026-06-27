@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 // @ts-expect-error JSX module without types
 import PostcardPickerSection from "./PostcardPickerSection";
 import { useIsMobile } from "./hooks/use-mobile";
@@ -85,6 +85,18 @@ export function scrollToSpots() {
 export function NavBar() {
   const isMobile = useIsMobile();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [pickerVisible, setPickerVisible] = useState(false);
+
+  useEffect(() => {
+    const el = document.getElementById("book");
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => setPickerVisible(entry.isIntersecting),
+      { threshold: 0 },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   const handleNav = (id: string) => {
     setMenuOpen(false);
@@ -93,7 +105,9 @@ export function NavBar() {
 
   return (
     <header style={{
-      position: "sticky", top: 0, zIndex: 50, background: "#fff",
+      position: pickerVisible ? "relative" : "sticky",
+      top: pickerVisible ? undefined : 0,
+      zIndex: 50, background: "#fff",
       borderBottom: "1px solid #e5e7eb",
       boxShadow: "0 2px 4px rgba(0,0,0,0.06)",
       padding: isMobile ? "0 16px" : "0 32px", display: "flex", alignItems: "center",
