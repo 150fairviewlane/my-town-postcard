@@ -166,12 +166,10 @@ const CARD_MARGIN = 1.0375;
 
 // ── Opaque panel constants ─────────────────────────────────────────────────
 /**
- * Side length (px) of the opaque footer-colour backing panel anchored at the
- * bottom-right image corner. Sized to cover the footprint of any AI-generated
- * corner decoration so nothing bleeds around the QR card.
- * Must be ≥ the old ERASE_ZONE_PX values (xl:374 l:270 m:186 s:186).
+ * The panel spans the FULL image width so it covers any AI-generated body
+ * content (e.g. offer tickets, coupons) that bleeds into the footer zone.
+ * Height is 16 % of imgH — tuned to match the typical AI footer band height.
  */
-const PANEL_SIZE_PX: Record<SizeKey, number> = { xl: 374, l: 270, m: 186, s: 186 };
 
 /**
  * Extra canvas pixels added to the card SVG on the right and bottom edges so
@@ -432,18 +430,17 @@ export async function compositeQrOnto(
   );
 
   // ── 4. Composite opaque panel then card+QR onto image (single pass) ────────
-  // Layer 1: solid opaque rectangle covering the corner area completely hides
-  //          any AI-generated decoration (gold disc, stray marks) — no blur,
-  //          no gradient, just a flat opaque fill that matches the footer bar.
+  // Layer 1: full-width solid rectangle at footer height covers the entire
+  //          bottom band — no AI-generated bleed (coupons, offer tickets, etc.)
+  //          can show through. Panel colour is sampled from the AI footer so it
+  //          looks like a natural extension of the footer background.
   // Layer 2: backing card + QR with crisp drop shadow on top.
-  // Panel geometry: full-height footer strip, right-edge width = PANEL_SIZE_PX.
-  // Height is clamped to the footer band (imgH × 20 %) so the panel never
-  // bleeds above the footer into the body of the ad.
-  const panelW    = PANEL_SIZE_PX[spotSize] ?? 374;
-  const footerBandH = Math.round(spec.imgH * 0.20);
-  const panelH    = footerBandH;
-  const panelLeft = spec.imgW - panelW;
-  const panelTop  = spec.imgH - panelH;
+  // Panel geometry: full image width × 16 % of imgH.
+  const panelW      = spec.imgW;
+  const footerBandH = Math.round(spec.imgH * 0.16);
+  const panelH      = footerBandH;
+  const panelLeft   = 0;
+  const panelTop    = spec.imgH - panelH;
 
   const panelPng = await sharp(makeOpaquePanelSvg(panelW, panelH, panelColor)).png().toBuffer();
 

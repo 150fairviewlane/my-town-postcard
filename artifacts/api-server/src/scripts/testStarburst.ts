@@ -28,13 +28,13 @@ const TRACKING_URL = "https://mytownpostcard.com/go/test-starburst-spring2026";
 const SIZE_KEY    = "xl" as const;
 
 /**
- * Synthetic JPEG: cream body with a dark navy footer (20% of height).
+ * Synthetic JPEG: cream body with a dark navy footer (16% of height).
  * Uses a single SVG that matches the exact expected image dimensions so the
  * buffer passed to compositeQrOnto is always exactly imgW × imgH.
  */
 async function makeSyntheticJpeg(): Promise<Buffer> {
   const { imgW, imgH } = QR_PLACEMENT[SIZE_KEY];
-  const footerH = Math.round(imgH * 0.20);
+  const footerH = Math.round(imgH * 0.16);
   const bodyH   = imgH - footerH;
 
   const svg = Buffer.from(
@@ -108,29 +108,28 @@ async function main() {
   console.log(`   After composite: ${outBytes.toLocaleString()} bytes  (Δ ${deltaKB} KB)`);
 
   // ── Multi-pixel panel verification ───────────────────────────────────────
-  // All sample points are inside the 374×374 panel zone and OUTSIDE the card
-  // rect, so they should all be close to the footer navy (#1A2744).
-  // A glow-disc or blurred-fill artefact would produce a value intermediate
-  // between navy and the surrounding cream body — caught by the card-fill check.
+  // Panel is now FULL image width × 16% of imgH.
+  // All sample points are inside the panel zone and OUTSIDE the card rect,
+  // so they should all be close to the footer navy (#1A2744).
   //
-  // Panel geometry (footer-height clamped):
-  //   panelW = PANEL_SIZE_PX[xl] = 374  → panelLeft = imgW - 374 = 826
-  //   panelH = Math.round(imgH × 0.20) = 300 → panelTop = imgH - 300 = 1200
-  //   Panel bounds: x ∈ [826, 1200), y ∈ [1200, 1500)
+  // Panel geometry (full-width, 16% height):
+  //   panelW = imgW = 1200  → panelLeft = 0
+  //   panelH = Math.round(imgH × 0.16) = 240 → panelTop = imgH - 240 = 1260
+  //   Panel bounds: x ∈ [0, 1200), y ∈ [1260, 1500)
   // Card bounds:  x ∈ [1007, 1194), y ∈ [1307, 1494)  (cardSize=187, inset=6)
   //
   // Sample points (all inside panel, all outside card):
-  //   P1 far corner     (1197, 1497) — 3px from image corner
-  //   P2 right edge top (1190, 1205) — 5px below footer top (old P2 y=1130 was above panel)
-  //   P3 bottom mid     (1000, 1490) — bottom of panel, left of card (card left=1007)
-  //   P4 panel mid-left (900, 1400)  — mid panel, clearly left of card left edge (1007)
-  //   P5 panel left     (840, 1300)  — left strip of panel, upper-left quadrant
+  //   P1 far right corner  (1197, 1497) — 3px from image corner
+  //   P2 right edge top    (1190, 1265) — 5px below panel top (1260)
+  //   P3 centre bottom     (600, 1490)  — centre of panel, bottom row
+  //   P4 left edge mid     (30, 1380)   — far left of panel (tests full-width coverage)
+  //   P5 left edge top     (30, 1265)   — left edge near panel top
   const samplePoints: Array<[number, number, string]> = [
-    [imgW - 3,          imgH - 3,          "far corner"],
-    [imgW - 10,         imgH - 295,        "right edge top"],
-    [imgW - 200,        imgH - 10,         "bottom mid"],
-    [900,               imgH - 100,        "panel mid-left"],
-    [imgW - 360,        imgH - 200,        "panel left"],
+    [imgW - 3,   imgH - 3,          "far right corner"],
+    [imgW - 10,  imgH - 235,        "right edge top"],
+    [600,        imgH - 10,         "centre bottom"],
+    [30,         imgH - 120,        "left edge mid"],
+    [30,         imgH - 235,        "left edge top"],
   ];
 
   const footerExpected = hexToRgb("#1A2744");
