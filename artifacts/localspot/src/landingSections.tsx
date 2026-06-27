@@ -290,7 +290,7 @@ export function Hero({ copy = DEFAULT_COPY }: { copy?: LandingCopy }) {
 export function HowItWorks({ copy = DEFAULT_COPY }: { copy?: LandingCopy }) {
   const steps = [
     { n: "1", icon: "🛡️", title: "Exclusive Categories",
-      desc: "Only one business per category on each postcard. No direct competition on your ad." },
+      desc: "Only one business per category. No direct competition on your postcard." },
     { n: "2", icon: "🎨", title: "Done-for-You Design",
       desc: "Polished professional ad design that makes your business stand out." },
     { n: "3", icon: "✉️", title: "Printed & Mailed for You",
