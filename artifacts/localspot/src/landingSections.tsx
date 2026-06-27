@@ -321,47 +321,7 @@ export function HowItWorks({ copy = DEFAULT_COPY }: { copy?: LandingCopy }) {
           ))}
         </div>
 
-        <div style={{
-          marginTop: 48,
-          background: "#fdf8f3",
-          borderRadius: 16,
-          padding: "28px 32px",
-          border: "1px solid #f0e0c0",
-          textAlign: "center",
-        }}>
-          <p style={{
-            fontSize: 15, fontWeight: 700, color: "#374151",
-            fontFamily: "sans-serif", margin: "0 0 16px",
-          }}>
-            📅 Four seasonal mailings a year — four chances to reach 5,000 homes
-          </p>
-          <div style={{ display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
-            {[
-              { label: "❄️ Winter", bg: "#dbeafe", color: "#1d4ed8" },
-              { label: "🌸 Spring", bg: "#d1fae5", color: "#065f46" },
-              { label: "☀️ Summer", bg: "#fef3c7", color: "#92400e" },
-              { label: "🍂 Fall",   bg: "#fee2e2", color: "#991b1b" },
-            ].map(s => (
-              <div key={s.label} style={{
-                padding: "6px 18px",
-                borderRadius: 9999,
-                background: s.bg,
-                color: s.color,
-                fontSize: 13.5,
-                fontWeight: 700,
-                fontFamily: "sans-serif",
-              }}>
-                {s.label}
-              </div>
-            ))}
-          </div>
-          <p style={{
-            fontSize: 13.5, color: "#666", fontFamily: "sans-serif",
-            lineHeight: 1.6, margin: 0, maxWidth: 560, marginLeft: "auto", marginRight: "auto",
-          }}>
-            Spots are available each season. Lock in your category now and stay top of mind all year long — or book multiple issues for a discounted rate.
-          </p>
-        </div>
+
       </div>
     </section>
   );
