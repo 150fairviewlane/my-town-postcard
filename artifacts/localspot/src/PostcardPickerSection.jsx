@@ -957,14 +957,6 @@ return(<div style={{fontFamily:"sans-serif"}}>
           style={{background:"#fff",color:"#374151",border:"1.5px solid #d1d5db",borderRadius:8,padding:"11px 0",cursor:"pointer",fontWeight:600,fontSize:14,width:"100%"}}>
           Choose a different spot
         </button>
-        {savedGrokContextRef.current?.formData?.finishedAdUrl&&(
-          <a
-            href={savedGrokContextRef.current.formData.finishedAdUrl}
-            download={`my-town-ad-${(savedGrokContextRef.current.formData.businessName||'ad').replace(/\s+/g,'-')}.png`}
-            style={{display:"block",textAlign:"center",color:"#6b7280",fontSize:12,padding:"6px 0",textDecoration:"underline",cursor:"pointer"}}>
-            ↓ Download your ad image to save it
-          </a>
-        )}
       </div>
     </div>
   </div>
