@@ -16,7 +16,7 @@ function getSharp(): Promise<typeof import("sharp")> {
   return _sharpLoader!;
 }
 import { buildAdPrompt } from "../lib/buildAdPrompt";
-import { compositeQrOnto, getTemplateQrStyle, type SizeKey } from "../lib/compositeQr";
+import { compositeQrOnto, detectQrInBuffer, getTemplateQrStyle, type SizeKey } from "../lib/compositeQr";
 import { db, spotsTable } from "@workspace/db";
 import { eq, and, ne, sql as drizzleSql } from "drizzle-orm";
 
@@ -1672,6 +1672,62 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
     res.end(JSON.stringify(data));
   };
 
+  // ── QR guard helpers ────────────────────────────────────────────────────────
+  // scanRawUrl: check a raw Grok data-URL for any QR code drawn by the model.
+  // Errors are swallowed — if the scan itself fails, we conservatively return
+  // false so the guard never blocks an otherwise-good generation.
+  async function scanRawUrl(rawUrl: string): Promise<boolean> {
+    try {
+      const b64 = rawUrl.includes(",") ? rawUrl.split(",")[1]! : rawUrl;
+      return await detectQrInBuffer(Buffer.from(b64, "base64"));
+    } catch {
+      return false;
+    }
+  }
+
+  // withQrRetry: if Grok drew a QR code in the raw output, discard and
+  // regenerate (up to QR_GUARD_MAX_RETRIES times). Every detection event is
+  // logged for frequency telemetry regardless of whether retry succeeds.
+  const QR_GUARD_MAX_RETRIES = 2;
+  async function withQrRetry(
+    initialUrl: string,
+    regenFn: () => Promise<string | null>,
+    label: string,
+  ): Promise<string> {
+    let url = initialUrl;
+    for (let attempt = 0; attempt < QR_GUARD_MAX_RETRIES; attempt++) {
+      const hasQr = await scanRawUrl(url);
+      if (!hasQr) break;
+      req.log.warn(
+        { templateKey, attempt, label, bizName: d.bizName },
+        "grok-qr-guard: QR detected in raw Grok image — regenerating",
+      );
+      const regenUrl = await regenFn();
+      if (regenUrl) {
+        url = regenUrl;
+        req.log.info(
+          { templateKey, attempt, label, bizName: d.bizName },
+          "grok-qr-guard: regeneration succeeded",
+        );
+      } else {
+        req.log.warn(
+          { templateKey, attempt, label, bizName: d.bizName },
+          "grok-qr-guard: regeneration call failed — proceeding with previous image",
+        );
+        break;
+      }
+    }
+    // Final telemetry pass — records outcome regardless of retry path taken.
+    const finalHasQr = await scanRawUrl(url);
+    if (finalHasQr) {
+      req.log.error(
+        { templateKey, bizName: d.bizName, label },
+        "grok-qr-guard: QR still present in final image after all retries — compositing will overlay it",
+      );
+    }
+    return url;
+  }
+
   // NOTE: the try/catch starts here so that photo/logo fetch errors also return
   // a clean JSON response instead of letting Express fall back to an HTML page
   // (which causes JSON.parse to throw a cryptic "string did not match" error in
@@ -1776,7 +1832,22 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       );
       if (genRes.ok) {
         const genUrl = extractXaiImageUrl(genBody);
-        if (genUrl) { endJson({ imageUrl: await cropAndQr(genUrl) }); return; }
+        if (genUrl) {
+          const cleanGenUrl = await withQrRetry(genUrl, async () => {
+            const r2 = await fetch("https://api.x.ai/v1/images/generations", {
+              method: "POST",
+              headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+              body: JSON.stringify({
+                model: "grok-imagine-image-quality", prompt: finalAdPrompt, n: 1,
+                aspect_ratio: spotAspectRatio, ...(isXL ? { resolution: "2k" } : {}),
+              }),
+            });
+            const rb = await safeJson(r2);
+            return r2.ok ? (extractXaiImageUrl(rb) ?? null) : null;
+          }, "generations");
+          endJson({ imageUrl: await cropAndQr(cleanGenUrl) });
+          return;
+        }
       }
       // Extract error and check for content moderation
       const genErrRaw = genBody["error"];
@@ -1993,7 +2064,16 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       return;
     }
 
-    endJson({ imageUrl: await cropAndQr(imageUrl) });
+    const cleanImageUrl = await withQrRetry(imageUrl, async () => {
+      const r2 = await fetch("https://api.x.ai/v1/images/edits", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify(editsBody),
+      });
+      const rb = await safeJson(r2);
+      return r2.ok ? (extractXaiImageUrl(rb) ?? null) : null;
+    }, "edits");
+    endJson({ imageUrl: await cropAndQr(cleanImageUrl) });
   } catch (err) {
     clearInterval(keepAliveTimer);
     const msg = err instanceof Error ? err.message : "Ad generation failed";

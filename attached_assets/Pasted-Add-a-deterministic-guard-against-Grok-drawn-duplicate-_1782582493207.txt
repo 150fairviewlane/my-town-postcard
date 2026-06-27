@@ -1,0 +1,13 @@
+Add a deterministic guard against Grok-drawn duplicate QR codes, rather than relying on prompt compliance alone.
+
+1. After Grok returns the raw generated image and BEFORE server-side compositing runs: scan the image with jsQR (the same library/approach already used in findBrokenQrAds.ts and the decode-verify checks used all session) to detect whether Grok already drew a decodable or QR-pattern-like blob anywhere in the image, not just the reserved corner zone.
+
+2. If detected: treat this the same as any other generation failure in the existing retry pipeline (the "normal / safe-prompt fallback / edits retry" pattern already used elsewhere in this generator) — discard and re-request from Grok automatically, up to a small retry limit (e.g. 2 additional attempts), before falling through to whatever the existing ultimate fallback behavior is for repeated failures.
+
+3. Regardless of whether auto-retry catches it: log every detection event (template, attempt number, whether retry succeeded) as lightweight telemetry — we only have 9 samples from tonight, nowhere near enough to know the real-world frequency. This telemetry is what actually answers that question over the coming days of real usage, not further manual sampling tonight.
+
+4. Do NOT build an inpaint/strip-and-patch approach to fix a detected duplicate in place — that's the same "looks added-on" tradeoff already rejected earlier this session for the QR-corner styling. Detect-and-regenerate produces a genuinely clean image; patching a flawed one does not.
+
+5. Test: deliberately re-run generations on purple-sage (the one template that failed) until you can reproduce the duplicate at least once with the OLD code path disabled... actually — simpler: just generate 10+ fresh purple-sage renders with the new retry guard in place, and confirm zero duplicates make it through to the final output (retried ones are fine, as long as the FINAL image is always clean).
+
+Report back the detection/retry results across at least 10 purple-sage renders before calling this done.

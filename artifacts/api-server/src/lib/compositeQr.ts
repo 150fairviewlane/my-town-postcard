@@ -409,3 +409,23 @@ export async function compositeQrOnto(
 
   return compositedBuffer;
 }
+
+/**
+ * Scan a raw image buffer for any QR code pattern using jsQR.
+ * Returns true if jsQR decodes a QR code anywhere in the image.
+ *
+ * Used by the ad generator QR guard (adGenGrok.ts) to detect Grok-hallucinated
+ * QR codes in the raw output BEFORE server-side compositing adds the real one.
+ * Resizes to ≤800 px to keep the pixel array small and jsQR fast.
+ */
+export async function detectQrInBuffer(buf: Buffer): Promise<boolean> {
+  const sharpMod = await (import("sharp") as Promise<any>);
+  const sharp    = (sharpMod.default ?? sharpMod) as typeof import("sharp");
+  const { data, info } = await sharp(buf)
+    .resize(800, 800, { fit: "inside", withoutEnlargement: true })
+    .raw()
+    .ensureAlpha()
+    .toBuffer({ resolveWithObject: true });
+  const decoded = jsqr(new Uint8ClampedArray(data), info.width, info.height);
+  return decoded !== null;
+}
