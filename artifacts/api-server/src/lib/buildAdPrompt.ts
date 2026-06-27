@@ -888,10 +888,10 @@ export function buildAdPrompt(
         ? `EXACTLY ${menuCount} circular dark burgundy icon badge${menuCount !== 1 ? "s" : ""} in a horizontal row and NO MORE — one per service in BUSINESS DETAILS, exactly as written. Thin vertical burgundy rule on right side of each badge divides them. Below each badge: brush-stroke-style label with service name and price. The template image may show more badge slots — ignore extras; do NOT render empty badge rows. No extras. No invented services.\n\n`
         : `four decorative dark burgundy circular icon badge shapes with thin vertical burgundy rule dividers; NO text labels.\n\n`) +
       (d.offer
-        ? `COUPON (dashed-border box in footer, scissors ✂ icon at upper-right of box): offer text bold cream inside dashed box. Fine print smaller below.\n\n`
+        ? `COUPON (footer bar, CENTER-LEFT section — between the phone column on the left and the address column): dashed-border rounded-rect, scissors ✂ icon, offer text bold cream inside box, fine print below. CRITICAL: the coupon must NOT appear at the far right — the bottom-right corner is reserved for the starburst graphic.\n\n`
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
-      `STARBURST CORNER: The bottom-right starburst area must NOT contain a cream-background rounded-rect with a thin burgundy border, a headline-style box with a diamond ◆ separator, or any element from the HEADLINE zone. Those elements are correct in the upper-right area of the card but must never be recreated or bleed into this starburst corner area.\n\n`
+      `STARBURST CORNER: The bottom-right starburst area must NOT contain a dashed-border coupon box or offer text, a cream-background rounded-rect with a thin burgundy border, a headline-style box with a diamond ◆ separator, or any element from the HEADLINE zone. Those elements are correct elsewhere on the card but must never appear in the starburst corner area.\n\n`
     )
     : isLandscape
     ? (
@@ -1153,10 +1153,10 @@ export function buildAdPrompt(
         ? `EXACTLY ${menuCount} dark burgundy circular icon badge${menuCount !== 1 ? "s" : ""} evenly spaced — one per service in BUSINESS DETAILS. Thin vertical burgundy rule divider on right of each; brush-stroke label below. Ignore extra slots; no empty badges. No invented services.\n\n`
         : `four decorative dark burgundy circular icon badge shapes with thin vertical burgundy rule dividers; NO text labels.\n\n`) +
       (d.offer
-        ? `COUPON (footer area, dashed-border rounded-rect, scissors ✂ icon upper-right corner): offer text bold inside dashed box. Fine print smaller below.\n\n`
+        ? `COUPON (footer bar, CENTER section — between the phone/address column on the left and the starburst corner on the right): dashed-border rounded-rect, scissors ✂ icon, offer text bold inside box, fine print below. CRITICAL: the coupon must NOT appear at the far right — the bottom-right corner is reserved for the starburst graphic.\n\n`
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
-      `STARBURST CORNER — must not contain here: a cream-background rounded-rect with a thin burgundy border, a headline-style box with a diamond ◆ separator, or any element from the HEADLINE zone.\n\n`
+      `STARBURST CORNER — must not contain here: a dashed-border coupon box or offer text, a cream-background rounded-rect with a thin burgundy border, a headline-style box with a diamond ◆ separator, or any element from the HEADLINE zone.\n\n`
     )
     : (
       // Default: parchment-classic portrait
