@@ -1,0 +1,13 @@
+Before applying the two fixes, two things:
+
+1. SYSTEMIC CHECK — given this is the SECOND time we've found a compositeQrOnto call site missing the style argument (the refine popups were the first, a few rounds ago), audit EVERY call site of compositeQrOnto across the entire codebase right now — adGenGrok.ts (generate, both refine popups), trackingCode.ts, and the post-purchase QR swap mechanism (swapGrokQrInTemplateData, built earlier this session for the preview-website-QR feature). For each one, confirm explicitly whether it passes getTemplateQrStyle(templateKey) correctly or falls through to DEFAULT_CARD_STYLE. Report a complete list — I don't want to fix trackingCode.ts:140 today and find a sixth caller with the same gap next week.
+
+2. BLAST RADIUS — given Bug 2 affects every paid ad's final card style (not decodability, which is why nothing caught it until now): are there any real (non-QA-test) paid spots currently in production? We've wiped test data twice this session already, so I'd expect the honest answer is "no real paid spots exist yet" — but confirm directly rather than assume a third time. If any real paid spots do exist, they'd need their stored finishedAdUrl re-composited with the correct style after the fix ships, similar to the swap-mechanism pattern already built.
+
+For the fixes themselves:
+
+BUG 1 — add the global "never draw a QR/barcode pattern" prohibition ONCE, in whatever part of buildAdPrompt() wraps/assembles the final prompt across all templates — NOT duplicated into each of the 12 templates' already byte-constrained footer-zone snippets. This is a universal rule, not template-specific, and duplicating it 12x would reignite the exact byte-budget fights from earlier today. Confirm where the single insertion point is before writing it.
+
+BUG 2 — fix trackingCode.ts:140 to parse template/templateKey out of the existing templateData JSON (already being read for finishedAdUrl) and pass getTemplateQrStyle(templateKey) as the 4th argument. Confirm the exact field name holding the template key in that JSON, and confirm graceful fallback to DEFAULT_CARD_STYLE only when the field is genuinely missing/unrecognized — not as the silent default path.
+
+Report findings on 1 and 2 before applying anything.

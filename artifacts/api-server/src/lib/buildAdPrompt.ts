@@ -1195,12 +1195,11 @@ export function buildAdPrompt(
         refLines.join("\n") + "\n\n"
       : "") +
     outputRequirements + "\n" +
-    "STYLE: high-end editorial advertising. Cinematic photography, rich vibrant color, professional lighting. Bold confident typography hierarchy. Premium color palette — deep, saturated, controlled. Print-ready sharpness throughout.\n\n" +
     (d.primaryColor && d.accentColor
       ? `BRAND COLORS: Primary ${d.primaryColor} · Accent ${d.accentColor}. Use these as the brand color for header/footer bars, icon badge fills, coupon border accent, and headline highlights. Integrate them harmoniously with the template's visual framework.\n\n`
       : "") +
     "TYPOGRAPHIC RULES — ABSOLUTE:\n" +
-    "  • NEVER add any word, abbreviation, or industry term not provided verbatim in the business data below — this includes industry category words like HVAC, MEXICAN, RESTAURANT, CAFE, PLUMBING, ROOFING, AUTO, DENTAL, or any other category descriptor. The business name must appear EXACTLY as provided, character for character, with zero additions, zero stylistic embellishments, and zero extra words inserted.\n" +
+    "  • NEVER add any word, abbreviation, or industry term not provided verbatim in the business data below — industry/category descriptors (e.g. RESTAURANT, DENTAL, HVAC, ROOFING) are strictly forbidden additions. The business name must appear EXACTLY as provided, character for character, with zero additions, zero stylistic embellishments, and zero extra words inserted.\n" +
     "  • NEVER split a business name across two visual styles (e.g. bold + script, or large + small) — render the complete business name in a single consistent typographic treatment.\n\n" +
     "STRICT FIDELITY — ABSOLUTE: Every word of text on this ad must come from BUSINESS DETAILS. Do NOT invent, add, hallucinate, or paraphrase any text, service name, menu item, or label not present in BUSINESS DETAILS. " +
     "If a field is '(none)', omit that element entirely. If no services are listed, render no service text labels anywhere on the ad. " +
@@ -1209,6 +1208,7 @@ export function buildAdPrompt(
     "No website URL text anywhere. Business name: each word appears exactly once across the entire ad. " +
     "Each menu/service item exactly once. Special offer in its own distinct coupon zone — never listed alongside menu items. " +
     "PRICES: If a menu or service item has no price, do NOT add one — never invent or append a dollar amount to any item unless that exact price appears verbatim in BUSINESS DETAILS.\n\n" +
+    "QR CODE — ABSOLUTE BAN: Never draw, render, or depict any QR code, barcode, or grid of squares/dots anywhere in this image. A real, verified QR is composited server-side after generation. Bottom-right corner: solid fill only — no marks, no patterns.\n\n" +
     "BUSINESS DETAILS:\n" + businessBlock
   );
 }

@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db, spotsTable, campaignsTable, type Spot } from "@workspace/db";
-import { compositeQrOnto, type SizeKey } from "./compositeQr";
+import { compositeQrOnto, getTemplateQrStyle, type SizeKey } from "./compositeQr";
 
 // Convert any string into a URL-safe lowercase slug. Strips accents, replaces
 // runs of non-alphanumerics with a single dash, trims leading/trailing dashes,
@@ -135,9 +135,17 @@ export async function swapGrokQrInTemplateData(spotId: number): Promise<void> {
     sizeRaw === "m"  || sizeRaw === "medium"                          ? "m"  :
     sizeRaw === "s"  || sizeRaw === "small"                           ? "s"  : "xl";
 
+  // Read the template key stored at ad-generation time so the QR backing card
+  // uses the correct per-template style rather than DEFAULT_CARD_STYLE.
+  // Falls through to DEFAULT_CARD_STYLE via getTemplateQrStyle's own ?? fallback
+  // when the field is genuinely absent or holds an unrecognized key — explicit,
+  // not a silent default-parameter path.
+  const templateKey = typeof parsed.template === "string" ? parsed.template : "";
+  const qrStyle     = getTemplateQrStyle(templateKey);
+
   const trackingUrl = `${(process.env.APP_URL ?? "https://mytownpostcard.com").replace(/\/$/, "")}/go/${spot.trackingCode}`;
   const buf         = Buffer.from(finishedAdUrl.split(",")[1] ?? "", "base64");
-  const composited  = await compositeQrOnto(buf, trackingUrl, sizeKey);
+  const composited  = await compositeQrOnto(buf, trackingUrl, sizeKey, qrStyle);
   const newDataUrl  = `data:image/jpeg;base64,${composited.toString("base64")}`;
 
   await db
