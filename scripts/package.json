@@ -24,6 +24,7 @@
     "inspect:corners": "tsx ./src/inspect-corner-crops.ts",
     "seed:qa": "tsx ./src/seedQaCampaign.ts",
     "qa:bot": "tsx ./src/qaBot.ts",
+    "test:corner-erase": "tsx ./src/test-corner-erase.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {

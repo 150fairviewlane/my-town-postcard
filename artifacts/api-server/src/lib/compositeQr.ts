@@ -356,14 +356,70 @@ export async function compositeQrOnto(
     .png()
     .toBuffer();
 
-  // ── 4. Composite glow disc then card+QR onto ad (single pass) ────────────
+  // ── 3.5. Erase corner starburst with blur-extend fill ────────────────────
+  // Visual measurement across 17 raw Grok images: starburst/badge shapes placed
+  // in the bottom-right corner extend up to ≥564 px diagonal from that corner
+  // (5 of 17 images exceeded the 400 px measurement crop; reliably measured
+  // worst-case: 530 px). ERASE_ZONE sizes add a safety margin on top of that.
+  //
+  // Algorithm:
+  //   1. Define a square erase zone anchored at the bottom-right corner.
+  //   2. Extract a broader surrounding region (erase zone + 50% outward in
+  //      both axes) so the blur samples clean non-starburst footer pixels
+  //      at the edges of the sample.
+  //   3. Apply a strong Gaussian blur (σ = 60) — at this sigma the colour
+  //      from the surrounding clean strip bleeds into the starburst zone,
+  //      producing a smooth, background-matching fill rather than a flat patch.
+  //   4. Crop the blurred result to exactly the erase zone dimensions.
+  //   5. Composite the blurred fill over the image corner → erasedBase.
+  // The glow disc + QR card are then composited on top of erasedBase in step 4.
+  const ERASE_ZONE_PX: Record<SizeKey, number> = { xl: 600, l: 480, m: 280, s: 280 };
+  const eraseSize  = ERASE_ZONE_PX[spotSize] ?? 600;
+  const eraseLeft  = Math.max(0, spec.imgW - eraseSize);
+  const eraseTop   = Math.max(0, spec.imgH - eraseSize);
+  const eraseW     = spec.imgW - eraseLeft;
+  const eraseH     = spec.imgH - eraseTop;
+
+  // Expand the sample region 50 % beyond the erase boundary so the blur mixes
+  // in clean background pixels from outside the starburst area.
+  const sampExtra  = Math.round(eraseSize * 0.50);
+  const sampLeft   = Math.max(0, eraseLeft - sampExtra);
+  const sampTop    = Math.max(0, eraseTop  - sampExtra);
+  const sampW      = spec.imgW - sampLeft;
+  const sampH      = spec.imgH - sampTop;
+
+  // Blur the full sample region — PNG intermediate to avoid JPEG re-compression.
+  const blurredSamp: Buffer = await sharp(imageBuffer)
+    .extract({ left: sampLeft, top: sampTop, width: sampW, height: sampH })
+    .blur(60)
+    .png()
+    .toBuffer();
+
+  // Crop the blurred result to just the erase-zone footprint.
+  const eraseFill: Buffer = await sharp(blurredSamp)
+    .extract({
+      left:   eraseLeft - sampLeft,
+      top:    eraseTop  - sampTop,
+      width:  eraseW,
+      height: eraseH,
+    })
+    .png()
+    .toBuffer();
+
+  // Composite blurred fill over the starburst corner → use as base for step 4.
+  const erasedBase: Buffer = await sharp(imageBuffer)
+    .composite([{ input: eraseFill, left: eraseLeft, top: eraseTop }])
+    .jpeg({ quality: 98, chromaSubsampling: "4:4:4" })
+    .toBuffer();
+
+  // ── 4. Composite glow disc then card+QR onto erasedBase (single pass) ─────
   // discRadius = cardSize × 2.0, extending one full card-width beyond each
   // card edge. The disc centre sits at the image corner (imgW, imgH) so only
   // the upper-left quadrant of the gradient circle is visible in the ad.
   const discRadius = Math.round(layout.cardSize * DISC_RADIUS_MULTIPLIER);
   const glowDiscPng = await sharp(makeGlowDiscSvg(discRadius, style.fill)).png().toBuffer();
 
-  const compositedBuffer: Buffer = await sharp(imageBuffer)
+  const compositedBuffer: Buffer = await sharp(erasedBase)
     .composite([
       // Layer 1 (bottom): soft gradient halo anchored at image corner.
       { input: glowDiscPng, left: spec.imgW - discRadius, top: spec.imgH - discRadius },
