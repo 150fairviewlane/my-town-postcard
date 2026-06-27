@@ -831,15 +831,14 @@ export function buildAdPrompt(
       "LAYOUT — reproduce Wok Fire LANDSCAPE zones exactly:\n\n" +
       `HEADLINE (upper-left, inside torn-edge deep red panel): business name bold condensed all-caps slab serif, very large, white or cream. Each word exactly once.\n\n` +
       (hasLogo
-        ? `LOGO (IMAGE ${logoImg} inside gold bookmark-ribbon pennant at top-left of red panel). Scale to fit; exact colors.` +
-          (d.tagline ? ` Tagline in italic script, gold/cream, inside red panel.\n\n` : "\n\n")
-        : (d.tagline ? `TAGLINE: italic script, gold/cream, inside red panel below business name.\n\n` : "")) +
+        ? `LOGO (IMAGE ${logoImg} inside gold bookmark-ribbon pennant at top-left of red panel). Scale to fit; exact colors.\n\n`
+        : "") +
       "HERO FOOD PHOTO (upper-right, wok/cooking action):\n" +
       (hasPhoto
         ? `  Composite IMAGE 2 into the hero zone. Natural edges into dark bg, no hard border.\n\n`
         : `  ${ipc.hero} — dramatic, vibrant. Natural edges; no hard border.\n\n`) +
       (d.tagline
-        ? `TAGLINE BANNER (center, parchment/kraft torn-edge banner): "${d.tagline}" in dark serif text.\n\n`
+        ? `TAGLINE BANNER (center, parchment/kraft torn-edge banner): "${d.tagline}" in dark serif text. Do NOT repeat the tagline anywhere else on the card — only here.\n\n`
         : "") +
       (d.offer
         ? `COUPON (lower-left, golden ticket-stub — dashed border, notched edges): offer text bold dark. Fine print smaller below.\n\n`
@@ -1099,15 +1098,14 @@ export function buildAdPrompt(
       "LAYOUT — reproduce Wok Fire template zones exactly:\n\n" +
       `HEADLINE (upper-left, inside large torn-edge deep red paper panel): business name bold condensed all-caps slab serif, very large, white or cream. Each word exactly once.\n\n` +
       (hasLogo
-        ? `LOGO (gold bookmark-ribbon pennant, top-left corner of red panel): IMAGE ${logoImg} centered inside pennant, scaled to fit, exact colors.` +
-          (d.tagline ? ` Tagline in italic script, gold/cream, inside red panel below business name.\n\n` : "\n\n")
-        : (d.tagline ? `TAGLINE: italic script, gold/cream, inside red panel below business name.\n\n` : "")) +
+        ? `LOGO (gold bookmark-ribbon pennant, top-left corner of red panel): IMAGE ${logoImg} centered inside pennant, scaled to fit, exact colors.\n\n`
+        : "") +
       "HERO FOOD PHOTO (upper-right, wok/cooking action scene):\n" +
       (hasPhoto
         ? `  Composite IMAGE 2 into the hero zone. Natural edges into dark bg, no hard border. Cinematic lighting.\n\n`
         : `  ${ipc.hero} — dramatic. Natural edges into dark bg; no hard border.\n\n`) +
       (d.tagline
-        ? `TAGLINE BANNER (center, parchment/kraft torn-edge banner): "${d.tagline}" in dark serif text on the banner.\n\n`
+        ? `TAGLINE BANNER (center, parchment/kraft torn-edge banner): "${d.tagline}" in dark serif text on the banner. Do NOT repeat the tagline anywhere else on the card — only here.\n\n`
         : "") +
       (d.offer
         ? `COUPON (lower-left, golden ticket-stub — dashed border, notched edges): offer text bold dark inside ticket-stub. Fine print smaller below.\n\n`
