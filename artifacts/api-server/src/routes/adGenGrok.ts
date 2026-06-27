@@ -2609,7 +2609,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
         <div class="refine-err" id="refineErr"></div>
       </div>
       <button class="use-btn" id="useBtn" onclick="selectCurrentAd()">&#10003; Use This Ad &rarr;</button>
-      <button class="dl-btn-rp" id="dlBtn" onclick="downloadSelected()">&#8595; Download</button>
     </div>
   </div>
 </div>
