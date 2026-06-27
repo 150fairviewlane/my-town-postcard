@@ -2,8 +2,12 @@
  * compositeQr.ts — server-side QR code compositing for Grok-generated ads.
  *
  * Generates a real, scannable QR code (ECL H) and composites it onto an ad
- * image buffer inside a square backing card anchored flush to the bottom-right
- * corner.
+ * image buffer. Compositing order (bottom to top):
+ *   1. Gold starburst — 16-point warm-gold star radiating from the bottom-right
+ *      image corner into the ad. Covers the corner area to replace whatever
+ *      Grok drew there.
+ *   2. Square backing card — sits on top of the starburst centre, concealing it.
+ *   3. QR code — centred inside the backing card.
  *
  * Card sizing — physical-inch based, always a square:
  *   cardSize (px) = round(qrSize × marginMultiplier)
@@ -24,11 +28,12 @@
  *   Use marginMultiplier ≥ 1.45 — at the default 1.0375× the QR's diagonal
  *   (side × √2) would exceed the circle's diameter and corners would clip.
  *
- * Telemetry:
- *   After compositing, a 20-px strip just above the card top edge is sampled.
- *   If average brightness > BLEED_THRESHOLD the logger emits a WARN so any
- *   future drift (Grok placeholder exceeding card bounds) is visible in logs
- *   rather than silently reintroducing the exposed-corner bug.
+ * Starburst geometry:
+ *   outerRadius = round((cardSize + CARD_INSET) × √2 × STARBURST_SCALE)
+ *   The 225° spike (pointing upper-left) is guaranteed to reach past the
+ *   card's top-left corner. The SVG is placed with its bottom-right corner
+ *   at the image corner (imgW, imgH), so only the upper-left quadrant of
+ *   spikes is visible within the image bounds.
  */
 
 import { logger } from "./logger";
@@ -158,15 +163,22 @@ const CARD_INSET = 6;
  */
 const CARD_MARGIN = 1.0375;
 
-/**
- * Average pixel brightness threshold (0-255) above which the strip just above
- * the card is considered suspiciously light — indicating Grok's placeholder
- * may have bled outside the card's covered zone.
- */
-const BLEED_THRESHOLD = 220;
+// ── Starburst constants ────────────────────────────────────────────────────
+/** Warm gold fill colour for the corner starburst */
+const STARBURST_COLOR = "#F4A800";
 
-/** Height (px) of the bleed-detection strip above the card top edge */
-const BLEED_CHECK_H = 20;
+/** Number of spike points on the starburst */
+const STARBURST_POINTS = 16;
+
+/** inner radius / outer radius ratio — controls spike sharpness */
+const STARBURST_INNER_RATIO = 0.42;
+
+/**
+ * outerRadius = round((cardSize + CARD_INSET) × √2 × STARBURST_SCALE).
+ * The ×√2 makes the 225° spike reach the card's top-left corner exactly;
+ * the extra ×1.1 provides a comfortable overlap margin.
+ */
+const STARBURST_SCALE = 1.1;
 
 // ── Card layout computed from QR spec ─────────────────────────────────────
 export interface CardLayout {
@@ -255,16 +267,63 @@ function makeCardSvg(cardSize: number, style: CardStyle, effectiveCornerRadius: 
   return Buffer.from(svg);
 }
 
+// ── Starburst SVG builder ──────────────────────────────────────────────────
+
+/**
+ * Render a 16-point warm-gold starburst as a square SVG buffer.
+ *
+ * The starburst center is at the SVG's bottom-right corner (outerRadius,
+ * outerRadius) so only the upper-left quadrant of spikes is visible within
+ * the SVG viewport — radiating from the corner into the image.
+ *
+ * Place the resulting buffer at (imgW − outerRadius, imgH − outerRadius) to
+ * align the starburst center with the image's bottom-right corner pixel.
+ *
+ * @param outerRadius  Tip-to-center distance of each spike in pixels; also
+ *                     the SVG width and height.
+ */
+function makeStarburstSvg(outerRadius: number): Buffer {
+  const cx = outerRadius; // center at SVG bottom-right corner
+  const cy = outerRadius;
+  const innerRadius = Math.round(outerRadius * STARBURST_INNER_RATIO);
+  const total = STARBURST_POINTS * 2; // alternating outer (spike) + inner (valley) points
+
+  const pts: string[] = [];
+  for (let i = 0; i < total; i++) {
+    // Even indices = spike tips (outerRadius); odd = valleys (innerRadius).
+    const r = i % 2 === 0 ? outerRadius : innerRadius;
+    // First spike (i=0) at 225° — points upper-left into the image.
+    // Each step advances 360°/total = 11.25° (for 16 spikes).
+    const angleDeg = 225 + (i * 360) / total;
+    const angleRad = (angleDeg * Math.PI) / 180;
+    pts.push(
+      `${(cx + r * Math.cos(angleRad)).toFixed(2)},` +
+      `${(cy + r * Math.sin(angleRad)).toFixed(2)}`,
+    );
+  }
+
+  const svg =
+    `<svg width="${outerRadius}" height="${outerRadius}" xmlns="http://www.w3.org/2000/svg">` +
+    `<polygon points="${pts.join(" ")}" fill="${STARBURST_COLOR}"/>` +
+    `</svg>`;
+  return Buffer.from(svg);
+}
+
 // ── Public API ─────────────────────────────────────────────────────────────
 
 /**
- * Composite a real, scannable QR code onto an ad image buffer.
+ * Composite a warm-gold starburst + real scannable QR code onto an ad image.
+ *
+ * Compositing order (bottom to top):
+ *   1. Gold starburst radiating from the bottom-right image corner.
+ *   2. Square backing card centred over the starburst origin.
+ *   3. QR code centred inside the backing card.
  *
  * @param imageBuffer  JPEG buffer of the ad (already cropped to print dims)
  * @param trackingUrl  Full URL the QR should encode, e.g. "https://app.com/go/slug"
  * @param spotSize     Spot size key; controls card/QR pixel sizes and placement
  * @param style        Optional card visual style; defaults to white + burgundy border
- * @returns            JPEG buffer (98 % quality) with backing card + QR composited
+ * @returns            JPEG buffer (98 % quality) with starburst + backing card + QR composited
  * @throws             If QR generation fails or post-composite decode check fails
  */
 export async function compositeQrOnto(
@@ -314,9 +373,19 @@ export async function compositeQrOnto(
     .png()
     .toBuffer();
 
-  // ── 4. Composite card+QR onto ad ─────────────────────────────────────────
+  // ── 4. Composite starburst then card+QR onto ad (single pass) ────────────
+  // outerRadius is sized so the 225° spike tip reaches past the card's top-left
+  // corner: (cardSize + CARD_INSET) × √2 × STARBURST_SCALE.
+  const outerRadius = Math.round((layout.cardSize + CARD_INSET) * Math.SQRT2 * STARBURST_SCALE);
+  const starburstPng = await sharp(makeStarburstSvg(outerRadius)).png().toBuffer();
+
   const compositedBuffer: Buffer = await sharp(imageBuffer)
-    .composite([{ input: cardWithQr, left: layout.cardLeft, top: layout.cardTop }])
+    .composite([
+      // Layer 1 (bottom): starburst radiates from image corner beneath card.
+      { input: starburstPng, left: spec.imgW - outerRadius, top: spec.imgH - outerRadius },
+      // Layer 2 (top): backing card + QR covers the starburst centre.
+      { input: cardWithQr, left: layout.cardLeft, top: layout.cardTop },
+    ])
     .jpeg({ quality: 98, chromaSubsampling: "4:4:4" })
     .toBuffer();
 
@@ -352,44 +421,6 @@ export async function compositeQrOnto(
       `compositeQrOnto: QR content mismatch — ` +
       `expected "${trackingUrl}" but decoded "${decoded.data}".`,
     );
-  }
-
-  // ── 6. Telemetry — detect Grok placeholder bleed above card ──────────────
-  // Sample a strip directly above the card. If Grok's reserved-zone placeholder
-  // extends taller than the card, those pixels will be suspiciously bright
-  // (white/near-white background of the placeholder). This is purely diagnostic;
-  // it does NOT alter the output.
-  const checkH = Math.min(BLEED_CHECK_H, layout.cardTop);
-  if (checkH > 0) {
-    try {
-      const strip = await sharp(compositedBuffer)
-        .extract({
-          left:   layout.cardLeft,
-          top:    layout.cardTop - checkH,
-          width:  layout.cardSize,
-          height: checkH,
-        })
-        .removeAlpha()
-        .raw()
-        .toBuffer();
-
-      let brightnessSum = 0;
-      for (let i = 0; i < strip.length; i++) brightnessSum += strip[i]!;
-      const avgBrightness = brightnessSum / strip.length;
-
-      if (avgBrightness > BLEED_THRESHOLD) {
-        logger.warn(
-          { spotSize, cardLeft: layout.cardLeft, cardTop: layout.cardTop,
-            cardSize: layout.cardSize, avgBrightnessAboveCard: avgBrightness.toFixed(1),
-            threshold: BLEED_THRESHOLD },
-          "compositeQrOnto: bright region detected above card — " +
-          "Grok placeholder may exceed card bounds (exposed corner risk)",
-        );
-      }
-    } catch (err) {
-      // Bleed check is non-blocking telemetry — never fail the whole composite for it.
-      logger.warn({ err, spotSize }, "compositeQrOnto: bleed-check extraction failed (non-fatal)");
-    }
   }
 
   return compositedBuffer;
