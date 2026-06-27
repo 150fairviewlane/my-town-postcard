@@ -3,10 +3,12 @@
  *
  * Generates a real, scannable QR code (ECL H) and composites it onto an ad
  * image buffer. Compositing order (bottom to top):
- *   1. Gold starburst — 16-point warm-gold star radiating from the bottom-right
- *      image corner into the ad. Covers the corner area to replace whatever
- *      Grok drew there.
- *   2. Square backing card — sits on top of the starburst centre, concealing it.
+ *   1. Glow disc — soft radial-gradient circle anchored at the bottom-right
+ *      image corner. Uses each template's own CardStyle.fill color, fading
+ *      from full opacity at the corner to transparent at the disc edge.
+ *      Creates a natural vignette that makes the backing card look embedded
+ *      in the ad rather than pasted on.
+ *   2. Square backing card — sits centred on the glow disc origin.
  *   3. QR code — centred inside the backing card.
  *
  * Card sizing — physical-inch based, always a square:
@@ -28,12 +30,11 @@
  *   Use marginMultiplier ≥ 1.45 — at the default 1.0375× the QR's diagonal
  *   (side × √2) would exceed the circle's diameter and corners would clip.
  *
- * Starburst geometry:
- *   outerRadius = round((cardSize + CARD_INSET) × √2 × STARBURST_SCALE)
- *   The 225° spike (pointing upper-left) is guaranteed to reach past the
- *   card's top-left corner. The SVG is placed with its bottom-right corner
- *   at the image corner (imgW, imgH), so only the upper-left quadrant of
- *   spikes is visible within the image bounds.
+ * Glow disc geometry:
+ *   discRadius = round(cardSize × DISC_RADIUS_MULTIPLIER)
+ *   The disc centre is at the image corner (imgW, imgH). Only the upper-left
+ *   quadrant of the disc is visible within the image bounds — appearing as a
+ *   soft quarter-circle halo in the bottom-right corner of the ad.
  */
 
 import { logger } from "./logger";
@@ -163,22 +164,13 @@ const CARD_INSET = 6;
  */
 const CARD_MARGIN = 1.0375;
 
-// ── Starburst constants ────────────────────────────────────────────────────
-/** Warm gold fill colour for the corner starburst */
-const STARBURST_COLOR = "#F4A800";
-
-/** Number of spike points on the starburst */
-const STARBURST_POINTS = 16;
-
-/** inner radius / outer radius ratio — controls spike sharpness */
-const STARBURST_INNER_RATIO = 0.42;
-
+// ── Glow disc constant ────────────────────────────────────────────────────
 /**
- * outerRadius = round((cardSize + CARD_INSET) × √2 × STARBURST_SCALE).
- * The ×√2 makes the 225° spike reach the card's top-left corner exactly;
- * the extra ×1.1 provides a comfortable overlap margin.
+ * discRadius = round(cardSize × DISC_RADIUS_MULTIPLIER).
+ * At 2.0× the disc extends one full card-width beyond each edge of the card,
+ * giving a visible soft halo that frames the card without overwhelming it.
  */
-const STARBURST_SCALE = 1.1;
+const DISC_RADIUS_MULTIPLIER = 2.0;
 
 // ── Card layout computed from QR spec ─────────────────────────────────────
 export interface CardLayout {
@@ -267,44 +259,34 @@ function makeCardSvg(cardSize: number, style: CardStyle, effectiveCornerRadius: 
   return Buffer.from(svg);
 }
 
-// ── Starburst SVG builder ──────────────────────────────────────────────────
+// ── Glow disc SVG builder ──────────────────────────────────────────────────
 
 /**
- * Render a 16-point warm-gold starburst as a square SVG buffer.
+ * Render a soft radial-gradient disc as a square SVG buffer.
  *
- * The starburst center is at the SVG's bottom-right corner (outerRadius,
- * outerRadius) so only the upper-left quadrant of spikes is visible within
- * the SVG viewport — radiating from the corner into the image.
+ * The disc centre is at the SVG's bottom-right corner (radius, radius), so
+ * only the upper-left quadrant of the gradient circle is visible within the
+ * SVG viewport. The gradient runs from `fillHex` at full opacity at the
+ * centre to `fillHex` at zero opacity at the disc edge — producing a smooth
+ * quarter-circle vignette with no hard outline.
  *
- * Place the resulting buffer at (imgW − outerRadius, imgH − outerRadius) to
- * align the starburst center with the image's bottom-right corner pixel.
+ * Place the resulting buffer at (imgW − radius, imgH − radius) to align the
+ * disc centre with the image's bottom-right corner pixel.
  *
- * @param outerRadius  Tip-to-center distance of each spike in pixels; also
- *                     the SVG width and height.
+ * @param radius   Disc radius in pixels; also the SVG width and height.
+ * @param fillHex  Fill colour as a hex string (e.g. "#1A2744"). Should match
+ *                 the template's CardStyle.fill for visual coherence.
  */
-function makeStarburstSvg(outerRadius: number): Buffer {
-  const cx = outerRadius; // center at SVG bottom-right corner
-  const cy = outerRadius;
-  const innerRadius = Math.round(outerRadius * STARBURST_INNER_RATIO);
-  const total = STARBURST_POINTS * 2; // alternating outer (spike) + inner (valley) points
-
-  const pts: string[] = [];
-  for (let i = 0; i < total; i++) {
-    // Even indices = spike tips (outerRadius); odd = valleys (innerRadius).
-    const r = i % 2 === 0 ? outerRadius : innerRadius;
-    // First spike (i=0) at 225° — points upper-left into the image.
-    // Each step advances 360°/total = 11.25° (for 16 spikes).
-    const angleDeg = 225 + (i * 360) / total;
-    const angleRad = (angleDeg * Math.PI) / 180;
-    pts.push(
-      `${(cx + r * Math.cos(angleRad)).toFixed(2)},` +
-      `${(cy + r * Math.sin(angleRad)).toFixed(2)}`,
-    );
-  }
-
+function makeGlowDiscSvg(radius: number, fillHex: string): Buffer {
   const svg =
-    `<svg width="${outerRadius}" height="${outerRadius}" xmlns="http://www.w3.org/2000/svg">` +
-    `<polygon points="${pts.join(" ")}" fill="${STARBURST_COLOR}"/>` +
+    `<svg width="${radius}" height="${radius}" xmlns="http://www.w3.org/2000/svg">` +
+    `<defs>` +
+    `<radialGradient id="g" cx="${radius}" cy="${radius}" r="${radius}" gradientUnits="userSpaceOnUse">` +
+    `<stop offset="0%" stop-color="${fillHex}" stop-opacity="1"/>` +
+    `<stop offset="100%" stop-color="${fillHex}" stop-opacity="0"/>` +
+    `</radialGradient>` +
+    `</defs>` +
+    `<rect width="${radius}" height="${radius}" fill="url(#g)"/>` +
     `</svg>`;
   return Buffer.from(svg);
 }
@@ -312,18 +294,19 @@ function makeStarburstSvg(outerRadius: number): Buffer {
 // ── Public API ─────────────────────────────────────────────────────────────
 
 /**
- * Composite a warm-gold starburst + real scannable QR code onto an ad image.
+ * Composite a soft glow disc + real scannable QR code onto an ad image.
  *
  * Compositing order (bottom to top):
- *   1. Gold starburst radiating from the bottom-right image corner.
- *   2. Square backing card centred over the starburst origin.
+ *   1. Glow disc — soft radial-gradient quarter-circle at the bottom-right
+ *      image corner, using the template's own CardStyle.fill colour.
+ *   2. Square backing card centred over the disc origin.
  *   3. QR code centred inside the backing card.
  *
  * @param imageBuffer  JPEG buffer of the ad (already cropped to print dims)
  * @param trackingUrl  Full URL the QR should encode, e.g. "https://app.com/go/slug"
  * @param spotSize     Spot size key; controls card/QR pixel sizes and placement
  * @param style        Optional card visual style; defaults to white + burgundy border
- * @returns            JPEG buffer (98 % quality) with starburst + backing card + QR composited
+ * @returns            JPEG buffer (98 % quality) with glow disc + backing card + QR composited
  * @throws             If QR generation fails or post-composite decode check fails
  */
 export async function compositeQrOnto(
@@ -373,17 +356,18 @@ export async function compositeQrOnto(
     .png()
     .toBuffer();
 
-  // ── 4. Composite starburst then card+QR onto ad (single pass) ────────────
-  // outerRadius is sized so the 225° spike tip reaches past the card's top-left
-  // corner: (cardSize + CARD_INSET) × √2 × STARBURST_SCALE.
-  const outerRadius = Math.round((layout.cardSize + CARD_INSET) * Math.SQRT2 * STARBURST_SCALE);
-  const starburstPng = await sharp(makeStarburstSvg(outerRadius)).png().toBuffer();
+  // ── 4. Composite glow disc then card+QR onto ad (single pass) ────────────
+  // discRadius = cardSize × 2.0, extending one full card-width beyond each
+  // card edge. The disc centre sits at the image corner (imgW, imgH) so only
+  // the upper-left quadrant of the gradient circle is visible in the ad.
+  const discRadius = Math.round(layout.cardSize * DISC_RADIUS_MULTIPLIER);
+  const glowDiscPng = await sharp(makeGlowDiscSvg(discRadius, style.fill)).png().toBuffer();
 
   const compositedBuffer: Buffer = await sharp(imageBuffer)
     .composite([
-      // Layer 1 (bottom): starburst radiates from image corner beneath card.
-      { input: starburstPng, left: spec.imgW - outerRadius, top: spec.imgH - outerRadius },
-      // Layer 2 (top): backing card + QR covers the starburst centre.
+      // Layer 1 (bottom): soft gradient halo anchored at image corner.
+      { input: glowDiscPng, left: spec.imgW - discRadius, top: spec.imgH - discRadius },
+      // Layer 2 (top): backing card + QR centred on the disc origin.
       { input: cardWithQr, left: layout.cardLeft, top: layout.cardTop },
     ])
     .jpeg({ quality: 98, chromaSubsampling: "4:4:4" })
