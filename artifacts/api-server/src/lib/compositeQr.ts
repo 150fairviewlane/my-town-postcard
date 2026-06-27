@@ -293,7 +293,6 @@ async function sampleFooterColor(
   imgW: number,
   imgH: number,
   fallbackHex: string,
-  cardLeft: number,
   cardTop: number,
   cardSize: number,
 ): Promise<string> {
@@ -302,10 +301,12 @@ async function sampleFooterColor(
 
   const patchW    = 60;
   const patchH    = 20;
-  // Centre the sample patch inside the backing square so we always read the
-  // colour at the exact horizontal position the card will cover.
-  const patchLeft = cardLeft + Math.floor((cardSize - patchW) / 2);
-  const patchTop  = cardTop  + Math.floor((cardSize - patchH) / 2);
+  // Sample from the far-left edge of the footer (x=10) — always solid background
+  // colour regardless of what Grok drew in the right portion of the footer.
+  // Sampling from under the card risks picking up design elements (tile borders,
+  // gold accents) that Grok renders at the bottom-right.
+  const patchLeft = 10;
+  const patchTop  = cardTop + Math.floor((cardSize - patchH) / 2);
 
   if (patchLeft + patchW > imgW || patchTop < 0 || patchTop + patchH > imgH) {
     return fallbackHex;
@@ -423,27 +424,31 @@ export async function compositeQrOnto(
   // invisibly into the footer instead of standing out.
   const panelColor = await sampleFooterColor(
     imageBuffer, spec.imgW, spec.imgH, style.fill,
-    layout.cardLeft, layout.cardTop, layout.cardSize,
+    layout.cardTop, layout.cardSize,
   );
   logger.info(
     { spotSize, panelColor, fallback: style.fill },
     "compositeQrOnto: sampled footer colour for opaque panel",
   );
 
-  // ── 4. Composite footer-colour backing square then card+QR (single pass) ──
-  // Layer 1: plain cardSize×cardSize square filled with the sampled footer
-  //          colour, placed exactly where the card sits. This covers any
-  //          AI-generated corner texture that would otherwise show through the
-  //          transparent rounded-corner regions of the card SVG.
+  // ── 4. Composite footer-colour backing panel then card+QR (single pass) ──
+  // Layer 1: right-25% footer panel filled with the sampled footer colour.
+  //   - Starts at x = 75% of image width so the phone/address (left 75%) is
+  //     untouched — no cramping, no coverage of real content.
+  //   - Full height from cardTop to image bottom, so it wipes any Grok-drawn
+  //     QR code, barcode, or design element in the right quarter.
   // Layer 2: the backing card + QR with crisp drop shadow on top.
+  const panelLeft   = Math.round(spec.imgW * 0.75);
+  const panelWidth  = spec.imgW - panelLeft;
+  const panelHeight = spec.imgH - layout.cardTop;
   const backingPng = await sharp(
-    makeOpaquePanelSvg(layout.cardSize, layout.cardSize, panelColor),
+    makeOpaquePanelSvg(panelWidth, panelHeight, panelColor),
   ).png().toBuffer();
 
   const compositedBuffer: Buffer = await sharp(imageBuffer)
     .composite([
-      // Layer 1 (bottom): footer-colour square behind card corners.
-      { input: backingPng, left: layout.cardLeft, top: layout.cardTop },
+      // Layer 1 (bottom): footer-colour panel covering right 25% of footer.
+      { input: backingPng, left: panelLeft, top: layout.cardTop },
       // Layer 2 (top): backing card + QR with drop shadow.
       { input: cardWithQr, left: layout.cardLeft, top: layout.cardTop },
     ])
