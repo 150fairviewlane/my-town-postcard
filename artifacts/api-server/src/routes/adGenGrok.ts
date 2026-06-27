@@ -2463,23 +2463,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .tc-btn.secondary{background:#fff;color:#7C1C2E;border:2px solid #7C1C2E}
 @media(max-width:860px){.layout{grid-template-columns:1fr 1fr}html,body{height:auto;overflow:auto}.rpanel{grid-column:1/-1;height:auto;overflow:visible}.rpanel-scroll{overflow:visible;height:auto}.fpanel,.mpanel{overflow:visible}.thumb-strip{flex-wrap:nowrap;overflow-x:auto}}
 @media(max-width:640px){.layout{grid-template-columns:1fr}.rpanel{grid-column:auto}.photo-logo-row{grid-template-columns:1fr}}
-/* ── Spell-check overlay ──────────────────────────────────────────────────── */
-.sc-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:9999;opacity:0;pointer-events:none;transition:opacity .18s}
-.sc-overlay.visible{opacity:1;pointer-events:all}
-.sc-card{background:#fff;border-radius:12px;padding:28px 28px 22px;max-width:380px;width:90%;box-shadow:0 24px 64px rgba(0,0,0,.35)}
-.sc-icon{font-size:28px;margin-bottom:10px}
-.sc-title{font-size:17px;font-weight:700;color:#0f1117;margin-bottom:6px}
-.sc-body{font-size:13.5px;color:#374151;line-height:1.5;margin-bottom:14px}
-.sc-words{list-style:none;margin:0 0 18px;padding:0;display:flex;flex-direction:column;gap:5px}
-.sc-words li{background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:6px 10px;font-size:13px;color:#7f1d1d;font-weight:600}
-.sc-words li span{font-weight:400;color:#6b7280;margin-left:6px}
-.sc-actions{display:flex;gap:10px}
-.sc-fix-btn{flex:1;padding:10px 0;background:#fff;color:#7C1C2E;border:1.5px solid #7C1C2E;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif}
-.sc-fix-btn:hover{background:#fef2f2}
-.sc-go-btn{flex:1;padding:10px 0;background:#7C1C2E;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif}
-.sc-go-btn:hover{background:#5a1220}
 </style>
-<script src="/api/static/typo.min.js"></script>
 </head>
 <body>
 
@@ -2519,7 +2503,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
           <option>Retail Shop</option><option>Other Service</option>
         </select>
       </div>
-      <div class="field"><label>Tagline / Slogan</label><input type="text" id="tagline" placeholder="From-Scratch Biscuits &amp; Boba!"></div>
+      <div class="field"><label>Tagline / Slogan</label><input type="text" id="tagline" spellcheck="true" placeholder="From-Scratch Biscuits &amp; Boba!"></div>
       <div class="frow">
         <div class="field"><label>Phone</label><input type="text" id="phone" placeholder="(706) 754-0105"></div>
         <div class="field"><label>City, State</label><input type="text" id="city" placeholder="Clarkesville, GA"></div>
@@ -2537,8 +2521,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 
     <div>
       <div class="sec-label">Special Offer / Coupon</div>
-      <div class="field"><label>Offer</label><input type="text" id="offer" placeholder="$1 OFF Any Biscuit"></div>
-      <div class="field"><label>Fine Print</label><input type="text" id="offerFine" placeholder="1 per visit &middot; with this postcard"></div>
+      <div class="field"><label>Offer</label><input type="text" id="offer" spellcheck="true" placeholder="$1 OFF Any Biscuit"></div>
+      <div class="field"><label>Fine Print</label><input type="text" id="offerFine" spellcheck="true" placeholder="1 per visit &middot; with this postcard"></div>
     </div>
 
   </div>
@@ -2653,95 +2637,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
   </div>
 </div>
 
-<!-- Spell-check confirmation overlay -->
-<div id="scOverlay" class="sc-overlay">
-  <div class="sc-card">
-    <div class="sc-icon">&#9888;&#65039;</div>
-    <div class="sc-title">Possible spelling to review</div>
-    <div class="sc-body">These words will appear verbatim on your printed postcard:</div>
-    <ul class="sc-words" id="scWordList"></ul>
-    <div class="sc-actions">
-      <button class="sc-fix-btn" onclick="hideSpellModal()">&larr; Fix Now</button>
-      <button class="sc-go-btn" id="scGoBtn">Generate Anyway &rarr;</button>
-    </div>
-  </div>
-</div>
-
 <script>
 function esc(s){ var d=document.createElement('div');d.textContent=String(s||'');return d.innerHTML; }
-
-// ── Spell-check (lazy-loaded, warn-and-confirm) ────────────────────────────────
-// _typo: null = still loading, false = load failed, Typo instance = ready.
-// The check is best-effort: if the dictionary isn't loaded yet when Generate is
-// clicked, we skip the check and fire immediately — never block the user.
-var _typo = null;
-(function initSpellChecker(){
-  function doLoad(){
-    Promise.all([
-      fetch('/api/static/en_US.aff').then(function(r){ return r.text(); }),
-      fetch('/api/static/en_US.dic').then(function(r){ return r.text(); }),
-    ]).then(function(parts){
-      try{ _typo = new Typo('en_US', parts[0], parts[1], {platform:'any'}); }
-      catch(e){ _typo = false; }
-    }).catch(function(){ _typo = false; });
-  }
-  if(typeof requestIdleCallback === 'function'){
-    requestIdleCallback(doLoad, {timeout:8000});
-  } else {
-    setTimeout(doLoad, 1500);
-  }
-})();
-
-var SPELL_FIELDS = [
-  {id:'tagline',   label:'Tagline'},
-  {id:'offer',     label:'Special Offer'},
-  {id:'offerFine', label:'Fine Print'},
-];
-
-function shouldSkipToken(tok){
-  if(tok.length <= 2) return true;
-  if(/\d/.test(tok)) return true;                           // prices, codes, years
-  if(/[&\/@#$().,'"\u2022\u2013\u2014]/.test(tok)) return true;  // punctuation/URLs
-  if(/^[A-Z]+$/.test(tok) && tok.length <= 4) return true; // abbreviations: HVAC LLC GA BBQ
-  return false;
-}
-
-function spellScanFields(){
-  if(!_typo) return []; // dictionary not ready — never block
-  var suspects = [], seen = {};
-  function scanText(text, label){
-    text.trim().split(/[\s\u2013\u2014\-]+/).forEach(function(tok){
-      tok = tok.replace(/^[^a-zA-Z]+|[^a-zA-Z]+$/g, ''); // strip leading/trailing non-alpha
-      if(!tok || shouldSkipToken(tok) || seen[tok.toLowerCase()]) return;
-      if(!_typo.check(tok)){ seen[tok.toLowerCase()]=true; suspects.push({word:tok, label:label}); }
-    });
-  }
-  SPELL_FIELDS.forEach(function(f){
-    var el = document.getElementById(f.id);
-    if(el && el.value) scanText(el.value, f.label);
-  });
-  document.querySelectorAll('#menuList .mrow input').forEach(function(el, i){
-    if(el.value.trim()) scanText(el.value, 'Service '+(i+1));
-  });
-  return suspects;
-}
-
-var _spellProceed = null;
-function showSpellModal(suspects, onProceed){
-  _spellProceed = onProceed;
-  document.getElementById('scWordList').innerHTML = suspects.map(function(s){
-    return '<li>'+esc(s.word)+'<span>in '+esc(s.label)+'</span></li>';
-  }).join('');
-  document.getElementById('scGoBtn').onclick = function(){
-    hideSpellModal();
-    if(_spellProceed){ _spellProceed(); _spellProceed = null; }
-  };
-  document.getElementById('scOverlay').classList.add('visible');
-}
-function hideSpellModal(){
-  document.getElementById('scOverlay').classList.remove('visible');
-  _spellProceed = null;
-}
 
 // ── State ──────────────────────────────────────────────────────────────────────
 var _variations = [];          // [{imageUrl, templateKey, templateName}]
@@ -3101,13 +2998,6 @@ async function generate(){
   if(_isGenerating || _variations.length >= 6) return;
   var biz = document.getElementById('bizName').value.trim();
   if(!biz){ showErr('Please enter a business name above.'); return; }
-  // Spell-check intercept: scan free-text copy fields before spending $0.07.
-  // If dictionary is still loading (_typo === null) we skip silently and fire.
-  var suspects = spellScanFields();
-  if(suspects.length > 0){ showSpellModal(suspects, function(){ doGenerate(biz); }); return; }
-  doGenerate(biz);
-}
-async function doGenerate(biz){
   hideErr();
   _isGenerating = true;
   document.getElementById('genBtn').disabled = true;
@@ -3303,7 +3193,7 @@ function addMenuItem(val){
   var list = document.getElementById('menuList');
   if(list.children.length >= 4) return;
   var row = document.createElement('div'); row.className = 'mrow';
-  var inp = document.createElement('input'); inp.type='text'; inp.placeholder='Item Name $Price'; inp.value=val;
+  var inp = document.createElement('input'); inp.type='text'; inp.placeholder='Item Name $Price'; inp.value=val; inp.spellcheck=true;
   var rm  = document.createElement('button'); rm.className='rm-btn'; rm.title='Remove'; rm.innerHTML='&#215;';
   rm.onclick = function(){ this.parentElement.remove(); };
   row.appendChild(inp); row.appendChild(rm);
@@ -3742,7 +3632,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
           <option>Retail Shop</option><option>Other Service</option>
         </select>
       </div>
-      <div class="field"><label>Tagline / Slogan</label><input type="text" id="tagline" placeholder="From-Scratch Biscuits &amp; Boba!"></div>
+      <div class="field"><label>Tagline / Slogan</label><input type="text" id="tagline" spellcheck="true" placeholder="From-Scratch Biscuits &amp; Boba!"></div>
       <div class="frow">
         <div class="field"><label>Phone *</label><input type="text" id="phone" placeholder="(706) 754-0105"></div>
         <div class="field"><label>City, State</label><input type="text" id="city" placeholder="Clarkesville, GA"></div>
@@ -3760,8 +3650,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 
     <div>
       <div class="sec-label">Special Offer / Coupon</div>
-      <div class="field"><label>Offer</label><input type="text" id="offer" placeholder="$1 OFF Any Biscuit"></div>
-      <div class="field"><label>Fine Print</label><input type="text" id="offerFine" placeholder="1 per visit &middot; with this postcard"></div>
+      <div class="field"><label>Offer</label><input type="text" id="offer" spellcheck="true" placeholder="$1 OFF Any Biscuit"></div>
+      <div class="field"><label>Fine Print</label><input type="text" id="offerFine" spellcheck="true" placeholder="1 per visit &middot; with this postcard"></div>
     </div>
   </div>
 
