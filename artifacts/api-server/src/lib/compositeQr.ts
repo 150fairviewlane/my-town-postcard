@@ -164,16 +164,7 @@ const CARD_INSET = 6;
  */
 const CARD_MARGIN = 1.0375;
 
-// ── Opaque panel constants ─────────────────────────────────────────────────
-/**
- * Width (px) of the opaque footer-colour panel anchored at the bottom-right
- * image corner. Sized to comfortably frame the QR card with breathing room to
- * its left. The panel must be ≥ cardSize + 2×CARD_INSET.
- *   xl  cardSize=187 → needs ≥199 px; 280 gives 87 px of buffer
- *   l   cardSize=135 → needs ≥147 px; 200 gives 53 px of buffer
- *   m/s cardSize= 93 → needs ≥105 px; 140 gives 35 px of buffer
- */
-const PANEL_SIZE_PX: Record<SizeKey, number> = { xl: 280, l: 200, m: 140, s: 140 };
+// (No large panel — the backing square is exactly cardSize × cardSize, see step 4.)
 
 /**
  * Extra canvas pixels added to the card SVG on the right and bottom edges so
@@ -433,23 +424,20 @@ export async function compositeQrOnto(
     "compositeQrOnto: sampled footer colour for opaque panel",
   );
 
-  // ── 4. Composite opaque panel then card+QR onto image (single pass) ────────
-  // Layer 1: right-edge panel in the footer colour covers the QR zone so no
-  //          AI-generated corner decoration bleeds around the card.
-  // Layer 2: backing card + QR with crisp drop shadow on top.
-  // Panel geometry: PANEL_SIZE_PX wide × 16 % of imgH, anchored bottom-right.
-  const panelW      = PANEL_SIZE_PX[spotSize] ?? 280;
-  const footerBandH = Math.round(spec.imgH * 0.16);
-  const panelH      = footerBandH;
-  const panelLeft   = spec.imgW - panelW;
-  const panelTop    = spec.imgH - panelH;
-
-  const panelPng = await sharp(makeOpaquePanelSvg(panelW, panelH, panelColor)).png().toBuffer();
+  // ── 4. Composite footer-colour backing square then card+QR (single pass) ──
+  // Layer 1: plain cardSize×cardSize square filled with the sampled footer
+  //          colour, placed exactly where the card sits. This covers any
+  //          AI-generated corner texture that would otherwise show through the
+  //          transparent rounded-corner regions of the card SVG.
+  // Layer 2: the backing card + QR with crisp drop shadow on top.
+  const backingPng = await sharp(
+    makeOpaquePanelSvg(layout.cardSize, layout.cardSize, panelColor),
+  ).png().toBuffer();
 
   const compositedBuffer: Buffer = await sharp(imageBuffer)
     .composite([
-      // Layer 1 (bottom): opaque footer-coloured panel covers the entire corner.
-      { input: panelPng, left: panelLeft, top: panelTop },
+      // Layer 1 (bottom): footer-colour square behind card corners.
+      { input: backingPng, left: layout.cardLeft, top: layout.cardTop },
       // Layer 2 (top): backing card + QR with drop shadow.
       { input: cardWithQr, left: layout.cardLeft, top: layout.cardTop },
     ])

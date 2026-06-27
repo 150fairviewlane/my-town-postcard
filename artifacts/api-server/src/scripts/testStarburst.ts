@@ -68,10 +68,13 @@ async function samplePixel(buf: Buffer, x: number, y: number): Promise<[number, 
 
 async function main() {
   const { imgW, imgH } = QR_PLACEMENT[SIZE_KEY];
-  // XL card geometry: cardLeft=1007, cardTop=1307, cardSize=187 (from QR_PLACEMENT + CARD_MARGIN)
-  // Panel covers (imgW-374, imgH-374) = (826, 1126) to (1200, 1500)
+  // XL card geometry (from QR_PLACEMENT + CARD_MARGIN=1.0375):
+  //   cardSize = round(180 × 1.0375) = 187
+  //   cardLeft = imgW - cardSize - CARD_INSET(6) = 1200 - 187 - 6 = 1007
+  //   cardTop  = imgH - cardSize - CARD_INSET(6) = 1500 - 187 - 6 = 1307
   const cardLeft = 1007;
   const cardTop  = 1307;
+  const cardSize = 187;
 
   console.log(`\n── testStarburst.ts (opaque panel) ───────────────────────`);
   console.log(`Image: ${imgW}×${imgH} px (XL spot)`);
@@ -107,29 +110,28 @@ async function main() {
   console.log(`\n   Raw synthetic:   ${rawBytes.toLocaleString()} bytes`);
   console.log(`   After composite: ${outBytes.toLocaleString()} bytes  (Δ ${deltaKB} KB)`);
 
-  // ── Multi-pixel panel verification ───────────────────────────────────────
-  // Panel is right-edge strip × 16% of imgH.
-  // All sample points are inside the panel zone and OUTSIDE the card rect,
-  // so they should all be close to the footer navy (#1A2744).
+  // ── Card-corner backing-square verification ───────────────────────────────
+  // The panel is now a cardSize×cardSize square placed exactly at (cardLeft,
+  // cardTop). We verify the 4 corners of the card bounding box — these are in
+  // the transparent corner zone of the card's rounded-rect SVG (cornerRadius=16
+  // means the curve starts 16 px from each edge; a pixel 1-2 px from the
+  // corner is well outside the rounded rect and passes straight through to the
+  // backing square below).
   //
-  // Panel geometry (right-edge, 16% height):
-  //   panelW = PANEL_SIZE_PX[xl] = 280  → panelLeft = imgW - 280 = 920
-  //   panelH = Math.round(imgH × 0.16) = 240 → panelTop = imgH - 240 = 1260
-  //   Panel bounds: x ∈ [920, 1200), y ∈ [1260, 1500)
-  // Card bounds:  x ∈ [1007, 1194), y ∈ [1307, 1494)  (cardSize=187, inset=6)
+  // Backing square: x ∈ [1007, 1194), y ∈ [1307, 1494)  (cardSize=187, inset=6)
+  // Card SVG rounded rect: rx=ry=16, drawn inside 1.5 px half-stroke inset.
+  // Corner transparent zone is verified for all 4 corners:
+  //   TL (1008, 1308)  TR (1192, 1308)  BL (1008, 1492)  BR (1192, 1492)
   //
-  // Sample points (all inside panel, all outside card):
-  //   P1 far right corner  (1197, 1497) — 3px from image corner
-  //   P2 right edge top    (1190, 1265) — 5px below panel top (1260)
-  //   P3 left-of-card bot  (950, 1490)  — inside panel, left of card (card left=1007)
-  //   P4 panel left mid    (930, 1380)  — left strip of panel
-  //   P5 panel left top    (930, 1265)  — left strip, near panel top
+  // In the synthetic test image the footer band (navy) already covers these
+  // coordinates, so the check doubles as confirmation the composite didn't
+  // accidentally paint the card-fill colour into the corners.
   const samplePoints: Array<[number, number, string]> = [
-    [imgW - 3,   imgH - 3,          "far right corner"],
-    [imgW - 10,  imgH - 235,        "right edge top"],
-    [950,        imgH - 10,         "left-of-card bottom"],
-    [930,        imgH - 120,        "panel left mid"],
-    [930,        imgH - 235,        "panel left top"],
+    [cardLeft + 1,           cardTop + 1,           "top-left corner"],
+    [cardLeft + cardSize - 3, cardTop + 1,           "top-right corner"],
+    [cardLeft + 1,           cardTop + cardSize - 3, "bottom-left corner"],
+    [cardLeft + cardSize - 3, cardTop + cardSize - 3, "bottom-right corner"],
+    [imgW - 3,               imgH - 3,               "image far corner (footer background)"],
   ];
 
   const footerExpected = hexToRgb("#1A2744");
