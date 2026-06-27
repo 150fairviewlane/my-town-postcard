@@ -436,11 +436,16 @@ export async function compositeQrOnto(
   //          any AI-generated decoration (gold disc, stray marks) — no blur,
   //          no gradient, just a flat opaque fill that matches the footer bar.
   // Layer 2: backing card + QR with crisp drop shadow on top.
-  const panelSize = PANEL_SIZE_PX[spotSize] ?? 374;
-  const panelLeft = spec.imgW - panelSize;
-  const panelTop  = spec.imgH - panelSize;
+  // Panel geometry: full-height footer strip, right-edge width = PANEL_SIZE_PX.
+  // Height is clamped to the footer band (imgH × 20 %) so the panel never
+  // bleeds above the footer into the body of the ad.
+  const panelW    = PANEL_SIZE_PX[spotSize] ?? 374;
+  const footerBandH = Math.round(spec.imgH * 0.20);
+  const panelH    = footerBandH;
+  const panelLeft = spec.imgW - panelW;
+  const panelTop  = spec.imgH - panelH;
 
-  const panelPng = await sharp(makeOpaquePanelSvg(panelSize, panelSize, panelColor)).png().toBuffer();
+  const panelPng = await sharp(makeOpaquePanelSvg(panelW, panelH, panelColor)).png().toBuffer();
 
   const compositedBuffer: Buffer = await sharp(imageBuffer)
     .composite([
