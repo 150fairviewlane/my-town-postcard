@@ -78,12 +78,11 @@ export function buildFooterZone(phone: string, address: string, isLandscape = fa
   // cardSize = round(qrSize × 1.0375) / 300 DPI — must stay in sync with compositeQr.ts CARD_MARGIN
   const qrCardInches = sk === "xl" ? 0.62 : sk === "l" ? 0.45 : 0.31; // m / s / unknown
 
-  // Right-edge strip: reserved for the server-composited QR card.
-  // "Do NOT draw a QR code" prevents Grok from producing a scannable pattern here.
+  // Right-edge strip: reserved for the server-composited custom ad-on element.
   const qrSlot =
-    `BOTTOM-RIGHT STRIP (full footer height, right edge, width = ${qrCardInches.toFixed(2)}"): ` +
-    `solid footer background color only — no text, no address, no marks. ` +
-    `Do NOT draw a QR code — composited in post-processing.`;
+    `CUSTOM AD-ON CORNER (bottom-right strip, full footer height, right edge, width = ${qrCardInches.toFixed(2)}"): ` +
+    `solid footer background color only — no text, no address, no graphic marks of any kind. ` +
+    `A custom ad-on element will be composited here in post-processing; leave this zone completely blank.`;
 
   if (isLandscape) {
     const hasAddr = address !== "(none)";
@@ -671,7 +670,7 @@ export function buildAdPrompt(
         ? `COUPON (dashed dark box, lower-right): offer text bold white/cream, large. Fine print smaller below.\n\n`
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `DISC CORNER: The bottom-right disc corner must NOT contain an orange circular checkmark badge, a dashed coupon box or dashed-border rectangle, or an orange bookmark-ribbon pennant. Those elements are correct elsewhere on the card but must never be recreated or bleed into this disc corner area.\n\n`
+      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain an orange circular checkmark badge, a dashed coupon box or dashed-border rectangle, or an orange bookmark-ribbon pennant. Those elements are correct elsewhere on the card but must never be recreated or bleed into this custom ad-on corner area.\n\n`
     )
     : isLandscape && templateKey === "made-fresh"
     ? (
@@ -686,7 +685,7 @@ export function buildAdPrompt(
         ? `GOLDEN TICKET-STUB COUPON (lower-right): offer text bold dark, large. Fine print smaller below.\n\n`
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `DISC CORNER: The bottom-right disc corner must NOT contain a golden ticket-stub coupon (dashed border, notched edges), a white paint-stroke panel, or a chalkboard A-frame sign. Those elements are correct elsewhere on the card but must never be recreated or bleed into this disc corner area.\n\n`
+      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain a golden ticket-stub coupon (dashed border, notched edges), a white paint-stroke panel, or a chalkboard A-frame sign. Those elements are correct elsewhere on the card but must never be recreated or bleed into this custom ad-on corner area.\n\n`
     )
     : isLandscape && templateKey === "neighborhood-pro"
     ? (
@@ -709,7 +708,7 @@ export function buildAdPrompt(
         ? `OFFER (wide white brush-stroke area, lower section): offer text bold dark-green, large. Fine print smaller below.\n\n`
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `DISC CORNER: The bottom-right disc corner must NOT contain a diagonal-cut service panel, a circular lime-green icon badge, or a white brush-stroke offer area. Those elements are correct elsewhere on the card but must never be recreated or bleed into this disc corner area.\n\n`
+      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain a diagonal-cut service panel, a circular lime-green icon badge, or a white brush-stroke offer area. Those elements are correct elsewhere on the card but must never be recreated or bleed into this custom ad-on corner area.\n\n`
     )
     : isLandscape && templateKey === "at-your-service"
     ? (
@@ -731,7 +730,7 @@ export function buildAdPrompt(
         ? `COUPON (gold/yellow dashed-border box, lower-right): offer text bold dark navy, prominent. Fine print smaller below.\n\n`
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `DISC CORNER: The bottom-right disc corner must NOT contain a gold/yellow dashed-border coupon box, a circular white icon badge from the navy band, or a gold/yellow brush-stroke element. Those elements are correct elsewhere on the card but must never be recreated or bleed into this disc corner area.\n\n`
+      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain a gold/yellow dashed-border coupon box, a circular white icon badge from the navy band, or a gold/yellow brush-stroke element. Those elements are correct elsewhere on the card but must never be recreated or bleed into this custom ad-on corner area.\n\n`
     )
     : isLandscape && templateKey === "purple-sage"
     ? (
@@ -756,7 +755,7 @@ export function buildAdPrompt(
         ? `SPECIAL OFFER (dashed coupon box, lower area): offer text bold dark, fine print smaller below.\n\n`
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `DISC CORNER: The bottom-right disc corner must NOT contain a muted purple circle or dot-grid accent, a dashed coupon box, a cream rounded-rect tile, or a sage green leaf sprig element. Those elements are correct elsewhere on the card but must never be recreated or bleed into this disc corner area.\n\n`
+      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain a muted purple circle or dot-grid accent, a dashed coupon box, a cream rounded-rect tile, or a sage green leaf sprig element. Those elements are correct elsewhere on the card but must never be recreated or bleed into this custom ad-on corner area.\n\n`
     )
     : isLandscape && templateKey === "sage-organic"
     ? (
@@ -780,7 +779,7 @@ export function buildAdPrompt(
         ? `COUPON (kraft paper dashed-stitch rectangle, lower-right, scissors icon): offer text bold dark, fine print below.\n\n`
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `DISC CORNER: The bottom-right disc corner must NOT contain a kraft paper dashed-stitch coupon rectangle, a dark olive circular icon badge, or a dark olive wave band element. Those elements are correct elsewhere on the card but must never be recreated or bleed into this disc corner area.\n\n`
+      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain a kraft paper dashed-stitch coupon rectangle, a dark olive circular icon badge, or a dark olive wave band element. Those elements are correct elsewhere on the card but must never be recreated or bleed into this custom ad-on corner area.\n\n`
     )
     : isLandscape && templateKey === "home-elegance"
     ? (
@@ -803,7 +802,7 @@ export function buildAdPrompt(
         ? `SPECIAL OFFER (dashed coupon box, lower area): offer text bold dark navy, large. Fine print smaller below.\n\n`
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `DISC CORNER: The bottom-right disc corner must NOT contain a solid navy filled rectangle, a rounded-rect service tile, or a circular dark navy icon badge. Those elements belong in the SERVICE TILES and dark navy lower area but must never be recreated or bleed into this disc corner area.\n\n`
+      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain a solid navy filled rectangle, a rounded-rect service tile, or a circular dark navy icon badge. Those elements belong in the SERVICE TILES and dark navy lower area but must never be recreated or bleed into this custom ad-on corner area.\n\n`
     )
     : isLandscape && templateKey === "health-wellness"
     ? (
@@ -824,7 +823,7 @@ export function buildAdPrompt(
         ? `OFFER (teal-bordered rect or dashed coupon box, visually distinct from service panels): offer text large and bold. Fine print smaller below.\n\n`
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `DISC CORNER: The bottom-right disc corner must NOT contain an organic teal blob shape, a circular teal badge, or a white rounded-rect text box or panel. Those elements are correct elsewhere on the card but must never be recreated or bleed into this disc corner area.\n\n`
+      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain an organic teal blob shape, a circular teal badge, or a white rounded-rect text box or panel. Those elements are correct elsewhere on the card but must never be recreated or bleed into this custom ad-on corner area.\n\n`
     )
     : isLandscape && templateKey === "wok-fire"
     ? (
@@ -848,7 +847,7 @@ export function buildAdPrompt(
         ? `CHALKBOARD MENU (lower-right, dark A-frame sign): EXACTLY ${menuCount} item${menuCount !== 1 ? "s" : ""} and NO MORE in chalk-style white text — one per service in BUSINESS DETAILS, exactly as written. The template image may show more chalkboard lines — ignore extras; do NOT render empty chalk lines. No extras.\n\n`
         : `CHALKBOARD SIGN (lower-right): A-frame — leave board surface clean.\n\n`) +
       buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `DISC CORNER: The bottom-right disc corner must NOT contain a dark chalkboard A-frame sign, a golden ticket-stub coupon, a torn-edge deep red panel element, or a parchment/kraft torn-edge banner. Those elements are correct elsewhere on the card but must never be recreated or bleed into this disc corner area.\n\n`
+      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain a dark chalkboard A-frame sign, a golden ticket-stub coupon, a torn-edge deep red panel element, or a parchment/kraft torn-edge banner. Those elements are correct elsewhere on the card but must never be recreated or bleed into this custom ad-on corner area.\n\n`
     )
     : isLandscape && templateKey === "brush-stroke"
     ? (
@@ -869,7 +868,7 @@ export function buildAdPrompt(
         ? `SPECIAL OFFER (visually distinct dashed or bordered box, lower area): offer text bold dark, large. Fine print smaller below.\n\n`
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `DISC CORNER: The bottom-right disc corner must NOT contain a circular olive-bordered icon badge, a dark charcoal horizontal brush-stroke shape, or a dark charcoal curved-top footer extension. Those elements are correct elsewhere on the card but must never be recreated or bleed into this disc corner area.\n\n`
+      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain a circular olive-bordered icon badge, a dark charcoal horizontal brush-stroke shape, or a dark charcoal curved-top footer extension. Those elements are correct elsewhere on the card but must never be recreated or bleed into this custom ad-on corner area.\n\n`
     )
     : isLandscape && templateKey === "heritage-home"
     ? (
@@ -891,7 +890,7 @@ export function buildAdPrompt(
         ? `COUPON (footer bar, CENTER-LEFT section — between the phone column on the left and the address column): dashed-border rounded-rect, scissors ✂ icon, offer text bold cream inside box, fine print below. CRITICAL: the coupon must NOT appear at the far right — the bottom-right corner is reserved for the small gold disc.\n\n`
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `DISC CORNER: The bottom-right disc corner must NOT contain a dashed-border coupon box or offer text, a cream-background rounded-rect with a thin burgundy border, a headline-style box with a diamond ◆ separator, or any element from the HEADLINE zone. Those elements are correct elsewhere on the card but must never appear in the disc corner area.\n\n`
+      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain a dashed-border coupon box or offer text, a cream-background rounded-rect with a thin burgundy border, a headline-style box with a diamond ◆ separator, or any element from the HEADLINE zone. Those elements are correct elsewhere on the card but must never appear in the custom ad-on corner area.\n\n`
     )
     : isLandscape
     ? (
@@ -941,7 +940,7 @@ export function buildAdPrompt(
         ? `SPECIAL OFFER (wide white brush-stroke area, lower section): offer text bold dark-green, large. Fine print smaller below.\n\n`
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `DISC CORNER: The bottom-right disc corner must NOT contain a diagonal-cut service panel, a circular lime-green icon badge, or a white brush-stroke offer area. Those elements are correct elsewhere on the card but must never be recreated or bleed into this disc corner area.\n\n`
+      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain a diagonal-cut service panel, a circular lime-green icon badge, or a white brush-stroke offer area. Those elements are correct elsewhere on the card but must never be recreated or bleed into this custom ad-on corner area.\n\n`
     )
     : templateKey === "at-your-service"
     ? (
@@ -965,7 +964,7 @@ export function buildAdPrompt(
         ? `SPECIAL OFFER (gold/yellow dashed-border coupon box, lower-right): offer text bold dark navy, large. Fine print smaller below.\n\n`
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `DISC CORNER: The bottom-right disc corner must NOT contain a gold/yellow dashed-border coupon box, a circular white icon badge from the navy band, or a gold/yellow brush-stroke element. Those elements are correct elsewhere on the card but must never be recreated or bleed into this disc corner area.\n\n`
+      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain a gold/yellow dashed-border coupon box, a circular white icon badge from the navy band, or a gold/yellow brush-stroke element. Those elements are correct elsewhere on the card but must never be recreated or bleed into this custom ad-on corner area.\n\n`
     )
     : templateKey === "purple-sage"
     ? (
@@ -1092,7 +1091,7 @@ export function buildAdPrompt(
         ? `SPECIAL OFFER: offer text prominently in teal or dark text in an available white-space area. Fine print smaller below.\n\n`
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `DISC CORNER: The bottom-right disc corner must NOT contain an organic teal blob shape, a circular teal badge, or a white rounded-rect text box or panel. Those elements are correct elsewhere on the card but must never be recreated or bleed into this disc corner area.\n\n`
+      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain an organic teal blob shape, a circular teal badge, or a white rounded-rect text box or panel. Those elements are correct elsewhere on the card but must never be recreated or bleed into this custom ad-on corner area.\n\n`
     )
     : templateKey === "wok-fire"
     ? (
@@ -1115,7 +1114,7 @@ export function buildAdPrompt(
         ? `CHALKBOARD MENU (lower-right, dark chalkboard A-frame sign): EXACTLY ${menuCount} item${menuCount !== 1 ? "s" : ""} and NO MORE in chalk-style white text — one per service in BUSINESS DETAILS, exactly as written. The template image may show more chalkboard lines — ignore extras; do NOT render empty chalk lines. No extras. No invented items.\n\n`
         : `CHALKBOARD SIGN (lower-right): A-frame sign — leave board surface clean (no services provided).\n\n`) +
       buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `DISC CORNER: The bottom-right disc corner must NOT contain a dark chalkboard A-frame sign, a golden ticket-stub coupon, a torn-edge deep red panel element, or a parchment/kraft torn-edge banner. Those elements must never appear in the disc corner area.\n\n`
+      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain a dark chalkboard A-frame sign, a golden ticket-stub coupon, a torn-edge deep red panel element, or a parchment/kraft torn-edge banner. Those elements must never appear in the custom ad-on corner area.\n\n`
     )
     : templateKey === "brush-stroke"
     ? (
@@ -1135,7 +1134,7 @@ export function buildAdPrompt(
         ? `SPECIAL OFFER (visually distinct dashed or bordered box, lower area): offer text bold dark, large. Fine print smaller below.\n\n`
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `DISC CORNER: The bottom-right disc corner must NOT contain a circular olive-bordered icon badge, a dark charcoal horizontal brush-stroke shape, or a dark charcoal curved-top footer extension. Those elements must never appear in the disc corner area.\n\n`
+      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain a circular olive-bordered icon badge, a dark charcoal horizontal brush-stroke shape, or a dark charcoal curved-top footer extension. Those elements must never appear in the custom ad-on corner area.\n\n`
     )
     : templateKey === "heritage-home"
     ? (
@@ -1153,10 +1152,10 @@ export function buildAdPrompt(
         ? `EXACTLY ${menuCount} dark burgundy circular icon badge${menuCount !== 1 ? "s" : ""} evenly spaced — one per service in BUSINESS DETAILS. Thin vertical burgundy rule divider on right of each; brush-stroke label below. Ignore extra slots; no empty badges. No invented services.\n\n`
         : `four decorative dark burgundy circular icon badge shapes with thin vertical burgundy rule dividers; NO text labels.\n\n`) +
       (d.offer
-        ? `COUPON (footer bar, center — left of disc corner): dashed-border rounded-rect, scissors ✂ icon, offer bold, fine print below. Do NOT place coupon at the far-right corner.\n\n`
+        ? `COUPON (footer bar, center — left of the custom ad-on corner): dashed-border rounded-rect, scissors ✂ icon, offer bold, fine print below. Do NOT place coupon at the far-right corner.\n\n`
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `DISC CORNER — must not contain: coupon/offer box, cream rounded-rect with burgundy border, headline-style box with diamond ◆, or any HEADLINE-zone element.\n\n`
+      `CUSTOM AD-ON CORNER — must not contain: coupon/offer box, cream rounded-rect with burgundy border, headline-style box with diamond ◆, or any HEADLINE-zone element.\n\n`
     )
     : (
       // Default: parchment-classic portrait
@@ -1179,7 +1178,7 @@ export function buildAdPrompt(
         ? `SPECIAL OFFER (dashed coupon box): offer text bold inside dashed rectangle. Fine print smaller below.\n\n`
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `DISC CORNER: The bottom-right disc corner must NOT contain an orange circular checkmark badge, a dashed coupon box or dashed-border rectangle, or an orange bookmark-ribbon pennant. Those elements are correct elsewhere on the card but must never be recreated or bleed into this disc corner area.\n\n`
+      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain an orange circular checkmark badge, a dashed coupon box or dashed-border rectangle, or an orange bookmark-ribbon pennant. Those elements are correct elsewhere on the card but must never be recreated or bleed into this custom ad-on corner area.\n\n`
     );
 
   return (
