@@ -155,7 +155,8 @@ const CreateDealerBodySchema = z.union([
 ]);
 
 function getOrigin(req: Request): string {
-  const envOrigin = process.env.PUBLIC_APP_URL?.replace(/\/$/, "");
+  const envOrigin =
+    process.env.APP_URL?.replace(/\/$/, "") || process.env.PUBLIC_APP_URL?.replace(/\/$/, "");
   if (envOrigin) return envOrigin;
   const replitDomain = process.env.REPLIT_DOMAINS?.split(",")[0]?.trim();
   if (replitDomain) return `https://${replitDomain}`;
