@@ -277,32 +277,35 @@ function makeCardSvg(cardSize: number, style: CardStyle, effectiveCornerRadius: 
 // ── Footer colour sampler ─────────────────────────────────────────────────
 
 /**
- * Sample a representative background colour from Grok's footer bar.
+ * Sample a representative background colour from directly beneath the QR
+ * backing square so the sampled colour always matches the exact footer zone
+ * the card will cover — even when the AI generates a horizontal gradient.
  *
- * Extracts a 60×20 px patch at ~60 % of image width (clear of left-aligned
- * phone/address text) and vertically centred in the bottom-20 % footer band.
- * Returns the median RGB as a "#rrggbb" hex string, or `fallbackHex` if the
- * image is too small or the extraction throws.
+ * Extracts a 60×20 px patch centred inside the cardSize×cardSize region at
+ * (cardLeft, cardTop). Returns the median RGB as a "#rrggbb" hex string, or
+ * `fallbackHex` if the image is too small or the extraction throws.
  *
- * A median rather than mean is used so isolated white text pixels in the patch
- * cannot skew the result away from the dark footer background.
+ * A median rather than mean is used so isolated lighter pixels (e.g. a thin
+ * coupon edge) cannot skew the result away from the true footer background.
  */
 async function sampleFooterColor(
   imageBuffer: Buffer,
   imgW: number,
   imgH: number,
   fallbackHex: string,
+  cardLeft: number,
+  cardTop: number,
+  cardSize: number,
 ): Promise<string> {
   const sharpMod = await (import("sharp") as Promise<any>);
   const sharp    = (sharpMod.default ?? sharpMod) as typeof import("sharp");
 
-  const footerH   = Math.round(imgH * 0.20);
-  const footerTop = imgH - footerH;
-
   const patchW    = 60;
   const patchH    = 20;
-  const patchLeft = Math.round(imgW * 0.60);                          // 60 % — clear of text and QR zone
-  const patchTop  = footerTop + Math.floor((footerH - patchH) / 2);  // vertically centred in footer
+  // Centre the sample patch inside the backing square so we always read the
+  // colour at the exact horizontal position the card will cover.
+  const patchLeft = cardLeft + Math.floor((cardSize - patchW) / 2);
+  const patchTop  = cardTop  + Math.floor((cardSize - patchH) / 2);
 
   if (patchLeft + patchW > imgW || patchTop < 0 || patchTop + patchH > imgH) {
     return fallbackHex;
@@ -418,7 +421,10 @@ export async function compositeQrOnto(
   // Extract a representative background colour from Grok's footer bar.
   // This becomes the fill of the opaque panel in step 4 so it merges
   // invisibly into the footer instead of standing out.
-  const panelColor = await sampleFooterColor(imageBuffer, spec.imgW, spec.imgH, style.fill);
+  const panelColor = await sampleFooterColor(
+    imageBuffer, spec.imgW, spec.imgH, style.fill,
+    layout.cardLeft, layout.cardTop, layout.cardSize,
+  );
   logger.info(
     { spotSize, panelColor, fallback: style.fill },
     "compositeQrOnto: sampled footer colour for opaque panel",
