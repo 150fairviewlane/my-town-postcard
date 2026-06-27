@@ -1160,10 +1160,10 @@ export function buildAdPrompt(
         ? `EXACTLY ${menuCount} dark burgundy circular icon badge${menuCount !== 1 ? "s" : ""} evenly spaced — one per service in BUSINESS DETAILS. Thin vertical burgundy rule divider on right of each; brush-stroke label below. Ignore extra slots; no empty badges. No invented services.\n\n`
         : `four decorative dark burgundy circular icon badge shapes with thin vertical burgundy rule dividers; NO text labels.\n\n`) +
       (d.offer
-        ? `COUPON (footer bar, CENTER section — between the phone/address column on the left and the small gold disc corner on the right): dashed-border rounded-rect, scissors ✂ icon, offer text bold inside box, fine print below. CRITICAL: the coupon must NOT appear at the far right — the bottom-right corner is reserved for the small gold disc.\n\n`
+        ? `COUPON (footer bar, center — left of disc corner): dashed-border rounded-rect, scissors ✂ icon, offer bold, fine print below. Do NOT place coupon at the far-right corner.\n\n`
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `DISC CORNER — must not appear here: a dashed-border coupon box or offer text, a cream-background rounded-rect with a thin burgundy border, a headline-style box with a diamond ◆ separator, or any element from the HEADLINE zone.\n\n`
+      `DISC CORNER — must not contain: coupon/offer box, cream rounded-rect with burgundy border, headline-style box with diamond ◆, or any HEADLINE-zone element.\n\n`
     )
     : (
       // Default: parchment-classic portrait
