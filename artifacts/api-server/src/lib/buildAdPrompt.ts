@@ -78,25 +78,11 @@ export function buildFooterZone(phone: string, address: string, isLandscape = fa
   // cardSize = round(qrSize × 1.0375) / 300 DPI — must stay in sync with compositeQr.ts CARD_MARGIN
   const qrCardInches = sk === "xl" ? 0.62 : sk === "l" ? 0.45 : 0.31; // m / s / unknown
 
-  // Bottom-right corner: server-side composited QR — just reserve the corner space.
-  // Per-template phrase matches the actual CardStyle fill+border in compositeQr.ts TEMPLATE_QR_STYLES.
-  const CORNER_PHRASES: Record<string, string> = {
-    "at-your-service":   "dark navy corner accent square with gold dashed border",
-    "home-elegance":     "dark navy corner accent square with gold border",
-    "made-fresh":        "dark corner accent square with gold border",
-    "wok-fire":          "dark corner accent square with gold border",
-    "surprise-me":       "dark corner accent square with gold border",
-    "parchment-classic": "dark corner accent square with orange border",
-    "heritage-home":     "cream corner accent square with burgundy border",
-    "health-wellness":   "white corner accent square with dark teal border",
-    "sage-organic":      "cream corner accent square with olive dashed-stitch border",
-    "brush-stroke":      "dark charcoal corner accent circle with olive border",
-    "neighborhood-pro":  "forest-green corner accent square, no border",
-    "purple-sage":       "deep purple corner accent square with lavender border",
-  };
-  const cornerPhrase = CORNER_PHRASES[templateKey] ?? "warm-gold starburst corner accent";
+  // Bottom-right corner: warm-gold starburst anchored at the image corner — server erases and
+  // recomposites the QR card unconditionally, so the exact starburst shape doesn't matter.
+  // "Do NOT draw a QR code" remains so Grok doesn't accidentally produce a scannable pattern.
   const qrSlot =
-    `BOTTOM-RIGHT: ${cornerPhrase} — ` +
+    `BOTTOM-RIGHT: warm-gold starburst graphic bursting from the image corner — ` +
     `RIGHT and BOTTOM edges at image border, zero margin. ` +
     `Do not place text, phone numbers, address, or service items here. ` +
     `Do NOT draw a QR code — composited in post-processing.`;

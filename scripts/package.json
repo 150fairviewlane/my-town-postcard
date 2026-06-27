@@ -20,6 +20,8 @@
     "find:broken-qr-ads": "tsx ./src/findBrokenQrAds.ts",
     "gen:qr-samples": "tsx ./src/genQrSamples.ts",
     "measure:qr": "tsx ./src/measureGrokPlaceholder.ts",
+    "measure:corner-bleed": "tsx ./src/measure-corner-bleed.ts",
+    "inspect:corners": "tsx ./src/inspect-corner-crops.ts",
     "seed:qa": "tsx ./src/seedQaCampaign.ts",
     "qa:bot": "tsx ./src/qaBot.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
