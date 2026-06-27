@@ -6,12 +6,9 @@
  *   /tmp/starburst_full.jpg       — full ad with opaque panel + card + QR
  *   /tmp/starburst_corner.jpg     — 400×400 px crop of the bottom-right corner
  *
- * Expected result: the bottom-right corner is covered by an opaque rectangle
- * whose colour matches the synthetic navy footer (#1A2744). The backing card
- * (cream #f5f0e8) + QR sit on top with a crisp drop shadow.
- *
- * The strip between the card's right/bottom edges and the image edge should be
- * the footer panel colour — no gradient halo, no blurred fill, pure navy.
+ * Expected result: every sample point in the panel region outside the card is
+ * the sampled footer navy colour (#1A2744), NOT the old cream fill (#f5f0e8).
+ * No gradient halo, no blurred smudge — just a flat opaque panel.
  *
  * Run: pnpm --filter @workspace/api-server exec tsx src/scripts/testStarburst.ts
  */
@@ -32,15 +29,12 @@ const SIZE_KEY    = "xl" as const;
 
 /**
  * Synthetic JPEG: cream body with a dark navy footer (20% of height).
- * Gives a realistic contrast backdrop for the opaque panel.
- *
  * Uses a single SVG that matches the exact expected image dimensions so the
- * buffer passed to compositeQrOnto is always exactly imgW × imgH — preventing
- * "bad extract area" errors in the decode-verify step.
+ * buffer passed to compositeQrOnto is always exactly imgW × imgH.
  */
 async function makeSyntheticJpeg(): Promise<Buffer> {
   const { imgW, imgH } = QR_PLACEMENT[SIZE_KEY];
-  const footerH = Math.round(imgH * 0.20); // 20% footer
+  const footerH = Math.round(imgH * 0.20);
   const bodyH   = imgH - footerH;
 
   const svg = Buffer.from(
@@ -60,16 +54,33 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
   return { r: parseInt(m[1]!, 16), g: parseInt(m[2]!, 16), b: parseInt(m[3]!, 16) };
 }
 
+/**
+ * Sample a 1×1 px pixel from the result image and return its RGB.
+ */
+async function samplePixel(buf: Buffer, x: number, y: number): Promise<[number, number, number]> {
+  const { data } = await sharp(buf)
+    .extract({ left: x, top: y, width: 1, height: 1 })
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  return [data[0]!, data[1]!, data[2]!];
+}
+
 async function main() {
   const { imgW, imgH } = QR_PLACEMENT[SIZE_KEY];
+  // XL card geometry: cardLeft=1007, cardTop=1307, cardSize=187 (from QR_PLACEMENT + CARD_MARGIN)
+  // Panel covers (imgW-374, imgH-374) = (826, 1126) to (1200, 1500)
+  const cardLeft = 1007;
+  const cardTop  = 1307;
+
   console.log(`\n── testStarburst.ts (opaque panel) ───────────────────────`);
   console.log(`Image: ${imgW}×${imgH} px (XL spot)`);
 
   const synth = await makeSyntheticJpeg();
   console.log(`Synthetic JPEG: ${synth.length.toLocaleString()} bytes (cream body + navy footer)`);
 
-  // Use heritage-home style — cream fill #f5f0e8 on a dark navy footer gives
-  // maximum contrast to verify the panel colour is sampled correctly.
+  // Use heritage-home style — cream fill #f5f0e8 on dark footer gives maximum
+  // contrast to verify the panel colour is sampled correctly.
   const style = getTemplateQrStyle("heritage-home");
   console.log(`Card style: ${JSON.stringify(style)}`);
 
@@ -96,58 +107,62 @@ async function main() {
   console.log(`\n   Raw synthetic:   ${rawBytes.toLocaleString()} bytes`);
   console.log(`   After composite: ${outBytes.toLocaleString()} bytes  (Δ ${deltaKB} KB)`);
 
-  // ── Panel colour verification ─────────────────────────────────────────────
-  // Sample the extreme corner pixel (3 px in from each edge). This falls
-  // inside the opaque panel (which covers a 374×374 px square anchored at the
-  // corner) and outside the card itself. The panel colour is sampled from the
-  // synthetic footer band (#1A2744 navy) so the pixel should be navy,
-  // NOT the card fill colour (#f5f0e8 cream).
+  // ── Multi-pixel panel verification ───────────────────────────────────────
+  // All sample points are inside the 374×374 panel zone and OUTSIDE the card
+  // rect, so they should all be close to the footer navy (#1A2744).
+  // A glow-disc or blurred-fill artefact would produce a value intermediate
+  // between navy and the surrounding cream body — caught by the card-fill check.
   //
-  // XL geometry — card placed at (1007, 1307) inside a 1200×1500 image:
-  //   corner pixel (1197, 1497) is 193 px below and 7 px right of the card edge
-  //   → squarely inside the panel, outside the card.
-  const sampleX = imgW - 3;
-  const sampleY = imgH - 3;
-  const { data: px } = await sharp(result)
-    .extract({ left: sampleX, top: sampleY, width: 1, height: 1 })
-    .removeAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true });
+  // Panel bounds: x ∈ [826, 1200), y ∈ [1126, 1500)
+  // Card bounds:  x ∈ [1007, 1194), y ∈ [1307, 1494)  (cardSize=187)
+  //
+  // Sample points (all inside panel, all outside card):
+  //   P1 far corner     (1197, 1497) — 3px from image corner
+  //   P2 right edge top (1190, 1130) — top of panel, right side (above card)
+  //   P3 bottom mid     (1000, 1490) — bottom of panel, left of card (card left=1007)
+  //   P4 panel mid-left (900, 1400)  — mid panel, clearly left of card left edge (1007)
+  //   P5 panel left     (840, 1200)  — left strip of panel, in body→panel zone
+  const samplePoints: Array<[number, number, string]> = [
+    [imgW - 3,          imgH - 3,          "far corner"],
+    [imgW - 10,         imgH - 370,        "right edge top"],
+    [imgW - 200,        imgH - 10,         "bottom mid"],
+    [900,               imgH - 100,        "panel mid-left"],
+    [imgW - 360,        imgH - 300,        "panel left"],
+  ];
 
-  const [sampR, sampG, sampB] = [px[0]!, px[1]!, px[2]!];
-
-  // Expected: the panel colour — sampled from the navy footer (#1A2744).
-  // We allow ±20 per channel for JPEG compression round-trips.
   const footerExpected = hexToRgb("#1A2744");
-  const cardExpected   = hexToRgb(style.fill);  // #f5f0e8 cream — should NOT be here
-  const TOL = 20;
+  const cardExpected   = hexToRgb(style.fill);  // cream — should NOT appear here
+  const TOL            = 30;  // allow extra tolerance for JPEG round-trips across samples
 
-  const matchesPanel =
-    Math.abs(sampR - footerExpected.r) <= TOL &&
-    Math.abs(sampG - footerExpected.g) <= TOL &&
-    Math.abs(sampB - footerExpected.b) <= TOL;
+  let allPass = true;
+  console.log(`\n   Panel colour checks (expect ≈ navy #1A2744, NOT cream ${style.fill}):`);
 
-  const matchesCard =
-    Math.abs(sampR - cardExpected.r) <= TOL &&
-    Math.abs(sampG - cardExpected.g) <= TOL &&
-    Math.abs(sampB - cardExpected.b) <= TOL;
+  for (const [sx, sy, label] of samplePoints) {
+    const [r, g, b] = await samplePixel(result, sx, sy);
+    const matchesPanel =
+      Math.abs(r - footerExpected.r) <= TOL &&
+      Math.abs(g - footerExpected.g) <= TOL &&
+      Math.abs(b - footerExpected.b) <= TOL;
+    const matchesCard =
+      Math.abs(r - cardExpected.r) <= TOL &&
+      Math.abs(g - cardExpected.g) <= TOL &&
+      Math.abs(b - cardExpected.b) <= TOL;
 
-  if (matchesPanel) {
-    console.log(
-      `\n✅ Opaque panel detected at (${sampleX},${sampleY}): ` +
-      `rgb(${sampR},${sampG},${sampB}) ≈ footer navy #1A2744 ✓`,
-    );
-  } else if (matchesCard) {
-    console.warn(
-      `\n⚠️  Corner pixel matches card fill (${style.fill}) instead of panel colour — ` +
-      `opaque panel may not be composited at (${sampleX},${sampleY}): rgb(${sampR},${sampG},${sampB})`,
-    );
+    if (matchesPanel) {
+      console.log(`   ✅ (${sx},${sy}) ${label}: rgb(${r},${g},${b}) ≈ navy ✓`);
+    } else if (matchesCard) {
+      console.warn(`   ⚠️  (${sx},${sy}) ${label}: rgb(${r},${g},${b}) — matches card fill (halo/no-panel?)`);
+      allPass = false;
+    } else {
+      console.warn(`   ⚠️  (${sx},${sy}) ${label}: rgb(${r},${g},${b}) — unexpected (expected navy or card)`);
+      allPass = false;
+    }
+  }
+
+  if (allPass) {
+    console.log(`\n✅ All panel sample points confirmed opaque navy — no glow halo or smudge detected.`);
   } else {
-    console.warn(
-      `\n⚠️  Unexpected corner pixel at (${sampleX},${sampleY}): rgb(${sampR},${sampG},${sampB})`,
-    );
-    console.warn(`   Expected panel colour ≈ #1A2744 = rgb(${footerExpected.r},${footerExpected.g},${footerExpected.b}) ±${TOL}`);
-    console.warn(`   Inspect ${cornerPath} for visual confirmation.`);
+    console.warn(`\n⚠️  Some panel samples failed — inspect ${cornerPath} for visual confirmation.`);
   }
 
   console.log(`\nAll templates registered: ${Object.keys(TEMPLATE_QR_STYLES).join(", ")}`);

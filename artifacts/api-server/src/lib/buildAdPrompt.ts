@@ -995,7 +995,7 @@ export function buildAdPrompt(
         ? `SPECIAL OFFER (dashed coupon box, lower area): offer text bold dark, fine print smaller below.\n\n`
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `RIGHT-EDGE STRIP: No purple circle/dot-grid, coupon box, cream tile, or leaf sprig in the reserved right-edge strip.\n\n`
+      `STARBURST CORNER: No purple circle/dot-grid, coupon box, cream tile, or leaf sprig in the corner.\n\n`
     )
     : templateKey === "sage-organic"
     ? (
@@ -1024,7 +1024,7 @@ export function buildAdPrompt(
         ? `COUPON (kraft paper/cardboard textured rectangle with dashed stitched border and scissors icon, lower-right): offer text bold dark, fine print smaller below.\n\n`
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `RIGHT-EDGE STRIP: No kraft coupon, dark olive badge, or olive wave band in the reserved right-edge strip.\n\n`
+      `STARBURST CORNER: No kraft coupon, dark olive badge, or olive wave band in the corner.\n\n`
     )
     : templateKey === "home-elegance"
     ? (
