@@ -320,6 +320,48 @@ export function HowItWorks({ copy = DEFAULT_COPY }: { copy?: LandingCopy }) {
             </div>
           ))}
         </div>
+
+        <div style={{
+          marginTop: 48,
+          background: "#fdf8f3",
+          borderRadius: 16,
+          padding: "28px 32px",
+          border: "1px solid #f0e0c0",
+          textAlign: "center",
+        }}>
+          <p style={{
+            fontSize: 15, fontWeight: 700, color: "#374151",
+            fontFamily: "sans-serif", margin: "0 0 16px",
+          }}>
+            📅 Four seasonal mailings a year — four chances to reach 5,000 homes
+          </p>
+          <div style={{ display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+            {[
+              { label: "❄️ Winter", bg: "#dbeafe", color: "#1d4ed8" },
+              { label: "🌸 Spring", bg: "#d1fae5", color: "#065f46" },
+              { label: "☀️ Summer", bg: "#fef3c7", color: "#92400e" },
+              { label: "🍂 Fall",   bg: "#fee2e2", color: "#991b1b" },
+            ].map(s => (
+              <div key={s.label} style={{
+                padding: "6px 18px",
+                borderRadius: 9999,
+                background: s.bg,
+                color: s.color,
+                fontSize: 13.5,
+                fontWeight: 700,
+                fontFamily: "sans-serif",
+              }}>
+                {s.label}
+              </div>
+            ))}
+          </div>
+          <p style={{
+            fontSize: 13.5, color: "#666", fontFamily: "sans-serif",
+            lineHeight: 1.6, margin: 0, maxWidth: 560, marginLeft: "auto", marginRight: "auto",
+          }}>
+            Spots are available each season. Lock in your category now and stay top of mind all year long — or book multiple issues for a discounted rate.
+          </p>
+        </div>
       </div>
     </section>
   );
@@ -556,12 +598,14 @@ export function CTABanner() {
   );
 }
 
-export function FAQSection({ copy = DEFAULT_COPY }: { copy?: LandingCopy }) {
+export function FAQSection({ copy = DEFAULT_COPY, placeName }: { copy?: LandingCopy; placeName?: string }) {
   const FAQ_ITEMS = [
     { q: "How do you pick which homes get the postcard?",
       a: copy.faqEddm },
     { q: "When will my ad hit mailboxes?",
       a: copy.faqMailboxes },
+    { q: "Can I advertise in multiple issues?",
+      a: "Absolutely — many local businesses advertise across multiple seasonal mailings to stay top of mind all year. We mail four times annually: Winter, Spring, Summer, and Fall. You can book a spot in each mailing individually, or ask about our multi-issue Growth Plan (6 consecutive issues, 10% off) and Premium Visibility Plan (12 consecutive issues, 20% off) for an ongoing discounted rate." },
     { q: "How much does it cost?",
       a: "Spots range from $199 (Small, 2\"×2\") to $499 (Extra-Large, 4\"×5\"). All sizes include professional ad design and mailing to 5,000 homes." },
     { q: "Is my business good for this postcard?",
@@ -600,6 +644,34 @@ export function FAQSection({ copy = DEFAULT_COPY }: { copy?: LandingCopy }) {
             </div>
           ))}
         </div>
+
+        {placeName && (
+          <div style={{
+            marginTop: 40,
+            background: "#fdf8f3",
+            border: "1.5px solid #C9A84C",
+            borderRadius: 12,
+            padding: "20px 24px",
+            display: "flex",
+            gap: 16,
+            alignItems: "flex-start",
+            fontFamily: "sans-serif",
+          }}>
+            <div style={{ fontSize: 26, flexShrink: 0, lineHeight: 1 }}>📞</div>
+            <div>
+              <div style={{
+                fontSize: 13, fontWeight: 700, color: "#7B1418",
+                textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6,
+              }}>
+                Need to make changes to a future mailing?
+              </div>
+              <p style={{ fontSize: 14.5, color: "#374151", lineHeight: 1.65, margin: 0 }}>
+                Reach out to your local {placeName} postcard coordinator — they manage this campaign and can
+                help with spot changes, ad updates, and renewals for upcoming issues.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );

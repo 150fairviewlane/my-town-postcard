@@ -408,7 +408,7 @@ export default function TerritoryLandingPage({ params }: { params: { slug: strin
           <Pricing />
           <Features copy={copy} />
           <CTABanner />
-          <FAQSection copy={copy} />
+          <FAQSection copy={copy} placeName={derivePlaceName(campaign)} />
           <ReserveForm />
           <Footer copy={copy} />
         </>
