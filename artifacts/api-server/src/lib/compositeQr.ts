@@ -438,17 +438,23 @@ export async function compositeQrOnto(
   //   - Full height from cardTop to image bottom, so it wipes any Grok-drawn
   //     QR code, barcode, or design element in the right quarter.
   // Layer 2: the backing card + QR with crisp drop shadow on top.
+  // panelTop = top of the footer bar (bottom 20% of image).
+  // Grok renders its black placeholder box starting at the footer top, so
+  // the panel must cover the full footer height — not just the card footprint —
+  // or the top portion of the black box shows above the card.
   const panelLeft   = Math.round(spec.imgW * 0.75);
+  const panelTop    = Math.round(spec.imgH * 0.80);
   const panelWidth  = spec.imgW - panelLeft;
-  const panelHeight = spec.imgH - layout.cardTop;
+  const panelHeight = spec.imgH - panelTop;
   const backingPng = await sharp(
     makeOpaquePanelSvg(panelWidth, panelHeight, panelColor),
   ).png().toBuffer();
 
   const compositedBuffer: Buffer = await sharp(imageBuffer)
     .composite([
-      // Layer 1 (bottom): footer-colour panel covering right 25% of footer.
-      { input: backingPng, left: panelLeft, top: layout.cardTop },
+      // Layer 1 (bottom): footer-colour panel covering right 25% of footer,
+      // full footer height. Erases Grok's entire black placeholder box.
+      { input: backingPng, left: panelLeft, top: panelTop },
       // Layer 2 (top): backing card + QR with drop shadow.
       { input: cardWithQr, left: layout.cardLeft, top: layout.cardTop },
     ])
