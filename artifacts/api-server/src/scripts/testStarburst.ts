@@ -108,28 +108,28 @@ async function main() {
   console.log(`   After composite: ${outBytes.toLocaleString()} bytes  (Δ ${deltaKB} KB)`);
 
   // ── Multi-pixel panel verification ───────────────────────────────────────
-  // Panel is now FULL image width × 16% of imgH.
+  // Panel is right-edge strip × 16% of imgH.
   // All sample points are inside the panel zone and OUTSIDE the card rect,
   // so they should all be close to the footer navy (#1A2744).
   //
-  // Panel geometry (full-width, 16% height):
-  //   panelW = imgW = 1200  → panelLeft = 0
+  // Panel geometry (right-edge, 16% height):
+  //   panelW = PANEL_SIZE_PX[xl] = 280  → panelLeft = imgW - 280 = 920
   //   panelH = Math.round(imgH × 0.16) = 240 → panelTop = imgH - 240 = 1260
-  //   Panel bounds: x ∈ [0, 1200), y ∈ [1260, 1500)
+  //   Panel bounds: x ∈ [920, 1200), y ∈ [1260, 1500)
   // Card bounds:  x ∈ [1007, 1194), y ∈ [1307, 1494)  (cardSize=187, inset=6)
   //
   // Sample points (all inside panel, all outside card):
   //   P1 far right corner  (1197, 1497) — 3px from image corner
   //   P2 right edge top    (1190, 1265) — 5px below panel top (1260)
-  //   P3 centre bottom     (600, 1490)  — centre of panel, bottom row
-  //   P4 left edge mid     (30, 1380)   — far left of panel (tests full-width coverage)
-  //   P5 left edge top     (30, 1265)   — left edge near panel top
+  //   P3 left-of-card bot  (950, 1490)  — inside panel, left of card (card left=1007)
+  //   P4 panel left mid    (930, 1380)  — left strip of panel
+  //   P5 panel left top    (930, 1265)  — left strip, near panel top
   const samplePoints: Array<[number, number, string]> = [
     [imgW - 3,   imgH - 3,          "far right corner"],
     [imgW - 10,  imgH - 235,        "right edge top"],
-    [600,        imgH - 10,         "centre bottom"],
-    [30,         imgH - 120,        "left edge mid"],
-    [30,         imgH - 235,        "left edge top"],
+    [950,        imgH - 10,         "left-of-card bottom"],
+    [930,        imgH - 120,        "panel left mid"],
+    [930,        imgH - 235,        "panel left top"],
   ];
 
   const footerExpected = hexToRgb("#1A2744");

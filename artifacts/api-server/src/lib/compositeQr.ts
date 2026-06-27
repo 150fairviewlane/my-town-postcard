@@ -166,10 +166,14 @@ const CARD_MARGIN = 1.0375;
 
 // ── Opaque panel constants ─────────────────────────────────────────────────
 /**
- * The panel spans the FULL image width so it covers any AI-generated body
- * content (e.g. offer tickets, coupons) that bleeds into the footer zone.
- * Height is 16 % of imgH — tuned to match the typical AI footer band height.
+ * Width (px) of the opaque footer-colour panel anchored at the bottom-right
+ * image corner. Sized to comfortably frame the QR card with breathing room to
+ * its left. The panel must be ≥ cardSize + 2×CARD_INSET.
+ *   xl  cardSize=187 → needs ≥199 px; 280 gives 87 px of buffer
+ *   l   cardSize=135 → needs ≥147 px; 200 gives 53 px of buffer
+ *   m/s cardSize= 93 → needs ≥105 px; 140 gives 35 px of buffer
  */
+const PANEL_SIZE_PX: Record<SizeKey, number> = { xl: 280, l: 200, m: 140, s: 140 };
 
 /**
  * Extra canvas pixels added to the card SVG on the right and bottom edges so
@@ -430,16 +434,14 @@ export async function compositeQrOnto(
   );
 
   // ── 4. Composite opaque panel then card+QR onto image (single pass) ────────
-  // Layer 1: full-width solid rectangle at footer height covers the entire
-  //          bottom band — no AI-generated bleed (coupons, offer tickets, etc.)
-  //          can show through. Panel colour is sampled from the AI footer so it
-  //          looks like a natural extension of the footer background.
+  // Layer 1: right-edge panel in the footer colour covers the QR zone so no
+  //          AI-generated corner decoration bleeds around the card.
   // Layer 2: backing card + QR with crisp drop shadow on top.
-  // Panel geometry: full image width × 16 % of imgH.
-  const panelW      = spec.imgW;
+  // Panel geometry: PANEL_SIZE_PX wide × 16 % of imgH, anchored bottom-right.
+  const panelW      = PANEL_SIZE_PX[spotSize] ?? 280;
   const footerBandH = Math.round(spec.imgH * 0.16);
   const panelH      = footerBandH;
-  const panelLeft   = 0;
+  const panelLeft   = spec.imgW - panelW;
   const panelTop    = spec.imgH - panelH;
 
   const panelPng = await sharp(makeOpaquePanelSvg(panelW, panelH, panelColor)).png().toBuffer();
