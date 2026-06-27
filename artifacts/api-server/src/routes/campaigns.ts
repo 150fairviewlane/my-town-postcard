@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and, inArray, sql } from "drizzle-orm";
-import { db, campaignsTable, spotsTable, territoriesTable } from "@workspace/db";
+import { db, campaignsTable, dealersTable, spotsTable, territoriesTable } from "@workspace/db";
 import { GetActiveCampaignResponse } from "@workspace/api-zod";
 import { fetchScanCountsForSpotIds } from "../lib/scanCounts";
 import { findGazetteerCity } from "../lib/censusApi";
@@ -77,10 +77,17 @@ router.get("/campaigns/by-slug/:slug", async (req, res): Promise<void> => {
     return;
   }
 
-  const spots = await db
-    .select()
-    .from(spotsTable)
-    .where(eq(spotsTable.campaignId, campaign.id));
+  const [spots, dealerRow] = await Promise.all([
+    db.select().from(spotsTable).where(eq(spotsTable.campaignId, campaign.id)),
+    campaign.dealerId
+      ? db
+          .select({ companyEmail: dealersTable.companyEmail })
+          .from(dealersTable)
+          .where(eq(dealersTable.id, campaign.dealerId))
+          .limit(1)
+          .then(rows => rows[0] ?? null)
+      : Promise.resolve(null),
+  ]);
 
   const counts = await fetchScanCountsForSpotIds(spots.map(s => s.id));
 
@@ -94,6 +101,7 @@ router.get("/campaigns/by-slug/:slug", async (req, res): Promise<void> => {
 
   const response = {
     ...campaign,
+    dealerEmail: dealerRow?.companyEmail ?? null,
     createdAt: serializeDate(campaign.createdAt),
     spots: spots.map(s => ({
       ...s,

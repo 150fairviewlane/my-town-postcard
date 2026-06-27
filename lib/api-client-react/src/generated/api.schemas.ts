@@ -44,6 +44,11 @@ export interface Campaign {
   cityList?: string | null;
   /** @nullable */
   dealerWelcomeMessage?: string | null;
+  /**
+   * The dealer's @mytownpostcard.com company email, if provisioned
+   * @nullable
+   */
+  dealerEmail?: string | null;
   createdAt: string;
 }
 

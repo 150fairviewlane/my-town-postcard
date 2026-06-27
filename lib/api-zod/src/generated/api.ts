@@ -33,6 +33,12 @@ export const GetActiveCampaignResponse = zod
     mailingMonth: zod.string().nullish(),
     cityList: zod.string().nullish(),
     dealerWelcomeMessage: zod.string().nullish(),
+    dealerEmail: zod
+      .string()
+      .nullish()
+      .describe(
+        "The dealer's @mytownpostcard.com company email, if provisioned",
+      ),
     createdAt: zod.string(),
   })
   .and(
@@ -87,6 +93,12 @@ export const GetCampaignBySlugResponse = zod
     mailingMonth: zod.string().nullish(),
     cityList: zod.string().nullish(),
     dealerWelcomeMessage: zod.string().nullish(),
+    dealerEmail: zod
+      .string()
+      .nullish()
+      .describe(
+        "The dealer's @mytownpostcard.com company email, if provisioned",
+      ),
     createdAt: zod.string(),
   })
   .and(
@@ -287,6 +299,12 @@ export const GetAdminCampaignResponse = zod.object({
     mailingMonth: zod.string().nullish(),
     cityList: zod.string().nullish(),
     dealerWelcomeMessage: zod.string().nullish(),
+    dealerEmail: zod
+      .string()
+      .nullish()
+      .describe(
+        "The dealer's @mytownpostcard.com company email, if provisioned",
+      ),
     createdAt: zod.string(),
   }),
   spots: zod.array(
@@ -384,6 +402,12 @@ export const ListAdminCampaignsResponse = zod.object({
         mailingMonth: zod.string().nullish(),
         cityList: zod.string().nullish(),
         dealerWelcomeMessage: zod.string().nullish(),
+        dealerEmail: zod
+          .string()
+          .nullish()
+          .describe(
+            "The dealer's @mytownpostcard.com company email, if provisioned",
+          ),
         createdAt: zod.string(),
       })
       .and(
@@ -426,6 +450,12 @@ export const CreateCampaignResponse = zod
       mailingMonth: zod.string().nullish(),
       cityList: zod.string().nullish(),
       dealerWelcomeMessage: zod.string().nullish(),
+      dealerEmail: zod
+        .string()
+        .nullish()
+        .describe(
+          "The dealer's @mytownpostcard.com company email, if provisioned",
+        ),
       createdAt: zod.string(),
     }),
     spots: zod.array(
@@ -493,6 +523,12 @@ export const GetAdminCampaignByIdResponse = zod
       mailingMonth: zod.string().nullish(),
       cityList: zod.string().nullish(),
       dealerWelcomeMessage: zod.string().nullish(),
+      dealerEmail: zod
+        .string()
+        .nullish()
+        .describe(
+          "The dealer's @mytownpostcard.com company email, if provisioned",
+        ),
       createdAt: zod.string(),
     }),
     spots: zod.array(
@@ -560,6 +596,12 @@ export const ActivateCampaignResponse = zod
       mailingMonth: zod.string().nullish(),
       cityList: zod.string().nullish(),
       dealerWelcomeMessage: zod.string().nullish(),
+      dealerEmail: zod
+        .string()
+        .nullish()
+        .describe(
+          "The dealer's @mytownpostcard.com company email, if provisioned",
+        ),
       createdAt: zod.string(),
     }),
     spots: zod.array(
@@ -627,6 +669,12 @@ export const CompleteCampaignResponse = zod
       mailingMonth: zod.string().nullish(),
       cityList: zod.string().nullish(),
       dealerWelcomeMessage: zod.string().nullish(),
+      dealerEmail: zod
+        .string()
+        .nullish()
+        .describe(
+          "The dealer's @mytownpostcard.com company email, if provisioned",
+        ),
       createdAt: zod.string(),
     }),
     spots: zod.array(

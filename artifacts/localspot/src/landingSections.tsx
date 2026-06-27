@@ -598,7 +598,7 @@ export function CTABanner() {
   );
 }
 
-export function FAQSection({ copy = DEFAULT_COPY, placeName }: { copy?: LandingCopy; placeName?: string }) {
+export function FAQSection({ copy = DEFAULT_COPY, placeName, dealerEmail }: { copy?: LandingCopy; placeName?: string; dealerEmail?: string | null }) {
   const FAQ_ITEMS = [
     { q: "How do you pick which homes get the postcard?",
       a: copy.faqEddm },
@@ -668,6 +668,18 @@ export function FAQSection({ copy = DEFAULT_COPY, placeName }: { copy?: LandingC
               <p style={{ fontSize: 14.5, color: "#374151", lineHeight: 1.65, margin: 0 }}>
                 Reach out to your local {placeName} postcard coordinator — they manage this campaign and can
                 help with spot changes, ad updates, and renewals for upcoming issues.
+                {dealerEmail && (
+                  <>
+                    {" "}Email them at{" "}
+                    <a
+                      href={`mailto:${dealerEmail}`}
+                      style={{ color: "#7B1418", fontWeight: 600, textDecoration: "none" }}
+                    >
+                      {dealerEmail}
+                    </a>
+                    .
+                  </>
+                )}
               </p>
             </div>
           </div>

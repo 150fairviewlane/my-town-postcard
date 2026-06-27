@@ -983,6 +983,9 @@ components:
           type: ["string", "null"]
         dealerWelcomeMessage:
           type: ["string", "null"]
+        dealerEmail:
+          type: ["string", "null"]
+          description: The dealer's @mytownpostcard.com company email, if provisioned
         createdAt:
           type: string
       required:
