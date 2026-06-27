@@ -229,7 +229,6 @@ function buildCopy(campaign: any): LandingCopy {
         : DEFAULT_COPY.countyPossessive,
     heroCities: citiesOxford,
     heroSeason: season || DEFAULT_COPY.heroSeason,
-    howItWorksMailDesc: `5,000 postcards printed and delivered to ${place} homes via USPS.`,
     mailingLabel,
     mailingDetail: `Timed to reach 5,000 ${place} homes during peak local shopping season${mailingWhen}.`,
     targetedAreasDesc: `We focus on specific ${place} neighborhoods where your customers already live.`,

@@ -17,7 +17,6 @@ export type LandingCopy = {
   countyPossessive: string; // hero headline line 2, e.g. "Habersham County's"
   heroCities: string; // hero subcopy city list (no Oxford comma)
   heroSeason: string; // "this <season>" in hero subcopy
-  howItWorksMailDesc: string; // How-It-Works step 3 full description
   mailingLabel: string; // Features card title
   mailingDetail: string; // Features mailing-window full description
   targetedAreasDesc: string; // Features "Targeted Areas" full description
@@ -52,7 +51,6 @@ export const DEFAULT_COPY: LandingCopy = {
   countyPossessive: "Your Town's",
   heroCities: "local",
   heroSeason: _s,
-  howItWorksMailDesc: "5,000 postcards printed and delivered to local homes via USPS Every Door Direct Mail.",
   mailingLabel: `${_s} ${_y} Mailing`,
   mailingDetail:
     "Timed to reach 5,000 local homes during peak shopping season — a precise, targeted drop right to their mailboxes.",
@@ -293,20 +291,18 @@ export function HowItWorks({ copy = DEFAULT_COPY }: { copy?: LandingCopy }) {
       desc: "Only one business per category. No direct competition on your postcard." },
     { n: "2", icon: "🎨", title: "Done-for-You Design",
       desc: "Polished professional ad design that makes your business stand out." },
-    { n: "3", icon: "✉️", title: "Printed & Mailed for You",
-      desc: copy.howItWorksMailDesc },
-    { n: "4", icon: "🎯", title: "Instant Local Reach",
-      desc: "Your ad reaches 5,000 local homes — real customers, not clicks." },
+    { n: "3", icon: "✉️", title: "Instant Local Reach",
+      desc: "5,000 postcards are printed and mailed directly to local homes via USPS Every Door Direct Mail — reaching real customers, not clicks." },
   ];
   return (
     <section id="how-it-works" style={{ background: "#fff", padding: "48px 32px 80px" }}>
-      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+      <div style={{ maxWidth: 900, margin: "0 auto" }}>
         <h2 style={{ textAlign: "center", fontSize: 36, fontWeight: 900, color: "#111",
           fontFamily: "Georgia,serif", marginBottom: 10 }}>How It Works</h2>
         <p style={{ textAlign: "center", color: "#666", fontSize: 16, marginBottom: 56, maxWidth: 520, margin: "0 auto 56px" }}>
           Simple, cost-effective advertising that connects local businesses with their neighbors.
         </p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 32 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 32 }}>
           {steps.map(s => (
             <div key={s.n} style={{ textAlign: "center", padding: "28px 20px",
               border: "1px solid #f0f0f0", borderRadius: 16, background: "#fff",
