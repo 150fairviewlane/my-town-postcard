@@ -1,14 +1,17 @@
 /**
- * testStarburst.ts — visual proof that the glow disc composites correctly.
+ * testStarburst.ts — visual proof that the opaque footer panel composites correctly.
  *
  * Creates a dark-footer synthetic ad (matching a typical postcard footer area),
  * runs compositeQrOnto, then saves:
- *   /tmp/starburst_full.jpg       — full ad with glow disc + card + QR
+ *   /tmp/starburst_full.jpg       — full ad with opaque panel + card + QR
  *   /tmp/starburst_corner.jpg     — 400×400 px crop of the bottom-right corner
  *
- * Expected result: a smooth radial-gradient quarter-circle (color = template's
- * CardStyle.fill) fades from the bottom-right corner into the ad. The backing
- * card + QR sit centred on top of the disc origin.
+ * Expected result: the bottom-right corner is covered by an opaque rectangle
+ * whose colour matches the synthetic navy footer (#1A2744). The backing card
+ * (cream #f5f0e8) + QR sit on top with a crisp drop shadow.
+ *
+ * The strip between the card's right/bottom edges and the image edge should be
+ * the footer panel colour — no gradient halo, no blurred fill, pure navy.
  *
  * Run: pnpm --filter @workspace/api-server exec tsx src/scripts/testStarburst.ts
  */
@@ -29,7 +32,7 @@ const SIZE_KEY    = "xl" as const;
 
 /**
  * Synthetic JPEG: cream body with a dark navy footer (20% of height).
- * Gives a realistic contrast backdrop for the glow disc.
+ * Gives a realistic contrast backdrop for the opaque panel.
  *
  * Uses a single SVG that matches the exact expected image dimensions so the
  * buffer passed to compositeQrOnto is always exactly imgW × imgH — preventing
@@ -59,14 +62,14 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
 
 async function main() {
   const { imgW, imgH } = QR_PLACEMENT[SIZE_KEY];
-  console.log(`\n── testStarburst.ts (glow disc) ──────────────────────────`);
+  console.log(`\n── testStarburst.ts (opaque panel) ───────────────────────`);
   console.log(`Image: ${imgW}×${imgH} px (XL spot)`);
 
   const synth = await makeSyntheticJpeg();
   console.log(`Synthetic JPEG: ${synth.length.toLocaleString()} bytes (cream body + navy footer)`);
 
-  // Use heritage-home style — cream fill #f5f0e8 on a dark footer gives high
-  // contrast to verify the disc colour.
+  // Use heritage-home style — cream fill #f5f0e8 on a dark navy footer gives
+  // maximum contrast to verify the panel colour is sampled correctly.
   const style = getTemplateQrStyle("heritage-home");
   console.log(`Card style: ${JSON.stringify(style)}`);
 
@@ -93,17 +96,16 @@ async function main() {
   console.log(`\n   Raw synthetic:   ${rawBytes.toLocaleString()} bytes`);
   console.log(`   After composite: ${outBytes.toLocaleString()} bytes  (Δ ${deltaKB} KB)`);
 
-  // ── Disc colour verification ──────────────────────────────────────────────
-  // Sample in the CARD_INSET strip — the 6px margin between the card's right/
-  // bottom edge and the image edge. This region sits on the glow disc at nearly
-  // 100% opacity (≈ 5px from disc centre), so the pixel should match style.fill
-  // within JPEG compression tolerance (±20 per channel).
+  // ── Panel colour verification ─────────────────────────────────────────────
+  // Sample the extreme corner pixel (3 px in from each edge). This falls
+  // inside the opaque panel (which covers a 374×374 px square anchored at the
+  // corner) and outside the card itself. The panel colour is sampled from the
+  // synthetic footer band (#1A2744 navy) so the pixel should be navy,
+  // NOT the card fill colour (#f5f0e8 cream).
   //
-  // XL geometry (CARD_INSET = 6):
-  //   card right  = imgW − cardSize − CARD_INSET + cardSize = imgW − 6 = 1194
-  //   card bottom = imgH − cardSize − CARD_INSET + cardSize = imgH − 6 = 1494
-  //   sample at (imgW − 3, imgH − 3) = (1197, 1497) — well inside image bounds,
-  //   outside the card, and only ~4 px from the disc centre → near-full opacity.
+  // XL geometry — card placed at (1007, 1307) inside a 1200×1500 image:
+  //   corner pixel (1197, 1497) is 193 px below and 7 px right of the card edge
+  //   → squarely inside the panel, outside the card.
   const sampleX = imgW - 3;
   const sampleY = imgH - 3;
   const { data: px } = await sharp(result)
@@ -113,24 +115,39 @@ async function main() {
     .toBuffer({ resolveWithObject: true });
 
   const [sampR, sampG, sampB] = [px[0]!, px[1]!, px[2]!];
-  const expected = hexToRgb(style.fill);
-  const TOL = 20;
-  const matches =
-    Math.abs(sampR - expected.r) <= TOL &&
-    Math.abs(sampG - expected.g) <= TOL &&
-    Math.abs(sampB - expected.b) <= TOL;
 
-  if (matches) {
+  // Expected: the panel colour — sampled from the navy footer (#1A2744).
+  // We allow ±20 per channel for JPEG compression round-trips.
+  const footerExpected = hexToRgb("#1A2744");
+  const cardExpected   = hexToRgb(style.fill);  // #f5f0e8 cream — should NOT be here
+  const TOL = 20;
+
+  const matchesPanel =
+    Math.abs(sampR - footerExpected.r) <= TOL &&
+    Math.abs(sampG - footerExpected.g) <= TOL &&
+    Math.abs(sampB - footerExpected.b) <= TOL;
+
+  const matchesCard =
+    Math.abs(sampR - cardExpected.r) <= TOL &&
+    Math.abs(sampG - cardExpected.g) <= TOL &&
+    Math.abs(sampB - cardExpected.b) <= TOL;
+
+  if (matchesPanel) {
     console.log(
-      `\n✅ Glow disc detected at (${sampleX},${sampleY}): ` +
-      `rgb(${sampR},${sampG},${sampB}) ≈ ${style.fill} (fill colour ✓)`,
+      `\n✅ Opaque panel detected at (${sampleX},${sampleY}): ` +
+      `rgb(${sampR},${sampG},${sampB}) ≈ footer navy #1A2744 ✓`,
+    );
+  } else if (matchesCard) {
+    console.warn(
+      `\n⚠️  Corner pixel matches card fill (${style.fill}) instead of panel colour — ` +
+      `opaque panel may not be composited at (${sampleX},${sampleY}): rgb(${sampR},${sampG},${sampB})`,
     );
   } else {
     console.warn(
-      `\n⚠️  Sample pixel at (${sampleX},${sampleY}): rgb(${sampR},${sampG},${sampB}) — ` +
-      `expected ≈ ${style.fill} = rgb(${expected.r},${expected.g},${expected.b}) ±${TOL}`,
+      `\n⚠️  Unexpected corner pixel at (${sampleX},${sampleY}): rgb(${sampR},${sampG},${sampB})`,
     );
-    console.warn(`   Inspect ${cornerPath} to verify the glow disc is rendering.`);
+    console.warn(`   Expected panel colour ≈ #1A2744 = rgb(${footerExpected.r},${footerExpected.g},${footerExpected.b}) ±${TOL}`);
+    console.warn(`   Inspect ${cornerPath} for visual confirmation.`);
   }
 
   console.log(`\nAll templates registered: ${Object.keys(TEMPLATE_QR_STYLES).join(", ")}`);
