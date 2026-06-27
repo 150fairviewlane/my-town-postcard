@@ -1662,11 +1662,14 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   }
 
   // Start keepalive immediately — before photo/logo fetches AND the xAI call.
-  // 2-second interval ensures no more than 2 s of silence between server writes,
-  // preventing the Replit proxy from closing the connection during any async gap
-  // (remote photo fetch, xAI generation, image crop) that might exceed its idle timeout.
+  // flushHeaders() commits the HTTP 200 + headers to the proxy right away so the
+  // proxy's idle-timeout clock resets from this point, not from T+2 s when the
+  // first body write would otherwise arrive.
+  // 1-second interval keeps the connection alive through any async gap
+  // (remote photo fetch, xAI generation, image compositing).
   res.setHeader("Content-Type", "application/json");
-  const keepAliveTimer = setInterval(() => { res.write("\n"); }, 2000);
+  res.flushHeaders();
+  const keepAliveTimer = setInterval(() => { res.write("\n"); }, 1000);
   const endJson = (data: object) => {
     clearInterval(keepAliveTimer);
     res.end(JSON.stringify(data));
