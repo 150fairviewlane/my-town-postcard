@@ -397,3 +397,13 @@
     inset: -1px;
   }
 }
+
+.ad-generator-modal {
+  max-height: calc(94vh - 32px);
+}
+
+@supports (height: 100dvh) {
+  .ad-generator-modal {
+    max-height: calc(94dvh - 32px);
+  }
+}

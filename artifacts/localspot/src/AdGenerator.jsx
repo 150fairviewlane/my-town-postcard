@@ -1378,10 +1378,11 @@ const formValid = formData.businessName.trim() && formData.industry && formData.
 return (<>
 <div style={{
 position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)",
-display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16,
+display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
+padding: 16, paddingBottom: "max(16px, env(safe-area-inset-bottom))",
 }}>
-<div style={{
-background: "#f8fafc", borderRadius: 18, width: "100%", maxWidth: 1280, maxHeight: "94vh",
+<div className="ad-generator-modal" style={{
+background: "#f8fafc", borderRadius: 18, width: "100%", maxWidth: 1280,
 overflow: "hidden", display: "flex", flexDirection: "column",
 boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
 }}>
