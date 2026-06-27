@@ -25,6 +25,8 @@
     "seed:qa": "tsx ./src/seedQaCampaign.ts",
     "qa:bot": "tsx ./src/qaBot.ts",
     "test:corner-erase": "tsx ./src/test-corner-erase.ts",
+    "gen:disc-samples": "tsx ./src/gen-disc-samples.ts",
+    "test:disc-erase": "tsx ./src/test-disc-erase.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {

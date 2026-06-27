@@ -356,24 +356,32 @@ export async function compositeQrOnto(
     .png()
     .toBuffer();
 
-  // ── 3.5. Erase corner starburst with blur-extend fill ────────────────────
-  // Visual measurement across 17 raw Grok images: starburst/badge shapes placed
-  // in the bottom-right corner extend up to ≥564 px diagonal from that corner
-  // (5 of 17 images exceeded the 400 px measurement crop; reliably measured
-  // worst-case: 530 px). ERASE_ZONE sizes add a safety margin on top of that.
+  // ── 3.5. Erase corner disc decoration with blur-extend fill ──────────────
+  // Grok places a small solid gold disc in the bottom-right footer corner.
+  // We erase exactly the region the glow disc (step 4) will cover so that
+  // any AI-generated decoration in that zone is cleanly replaced before we
+  // draw our own glow disc on top.
+  //
+  // Zone sizing: ERASE_ZONE_PX = discRadius = cardSize × DISC_RADIUS_MULTIPLIER
+  // for each size.  Measurement across 8 fresh renders with the bounded "small
+  // gold disc" prompt confirmed every disc falls within this footprint:
+  //   XL (1200×1500): cardSize=187, discRadius=374 px — worst observed: ~330 px
+  //   L  (900×1200) : cardSize=135, discRadius=270 px
+  //   M  (900×600)  : cardSize=93,  discRadius=186 px
+  //   S  (600×600)  : cardSize=93,  discRadius=186 px
   //
   // Algorithm:
   //   1. Define a square erase zone anchored at the bottom-right corner.
   //   2. Extract a broader surrounding region (erase zone + 50% outward in
-  //      both axes) so the blur samples clean non-starburst footer pixels
-  //      at the edges of the sample.
-  //   3. Apply a strong Gaussian blur (σ = 60) — at this sigma the colour
-  //      from the surrounding clean strip bleeds into the starburst zone,
-  //      producing a smooth, background-matching fill rather than a flat patch.
+  //      both axes) so the blur samples clean non-disc footer pixels at
+  //      the zone boundary.
+  //   3. Apply a strong Gaussian blur (σ = 60) — colour from the surrounding
+  //      clean strip bleeds into the disc zone, producing a smooth
+  //      background-matching fill rather than a flat patch.
   //   4. Crop the blurred result to exactly the erase zone dimensions.
-  //   5. Composite the blurred fill over the image corner → erasedBase.
+  //   5. Composite the blurred fill over the corner → erasedBase.
   // The glow disc + QR card are then composited on top of erasedBase in step 4.
-  const ERASE_ZONE_PX: Record<SizeKey, number> = { xl: 600, l: 480, m: 280, s: 280 };
+  const ERASE_ZONE_PX: Record<SizeKey, number> = { xl: 374, l: 270, m: 186, s: 186 };
   const eraseSize  = ERASE_ZONE_PX[spotSize] ?? 600;
   const eraseLeft  = Math.max(0, spec.imgW - eraseSize);
   const eraseTop   = Math.max(0, spec.imgH - eraseSize);
