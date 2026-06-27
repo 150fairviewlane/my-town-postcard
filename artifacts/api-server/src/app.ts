@@ -1,4 +1,6 @@
 import express, { type Express } from "express";
+import path from "path";
+import { fileURLToPath } from "url";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
@@ -49,6 +51,16 @@ app.post(
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+// Serve vendored static assets (Typo.js spell-check library + en_US dictionary).
+// Uses import.meta.url so the path resolves correctly in both dev (src/) and
+// production (dist/) regardless of what process.cwd() returns.
+const __staticDir = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "static",
+);
+app.use("/api/static", express.static(__staticDir));
 
 // Public QR redirect lives at the app root (no /api prefix) so printed
 // codes are short and human-readable. Mount BEFORE the /api router so it
