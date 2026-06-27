@@ -960,6 +960,7 @@ export function buildAdPrompt(
       (menuCount > 0
         ? `EXACTLY ${menuCount} circular white icon badge${menuCount !== 1 ? "s" : ""} on the navy band and NO MORE — one per service in BUSINESS DETAILS, exactly as written. The template image may show more badge slots — ignore extras; do NOT render empty badges. No extras. No invented services.\n\n`
         : `navy band — render decorative circular icon badge graphics only; NO text captions or labels (no services provided).\n\n`) +
+      `LOWER-LEFT AREA (below service icons band, left of coupon): generate a secondary on-site photo — circular-cropped or soft-masked edges, no hard rectangular border, fills the zone completely.\n\n` +
       (d.offer
         ? `SPECIAL OFFER (gold/yellow dashed-border coupon box, lower-right): offer text bold dark navy, large. Fine print smaller below.\n\n`
         : "") +
