@@ -2333,6 +2333,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .upload-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .upload-row .upload-zone{max-height:120px;min-height:90px}
 .menu-list{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:7px}
+.menu-cap3 .mrow:last-child{grid-column:1/-1}
 .mrow{display:flex;gap:6px;align-items:center}
 .mrow input{flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:6px;font-family:'DM Sans',sans-serif;font-size:13.5px;color:var(--ink);background:var(--surface);outline:none;transition:border-color .2s}
 .mrow input:focus{border-color:var(--burg);background:#fff}
@@ -2500,9 +2501,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
     </div>
 
     <div>
-      <div class="sec-label">Menu Items / Services (up to 4)</div>
+      <div class="sec-label">Menu Items / Services</div>
       <div class="menu-list" id="menuList"></div>
-      <button class="add-btn" onclick="addMenuItem()">+ Add Item</button>
     </div>
 
     <div class="upload-row">
@@ -2602,6 +2602,8 @@ var _variations = [];          // [{imageUrl, templateKey, templateName}]
 var _sessionUsedTemplates = [];// templates used this session
 var _campaignUsedTemplates = [];
 var _spotSize = 'XL';
+var SIZE_DIMS = { XL:{w:400,h:500}, xl:{w:400,h:500}, L:{w:300,h:400}, large:{w:300,h:400}, M:{w:300,h:200}, medium:{w:300,h:200}, S:{w:200,h:200}, small:{w:200,h:200} };
+function getOrientation(sizeKey){ var d = SIZE_DIMS[sizeKey]||SIZE_DIMS.XL; return d.h>d.w?'portrait':d.w>d.h?'landscape':'square'; }
 var _spotId = 0;
 var _campaignId = 0;
 var _side = 'front';
@@ -3086,25 +3088,25 @@ function onFormChange(){
 function onIndustryChange(){
   var industry = document.getElementById('industry').value;
   if(industry && _takenCategories.indexOf(industry) !== -1){ showTakenDialog(industry); return; }
-  var list = document.getElementById('menuList'); list.innerHTML = '';
-  var defs = MENU_DEFAULTS[industry];
-  if(defs) defs.slice(0,4).forEach(function(v){ addMenuItem(v); });
+  renderMenuInputs(MENU_DEFAULTS[industry]);
   var tEl = document.getElementById('tagline'); if(tEl) tEl.value = TAGLINE_DEFAULTS[industry]||'';
   var op = OFFER_DEFAULTS[industry];
   document.getElementById('offer').value     = op ? op[0] : '';
   document.getElementById('offerFine').value = op ? op[1] : '';
 }
 
-function addMenuItem(val){
-  val = val || '';
+function renderMenuInputs(defs){
   var list = document.getElementById('menuList');
-  if(list.children.length >= 4) return;
-  var row = document.createElement('div'); row.className = 'mrow';
-  var inp = document.createElement('input'); inp.type='text'; inp.placeholder='Item Name $Price'; inp.value=val; inp.spellcheck=true;
-  var rm  = document.createElement('button'); rm.className='rm-btn'; rm.title='Remove'; rm.innerHTML='&#215;';
-  rm.onclick = function(){ this.parentElement.remove(); };
-  row.appendChild(inp); row.appendChild(rm);
-  list.appendChild(row);
+  var cap = getOrientation(_spotSize) === 'landscape' ? 3 : 4;
+  list.className = 'menu-list' + (cap === 3 ? ' menu-cap3' : '');
+  list.innerHTML = '';
+  for(var i = 0; i < cap; i++){
+    var row = document.createElement('div'); row.className = 'mrow';
+    var inp = document.createElement('input'); inp.type='text'; inp.placeholder='Item Name $Price'; inp.spellcheck=true;
+    if(defs && defs[i]) inp.value = defs[i];
+    row.appendChild(inp);
+    list.appendChild(row);
+  }
 }
 
 function getMenu(){
