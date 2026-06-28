@@ -143,7 +143,7 @@ export default function AdGenV7Page() {
   const [accentColor, setAccentColor]   = useState("#C8541A");
 
   // hero photo
-  const [heroTab, setHeroTab]           = useState("stock");
+  const [heroTab, setHeroTab]           = useState("upload");
   const [heroSrc, setHeroSrc]           = useState("");
   const [heroPrompt, setHeroPrompt]     = useState("");
 
@@ -188,11 +188,10 @@ export default function AdGenV7Page() {
     document.fonts.ready.then(() => stageRef.current?.batchDraw());
   }, []);
 
-  // Seed menu items + first stock photo on industry change
+  // Seed menu items on industry change
   useEffect(() => {
     const ind = INDUSTRIES[industry];
     if (ind?.menu) setMenuItems([...ind.menu.slice(0, 4), "", "", "", ""].slice(0, 4));
-    if (ind?.photos?.[0] && heroTab === "stock") setHeroSrc(ind.photos[0]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [industry]);
 
@@ -220,7 +219,6 @@ export default function AdGenV7Page() {
 
   const parsedMenu = useMemo(() => menuItems.map(parseMenuItem), [menuItems]);
 
-  const stockPhotos = useMemo(() => INDUSTRIES[industry]?.photos ?? [], [industry]);
 
   const ind = INDUSTRIES[industry] || INDUSTRIES[INDUSTRY_LIST[0]];
 
@@ -819,7 +817,7 @@ export default function AdGenV7Page() {
           <div>
             <div style={sectionLabel}>Hero Photo</div>
             <div style={{ display: "flex", gap: 4, marginBottom: 10 }}>
-              {[["stock","📚 Library"],["upload","📁 Upload"],["ai","✨ AI Gen"]].map(([t,lbl]) => (
+              {[["upload","📁 Upload"],["ai","✨ AI Gen"]].map(([t,lbl]) => (
                 <button key={t} onClick={() => setHeroTab(t)} style={{
                   flex: 1, padding: "6px 4px", border: "none", borderRadius: 6, cursor: "pointer",
                   fontSize: 11, fontWeight: 700,
@@ -828,17 +826,6 @@ export default function AdGenV7Page() {
                 }}>{lbl}</button>
               ))}
             </div>
-
-            {heroTab === "stock" && (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 5 }}>
-                {stockPhotos.slice(0, 4).map((url, i) => (
-                  <img key={i} src={url} alt="" onClick={() => setHeroSrc(url)} style={{
-                    width: "100%", aspectRatio: "4/3", objectFit: "cover", borderRadius: 6, cursor: "pointer",
-                    border: heroSrc === url ? "2.5px solid #C8541A" : "2.5px solid transparent",
-                  }} />
-                ))}
-              </div>
-            )}
 
             {heroTab === "upload" && (
               <label style={{
