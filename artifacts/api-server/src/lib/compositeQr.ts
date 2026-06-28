@@ -335,11 +335,18 @@ async function sampleFooterColor(
 }
 
 /**
- * Scan the left edge of the image upward from cardTop to find where the footer
- * bar actually begins. Uses the already-sampled footer colour as the reference.
- * Returns the topmost y where the median pixel in a 60 px wide strip matches
- * the footer colour within `tolerance` RGB distance.
- * Falls back to `cardTop` if no match is found above it.
+ * Scan the LEFT edge of the image UPWARD from cardTop to find where the footer
+ * bar actually begins.
+ *
+ * Strategy: extract a 60px-tall strip just above the card (cardTop-60 to cardTop)
+ * and walk it top-to-bottom. The FIRST row that matches the footer colour is the
+ * footer's upper boundary. Scanning upward from the card avoids the false-positive
+ * problem of the old top-down scan (which matched dark body elements on dark templates).
+ *
+ * Hard cap: never look more than MAX_SCAN_PX above cardTop so the panel can never
+ * reach into body content even on templates where footer colour bleeds upward.
+ *
+ * Falls back to cardTop (panel just covers the card) if nothing matches.
  */
 async function detectFooterTop(
   imageBuffer: Buffer,
@@ -348,6 +355,7 @@ async function detectFooterTop(
   footerHex: string,
   tolerance = 40,
 ): Promise<number> {
+  const MAX_SCAN_PX = 60; // never look more than 60 px above the card
   const sharpMod = await (import("sharp") as Promise<any>);
   const sharp    = (sharpMod.default ?? sharpMod) as typeof import("sharp");
 
@@ -355,10 +363,9 @@ async function detectFooterTop(
   const fg = parseInt(footerHex.slice(3, 5), 16);
   const fb = parseInt(footerHex.slice(5, 7), 16);
 
-  // Scan the left-edge strip from 60% of image height down to image bottom
-  // in a single sharp call, then walk it in memory — fast, no loop of sharp calls.
-  const scanTop = Math.round(imgH * 0.60);
-  const scanH   = imgH - scanTop;
+  const scanTop = Math.max(0, cardTop - MAX_SCAN_PX);
+  const scanH   = cardTop - scanTop; // ≤ MAX_SCAN_PX rows
+  if (scanH <= 0) return cardTop;
 
   const { data } = await sharp(imageBuffer)
     .extract({ left: 10, top: scanTop, width: 60, height: scanH })
@@ -366,8 +373,9 @@ async function detectFooterTop(
     .raw()
     .toBuffer({ resolveWithObject: true });
 
-  // Walk rows from top of scan region downward; find FIRST row matching footer.
-  let footerTop = cardTop; // fallback
+  // Walk the strip TOP-TO-BOTTOM (i.e. from farthest-above-card downward).
+  // The FIRST matching row is the topmost point of the footer bar.
+  let footerTop = cardTop; // fallback: panel starts exactly at the card
   for (let row = 0; row < scanH; row++) {
     const rs: number[] = [], gs: number[] = [], bs: number[] = [];
     for (let px = 0; px < 60; px++) {
@@ -384,7 +392,7 @@ async function detectFooterTop(
       (rs[mid]! - fr) ** 2 + (gs[mid]! - fg) ** 2 + (bs[mid]! - fb) ** 2,
     );
     if (dist < tolerance) {
-      footerTop = scanTop + row;
+      footerTop = scanTop + row; // topmost footer row found
       break;
     }
   }
@@ -484,14 +492,16 @@ export async function compositeQrOnto(
   );
 
   // ── 4. Composite footer-colour backing panel then card+QR (single pass) ──
-  // Panel is anchored to the QR card footprint + a small buffer on each side.
-  // This guarantees the panel never reaches into the ad body regardless of
-  // how tall or short the footer bar is on any given template.
-  // cardTop/cardLeft are computed from fixed geometry (imgH - cardSize - inset),
-  // so this is always reliable — no scanning or dynamic detection needed.
-  const PANEL_BUFFER = 10; // px above/left of card to catch any Grok overflow
-  const panelLeft   = Math.max(0, layout.cardLeft - PANEL_BUFFER);
-  const panelTop    = Math.max(0, layout.cardTop  - PANEL_BUFFER);
+  // panelTop: scan UPWARD from cardTop (max 60 px) to find the actual footer
+  // boundary. Scanning up from the card avoids matching dark body elements
+  // (the old downward scan's failure mode on dark templates). Falls back to
+  // cardTop if nothing matches within the 60 px window.
+  // panelLeft: card left-edge minus a 10 px bleed buffer, right-edge only —
+  // never touches the phone/address content on the left.
+  const panelLeft   = Math.max(0, layout.cardLeft - 10);
+  const panelTop    = await detectFooterTop(
+    imageBuffer, spec.imgH, layout.cardTop, panelColor,
+  );
   const panelWidth  = spec.imgW - panelLeft;
   const panelHeight = spec.imgH - panelTop;
   const backingPng = await sharp(
