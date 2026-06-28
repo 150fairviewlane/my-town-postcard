@@ -1149,15 +1149,15 @@ export function buildAdPrompt(
       (hasPhoto
         ? `  Composite IMAGE 2 into the hero zone. Fill upper-left, right edge dissolves organically into the burgundy brush stroke; no hard border.\n\n`
         : `  ${ipc.hero}. Fill upper-left zone, right edge dissolves into brush stroke; no hard border.\n\n`) +
-      `SERVICE BADGES (middle, horizontal row full width): ` +
+      `SERVICE BADGES (middle, horizontal row full width${d.offer ? " — positioned in the upper-middle area to leave a coupon zone between the badges and the footer bar" : ""}): ` +
       (menuCount > 0
         ? `EXACTLY ${menuCount} dark burgundy circular icon badge${menuCount !== 1 ? "s" : ""} evenly spaced — one per service in BUSINESS DETAILS. Thin vertical burgundy rule divider on right of each; brush-stroke label below. Ignore extra slots; no empty badges. No invented services.\n\n`
         : `four decorative dark burgundy circular icon badge shapes with thin vertical burgundy rule dividers; NO text labels.\n\n`) +
       (d.offer
-        ? `COUPON (footer bar, CENTER section — between the phone/address column on the left and the starburst corner on the right): dashed-border rounded-rect, scissors ✂ icon, offer text bold inside box, fine print below. CRITICAL: the coupon must NOT appear at the far right — the bottom-right corner is reserved for the starburst graphic.\n\n`
+        ? `COUPON (centered full-width zone in the body of the ad, between the service badges above and the dark footer bar below — NOT inside the footer bar itself): dashed-border rounded-rect, scissors ✂ icon, offer text bold dark burgundy inside box, fine print below. This zone sits entirely above the footer.\n\n`
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
-      `STARBURST CORNER — must not contain here: a dashed-border coupon box or offer text, a cream-background rounded-rect with a thin burgundy border, a headline-style box with a diamond ◆ separator, or any element from the HEADLINE zone.\n\n`
+      `STARBURST CORNER: The bottom-right starburst area must NOT contain a dashed-border coupon box or offer text, a cream-background rounded-rect with a thin burgundy border, a headline-style box with a diamond ◆ separator, or any element from the HEADLINE zone. Those elements are correct elsewhere on the card but must never appear in the starburst corner area.\n\n`
     )
     : (
       // Default: parchment-classic portrait
