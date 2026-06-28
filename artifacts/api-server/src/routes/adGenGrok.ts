@@ -1604,6 +1604,24 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   async function cropAndQr(url: string): Promise<string> {
     const dataUrl = await cropToSpotDims(url, cropDim.w, cropDim.h);
 
+    // ── Neighborhood Pro: programmatic footer pilot ──────────────────────────
+    // Instead of compositing over Grok's hand-drawn QR placeholder, we discard
+    // Grok's footer zone and replace it with a clean programmatic footer that
+    // has a seamlessly-sampled background, real phone/address text, and a
+    // real scannable QR code.
+    if (templateKey === "neighborhood-pro") {
+      const buf = Buffer.from(dataUrl.split(",")[1] ?? "", "base64");
+      if (process.env.NODE_ENV !== "production") {
+        const { writeFile } = await import("fs/promises");
+        await writeFile(`/tmp/grok-raw-${Date.now()}-${d.sizeKey}.jpg`, buf).catch(() => {});
+      }
+      const qrUrl = spotTrackingCode
+        ? `${(process.env.APP_URL ?? "https://mytownpostcard.com").replace(/\/$/, "")}/go/${spotTrackingCode}`
+        : resolvePreviewQrUrl(d.website);
+      const { buildNpFooterStack } = await import("../lib/neighborhoodProFooter.js");
+      return buildNpFooterStack(buf, toSizeKey(d.sizeKey), d.phone ?? "", fullAddress, qrUrl);
+    }
+
     if (spotTrackingCode) {
       // ── Paid spot: hard gate ──────────────────────────────────────────
       const trackingUrl = `${(process.env.APP_URL ?? "https://mytownpostcard.com").replace(/\/$/, "")}/go/${spotTrackingCode}`;

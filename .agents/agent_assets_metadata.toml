@@ -335,3 +335,51 @@ id = "dJhn0RpwumaXkrJgAkPWR"
 uri = "file://.local/qr-preview/wok-fire-xl-corner.jpg"
 type = "image"
 title = "wok-fire XL — near-black fill, gold border, square corners"
+
+[[outputs]]
+id = "X4hUPFpUnrxpTaiLhktFs"
+uri = "file://.local/np-pilot/np_crop_before_xl.jpg"
+type = "image"
+title = "XL — BEFORE (Grok draws footer, imperfect)"
+
+[[outputs]]
+id = "2p78PFKtdzL_ghXsn-Hxy"
+uri = "file://.local/np-pilot/np_crop_after_xl.jpg"
+type = "image"
+title = "XL — AFTER (programmatic footer)"
+
+[[outputs]]
+id = "st1NYLZWRhDvswablPx0-"
+uri = "file://.local/np-pilot/np_crop_before_l.jpg"
+type = "image"
+title = "L — BEFORE"
+
+[[outputs]]
+id = "kyug12XIQINmzTmECF0r3"
+uri = "file://.local/np-pilot/np_crop_after_l.jpg"
+type = "image"
+title = "L — AFTER"
+
+[[outputs]]
+id = "NYqXsf3N6LhkxBarFb0Gf"
+uri = "file://.local/np-pilot/np_crop_before_m.jpg"
+type = "image"
+title = "M — BEFORE"
+
+[[outputs]]
+id = "pSd499-V9_vhqcyPkUhmZ"
+uri = "file://.local/np-pilot/np_crop_after_m.jpg"
+type = "image"
+title = "M — AFTER"
+
+[[outputs]]
+id = "K43tyCoMZBsDjlF-7SZPh"
+uri = "file://.local/np-pilot/np_crop_before_s.jpg"
+type = "image"
+title = "S — BEFORE"
+
+[[outputs]]
+id = "G4_Q6KGgz8IH5Cib5uum0"
+uri = "file://.local/np-pilot/np_crop_after_s.jpg"
+type = "image"
+title = "S — AFTER"

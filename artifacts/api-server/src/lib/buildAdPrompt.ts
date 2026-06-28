@@ -707,8 +707,7 @@ export function buildAdPrompt(
       (d.offer
         ? `OFFER (wide white brush-stroke area, lower section): offer text bold dark-green, large. Fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain a diagonal-cut service panel, a circular lime-green icon badge, or a white brush-stroke offer area. Those elements are correct elsewhere on the card but must never be recreated or bleed into this custom ad-on corner area.\n\n`
+      "FOOTER (bottom bar): flat solid dark forest-green fill — no text, no phone number, no address, no QR code placeholder, no icons, no decorative marks of any kind. Leave the entire footer bar as a single plain dark green rectangle.\n\n"
     )
     : isLandscape && templateKey === "at-your-service"
     ? (
@@ -939,8 +938,7 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (wide white brush-stroke area, lower section): offer text bold dark-green, large. Fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain a diagonal-cut service panel, a circular lime-green icon badge, or a white brush-stroke offer area. Those elements are correct elsewhere on the card but must never be recreated or bleed into this custom ad-on corner area.\n\n`
+      "FOOTER (bottom bar): flat solid dark forest-green fill — no text, no phone number, no address, no QR code placeholder, no icons, no decorative marks of any kind. Leave the entire footer bar as a single plain dark green rectangle.\n\n"
     )
     : templateKey === "at-your-service"
     ? (
