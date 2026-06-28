@@ -1698,7 +1698,7 @@ boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
             </div>
             <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 10, marginTop: 4, textAlign: "center" }}>
               Style: <strong style={{ color: "#fff" }}>{TEMPLATES[selectedTemplate].name}</strong>
-              {!formData.photo && formData.industry && <> - Using stock photo for {formData.industry}</>}
+              {!formData.photo && <> — AI will generate hero photo</>}
             </div>
 
             {/* Grok-generated ad + refine panel */}

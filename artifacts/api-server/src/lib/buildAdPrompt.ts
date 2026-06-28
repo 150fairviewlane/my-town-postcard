@@ -1157,7 +1157,7 @@ export function buildAdPrompt(
         ? `COUPON (centered full-width zone in the body of the ad, between the service badges above and the dark footer bar below — NOT inside the footer bar itself): dashed-border rounded-rect, scissors ✂ icon, offer text bold dark burgundy inside box, fine print below. This zone sits entirely above the footer.\n\n`
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
-      `STARBURST CORNER: The bottom-right starburst area must NOT contain a dashed-border coupon box or offer text, a cream-background rounded-rect with a thin burgundy border, a headline-style box with a diamond ◆ separator, or any element from the HEADLINE zone. Those elements are correct elsewhere on the card but must never appear in the starburst corner area.\n\n`
+      `STARBURST CORNER: Must not contain coupon box, offer text, headline rounded-rect, or diamond ◆ separator — those belong in the body, not the corner.\n\n`
     )
     : (
       // Default: parchment-classic portrait
