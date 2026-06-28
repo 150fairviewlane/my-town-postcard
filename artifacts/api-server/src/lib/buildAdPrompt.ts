@@ -1196,9 +1196,6 @@ export function buildAdPrompt(
         refLines.join("\n") + "\n\n"
       : "") +
     outputRequirements + "\n" +
-    (d.primaryColor && d.accentColor
-      ? `BRAND COLORS: Primary ${d.primaryColor} · Accent ${d.accentColor}. Use these as the brand color for header/footer bars, icon badge fills, coupon border accent, and headline highlights. Integrate them harmoniously with the template's visual framework.\n\n`
-      : "") +
     "TYPOGRAPHIC RULES — ABSOLUTE:\n" +
     "  • NEVER add any word, abbreviation, or industry term not provided verbatim in the business data below — industry/category descriptors (e.g. RESTAURANT, DENTAL, HVAC, ROOFING) are strictly forbidden additions. The business name must appear EXACTLY as provided, character for character, with zero additions, zero stylistic embellishments, and zero extra words inserted.\n" +
     "  • NEVER split a business name across two visual styles (e.g. bold + script, or large + small) — render the complete business name in a single consistent typographic treatment.\n\n" +

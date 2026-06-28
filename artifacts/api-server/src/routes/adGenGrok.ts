@@ -2317,9 +2317,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .brand span{color:var(--burg)}
 .brand-logo{height:42px;width:auto;display:block;flex-shrink:0}
 .hdr-badge{background:linear-gradient(135deg,#7C1C2E,#9b2c3e);color:#fff;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:4px 14px;border-radius:20px}
-.layout{display:grid;grid-template-columns:1fr 1fr 400px;flex:1;min-height:0;overflow:hidden}
+.layout{display:grid;grid-template-columns:1fr 560px;flex:1;min-height:0;overflow:hidden}
 .fpanel{background:var(--card);border-right:1.5px solid var(--border);padding:18px 18px 24px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
-.mpanel{background:var(--surface);border-right:1.5px solid var(--border);padding:18px 18px 24px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
 .ptitle{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.06em;margin-bottom:2px}
 .psub{font-family:'Crimson Pro',serif;font-style:italic;font-size:15px;color:var(--ink-light);line-height:1.4;margin-bottom:4px}
 .sec-label{font-size:13px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--burg);padding-bottom:8px;border-bottom:1.5px solid var(--burg-pale);margin-bottom:8px}
@@ -2337,27 +2336,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .rm-btn:hover{border-color:#c0392b;color:#c0392b;background:#fef2f2}
 .add-btn{font-size:13px;font-weight:600;color:var(--burg);background:none;border:1.5px dashed var(--burg);border-radius:6px;padding:5px 12px;cursor:pointer;width:100%;transition:all .2s;font-family:'DM Sans',sans-serif}
 .add-btn:hover{background:var(--burg-pale)}
-/* Swatches */
-.swatches-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}
-.swatch-card{border:2px solid var(--border);border-radius:9px;padding:9px 11px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:all .18s;background:#fafaf8}
-.swatch-card:hover{border-color:var(--burg);background:#fff}
-.swatch-card.active{border-color:var(--burg);box-shadow:0 0 0 2px var(--burg);background:#fff}
-.swatch-circles{display:flex;gap:4px;flex-shrink:0}
-.swatch-circle{width:28px;height:28px;border-radius:50%;border:1.5px solid rgba(0,0,0,.1)}
-.swatch-name{font-size:11px;font-weight:700;color:var(--ink);line-height:1.3;letter-spacing:.02em}
 /* Upload */
 .photo-logo-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
 .logo-col{display:flex;flex-direction:column;gap:8px}
-.lib-section{margin-top:10px}
-.lib-label{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-light);margin-bottom:6px}
-.img-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
-.img-thumb{position:relative;aspect-ratio:4/3;border-radius:6px;overflow:hidden;cursor:pointer;border:2.5px solid transparent;transition:all .2s}
-.img-thumb:hover{transform:scale(1.03)}
-.img-thumb.selected{border-color:var(--burg);box-shadow:0 0 0 1.5px var(--burg)}
-.img-thumb img{width:100%;height:100%;object-fit:cover;display:block}
-.img-thumb .chk{display:none;position:absolute;top:3px;right:3px;background:var(--burg);color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:900;align-items:center;justify-content:center}
-.img-thumb.selected .chk{display:flex}
-.img-empty,.img-loading{grid-column:1/-1;padding:14px 8px;text-align:center;font-size:13px;color:var(--ink-light);line-height:1.5}
 .upload-zone{border:2px dashed var(--border);border-radius:8px;padding:14px 10px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;background:var(--surface);position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100px}
 .upload-zone.logo-zone{min-height:75px}
 .upload-zone:hover:not(.has-file){border-color:var(--burg);background:var(--burg-pale)}
@@ -2461,8 +2442,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .tc-btn:last-child{margin-bottom:0}
 .tc-btn.primary{background:#0f1117;color:#fff}
 .tc-btn.secondary{background:#fff;color:#7C1C2E;border:2px solid #7C1C2E}
-@media(max-width:860px){.layout{grid-template-columns:1fr 1fr}html,body{height:auto;overflow:auto}.rpanel{grid-column:1/-1;height:auto;overflow:visible}.rpanel-scroll{overflow:visible;height:auto}.fpanel,.mpanel{overflow:visible}.thumb-strip{flex-wrap:nowrap;overflow-x:auto}}
-@media(max-width:640px){.layout{grid-template-columns:1fr}.rpanel{grid-column:auto}.photo-logo-row{grid-template-columns:1fr}}
+@media(max-width:760px){.layout{grid-template-columns:1fr}html,body{height:auto;overflow:auto}.rpanel{grid-column:auto;height:auto;overflow:visible}.rpanel-scroll{overflow:visible;height:auto}.fpanel{overflow:visible}.thumb-strip{flex-wrap:nowrap;overflow-x:auto}.photo-logo-row{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -2525,10 +2505,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
       <div class="field"><label>Fine Print</label><input type="text" id="offerFine" spellcheck="true" placeholder="1 per visit &middot; with this postcard"></div>
     </div>
 
-  </div>
-
-  <!-- MIDDLE: VISUAL INPUTS -->
-  <div class="mpanel">
+    <div class="sec-label" style="border-top:1.5px solid var(--burg-pale);padding-top:14px;margin-top:4px">Photos &amp; Logo</div>
     <div class="logo-col">
       <div class="sec-label" style="margin-top:0">Logo <span style="font-weight:400;font-size:11px;color:var(--ink-light);text-transform:none;letter-spacing:0">(optional)</span></div>
       <div class="upload-zone logo-zone" id="logoZone">
@@ -2565,14 +2542,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
     <div class="rpanel-header">
       <button class="gen-btn" id="genBtn" onclick="generate()" disabled>
         <span class="gen-spark">&#9889;</span>
-        <span id="genLabel">Generate My Ad</span>
+        <span id="genLabel">Create My Ad</span>
       </button>
     </div>
     <div class="rpanel-scroll">
       <div class="preview-area" id="previewArea">
         <div class="preview-ph" id="previewPh">
           <div class="preview-ph-icon">&#127912;</div>
-          <div>Fill in your business info,<br>then click Generate.</div>
+          <div>Fill in your business info,<br>then click Create My Ad.</div>
         </div>
         <img class="preview-img" id="previewImg" alt="Ad preview" style="display:none">
         <div class="gen-overlay" id="genOverlay">
@@ -2632,7 +2609,6 @@ function esc(s){ var d=document.createElement('div');d.textContent=String(s||'')
 var _variations = [];          // [{imageUrl, templateKey, templateName}]
 var _sessionUsedTemplates = [];// templates used this session
 var _campaignUsedTemplates = [];
-var _activeSwatchIdx = 1;
 var _spotSize = 'XL';
 var _spotId = 0;
 var _campaignId = 0;
@@ -2646,27 +2622,6 @@ var _selectedVarIdx = -1;
 var _isRefining = false;
 
 // ── Data ───────────────────────────────────────────────────────────────────────
-var COLOR_SWATCHES = [
-  {name:'Classic Red \u00b7 Gold',    p:'#c0392b',a:'#f39c12'},
-  {name:'Deep Navy \u00b7 Amber',     p:'#1a3d5c',a:'#c8a84b'},
-  {name:'Forest Green \u00b7 Sage',   p:'#2e7d32',a:'#8bc34a'},
-  {name:'Royal Purple \u00b7 Lilac',  p:'#6a1b9a',a:'#ce93d8'},
-  {name:'Warm Espresso \u00b7 Cream', p:'#4a2c1a',a:'#d4a574'},
-  {name:'Steel Blue \u00b7 Sky',      p:'#1565c0',a:'#42a5f5'},
-];
-
-var INDUSTRY_SWATCH_IDX = {
-  'Pizza Restaurant':0,'Mexican Restaurant':2,'Chinese Restaurant':0,
-  'Breakfast & Cafe':4,'Bar & Grill':1,'Italian Restaurant':0,
-  'Bakery':4,'Coffee Shop':4,'Dentist':5,'Medical & Healthcare':5,
-  'Chiropractor':5,'Veterinarian':2,'HVAC':5,'Plumber':5,
-  'Electrician':1,'Lawn & Landscaping':2,'Roofing':1,'Painting':3,
-  'Cleaning Service':5,'Pest Control':2,'Real Estate':1,'Insurance':1,
-  'Auto Repair':1,'Salon & Beauty':3,'Barbershop':1,'Gym & Fitness':0,
-  'Pet Services':2,'Financial Services':1,'Daycare':0,'Photography':4,
-  'Retail Shop':3,'Other Service':1,
-};
-
 var INDUSTRY_TEMPLATES = {
   'Pizza Restaurant':    ['wok-fire','made-fresh','parchment-classic','neighborhood-pro','at-your-service','sage-organic'],
   'Mexican Restaurant':  ['made-fresh','wok-fire','parchment-classic','neighborhood-pro','sage-organic','brush-stroke'],
@@ -2813,26 +2768,6 @@ var MENU_DEFAULTS = {
   'Photography':         ['Family Portraits from $149','Event Photography','Headshots $99','Prints & Albums Available'],
   'Retail Shop':         ['New Arrivals Weekly','Gift Cards Available','Layaway & Special Orders','Call for Hours'],
 };
-
-// ── Swatch rendering ───────────────────────────────────────────────────────────
-function renderSwatches(){
-  var grid = document.getElementById('swatchesGrid');
-  if(!grid) return;
-  grid.innerHTML = COLOR_SWATCHES.map(function(sw,i){
-    return '<div class="swatch-card' + (i===_activeSwatchIdx?' active':'') + '" onclick="selectSwatch(' + i + ')" title="' + esc(sw.name) + '">'
-      + '<div class="swatch-circles">'
-      + '<div class="swatch-circle" style="background:' + sw.p + '"></div>'
-      + '<div class="swatch-circle" style="background:' + sw.a + '"></div>'
-      + '</div>'
-      + '<div class="swatch-name">' + esc(sw.name) + '</div>'
-      + '</div>';
-  }).join('');
-}
-
-function selectSwatch(i){
-  _activeSwatchIdx = i;
-  renderSwatches();
-}
 
 // ── Preview + thumbnail gallery ────────────────────────────────────────────────
 function renderVariations(){
@@ -2992,7 +2927,6 @@ async function generate(){
   showOverlay(_variations.length === 0 ? 'Generating your ad\u2026' : 'Generating a new variation\u2026', 'This takes about 30 seconds');
   renderVariations();
   var templateKey = getNextTemplate();
-  var sw = COLOR_SWATCHES[_activeSwatchIdx] || COLOR_SWATCHES[1];
   var body = {
     bizName:      biz,
     tagline:      document.getElementById('tagline').value.trim(),
@@ -3012,8 +2946,6 @@ async function generate(){
     campaignId:   _campaignId || undefined,
     side:         _side || undefined,
     generationIndex: _variations.length,
-    primaryColor: sw.p,
-    accentColor:  sw.a,
   };
   try{
     var resp = await fetch('/api/grok-ad-generator/generate',{
@@ -3055,7 +2987,7 @@ function updateGenButton(){
     btn.style.display = '';
     var biz = document.getElementById('bizName').value.trim();
     btn.disabled = !biz || _isGenerating;
-    lbl.textContent = _variations.length === 0 ? 'Generate My Ad' : '\u21ba Regenerate Ad';
+    lbl.textContent = _variations.length === 0 ? 'Create My Ad' : '\u21ba Regenerate Ad';
   }
 }
 
@@ -3162,7 +3094,6 @@ function onFormChange(){
 function onIndustryChange(){
   var industry = document.getElementById('industry').value;
   if(industry && _takenCategories.indexOf(industry) !== -1){ showTakenDialog(industry); return; }
-  loadLibrary();
   var list = document.getElementById('menuList'); list.innerHTML = '';
   var defs = MENU_DEFAULTS[industry];
   if(defs) defs.slice(0,4).forEach(function(v){ addMenuItem(v); });
@@ -3170,10 +3101,6 @@ function onIndustryChange(){
   var op = OFFER_DEFAULTS[industry];
   document.getElementById('offer').value     = op ? op[0] : '';
   document.getElementById('offerFine').value = op ? op[1] : '';
-  if(industry){
-    var si = INDUSTRY_SWATCH_IDX[industry];
-    if(si !== undefined){ _activeSwatchIdx = si; renderSwatches(); }
-  }
 }
 
 function addMenuItem(val){
@@ -3191,33 +3118,6 @@ function addMenuItem(val){
 function getMenu(){
   return Array.from(document.querySelectorAll('.mrow input'))
     .map(function(i){ return i.value.trim(); }).filter(Boolean).slice(0,4);
-}
-
-// ── Photo / library ────────────────────────────────────────────────────────────
-async function loadLibrary(){
-  var industry = document.getElementById('industry').value;
-  var grid = document.getElementById('libGrid');
-  if(!industry){ grid.innerHTML = '<div class="img-empty">Select an industry above.</div>'; return; }
-  grid.innerHTML = '<div class="img-loading">Loading library photos&hellip;</div>';
-  try{
-    var r = await fetch('/api/image-library?industry=' + encodeURIComponent(industry));
-    var data = await r.json();
-    var imgs = data.images || [];
-    if(!imgs.length){ grid.innerHTML = '<div class="img-empty">No photos yet. Upload your own above.</div>'; return; }
-    grid.innerHTML = imgs.map(function(img,i){
-      return '<div class="img-thumb" id="lthumb-'+i+'" onclick="selectLibPhoto('+i+',this)">'
-        + '<img src="'+esc(img.thumb_url)+'" loading="lazy" alt="">'
-        + '<div class="chk">&#10003;</div>'
-        + '<input type="hidden" id="lurl-'+i+'" value="'+esc(img.image_url)+'">'
-        + '</div>';
-    }).join('');
-  }catch(e){ grid.innerHTML = '<div class="img-empty">Error loading library: ' + e.message + '</div>'; }
-}
-
-function selectLibPhoto(i, el){
-  document.querySelectorAll('.img-thumb').forEach(function(t){ t.classList.remove('selected'); });
-  el.classList.add('selected');
-  _selectedPhotoUrl = document.getElementById('lurl-'+i).value;
 }
 
 function handlePhotoUpload(input){
@@ -3331,7 +3231,6 @@ function showToast(msg){
   var takenParam = params.get('taken') || '';
   _takenCategories = takenParam ? takenParam.split(',').map(function(s){ return s.trim(); }).filter(Boolean) : [];
   applyTakenIndustries();
-  renderSwatches();
   renderVariations();
   // Fetch server-side taken categories
   fetch('/api/campaigns/active/taken-categories')
@@ -3865,7 +3764,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
         <!-- Generate button -->
         <button class="gen-btn" id="genBtn" onclick="generate()" disabled>
           <span class="gen-spark">&#9889;</span>
-          <span id="genLabel">Generate My Ad</span>
+          <span id="genLabel">Create My Ad</span>
         </button>
 
         <!-- Loading -->
@@ -4179,7 +4078,6 @@ function onIndustryChange(){
     showTakenDialog(industry);
     return;
   }
-  loadLibrary();
   // Menu items
   var list = document.getElementById('menuList');
   list.innerHTML = '';
@@ -4214,48 +4112,11 @@ function getMenu(){
     .map(function(i){ return i.value.trim(); }).filter(Boolean).slice(0,4);
 }
 
-async function loadLibrary(){
-  var industry = document.getElementById('industry').value;
-  var grid = document.getElementById('libGrid');
-  if(!industry){
-    grid.innerHTML = '<div class="img-empty">Select an industry above to load photos.</div>';
-    return;
-  }
-  grid.innerHTML = '<div class="img-loading">Loading library photos&hellip;</div>';
-  try{
-    var r = await fetch('/api/image-library?industry=' + encodeURIComponent(industry));
-    var data = await r.json();
-    var imgs = data.images || [];
-    if(!imgs.length){
-      grid.innerHTML = '<div class="img-empty">No approved photos for this industry yet. Upload your own photo above.</div>';
-      return;
-    }
-    grid.innerHTML = imgs.map(function(img,i){
-      return '<div class="img-thumb" id="lthumb-'+i+'" onclick="selectLibPhoto('+i+',this)" title="'+esc(img.photographer_credit)+'">'
-        + '<img src="'+esc(img.thumb_url)+'" loading="lazy" alt="">'
-        + '<div class="chk">\\u2713</div>'
-        + '<input type="hidden" id="lurl-'+i+'" value="'+esc(img.image_url)+'">'
-        + '</div>';
-    }).join('');
-  }catch(e){
-    grid.innerHTML = '<div class="img-empty">Error loading library: ' + e.message + '</div>';
-  }
-}
-
-function selectLibPhoto(i, el){
-  document.querySelectorAll('.img-thumb').forEach(function(t){ t.classList.remove('selected'); });
-  el.classList.add('selected');
-  _selectedPhotoUrl = document.getElementById('lurl-'+i).value;
-  document.getElementById('photoStatus').textContent = '\\u2713 Photo selected';
-  document.getElementById('photoStatus').style.color = 'var(--green)';
-}
-
 function handlePhotoUpload(input){
   var file = input.files[0]; if(!file) return;
   var reader = new FileReader();
   reader.onload = function(e){
     _selectedPhotoUrl = e.target.result;
-    // Deselect any library photo
     document.querySelectorAll('.img-thumb').forEach(function(t){ t.classList.remove('selected'); });
     var prev = document.getElementById('photoPreview');
     prev.src = e.target.result;
@@ -4357,7 +4218,7 @@ async function generate(){
   }
 
   document.getElementById('genBtn').disabled = false;
-  document.getElementById('genLabel').textContent = 'Generate My Ad';
+  document.getElementById('genLabel').textContent = 'Create My Ad';
 }
 
 function showResult(url, keepOriginal){
@@ -4606,7 +4467,6 @@ function showToast(msg){
     Object.keys(f).forEach(function(id){ var el=document.getElementById(id); if(el) el.value=f[id]; });
   }
   onFormChange();
-  loadLibrary();
 })();
 </script>
 
