@@ -484,19 +484,14 @@ export async function compositeQrOnto(
   );
 
   // ── 4. Composite footer-colour backing panel then card+QR (single pass) ──
-  // Layer 1: right-25% footer panel filled with the sampled footer colour.
-  //   - Starts at x = 75% of image width so the phone/address (left 75%) is
-  //     untouched — no cramping, no coverage of real content.
-  //   - Full height from cardTop to image bottom, so it wipes any Grok-drawn
-  //     QR code, barcode, or design element in the right quarter.
-  // Layer 2: the backing card + QR with crisp drop shadow on top.
-  // Detect the actual footer top by scanning the left edge for the first row
-  // that matches the sampled footer colour. This adapts to each template's
-  // footer height instead of guessing a fixed percentage.
-  const panelLeft   = Math.round(spec.imgW * 0.75);
-  const panelTop    = await detectFooterTop(
-    imageBuffer, spec.imgH, layout.cardTop, panelColor,
-  );
+  // Panel is anchored to the QR card footprint + a small buffer on each side.
+  // This guarantees the panel never reaches into the ad body regardless of
+  // how tall or short the footer bar is on any given template.
+  // cardTop/cardLeft are computed from fixed geometry (imgH - cardSize - inset),
+  // so this is always reliable — no scanning or dynamic detection needed.
+  const PANEL_BUFFER = 10; // px above/left of card to catch any Grok overflow
+  const panelLeft   = Math.max(0, layout.cardLeft - PANEL_BUFFER);
+  const panelTop    = Math.max(0, layout.cardTop  - PANEL_BUFFER);
   const panelWidth  = spec.imgW - panelLeft;
   const panelHeight = spec.imgH - panelTop;
   const backingPng = await sharp(
