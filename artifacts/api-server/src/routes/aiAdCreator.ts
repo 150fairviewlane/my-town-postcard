@@ -134,13 +134,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
 .add-btn:hover{background:var(--burg-pale)}
 
 /* TEMPLATE SELECTOR */
-.tmpl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+.tmpl-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .tmpl-opt{position:relative}
 .tmpl-opt input{position:absolute;opacity:0;width:0;height:0}
 .tmpl-card{border:2px solid var(--border);border-radius:9px;overflow:hidden;cursor:pointer;transition:all .2s;background:var(--surface);display:block}
 .tmpl-opt input:checked+.tmpl-card{border-color:var(--burg);box-shadow:0 0 0 2px var(--burg)}
 .tmpl-thumb{width:100%;aspect-ratio:4/5;object-fit:cover;display:block}
+.tmpl-thumb-ph{width:100%;aspect-ratio:4/5;background:#e8e3dc;display:flex;align-items:center;justify-content:center;font-size:22px;color:#bbb}
 .tmpl-label{padding:6px 8px;font-size:10px;font-weight:700;text-align:center;color:var(--ink-mid);letter-spacing:.05em;text-transform:uppercase;border-top:1px solid var(--border)}
+.tmpl-soon .tmpl-card{opacity:.48;cursor:not-allowed}
+.tmpl-soon .tmpl-label{color:var(--ink-light)}
 
 /* IMAGE CHECKLIST */
 .img-check-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1.5px solid var(--border);border-radius:9px;cursor:pointer;transition:all .2s;margin-bottom:8px;background:var(--surface)}
@@ -313,6 +316,36 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
                 <img class="tmpl-thumb" src="/api/ai-ad-creator/templates/mr-biscuits?view=1" alt="Mr. Biscuit&apos;s Style template">
                 <div class="tmpl-label">Mr. Biscuit&apos;s Style</div>
               </label>
+            </div>
+            <div class="tmpl-opt tmpl-soon">
+              <div class="tmpl-card" style="pointer-events:none">
+                <div class="tmpl-thumb-ph">+</div>
+                <div class="tmpl-label">Coming Soon</div>
+              </div>
+            </div>
+            <div class="tmpl-opt tmpl-soon">
+              <div class="tmpl-card" style="pointer-events:none">
+                <div class="tmpl-thumb-ph">+</div>
+                <div class="tmpl-label">Coming Soon</div>
+              </div>
+            </div>
+            <div class="tmpl-opt tmpl-soon">
+              <div class="tmpl-card" style="pointer-events:none">
+                <div class="tmpl-thumb-ph">+</div>
+                <div class="tmpl-label">Coming Soon</div>
+              </div>
+            </div>
+            <div class="tmpl-opt tmpl-soon">
+              <div class="tmpl-card" style="pointer-events:none">
+                <div class="tmpl-thumb-ph">+</div>
+                <div class="tmpl-label">Coming Soon</div>
+              </div>
+            </div>
+            <div class="tmpl-opt tmpl-soon">
+              <div class="tmpl-card" style="pointer-events:none">
+                <div class="tmpl-thumb-ph">+</div>
+                <div class="tmpl-label">Coming Soon</div>
+              </div>
             </div>
           </div>
         </div>

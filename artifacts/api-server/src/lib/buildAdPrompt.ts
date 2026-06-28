@@ -71,18 +71,18 @@ export function getDefaultThemeIndex(industry: string): number {
 
 // ── Footer zone builder ──────────────────────────────────────────────────────
 
-export function buildFooterZone(phone: string, address: string, isLandscape = false, sizeKey?: string, templateKey = ""): string {
+export function buildFooterZone(phone: string, address: string, isLandscape = false, sizeKey?: string): string {
   // Physical card size for the composited QR square (cardSize = round(qrSize × 1.075)).
   // Must stay in sync with CARD_MARGIN in compositeQr.ts.
   const sk = (sizeKey ?? "").toLowerCase();
   // cardSize = round(qrSize × 1.0375) / 300 DPI — must stay in sync with compositeQr.ts CARD_MARGIN
   const qrCardInches = sk === "xl" ? 0.62 : sk === "l" ? 0.45 : 0.31; // m / s / unknown
 
-  // Right-edge strip: reserved for the server-composited custom ad-on element.
+  // Bottom-right corner: warm-gold starburst composited server-side — just reserve the corner space.
   const qrSlot =
-    `CUSTOM AD-ON CORNER (bottom-right corner of footer, right edge, ${qrCardInches.toFixed(2)}"×${qrCardInches.toFixed(2)}" square): ` +
-    `render a solid flat-filled rectangle exactly the same color as the footer bar — no text, no icons, no patterns, no border, no stroke, no outline, no colored edge of any kind. ` +
-    `A custom element will be composited over this area in post-processing.`;
+    `BOTTOM-RIGHT: warm-gold starburst graphic bursting from the image corner — ` +
+    `RIGHT and BOTTOM edges at image border, zero margin. ` +
+    `Do not place text, phone numbers, address, or service items here.`;
 
   if (isLandscape) {
     const hasAddr = address !== "(none)";
@@ -91,7 +91,7 @@ export function buildFooterZone(phone: string, address: string, isLandscape = fa
       `THREE inline columns left to right — ` +
       `LEFT: "${phone}" bold white, very large (the largest text in the footer); ` +
       `CENTER: ` + (hasAddr
-        ? `"${address}" bold white, large, split to 2 lines at the comma (street on line 1, city/state on line 2), center-aligned — must not enter the right-edge strip; `
+        ? `"${address}" bold white, large, split to 2 lines at the comma (street on line 1, city/state on line 2), center-aligned in the bar; `
         : `(centered placeholder); `) +
       qrSlot + ` ` +
       `Phone once, footer only.\n\n`
@@ -100,7 +100,7 @@ export function buildFooterZone(phone: string, address: string, isLandscape = fa
   return (
     `FOOTER (full-width dark bar, 20% of card height): ` +
     `"${phone}" bold white, very large, left-aligned (the largest text in the footer); ` +
-    (address !== "(none)" ? `"${address}" bold white, large, directly below phone (left column only — must not enter the right-edge strip); ` : "") +
+    (address !== "(none)" ? `"${address}" bold white, large, directly below phone (same left column); ` : "") +
     qrSlot + ` ` +
     `Phone once, footer only.\n\n`
   );
@@ -573,20 +573,20 @@ export function buildAdPrompt(
             : templateKey === "neighborhood-pro"
               ? "landscape Neighborhood Pro layout: deep forest-green bg, large white brush-stroke splash panel upper-left (headline zone), full-bleed hero photo upper-right, horizontal row of diagonal-cut service panels with circular lime-green icon badges, wide white brush-stroke offer/coupon area lower-center, dark green footer bar. Reproduce exactly."
               : templateKey === "at-your-service"
-                ? "landscape At Your Service layout: light gray/cream textured bg, large dark navy hexagonal badge upper-left (logo zone), gold/yellow brush-stroke sweeping upper area, large hero photo zone blending into bg upper-right, wide dark navy band with circular white icon service badges, gold/yellow dashed-border coupon box lower-right, footer: location-pin + address left, phone center. Reproduce exactly."
+                ? "landscape At Your Service layout: light gray/cream textured bg, large dark navy hexagonal badge upper-left (logo zone), gold/yellow brush-stroke sweeping upper area, large hero photo zone blending into bg upper-right, wide dark navy band with circular white icon service badges, gold/yellow dashed-border coupon box lower-right, footer: location-pin + address left, phone center, starburst corner. Reproduce exactly."
                 : templateKey === "home-elegance"
-                  ? "landscape Home Elegance layout: cream/off-white bg with organic blob wave shapes, dark navy + gold accent scheme. Left side (cream blob area): dark navy hexagonal house-icon badge top-left, navy-bordered rounded-rect business-name box, smaller tagline box, additional text boxes, phone/address icons lower-left. Right side: large hero photo upper-right blending naturally, dark navy lower-right section with three overlapping circular photos (interior, kitchen, outdoor service), four rounded-rect service card tiles each topped by circular dark navy icon badge (house, tools, leaf, people). Reproduce exactly."
+                  ? "landscape Home Elegance layout: cream/off-white bg with organic blob wave shapes, dark navy + gold accent scheme. Left side (cream blob area): dark navy hexagonal house-icon badge top-left, navy-bordered rounded-rect business-name box, smaller tagline box, additional text boxes, phone/address icons lower-left. Right side: large hero photo upper-right blending naturally, dark navy lower-right section with three overlapping circular photos (interior, kitchen, outdoor service), four rounded-rect service card tiles each topped by circular dark navy icon badge (house, tools, leaf, people), starburst corner. Reproduce exactly."
                   : templateKey === "sage-organic"
-                  ? "landscape Sage Organic layout: cream/beige textured bg with dark olive/sage green and kraft paper accents. Upper-left: large dark olive circle with botanical leaf sprigs; large white/cream rounded-rect business-name zone; dark olive paint brush stroke below it. Upper-right: large hero photo in curved wave cutout, no hard border. Middle: four dark olive circular icon badges (award, people, handshake, shield) with vertical dividers; four cream rounded-rect service tiles below. Lower olive wave band: three equal-width landscape photos side by side. Lower-right: kraft paper dashed-stitch coupon rectangle. Footer: dark olive strip with location pin + address left. Reproduce exactly."
+                  ? "landscape Sage Organic layout: cream/beige textured bg with dark olive/sage green and kraft paper accents. Upper-left: large dark olive circle with botanical leaf sprigs; large white/cream rounded-rect business-name zone; dark olive paint brush stroke below it. Upper-right: large hero photo in curved wave cutout, no hard border. Middle: four dark olive circular icon badges (award, people, handshake, shield) with vertical dividers; four cream rounded-rect service tiles below. Lower olive wave band: three equal-width landscape photos side by side. Lower-right: kraft paper dashed-stitch coupon rectangle. Footer: dark olive strip with location pin + address left, starburst corner. Reproduce exactly."
                   : templateKey === "purple-sage"
-                  ? "landscape Purple Sage layout: cream/beige bg with muted lavender-purple and sage green accents. Upper-left: large muted purple circle + dot grid (decorative); sage green botanical leaf sprig (decorative). Large white/cream rounded-rect business-name panel; sweeping purple brush stroke below it. Upper-right: large circular hero photo in sage green ring border. Lower-right: two smaller overlapping circles (kitchen, outdoor patio). Middle: four muted sage green circular icon badges (professional, award, team, shield) with dividers; four cream service tiles below. Lower purple wave band with sage green brush stroke. Footer: dark purple strip with phone + oval pill | location pin + oval pill. Reproduce exactly."
+                  ? "landscape Purple Sage layout: cream/beige bg with muted lavender-purple and sage green accents. Upper-left: large muted purple circle + dot grid (decorative); sage green botanical leaf sprig (decorative). Large white/cream rounded-rect business-name panel; sweeping purple brush stroke below it. Upper-right: large circular hero photo in sage green ring border. Lower-right: two smaller overlapping circles (kitchen, outdoor patio). Middle: four muted sage green circular icon badges (professional, award, team, shield) with dividers; four cream service tiles below. Lower purple wave band with sage green brush stroke. Footer: dark purple strip with phone + oval pill | location pin + oval pill | starburst corner. Reproduce exactly."
                   : templateKey === "brush-stroke"
-                  ? "landscape Brush Stroke layout: cream/parchment bg with dark olive green and charcoal accents. Left half: large circular hero photo framed by dark organic brush-stroke swoosh curving around left side (no hard rectangular border). Upper-right: dark olive hexagonal house-icon badge (logo zone); wide horizontal olive green paint brush stroke above (headline zone); thin dark rule with diamond separator below. Middle-right: vertical column of service rows — each row has a circular olive-bordered icon badge on the left and a dark charcoal horizontal brush-stroke label in white on the right. Footer: dark charcoal curved-top band full-width — circular phone icon + field left, circular location pin + field center. Reproduce exactly."
+                  ? "landscape Brush Stroke layout: cream/parchment bg with dark olive green and charcoal accents. Left half: large circular hero photo framed by dark organic brush-stroke swoosh curving around left side (no hard rectangular border). Upper-right: dark olive hexagonal house-icon badge (logo zone); wide horizontal olive green paint brush stroke above (headline zone); thin dark rule with diamond separator below. Middle-right: vertical column of service rows — each row has a circular olive-bordered icon badge on the left and a dark charcoal horizontal brush-stroke label in white on the right. Footer: dark charcoal curved-top band full-width — circular phone icon + field left, circular location pin + field center, starburst corner. Reproduce exactly."
                   : templateKey === "heritage-home"
-                  ? "landscape Heritage Home layout: cream/off-white (#f5f0e8) bg, deep burgundy (#6b1a2a) accents. Sweeping organic burgundy brush stroke diagonal lower-left to upper-right for depth. Left 40%: hero photo zone, full bleed left/top/bottom, right edge dissolves organically into brush stroke. Right 60%: upper area — large rounded-rect headline zone with thin burgundy border (business name bold serif, large; tagline in elegant italic serif below thin burgundy rule with diamond ◆ separator). Center-right: horizontal row of circular dark burgundy icon badges with thin vertical burgundy rule dividers; brush-stroke label for service + price below each badge. Footer: full-width dark burgundy bar — phone icon + number left, location pin + address center-left, dashed-border coupon box with scissor ✂ icon + offer center-right. Reproduce exactly."
+                  ? "landscape Heritage Home layout: cream/off-white (#f5f0e8) bg, deep burgundy (#6b1a2a) accents. Sweeping organic burgundy brush stroke diagonal lower-left to upper-right for depth. Left 40%: hero photo zone, full bleed left/top/bottom, right edge dissolves organically into brush stroke. Right 60%: upper area — large rounded-rect headline zone with thin burgundy border (business name bold serif, large; tagline in elegant italic serif below thin burgundy rule with diamond ◆ separator). Center-right: horizontal row of circular dark burgundy icon badges with thin vertical burgundy rule dividers; brush-stroke label for service + price below each badge. Footer: full-width dark burgundy bar — phone icon + number left, location pin + address center-left, dashed-border coupon box with scissor ✂ icon + offer center-right, starburst corner. Reproduce exactly."
                   : templateKey === "wok-fire"
-                  ? "landscape Wok Fire layout: near-black bg with deep red, gold, and parchment accents. Upper-left: large torn-edge deep red paper panel (headline zone) with gold bookmark-ribbon pennant + three gold circular brad accents. Upper-right: large hero photo zone natural edges into dark bg, no hard border. Center: wide parchment/kraft torn-edge banner (tagline zone). Lower-left: golden ticket-stub coupon (dashed border, notched edges). Lower-right: dark chalkboard A-frame sign with wood frame (menu/services). Footer: location pin + address pill left, phone + phone pill center, gold arrow accent. Reproduce exactly."
-                  : "landscape Health & Wellness layout: soft cream/off-white bg, clinic/office photo in organic curved teal blob upper-left, large wide rounded-rectangle white headline panel upper-center, teal pill-shaped tagline bar below it, service panels row with circular teal icon badges and white rounded-rect text boxes, reception photo in organic teal blob lower-left, stethoscope on dark teal circular blob lower-right, dark teal footer bar. Reproduce exactly.";
+                  ? "landscape Wok Fire layout: near-black bg with deep red, gold, and parchment accents. Upper-left: large torn-edge deep red paper panel (headline zone) with gold bookmark-ribbon pennant + three gold circular brad accents. Upper-right: large hero photo zone natural edges into dark bg, no hard border. Center: wide parchment/kraft torn-edge banner (tagline zone). Lower-left: golden ticket-stub coupon (dashed border, notched edges). Lower-right: dark chalkboard A-frame sign with wood frame (menu/services). Footer: location pin + address pill left, phone + phone pill center, starburst corner, gold arrow accent. Reproduce exactly."
+                  : "landscape Health & Wellness layout: soft cream/off-white bg, clinic/office photo in organic curved teal blob upper-left, large wide rounded-rectangle white headline panel upper-center, teal pill-shaped tagline bar below it, service panels row with circular teal icon badges and white rounded-rect text boxes, reception photo in organic teal blob lower-left, stethoscope on dark teal circular blob lower-right, starburst corner graphic, dark teal footer bar. Reproduce exactly.";
       refLines.push(`  • IMAGE ${imgIdx++} (LANDSCAPE TEMPLATE) — ${lsTmplDesc}`);
     }
     if (hasPhoto) {
@@ -618,19 +618,19 @@ export function buildAdPrompt(
           : templateKey === "at-your-service"
             ? "  • IMAGE 1 (TEMPLATE) — home-services postcard on light gray/off-white textured bg, navy blue + gold/yellow scheme: large dark navy hexagonal badge upper-left (logo zone), bold horizontal gold/yellow brush-stroke sweeping upper third, large hero photo zone upper-right blending naturally, wide dark navy horizontal band center-full-width, circular white icon service badges on the navy band, gold/yellow dashed-border coupon box lower-right, dark strip footer. Reproduce exactly."
             : templateKey === "home-elegance"
-              ? "  • IMAGE 1 (TEMPLATE) — premium home-services postcard on cream/off-white bg, dark navy + gold scheme: dark navy hexagonal house-icon badge upper-left, large hero photo upper-right bleeding off edge, organic cream blob wave left-center with navy-bordered rounded-rect business-name box + smaller tagline box + gold dot separator, three overlapping circular photos (living room, kitchen, outdoor service) middle-right, wide dark navy lower section with four rounded-rect service card tiles each capped by circular navy icon badge (house, tools, leaf, people), dark navy footer bar with phone icon. Reproduce exactly."
+              ? "  • IMAGE 1 (TEMPLATE) — premium home-services postcard on cream/off-white bg, dark navy + gold scheme: dark navy hexagonal house-icon badge upper-left, large hero photo upper-right bleeding off edge, organic cream blob wave left-center with navy-bordered rounded-rect business-name box + smaller tagline box + gold dot separator, three overlapping circular photos (living room, kitchen, outdoor service) middle-right, wide dark navy lower section with four rounded-rect service card tiles each capped by circular navy icon badge (house, tools, leaf, people), dark navy footer bar with phone icon + starburst corner. Reproduce exactly."
               : templateKey === "sage-organic"
-              ? "  • IMAGE 1 (TEMPLATE) — botanical organic postcard on cream/beige textured bg, dark olive/sage green + kraft paper scheme: large dark olive circle with botanical leaf sprigs top-left (decorative, not logo zone), large white/cream rounded-rect business-name panel upper-left, sweeping dark olive paint brush stroke below panel, large hero photo upper-right in curved wave cutout (no hard border), four dark olive circular icon badges (award, people, handshake, shield) with vertical dividers middle row, four cream rounded-rect service tiles below badges, dark olive wave band lower section with three landscape photos side by side, kraft paper dashed-stitch coupon rectangle lower-right, dark olive footer strip with location pin. Reproduce exactly."
+              ? "  • IMAGE 1 (TEMPLATE) — botanical organic postcard on cream/beige textured bg, dark olive/sage green + kraft paper scheme: large dark olive circle with botanical leaf sprigs top-left (decorative, not logo zone), large white/cream rounded-rect business-name panel upper-left, sweeping dark olive paint brush stroke below panel, large hero photo upper-right in curved wave cutout (no hard border), four dark olive circular icon badges (award, people, handshake, shield) with vertical dividers middle row, four cream rounded-rect service tiles below badges, dark olive wave band lower section with three landscape photos side by side, kraft paper dashed-stitch coupon rectangle lower-right, dark olive footer strip with location pin + starburst corner. Reproduce exactly."
               : templateKey === "purple-sage"
-              ? "  • IMAGE 1 (TEMPLATE) — premium lifestyle/home-services postcard on cream/beige bg, muted lavender-purple + sage green scheme: large muted purple circle + dot grid top-left (decorative, NOT logo zone), sage green botanical leaf sprig left (decorative), large white/cream rounded-rect business-name panel upper-left, sweeping purple paint brush stroke below panel, large circular hero photo in sage green ring border upper-right (no rectangular frame), two smaller overlapping circular photos lower-right (kitchen, outdoor patio), four muted sage green circular icon badges (professional, award, team, shield) with vertical dividers middle row, four cream rounded-rect service tiles below badges, muted purple wave band lower section, sage green brush stroke, dark purple footer strip with phone + oval pill | location pin + oval pill. Reproduce exactly."
+              ? "  • IMAGE 1 (TEMPLATE) — premium lifestyle/home-services postcard on cream/beige bg, muted lavender-purple + sage green scheme: large muted purple circle + dot grid top-left (decorative, NOT logo zone), sage green botanical leaf sprig left (decorative), large white/cream rounded-rect business-name panel upper-left, sweeping purple paint brush stroke below panel, large circular hero photo in sage green ring border upper-right (no rectangular frame), two smaller overlapping circular photos lower-right (kitchen, outdoor patio), four muted sage green circular icon badges (professional, award, team, shield) with vertical dividers middle row, four cream rounded-rect service tiles below badges, muted purple wave band lower section, sage green brush stroke, dark purple footer strip with phone + oval pill | location pin + oval pill | starburst corner. Reproduce exactly."
               : templateKey === "health-wellness"
-              ? "  • IMAGE 1 (TEMPLATE) — health/wellness postcard on soft cream bg with teal accents: two clinic/office photos inside organic curved teal blob shapes upper section, large wide rounded-rectangle white panel center (headline zone), narrow teal pill-shaped bar below it (tagline zone), service panels with circular teal badge icons and white rounded-rect text boxes, reception/waiting-room photo in organic blob lower-left, teal stethoscope on dark teal circular blob lower-right, dark teal footer bar. Reproduce exactly."
+              ? "  • IMAGE 1 (TEMPLATE) — health/wellness postcard on soft cream bg with teal accents: two clinic/office photos inside organic curved teal blob shapes upper section, large wide rounded-rectangle white panel center (headline zone), narrow teal pill-shaped bar below it (tagline zone), service panels with circular teal badge icons and white rounded-rect text boxes, reception/waiting-room photo in organic blob lower-left, teal stethoscope on dark teal circular blob lower-right, starburst corner graphic, dark teal footer bar. Reproduce exactly."
               : templateKey === "wok-fire"
-              ? "  • IMAGE 1 (TEMPLATE) — dramatic dark restaurant/food postcard on near-black bg, deep red + gold + parchment accents: large torn-edge deep red paper panel upper-left (headline zone) with gold bookmark pennant + gold brad accents; large hero photo zone upper-right natural edges into dark bg, no hard border; wide parchment/kraft torn-edge banner center (tagline zone); golden ticket-stub coupon lower-left (dashed border, notched edges); dark chalkboard A-frame sign lower-right (menu/services); footer: location pin + address pill left, phone + phone pill center, gold arrow. Reproduce exactly."
+              ? "  • IMAGE 1 (TEMPLATE) — dramatic dark restaurant/food postcard on near-black bg, deep red + gold + parchment accents: large torn-edge deep red paper panel upper-left (headline zone) with gold bookmark pennant + gold brad accents; large hero photo zone upper-right natural edges into dark bg, no hard border; wide parchment/kraft torn-edge banner center (tagline zone); golden ticket-stub coupon lower-left (dashed border, notched edges); dark chalkboard A-frame sign lower-right (menu/services); footer: location pin + address pill left, phone + phone pill center, starburst corner, gold arrow. Reproduce exactly."
               : templateKey === "brush-stroke"
-              ? "  • IMAGE 1 (TEMPLATE) — home-services postcard on cream/parchment bg with dark olive green and charcoal accents: large circular hero photo on the left framed by a dark organic brush-stroke swoosh (no hard rectangular border), dark olive hexagonal house-icon badge upper-right (logo zone), wide horizontal olive green paint brush stroke across upper-right area (headline zone), thin dark horizontal rule with small diamond separator below brush stroke, vertical column of service rows on the right each with a circular olive-bordered icon badge on the left and a dark charcoal horizontal brush-stroke shape with white text on the right, dark charcoal curved-top footer band spanning full width with circular phone icon + field left, circular location pin + field center. Reproduce every zone and element exactly."
+              ? "  • IMAGE 1 (TEMPLATE) — home-services postcard on cream/parchment bg with dark olive green and charcoal accents: large circular hero photo on the left framed by a dark organic brush-stroke swoosh (no hard rectangular border), dark olive hexagonal house-icon badge upper-right (logo zone), wide horizontal olive green paint brush stroke across upper-right area (headline zone), thin dark horizontal rule with small diamond separator below brush stroke, vertical column of service rows on the right each with a circular olive-bordered icon badge on the left and a dark charcoal horizontal brush-stroke shape with white text on the right, dark charcoal curved-top footer band spanning full width with circular phone icon + field left, circular location pin + field center, starburst corner. Reproduce every zone and element exactly."
               : templateKey === "heritage-home"
-              ? "  • IMAGE 1 (TEMPLATE) — premium home services postcard on cream/off-white (#f5f0e8) bg, deep burgundy (#6b1a2a) accents: sweeping organic burgundy brush stroke diagonal lower-left to upper-right. Upper-left: hero photo zone blending right edge into the brush stroke, no hard border. Upper-right: large rounded-rect headline zone with thin burgundy border, diamond ◆ separator between business name (bold serif) and tagline (elegant italic serif). Middle: horizontal row of circular dark burgundy icon badges with thin vertical burgundy rule dividers; brush-stroke-style label for service name and price below each badge. Footer: full-width dark burgundy bar — circular phone icon + number left, diamond accent, circular location pin + address; dashed-border rounded-rect coupon box with scissor ✂ upper-right corner + offer text. Reproduce every zone and element exactly."
+              ? "  • IMAGE 1 (TEMPLATE) — premium home services postcard on cream/off-white (#f5f0e8) bg, deep burgundy (#6b1a2a) accents: sweeping organic burgundy brush stroke diagonal lower-left to upper-right. Upper-left: hero photo zone blending right edge into the brush stroke, no hard border. Upper-right: large rounded-rect headline zone with thin burgundy border, diamond ◆ separator between business name (bold serif) and tagline (elegant italic serif). Middle: horizontal row of circular dark burgundy icon badges with thin vertical burgundy rule dividers; brush-stroke-style label for service name and price below each badge. Footer: full-width dark burgundy bar — circular phone icon + number left, diamond accent, circular location pin + address; dashed-border rounded-rect coupon box with scissor ✂ upper-right corner + offer text; starburst corner. Reproduce every zone and element exactly."
               : "  • IMAGE 1 (TEMPLATE) — postcard with parchment texture, brush-stroke headline band, orange pennant ribbon, circular checkmark badge, dashed coupon box, dark footer strip. Reproduce every zone and element exactly.",
     );
     imgIdx = 2;
@@ -669,8 +669,8 @@ export function buildAdPrompt(
       (d.offer
         ? `COUPON (dashed dark box, lower-right): offer text bold white/cream, large. Fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain an orange circular checkmark badge, a dashed coupon box or dashed-border rectangle, or an orange bookmark-ribbon pennant. Those elements are correct elsewhere on the card but must never be recreated or bleed into this custom ad-on corner area.\n\n`
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `STARBURST CORNER: The bottom-right starburst area must NOT contain an orange circular checkmark badge, a dashed coupon box or dashed-border rectangle, or an orange bookmark-ribbon pennant. Those elements are correct elsewhere on the card but must never be recreated or bleed into this starburst corner area.\n\n`
     )
     : isLandscape && templateKey === "made-fresh"
     ? (
@@ -684,8 +684,8 @@ export function buildAdPrompt(
       (d.offer
         ? `GOLDEN TICKET-STUB COUPON (lower-right): offer text bold dark, large. Fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain a golden ticket-stub coupon (dashed border, notched edges), a white paint-stroke panel, or a chalkboard A-frame sign. Those elements are correct elsewhere on the card but must never be recreated or bleed into this custom ad-on corner area.\n\n`
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `STARBURST CORNER: The bottom-right starburst area must NOT contain a golden ticket-stub coupon (dashed border, notched edges), a white paint-stroke panel, or a chalkboard A-frame sign. Those elements are correct elsewhere on the card but must never be recreated or bleed into this starburst corner area.\n\n`
     )
     : isLandscape && templateKey === "neighborhood-pro"
     ? (
@@ -707,7 +707,8 @@ export function buildAdPrompt(
       (d.offer
         ? `OFFER (wide white brush-stroke area, lower section): offer text bold dark-green, large. Fine print smaller below.\n\n`
         : "") +
-      "FOOTER (bottom bar): flat solid dark forest-green fill — no text, no phone number, no address, no QR code placeholder, no icons, no decorative marks of any kind. Leave the entire footer bar as a single plain dark green rectangle.\n\n"
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `STARBURST CORNER: The bottom-right starburst area must NOT contain a diagonal-cut service panel, a circular lime-green icon badge, or a white brush-stroke offer area. Those elements are correct elsewhere on the card but must never be recreated or bleed into this starburst corner area.\n\n`
     )
     : isLandscape && templateKey === "at-your-service"
     ? (
@@ -728,8 +729,8 @@ export function buildAdPrompt(
       (d.offer
         ? `COUPON (gold/yellow dashed-border box, lower-right): offer text bold dark navy, prominent. Fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain a gold/yellow dashed-border coupon box, a circular white icon badge from the navy band, or a gold/yellow brush-stroke element. Those elements are correct elsewhere on the card but must never be recreated or bleed into this custom ad-on corner area.\n\n`
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `STARBURST CORNER: The bottom-right starburst area must NOT contain a gold/yellow dashed-border coupon box, a circular white icon badge from the navy band, or a gold/yellow brush-stroke element. Those elements are correct elsewhere on the card but must never be recreated or bleed into this starburst corner area.\n\n`
     )
     : isLandscape && templateKey === "purple-sage"
     ? (
@@ -753,8 +754,8 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (dashed coupon box, lower area): offer text bold dark, fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain a muted purple circle or dot-grid accent, a dashed coupon box, a cream rounded-rect tile, or a sage green leaf sprig element. Those elements are correct elsewhere on the card but must never be recreated or bleed into this custom ad-on corner area.\n\n`
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `STARBURST CORNER: The bottom-right starburst area must NOT contain a muted purple circle or dot-grid accent, a dashed coupon box, a cream rounded-rect tile, or a sage green leaf sprig element. Those elements are correct elsewhere on the card but must never be recreated or bleed into this starburst corner area.\n\n`
     )
     : isLandscape && templateKey === "sage-organic"
     ? (
@@ -777,8 +778,8 @@ export function buildAdPrompt(
       (d.offer
         ? `COUPON (kraft paper dashed-stitch rectangle, lower-right, scissors icon): offer text bold dark, fine print below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain a kraft paper dashed-stitch coupon rectangle, a dark olive circular icon badge, or a dark olive wave band element. Those elements are correct elsewhere on the card but must never be recreated or bleed into this custom ad-on corner area.\n\n`
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `STARBURST CORNER: The bottom-right starburst area must NOT contain a kraft paper dashed-stitch coupon rectangle, a dark olive circular icon badge, or a dark olive wave band element. Those elements are correct elsewhere on the card but must never be recreated or bleed into this starburst corner area.\n\n`
     )
     : isLandscape && templateKey === "home-elegance"
     ? (
@@ -800,8 +801,8 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (dashed coupon box, lower area): offer text bold dark navy, large. Fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain a solid navy filled rectangle, a rounded-rect service tile, or a circular dark navy icon badge. Those elements belong in the SERVICE TILES and dark navy lower area but must never be recreated or bleed into this custom ad-on corner area.\n\n`
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `STARBURST CORNER: The bottom-right starburst area must NOT contain a solid navy filled rectangle, a rounded-rect service tile, or a circular dark navy icon badge. Those elements belong in the SERVICE TILES and dark navy lower area but must never be recreated or bleed into this starburst corner area.\n\n`
     )
     : isLandscape && templateKey === "health-wellness"
     ? (
@@ -821,8 +822,8 @@ export function buildAdPrompt(
       (d.offer
         ? `OFFER (teal-bordered rect or dashed coupon box, visually distinct from service panels): offer text large and bold. Fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain an organic teal blob shape, a circular teal badge, or a white rounded-rect text box or panel. Those elements are correct elsewhere on the card but must never be recreated or bleed into this custom ad-on corner area.\n\n`
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `STARBURST CORNER: The bottom-right starburst area must NOT contain an organic teal blob shape, a circular teal badge, or a white rounded-rect text box or panel. Those elements are correct elsewhere on the card but must never be recreated or bleed into this starburst corner area.\n\n`
     )
     : isLandscape && templateKey === "wok-fire"
     ? (
@@ -830,14 +831,15 @@ export function buildAdPrompt(
       "LAYOUT — reproduce Wok Fire LANDSCAPE zones exactly:\n\n" +
       `HEADLINE (upper-left, inside torn-edge deep red panel): business name bold condensed all-caps slab serif, very large, white or cream. Each word exactly once.\n\n` +
       (hasLogo
-        ? `LOGO (IMAGE ${logoImg} inside gold bookmark-ribbon pennant at top-left of red panel). Scale to fit; exact colors.\n\n`
-        : "") +
+        ? `LOGO (IMAGE ${logoImg} inside gold bookmark-ribbon pennant at top-left of red panel). Scale to fit; exact colors.` +
+          (d.tagline ? ` Tagline in italic script, gold/cream, inside red panel.\n\n` : "\n\n")
+        : (d.tagline ? `TAGLINE: italic script, gold/cream, inside red panel below business name.\n\n` : "")) +
       "HERO FOOD PHOTO (upper-right, wok/cooking action):\n" +
       (hasPhoto
         ? `  Composite IMAGE 2 into the hero zone. Natural edges into dark bg, no hard border.\n\n`
         : `  ${ipc.hero} — dramatic, vibrant. Natural edges; no hard border.\n\n`) +
       (d.tagline
-        ? `TAGLINE BANNER (center, parchment/kraft torn-edge banner): "${d.tagline}" in dark serif text. Do NOT repeat the tagline anywhere else on the card — only here.\n\n`
+        ? `TAGLINE BANNER (center, parchment/kraft torn-edge banner): "${d.tagline}" in dark serif text.\n\n`
         : "") +
       (d.offer
         ? `COUPON (lower-left, golden ticket-stub — dashed border, notched edges): offer text bold dark. Fine print smaller below.\n\n`
@@ -845,8 +847,8 @@ export function buildAdPrompt(
       (menuCount > 0
         ? `CHALKBOARD MENU (lower-right, dark A-frame sign): EXACTLY ${menuCount} item${menuCount !== 1 ? "s" : ""} and NO MORE in chalk-style white text — one per service in BUSINESS DETAILS, exactly as written. The template image may show more chalkboard lines — ignore extras; do NOT render empty chalk lines. No extras.\n\n`
         : `CHALKBOARD SIGN (lower-right): A-frame — leave board surface clean.\n\n`) +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain a dark chalkboard A-frame sign, a golden ticket-stub coupon, a torn-edge deep red panel element, or a parchment/kraft torn-edge banner. Those elements are correct elsewhere on the card but must never be recreated or bleed into this custom ad-on corner area.\n\n`
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `STARBURST CORNER: The bottom-right starburst area must NOT contain a dark chalkboard A-frame sign, a golden ticket-stub coupon, a torn-edge deep red panel element, or a parchment/kraft torn-edge banner. Those elements are correct elsewhere on the card but must never be recreated or bleed into this starburst corner area.\n\n`
     )
     : isLandscape && templateKey === "brush-stroke"
     ? (
@@ -866,8 +868,8 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (visually distinct dashed or bordered box, lower area): offer text bold dark, large. Fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain a circular olive-bordered icon badge, a dark charcoal horizontal brush-stroke shape, or a dark charcoal curved-top footer extension. Those elements are correct elsewhere on the card but must never be recreated or bleed into this custom ad-on corner area.\n\n`
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `STARBURST CORNER: The bottom-right starburst area must NOT contain a circular olive-bordered icon badge, a dark charcoal horizontal brush-stroke shape, or a dark charcoal curved-top footer extension. Those elements are correct elsewhere on the card but must never be recreated or bleed into this starburst corner area.\n\n`
     )
     : isLandscape && templateKey === "heritage-home"
     ? (
@@ -886,10 +888,10 @@ export function buildAdPrompt(
         ? `EXACTLY ${menuCount} circular dark burgundy icon badge${menuCount !== 1 ? "s" : ""} in a horizontal row and NO MORE — one per service in BUSINESS DETAILS, exactly as written. Thin vertical burgundy rule on right side of each badge divides them. Below each badge: brush-stroke-style label with service name and price. The template image may show more badge slots — ignore extras; do NOT render empty badge rows. No extras. No invented services.\n\n`
         : `four decorative dark burgundy circular icon badge shapes with thin vertical burgundy rule dividers; NO text labels.\n\n`) +
       (d.offer
-        ? `COUPON (footer bar, CENTER-LEFT section — between the phone column on the left and the address column): dashed-border rounded-rect, scissors ✂ icon, offer text bold cream inside box, fine print below. CRITICAL: the coupon must NOT appear at the far right — the bottom-right corner is reserved for the small gold disc.\n\n`
+        ? `COUPON (footer bar, CENTER-LEFT section — between the phone column on the left and the address column): dashed-border rounded-rect, scissors ✂ icon, offer text bold cream inside box, fine print below. CRITICAL: the coupon must NOT appear at the far right — the bottom-right corner is reserved for the starburst graphic.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain a dashed-border coupon box or offer text, a cream-background rounded-rect with a thin burgundy border, a headline-style box with a diamond ◆ separator, or any element from the HEADLINE zone. Those elements are correct elsewhere on the card but must never appear in the custom ad-on corner area.\n\n`
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `STARBURST CORNER: The bottom-right starburst area must NOT contain a dashed-border coupon box or offer text, a cream-background rounded-rect with a thin burgundy border, a headline-style box with a diamond ◆ separator, or any element from the HEADLINE zone. Those elements are correct elsewhere on the card but must never appear in the starburst corner area.\n\n`
     )
     : isLandscape
     ? (
@@ -916,7 +918,7 @@ export function buildAdPrompt(
       (d.offer
         ? `  SPECIAL OFFER (own visually distinct coupon zone — dashed box or bordered panel, clearly separated from services): offer text and fine print from BUSINESS DETAILS. No filler phrases.\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
     )
     : templateKey === "neighborhood-pro"
     ? (
@@ -938,7 +940,8 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (wide white brush-stroke area, lower section): offer text bold dark-green, large. Fine print smaller below.\n\n`
         : "") +
-      "FOOTER (bottom bar): flat solid dark forest-green fill — no text, no phone number, no address, no QR code placeholder, no icons, no decorative marks of any kind. Leave the entire footer bar as a single plain dark green rectangle.\n\n"
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `STARBURST CORNER: The bottom-right starburst area must NOT contain a diagonal-cut service panel, a circular lime-green icon badge, or a white brush-stroke offer area. Those elements are correct elsewhere on the card but must never be recreated or bleed into this starburst corner area.\n\n`
     )
     : templateKey === "at-your-service"
     ? (
@@ -961,8 +964,8 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (gold/yellow dashed-border coupon box, lower-right): offer text bold dark navy, large. Fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain a gold/yellow dashed-border coupon box, a circular white icon badge from the navy band, or a gold/yellow brush-stroke element. Those elements are correct elsewhere on the card but must never be recreated or bleed into this custom ad-on corner area.\n\n`
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `STARBURST CORNER: The bottom-right starburst area must NOT contain a gold/yellow dashed-border coupon box, a circular white icon badge from the navy band, or a gold/yellow brush-stroke element. Those elements are correct elsewhere on the card but must never be recreated or bleed into this starburst corner area.\n\n`
     )
     : templateKey === "purple-sage"
     ? (
@@ -991,8 +994,8 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (dashed coupon box, lower area): offer text bold dark, fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `STARBURST CORNER: No purple circle/dot-grid, coupon box, cream tile, or leaf sprig in the corner.\n\n`
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `STARBURST CORNER: No purple circle/dot-grid, coupon box, cream tile, or leaf sprig in starburst corner.\n\n`
     )
     : templateKey === "sage-organic"
     ? (
@@ -1020,8 +1023,8 @@ export function buildAdPrompt(
       (d.offer
         ? `COUPON (kraft paper/cardboard textured rectangle with dashed stitched border and scissors icon, lower-right): offer text bold dark, fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `STARBURST CORNER: No kraft coupon, dark olive badge, or olive wave band in the corner.\n\n`
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `STARBURST CORNER: No kraft coupon, dark olive badge, or olive wave band in starburst corner.\n\n`
     )
     : templateKey === "home-elegance"
     ? (
@@ -1045,7 +1048,7 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (dashed coupon box, lower area): offer text bold dark navy, large. Fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
       `STARBURST CORNER — must not appear here: a solid navy rectangle, a rounded-rect service tile, or a circular dark navy icon badge.\n\n`
     )
     : templateKey === "surprise-me"
@@ -1068,7 +1071,7 @@ export function buildAdPrompt(
       (d.offer
         ? `  SPECIAL OFFER (own visually distinct coupon zone, clearly separated from services): offer text and fine print from BUSINESS DETAILS. No filler phrases.\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
       "QUALITY: ✗ flat bg | ✗ rectangular frames | ✗ text on bare color | ✗ filler in coupon. ✓ Three depth planes | ✓ cinematic edge blending | ✓ 300 DPI.\n\n"
     )
     : templateKey === "health-wellness"
@@ -1088,22 +1091,23 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER: offer text prominently in teal or dark text in an available white-space area. Fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain an organic teal blob shape, a circular teal badge, or a white rounded-rect text box or panel. Those elements are correct elsewhere on the card but must never be recreated or bleed into this custom ad-on corner area.\n\n`
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `STARBURST CORNER: The bottom-right starburst area must NOT contain an organic teal blob shape, a circular teal badge, or a white rounded-rect text box or panel. Those elements are correct elsewhere on the card but must never be recreated or bleed into this starburst corner area.\n\n`
     )
     : templateKey === "wok-fire"
     ? (
       "LAYOUT — reproduce Wok Fire template zones exactly:\n\n" +
       `HEADLINE (upper-left, inside large torn-edge deep red paper panel): business name bold condensed all-caps slab serif, very large, white or cream. Each word exactly once.\n\n` +
       (hasLogo
-        ? `LOGO (gold bookmark-ribbon pennant, top-left corner of red panel): IMAGE ${logoImg} centered inside pennant, scaled to fit, exact colors.\n\n`
-        : "") +
+        ? `LOGO (gold bookmark-ribbon pennant, top-left corner of red panel): IMAGE ${logoImg} centered inside pennant, scaled to fit, exact colors.` +
+          (d.tagline ? ` Tagline in italic script, gold/cream, inside red panel below business name.\n\n` : "\n\n")
+        : (d.tagline ? `TAGLINE: italic script, gold/cream, inside red panel below business name.\n\n` : "")) +
       "HERO FOOD PHOTO (upper-right, wok/cooking action scene):\n" +
       (hasPhoto
         ? `  Composite IMAGE 2 into the hero zone. Natural edges into dark bg, no hard border. Cinematic lighting.\n\n`
         : `  ${ipc.hero} — dramatic. Natural edges into dark bg; no hard border.\n\n`) +
       (d.tagline
-        ? `TAGLINE BANNER (center, parchment/kraft torn-edge banner): "${d.tagline}" in dark serif text on the banner. Do NOT repeat the tagline anywhere else on the card — only here.\n\n`
+        ? `TAGLINE BANNER (center, parchment/kraft torn-edge banner): "${d.tagline}" in dark serif text on the banner.\n\n`
         : "") +
       (d.offer
         ? `COUPON (lower-left, golden ticket-stub — dashed border, notched edges): offer text bold dark inside ticket-stub. Fine print smaller below.\n\n`
@@ -1111,8 +1115,8 @@ export function buildAdPrompt(
       (menuCount > 0
         ? `CHALKBOARD MENU (lower-right, dark chalkboard A-frame sign): EXACTLY ${menuCount} item${menuCount !== 1 ? "s" : ""} and NO MORE in chalk-style white text — one per service in BUSINESS DETAILS, exactly as written. The template image may show more chalkboard lines — ignore extras; do NOT render empty chalk lines. No extras. No invented items.\n\n`
         : `CHALKBOARD SIGN (lower-right): A-frame sign — leave board surface clean (no services provided).\n\n`) +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain a dark chalkboard A-frame sign, a golden ticket-stub coupon, a torn-edge deep red panel element, or a parchment/kraft torn-edge banner. Those elements must never appear in the custom ad-on corner area.\n\n`
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `STARBURST CORNER: The bottom-right starburst area must NOT contain a dark chalkboard A-frame sign, a golden ticket-stub coupon, a torn-edge deep red panel element, or a parchment/kraft torn-edge banner. Those elements must never appear in the starburst corner area.\n\n`
     )
     : templateKey === "brush-stroke"
     ? (
@@ -1131,8 +1135,8 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (visually distinct dashed or bordered box, lower area): offer text bold dark, large. Fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain a circular olive-bordered icon badge, a dark charcoal horizontal brush-stroke shape, or a dark charcoal curved-top footer extension. Those elements must never appear in the custom ad-on corner area.\n\n`
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `STARBURST CORNER: The bottom-right starburst area must NOT contain a circular olive-bordered icon badge, a dark charcoal horizontal brush-stroke shape, or a dark charcoal curved-top footer extension. Those elements must never appear in the starburst corner area.\n\n`
     )
     : templateKey === "heritage-home"
     ? (
@@ -1150,10 +1154,10 @@ export function buildAdPrompt(
         ? `EXACTLY ${menuCount} dark burgundy circular icon badge${menuCount !== 1 ? "s" : ""} evenly spaced — one per service in BUSINESS DETAILS. Thin vertical burgundy rule divider on right of each; brush-stroke label below. Ignore extra slots; no empty badges. No invented services.\n\n`
         : `four decorative dark burgundy circular icon badge shapes with thin vertical burgundy rule dividers; NO text labels.\n\n`) +
       (d.offer
-        ? `COUPON (footer bar, center — left of the custom ad-on corner): dashed-border rounded-rect, scissors ✂ icon, offer bold, fine print below. Do NOT place coupon at the far-right corner.\n\n`
+        ? `COUPON (footer bar, CENTER section — between the phone/address column on the left and the starburst corner on the right): dashed-border rounded-rect, scissors ✂ icon, offer text bold inside box, fine print below. CRITICAL: the coupon must NOT appear at the far right — the bottom-right corner is reserved for the starburst graphic.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `CUSTOM AD-ON CORNER — must not contain: coupon/offer box, cream rounded-rect with burgundy border, headline-style box with diamond ◆, or any HEADLINE-zone element.\n\n`
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `STARBURST CORNER — must not contain here: a dashed-border coupon box or offer text, a cream-background rounded-rect with a thin burgundy border, a headline-style box with a diamond ◆ separator, or any element from the HEADLINE zone.\n\n`
     )
     : (
       // Default: parchment-classic portrait
@@ -1175,8 +1179,8 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (dashed coupon box): offer text bold inside dashed rectangle. Fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, templateKey) +
-      `CUSTOM AD-ON CORNER: The custom ad-on corner must NOT contain an orange circular checkmark badge, a dashed coupon box or dashed-border rectangle, or an orange bookmark-ribbon pennant. Those elements are correct elsewhere on the card but must never be recreated or bleed into this custom ad-on corner area.\n\n`
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      `STARBURST CORNER: The bottom-right starburst area must NOT contain an orange circular checkmark badge, a dashed coupon box or dashed-border rectangle, or an orange bookmark-ribbon pennant. Those elements are correct elsewhere on the card but must never be recreated or bleed into this starburst corner area.\n\n`
     );
 
   return (

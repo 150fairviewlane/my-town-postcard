@@ -1,14 +1,14 @@
 /**
- * testStarburst.ts — visual proof that the opaque footer panel composites correctly.
+ * testStarburst.ts — visual proof that the glow disc composites correctly.
  *
  * Creates a dark-footer synthetic ad (matching a typical postcard footer area),
  * runs compositeQrOnto, then saves:
- *   /tmp/starburst_full.jpg       — full ad with opaque panel + card + QR
+ *   /tmp/starburst_full.jpg       — full ad with glow disc + card + QR
  *   /tmp/starburst_corner.jpg     — 400×400 px crop of the bottom-right corner
  *
- * Expected result: every sample point in the panel region outside the card is
- * the sampled footer navy colour (#1A2744), NOT the old cream fill (#f5f0e8).
- * No gradient halo, no blurred smudge — just a flat opaque panel.
+ * Expected result: a smooth radial-gradient quarter-circle (color = template's
+ * CardStyle.fill) fades from the bottom-right corner into the ad. The backing
+ * card + QR sit centred on top of the disc origin.
  *
  * Run: pnpm --filter @workspace/api-server exec tsx src/scripts/testStarburst.ts
  */
@@ -28,13 +28,16 @@ const TRACKING_URL = "https://mytownpostcard.com/go/test-starburst-spring2026";
 const SIZE_KEY    = "xl" as const;
 
 /**
- * Synthetic JPEG: cream body with a dark navy footer (16% of height).
+ * Synthetic JPEG: cream body with a dark navy footer (20% of height).
+ * Gives a realistic contrast backdrop for the glow disc.
+ *
  * Uses a single SVG that matches the exact expected image dimensions so the
- * buffer passed to compositeQrOnto is always exactly imgW × imgH.
+ * buffer passed to compositeQrOnto is always exactly imgW × imgH — preventing
+ * "bad extract area" errors in the decode-verify step.
  */
 async function makeSyntheticJpeg(): Promise<Buffer> {
   const { imgW, imgH } = QR_PLACEMENT[SIZE_KEY];
-  const footerH = Math.round(imgH * 0.16);
+  const footerH = Math.round(imgH * 0.20); // 20% footer
   const bodyH   = imgH - footerH;
 
   const svg = Buffer.from(
@@ -54,36 +57,16 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
   return { r: parseInt(m[1]!, 16), g: parseInt(m[2]!, 16), b: parseInt(m[3]!, 16) };
 }
 
-/**
- * Sample a 1×1 px pixel from the result image and return its RGB.
- */
-async function samplePixel(buf: Buffer, x: number, y: number): Promise<[number, number, number]> {
-  const { data } = await sharp(buf)
-    .extract({ left: x, top: y, width: 1, height: 1 })
-    .removeAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-  return [data[0]!, data[1]!, data[2]!];
-}
-
 async function main() {
   const { imgW, imgH } = QR_PLACEMENT[SIZE_KEY];
-  // XL card geometry (from QR_PLACEMENT + CARD_MARGIN=1.0375):
-  //   cardSize = round(180 × 1.0375) = 187
-  //   cardLeft = imgW - cardSize - CARD_INSET(6) = 1200 - 187 - 6 = 1007
-  //   cardTop  = imgH - cardSize - CARD_INSET(6) = 1500 - 187 - 6 = 1307
-  const cardLeft = 1007;
-  const cardTop  = 1307;
-  const cardSize = 187;
-
-  console.log(`\n── testStarburst.ts (opaque panel) ───────────────────────`);
+  console.log(`\n── testStarburst.ts (glow disc) ──────────────────────────`);
   console.log(`Image: ${imgW}×${imgH} px (XL spot)`);
 
   const synth = await makeSyntheticJpeg();
   console.log(`Synthetic JPEG: ${synth.length.toLocaleString()} bytes (cream body + navy footer)`);
 
-  // Use heritage-home style — cream fill #f5f0e8 on dark footer gives maximum
-  // contrast to verify the panel colour is sampled correctly.
+  // Use heritage-home style — cream fill #f5f0e8 on a dark footer gives high
+  // contrast to verify the disc colour.
   const style = getTemplateQrStyle("heritage-home");
   console.log(`Card style: ${JSON.stringify(style)}`);
 
@@ -110,63 +93,44 @@ async function main() {
   console.log(`\n   Raw synthetic:   ${rawBytes.toLocaleString()} bytes`);
   console.log(`   After composite: ${outBytes.toLocaleString()} bytes  (Δ ${deltaKB} KB)`);
 
-  // ── Card-corner backing-square verification ───────────────────────────────
-  // The panel is now a cardSize×cardSize square placed exactly at (cardLeft,
-  // cardTop). We verify the 4 corners of the card bounding box — these are in
-  // the transparent corner zone of the card's rounded-rect SVG (cornerRadius=16
-  // means the curve starts 16 px from each edge; a pixel 1-2 px from the
-  // corner is well outside the rounded rect and passes straight through to the
-  // backing square below).
+  // ── Disc colour verification ──────────────────────────────────────────────
+  // Sample in the CARD_INSET strip — the 6px margin between the card's right/
+  // bottom edge and the image edge. This region sits on the glow disc at nearly
+  // 100% opacity (≈ 5px from disc centre), so the pixel should match style.fill
+  // within JPEG compression tolerance (±20 per channel).
   //
-  // Backing square: x ∈ [1007, 1194), y ∈ [1307, 1494)  (cardSize=187, inset=6)
-  // Card SVG rounded rect: rx=ry=16, drawn inside 1.5 px half-stroke inset.
-  // Corner transparent zone is verified for all 4 corners:
-  //   TL (1008, 1308)  TR (1192, 1308)  BL (1008, 1492)  BR (1192, 1492)
-  //
-  // In the synthetic test image the footer band (navy) already covers these
-  // coordinates, so the check doubles as confirmation the composite didn't
-  // accidentally paint the card-fill colour into the corners.
-  const samplePoints: Array<[number, number, string]> = [
-    [cardLeft + 1,           cardTop + 1,           "top-left corner"],
-    [cardLeft + cardSize - 3, cardTop + 1,           "top-right corner"],
-    [cardLeft + 1,           cardTop + cardSize - 3, "bottom-left corner"],
-    [cardLeft + cardSize - 3, cardTop + cardSize - 3, "bottom-right corner"],
-    [imgW - 3,               imgH - 3,               "image far corner (footer background)"],
-  ];
+  // XL geometry (CARD_INSET = 6):
+  //   card right  = imgW − cardSize − CARD_INSET + cardSize = imgW − 6 = 1194
+  //   card bottom = imgH − cardSize − CARD_INSET + cardSize = imgH − 6 = 1494
+  //   sample at (imgW − 3, imgH − 3) = (1197, 1497) — well inside image bounds,
+  //   outside the card, and only ~4 px from the disc centre → near-full opacity.
+  const sampleX = imgW - 3;
+  const sampleY = imgH - 3;
+  const { data: px } = await sharp(result)
+    .extract({ left: sampleX, top: sampleY, width: 1, height: 1 })
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
 
-  const footerExpected = hexToRgb("#1A2744");
-  const cardExpected   = hexToRgb(style.fill);  // cream — should NOT appear here
-  const TOL            = 30;  // allow extra tolerance for JPEG round-trips across samples
+  const [sampR, sampG, sampB] = [px[0]!, px[1]!, px[2]!];
+  const expected = hexToRgb(style.fill);
+  const TOL = 20;
+  const matches =
+    Math.abs(sampR - expected.r) <= TOL &&
+    Math.abs(sampG - expected.g) <= TOL &&
+    Math.abs(sampB - expected.b) <= TOL;
 
-  let allPass = true;
-  console.log(`\n   Panel colour checks (expect ≈ navy #1A2744, NOT cream ${style.fill}):`);
-
-  for (const [sx, sy, label] of samplePoints) {
-    const [r, g, b] = await samplePixel(result, sx, sy);
-    const matchesPanel =
-      Math.abs(r - footerExpected.r) <= TOL &&
-      Math.abs(g - footerExpected.g) <= TOL &&
-      Math.abs(b - footerExpected.b) <= TOL;
-    const matchesCard =
-      Math.abs(r - cardExpected.r) <= TOL &&
-      Math.abs(g - cardExpected.g) <= TOL &&
-      Math.abs(b - cardExpected.b) <= TOL;
-
-    if (matchesPanel) {
-      console.log(`   ✅ (${sx},${sy}) ${label}: rgb(${r},${g},${b}) ≈ navy ✓`);
-    } else if (matchesCard) {
-      console.warn(`   ⚠️  (${sx},${sy}) ${label}: rgb(${r},${g},${b}) — matches card fill (halo/no-panel?)`);
-      allPass = false;
-    } else {
-      console.warn(`   ⚠️  (${sx},${sy}) ${label}: rgb(${r},${g},${b}) — unexpected (expected navy or card)`);
-      allPass = false;
-    }
-  }
-
-  if (allPass) {
-    console.log(`\n✅ All panel sample points confirmed opaque navy — no glow halo or smudge detected.`);
+  if (matches) {
+    console.log(
+      `\n✅ Glow disc detected at (${sampleX},${sampleY}): ` +
+      `rgb(${sampR},${sampG},${sampB}) ≈ ${style.fill} (fill colour ✓)`,
+    );
   } else {
-    console.warn(`\n⚠️  Some panel samples failed — inspect ${cornerPath} for visual confirmation.`);
+    console.warn(
+      `\n⚠️  Sample pixel at (${sampleX},${sampleY}): rgb(${sampR},${sampG},${sampB}) — ` +
+      `expected ≈ ${style.fill} = rgb(${expected.r},${expected.g},${expected.b}) ±${TOL}`,
+    );
+    console.warn(`   Inspect ${cornerPath} to verify the glow disc is rendering.`);
   }
 
   console.log(`\nAll templates registered: ${Object.keys(TEMPLATE_QR_STYLES).join(", ")}`);

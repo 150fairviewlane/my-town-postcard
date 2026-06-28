@@ -143,20 +143,6 @@ The postcard is 12"×9" landscape and has TWO sides, both sellable through the s
 
 The print page (`/admin/campaign/:id/print`) renders both sides as separate print pages with `page-break-after: always` between them.
 
-## AI Ad Background Compositing (Glow Disc Erasure)
-
-- AI-generated dark-template ad backgrounds render a decorative "glow disc"
-  in the corner of each card.
-- Card sizes (px, pre-bleed): XL 180, L 130, M/S 90.
-  Bleed-adjusted size = round(base × 1.0375).
-- ERASE_ZONE_PX = discRadius = round(cardSize × 2.0) — the exact footprint
-  the glow disc will cover, erased before the disc is redrawn so no leftover
-  AI-generated texture peeks out from behind it.
-- Verified zones: XL 374px, L 270px, M/S 186px.
-- Confirmed via corner-crop inspection on 7 raw renders, including the
-  worst-case health-wellness templates (~330px disc offset) — all erase
-  cleanly, gradient blends smoothly into template background.
-
 ## Seed Data
 
 Campaign 1 (Spring 2025) has 15 spots: 7 front + 8 back. Front: `mb` `re` paid; `dn` `l1` `l2` `l3` `l4` available. Back: `bxl` paid; `bxl2` `bxl3` `bm1` `bm2` `bm3` `bm4` `bs1` available. (Old spots `lw`/`a2` are orphaned DB rows — grid skips them via GRID_POSITIONS lookup.)

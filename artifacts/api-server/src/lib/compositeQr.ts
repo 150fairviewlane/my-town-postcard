@@ -3,11 +3,12 @@
  *
  * Generates a real, scannable QR code (ECL H) and composites it onto an ad
  * image buffer. Compositing order (bottom to top):
- *   1. Opaque backing panel — solid rectangle anchored at the bottom-right
- *      image corner, coloured by sampling the actual footer bar from Grok's
- *      output. Covers any AI-generated corner decoration (gold disc, stray
- *      marks) completely without blurring or blending artefacts.
- *   2. Square backing card with a crisp drop shadow — centred in the panel.
+ *   1. Glow disc — soft radial-gradient circle anchored at the bottom-right
+ *      image corner. Uses each template's own CardStyle.fill color, fading
+ *      from full opacity at the corner to transparent at the disc edge.
+ *      Creates a natural vignette that makes the backing card look embedded
+ *      in the ad rather than pasted on.
+ *   2. Square backing card — sits centred on the glow disc origin.
  *   3. QR code — centred inside the backing card.
  *
  * Card sizing — physical-inch based, always a square:
@@ -29,12 +30,11 @@
  *   Use marginMultiplier ≥ 1.45 — at the default 1.0375× the QR's diagonal
  *   (side × √2) would exceed the circle's diameter and corners would clip.
  *
- * Opaque panel geometry:
- *   panelSize = PANEL_SIZE_PX[spotSize] — covers the old "erase zone" footprint
- *   so any Grok corner decoration is fully hidden before the card is placed.
- *   Panel colour is sampled from a clean patch of Grok's actual footer bar
- *   (60×20 px at x≈60 % of image width, vertically centred in footer band),
- *   falling back to style.fill if sampling fails.
+ * Glow disc geometry:
+ *   discRadius = round(cardSize × DISC_RADIUS_MULTIPLIER)
+ *   The disc centre is at the image corner (imgW, imgH). Only the upper-left
+ *   quadrant of the disc is visible within the image bounds — appearing as a
+ *   soft quarter-circle halo in the bottom-right corner of the ad.
  */
 
 import { logger } from "./logger";
@@ -164,14 +164,13 @@ const CARD_INSET = 6;
  */
 const CARD_MARGIN = 1.0375;
 
-// (No large panel — the backing square is exactly cardSize × cardSize, see step 4.)
-
+// ── Glow disc constant ────────────────────────────────────────────────────
 /**
- * Extra canvas pixels added to the card SVG on the right and bottom edges so
- * the drop-shadow filter can render without being clipped at the card boundary.
- * Must be ≥ shadow_dx + stdDeviation * 3  (2 + 2*3 = 8).
+ * discRadius = round(cardSize × DISC_RADIUS_MULTIPLIER).
+ * At 2.0× the disc extends one full card-width beyond each edge of the card,
+ * giving a visible soft halo that frames the card without overwhelming it.
  */
-const SHADOW_EXTRA = 8;
+const DISC_RADIUS_MULTIPLIER = 2.0;
 
 // ── Card layout computed from QR spec ─────────────────────────────────────
 export interface CardLayout {
@@ -232,12 +231,6 @@ export function computeCardLayout(spec: QrSpec, style?: Pick<CardStyle, "marginM
 // ── SVG backing-card builder ───────────────────────────────────────────────
 /**
  * Render the backing card as an SVG buffer.
- *
- * The SVG canvas is SHADOW_EXTRA pixels wider/taller than cardSize so the
- * feDropShadow filter can bleed rightward/downward without being clipped at
- * the card boundary. The extra pixels composite cleanly against the opaque
- * backing panel below them.
- *
  * @param cardSize  Side length in px (card is always square)
  * @param style     Visual style
  * @param effectiveCornerRadius  Computed corner radius (may differ from style.cornerRadius
@@ -258,178 +251,62 @@ function makeCardSvg(cardSize: number, style: CardStyle, effectiveCornerRadius: 
     ? ` stroke="${style.border}" stroke-width="${sw}"${style.dashPattern ? ` stroke-dasharray="${style.dashPattern.join(" ")}"` : ""}`
     : "";
 
-  // Canvas is slightly larger than cardSize to give the drop-shadow room to
-  // render on right and bottom edges without clipping.
-  const svgW = cardSize + SHADOW_EXTRA;
-  const svgH = cardSize + SHADOW_EXTRA;
-
   const svg =
-    `<svg width="${svgW}" height="${svgH}" xmlns="http://www.w3.org/2000/svg">` +
-    `<defs><filter id="ds" x="-5%" y="-5%" width="130%" height="130%">` +
-    `<feDropShadow dx="2" dy="2" stdDeviation="2" flood-color="#000000" flood-opacity="0.35"/>` +
-    `</filter></defs>` +
+    `<svg width="${cardSize}" height="${cardSize}" xmlns="http://www.w3.org/2000/svg">` +
     `<rect x="${half}" y="${half}" width="${cardSize - inset}" height="${cardSize - inset}" ` +
-    `rx="${effectiveCornerRadius}" ry="${effectiveCornerRadius}" fill="${style.fill}"${strokeAttrs} filter="url(#ds)"/>` +
+    `rx="${effectiveCornerRadius}" ry="${effectiveCornerRadius}" fill="${style.fill}"${strokeAttrs}/>` +
     `</svg>`;
   return Buffer.from(svg);
 }
 
-// ── Footer colour sampler ─────────────────────────────────────────────────
+// ── Glow disc SVG builder ──────────────────────────────────────────────────
 
 /**
- * Sample a representative background colour from directly beneath the QR
- * backing square so the sampled colour always matches the exact footer zone
- * the card will cover — even when the AI generates a horizontal gradient.
+ * Render a soft radial-gradient disc as a square SVG buffer.
  *
- * Extracts a 60×20 px patch centred inside the cardSize×cardSize region at
- * (cardLeft, cardTop). Returns the median RGB as a "#rrggbb" hex string, or
- * `fallbackHex` if the image is too small or the extraction throws.
+ * The disc centre is at the SVG's bottom-right corner (radius, radius), so
+ * only the upper-left quadrant of the gradient circle is visible within the
+ * SVG viewport. The gradient runs from `fillHex` at full opacity at the
+ * centre to `fillHex` at zero opacity at the disc edge — producing a smooth
+ * quarter-circle vignette with no hard outline.
  *
- * A median rather than mean is used so isolated lighter pixels (e.g. a thin
- * coupon edge) cannot skew the result away from the true footer background.
+ * Place the resulting buffer at (imgW − radius, imgH − radius) to align the
+ * disc centre with the image's bottom-right corner pixel.
+ *
+ * @param radius   Disc radius in pixels; also the SVG width and height.
+ * @param fillHex  Fill colour as a hex string (e.g. "#1A2744"). Should match
+ *                 the template's CardStyle.fill for visual coherence.
  */
-async function sampleFooterColor(
-  imageBuffer: Buffer,
-  imgW: number,
-  imgH: number,
-  fallbackHex: string,
-): Promise<string> {
-  const sharpMod = await (import("sharp") as Promise<any>);
-  const sharp    = (sharpMod.default ?? sharpMod) as typeof import("sharp");
-
-  const patchW = 60;
-  const patchH = 20;
-  // Sample from the very bottom of the left edge — the lowest pixels are
-  // always pure footer background regardless of template or Grok content.
-  const patchLeft = 10;
-  const patchTop  = imgH - patchH - 5;
-
-  if (patchLeft + patchW > imgW || patchTop < 0) {
-    return fallbackHex;
-  }
-
-  try {
-    const { data } = await sharp(imageBuffer)
-      .extract({ left: patchLeft, top: patchTop, width: patchW, height: patchH })
-      .removeAlpha()
-      .raw()
-      .toBuffer({ resolveWithObject: true });
-
-    const rs: number[] = [];
-    const gs: number[] = [];
-    const bs: number[] = [];
-    for (let i = 0; i < data.length; i += 3) {
-      rs.push(data[i]!);
-      gs.push(data[i + 1]!);
-      bs.push(data[i + 2]!);
-    }
-    rs.sort((a, b) => a - b);
-    gs.sort((a, b) => a - b);
-    bs.sort((a, b) => a - b);
-    const mid = Math.floor(rs.length / 2);
-    const hex = (n: number) => n.toString(16).padStart(2, "0");
-    return `#${hex(rs[mid]!)}${hex(gs[mid]!)}${hex(bs[mid]!)}`;
-  } catch {
-    return fallbackHex;
-  }
-}
-
-/**
- * Scan the LEFT edge of the image UPWARD from cardTop to find where the footer
- * bar actually begins.
- *
- * Strategy: extract a 60px-tall strip just above the card (cardTop-60 to cardTop)
- * and walk it top-to-bottom. The FIRST row that matches the footer colour is the
- * footer's upper boundary. Scanning upward from the card avoids the false-positive
- * problem of the old top-down scan (which matched dark body elements on dark templates).
- *
- * Hard cap: never look more than MAX_SCAN_PX above cardTop so the panel can never
- * reach into body content even on templates where footer colour bleeds upward.
- *
- * Falls back to cardTop (panel just covers the card) if nothing matches.
- */
-async function detectFooterTop(
-  imageBuffer: Buffer,
-  imgH: number,
-  cardTop: number,
-  footerHex: string,
-  tolerance = 40,
-): Promise<number> {
-  const MAX_SCAN_PX = 80; // never look more than 80 px above the card
-  const sharpMod = await (import("sharp") as Promise<any>);
-  const sharp    = (sharpMod.default ?? sharpMod) as typeof import("sharp");
-
-  const fr = parseInt(footerHex.slice(1, 3), 16);
-  const fg = parseInt(footerHex.slice(3, 5), 16);
-  const fb = parseInt(footerHex.slice(5, 7), 16);
-
-  const scanTop = Math.max(0, cardTop - MAX_SCAN_PX);
-  const scanH   = cardTop - scanTop; // ≤ MAX_SCAN_PX rows
-  if (scanH <= 0) return cardTop;
-
-  const { data } = await sharp(imageBuffer)
-    .extract({ left: 10, top: scanTop, width: 60, height: scanH })
-    .removeAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-
-  // Walk the strip TOP-TO-BOTTOM (i.e. from farthest-above-card downward).
-  // The FIRST matching row is the topmost point of the footer bar.
-  let footerTop = cardTop; // fallback: panel starts exactly at the card
-  for (let row = 0; row < scanH; row++) {
-    const rs: number[] = [], gs: number[] = [], bs: number[] = [];
-    for (let px = 0; px < 60; px++) {
-      const idx = (row * 60 + px) * 3;
-      rs.push(data[idx]!);
-      gs.push(data[idx + 1]!);
-      bs.push(data[idx + 2]!);
-    }
-    rs.sort((a, b) => a - b);
-    gs.sort((a, b) => a - b);
-    bs.sort((a, b) => a - b);
-    const mid  = Math.floor(rs.length / 2);
-    const dist = Math.sqrt(
-      (rs[mid]! - fr) ** 2 + (gs[mid]! - fg) ** 2 + (bs[mid]! - fb) ** 2,
-    );
-    if (dist < tolerance) {
-      footerTop = scanTop + row; // topmost footer row found
-      break;
-    }
-  }
-  return footerTop;
-}
-
-// ── Opaque backing-panel SVG builder ──────────────────────────────────────
-
-/**
- * Render a solid opaque rectangle as an SVG buffer.
- * Anchored at the bottom-right image corner; composited at (imgW−w, imgH−h).
- */
-function makeOpaquePanelSvg(w: number, h: number, colorHex: string): Buffer {
-  return Buffer.from(
-    `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">` +
-    `<rect width="${w}" height="${h}" fill="${colorHex}"/>` +
-    `</svg>`,
-  );
+function makeGlowDiscSvg(radius: number, fillHex: string): Buffer {
+  const svg =
+    `<svg width="${radius}" height="${radius}" xmlns="http://www.w3.org/2000/svg">` +
+    `<defs>` +
+    `<radialGradient id="g" cx="${radius}" cy="${radius}" r="${radius}" gradientUnits="userSpaceOnUse">` +
+    `<stop offset="0%" stop-color="${fillHex}" stop-opacity="1"/>` +
+    `<stop offset="100%" stop-color="${fillHex}" stop-opacity="0"/>` +
+    `</radialGradient>` +
+    `</defs>` +
+    `<rect width="${radius}" height="${radius}" fill="url(#g)"/>` +
+    `</svg>`;
+  return Buffer.from(svg);
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────
 
 /**
- * Composite a footer-matched opaque panel + real scannable QR code onto an ad image.
+ * Composite a soft glow disc + real scannable QR code onto an ad image.
  *
  * Compositing order (bottom to top):
- *   1. Opaque backing panel — solid rectangle anchored at the bottom-right
- *      corner, coloured to match Grok's actual footer bar. Completely hides
- *      any AI-generated corner decoration without blur or blending artefacts.
- *   2. Square backing card with a crisp drop shadow centred over the panel.
+ *   1. Glow disc — soft radial-gradient quarter-circle at the bottom-right
+ *      image corner, using the template's own CardStyle.fill colour.
+ *   2. Square backing card centred over the disc origin.
  *   3. QR code centred inside the backing card.
  *
  * @param imageBuffer  JPEG buffer of the ad (already cropped to print dims)
  * @param trackingUrl  Full URL the QR should encode, e.g. "https://app.com/go/slug"
  * @param spotSize     Spot size key; controls card/QR pixel sizes and placement
  * @param style        Optional card visual style; defaults to white + burgundy border
- * @returns            JPEG buffer (98 % quality) with opaque panel + backing card + QR composited
+ * @returns            JPEG buffer (98 % quality) with glow disc + backing card + QR composited
  * @throws             If QR generation fails or post-composite decode check fails
  */
 export async function compositeQrOnto(
@@ -479,41 +356,18 @@ export async function compositeQrOnto(
     .png()
     .toBuffer();
 
-  // ── 3.5. Sample footer colour ─────────────────────────────────────────────
-  // Extract a representative background colour from Grok's footer bar.
-  // This becomes the fill of the opaque panel in step 4 so it merges
-  // invisibly into the footer instead of standing out.
-  const panelColor = await sampleFooterColor(
-    imageBuffer, spec.imgW, spec.imgH, style.fill,
-  );
-  logger.info(
-    { spotSize, panelColor, fallback: style.fill },
-    "compositeQrOnto: sampled footer colour for opaque panel",
-  );
-
-  // ── 4. Composite footer-colour backing panel then card+QR (single pass) ──
-  // panelTop: scan UPWARD from cardTop (max 60 px) to find the actual footer
-  // boundary. Scanning up from the card avoids matching dark body elements
-  // (the old downward scan's failure mode on dark templates). Falls back to
-  // cardTop if nothing matches within the 60 px window.
-  // panelLeft: card left-edge minus a 10 px bleed buffer, right-edge only —
-  // never touches the phone/address content on the left.
-  const panelLeft   = Math.max(0, layout.cardLeft - 25);
-  const panelTop    = await detectFooterTop(
-    imageBuffer, spec.imgH, layout.cardTop, panelColor,
-  );
-  const panelWidth  = spec.imgW - panelLeft;
-  const panelHeight = spec.imgH - panelTop;
-  const backingPng = await sharp(
-    makeOpaquePanelSvg(panelWidth, panelHeight, panelColor),
-  ).png().toBuffer();
+  // ── 4. Composite glow disc then card+QR onto ad (single pass) ────────────
+  // discRadius = cardSize × 2.0, extending one full card-width beyond each
+  // card edge. The disc centre sits at the image corner (imgW, imgH) so only
+  // the upper-left quadrant of the gradient circle is visible in the ad.
+  const discRadius = Math.round(layout.cardSize * DISC_RADIUS_MULTIPLIER);
+  const glowDiscPng = await sharp(makeGlowDiscSvg(discRadius, style.fill)).png().toBuffer();
 
   const compositedBuffer: Buffer = await sharp(imageBuffer)
     .composite([
-      // Layer 1 (bottom): footer-colour panel covering right 25% of footer,
-      // full footer height. Erases Grok's entire black placeholder box.
-      { input: backingPng, left: panelLeft, top: panelTop },
-      // Layer 2 (top): backing card + QR with drop shadow.
+      // Layer 1 (bottom): soft gradient halo anchored at image corner.
+      { input: glowDiscPng, left: spec.imgW - discRadius, top: spec.imgH - discRadius },
+      // Layer 2 (top): backing card + QR centred on the disc origin.
       { input: cardWithQr, left: layout.cardLeft, top: layout.cardTop },
     ])
     .jpeg({ quality: 98, chromaSubsampling: "4:4:4" })
@@ -554,24 +408,4 @@ export async function compositeQrOnto(
   }
 
   return compositedBuffer;
-}
-
-/**
- * Scan a raw image buffer for any QR code pattern using jsQR.
- * Returns true if jsQR decodes a QR code anywhere in the image.
- *
- * Used by the ad generator QR guard (adGenGrok.ts) to detect Grok-hallucinated
- * QR codes in the raw output BEFORE server-side compositing adds the real one.
- * Resizes to ≤800 px to keep the pixel array small and jsQR fast.
- */
-export async function detectQrInBuffer(buf: Buffer): Promise<boolean> {
-  const sharpMod = await (import("sharp") as Promise<any>);
-  const sharp    = (sharpMod.default ?? sharpMod) as typeof import("sharp");
-  const { data, info } = await sharp(buf)
-    .resize(800, 800, { fit: "inside", withoutEnlargement: true })
-    .raw()
-    .ensureAlpha()
-    .toBuffer({ resolveWithObject: true });
-  const decoded = jsqr(new Uint8ClampedArray(data), info.width, info.height);
-  return decoded !== null;
 }
