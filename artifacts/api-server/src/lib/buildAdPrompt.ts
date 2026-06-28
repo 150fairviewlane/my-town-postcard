@@ -81,7 +81,7 @@ export function buildFooterZone(phone: string, address: string, isLandscape = fa
   // Right-edge strip: reserved for the server-composited custom ad-on element.
   const qrSlot =
     `CUSTOM AD-ON CORNER (bottom-right corner of footer, right edge, ${qrCardInches.toFixed(2)}"×${qrCardInches.toFixed(2)}" square): ` +
-    `render a solid filled rectangle exactly the same color as the footer bar — no text, no icons, no patterns, no border, no decorative marks. ` +
+    `render a solid flat-filled rectangle exactly the same color as the footer bar — no text, no icons, no patterns, no border, no stroke, no outline, no colored edge of any kind. ` +
     `A custom element will be composited over this area in post-processing.`;
 
   if (isLandscape) {

@@ -355,7 +355,7 @@ async function detectFooterTop(
   footerHex: string,
   tolerance = 40,
 ): Promise<number> {
-  const MAX_SCAN_PX = 60; // never look more than 60 px above the card
+  const MAX_SCAN_PX = 80; // never look more than 80 px above the card
   const sharpMod = await (import("sharp") as Promise<any>);
   const sharp    = (sharpMod.default ?? sharpMod) as typeof import("sharp");
 
@@ -498,7 +498,7 @@ export async function compositeQrOnto(
   // cardTop if nothing matches within the 60 px window.
   // panelLeft: card left-edge minus a 10 px bleed buffer, right-edge only —
   // never touches the phone/address content on the left.
-  const panelLeft   = Math.max(0, layout.cardLeft - 10);
+  const panelLeft   = Math.max(0, layout.cardLeft - 25);
   const panelTop    = await detectFooterTop(
     imageBuffer, spec.imgH, layout.cardTop, panelColor,
   );
