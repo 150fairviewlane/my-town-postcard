@@ -2480,7 +2480,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
   <div class="fpanel">
     <div>
       <div class="ptitle">Ad Generator</div>
-      <div class="psub">Enter your business details below. Pick your colors and photo in the middle panel, then click Generate for a print-ready postcard ad.</div>
+      <div class="psub">Tell us about your business and our AI will create a finished, print-ready postcard ad &mdash; copy, colors, and layout all included.</div>
     </div>
 
     <div>
@@ -2529,12 +2529,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 
   <!-- MIDDLE: VISUAL INPUTS -->
   <div class="mpanel">
-    <div>
-      <div class="sec-label">&#127775; Brand Color Palette</div>
-      <div class="swatches-grid" id="swatchesGrid"></div>
-      <p class="fnote">Auto-selected for your industry &mdash; click any pair to switch.</p>
-    </div>
-
     <div class="logo-col">
       <div class="sec-label" style="margin-top:0">Logo <span style="font-weight:400;font-size:11px;color:var(--ink-light);text-transform:none;letter-spacing:0">(optional)</span></div>
       <div class="upload-zone logo-zone" id="logoZone">
@@ -2563,12 +2557,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
         <button class="upload-clear" title="Remove" onclick="clearPhoto(event)">&#10005;</button>
       </div>
       <p class="fnote" style="margin-top:5px">Skip to let AI auto-generate a photo.</p>
-      <div class="lib-section">
-        <div class="lib-label">Or pick from library</div>
-        <div id="libGrid" class="img-grid">
-          <div class="img-empty">Select an industry above to load photos.</div>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -3849,13 +3837,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
             <button class="upload-clear" title="Remove photo" onclick="clearPhoto(event)">&#10005;</button>
           </div>
           <p class="fnote" style="margin-top:6px">Skip to let our AI generate a photo automatically.</p>
-          <!-- Library grid always visible below -->
-          <div class="lib-section">
-            <div class="lib-label">Or pick from library</div>
-            <div id="libGrid" class="img-grid">
-              <div class="img-empty">Select an industry above to load photos.</div>
-            </div>
-          </div>
         </div>
       </div>
 

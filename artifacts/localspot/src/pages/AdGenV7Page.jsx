@@ -695,10 +695,10 @@ export default function AdGenV7Page() {
         }}>v7 · Canvas + Polish</div>
       </div>
 
-      {/* Three-column layout */}
+      {/* Two-column layout */}
       <div className="adv7-layout" style={{
         display: "grid",
-        gridTemplateColumns: "1fr 1fr 520px",
+        gridTemplateColumns: "1fr 580px",
         gap: 0,
         maxWidth: 1400,
         margin: "0 auto",
@@ -706,12 +706,11 @@ export default function AdGenV7Page() {
         alignItems: "start",
       }}>
 
-        {/* ── LEFT: Text fields ── */}
+        {/* ── LEFT: Business Info + Photos ── */}
         <div style={{
           ...colPanel,
-          borderRadius: "12px 0 0 12px",
+          borderRadius: 12,
           border: "1px solid #e5e7eb",
-          borderRight: "none",
         }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: "#374151", letterSpacing: "0.05em", textTransform: "uppercase", paddingBottom: 10, borderBottom: "1px solid #f3f4f6" }}>
             Business Info
@@ -802,15 +801,9 @@ export default function AdGenV7Page() {
             <label style={smallLabel}>Fine Print</label>
             <input value={offerFine} onChange={e => setOfferFine(e.target.value)} style={inp} />
           </div>
-        </div>
 
-        {/* ── MIDDLE: Visual inputs ── */}
-        <div style={{
-          ...colPanel,
-          border: "1px solid #e5e7eb",
-        }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#374151", letterSpacing: "0.05em", textTransform: "uppercase", paddingBottom: 10, borderBottom: "1px solid #f3f4f6" }}>
-            Visual Style
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#374151", letterSpacing: "0.05em", textTransform: "uppercase", paddingBottom: 10, borderBottom: "1px solid #f3f4f6", borderTop: "1px solid #f3f4f6", paddingTop: 10 }}>
+            Photos &amp; Logo
           </div>
 
           {/* Hero Photo */}
@@ -936,7 +929,7 @@ export default function AdGenV7Page() {
                 ? "Generating…"
                 : hasGenerated
                   ? "↺ Regenerate"
-                  : "✦ Generate with AI"}
+                  : "✦ Create My Ad"}
             </button>
 
             {/* Optional change instruction (shown after first generation) */}
@@ -1079,7 +1072,7 @@ export default function AdGenV7Page() {
               <div style={{
                 fontSize: 10, color: "rgba(255,255,255,0.25)", textAlign: "center", lineHeight: 1.6,
               }}>
-                Fill in your business name and click Generate.<br />
+                Fill in your business name and click Create My Ad.<br />
                 AI will write your copy and choose colors.
               </div>
             )}
@@ -1094,10 +1087,7 @@ export default function AdGenV7Page() {
 
       <style>{`
         @keyframes adv7spin { to { transform: rotate(360deg); } }
-        @media (max-width: 900px) {
-          .adv7-layout { grid-template-columns: 1fr 1fr !important; }
-        }
-        @media (max-width: 640px) {
+        @media (max-width: 760px) {
           .adv7-layout { grid-template-columns: 1fr !important; }
         }
       `}</style>

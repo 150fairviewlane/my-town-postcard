@@ -1,0 +1,18 @@
+Several related changes to the ad generator at /ad-gen (artifacts/localspot/src/pages/AdGenV7Page.jsx). Do all of these together as one pass — they're connected.
+
+1. MERGE COLUMNS 1+2 INTO ONE INPUT COLUMN
+Currently `gridTemplateColumns: "1fr 1fr 520px"` (line ~707) — two equal flexible columns (Business Info form, then Logo/Photo upload) plus a fixed-width preview column. Combine the first two into a single unified scrollable column: Business Info fields first, followed by Logo upload and Primary Photo/Hero Photo sections at the bottom of that same column, all in one continuous flow — not two divs side-by-side with a visual seam. New grid should be roughly `"1fr 580px"` (two columns instead of three) — see point 2 for the exact right-column number.
+
+Also update the responsive breakpoints below the grid (currently collapsing 3→2 columns at 900px, 2→1 at 640px) since the base layout is now 2 columns, not 3 — adjust so it still collapses sensibly to a single column on narrow screens.
+
+2. WIDEN THE RIGHT (PREVIEW) COLUMN SLIGHTLY
+Goal: comfortably fit all 6 thumbnails (MAX_GENERATIONS = 6) from the "Your versions" gallery (~line 994) side by side with consistent margins and no horizontal scroll needed — each thumbnail is 72px wide with an 8px gap. Calculate the right column's needed width from that (accounting for the column's own left/right padding) rather than guessing — likely somewhere around 580-600px, but verify against actual padding values in the file. This should be a modest increase from the current 520px, not a dramatic one.
+
+3. COPY CHANGES
+- Button label: change "GENERATE MY AD" to "CREATE MY AD" (find and replace exactly that string, check it doesn't break the "↺ Regenerate" state logic elsewhere in the same button).
+- Intro copy below the "AD GENERATOR" heading currently reads: "Enter your business details below. Pick your colors and photo in the middle panel, then click Generate for a print-ready postcard ad." This is now wrong on two counts — there's no color picker anymore, and there's no middle panel after this merge. Replace with copy that frames this as a marketing assistant producing a finished ad for them, not a tool generating an image — something like: "Tell us about your business below, and your marketing assistant will design a print-ready postcard ad — built to convert, not just generated." Feel free to adjust wording slightly for flow, but keep the "marketing assistant / done-for-you ad" framing, not "AI image tool" framing.
+
+4. DON'T FIX YET, BUT CHECK AFTER
+There's a known issue where the Generate/Create button sits at the top of the right column while the input form can be long enough to require scrolling back up to reach it. Don't build a sticky-button fix in this pass. After completing 1-3, take a screenshot of the new merged single-column layout and tell me whether that scroll-to-find-the-button problem still exists given the new column lengths — don't fix it, just report back on whether it's still present.
+
+Typecheck, restart, and screenshot the full page when done.
