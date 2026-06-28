@@ -2339,6 +2339,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 /* Upload */
 .photo-logo-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
 .logo-col{display:flex;flex-direction:column;gap:8px}
+.inline-row{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px}
+.upload-col{flex:1;min-width:0}
+.inline-row .field{flex:0 0 210px;min-width:0;margin-bottom:0}
+.inline-row .add-btn{width:210px;flex-shrink:0}
 .upload-zone{border:2px dashed var(--border);border-radius:8px;padding:14px 10px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;background:var(--surface);position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100px}
 .upload-zone.logo-zone{min-height:75px}
 .upload-zone:hover:not(.has-file){border-color:var(--burg);background:var(--burg-pale)}
@@ -2466,29 +2470,41 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
     <div>
       <div class="sec-label">Business Info</div>
       <div class="field"><label>Business Name *</label><input type="text" id="bizName" placeholder="Mr. Biscuit's Cafe" oninput="onFormChange()"></div>
-      <div class="field">
-        <label>Industry</label>
-        <select id="industry" onchange="onIndustryChange()">
-          <option value="">&mdash; Select &mdash;</option>
-          <option>Pizza Restaurant</option><option>Mexican Restaurant</option><option>Chinese Restaurant</option>
-          <option>Breakfast &amp; Cafe</option><option>Bar &amp; Grill</option><option>Italian Restaurant</option>
-          <option>Bakery</option><option>Coffee Shop</option><option>Dentist</option>
-          <option>Medical &amp; Healthcare</option><option>Chiropractor</option><option>Veterinarian</option>
-          <option>HVAC</option><option>Plumber</option><option>Electrician</option>
-          <option>Lawn &amp; Landscaping</option><option>Roofing</option><option>Painting</option>
-          <option>Cleaning Service</option><option>Pest Control</option><option>Real Estate</option>
-          <option>Insurance</option><option>Auto Repair</option><option>Salon &amp; Beauty</option>
-          <option>Barbershop</option><option>Gym &amp; Fitness</option><option>Pet Services</option>
-          <option>Financial Services</option><option>Daycare</option><option>Photography</option>
-          <option>Retail Shop</option><option>Other Service</option>
-        </select>
+      <div class="inline-row">
+        <div class="field">
+          <label>Industry</label>
+          <select id="industry" onchange="onIndustryChange()">
+            <option value="">&mdash; Select &mdash;</option>
+            <option>Pizza Restaurant</option><option>Mexican Restaurant</option><option>Chinese Restaurant</option>
+            <option>Breakfast &amp; Cafe</option><option>Bar &amp; Grill</option><option>Italian Restaurant</option>
+            <option>Bakery</option><option>Coffee Shop</option><option>Dentist</option>
+            <option>Medical &amp; Healthcare</option><option>Chiropractor</option><option>Veterinarian</option>
+            <option>HVAC</option><option>Plumber</option><option>Electrician</option>
+            <option>Lawn &amp; Landscaping</option><option>Roofing</option><option>Painting</option>
+            <option>Cleaning Service</option><option>Pest Control</option><option>Real Estate</option>
+            <option>Insurance</option><option>Auto Repair</option><option>Salon &amp; Beauty</option>
+            <option>Barbershop</option><option>Gym &amp; Fitness</option><option>Pet Services</option>
+            <option>Financial Services</option><option>Daycare</option><option>Photography</option>
+            <option>Retail Shop</option><option>Other Service</option>
+          </select>
+        </div>
+        <div class="upload-col">
+          <div class="upload-zone logo-zone" id="logoZone">
+            <input type="file" accept="image/*" onchange="handleLogoUpload(this)">
+            <div class="upload-placeholder">
+              <div class="upload-icon">&#127991;&#65039;</div>
+              <div class="upload-label">Logo (optional)</div>
+              <div class="upload-sub">PNG preferred</div>
+            </div>
+            <img class="upload-preview" id="logoPreview" alt="Logo">
+            <button class="upload-clear" title="Remove" onclick="clearLogo(event)">&#10005;</button>
+          </div>
+        </div>
       </div>
       <div class="field"><label>Tagline / Slogan</label><input type="text" id="tagline" spellcheck="true" placeholder="From-Scratch Biscuits &amp; Boba!"></div>
-      <div class="frow">
-        <div class="field"><label>Phone</label><input type="text" id="phone" placeholder="(706) 754-0105"></div>
-        <div class="field"><label>City, State</label><input type="text" id="city" placeholder="Clarkesville, GA"></div>
-      </div>
+      <div class="field"><label>Phone</label><input type="text" id="phone" placeholder="(706) 754-0105"></div>
       <div class="field"><label>Street Address</label><input type="text" id="address" placeholder="596 W Louise St"></div>
+      <div class="field"><label>City, State</label><input type="text" id="city" placeholder="Clarkesville, GA"></div>
       <div class="field"><label>Website / URL</label><input type="text" id="website" placeholder="mytownpostcard.com"></div>
       <div class="field"><label>Contact Email <span style="font-weight:400;color:var(--ink-light)">(for order)</span></label><input type="email" id="email" placeholder="owner@mrbiscuitscafe.com"></div>
     </div>
@@ -2496,44 +2512,29 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
     <div>
       <div class="sec-label">Menu Items / Services (up to 4)</div>
       <div class="menu-list" id="menuList"></div>
-      <button class="add-btn" onclick="addMenuItem()">+ Add Item</button>
+      <div class="inline-row" style="align-items:flex-start">
+        <button class="add-btn" onclick="addMenuItem()">+ Add Item</button>
+        <div class="upload-col">
+          <div class="upload-zone" id="photoZone">
+            <input type="file" accept="image/*" onchange="handlePhotoUpload(this)">
+            <div class="upload-placeholder">
+              <div class="upload-icon">&#128248;</div>
+              <div class="upload-label">Photo (optional)</div>
+              <div class="upload-sub">AI generates if blank</div>
+            </div>
+            <img class="upload-preview" id="photoPreview" alt="Photo">
+            <button class="upload-clear" title="Remove" onclick="clearPhoto(event)">&#10005;</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div>
       <div class="sec-label">Special Offer / Coupon</div>
-      <div class="field"><label>Offer</label><input type="text" id="offer" spellcheck="true" placeholder="$1 OFF Any Biscuit"></div>
-      <div class="field"><label>Fine Print</label><input type="text" id="offerFine" spellcheck="true" placeholder="1 per visit &middot; with this postcard"></div>
-    </div>
-
-    <div class="sec-label" style="border-top:1.5px solid var(--burg-pale);padding-top:14px;margin-top:4px">Photos &amp; Logo</div>
-    <div class="logo-col">
-      <div class="sec-label" style="margin-top:0">Logo <span style="font-weight:400;font-size:11px;color:var(--ink-light);text-transform:none;letter-spacing:0">(optional)</span></div>
-      <div class="upload-zone logo-zone" id="logoZone">
-        <input type="file" accept="image/*" onchange="handleLogoUpload(this)">
-        <div class="upload-placeholder">
-          <div class="upload-icon">&#127991;&#65039;</div>
-          <div class="upload-label">Upload logo</div>
-          <div class="upload-sub">PNG with transparency preferred</div>
-        </div>
-        <img class="upload-preview" id="logoPreview" alt="Logo">
-        <button class="upload-clear" title="Remove" onclick="clearLogo(event)">&#10005;</button>
+      <div class="frow">
+        <div class="field"><label>Offer</label><input type="text" id="offer" spellcheck="true" placeholder="$1 OFF Any Biscuit"></div>
+        <div class="field"><label>Fine Print</label><input type="text" id="offerFine" spellcheck="true" placeholder="1 per visit &middot; with this postcard"></div>
       </div>
-      <p class="fnote" style="margin-top:5px">Placed upper-left exactly as provided.</p>
-    </div>
-
-    <div>
-      <div class="sec-label" style="margin-top:0">Primary Photo</div>
-      <div class="upload-zone" id="photoZone">
-        <input type="file" accept="image/*" onchange="handlePhotoUpload(this)">
-        <div class="upload-placeholder">
-          <div class="upload-icon">&#128248;</div>
-          <div class="upload-label">Upload a photo</div>
-          <div class="upload-sub">Food, product, or storefront</div>
-        </div>
-        <img class="upload-preview" id="photoPreview" alt="Photo">
-        <button class="upload-clear" title="Remove" onclick="clearPhoto(event)">&#10005;</button>
-      </div>
-      <p class="fnote" style="margin-top:5px">Skip to let AI auto-generate a photo.</p>
     </div>
   </div>
 
