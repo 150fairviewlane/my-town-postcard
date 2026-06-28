@@ -2602,6 +2602,8 @@ var _variations = [];          // [{imageUrl, templateKey, templateName}]
 var _sessionUsedTemplates = [];// templates used this session
 var _campaignUsedTemplates = [];
 var _spotSize = 'XL';
+var _userEditedFields = new Set();
+var _menuUserValues   = {};
 var SIZE_DIMS = { XL:{w:400,h:500}, xl:{w:400,h:500}, L:{w:300,h:400}, large:{w:300,h:400}, M:{w:300,h:200}, medium:{w:300,h:200}, S:{w:200,h:200}, small:{w:200,h:200} };
 function getOrientation(sizeKey){ var d = SIZE_DIMS[sizeKey]||SIZE_DIMS.XL; return d.h>d.w?'portrait':d.w>d.h?'landscape':'square'; }
 var _spotId = 0;
@@ -3089,10 +3091,10 @@ function onIndustryChange(){
   var industry = document.getElementById('industry').value;
   if(industry && _takenCategories.indexOf(industry) !== -1){ showTakenDialog(industry); return; }
   renderMenuInputs(MENU_DEFAULTS[industry]);
-  var tEl = document.getElementById('tagline'); if(tEl) tEl.value = TAGLINE_DEFAULTS[industry]||'';
+  if(!_userEditedFields.has('tagline')){ var tEl = document.getElementById('tagline'); if(tEl) tEl.value = TAGLINE_DEFAULTS[industry]||''; }
   var op = OFFER_DEFAULTS[industry];
-  document.getElementById('offer').value     = op ? op[0] : '';
-  document.getElementById('offerFine').value = op ? op[1] : '';
+  if(!_userEditedFields.has('offer'))     document.getElementById('offer').value     = op ? op[0] : '';
+  if(!_userEditedFields.has('offerFine')) document.getElementById('offerFine').value = op ? op[1] : '';
 }
 
 function renderMenuInputs(defs){
@@ -3101,9 +3103,11 @@ function renderMenuInputs(defs){
   list.className = 'menu-list' + (cap === 3 ? ' menu-cap3' : '');
   list.innerHTML = '';
   for(var i = 0; i < cap; i++){
+    var id = 'menu-' + i;
     var row = document.createElement('div'); row.className = 'mrow';
-    var inp = document.createElement('input'); inp.type='text'; inp.placeholder='Item Name $Price'; inp.spellcheck=true;
-    if(defs && defs[i]) inp.value = defs[i];
+    var inp = document.createElement('input'); inp.type='text'; inp.id=id; inp.placeholder='Item Name $Price'; inp.spellcheck=true;
+    inp.value = _userEditedFields.has(id) ? (_menuUserValues[id]||'') : (defs && defs[i] ? defs[i] : '');
+    inp.addEventListener('input', (function(fid){ return function(){ _userEditedFields.add(fid); _menuUserValues[fid]=this.value; }; })(id));
     row.appendChild(inp);
     list.appendChild(row);
   }
@@ -3261,6 +3265,11 @@ function showToast(msg){
     onIndustryChange();
   }
   onFormChange();
+  // Watch prefillable fields so future industry changes don't stomp user input
+  ['tagline','offer','offerFine'].forEach(function(fid){
+    var el = document.getElementById(fid);
+    if(el) el.addEventListener('input', function(){ _userEditedFields.add(fid); });
+  });
 })();
 </script>
 </body>
