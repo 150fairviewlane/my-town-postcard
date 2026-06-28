@@ -293,22 +293,18 @@ async function sampleFooterColor(
   imgW: number,
   imgH: number,
   fallbackHex: string,
-  cardTop: number,
-  cardSize: number,
 ): Promise<string> {
   const sharpMod = await (import("sharp") as Promise<any>);
   const sharp    = (sharpMod.default ?? sharpMod) as typeof import("sharp");
 
-  const patchW    = 60;
-  const patchH    = 20;
-  // Sample from the far-left edge of the footer (x=10) — always solid background
-  // colour regardless of what Grok drew in the right portion of the footer.
-  // Sampling from under the card risks picking up design elements (tile borders,
-  // gold accents) that Grok renders at the bottom-right.
+  const patchW = 60;
+  const patchH = 20;
+  // Sample from the very bottom of the left edge — the lowest pixels are
+  // always pure footer background regardless of template or Grok content.
   const patchLeft = 10;
-  const patchTop  = cardTop + Math.floor((cardSize - patchH) / 2);
+  const patchTop  = imgH - patchH - 5;
 
-  if (patchLeft + patchW > imgW || patchTop < 0 || patchTop + patchH > imgH) {
+  if (patchLeft + patchW > imgW || patchTop < 0) {
     return fallbackHex;
   }
 
@@ -336,6 +332,63 @@ async function sampleFooterColor(
   } catch {
     return fallbackHex;
   }
+}
+
+/**
+ * Scan the left edge of the image upward from cardTop to find where the footer
+ * bar actually begins. Uses the already-sampled footer colour as the reference.
+ * Returns the topmost y where the median pixel in a 60 px wide strip matches
+ * the footer colour within `tolerance` RGB distance.
+ * Falls back to `cardTop` if no match is found above it.
+ */
+async function detectFooterTop(
+  imageBuffer: Buffer,
+  imgH: number,
+  cardTop: number,
+  footerHex: string,
+  tolerance = 40,
+): Promise<number> {
+  const sharpMod = await (import("sharp") as Promise<any>);
+  const sharp    = (sharpMod.default ?? sharpMod) as typeof import("sharp");
+
+  const fr = parseInt(footerHex.slice(1, 3), 16);
+  const fg = parseInt(footerHex.slice(3, 5), 16);
+  const fb = parseInt(footerHex.slice(5, 7), 16);
+
+  // Scan the left-edge strip from 60% of image height down to image bottom
+  // in a single sharp call, then walk it in memory — fast, no loop of sharp calls.
+  const scanTop = Math.round(imgH * 0.60);
+  const scanH   = imgH - scanTop;
+
+  const { data } = await sharp(imageBuffer)
+    .extract({ left: 10, top: scanTop, width: 60, height: scanH })
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  // Walk rows from top of scan region downward; find FIRST row matching footer.
+  let footerTop = cardTop; // fallback
+  for (let row = 0; row < scanH; row++) {
+    const rs: number[] = [], gs: number[] = [], bs: number[] = [];
+    for (let px = 0; px < 60; px++) {
+      const idx = (row * 60 + px) * 3;
+      rs.push(data[idx]!);
+      gs.push(data[idx + 1]!);
+      bs.push(data[idx + 2]!);
+    }
+    rs.sort((a, b) => a - b);
+    gs.sort((a, b) => a - b);
+    bs.sort((a, b) => a - b);
+    const mid  = Math.floor(rs.length / 2);
+    const dist = Math.sqrt(
+      (rs[mid]! - fr) ** 2 + (gs[mid]! - fg) ** 2 + (bs[mid]! - fb) ** 2,
+    );
+    if (dist < tolerance) {
+      footerTop = scanTop + row;
+      break;
+    }
+  }
+  return footerTop;
 }
 
 // ── Opaque backing-panel SVG builder ──────────────────────────────────────
@@ -424,7 +477,6 @@ export async function compositeQrOnto(
   // invisibly into the footer instead of standing out.
   const panelColor = await sampleFooterColor(
     imageBuffer, spec.imgW, spec.imgH, style.fill,
-    layout.cardTop, layout.cardSize,
   );
   logger.info(
     { spotSize, panelColor, fallback: style.fill },
@@ -438,12 +490,13 @@ export async function compositeQrOnto(
   //   - Full height from cardTop to image bottom, so it wipes any Grok-drawn
   //     QR code, barcode, or design element in the right quarter.
   // Layer 2: the backing card + QR with crisp drop shadow on top.
-  // panelTop = top of the footer bar (bottom 20% of image).
-  // Grok renders its black placeholder box starting at the footer top, so
-  // the panel must cover the full footer height — not just the card footprint —
-  // or the top portion of the black box shows above the card.
+  // Detect the actual footer top by scanning the left edge for the first row
+  // that matches the sampled footer colour. This adapts to each template's
+  // footer height instead of guessing a fixed percentage.
   const panelLeft   = Math.round(spec.imgW * 0.75);
-  const panelTop    = Math.round(spec.imgH * 0.80);
+  const panelTop    = await detectFooterTop(
+    imageBuffer, spec.imgH, layout.cardTop, panelColor,
+  );
   const panelWidth  = spec.imgW - panelLeft;
   const panelHeight = spec.imgH - panelTop;
   const backingPng = await sharp(
