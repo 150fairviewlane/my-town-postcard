@@ -1614,83 +1614,11 @@ boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
               value={formData.logo} onChange={v => setFormData(d => ({ ...d, logo: v }))} />
           </div>
 
-          {/* Photo selection -- stock thumbnails + own upload */}
-          {formData.industry && (() => {
-            const ind = INDUSTRIES[formData.industry];
-            const stockPhotos = ind?.photos || [];
-            // The currently active photo URL (null means use photos[0] as default)
-            const activePhoto = formData.photo || stockPhotos[0] || null;
-            return (
-              <div style={{ paddingTop: 12, borderTop: "1px solid #f3f4f6" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                  <label style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Ad Photo</label>
-                  <span style={{ fontSize: 10, color: "#9ca3af" }}>
-                    {formData.photo && !stockPhotos.includes(formData.photo) ? "Using your photo" : "Choose a stock photo"}
-                  </span>
-                </div>
-
-                {/* Stock photo thumbnails -- 4 in a row */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 10 }}>
-                  {stockPhotos.map((url, i) => {
-                    const isSelected = activePhoto === url && (stockPhotos.includes(formData.photo) || !formData.photo);
-                    return (
-                      <button key={i} onClick={() => setFormData(d => ({ ...d, photo: url }))}
-                        style={{ padding: 0, border: "none", background: "none", cursor: "pointer", position: "relative", borderRadius: 8, overflow: "hidden" }}>
-                        <img src={url} alt={"Stock photo " + (i+1)}
-                          style={{ width: "100%", aspectRatio: "1", objectFit: "cover", display: "block", borderRadius: 8,
-                            outline: isSelected ? "3px solid #991b1b" : "2px solid #e5e7eb",
-                            outlineOffset: isSelected ? 1 : 0,
-                            opacity: isSelected ? 1 : 0.75,
-                            transition: "all 0.15s",
-                          }}/>
-                        {/* Selected checkmark */}
-                        {isSelected && (
-                          <div style={{ position: "absolute", top: 4, right: 4, width: 18, height: 18,
-                            background: "#991b1b", borderRadius: "50%", display: "flex",
-                            alignItems: "center", justifyContent: "center" }}>
-                            <span style={{ color: "#fff", fontSize: 10, fontWeight: 900, lineHeight: 1 }}>&#10003;</span>
-                          </div>
-                        )}
-                        {/* Photo number badge */}
-                        <div style={{ position: "absolute", bottom: 3, left: 4, fontSize: 8,
-                          color: "#fff", fontWeight: 700, textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}>
-                          {i + 1}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Divider */}
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                  <div style={{ flex: 1, height: 1, background: "#f3f4f6" }}/>
-                  <span style={{ fontSize: 10, color: "#9ca3af", whiteSpace: "nowrap" }}>or upload your own</span>
-                  <div style={{ flex: 1, height: 1, background: "#f3f4f6" }}/>
-                </div>
-
-                {/* Own photo upload */}
-                <ImageUpload label="" hint="Upload your photo"
-                  value={formData.photo && !stockPhotos.includes(formData.photo) ? formData.photo : null}
-                  onChange={v => setFormData(d => ({ ...d, photo: v || stockPhotos[0] || null }))} />
-
-                {/* Clear custom photo back to stock */}
-                {formData.photo && !stockPhotos.includes(formData.photo) && (
-                  <button onClick={() => setFormData(d => ({ ...d, photo: stockPhotos[0] || null }))}
-                    style={{ marginTop: 6, fontSize: 11, color: "#6b7280", background: "none", border: "none",
-                      cursor: "pointer", padding: 0, textDecoration: "underline" }}>
-                    Use stock photos instead
-                  </button>
-                )}
-              </div>
-            );
-          })()}
-
-          {!formData.industry && (
-            <div style={{ paddingTop: 8, borderTop: "1px solid #f3f4f6" }}>
-              <ImageUpload label="YOUR PHOTO" hint="Or select industry first for stock photos"
-                value={formData.photo} onChange={v => setFormData(d => ({ ...d, photo: v }))} />
-            </div>
-          )}
+          {/* Photo upload */}
+          <div style={{ paddingTop: 12, borderTop: "1px solid #f3f4f6" }}>
+            <ImageUpload label="Ad Photo" hint="Optional — Grok generates one if left blank"
+              value={formData.photo} onChange={v => setFormData(d => ({ ...d, photo: v }))} />
+          </div>
         </div>
 
         {/* Template picker */}

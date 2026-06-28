@@ -20,10 +20,6 @@ const FT_X = 58,   FT_Y = 476;                               // footer
 const QR_S = 58,   QR_X = 415, QR_Y = 504;                  // QR code
 const LG_X = 7,    LG_Y = 7,   LG_S = 36;                   // logo
 
-const ACCENT_COLORS = [
-  "#C8541A", "#7B1418", "#1a3d5c", "#166534",
-  "#6B21A8", "#0e7490", "#92400e", "#374151",
-];
 
 const EXPORT_PIXEL_RATIO = Math.round((1148 / W) * 10) / 10; // 2.4
 
@@ -817,21 +813,6 @@ export default function AdGenV7Page() {
         }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: "#374151", letterSpacing: "0.05em", textTransform: "uppercase", paddingBottom: 10, borderBottom: "1px solid #f3f4f6" }}>
             Visual Style
-          </div>
-
-          {/* Accent Color */}
-          <div>
-            <div style={sectionLabel}>Accent Color</div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {ACCENT_COLORS.map(c => (
-                <button key={c} onClick={() => setAccentColor(c)} style={{
-                  width: 32, height: 32, borderRadius: "50%", background: c,
-                  border: "none", cursor: "pointer",
-                  outline: accentColor === c ? "3px solid #111" : "3px solid transparent",
-                  outlineOffset: 2,
-                }} />
-              ))}
-            </div>
           </div>
 
           {/* Hero Photo */}
