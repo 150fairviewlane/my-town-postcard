@@ -1,0 +1,14 @@
+Two independent removals from the ad generator — verify each separately, don't conflate them. For both, this is removal only — do NOT redesign or reflow the surrounding layout. If removing these elements leaves a visual gap (e.g. the stock-photo picker sat in a middle column that's now mostly empty), leave the remaining elements (logo, photo upload) where they are and just clean up dead markup — remove any now-empty wrapper divs, grid cells, or containers left behind so there's no broken-looking empty box, but don't attempt a real layout fix. We'll handle the layout as a separate follow-up once I've seen what it looks like.
+
+REMOVAL 1 — Stock photo library (verified location):
+In artifacts/localspot/src/AdGenerator.jsx (~lines 1617-1690), there's a "Choose a stock photo" UI that shows thumbnails from `ind.photos` (per-industry stock photo arrays defined in artifacts/localspot/src/industryAssets.js). Remove this stock-photo-selection UI entirely. Keep the "upload your own photo" option as-is. When no photo is uploaded, the existing fallback (Grok generates its own photorealistic hero photo) should now always be the behavior — confirm this fallback path already exists and works without the stock photo branch (check adGenGrok.ts's hasPhoto logic).
+
+Do NOT delete industryAssets.js or remove other fields from it (colors, taglines, menu, emoji, serviceWord) — only stop using the `photos` arrays and remove the stock-photo-picker UI. Other features may still depend on the rest of that file.
+
+REMOVAL 2 — Color palette selector (location needs to be found first):
+There's a user-facing color palette selection control somewhere in the ad generator flow that currently has no effect on output for named (non-surprise-me) templates — find it before removing it; I'm not fully certain which file it's in. Search the frontend for any palette/color-scheme/theme picker UI in the ad generator flow (check AdGenerator.jsx, AdGenV7Page.jsx, and any related form components). Once located:
+- Remove the palette-selector UI control.
+- Remove whatever request parameter it was sending to the backend, if it's not used elsewhere.
+- On the backend, confirm the SURPRISE_ME_THEMES palette system in buildAdPrompt.ts is untouched — that one is real and should keep working for surprise-me mode specifically. Don't remove or alter that.
+
+After both removals, typecheck and show me the diff before committing. Tell me explicitly where the palette-selector UI actually was, since I want to confirm it's gone for good. Also send me a screenshot of the resulting middle column so we can plan the layout pass separately.
