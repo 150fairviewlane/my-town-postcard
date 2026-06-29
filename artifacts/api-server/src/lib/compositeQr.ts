@@ -174,13 +174,13 @@ const GLOW_COLOR = "#F4A800";
 
 /**
  * discRadius = round(cardSize × DISC_RADIUS_MULTIPLIER).
- * At 2.5× the glow extends well past the card's upper-left corner:
- *   XL: 2.5 × 187 = 468 px — ~42% opacity at the card corner diagonal (273 px)
- *   M:  2.5 × 93  = 233 px — same proportion
+ * At 1.875× the glow extends just past the card's upper-left corner:
+ *   XL: 1.875 × 187 = 351 px — ~25% narrower reach than the former 2.5×
+ *   M:  1.875 × 93  = 174 px — same proportion
  * This produces a visible warm-gold vignette that softly masks any Grok-drawn
- * corner graphic (starburst, box, texture) without adding any opaque layer.
+ * corner graphic without adding any opaque layer.
  */
-const DISC_RADIUS_MULTIPLIER = 2.5;
+const DISC_RADIUS_MULTIPLIER = 1.875;
 
 // ── Card layout computed from QR spec ─────────────────────────────────────
 export interface CardLayout {
