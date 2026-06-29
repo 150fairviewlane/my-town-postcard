@@ -185,11 +185,18 @@ const DISC_RADIUS_MULTIPLIER = 1.1;
 
 /**
  * flattenRadius = round(cardSize × FLATTEN_RADIUS_MULTIPLIER).
- * ~27% larger than the glow disc so it fully covers any AI-drawn corner
- * content (starburst, objects, texture) before the glow is composited on top.
+ *
+ * Intentionally independent of DISC_RADIUS_MULTIPLIER — these two constants
+ * serve different purposes and must be tuned separately.
+ *
+ * The erase radius must be generous: Grok can produce AI-drawn corner content
+ * (boxes, starbursts, objects) of unpredictable size. 2.5× puts the opaque
+ * zone at ~398 px from the corner for XL — reliably covering the full footer
+ * band and any AI-drawn shape that belongs there, without reaching deep enough
+ * into the ad body to erase service copy or pricing text.
  * Outer 15% feathered to transparent; inner 85% fully opaque style.fill.
  */
-const FLATTEN_RADIUS_MULTIPLIER = 1.4;
+const FLATTEN_RADIUS_MULTIPLIER = 2.5;
 
 // ── Card layout computed from QR spec ─────────────────────────────────────
 export interface CardLayout {
@@ -402,10 +409,11 @@ export async function compositeQrOnto(
     .toBuffer();
 
   // ── 4. Composite flatten disc, glow disc, then card+QR onto ad (single pass) ──
-  // flattenRadius = cardSize × 2.5 — 25% larger than the glow disc.
-  //   Inner 85% fully opaque: erases any AI-drawn starburst / texture / object.
-  //   Outer 15% feathers to transparent: smooth transition into the ad image.
-  // discRadius    = cardSize × 2.0 — soft translucent halo over the flat fill.
+  // flattenRadius = cardSize × FLATTEN_RADIUS_MULTIPLIER (2.5×)
+  //   Generous erase zone: inner 85% fully opaque style.fill covers any
+  //   AI-drawn corner shape; outer 15% feathers to transparent.
+  // discRadius    = cardSize × DISC_RADIUS_MULTIPLIER (1.1×)
+  //   Tight warm-gold glow halo on top of the erased area.
   // Both disc centres sit at the image corner (imgW, imgH) so only the
   // upper-left quadrant of each gradient circle is visible in the ad.
   const flattenRadius = Math.round(layout.cardSize * FLATTEN_RADIUS_MULTIPLIER);
