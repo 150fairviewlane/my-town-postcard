@@ -1,0 +1,13 @@
+Two separate corner-artifact issues to investigate from this latest batch — keep them distinct, don't conflate the findings.
+
+ISSUE 1 — Parchment-classic black box (Testing 123 pet-grooming ad, tan/cream/orange template):
+1. Check the actual generation log for this specific ad: did corner-cleanup fire ("success") or get bypassed ("skipped")? Confirm whether parchment-classic is on CORNER_CLEANUP_SKIP_TEMPLATES.
+2. If it fired but the box still survived: the narrowed cleanup instruction only describes "a blank white, gray, or light-colored placeholder square" — a solid black box wouldn't match that description, so the instruction itself may be telling Grok to leave it alone. Broaden the color qualifier to cover placeholders of any shade/color, not just light ones — the existing "do NOT remove coupon boxes, offer text, service panels..." exclusion list already distinguishes by what the element IS, not by its color, so widening the color range shouldn't reintroduce the coupon-deletion risk from before. Keep the type-based exclusions exactly as they are.
+3. If parchment-classic is on the skip list instead, that's a different problem — report that finding instead and I'll decide whether it should be removed from the list.
+
+ISSUE 2 — Neighborhood-pro black circle under the QR (same batch, dark green/olive template with house-hexagon logo):
+1. Check getTemplateQrStyle for this template specifically — what is its configured circularCard setting and fill color?
+2. If circularCard is true and fill is black/near-black: this is the intended, designed QR backing card, not a bug. Report this plainly and give me the exact hex value so I can decide whether to change it.
+3. If the configured card style doesn't match what's visible (e.g., card should be square, a different color, or there are two overlapping dark circles instead of one): this is a real defect — describe exactly what's actually being composited (glow disc, card, and anything else) at that corner for this template, layer by layer, so we know what's actually drawn there before proposing any fix.
+
+Don't change anything yet for either issue, and don't generate test ads — just report findings on both.

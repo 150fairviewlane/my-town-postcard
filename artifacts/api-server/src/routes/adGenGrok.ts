@@ -165,13 +165,16 @@ function extractXaiImageUrl(body: Record<string, unknown>): string | null {
  *   purple-sage       — two overlapping circular secondary photos, lower-right
  *   health-wellness   — stethoscope on dark teal circular blob, lower-right
  *   made-fresh        — golden ticket-stub coupon, lower-right body
- *   parchment-classic — dashed coupon box, lower-right body (portrait)
  *
  * NOT on the list (cleanup runs normally):
- *   heritage-home   — coupon is CENTER-LEFT in the footer bar, not body lower-right
+ *   heritage-home    — coupon is CENTER-LEFT in the footer bar, not body lower-right
  *   neighborhood-pro — offer/coupon area is lower-CENTER, not lower-right
- *   brush-stroke    — no lower-right body content; circular QR card + dark footer only
- *   surprise-me     — free-form layout; cleanup most useful here, nothing to protect
+ *   brush-stroke     — no lower-right body content; circular QR card + dark footer only
+ *   surprise-me      — free-form layout; cleanup most useful here, nothing to protect
+ *   parchment-classic — removed from skip list: its dashed coupon box is already
+ *                       protected by the exclusion list ("Do NOT remove coupon
+ *                       boxes..."), so a blanket skip is unnecessary. Cleanup must
+ *                       run here to catch hallucinated placeholders of any color/shape.
  */
 const CORNER_CLEANUP_SKIP_TEMPLATES = new Set([
   "at-your-service",
@@ -181,7 +184,6 @@ const CORNER_CLEANUP_SKIP_TEMPLATES = new Set([
   "purple-sage",
   "health-wellness",
   "made-fresh",
-  "parchment-classic",
 ]);
 
 /** Resize and centre-crop a Grok-returned image URL to exact print pixel dimensions. */
@@ -1653,14 +1655,17 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       return url;
     }
 
-    // Narrow instruction: target only blank placeholder squares, not design elements.
-    // "any shape, box, panel" was too broad — it caused Grok to remove coupon boxes
-    // and other intentional lower-right design elements on excluded templates.
+    // Instruction: target empty placeholder elements by content/purpose, not by
+    // color or shape — a placeholder can be any color (white, black, dark) or
+    // shape (square, rectangle, circle). The exclusion list ("Do NOT remove
+    // coupon boxes...") is what does the real discrimination between a hallucinated
+    // placeholder and an intentional design element.
     const CORNER_CLEANUP_INSTRUCTION =
-      "Remove ONLY a blank white, gray, or light-colored placeholder square or rectangle " +
-      "that appears to be an empty box reserving space for a QR code in the very bottom-right " +
-      "corner of this image (approximately the last 15% of width and last 15% of height). " +
-      "Replace it with a natural continuation of the immediately surrounding background. " +
+      "Remove any blank, empty placeholder element with no real content or purpose — " +
+      "regardless of its color or shape (square, rectangle, circle, or anything else) — " +
+      "from the very bottom-right corner of this image (approximately the last 15% of width " +
+      "and last 15% of height). Replace it with a natural continuation of the immediately " +
+      "surrounding background. " +
       "Do NOT remove coupon boxes, offer text, service panels, chalkboard signs, photo elements, " +
       "circular photos, ribbons, banners, or any element that appears to be an intentional " +
       "part of the advertisement's design.";
