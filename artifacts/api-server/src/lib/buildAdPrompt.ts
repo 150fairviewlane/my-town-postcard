@@ -71,20 +71,28 @@ export function getDefaultThemeIndex(industry: string): number {
 
 // ── Footer zone builder ──────────────────────────────────────────────────────
 
-export function buildFooterZone(phone: string, address: string, isLandscape = false, sizeKey?: string): string {
+export function buildFooterZone(phone: string, address: string, isLandscape = false, sizeKey?: string, drawQrPlaceholder?: boolean): string {
   // Physical card size for the composited QR square (cardSize = round(qrSize × 1.075)).
   // Must stay in sync with CARD_MARGIN in compositeQr.ts.
   const sk = (sizeKey ?? "").toLowerCase();
   // cardSize = round(qrSize × 1.0375) / 300 DPI — must stay in sync with compositeQr.ts CARD_MARGIN
   const qrCardInches = sk === "xl" ? 0.62 : sk === "l" ? 0.45 : 0.31; // m / s / unknown
 
-  // Bottom-right corner: server composites a glow disc + QR card here.
-  // The reserved zone is the rightmost ~20% of the footer bar (≈ ${qrCardInches}" square at 300 DPI).
-  // Give Grok an explicit percentage clearance so it doesn't run address text into the card.
-  const qrSlot =
-    `BOTTOM-RIGHT RESERVED ZONE (rightmost 20% of the footer bar — approx ${qrCardInches}" wide): ` +
-    `keep completely empty — no text, no address, no phone number, no icons, no decorative graphics. ` +
-    `The server composites the QR code card here after generation; anything drawn in this zone will be covered.`;
+  // drawQrPlaceholder=true (at-your-service detect-and-replace pilot): ask Grok to draw a small
+  // QR-code-shaped placeholder naturally in the design. The server will detect it with GPT-4o
+  // vision and overwrite it with a real scannable QR card.
+  //
+  // Default (all other templates): reserve the bottom-right corner empty for fixed-corner compositing.
+  const qrSlot = drawQrPlaceholder
+    ? `BOTTOM-RIGHT AREA — draw a small, compact QR code placeholder here: ` +
+      `approximately 140–150 pixels across (noticeably smaller than a typical QR code), ` +
+      `with a visible module grid pattern and three finder-square corners — the real visual ` +
+      `signature of a QR code, not a generic box or barcode. ` +
+      `Place it wherever it looks natural in the design (lower-right, in or above the footer bar). ` +
+      `The server will detect and replace this placeholder with a real scannable QR code.`
+    : `BOTTOM-RIGHT RESERVED ZONE (rightmost 20% of the footer bar — approx ${qrCardInches}" wide): ` +
+      `keep completely empty — no text, no address, no phone number, no icons, no decorative graphics. ` +
+      `The server composites the QR code card here after generation; anything drawn in this zone will be covered.`;
 
   if (isLandscape) {
     const hasAddr = address !== "(none)";
@@ -734,7 +742,7 @@ export function buildAdPrompt(
       (d.offer
         ? `COUPON (gold/yellow dashed-border box, lower-right): offer text bold dark navy, prominent. Fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, true) +
       `RESERVED CORNER: The bottom-right reserved area must NOT contain a gold/yellow dashed-border coupon box, a circular white icon badge from the navy band, or a gold/yellow brush-stroke element. Those elements are correct elsewhere on the card but must never be recreated or bleed into this reserved corner area.\n\n`
     )
     : isLandscape && templateKey === "purple-sage"
@@ -969,7 +977,7 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (gold/yellow dashed-border coupon box, lower-right): offer text bold dark navy, large. Fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, true) +
       `RESERVED CORNER: The bottom-right reserved area must NOT contain a gold/yellow dashed-border coupon box, a circular white icon badge from the navy band, or a gold/yellow brush-stroke element. Those elements are correct elsewhere on the card but must never be recreated or bleed into this reserved corner area.\n\n`
     )
     : templateKey === "purple-sage"

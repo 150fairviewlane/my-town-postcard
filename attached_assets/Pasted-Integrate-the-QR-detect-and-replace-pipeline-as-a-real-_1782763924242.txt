@@ -1,0 +1,13 @@
+Integrate the QR-detect-and-replace pipeline as a real, callable function, with these requirements:
+
+1. PROMPT WORDING — VERIFY FIRST: before anything else, show me the exact, literal prompt text currently used (from the probe script) to instruct Grok to draw something in the corner. Confirm whether it explicitly asks Grok to draw something that visually resembles an actual QR code (module grid pattern, finder squares — the real visual signature of a QR code), or whether it asks for something vaguer (a generic placeholder mark or "space reserved for a QR code" without describing what it should look like). If it's the vaguer version, tighten it to explicitly request a QR-code-LIKE visual — clearly stating it does not need to be scannable or functional, just needs to visually resemble one — since that matches what originally produced the best-looking results and is consistent with what GPT-4o has been successfully detecting in the probe runs. Use this confirmed/corrected wording for step 3 below.
+
+2. CALLABLE FUNCTION WITH FALLBACK: wrap the full flow (generate → detect candidates → pick largest → composite) as a single function with proper error handling. The GPT-4o detection call must have a timeout and must not throw uncaught — on any failure or zero-candidate result, fall back automatically to the existing compositeQrOnto fixed-corner approach already in compositeQr.ts. This fallback must always produce a usable ad with a scannable QR somewhere, never a broken or QR-less result.
+
+3. PILOT ON ONE TEMPLATE: at-your-service only. For that template, invert its qrSlot/corner prompt instructions in buildAdPrompt.ts to ask Grok to draw the QR-code-like placeholder confirmed/corrected in step 1 (with the smaller-size nudge from earlier), instead of the current "leave this corner empty" instruction. Leave every other template's prompts and compositing path completely untouched, still using the existing blank-corner approach.
+
+4. WIRE INTO THE REAL ROUTE: gate this in /api/grok-ad-generator/generate specifically to at-your-service — when that template is selected, use the new detect-and-replace function (with its fallback); every other template keeps using the existing code path unchanged.
+
+5. LOGGING: add logging for this new path — detection success/fail, number of candidates found, which was chosen, whether the fallback was triggered.
+
+Don't generate test ads yourself — I'll test the at-your-service pilot manually once this is wired in.

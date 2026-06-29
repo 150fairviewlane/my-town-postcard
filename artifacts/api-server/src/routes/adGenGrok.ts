@@ -17,6 +17,7 @@ function getSharp(): Promise<typeof import("sharp")> {
 }
 import { buildAdPrompt } from "../lib/buildAdPrompt";
 import { compositeQrOnto, getTemplateQrStyle, type SizeKey } from "../lib/compositeQr";
+import { detectAndReplaceQr } from "../lib/detectAndReplaceQr";
 import { db, spotsTable } from "@workspace/db";
 import { eq, and, ne, sql as drizzleSql } from "drizzle-orm";
 
@@ -1740,6 +1741,14 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
   async function cropAndQr(url: string): Promise<string> {
     const dataUrl = await cropToSpotDims(await callCornerCleanup(url), cropDim.w, cropDim.h);
 
+    // at-your-service uses the detect-and-replace pipeline: GPT-4o detects the
+    // QR placeholder Grok drew naturally, then composites a real scannable QR card
+    // at that location.  All other templates use the fixed bottom-right corner compositor.
+    // detectAndReplaceQr handles its own fallback to compositeQrOnto on any failure.
+    const applyQrComposite = templateKey === "at-your-service"
+      ? detectAndReplaceQr
+      : compositeQrOnto;
+
     if (spotTrackingCode) {
       // ── Paid spot: hard gate ──────────────────────────────────────────
       const trackingUrl = `${(process.env.APP_URL ?? "https://mytownpostcard.com").replace(/\/$/, "")}/go/${spotTrackingCode}`;
@@ -1749,7 +1758,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
         const { writeFile } = await import("fs/promises");
         await writeFile(`/tmp/grok-raw-${Date.now()}-${d.sizeKey}.jpg`, buf).catch(() => {});
       }
-      const composited = await compositeQrOnto(buf, trackingUrl, toSizeKey(d.sizeKey), getTemplateQrStyle(templateKey));
+      const composited = await applyQrComposite(buf, trackingUrl, toSizeKey(d.sizeKey), getTemplateQrStyle(templateKey));
       return `data:image/jpeg;base64,${composited.toString("base64")}`;
     }
 
@@ -1765,7 +1774,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
 
     const tryCompositePreview = async (qrUrl: string): Promise<string | null> => {
       try {
-        const composited = await compositeQrOnto(buf, qrUrl, sKey, getTemplateQrStyle(templateKey));
+        const composited = await applyQrComposite(buf, qrUrl, sKey, getTemplateQrStyle(templateKey));
         return `data:image/jpeg;base64,${composited.toString("base64")}`;
       } catch { return null; }
     };
