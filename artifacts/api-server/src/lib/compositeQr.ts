@@ -166,11 +166,10 @@ const CARD_MARGIN = 1.0375;
 
 // ── Disc constants ─────────────────────────────────────────────────────────
 /**
- * Warm-gold fill for the glow disc — matches the original corner starburst
- * color (#F4A800) so the halo reads as a neutral decorative element rather
- * than a heavy brand-color blob. Template-agnostic by design.
+ * Off-white fill for the glow disc — reads as light shining from the corner
+ * rather than a branded colour element. Template-agnostic by design.
  */
-const GLOW_COLOR = "#F4A800";
+const GLOW_COLOR = "#FFF9F0";
 
 /**
  * discRadius = round(cardSize × DISC_RADIUS_MULTIPLIER).
