@@ -72,6 +72,12 @@ export function getDefaultThemeIndex(industry: string): number {
 // ── Footer zone builder ──────────────────────────────────────────────────────
 
 export function buildFooterZone(phone: string, address: string, isLandscape = false): string {
+  const magentaNote =
+    `QR MARKER: The reference image has a solid bright magenta (#FF00FF) square ` +
+    `in the lower-right corner of the body (just above/overlapping the footer). ` +
+    `Reproduce this magenta square EXACTLY — same position, same size, pure #FF00FF colour. ` +
+    `This is a mandatory machine-readable element; do not omit, recolour, or obscure it.\n\n`;
+
   if (isLandscape) {
     const hasAddr = address !== "(none)";
     return (
@@ -82,7 +88,8 @@ export function buildFooterZone(phone: string, address: string, isLandscape = fa
         ? `"${address}" bold white, large, split to 2 lines at the comma (street on line 1, city/state on line 2), ` +
           `center-aligned within the center column — do not extend past 78% of the total footer width; `
         : `(centered placeholder); `) +
-      `Phone once, footer only.\n\n`
+      `Phone once, footer only.\n\n` +
+      magentaNote
     );
   }
   return (
@@ -91,7 +98,8 @@ export function buildFooterZone(phone: string, address: string, isLandscape = fa
     (address !== "(none)"
       ? `"${address}" bold white, large, directly below phone — left-aligned, must not extend past 75% of the footer width; `
       : "") +
-    `Phone once, footer only.\n\n`
+    `Phone once, footer only.\n\n` +
+    magentaNote
   );
 }
 
@@ -619,7 +627,7 @@ export function buildAdPrompt(
               : templateKey === "brush-stroke"
               ? "  • IMAGE 1 (TEMPLATE) — home-services postcard on cream/parchment bg with dark olive green and charcoal accents: large circular hero photo on the left framed by a dark organic brush-stroke swoosh (no hard rectangular border), dark olive hexagonal house-icon badge upper-right (logo zone), wide horizontal olive green paint brush stroke across upper-right area (headline zone), thin dark horizontal rule with small diamond separator below brush stroke, vertical column of service rows on the right each with a circular olive-bordered icon badge on the left and a dark charcoal horizontal brush-stroke shape with white text on the right, dark charcoal curved-top footer band spanning full width with circular phone icon + field left, circular location pin + field center, reserved corner. Reproduce every zone and element exactly."
               : templateKey === "heritage-home"
-              ? "  • IMAGE 1 (TEMPLATE) — premium home services postcard on cream/off-white (#f5f0e8) bg, deep burgundy (#6b1a2a) accents: sweeping organic burgundy brush stroke diagonal lower-left to upper-right. Upper-left: hero photo zone blending right edge into the brush stroke, no hard border. Upper-right: large rounded-rect headline zone with thin burgundy border, diamond ◆ separator between business name (bold serif) and tagline (elegant italic serif). Middle: horizontal row of circular dark burgundy icon badges with thin vertical burgundy rule dividers; brush-stroke-style label for service name and price below each badge. Footer: full-width dark burgundy bar — circular phone icon + number left, diamond accent, circular location pin + address; dashed-border rounded-rect coupon box with scissor ✂ upper-right corner + offer text; reserved corner. Reproduce every zone and element exactly."
+              ? "  • IMAGE 1 (TEMPLATE) — premium home services postcard on cream/off-white bg, deep burgundy accents: sweeping organic burgundy brush stroke diagonal lower-left to upper-right. Upper-left: hero photo zone blending right edge into the brush stroke, no hard border. Upper-right: large rounded-rect headline zone with thin burgundy border, diamond ◆ separator between business name (bold serif) and tagline (italic serif). Middle: horizontal row of circular dark burgundy icon badges with thin vertical burgundy rule dividers; service name and price label below each badge. Footer: full-width dark burgundy bar — circular phone icon + number left, diamond accent, circular location pin + address; dashed-border rounded-rect coupon box + offer text; reserved corner. Reproduce every zone and element exactly."
               : "  • IMAGE 1 (TEMPLATE) — postcard with parchment texture, brush-stroke headline band, orange pennant ribbon, circular checkmark badge, dashed coupon box, dark footer strip. Reproduce every zone and element exactly.",
     );
     imgIdx = 2;
