@@ -11,4 +11,4 @@
 - [QR card style hard-failure enforcement](qr-style-hard-failure-todo.md) — once all 11 templates have real TEMPLATE_QR_STYLES entries, convert startup logger.warn to throw; delete PLACEHOLDER_QR_STYLE.
 - [QR circular card margin rule](qr-circular-card-margin.md) — circularCard=true requires marginMultiplier≥1.45; default 1.0375 lets QR diagonal exceed circle diameter. cornerRadius is computed at render time (Math.floor(cardSize/2)), not stored statically.
 - [QR corner compositing — opaque panel](qr-corner-opaque-panel.md) — glow-disc+blur-erase replaced with footer-colour-sampled opaque panel; sampleFooterColor samples 60×20px median RGB at imgW*60% in footer band; no "gold disc" in prompts; qrSlot is now a right-edge strip instruction.
-- [Template image QR erase](template-image-qr-erase.md) — erase bottom-right corner of template reference images; use CARD_MARGIN (not 1.45×) for disc radius; sample fill at y=97% of image height, not mid-erase-zone.
+- [QR swap pipeline — jsQR detect-replace](qr-swap-jsqr.md) — reference images now have QR codes; jsQR locates Grok's copy; swapQrCode replaces it; compositeQrOnto is fallback only.

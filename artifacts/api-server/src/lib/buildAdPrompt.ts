@@ -71,28 +71,7 @@ export function getDefaultThemeIndex(industry: string): number {
 
 // ── Footer zone builder ──────────────────────────────────────────────────────
 
-export function buildFooterZone(phone: string, address: string, isLandscape = false, sizeKey?: string, drawQrPlaceholder?: boolean): string {
-  // Physical card size for the composited QR square (cardSize = round(qrSize × 1.075)).
-  // Must stay in sync with CARD_MARGIN in compositeQr.ts.
-  const sk = (sizeKey ?? "").toLowerCase();
-  // cardSize = round(qrSize × 1.0375) / 300 DPI — must stay in sync with compositeQr.ts CARD_MARGIN
-  const qrCardInches = sk === "xl" ? 0.62 : sk === "l" ? 0.45 : 0.31; // m / s / unknown
-
-  // drawQrPlaceholder=true (at-your-service detect-and-replace pilot): ask Grok to draw a small
-  // QR-code-shaped placeholder naturally in the design. The server will detect it with GPT-4o
-  // vision and overwrite it with a real scannable QR card.
-  //
-  // Default (all other templates): reserve the bottom-right corner empty for fixed-corner compositing.
-  const qrSlot = drawQrPlaceholder
-    ? `BOTTOM-RIGHT AREA — draw a small, compact QR code placeholder: ` +
-      `approximately 140–150 pixels across, with a visible module grid and three finder-square corners ` +
-      `(the real visual signature of a QR code). ` +
-      `Place it wherever it looks natural in the design (lower-right, in or above the footer bar). ` +
-      `The server will detect and replace this placeholder with a real scannable QR code.`
-    : `BOTTOM-RIGHT RESERVED ZONE (rightmost 20% of the footer bar — approx ${qrCardInches}" wide): ` +
-      `keep completely empty — no text, no address, no phone number, no icons, no decorative graphics. ` +
-      `The server composites the QR code card here after generation; anything drawn in this zone will be covered.`;
-
+export function buildFooterZone(phone: string, address: string, isLandscape = false): string {
   if (isLandscape) {
     const hasAddr = address !== "(none)";
     return (
@@ -103,7 +82,6 @@ export function buildFooterZone(phone: string, address: string, isLandscape = fa
         ? `"${address}" bold white, large, split to 2 lines at the comma (street on line 1, city/state on line 2), ` +
           `center-aligned within the center column — do not extend past 78% of the total footer width; `
         : `(centered placeholder); `) +
-      qrSlot + ` ` +
       `Phone once, footer only.\n\n`
     );
   }
@@ -113,7 +91,6 @@ export function buildFooterZone(phone: string, address: string, isLandscape = fa
     (address !== "(none)"
       ? `"${address}" bold white, large, directly below phone — left-aligned, must not extend past 75% of the footer width; `
       : "") +
-    qrSlot + ` ` +
     `Phone once, footer only.\n\n`
   );
 }
@@ -681,7 +658,7 @@ export function buildAdPrompt(
       (d.offer
         ? `COUPON (dashed dark box, lower-right): offer text bold white/cream, large. Fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape) +
       `RESERVED CORNER: The bottom-right reserved area must NOT contain an orange circular checkmark badge, a dashed coupon box or dashed-border rectangle, or an orange bookmark-ribbon pennant. Those elements are correct elsewhere on the card but must never be recreated or bleed into this reserved corner area.\n\n`
     )
     : isLandscape && templateKey === "made-fresh"
@@ -696,7 +673,7 @@ export function buildAdPrompt(
       (d.offer
         ? `GOLDEN TICKET-STUB COUPON (lower-right): offer text bold dark, large. Fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape) +
       `RESERVED CORNER: The bottom-right reserved area must NOT contain a golden ticket-stub coupon (dashed border, notched edges), a white paint-stroke panel, or a chalkboard A-frame sign. Those elements are correct elsewhere on the card but must never be recreated or bleed into this reserved corner area.\n\n`
     )
     : isLandscape && templateKey === "neighborhood-pro"
@@ -719,7 +696,7 @@ export function buildAdPrompt(
       (d.offer
         ? `OFFER (wide white brush-stroke area, lower section): offer text bold dark-green, large. Fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape) +
       `RESERVED CORNER: The bottom-right reserved area must NOT contain a diagonal-cut service panel, a circular lime-green icon badge, or a white brush-stroke offer area. Those elements are correct elsewhere on the card but must never be recreated or bleed into this reserved corner area.\n\n`
     )
     : isLandscape && templateKey === "at-your-service"
@@ -741,7 +718,7 @@ export function buildAdPrompt(
       (d.offer
         ? `COUPON (gold/yellow dashed-border box, lower-right): offer text bold dark navy, prominent. Fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, true) +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape) +
       `RESERVED CORNER: The bottom-right reserved area must NOT contain a gold/yellow dashed-border coupon box, a circular white icon badge from the navy band, or a gold/yellow brush-stroke element. Those elements are correct elsewhere on the card but must never be recreated or bleed into this reserved corner area.\n\n`
     )
     : isLandscape && templateKey === "purple-sage"
@@ -766,7 +743,7 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (dashed coupon box, lower area): offer text bold dark, fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape) +
       `RESERVED CORNER: The bottom-right reserved area must NOT contain a muted purple circle or dot-grid accent, a dashed coupon box, a cream rounded-rect tile, or a sage green leaf sprig element. Those elements are correct elsewhere on the card but must never be recreated or bleed into this reserved corner area.\n\n`
     )
     : isLandscape && templateKey === "sage-organic"
@@ -790,7 +767,7 @@ export function buildAdPrompt(
       (d.offer
         ? `COUPON (kraft paper dashed-stitch rectangle, lower-right, scissors icon): offer text bold dark, fine print below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape) +
       `RESERVED CORNER: The bottom-right reserved area must NOT contain a kraft paper dashed-stitch coupon rectangle, a dark olive circular icon badge, or a dark olive wave band element. Those elements are correct elsewhere on the card but must never be recreated or bleed into this reserved corner area.\n\n`
     )
     : isLandscape && templateKey === "home-elegance"
@@ -813,7 +790,7 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (dashed coupon box, lower area): offer text bold dark navy, large. Fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape) +
       `RESERVED CORNER: The bottom-right reserved area must NOT contain a solid navy filled rectangle, a rounded-rect service tile, or a circular dark navy icon badge. Those elements belong in the SERVICE TILES and dark navy lower area but must never be recreated or bleed into this reserved corner area.\n\n`
     )
     : isLandscape && templateKey === "health-wellness"
@@ -834,7 +811,7 @@ export function buildAdPrompt(
       (d.offer
         ? `OFFER (teal-bordered rect or dashed coupon box, visually distinct from service panels): offer text large and bold. Fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape) +
       `RESERVED CORNER: The bottom-right reserved area must NOT contain an organic teal blob shape, a circular teal badge, or a white rounded-rect text box or panel. Those elements are correct elsewhere on the card but must never be recreated or bleed into this reserved corner area.\n\n`
     )
     : isLandscape && templateKey === "wok-fire"
@@ -859,7 +836,7 @@ export function buildAdPrompt(
       (menuCount > 0
         ? `CHALKBOARD MENU (lower-right, dark A-frame sign): EXACTLY ${menuCount} item${menuCount !== 1 ? "s" : ""} and NO MORE in chalk-style white text — one per service in BUSINESS DETAILS, exactly as written. The template image may show more chalkboard lines — ignore extras; do NOT render empty chalk lines. No extras.\n\n`
         : `CHALKBOARD SIGN (lower-right): A-frame — leave board surface clean.\n\n`) +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape) +
       `RESERVED CORNER: The bottom-right reserved area must NOT contain a dark chalkboard A-frame sign, a golden ticket-stub coupon, a torn-edge deep red panel element, or a parchment/kraft torn-edge banner. Those elements are correct elsewhere on the card but must never be recreated or bleed into this reserved corner area.\n\n`
     )
     : isLandscape && templateKey === "brush-stroke"
@@ -880,7 +857,7 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (visually distinct dashed or bordered box, lower area): offer text bold dark, large. Fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape) +
       `RESERVED CORNER: The bottom-right reserved area must NOT contain a circular olive-bordered icon badge, a dark charcoal horizontal brush-stroke shape, or a dark charcoal curved-top footer extension. Those elements are correct elsewhere on the card but must never be recreated or bleed into this reserved corner area.\n\n`
     )
     : isLandscape && templateKey === "heritage-home"
@@ -902,7 +879,7 @@ export function buildAdPrompt(
       (d.offer
         ? `COUPON (footer bar, CENTER-LEFT section — between the phone column on the left and the address column): dashed-border rounded-rect, scissors ✂ icon, offer text bold cream inside box, fine print below. CRITICAL: the coupon must NOT appear at the far right — the bottom-right corner is reserved for the reserved corner graphic.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape) +
       `RESERVED CORNER: The bottom-right reserved area must NOT contain a dashed-border coupon box or offer text, a cream-background rounded-rect with a thin burgundy border, a headline-style box with a diamond ◆ separator, or any element from the HEADLINE zone. Those elements are correct elsewhere on the card but must never appear in the reserved corner area.\n\n`
     )
     : isLandscape
@@ -930,7 +907,7 @@ export function buildAdPrompt(
       (d.offer
         ? `  SPECIAL OFFER (own visually distinct coupon zone — dashed box or bordered panel, clearly separated from services): offer text and fine print from BUSINESS DETAILS. No filler phrases.\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey)
+      buildFooterZone(d.phone || "", fullAddress, isLandscape)
     )
     : templateKey === "neighborhood-pro"
     ? (
@@ -952,7 +929,7 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (wide white brush-stroke area, lower section): offer text bold dark-green, large. Fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape) +
       `RESERVED CORNER: The bottom-right reserved area must NOT contain a diagonal-cut service panel, a circular lime-green icon badge, or a white brush-stroke offer area. Those elements are correct elsewhere on the card but must never be recreated or bleed into this reserved corner area.\n\n`
     )
     : templateKey === "at-your-service"
@@ -976,7 +953,7 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (gold/yellow dashed-border coupon box, lower-right): offer text bold dark navy, large. Fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey, true) +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape) +
       `RESERVED CORNER: The bottom-right reserved area must NOT contain a gold/yellow dashed-border coupon box, a circular white icon badge from the navy band, or a gold/yellow brush-stroke element. Those elements are correct elsewhere on the card but must never be recreated or bleed into this reserved corner area.\n\n`
     )
     : templateKey === "purple-sage"
@@ -1006,7 +983,7 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (dashed coupon box, lower area): offer text bold dark, fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape) +
       `RESERVED CORNER: No purple circle/dot-grid, coupon box, cream tile, or leaf sprig in reserved corner.\n\n`
     )
     : templateKey === "sage-organic"
@@ -1035,7 +1012,7 @@ export function buildAdPrompt(
       (d.offer
         ? `COUPON (kraft paper/cardboard textured rectangle with dashed stitched border and scissors icon, lower-right): offer text bold dark, fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape) +
       `RESERVED CORNER: No kraft coupon, dark olive badge, or olive wave band in reserved corner.\n\n`
     )
     : templateKey === "home-elegance"
@@ -1060,7 +1037,7 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (dashed coupon box, lower area): offer text bold dark navy, large. Fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape) +
       `RESERVED CORNER — must not appear here: a solid navy rectangle, a rounded-rect service tile, or a circular dark navy icon badge.\n\n`
     )
     : templateKey === "surprise-me"
@@ -1083,7 +1060,7 @@ export function buildAdPrompt(
       (d.offer
         ? `  SPECIAL OFFER (own visually distinct coupon zone, clearly separated from services): offer text and fine print from BUSINESS DETAILS. No filler phrases.\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape) +
       "QUALITY: ✗ flat bg | ✗ rectangular frames | ✗ text on bare color | ✗ filler in coupon. ✓ Three depth planes | ✓ cinematic edge blending | ✓ 300 DPI.\n\n"
     )
     : templateKey === "health-wellness"
@@ -1103,7 +1080,7 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER: offer text prominently in teal or dark text in an available white-space area. Fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape) +
       `RESERVED CORNER: The bottom-right reserved area must NOT contain an organic teal blob shape, a circular teal badge, or a white rounded-rect text box or panel. Those elements are correct elsewhere on the card but must never be recreated or bleed into this reserved corner area.\n\n`
     )
     : templateKey === "wok-fire"
@@ -1127,7 +1104,7 @@ export function buildAdPrompt(
       (menuCount > 0
         ? `CHALKBOARD MENU (lower-right, dark chalkboard A-frame sign): EXACTLY ${menuCount} item${menuCount !== 1 ? "s" : ""} and NO MORE in chalk-style white text — one per service in BUSINESS DETAILS, exactly as written. The template image may show more chalkboard lines — ignore extras; do NOT render empty chalk lines. No extras. No invented items.\n\n`
         : `CHALKBOARD SIGN (lower-right): A-frame sign — leave board surface clean (no services provided).\n\n`) +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape) +
       `RESERVED CORNER: The bottom-right reserved area must NOT contain a dark chalkboard A-frame sign, a golden ticket-stub coupon, a torn-edge deep red panel element, or a parchment/kraft torn-edge banner. Those elements must never appear in the reserved corner area.\n\n`
     )
     : templateKey === "brush-stroke"
@@ -1147,7 +1124,7 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (visually distinct dashed or bordered box, lower area): offer text bold dark, large. Fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape) +
       `RESERVED CORNER: The bottom-right reserved area must NOT contain a circular olive-bordered icon badge, a dark charcoal horizontal brush-stroke shape, or a dark charcoal curved-top footer extension. Those elements must never appear in the reserved corner area.\n\n`
     )
     : templateKey === "heritage-home"
@@ -1168,7 +1145,7 @@ export function buildAdPrompt(
       (d.offer
         ? `COUPON (centered full-width zone in the body of the ad, between the service badges above and the dark footer bar below — NOT inside the footer bar itself): dashed-border rounded-rect, scissors ✂ icon, offer text bold dark burgundy inside box, fine print below. This zone sits entirely above the footer.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape) +
       `RESERVED CORNER: Must not contain coupon box, offer text, headline rounded-rect, or diamond ◆ separator — those belong in the body, not the corner.\n\n`
     )
     : (
@@ -1191,7 +1168,7 @@ export function buildAdPrompt(
       (d.offer
         ? `SPECIAL OFFER (dashed coupon box): offer text bold inside dashed rectangle. Fine print smaller below.\n\n`
         : "") +
-      buildFooterZone(d.phone || "", fullAddress, isLandscape, d.sizeKey) +
+      buildFooterZone(d.phone || "", fullAddress, isLandscape) +
       `RESERVED CORNER: The bottom-right reserved area must NOT contain an orange circular checkmark badge, a dashed coupon box or dashed-border rectangle, or an orange bookmark-ribbon pennant. Those elements are correct elsewhere on the card but must never be recreated or bleed into this reserved corner area.\n\n`
     );
 

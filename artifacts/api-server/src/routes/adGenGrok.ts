@@ -16,8 +16,8 @@ function getSharp(): Promise<typeof import("sharp")> {
   return _sharpLoader!;
 }
 import { buildAdPrompt } from "../lib/buildAdPrompt";
-import { compositeQrOnto, getTemplateQrStyle, type SizeKey } from "../lib/compositeQr";
-import { detectAndReplaceQr } from "../lib/detectAndReplaceQr";
+import { getTemplateQrStyle, type SizeKey } from "../lib/compositeQr";
+import { swapQrCode } from "../lib/locateQrCode";
 import { db, spotsTable } from "@workspace/db";
 import { eq, and, ne, sql as drizzleSql } from "drizzle-orm";
 
@@ -154,38 +154,6 @@ function extractXaiImageUrl(body: Record<string, unknown>): string | null {
   return null;
 }
 
-/**
- * Templates with intentional design elements in the lower-right body area that must
- * NOT be removed by the corner-cleanup refine pass.
- *
- * Audit notes (all variants — portrait and landscape — of each key are covered):
- *   at-your-service   — gold/yellow dashed-border coupon box, lower-right body
- *   wok-fire          — dark chalkboard A-frame sign, lower-right body
- *   sage-organic      — kraft paper dashed-stitch coupon rectangle, lower-right body
- *   home-elegance     — service tiles in dark navy lower-right area
- *   purple-sage       — two overlapping circular secondary photos, lower-right
- *   health-wellness   — stethoscope on dark teal circular blob, lower-right
- *   made-fresh        — golden ticket-stub coupon, lower-right body
- *
- * NOT on the list (cleanup runs normally):
- *   heritage-home    — coupon is CENTER-LEFT in the footer bar, not body lower-right
- *   neighborhood-pro — offer/coupon area is lower-CENTER, not lower-right
- *   brush-stroke     — no lower-right body content; circular QR card + dark footer only
- *   surprise-me      — free-form layout; cleanup most useful here, nothing to protect
- *   parchment-classic — removed from skip list: its dashed coupon box is already
- *                       protected by the exclusion list ("Do NOT remove coupon
- *                       boxes..."), so a blanket skip is unnecessary. Cleanup must
- *                       run here to catch hallucinated placeholders of any color/shape.
- */
-const CORNER_CLEANUP_SKIP_TEMPLATES = new Set([
-  "at-your-service",
-  "wok-fire",
-  "sage-organic",
-  "home-elegance",
-  "purple-sage",
-  "health-wellness",
-  "made-fresh",
-]);
 
 /** Resize and centre-crop a Grok-returned image URL to exact print pixel dimensions. */
 async function cropToSpotDims(url: string, w: number, h: number): Promise<string> {
@@ -1635,119 +1603,8 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
    *   Level 2: if level 1 fails, homepage QR (logged as product telemetry warn).
    *   Level 3: if level 2 also fails, plain cropped image (logged as error/bug).
    */
-  /**
-   * Auto corner-cleanup refine pass.
-   *
-   * Sends the raw Grok image through a second /v1/images/edits call instructing
-   * Grok to remove any shape, box, or panel it drew in the bottom-right corner
-   * and replace it with natural background. Runs before crop + QR composite on
-   * every generation path.
-   *
-   * Best-effort: any failure (API error, overload, exception) is logged as a
-   * warning and the original URL is returned unchanged so the generation never
-   * errors out due to the cleanup pass.
-   */
-  async function callCornerCleanup(url: string): Promise<string> {
-    // Skip templates that have intentional design elements in the lower-right
-    // body area — the cleanup prompt cannot distinguish a hallucinated QR
-    // placeholder from a coupon box or chalkboard sign that belongs there.
-    if (CORNER_CLEANUP_SKIP_TEMPLATES.has(templateKey)) {
-      req.log.info({ templateKey, bizName: d.bizName }, "corner-cleanup: skipped (template exclusion)");
-      return url;
-    }
-
-    // Instruction: target empty placeholder elements by content/purpose, not by
-    // color or shape — a placeholder can be any color (white, black, dark) or
-    // shape (square, rectangle, circle). The exclusion list ("Do NOT remove
-    // coupon boxes...") is what does the real discrimination between a hallucinated
-    // placeholder and an intentional design element.
-    const CORNER_CLEANUP_INSTRUCTION =
-      "Remove any blank, empty placeholder element with no real content or purpose — " +
-      "regardless of its color or shape (square, rectangle, circle, or anything else) — " +
-      "from the very bottom-right corner of this image (approximately the last 15% of width " +
-      "and last 15% of height). Replace it with a natural continuation of the immediately " +
-      "surrounding background. " +
-      "Do NOT remove coupon boxes, offer text, service panels, chalkboard signs, photo elements, " +
-      "circular photos, ribbons, banners, or any element that appears to be an intentional " +
-      "part of the advertisement's design.";
-    const cleanupPrompt =
-      `You are editing a finished print-ready postcard advertisement image. ` +
-      `Apply ONLY this specific change: "${CORNER_CLEANUP_INSTRUCTION}". ` +
-      `Keep every other element exactly as it appears — layout, colors, fonts, ` +
-      `business name, phone number, address, coupon offer, photos, background, ` +
-      `logo, and all remaining text. Do not add or remove anything beyond what ` +
-      `the instruction explicitly requests. Output a complete finished ad at the ` +
-      `same dimensions and print quality as the input.`;
-    // 60-second hard ceiling covering image fetch + edit call.
-    // On abort the catch block fires, logs warn, and returns the original URL.
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60_000);
-    try {
-      // Convert https:// URL to a data URL; data: URLs pass through as-is.
-      let imageDataUrl: string;
-      if (url.startsWith("data:")) {
-        imageDataUrl = url;
-      } else {
-        const imgFetch = await fetch(url, { signal: controller.signal });
-        if (!imgFetch.ok) {
-          req.log.warn({ reason: `fetch ${imgFetch.status}`, bizName: d.bizName }, "corner-cleanup: skipped");
-          return url;
-        }
-        const imgBuf  = Buffer.from(await imgFetch.arrayBuffer());
-        const imgMime = imgFetch.headers.get("content-type") ?? "image/jpeg";
-        imageDataUrl  = `data:${imgMime};base64,${imgBuf.toString("base64")}`;
-      }
-      const cleanupReqBody = {
-        model:        "grok-imagine-image-quality",
-        prompt:       cleanupPrompt,
-        n:            1,
-        images:       [{ type: "image_url", url: imageDataUrl }],
-        aspect_ratio: spotAspectRatio,
-        resolution:   "2k",
-      };
-      const cleanupRes = await fetch("https://api.x.ai/v1/images/edits", {
-        method:  "POST",
-        headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body:    JSON.stringify(cleanupReqBody),
-        signal:  controller.signal,
-      });
-      const cleanupResBody = await safeJson(cleanupRes);
-      if (!cleanupRes.ok) {
-        const errRaw = cleanupResBody["error"];
-        const errMsg =
-          (typeof errRaw === "string" ? errRaw : undefined)
-          ?? ((errRaw as Record<string, unknown> | undefined)?.["message"] as string | undefined)
-          ?? `xAI API error ${cleanupRes.status}`;
-        req.log.warn({ reason: errMsg, bizName: d.bizName }, "corner-cleanup: skipped");
-        return url;
-      }
-      const cleanedUrl = extractXaiImageUrl(cleanupResBody);
-      if (!cleanedUrl) {
-        req.log.warn({ reason: "no image in response", bizName: d.bizName }, "corner-cleanup: skipped");
-        return url;
-      }
-      req.log.info({ bizName: d.bizName }, "corner-cleanup: success");
-      return cleanedUrl;
-    } catch (err) {
-      const isAbort = err instanceof Error && err.name === "AbortError";
-      const reason  = isAbort ? "timeout" : (err instanceof Error ? err.message : String(err));
-      req.log.warn({ reason, bizName: d.bizName }, "corner-cleanup: skipped");
-      return url;
-    } finally {
-      clearTimeout(timeoutId);
-    }
-  }
-
   async function cropAndQr(url: string): Promise<string> {
-    const dataUrl = await cropToSpotDims(await callCornerCleanup(url), cropDim.w, cropDim.h);
-
-    // at-your-service uses the detect-and-replace pipeline: GPT-4o detects the
-    // QR placeholder Grok drew naturally, then composites a real scannable QR card
-    // at that location.  All other templates use the fixed bottom-right corner compositor.
-    // detectAndReplaceQr handles its own fallback to compositeQrOnto on any failure.
-    const applyQrComposite = templateKey === "at-your-service"
-      ? detectAndReplaceQr
-      : compositeQrOnto;
+    const dataUrl = await cropToSpotDims(url, cropDim.w, cropDim.h);
 
     if (spotTrackingCode) {
       // ── Paid spot: hard gate ──────────────────────────────────────────
@@ -1758,7 +1615,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
         const { writeFile } = await import("fs/promises");
         await writeFile(`/tmp/grok-raw-${Date.now()}-${d.sizeKey}.jpg`, buf).catch(() => {});
       }
-      const composited = await applyQrComposite(buf, trackingUrl, toSizeKey(d.sizeKey), getTemplateQrStyle(templateKey));
+      const composited = await swapQrCode(buf, trackingUrl, toSizeKey(d.sizeKey), getTemplateQrStyle(templateKey));
       return `data:image/jpeg;base64,${composited.toString("base64")}`;
     }
 
@@ -1774,7 +1631,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
 
     const tryCompositePreview = async (qrUrl: string): Promise<string | null> => {
       try {
-        const composited = await applyQrComposite(buf, qrUrl, sKey, getTemplateQrStyle(templateKey));
+        const composited = await swapQrCode(buf, qrUrl, sKey, getTemplateQrStyle(templateKey));
         return `data:image/jpeg;base64,${composited.toString("base64")}`;
       } catch { return null; }
     };
@@ -2315,13 +2172,13 @@ router.post("/grok-ad-generator/refine", async (req, res) => {
     const refineQrStyle = getTemplateQrStyle(refineTemplate);
     if (!refineIsPreview) {
       // ── Paid spot: hard gate ──────────────────────────────────────────────
-      const refineComp = await compositeQrOnto(refineBuf, refineTrackingUrl, refineSizeKey, refineQrStyle);
+      const refineComp = await swapQrCode(refineBuf, refineTrackingUrl, refineSizeKey, refineQrStyle);
       refineFinalUrl   = `data:image/jpeg;base64,${refineComp.toString("base64")}`;
     } else {
       // ── Preview: soft gate with two-level fallback ────────────────────────
       const tryRefineComposite = async (qrUrl: string): Promise<string | null> => {
         try {
-          const comp = await compositeQrOnto(refineBuf, qrUrl, refineSizeKey, refineQrStyle);
+          const comp = await swapQrCode(refineBuf, qrUrl, refineSizeKey, refineQrStyle);
           return `data:image/jpeg;base64,${comp.toString("base64")}`;
         } catch { return null; }
       };
