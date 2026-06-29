@@ -78,9 +78,10 @@ export function buildFooterZone(phone: string, address: string, isLandscape = fa
   // cardSize = round(qrSize × 1.0375) / 300 DPI — must stay in sync with compositeQr.ts CARD_MARGIN
   const qrCardInches = sk === "xl" ? 0.62 : sk === "l" ? 0.45 : 0.31; // m / s / unknown
 
-  // Bottom-right corner: warm-gold starburst composited server-side — just reserve the corner space.
+  // Bottom-right corner: server composites a glow disc + QR card here — just reserve the space.
   const qrSlot =
-    `BOTTOM-RIGHT: warm-gold starburst graphic bursting from the image corner — ` +
+    `BOTTOM-RIGHT: leave a plain, flat, solid-color fill in this corner — ` +
+    `no shapes, no texture, no objects, no gradient of its own. ` +
     `RIGHT and BOTTOM edges at image border, zero margin. ` +
     `Do not place text, phone numbers, address, or service items here.`;
 

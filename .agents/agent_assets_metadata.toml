@@ -383,3 +383,9 @@ id = "G4_Q6KGgz8IH5Cib5uum0"
 uri = "file://.local/np-pilot/np_crop_after_s.jpg"
 type = "image"
 title = "S — AFTER"
+
+[[outputs]]
+id = "k2eTVMydimojebJA3iyV2"
+uri = "file://artifacts/api-server/tmp_crops/comparison.jpg"
+type = "image"
+title = "Before vs After — corner crops (all 6 template pairs)"
