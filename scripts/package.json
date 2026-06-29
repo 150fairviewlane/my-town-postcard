@@ -22,6 +22,7 @@
     "measure:qr": "tsx ./src/measureGrokPlaceholder.ts",
     "seed:qa": "tsx ./src/seedQaCampaign.ts",
     "qa:bot": "tsx ./src/qaBot.ts",
+    "probe:qr-bbox": "tsx ./src/qrBboxProbe.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
