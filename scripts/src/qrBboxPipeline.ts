@@ -245,10 +245,16 @@ async function compositeRealQr(
   const clusterH = cluster.y2 - cluster.y1;
   const largerDim = Math.max(clusterW, clusterH);
 
-  // 1.3× the larger dimension; cap scales with image dimensions rather than anchoring
-  // to a fixed percentage that breaks on taller images (e.g. 2K at 2496px height).
+  // Clip the cluster's larger dimension before multiplying so that a long text label
+  // extending beside/below the QR doesn't inflate the card size beyond what the
+  // actual QR + backing-card shape needs (20% of image height is a generous upper bound
+  // for any real QR element; text labels routinely push clusters beyond that).
+  const clippedDim = Math.min(largerDim, Math.round(imgH * 0.20));
+
+  // 1.3× the clipped dimension; hard cap scales with image dimensions rather than
+  // anchoring to a fixed percentage that breaks on taller images (e.g. 2K at 2496px).
   const maxCard = Math.min(Math.round(imgW * 0.35), Math.round(imgH * 0.25));
-  const cardSize = Math.min(Math.round(largerDim * 1.3), maxCard);
+  const cardSize = Math.min(Math.round(clippedDim * 1.3), maxCard);
 
   // Center on detected cluster bbox
   const cx = Math.round((cluster.x1 + cluster.x2) / 2);
