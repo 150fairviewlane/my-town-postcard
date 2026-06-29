@@ -252,13 +252,11 @@ router.get("/campaigns/public-territories", async (req, res): Promise<void> => {
 });
 
 router.get("/campaigns/active/taken-categories", async (req, res): Promise<void> => {
-  const [campaign] = await db
-    .select({ id: campaignsTable.id })
-    .from(campaignsTable)
-    .where(eq(campaignsTable.status, "active"))
-    .limit(1);
-
-  if (!campaign) {
+  const campaignId = parseInt(String(req.query.campaignId ?? ""), 10);
+  if (!campaignId || isNaN(campaignId)) {
+    // Missing or invalid campaignId — return empty list rather than falling back
+    // to an arbitrary active campaign, which would return the wrong data for
+    // every territory except whichever one wins the unscoped query.
     res.json({ takenCategories: [] });
     return;
   }
@@ -266,7 +264,7 @@ router.get("/campaigns/active/taken-categories", async (req, res): Promise<void>
   const spots = await db
     .select({ businessCategory: spotsTable.businessCategory, status: spotsTable.status })
     .from(spotsTable)
-    .where(eq(spotsTable.campaignId, campaign.id));
+    .where(eq(spotsTable.campaignId, campaignId));
 
   const takenCategories = spots
     .filter(s => s.status === "paid" && s.businessCategory)

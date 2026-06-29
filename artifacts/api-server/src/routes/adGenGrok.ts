@@ -3316,10 +3316,12 @@ function showToast(msg){
   applyTakenIndustries();
   renderVariations();
   // Fetch server-side taken categories
-  fetch('/api/campaigns/active/taken-categories')
-    .then(function(r){ return r.ok ? r.json() : null; })
-    .then(function(data){ if(data && Array.isArray(data.takenCategories)){ _takenCategories = data.takenCategories; applyTakenIndustries(); } })
-    .catch(function(){});
+  if(_campaignId){
+    fetch('/api/campaigns/active/taken-categories?campaignId=' + _campaignId)
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(data){ if(data && Array.isArray(data.takenCategories)){ _takenCategories = data.takenCategories; applyTakenIndustries(); } })
+      .catch(function(){});
+  }
   // Fetch campaign-used templates
   if(_campaignId && _spotId){
     fetch('/api/campaigns/' + _campaignId + '/used-templates?spotId=' + _spotId)
@@ -4507,18 +4509,21 @@ function showToast(msg){
   var takenParam = params.get('taken') || '';
   _takenCategories = takenParam ? takenParam.split(',').map(function(s){ return s.trim(); }).filter(Boolean) : [];
   applyTakenIndustries();
-  // Fetch taken categories from the API so standalone use is accurate
-  fetch('/api/campaigns/active/taken-categories')
-    .then(function(r){ return r.ok ? r.json() : null; })
-    .then(function(data){
-      if(data && Array.isArray(data.takenCategories)){
-        // Server is authoritative — replace entirely so stale URL params
-        // don't keep a category grayed out after it's been freed.
-        _takenCategories = data.takenCategories.slice();
-        applyTakenIndustries();
-      }
-    })
-    .catch(function(){});
+  // Fetch taken categories from the API so standalone use is accurate.
+  // Always scope by campaignId so each territory sees only its own paid spots.
+  if(_campaignId){
+    fetch('/api/campaigns/active/taken-categories?campaignId=' + _campaignId)
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(data){
+        if(data && Array.isArray(data.takenCategories)){
+          // Server is authoritative — replace entirely so stale URL params
+          // don't keep a category grayed out after it's been freed.
+          _takenCategories = data.takenCategories.slice();
+          applyTakenIndustries();
+        }
+      })
+      .catch(function(){});
+  }
   // Fetch used templates for this campaign side so the picker hides already-used ones
   if(_campaignId && _spotId){
     fetch('/api/campaigns/' + _campaignId + '/used-templates?spotId=' + _spotId)
