@@ -84,10 +84,9 @@ export function buildFooterZone(phone: string, address: string, isLandscape = fa
   //
   // Default (all other templates): reserve the bottom-right corner empty for fixed-corner compositing.
   const qrSlot = drawQrPlaceholder
-    ? `BOTTOM-RIGHT AREA — draw a small, compact QR code placeholder here: ` +
-      `approximately 140–150 pixels across (noticeably smaller than a typical QR code), ` +
-      `with a visible module grid pattern and three finder-square corners — the real visual ` +
-      `signature of a QR code, not a generic box or barcode. ` +
+    ? `BOTTOM-RIGHT AREA — draw a small, compact QR code placeholder: ` +
+      `approximately 140–150 pixels across, with a visible module grid and three finder-square corners ` +
+      `(the real visual signature of a QR code). ` +
       `Place it wherever it looks natural in the design (lower-right, in or above the footer bar). ` +
       `The server will detect and replace this placeholder with a real scannable QR code.`
     : `BOTTOM-RIGHT RESERVED ZONE (rightmost 20% of the footer bar — approx ${qrCardInches}" wide): ` +
@@ -1162,7 +1161,7 @@ export function buildAdPrompt(
       (hasPhoto
         ? `  Composite IMAGE 2 into the hero zone. Fill upper-left, right edge dissolves organically into the burgundy brush stroke; no hard border.\n\n`
         : `  ${ipc.hero}. Fill upper-left zone, right edge dissolves into brush stroke; no hard border.\n\n`) +
-      `SERVICE BADGES (middle, horizontal row full width${d.offer ? " — positioned in the upper-middle area to leave a coupon zone between the badges and the footer bar" : ""}): ` +
+      `SERVICE BADGES (middle, horizontal row full width${d.offer ? " — leave room for the coupon zone below the badges" : ""}): ` +
       (menuCount > 0
         ? `EXACTLY ${menuCount} dark burgundy circular icon badge${menuCount !== 1 ? "s" : ""} evenly spaced — one per service in BUSINESS DETAILS. Thin vertical burgundy rule divider on right of each; brush-stroke label below. Ignore extra slots; no empty badges. No invented services.\n\n`
         : `four decorative dark burgundy circular icon badge shapes with thin vertical burgundy rule dividers; NO text labels.\n\n`) +

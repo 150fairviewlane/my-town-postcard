@@ -120,7 +120,9 @@ async function detectQrCluster(
 
   const b64 = visionBuf.toString("base64");
 
-  const client = new OpenAI({ apiKey: openaiKey, timeout: DETECT_TIMEOUT_MS });
+  // maxRetries: 0 — the SDK's default of 2 would allow up to 3 × 30 s = 90 s of waiting
+  // before throwing.  We need a hard 30-second ceiling so the fallback fires promptly.
+  const client = new OpenAI({ apiKey: openaiKey, timeout: DETECT_TIMEOUT_MS, maxRetries: 0 });
 
   const resp = await client.chat.completions.create({
     model: "gpt-4o",
