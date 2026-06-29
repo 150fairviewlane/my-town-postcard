@@ -1626,17 +1626,24 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
       `logo, and all remaining text. Do not add or remove anything beyond what ` +
       `the instruction explicitly requests. Output a complete finished ad at the ` +
       `same dimensions and print quality as the input.`;
+    // 60-second hard ceiling covering image fetch + edit call.
+    // On abort the catch block fires, logs warn, and returns the original URL.
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60_000);
     try {
       // Convert https:// URL to a data URL; data: URLs pass through as-is.
       let imageDataUrl: string;
       if (url.startsWith("data:")) {
         imageDataUrl = url;
       } else {
-        const imgFetch = await fetch(url);
-        if (!imgFetch.ok) throw new Error(`fetch image ${imgFetch.status}`);
-        const imgBuf = Buffer.from(await imgFetch.arrayBuffer());
+        const imgFetch = await fetch(url, { signal: controller.signal });
+        if (!imgFetch.ok) {
+          req.log.warn({ reason: `fetch ${imgFetch.status}`, bizName: d.bizName }, "corner-cleanup: skipped");
+          return url;
+        }
+        const imgBuf  = Buffer.from(await imgFetch.arrayBuffer());
         const imgMime = imgFetch.headers.get("content-type") ?? "image/jpeg";
-        imageDataUrl = `data:${imgMime};base64,${imgBuf.toString("base64")}`;
+        imageDataUrl  = `data:${imgMime};base64,${imgBuf.toString("base64")}`;
       }
       const cleanupReqBody = {
         model:        "grok-imagine-image-quality",
@@ -1650,6 +1657,7 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
         method:  "POST",
         headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
         body:    JSON.stringify(cleanupReqBody),
+        signal:  controller.signal,
       });
       const cleanupResBody = await safeJson(cleanupRes);
       if (!cleanupRes.ok) {
@@ -1658,20 +1666,23 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
           (typeof errRaw === "string" ? errRaw : undefined)
           ?? ((errRaw as Record<string, unknown> | undefined)?.["message"] as string | undefined)
           ?? `xAI API error ${cleanupRes.status}`;
-        req.log.warn({ errMsg, bizName: d.bizName }, "corner-cleanup: skipped (error)");
+        req.log.warn({ reason: errMsg, bizName: d.bizName }, "corner-cleanup: skipped");
         return url;
       }
       const cleanedUrl = extractXaiImageUrl(cleanupResBody);
       if (!cleanedUrl) {
-        req.log.warn({ bizName: d.bizName }, "corner-cleanup: skipped (no image in response)");
+        req.log.warn({ reason: "no image in response", bizName: d.bizName }, "corner-cleanup: skipped");
         return url;
       }
       req.log.info({ bizName: d.bizName }, "corner-cleanup: success");
       return cleanedUrl;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      req.log.warn({ err: msg, bizName: d.bizName }, "corner-cleanup: skipped (exception)");
+      const isAbort = err instanceof Error && err.name === "AbortError";
+      const reason  = isAbort ? "timeout" : (err instanceof Error ? err.message : String(err));
+      req.log.warn({ reason, bizName: d.bizName }, "corner-cleanup: skipped");
       return url;
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
