@@ -389,3 +389,9 @@ id = "k2eTVMydimojebJA3iyV2"
 uri = "file://artifacts/api-server/tmp_crops/comparison.jpg"
 type = "image"
 title = "Before vs After — corner crops (all 6 template pairs)"
+
+[[outputs]]
+id = "hnxPZvUkXZBZAlaSOh5SL"
+uri = "file://artifacts/api-server/tmp_crops_v2.jpg"
+type = "image"
+title = "Corner crops — BEFORE (style.fill glow, 2.0×) vs AFTER (warm-gold #F4A800, 1.1×)"

@@ -8,8 +8,9 @@
  *      the outer 15% feathered to transparent. Erases whatever Grok drew
  *      in the corner (starburst, texture, objects) before the glow is applied.
  *   2. Glow disc — soft translucent radial-gradient quarter-circle anchored
- *      at the same corner, using style.fill, fading from full opacity to
- *      transparent. Creates a smooth vignette over the flat fill.
+ *      at the same corner, using GLOW_COLOR (#F4A800 warm gold), fading from
+ *      full opacity to transparent. Warm-gold is template-agnostic — it reads
+ *      as a neutral decorative halo rather than a brand-color blob.
  *   3. Square backing card — sits centred on the glow disc origin.
  *   4. QR code — centred inside the backing card.
  *
@@ -168,19 +169,27 @@ const CARD_MARGIN = 1.0375;
 
 // ── Disc constants ─────────────────────────────────────────────────────────
 /**
- * discRadius = round(cardSize × DISC_RADIUS_MULTIPLIER).
- * At 2.0× the disc extends one full card-width beyond each edge of the card,
- * giving a visible soft halo that frames the card without overwhelming it.
+ * Warm-gold fill for the glow disc — matches the original corner starburst
+ * color (#F4A800) so the halo reads as a neutral decorative element rather
+ * than a heavy brand-color blob. Template-agnostic by design.
  */
-const DISC_RADIUS_MULTIPLIER = 2.0;
+const GLOW_COLOR = "#F4A800";
+
+/**
+ * discRadius = round(cardSize × DISC_RADIUS_MULTIPLIER).
+ * At 1.1× the disc extends just 10% beyond the card edge on each side,
+ * producing a tight, subtle halo that stays well clear of the coupon/offer
+ * area even on the smallest spot sizes.
+ */
+const DISC_RADIUS_MULTIPLIER = 1.1;
 
 /**
  * flattenRadius = round(cardSize × FLATTEN_RADIUS_MULTIPLIER).
- * 25% larger than the glow disc so it fully covers any AI-drawn corner
+ * ~27% larger than the glow disc so it fully covers any AI-drawn corner
  * content (starburst, objects, texture) before the glow is composited on top.
  * Outer 15% feathered to transparent; inner 85% fully opaque style.fill.
  */
-const FLATTEN_RADIUS_MULTIPLIER = 2.5;
+const FLATTEN_RADIUS_MULTIPLIER = 1.4;
 
 // ── Card layout computed from QR spec ─────────────────────────────────────
 export interface CardLayout {
@@ -309,8 +318,9 @@ function makeFlattenDiscSvg(radius: number, fillHex: string): Buffer {
  * disc centre with the image's bottom-right corner pixel.
  *
  * @param radius   Disc radius in pixels; also the SVG width and height.
- * @param fillHex  Fill colour as a hex string (e.g. "#1A2744"). Should match
- *                 the template's CardStyle.fill for visual coherence.
+ * @param fillHex  Fill colour as a hex string (e.g. "#F4A800"). Use GLOW_COLOR
+ *                 for a template-agnostic warm-gold halo (not style.fill, which
+ *                 produces a saturated brand-color blob on dark templates).
  */
 function makeGlowDiscSvg(radius: number, fillHex: string): Buffer {
   const svg =
@@ -402,7 +412,7 @@ export async function compositeQrOnto(
   const discRadius    = Math.round(layout.cardSize * DISC_RADIUS_MULTIPLIER);
   const [flattenPng, glowDiscPng] = await Promise.all([
     sharp(makeFlattenDiscSvg(flattenRadius, style.fill)).png().toBuffer(),
-    sharp(makeGlowDiscSvg(discRadius,    style.fill)).png().toBuffer(),
+    sharp(makeGlowDiscSvg(discRadius,    GLOW_COLOR )).png().toBuffer(),
   ]);
 
   const compositedBuffer: Buffer = await sharp(imageBuffer)

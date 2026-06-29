@@ -67,8 +67,10 @@ async function main() {
 
   // Use heritage-home style — cream fill #f5f0e8 on a dark footer gives high
   // contrast to verify the disc colour.
-  const style = getTemplateQrStyle("heritage-home");
+  const style    = getTemplateQrStyle("heritage-home");
+  const glowColor = "#F4A800"; // GLOW_COLOR — warm gold, template-agnostic
   console.log(`Card style: ${JSON.stringify(style)}`);
+  console.log(`Glow color: ${glowColor} (warm gold — not style.fill)`);
 
   const result = await compositeQrOnto(synth, TRACKING_URL, SIZE_KEY, style);
 
@@ -113,8 +115,9 @@ async function main() {
     .toBuffer({ resolveWithObject: true });
 
   const [sampR, sampG, sampB] = [px[0]!, px[1]!, px[2]!];
-  const expected = hexToRgb(style.fill);
-  const TOL = 20;
+  // Glow disc now uses GLOW_COLOR (#F4A800 warm gold), not style.fill.
+  const expected = hexToRgb(glowColor);
+  const TOL = 30; // wider tolerance: JPEG compression + tiny JPEG→PNG→JPEG round-trip
   const matches =
     Math.abs(sampR - expected.r) <= TOL &&
     Math.abs(sampG - expected.g) <= TOL &&
@@ -122,15 +125,15 @@ async function main() {
 
   if (matches) {
     console.log(
-      `\n✅ Glow disc detected at (${sampleX},${sampleY}): ` +
-      `rgb(${sampR},${sampG},${sampB}) ≈ ${style.fill} (fill colour ✓)`,
+      `\n✅ Warm-gold glow detected at (${sampleX},${sampleY}): ` +
+      `rgb(${sampR},${sampG},${sampB}) ≈ ${glowColor} ✓`,
     );
   } else {
     console.warn(
       `\n⚠️  Sample pixel at (${sampleX},${sampleY}): rgb(${sampR},${sampG},${sampB}) — ` +
-      `expected ≈ ${style.fill} = rgb(${expected.r},${expected.g},${expected.b}) ±${TOL}`,
+      `expected ≈ ${glowColor} = rgb(${expected.r},${expected.g},${expected.b}) ±${TOL}`,
     );
-    console.warn(`   Inspect ${cornerPath} to verify the glow disc is rendering.`);
+    console.warn(`   Inspect ${cornerPath} to verify the warm-gold glow is rendering.`);
   }
 
   console.log(`\nAll templates registered: ${Object.keys(TEMPLATE_QR_STYLES).join(", ")}`);
