@@ -1,0 +1,11 @@
+Go ahead with the reference-image fix, scoped like this:
+
+1. Check EVERY portrait template reference image by actually opening each file and visually inspecting the bottom-right corner — same direct method that just confirmed heritage-home's QR code. Don't look only for QR-shaped patterns — look for ANY visible marking, designation, or placeholder there: a plain box outline, a dashed border, a gray/colored patch, an icon, placeholder text, a watermark, anything that signals "something goes here," even if it doesn't look like a QR code. These templates were built before this idiosyncrasy was understood, so assume any deliberate marking in that corner is a candidate for the same problem. Report back a list per template, described plainly (e.g. "gray rounded rectangle, no content," "dashed-border square," "real QR code," "nothing, already blank").
+
+2. For every template that has anything there, edit the reference image so that corner is plain and blank — matching that image's own surrounding background color/texture, no QR, no glow, no placeholder graphic of any kind. Don't add a glow or starburst to the reference image itself — the server composites the real glow and QR after generation regardless, so "reproduce exactly" should mean reproducing nothing there.
+
+3. Do the same check (same broadened criteria from step 1) for landscape template reference images too, even though they're untested right now — cheap to check while you're already doing this, and it saves repeating this exact investigation later when landscape testing happens.
+
+4. Leave the existing qrSlot text ("no specific graphic needed here") and STARBURST CORNER prohibition text as-is — don't add a new prohibition on top. The image fix should resolve this at its source; adding redundant text on top of it is how the flat-fill box problem happened last time.
+
+Report back the before/after list of which templates needed fixing, plus confirm the erase-layer status question from a couple rounds ago if it's still unanswered — that's still open and still matters as the deterministic backstop under all of this.
