@@ -1601,8 +1601,82 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
    *   Level 2: if level 1 fails, homepage QR (logged as product telemetry warn).
    *   Level 3: if level 2 also fails, plain cropped image (logged as error/bug).
    */
+  /**
+   * Auto corner-cleanup refine pass.
+   *
+   * Sends the raw Grok image through a second /v1/images/edits call instructing
+   * Grok to remove any shape, box, or panel it drew in the bottom-right corner
+   * and replace it with natural background. Runs before crop + QR composite on
+   * every generation path.
+   *
+   * Best-effort: any failure (API error, overload, exception) is logged as a
+   * warning and the original URL is returned unchanged so the generation never
+   * errors out due to the cleanup pass.
+   */
+  async function callCornerCleanup(url: string): Promise<string> {
+    const CORNER_CLEANUP_INSTRUCTION =
+      "Remove any shape, box, panel, or graphic element from the bottom-right corner " +
+      "of this image and replace it with a plain, natural continuation of the surrounding " +
+      "background — no objects, no text, no decorative elements in that corner.";
+    const cleanupPrompt =
+      `You are editing a finished print-ready postcard advertisement image. ` +
+      `Apply ONLY this specific change: "${CORNER_CLEANUP_INSTRUCTION}". ` +
+      `Keep every other element exactly as it appears — layout, colors, fonts, ` +
+      `business name, phone number, address, coupon offer, photos, background, ` +
+      `logo, and all remaining text. Do not add or remove anything beyond what ` +
+      `the instruction explicitly requests. Output a complete finished ad at the ` +
+      `same dimensions and print quality as the input.`;
+    try {
+      // Convert https:// URL to a data URL; data: URLs pass through as-is.
+      let imageDataUrl: string;
+      if (url.startsWith("data:")) {
+        imageDataUrl = url;
+      } else {
+        const imgFetch = await fetch(url);
+        if (!imgFetch.ok) throw new Error(`fetch image ${imgFetch.status}`);
+        const imgBuf = Buffer.from(await imgFetch.arrayBuffer());
+        const imgMime = imgFetch.headers.get("content-type") ?? "image/jpeg";
+        imageDataUrl = `data:${imgMime};base64,${imgBuf.toString("base64")}`;
+      }
+      const cleanupReqBody = {
+        model:        "grok-imagine-image-quality",
+        prompt:       cleanupPrompt,
+        n:            1,
+        images:       [{ type: "image_url", url: imageDataUrl }],
+        aspect_ratio: spotAspectRatio,
+        resolution:   "2k",
+      };
+      const cleanupRes = await fetch("https://api.x.ai/v1/images/edits", {
+        method:  "POST",
+        headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body:    JSON.stringify(cleanupReqBody),
+      });
+      const cleanupResBody = await safeJson(cleanupRes);
+      if (!cleanupRes.ok) {
+        const errRaw = cleanupResBody["error"];
+        const errMsg =
+          (typeof errRaw === "string" ? errRaw : undefined)
+          ?? ((errRaw as Record<string, unknown> | undefined)?.["message"] as string | undefined)
+          ?? `xAI API error ${cleanupRes.status}`;
+        req.log.warn({ errMsg, bizName: d.bizName }, "corner-cleanup: skipped (error)");
+        return url;
+      }
+      const cleanedUrl = extractXaiImageUrl(cleanupResBody);
+      if (!cleanedUrl) {
+        req.log.warn({ bizName: d.bizName }, "corner-cleanup: skipped (no image in response)");
+        return url;
+      }
+      req.log.info({ bizName: d.bizName }, "corner-cleanup: success");
+      return cleanedUrl;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      req.log.warn({ err: msg, bizName: d.bizName }, "corner-cleanup: skipped (exception)");
+      return url;
+    }
+  }
+
   async function cropAndQr(url: string): Promise<string> {
-    const dataUrl = await cropToSpotDims(url, cropDim.w, cropDim.h);
+    const dataUrl = await cropToSpotDims(await callCornerCleanup(url), cropDim.w, cropDim.h);
 
     if (spotTrackingCode) {
       // ── Paid spot: hard gate ──────────────────────────────────────────
