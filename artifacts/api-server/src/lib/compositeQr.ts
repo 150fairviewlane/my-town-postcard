@@ -294,6 +294,7 @@ function makeGlowDiscSvg(radius: number, fillHex: string): Buffer {
     `<defs>` +
     `<radialGradient id="g" cx="${radius}" cy="${radius}" r="${radius}" gradientUnits="userSpaceOnUse">` +
     `<stop offset="0%" stop-color="${fillHex}" stop-opacity="1"/>` +
+    `<stop offset="40%" stop-color="${fillHex}" stop-opacity="0.3"/>` +
     `<stop offset="100%" stop-color="${fillHex}" stop-opacity="0"/>` +
     `</radialGradient>` +
     `</defs>` +
