@@ -23,6 +23,7 @@
     "seed:qa": "tsx ./src/seedQaCampaign.ts",
     "qa:bot": "tsx ./src/qaBot.ts",
     "probe:qr-bbox": "tsx ./src/qrBboxProbe.ts",
+    "pipeline:qr-bbox": "tsx ./src/qrBboxPipeline.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
