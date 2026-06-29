@@ -153,6 +153,37 @@ function extractXaiImageUrl(body: Record<string, unknown>): string | null {
   return null;
 }
 
+/**
+ * Templates with intentional design elements in the lower-right body area that must
+ * NOT be removed by the corner-cleanup refine pass.
+ *
+ * Audit notes (all variants — portrait and landscape — of each key are covered):
+ *   at-your-service   — gold/yellow dashed-border coupon box, lower-right body
+ *   wok-fire          — dark chalkboard A-frame sign, lower-right body
+ *   sage-organic      — kraft paper dashed-stitch coupon rectangle, lower-right body
+ *   home-elegance     — service tiles in dark navy lower-right area
+ *   purple-sage       — two overlapping circular secondary photos, lower-right
+ *   health-wellness   — stethoscope on dark teal circular blob, lower-right
+ *   made-fresh        — golden ticket-stub coupon, lower-right body
+ *   parchment-classic — dashed coupon box, lower-right body (portrait)
+ *
+ * NOT on the list (cleanup runs normally):
+ *   heritage-home   — coupon is CENTER-LEFT in the footer bar, not body lower-right
+ *   neighborhood-pro — offer/coupon area is lower-CENTER, not lower-right
+ *   brush-stroke    — no lower-right body content; circular QR card + dark footer only
+ *   surprise-me     — free-form layout; cleanup most useful here, nothing to protect
+ */
+const CORNER_CLEANUP_SKIP_TEMPLATES = new Set([
+  "at-your-service",
+  "wok-fire",
+  "sage-organic",
+  "home-elegance",
+  "purple-sage",
+  "health-wellness",
+  "made-fresh",
+  "parchment-classic",
+]);
+
 /** Resize and centre-crop a Grok-returned image URL to exact print pixel dimensions. */
 async function cropToSpotDims(url: string, w: number, h: number): Promise<string> {
   try {
@@ -1614,10 +1645,25 @@ router.post("/grok-ad-generator/generate", async (req, res): Promise<void> => {
    * errors out due to the cleanup pass.
    */
   async function callCornerCleanup(url: string): Promise<string> {
+    // Skip templates that have intentional design elements in the lower-right
+    // body area — the cleanup prompt cannot distinguish a hallucinated QR
+    // placeholder from a coupon box or chalkboard sign that belongs there.
+    if (CORNER_CLEANUP_SKIP_TEMPLATES.has(templateKey)) {
+      req.log.info({ templateKey, bizName: d.bizName }, "corner-cleanup: skipped (template exclusion)");
+      return url;
+    }
+
+    // Narrow instruction: target only blank placeholder squares, not design elements.
+    // "any shape, box, panel" was too broad — it caused Grok to remove coupon boxes
+    // and other intentional lower-right design elements on excluded templates.
     const CORNER_CLEANUP_INSTRUCTION =
-      "Remove any shape, box, panel, or graphic element from the bottom-right corner " +
-      "of this image and replace it with a plain, natural continuation of the surrounding " +
-      "background — no objects, no text, no decorative elements in that corner.";
+      "Remove ONLY a blank white, gray, or light-colored placeholder square or rectangle " +
+      "that appears to be an empty box reserving space for a QR code in the very bottom-right " +
+      "corner of this image (approximately the last 15% of width and last 15% of height). " +
+      "Replace it with a natural continuation of the immediately surrounding background. " +
+      "Do NOT remove coupon boxes, offer text, service panels, chalkboard signs, photo elements, " +
+      "circular photos, ribbons, banners, or any element that appears to be an intentional " +
+      "part of the advertisement's design.";
     const cleanupPrompt =
       `You are editing a finished print-ready postcard advertisement image. ` +
       `Apply ONLY this specific change: "${CORNER_CLEANUP_INSTRUCTION}". ` +

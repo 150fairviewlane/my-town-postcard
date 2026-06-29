@@ -288,12 +288,19 @@ function makeCardSvg(cardSize: number, style: CardStyle, effectiveCornerRadius: 
  *                 produces a saturated brand-color blob on dark templates).
  */
 function makeGlowDiscSvg(radius: number, fillHex: string): Buffer {
+  // Opacity tuned so the disc reads as a subtle ambient vignette on both
+  // light and dark template backgrounds, rather than a stark visible circle.
+  // Long-term TODO: derive fillHex as a lightened/darkened variant of each
+  // template's own style.fill (already passed to compositeQrOnto) so the glow
+  // blends naturally instead of using one fixed hue universally — a fixed
+  // off-white can't be simultaneously invisible on both light cream and
+  // near-black footer backgrounds.
   const svg =
     `<svg width="${radius}" height="${radius}" xmlns="http://www.w3.org/2000/svg">` +
     `<defs>` +
     `<radialGradient id="g" cx="${radius}" cy="${radius}" r="${radius}" gradientUnits="userSpaceOnUse">` +
-    `<stop offset="0%" stop-color="${fillHex}" stop-opacity="1"/>` +
-    `<stop offset="40%" stop-color="${fillHex}" stop-opacity="0.3"/>` +
+    `<stop offset="0%" stop-color="${fillHex}" stop-opacity="0.55"/>` +
+    `<stop offset="40%" stop-color="${fillHex}" stop-opacity="0.15"/>` +
     `<stop offset="100%" stop-color="${fillHex}" stop-opacity="0"/>` +
     `</radialGradient>` +
     `</defs>` +

@@ -78,10 +78,13 @@ export function buildFooterZone(phone: string, address: string, isLandscape = fa
   // cardSize = round(qrSize × 1.0375) / 300 DPI — must stay in sync with compositeQr.ts CARD_MARGIN
   const qrCardInches = sk === "xl" ? 0.62 : sk === "l" ? 0.45 : 0.31; // m / s / unknown
 
-  // Bottom-right corner: server composites a glow disc + QR card here — just leave it clear.
+  // Bottom-right corner: server composites a glow disc + QR card here.
+  // The reserved zone is the rightmost ~20% of the footer bar (≈ ${qrCardInches}" square at 300 DPI).
+  // Give Grok an explicit percentage clearance so it doesn't run address text into the card.
   const qrSlot =
-    `BOTTOM-RIGHT corner: no specific graphic needed here — ` +
-    `do not place text, phone numbers, address, or service items in this corner.`;
+    `BOTTOM-RIGHT RESERVED ZONE (rightmost 20% of the footer bar — approx ${qrCardInches}" wide): ` +
+    `keep completely empty — no text, no address, no phone number, no icons, no decorative graphics. ` +
+    `The server composites the QR code card here after generation; anything drawn in this zone will be covered.`;
 
   if (isLandscape) {
     const hasAddr = address !== "(none)";
@@ -90,7 +93,8 @@ export function buildFooterZone(phone: string, address: string, isLandscape = fa
       `THREE inline columns left to right — ` +
       `LEFT: "${phone}" bold white, very large (the largest text in the footer); ` +
       `CENTER: ` + (hasAddr
-        ? `"${address}" bold white, large, split to 2 lines at the comma (street on line 1, city/state on line 2), center-aligned in the bar; `
+        ? `"${address}" bold white, large, split to 2 lines at the comma (street on line 1, city/state on line 2), ` +
+          `center-aligned within the center column — do not extend past 78% of the total footer width; `
         : `(centered placeholder); `) +
       qrSlot + ` ` +
       `Phone once, footer only.\n\n`
@@ -99,7 +103,9 @@ export function buildFooterZone(phone: string, address: string, isLandscape = fa
   return (
     `FOOTER (full-width dark bar, 20% of card height): ` +
     `"${phone}" bold white, very large, left-aligned (the largest text in the footer); ` +
-    (address !== "(none)" ? `"${address}" bold white, large, directly below phone (same left column); ` : "") +
+    (address !== "(none)"
+      ? `"${address}" bold white, large, directly below phone — left-aligned, must not extend past 75% of the footer width; `
+      : "") +
     qrSlot + ` ` +
     `Phone once, footer only.\n\n`
   );
