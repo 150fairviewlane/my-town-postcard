@@ -35,6 +35,14 @@ const CARD_MARGIN = 1.0375;
 const MAX_CARD_W_FRAC = 0.35;
 const MAX_CARD_H_FRAC = 0.30;
 
+// Blur region is this many times the detected QR rawSize on each side,
+// so the quiet zone and outer finder-pattern border are fully covered.
+const BLUR_PAD_MULTIPLIER = 1.6;
+
+// Sharp blur sigma — high enough to make any QR unreadable, low enough to
+// keep the halo visually soft rather than pixelated.
+const BLUR_SIGMA = 18;
+
 // ── Detection ──────────────────────────────────────────────────────────────────
 
 /**
@@ -172,9 +180,28 @@ export async function swapQrCode(
     .png()
     .toBuffer();
 
-  // ── Composite onto ad + verify ─────────────────────────────────────────────
+  // ── Blur Grok's QR before compositing the real card ───────────────────────
+  // Extract a padded region (1.6× rawSize) centred on the detected QR centroid,
+  // blur it so Grok's QR modules become unreadable, then paste it back.
+  // This eliminates the double-QR artefact without needing any erase/cleanup pass.
+  const blurSize   = Math.round(rawSize * BLUR_PAD_MULTIPLIER);
+  const blurLeft   = Math.min(Math.max(0, Math.round(cx - blurSize / 2)), imgW - blurSize);
+  const blurTop    = Math.min(Math.max(0, Math.round(cy - blurSize / 2)), imgH - blurSize);
+  const blurW      = Math.min(blurSize, imgW - blurLeft);
+  const blurH      = Math.min(blurSize, imgH - blurTop);
+
+  const blurredPatch = await sharp(imageBuffer)
+    .extract({ left: blurLeft, top: blurTop, width: blurW, height: blurH })
+    .blur(BLUR_SIGMA)
+    .toBuffer();
+
+  const blurredBase = await sharp(imageBuffer)
+    .composite([{ input: blurredPatch, left: blurLeft, top: blurTop }])
+    .toBuffer();
+
+  // ── Composite real QR card onto blurred base + verify ─────────────────────
   try {
-    const compositedBuf: Buffer = await sharp(imageBuffer)
+    const compositedBuf: Buffer = await sharp(blurredBase)
       .composite([{ input: cardWithQr, left: cardLeft, top: cardTop }])
       .jpeg({ quality: 98, chromaSubsampling: "4:4:4" })
       .toBuffer();
