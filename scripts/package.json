@@ -26,6 +26,7 @@
     "pipeline:qr-bbox": "tsx ./src/qrBboxPipeline.ts",
     "scan:template-qr-positions": "tsx ./src/scan-template-qr-positions.ts",
     "test:magenta-detection": "tsx ./src/test-magenta-detection.ts",
+    "rebuild:reference-qr-cards": "tsx ./src/rebuild-reference-qr-cards.ts",
     "stamp:magenta-qr-markers": "tsx ./src/stamp-magenta-qr-markers.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

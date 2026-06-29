@@ -3,18 +3,19 @@
  *
  * Pipeline:
  *   1. The reference template images each have a solid magenta (#FF00FF) square
- *      stamped over the QR placeholder area.
+ *      stamped precisely over a new, 20%-smaller QR card in the bottom-right corner.
  *   2. Grok sees the reference and faithfully reproduces the magenta square in
  *      the generated ad at the same relative position.
  *   3. We scan the generated ad's raw RGBA pixels for magenta-range values,
- *      compute the bounding box, blur that region (erasing Grok's fake QR and
- *      the magenta marker), then composite a real scannable QR card centred there.
+ *      compute the bounding box centroid, then composite a real scannable QR card
+ *      centred there. The card is 25% larger than the detected magenta (CARD_MARGIN
+ *      1.25×) so it fully covers the magenta regardless of small reproduction variance.
  *   4. If no magenta is detected (fallback: Grok forgot the marker), we fall
  *      back to compositeQrOnto at the fixed bottom-right corner.
  *
  * Detection thresholds — tuned to survive JPEG q=85 compression:
  *   R ≥ 180,  G ≤ 80,  B ≥ 180
- * These tolerate ±30px drift from the pure #FF00FF value while excluding all
+ * These tolerate ±30 value drift from pure #FF00FF while excluding all
  * warm tones, cool blues, and neutrals that appear in real ad artwork.
  */
 
@@ -36,15 +37,10 @@ const MAG_B_MIN = 180;
 // Minimum matching pixels before we trust the detection
 const MIN_PIXEL_COUNT = 100;
 
-// Blur region is this many times the detected marker size on each side,
-// covering the full QR including quiet zone.
-const BLUR_PAD_MULTIPLIER = 1.5;
-
-// Sharp blur sigma — strong enough to erase any QR pattern
-const BLUR_SIGMA = 18;
-
-// Card sizing constants (mirrors compositeQr.ts)
-const CARD_MARGIN     = 1.0375;
+// Our real QR card is this multiple of the detected magenta marker size.
+// At 1.25× the card is 25% wider/taller than the magenta, giving comfortable
+// overlap even if Grok's reproduction has slight size variance.
+const CARD_MARGIN     = 1.25;
 const MAX_CARD_W_FRAC = 0.35;
 const MAX_CARD_H_FRAC = 0.30;
 
@@ -105,8 +101,9 @@ export async function locateQrCode(imageBuffer: Buffer): Promise<QrLocation | nu
 // ── Compositing ────────────────────────────────────────────────────────────────
 
 /**
- * Detect the magenta marker in the image, blur that region (erasing Grok's fake
- * QR and the marker itself), then composite a real scannable QR card centred there.
+ * Detect the magenta marker in the image, then composite a real scannable QR
+ * card centred on the detected position. The card is 1.25× the marker size so
+ * it fully covers the magenta with no halo or blurring.
  *
  * Falls back to compositeQrOnto (fixed bottom-right corner) on any failure.
  */
@@ -146,13 +143,14 @@ export async function swapQrCode(
   );
 
   // ── Size the replacement card ──────────────────────────────────────────────
+  // Card is 1.25× the detected magenta so it fully covers the marker.
   const rawSize = Math.max(loc.width, loc.height);
   const maxCard = Math.min(
     Math.round(imgW * MAX_CARD_W_FRAC),
     Math.round(imgH * MAX_CARD_H_FRAC),
   );
   const cardSize = Math.min(Math.round(rawSize * CARD_MARGIN), maxCard);
-  const qrSize   = Math.max(Math.round(cardSize / (style.marginMultiplier ?? CARD_MARGIN)), 64);
+  const qrSize   = Math.max(Math.round(cardSize / (style.marginMultiplier ?? 1.0375)), 64);
   const qrOffset = Math.floor((cardSize - qrSize) / 2);
 
   // Centre card on detected marker centroid, clamped to image bounds
@@ -160,24 +158,6 @@ export async function swapQrCode(
   const cy       = Math.round(loc.y + loc.height / 2);
   const cardLeft = Math.min(Math.max(0, Math.round(cx - cardSize / 2)), imgW - cardSize);
   const cardTop  = Math.min(Math.max(0, Math.round(cy - cardSize / 2)), imgH - cardSize);
-
-  // ── Blur the magenta region + surrounding area ─────────────────────────────
-  // Padding ensures the blur covers Grok's full QR graphic including quiet zone,
-  // not just the magenta marker square itself.
-  const blurSize = Math.round(rawSize * BLUR_PAD_MULTIPLIER);
-  const blurLeft = Math.min(Math.max(0, Math.round(cx - blurSize / 2)), imgW - blurSize);
-  const blurTop  = Math.min(Math.max(0, Math.round(cy - blurSize / 2)), imgH - blurSize);
-  const blurW    = Math.min(blurSize, imgW - blurLeft);
-  const blurH    = Math.min(blurSize, imgH - blurTop);
-
-  const blurredPatch = await sharp(imageBuffer)
-    .extract({ left: blurLeft, top: blurTop, width: blurW, height: blurH })
-    .blur(BLUR_SIGMA)
-    .toBuffer();
-
-  const blurredBase = await sharp(imageBuffer)
-    .composite([{ input: blurredPatch, left: blurLeft, top: blurTop }])
-    .toBuffer();
 
   // ── Build real QR PNG ──────────────────────────────────────────────────────
   const qrPng: Buffer = await QRCode.toBuffer(trackingUrl, {
@@ -214,9 +194,9 @@ export async function swapQrCode(
     .png()
     .toBuffer();
 
-  // ── Composite real QR card onto blurred base + verify ─────────────────────
+  // ── Composite real QR card directly onto ad + verify ──────────────────────
   try {
-    const compositedBuf: Buffer = await sharp(blurredBase)
+    const compositedBuf: Buffer = await sharp(imageBuffer)
       .composite([{ input: cardWithQr, left: cardLeft, top: cardTop }])
       .jpeg({ quality: 98, chromaSubsampling: "4:4:4" })
       .toBuffer();
