@@ -102,11 +102,20 @@ async function generateAd(b: (typeof BUSINESSES)[number]): Promise<Buffer> {
 // Asks for the ENTIRE visual cluster: QR shape + backing card + border/frame + label text.
 // Coordinates returned in vision-image space, scaled back to original image space.
 
+// A single candidate cluster returned by GPT-4o (coordinates in vision space until scaled)
+interface Candidate {
+  x1: number; y1: number; x2: number; y2: number;
+  confidence: "high" | "medium" | "low";
+  notes: string;
+}
+
 interface ClusterBox {
   found: true;
   x1: number; y1: number; x2: number; y2: number;
   confidence: "high" | "medium" | "low";
   notes: string;
+  /** All candidates GPT-4o returned, scaled to original image space, sorted largest→smallest. */
+  allCandidates: Array<Candidate & { area: number }>;
 }
 interface NotFound { found: false; notes?: string }
 type DetectResult = ClusterBox | NotFound;
@@ -126,25 +135,28 @@ async function detectCluster(
   const scaleX = actualW / VISION_W;
   const scaleY = actualH / VISION_H;
 
+  // Ask for ALL QR-like clusters; we pick the largest by area in code so the
+  // selection is inspectable and not hidden inside the model's internal judgment.
   const prompt =
     `This is a printed postcard advertisement (${VISION_W}×${VISION_H} px as shown, ` +
     `original is ${actualW}×${actualH} px).` +
-    `\n\nFind the QR code cluster. The cluster is the QR code pattern PLUS every element ` +
-    `directly attached to it: any backing card or panel behind the QR, any border or frame ` +
-    `surrounding it, and any label text (e.g. "Scan for…") immediately adjacent to it. ` +
-    `All connected/touching elements are ONE cluster — return a single bounding box that ` +
-    `encloses all of them together.` +
+    `\n\nFind EVERY QR code or QR-like visual cluster in the image — there may be more than one. ` +
+    `A cluster = the QR code pattern PLUS every directly attached element: ` +
+    `backing card or panel, border or frame, adjacent label text (e.g. "Scan for…"). ` +
+    `Return one bounding box per cluster that encloses all attached elements together.` +
     `\n\nReturn ONLY valid JSON, no other text:` +
-    `\n• Cluster found:` +
-    ` {"found":true,"x1":<int>,"y1":<int>,"x2":<int>,"y2":<int>,` +
-    `"confidence":"high"|"medium"|"low",` +
-    `"notes":"<brief: what is in the cluster, e.g. QR + white card + red frame + label>"}` +
+    `\n• One or more found:` +
+    ` {"candidates":[` +
+    `{"x1":<int>,"y1":<int>,"x2":<int>,"y2":<int>,"confidence":"high"|"medium"|"low",` +
+    `"notes":"<what is in this cluster>"},` +
+    `...` +
+    `]}` +
     `  (coordinates in THIS image's pixel space, ${VISION_W}×${VISION_H})` +
-    `\n• Not found: {"found":false}`;
+    `\n• Nothing found: {"candidates":[]}`;
 
   const response = await openai.chat.completions.create({
     model: "gpt-4o",
-    max_tokens: 150,
+    max_tokens: 400,
     messages: [{
       role: "user",
       content: [
@@ -161,22 +173,43 @@ async function detectCluster(
   });
 
   const raw = response.choices[0]?.message.content?.trim() ?? "";
-  let parsed: DetectResult;
+  let rawCandidates: Candidate[];
   try {
     const json = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
-    parsed = JSON.parse(json) as DetectResult;
+    const parsed = JSON.parse(json) as { candidates?: Candidate[] };
+    rawCandidates = Array.isArray(parsed.candidates) ? parsed.candidates : [];
   } catch {
     return { found: false, notes: `parse-error: ${raw.slice(0, 120)}` };
   }
 
-  // Scale back to original image space
-  if (parsed.found) {
-    parsed.x1 = Math.round(parsed.x1 * scaleX);
-    parsed.y1 = Math.round(parsed.y1 * scaleY);
-    parsed.x2 = Math.round(parsed.x2 * scaleX);
-    parsed.y2 = Math.round(parsed.y2 * scaleY);
+  if (rawCandidates.length === 0) {
+    return { found: false, notes: "GPT-4o returned empty candidates array" };
   }
-  return parsed;
+
+  // Scale every candidate from vision space → original image space, compute area
+  const scaled = rawCandidates.map(c => ({
+    x1: Math.round(c.x1 * scaleX),
+    y1: Math.round(c.y1 * scaleY),
+    x2: Math.round(c.x2 * scaleX),
+    y2: Math.round(c.y2 * scaleY),
+    confidence: c.confidence,
+    notes: c.notes,
+    area: (c.x2 - c.x1) * (c.y2 - c.y1),   // area in vision-space px (scaling cancels for ranking)
+  }));
+
+  // Sort largest → smallest so logs always list them in priority order
+  scaled.sort((a, b) => b.area - a.area);
+
+  // Largest area = target cluster (most likely the dominant QR the model missed last time)
+  const best = scaled[0]!;
+
+  return {
+    found: true,
+    x1: best.x1, y1: best.y1, x2: best.x2, y2: best.y2,
+    confidence: best.confidence,
+    notes: best.notes,
+    allCandidates: scaled,
+  };
 }
 
 // ── Real QR card compositor ────────────────────────────────────────────────
@@ -212,8 +245,9 @@ async function compositeRealQr(
   const clusterH = cluster.y2 - cluster.y1;
   const largerDim = Math.max(clusterW, clusterH);
 
-  // 1.3× the larger dimension; cap at 18% of image height so it never swallows the footer
-  const maxCard = Math.round(imgH * 0.18);
+  // 1.3× the larger dimension; cap scales with image dimensions rather than anchoring
+  // to a fixed percentage that breaks on taller images (e.g. 2K at 2496px height).
+  const maxCard = Math.min(Math.round(imgW * 0.35), Math.round(imgH * 0.25));
   const cardSize = Math.min(Math.round(largerDim * 1.3), maxCard);
 
   // Center on detected cluster bbox
@@ -379,15 +413,28 @@ for (const r of results) {
   const cW   = cb.x2 - cb.x1;
   const cH   = cb.y2 - cb.y1;
   const card = r.card;
+
+  // Format all candidates (always shown so every ad is fully inspectable)
+  const isMiguel = r.business.includes("Miguel");
+  const candidateLines = cb.allCandidates.map((ca, idx) => {
+    const caW = ca.x2 - ca.x1, caH = ca.y2 - ca.y1;
+    const chosen = idx === 0 ? " ← CHOSEN (largest area)" : "";
+    return `      [${idx+1}] [${ca.x1},${ca.y1}]→[${ca.x2},${ca.y2}] ${caW}×${caH}px ` +
+           `area=${ca.area}  conf:${ca.confidence}  "${ca.notes}"${chosen}`;
+  }).join("\n");
+
   console.log(
     `${mark}${r.business}:\n` +
     `    image        : ${r.actualW}×${r.actualH}px\n` +
-    `    cluster bbox : [${cb.x1},${cb.y1}]→[${cb.x2},${cb.y2}]  (${cW}×${cH}px)  conf:${cb.confidence}\n` +
-    `    cluster desc : ${cb.notes}\n` +
+    `    candidates   : ${cb.allCandidates.length} found\n` +
+    candidateLines + "\n" +
+    `    chosen bbox  : [${cb.x1},${cb.y1}]→[${cb.x2},${cb.y2}]  (${cW}×${cH}px)  conf:${cb.confidence}\n` +
+    `    chosen desc  : ${cb.notes}\n` +
     (card
       ? `    card placed  : ${card.size}px sq @ [${card.left},${card.top}], ` +
         `coverage ${(card.coverageRatio*100).toFixed(0)}% of cluster ${Math.max(cW,cH)}px` +
-        (isMVP ? `  ← red frame must be covered` : "")
+        (isMVP ? `  ← red frame must be covered` : "") +
+        (isMiguel ? `  ← was footer-area miss last run; verify body-area now` : "")
       : `    card         : NOT composited (detection failed)`) +
     `\n    AI calls     : ${r.aiCalls}  time: ${(r.durationMs/1000).toFixed(1)}s`,
   );
