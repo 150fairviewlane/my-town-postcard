@@ -3,16 +3,13 @@
  *
  * Generates a real, scannable QR code (ECL H) and composites it onto an ad
  * image buffer. Compositing order (bottom to top):
- *   1. Flatten disc — opaque feathered-edge quarter-circle at the corner,
- *      larger than the glow disc, using style.fill at full opacity with only
- *      the outer 15% feathered to transparent. Erases whatever Grok drew
- *      in the corner (starburst, texture, objects) before the glow is applied.
- *   2. Glow disc — soft translucent radial-gradient quarter-circle anchored
- *      at the same corner, using GLOW_COLOR (#F4A800 warm gold), fading from
- *      full opacity to transparent. Warm-gold is template-agnostic — it reads
- *      as a neutral decorative halo rather than a brand-color blob.
- *   3. Square backing card — sits centred on the glow disc origin.
- *   4. QR code — centred inside the backing card.
+ *   1. Glow disc — soft radial-gradient quarter-circle anchored at the image's
+ *      bottom-right corner, GLOW_COLOR (#F4A800 warm gold), fully opaque at
+ *      the corner pixel and fading to transparent at discRadius (2.5× cardSize).
+ *      Extends well past the card's upper-left corner, softly masking any
+ *      Grok-drawn corner graphic under a warm-gold vignette.
+ *   2. Square backing card — sits centred on the glow disc origin.
+ *   3. QR code — centred inside the backing card.
  *
  * Card sizing — physical-inch based, always a square:
  *   cardSize (px) = round(qrSize × marginMultiplier)
@@ -177,26 +174,13 @@ const GLOW_COLOR = "#F4A800";
 
 /**
  * discRadius = round(cardSize × DISC_RADIUS_MULTIPLIER).
- * At 1.1× the disc extends just 10% beyond the card edge on each side,
- * producing a tight, subtle halo that stays well clear of the coupon/offer
- * area even on the smallest spot sizes.
+ * At 2.5× the glow extends well past the card's upper-left corner:
+ *   XL: 2.5 × 187 = 468 px — ~42% opacity at the card corner diagonal (273 px)
+ *   M:  2.5 × 93  = 233 px — same proportion
+ * This produces a visible warm-gold vignette that softly masks any Grok-drawn
+ * corner graphic (starburst, box, texture) without adding any opaque layer.
  */
-const DISC_RADIUS_MULTIPLIER = 1.1;
-
-/**
- * flattenRadius = round(cardSize × FLATTEN_RADIUS_MULTIPLIER).
- *
- * Intentionally independent of DISC_RADIUS_MULTIPLIER — these two constants
- * serve different purposes and must be tuned separately.
- *
- * The erase radius must be generous: Grok can produce AI-drawn corner content
- * (boxes, starbursts, objects) of unpredictable size. 2.5× puts the opaque
- * zone at ~398 px from the corner for XL — reliably covering the full footer
- * band and any AI-drawn shape that belongs there, without reaching deep enough
- * into the ad body to erase service copy or pricing text.
- * Outer 15% feathered to transparent; inner 85% fully opaque style.fill.
- */
-const FLATTEN_RADIUS_MULTIPLIER = 2.5;
+const DISC_RADIUS_MULTIPLIER = 2.5;
 
 // ── Card layout computed from QR spec ─────────────────────────────────────
 export interface CardLayout {
@@ -286,31 +270,6 @@ function makeCardSvg(cardSize: number, style: CardStyle, effectiveCornerRadius: 
 }
 
 // ── Disc SVG builders ──────────────────────────────────────────────────────
-
-/**
- * Render a feathered opaque disc as a square SVG buffer.
- *
- * Inner 85% of the radius is solid `fillHex` at full opacity; outer 15%
- * feathers to transparent. Placed at the image corner before the glow disc
- * to erase any AI-drawn corner content (starburst, objects, texture) with a
- * hard flat fill before the translucent glow is applied on top.
- *
- * Place the resulting buffer at (imgW − radius, imgH − radius).
- */
-function makeFlattenDiscSvg(radius: number, fillHex: string): Buffer {
-  const svg =
-    `<svg width="${radius}" height="${radius}" xmlns="http://www.w3.org/2000/svg">` +
-    `<defs>` +
-    `<radialGradient id="f" cx="${radius}" cy="${radius}" r="${radius}" gradientUnits="userSpaceOnUse">` +
-    `<stop offset="0%"  stop-color="${fillHex}" stop-opacity="1"/>` +
-    `<stop offset="85%" stop-color="${fillHex}" stop-opacity="1"/>` +
-    `<stop offset="100%" stop-color="${fillHex}" stop-opacity="0"/>` +
-    `</radialGradient>` +
-    `</defs>` +
-    `<rect width="${radius}" height="${radius}" fill="url(#f)"/>` +
-    `</svg>`;
-  return Buffer.from(svg);
-}
 
 /**
  * Render a soft radial-gradient disc as a square SVG buffer.
@@ -408,29 +367,22 @@ export async function compositeQrOnto(
     .png()
     .toBuffer();
 
-  // ── 4. Composite flatten disc, glow disc, then card+QR onto ad (single pass) ──
-  // flattenRadius = cardSize × FLATTEN_RADIUS_MULTIPLIER (2.5×)
-  //   Generous erase zone: inner 85% fully opaque style.fill covers any
-  //   AI-drawn corner shape; outer 15% feathers to transparent.
-  // discRadius    = cardSize × DISC_RADIUS_MULTIPLIER (1.1×)
-  //   Tight warm-gold glow halo on top of the erased area.
-  // Both disc centres sit at the image corner (imgW, imgH) so only the
-  // upper-left quadrant of each gradient circle is visible in the ad.
-  const flattenRadius = Math.round(layout.cardSize * FLATTEN_RADIUS_MULTIPLIER);
-  const discRadius    = Math.round(layout.cardSize * DISC_RADIUS_MULTIPLIER);
-  const [flattenPng, glowDiscPng] = await Promise.all([
-    sharp(makeFlattenDiscSvg(flattenRadius, style.fill)).png().toBuffer(),
-    sharp(makeGlowDiscSvg(discRadius,    GLOW_COLOR )).png().toBuffer(),
-  ]);
+  // ── 4. Composite glow disc, then card+QR onto ad (single pass) ──────────
+  // discRadius = cardSize × DISC_RADIUS_MULTIPLIER (2.5×)
+  //   Warm-gold radial gradient from full opacity at the corner to transparent
+  //   at discRadius — extends well past the card's upper-left corner so any
+  //   Grok-drawn corner graphic is softly masked rather than exposed.
+  // Disc centre sits at the image corner (imgW, imgH); only the upper-left
+  // quadrant of the gradient circle is visible within the image bounds.
+  const discRadius = Math.round(layout.cardSize * DISC_RADIUS_MULTIPLIER);
+  const glowDiscPng = await sharp(makeGlowDiscSvg(discRadius, GLOW_COLOR)).png().toBuffer();
 
   const compositedBuffer: Buffer = await sharp(imageBuffer)
     .composite([
-      // Layer 1 (bottom): opaque feathered disc — erases AI corner content.
-      { input: flattenPng,  left: spec.imgW - flattenRadius, top: spec.imgH - flattenRadius },
-      // Layer 2: soft translucent glow halo over the flat fill.
-      { input: glowDiscPng, left: spec.imgW - discRadius,    top: spec.imgH - discRadius    },
-      // Layer 3 (top): backing card + QR centred on the disc origin.
-      { input: cardWithQr,  left: layout.cardLeft,           top: layout.cardTop            },
+      // Layer 1 (bottom): warm-gold glow vignette — softly masks corner content.
+      { input: glowDiscPng, left: spec.imgW - discRadius, top: spec.imgH - discRadius },
+      // Layer 2 (top): backing card + QR centred on the disc origin.
+      { input: cardWithQr,  left: layout.cardLeft,        top: layout.cardTop         },
     ])
     .jpeg({ quality: 98, chromaSubsampling: "4:4:4" })
     .toBuffer();
