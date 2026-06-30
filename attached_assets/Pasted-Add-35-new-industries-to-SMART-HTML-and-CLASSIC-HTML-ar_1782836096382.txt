@@ -1,0 +1,51 @@
+Add 35 new industries to SMART_HTML and CLASSIC_HTML (artifacts/api-server/src/routes/adGenGrok.ts) using the EXACT content below — don't invent or alter any tagline, offer text, or template list. Add corresponding entries to all four data structures (CATEGORY_INDUSTRIES, TAGLINE_DEFAULTS, OFFER_DEFAULTS, INDUSTRY_TEMPLATES/template-affinity scores) plus the actual <option> elements, in BOTH HTML copies, matching the existing format/structure used for current industries.
+
+Also: move "Photography Studio" from Professional Services to Entertainment & Events in CATEGORY_INDUSTRIES (keep its existing tagline/offer/templates unchanged — this is a category reassignment only).
+
+— RETAIL (15 new) —
+Liquor Store | "Stocked & Ready for Any Occasion" | "10% OFF Any Bottle $20+" / "With this postcard" | heritage-home, home-elegance, purple-sage, parchment-classic, brush-stroke, neighborhood-pro
+Vape & Smoke Shop | "Your Local Vape & Smoke Headquarters" | "15% OFF First Purchase" / "New customers only · with this postcard" | neighborhood-pro, brush-stroke, purple-sage, at-your-service, parchment-classic, home-elegance
+Cell Phone Sales & Repair | "Fast Repairs, Honest Prices" | "$10 OFF Screen Repair" / "With this postcard" | at-your-service, neighborhood-pro, health-wellness, home-elegance, parchment-classic, purple-sage
+Toy Store | "Where Playtime Begins" | "FREE Gift Wrap with Purchase" / "With this postcard" | sage-organic, made-fresh, home-elegance, purple-sage, parchment-classic, neighborhood-pro
+Jewelry Store | "Timeless Pieces, Personal Service" | "FREE Jewelry Cleaning" / "With this postcard" | heritage-home, home-elegance, purple-sage, parchment-classic, sage-organic, brush-stroke
+Furniture Store | "Quality Furniture for Every Room" | "10% OFF Your First Purchase" / "With this postcard" | home-elegance, heritage-home, sage-organic, parchment-classic, purple-sage, neighborhood-pro
+Pawn Shop | "Buy · Sell · Trade — Fair Deals Every Time" | "Top Dollar for Gold & Electronics" / "Free, no-obligation quote" | at-your-service, neighborhood-pro, brush-stroke, home-elegance, parchment-classic, purple-sage
+Thrift & Consignment | "Great Finds, Great Prices" | "20% OFF One Item" / "With this postcard" | sage-organic, made-fresh, parchment-classic, purple-sage, home-elegance, neighborhood-pro
+Florist | "Fresh Flowers for Every Moment" | "FREE Delivery on Orders $50+" / "With this postcard" | sage-organic, heritage-home, home-elegance, purple-sage, parchment-classic, made-fresh
+Garden Center & Nursery | "Grow Something Beautiful" | "10% OFF Any Plant Purchase" / "With this postcard" | sage-organic, neighborhood-pro, made-fresh, parchment-classic, home-elegance, purple-sage
+Sporting Goods | "Gear Up for Your Next Adventure" | "10% OFF Your Purchase" / "With this postcard" | neighborhood-pro, at-your-service, brush-stroke, parchment-classic, home-elegance, purple-sage
+Bike Shop | "Sales, Service & Repairs" | "FREE Tune-Up with Bike Purchase" / "With this postcard" | neighborhood-pro, at-your-service, brush-stroke, sage-organic, parchment-classic, made-fresh
+Gift Shop | "Find the Perfect Gift" | "10% OFF Your Purchase" / "With this postcard" | sage-organic, made-fresh, home-elegance, purple-sage, parchment-classic, heritage-home
+Bookstore | "Your Next Great Read Awaits" | "Buy 2 Get 1 Free (Used Books)" / "With this postcard" | heritage-home, sage-organic, home-elegance, parchment-classic, purple-sage, made-fresh
+Hardware Store | "Everything You Need, Right Down the Street" | "10% OFF Any Purchase" / "With this postcard" | neighborhood-pro, at-your-service, brush-stroke, parchment-classic, home-elegance, heritage-home
+
+— AUTO SERVICES (5 new) —
+Tire Shop | "New & Used Tires — All Sizes!" | "FREE Tire Rotation with Purchase" / "With this postcard" | at-your-service, neighborhood-pro, home-elegance, heritage-home, parchment-classic, purple-sage
+Oil Change & Quick Lube | "In & Out — No Appointment Needed" | "$10 OFF Full Synthetic Oil Change" / "With this postcard" | at-your-service, neighborhood-pro, brush-stroke, parchment-classic, home-elegance, purple-sage
+Car Wash & Detailing | "Shine Like New, Every Time" | "FREE Vacuum with Any Wash" / "With this postcard" | neighborhood-pro, sage-organic, brush-stroke, parchment-classic, home-elegance, purple-sage
+Auto Body Shop | "Collision Repair Done Right" | "FREE Estimate — No Obligation" / "Call or text to schedule" | at-your-service, neighborhood-pro, home-elegance, heritage-home, parchment-classic, purple-sage
+Window Tinting | "Beat the Heat — Tint Today" | "$25 OFF Full Vehicle Tint" / "With this postcard" | neighborhood-pro, at-your-service, brush-stroke, home-elegance, purple-sage, parchment-classic
+
+— ENTERTAINMENT & EVENTS (3 new, plus Photography moved here) —
+Event Venue | "The Perfect Setting for Your Special Day" | "FREE Venue Tour & Consultation" / "Call or text to schedule" | heritage-home, home-elegance, sage-organic, purple-sage, parchment-classic, made-fresh
+Party & Equipment Rental | "Everything You Need to Celebrate" | "10% OFF Your First Rental" / "With this postcard" | neighborhood-pro, at-your-service, sage-organic, home-elegance, parchment-classic, purple-sage
+DJ & Entertainment Services | "Setting the Mood for Your Event" | "$50 OFF Booking" / "With this postcard" | neighborhood-pro, at-your-service, brush-stroke, home-elegance, purple-sage, parchment-classic
+
+— PROFESSIONAL SERVICES (3 new) —
+Law Firm | "Experienced Legal Help When You Need It" | "FREE Initial Consultation" / "Call or text to schedule" | heritage-home, home-elegance, parchment-classic, purple-sage, neighborhood-pro, at-your-service
+Accounting & Tax Prep | "Maximize Your Refund, Minimize Your Stress" | "$25 OFF Tax Preparation" / "New clients only · with this postcard" | at-your-service, home-elegance, heritage-home, parchment-classic, neighborhood-pro, purple-sage
+Mortgage Broker | "Your Path to Homeownership Starts Here" | "FREE Rate Quote — No Obligation" / "Call or text to schedule" | home-elegance, heritage-home, sage-organic, parchment-classic, purple-sage, neighborhood-pro
+
+— CHILDCARE & EDUCATION (4 new) —
+Tutoring Services | "Helping Students Succeed, One Lesson at a Time" | "FREE First Session" / "New students only · with this postcard" | sage-organic, made-fresh, health-wellness, parchment-classic, home-elegance, purple-sage
+Dance & Music Lessons | "Discover Your Passion for the Arts" | "FREE Trial Class" / "New students only · call to schedule" | sage-organic, made-fresh, home-elegance, purple-sage, parchment-classic, neighborhood-pro
+Martial Arts Studio | "Build Confidence, Discipline & Strength" | "FREE Trial Class" / "New students only · call to schedule" | neighborhood-pro, at-your-service, brush-stroke, home-elegance, purple-sage, parchment-classic
+Driving School | "Confident Drivers Start Here" | "$25 OFF Driving Course" / "With this postcard" | at-your-service, neighborhood-pro, home-elegance, parchment-classic, purple-sage, sage-organic
+
+— FOOD & DINING (4 new) —
+BBQ Restaurant | "Slow-Smoked, Always Fresh" | "FREE Side with Any Entrée" / "One per visit · with this postcard" | made-fresh, wok-fire, parchment-classic, neighborhood-pro, heritage-home, sage-organic
+Sub & Sandwich Shop | "Stacked Fresh, Made Your Way" | "BOGO — Buy One Sub, Get One 50% Off" / "One per order · with this postcard" | made-fresh, wok-fire, parchment-classic, neighborhood-pro, at-your-service, sage-organic
+Ice Cream & Dessert Shop | "Sweet Treats for Every Occasion" | "FREE Topping with Any Purchase" / "With this postcard" | made-fresh, sage-organic, neighborhood-pro, parchment-classic, purple-sage, home-elegance
+Food Truck & Catering | "Bringing the Flavor to You" | "10% OFF Your Catering Order" / "With this postcard" | made-fresh, wok-fire, neighborhood-pro, parchment-classic, sage-organic, at-your-service
+
+After implementing: typecheck, restart, and screenshot the industry dropdown for 3-4 different categories (including Retail and Entertainment & Events specifically, since those changed most) to confirm the new industries appear correctly, the Photography move took effect, and the existing prefill/taken-industry logic still works with the new entries. Don't invent any content beyond what's listed above — if any industry name conflicts with an existing one or any data structure doesn't have an obvious matching slot for new entries, stop and ask rather than guessing.
