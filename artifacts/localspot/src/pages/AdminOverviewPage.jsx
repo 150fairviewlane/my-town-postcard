@@ -197,7 +197,22 @@ function Overview({ token }) {
           {/* Campaigns table */}
           {campaigns.length > 0 && (
             <div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>All Campaigns</div>
+              <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 12 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: 1 }}>All Campaigns</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginLeft: "auto", flexWrap: "wrap" }}>
+                  {[
+                    { color: "#111",     label: "0 spots — empty" },
+                    { color: "#15803d", label: "1–11 — selling" },
+                    { color: "#ea580c", label: "12–14 — nearly full" },
+                    { color: "#dc2626", label: "15+ — print-ready" },
+                  ].map(({ color, label }) => (
+                    <div key={label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                      <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: "50%", background: color, flexShrink: 0 }} />
+                      <span style={{ fontSize: 11, color: "#6b7280", whiteSpace: "nowrap" }}>{label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
               <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #f3f4f6", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", overflow: "hidden" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead style={{ background: "#f9fafb" }}>
