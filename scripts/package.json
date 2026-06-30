@@ -29,6 +29,7 @@
     "rebuild:reference-qr-cards": "tsx ./src/rebuild-reference-qr-cards.ts",
     "stamp:magenta-qr-markers": "tsx ./src/stamp-magenta-qr-markers.ts",
     "clean:template-qr": "tsx ./src/cleanTemplateQr.ts",
+    "cover:template-qr": "tsx ./src/coverTemplateQr.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
