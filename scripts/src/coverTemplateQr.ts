@@ -32,13 +32,16 @@ const ASSETS_DIR = path.join(WORKSPACE_ROOT, "attached_assets");
 const CLEAN_COMMIT = "123665e91e5862f69f756288a24c35fada3e3935";
 
 // ── Operation types ────────────────────────────────────────────────────────────
-// "cover"  → composite a magenta rect at (x,y,w,h) over the existing image
+// "cover"  → composite a magenta rect at (x,y,w,h) over the existing image.
+//            Optional `fills`: solid-colour rectangles applied BEFORE the magenta,
+//            used to repaint background areas (e.g. extend a footer band upward).
 // "footer" → extend canvas downward by footerH px (filled with footerRgb),
 //            then paint a qrSize×qrSize magenta square in the right side of
 //            the new strip, vertically centred.
 //            qrMarginRight: px gap between magenta right edge and image right edge
 //            (default 20; increase when the native right edge is near the boundary)
-type CoverOp  = { kind: "cover";  x: number; y: number; w: number; h: number };
+type Fill     = { x: number; y: number; w: number; h: number; rgb: [number,number,number] };
+type CoverOp  = { kind: "cover";  x: number; y: number; w: number; h: number; fills?: Fill[] };
 type FooterOp = { kind: "footer"; footerH: number; footerRgb: [number,number,number]; qrSize: number; qrMarginRight?: number };
 type TemplateOp = CoverOp | FooterOp;
 
@@ -90,10 +93,19 @@ const TEMPLATE_OPS: Record<string, TemplateOp> = {
   "IMG_0747_1779162178190.png":
     { kind: "cover", x: 1350, y: 850, w: 142, h: 168 },
 
-  // At Your Service landscape: box shifted ~50px left so the full magenta square
-  // is clearly visible within the image (right edge at x=1482, 54px clear margin)
-  "IMG_0746_1779162178190.png":
-    { kind: "cover", x: 1340, y: 818, w: 142, h: 168 },
+  // At Your Service landscape:
+  //   fill: paint the left-side navy gap (y=797-857) with footer beige so the
+  //         coupon bottom (y≈799) just enters the beige area, matching the
+  //         portrait-style layout where the coupon sits at the footer edge.
+  //   cover: magenta shifted right to x=1371 to cover the full QR (x=1381-1535).
+  "IMG_0746_1779162178190.png": {
+    kind: "cover",
+    x: 1371, y: 770, w: 165, h: 205,
+    fills: [
+      // Extend footer beige upward over the navy gap left of the coupon
+      { x: 0, y: 797, w: 633, h: 60, rgb: [232, 225, 219] },
+    ],
+  },
 
   // Health & Wellness landscape: white placeholder card → cover with magenta
   "healthcare_wellness_landscape_1779162178190.png":
@@ -125,8 +137,25 @@ async function makeMagenta(w: number, h: number): Promise<Buffer> {
 }
 
 async function applyCover(imgBuffer: Buffer, op: CoverOp, destPath: string): Promise<void> {
+  let buf = imgBuffer;
+
+  // Apply pre-fills (solid colour rectangles) before the magenta overlay
+  if (op.fills && op.fills.length > 0) {
+    for (const fill of op.fills) {
+      const fillImg = await sharp({
+        create: {
+          width: fill.w, height: fill.h, channels: 3,
+          background: { r: fill.rgb[0], g: fill.rgb[1], b: fill.rgb[2] },
+        },
+      }).png().toBuffer();
+      buf = await sharp(buf)
+        .composite([{ input: fillImg, left: fill.x, top: fill.y }])
+        .toBuffer();
+    }
+  }
+
   const magenta = await makeMagenta(op.w, op.h);
-  await sharp(imgBuffer)
+  await sharp(buf)
     .composite([{ input: magenta, left: op.x, top: op.y }])
     .toFile(destPath);
 }
