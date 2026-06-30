@@ -138,6 +138,73 @@ export async function swapQrCode(
     "swapQrCode: magenta marker detected — compositing real QR at detected position",
   );
 
+  // ── Erase magenta — fill from left to right edge, body + footer ───────────
+  // Covers magenta Grok placed in the body just above the footer as well as the
+  // marker itself in the footer. For each row we average a narrow sample strip
+  // immediately left of the detected magenta and paint that colour rightward to
+  // the image edge, so the surrounding footer bar (and any body content) flows
+  // seamlessly through the erased area before the QR card is placed on top.
+  let workBuf = imageBuffer;
+  const ERASE_PAD  = 8;  // extra px above detected magenta top — catches body bleed
+  const SAMPLE_W   = 8;  // px strip width sampled for fill colour
+
+  const eraseTop   = Math.max(0, loc.y - ERASE_PAD);
+  const eraseH     = imgH - eraseTop;
+  const sampleLeft = Math.max(0, loc.x - SAMPLE_W);
+  const sampleW    = loc.x - sampleLeft;   // ≤ SAMPLE_W; 0 when magenta is at left edge
+
+  if (sampleW > 0 && loc.x < imgW && eraseH > 0) {
+    const fillW  = imgW - loc.x;           // columns from magenta-left to image-right
+    const bandW  = sampleW + fillW;        // sample strip + fill zone, side by side
+
+    // Extract the combined band (sample strip + fill zone) as raw RGBA.
+    const { data: bandData } = await sharp(imageBuffer)
+      .extract({ left: sampleLeft, top: eraseTop, width: bandW, height: eraseH })
+      .raw()
+      .ensureAlpha()
+      .toBuffer({ resolveWithObject: true });
+
+    // Build fill-zone buffer (fillW × eraseH, 4 channels RGBA).
+    const fillBuf = Buffer.alloc(fillW * eraseH * 4);
+
+    for (let row = 0; row < eraseH; row++) {
+      // Per-row average of the sample strip.
+      let rSum = 0, gSum = 0, bSum = 0;
+      for (let col = 0; col < sampleW; col++) {
+        const idx = (row * bandW + col) * 4;
+        rSum += (bandData as Buffer)[idx]!;
+        gSum += (bandData as Buffer)[idx + 1]!;
+        bSum += (bandData as Buffer)[idx + 2]!;
+      }
+      const r = Math.round(rSum / sampleW);
+      const g = Math.round(gSum / sampleW);
+      const b = Math.round(bSum / sampleW);
+
+      // Paint that colour across every pixel in the fill row.
+      for (let col = 0; col < fillW; col++) {
+        const dst = (row * fillW + col) * 4;
+        fillBuf[dst]     = r;
+        fillBuf[dst + 1] = g;
+        fillBuf[dst + 2] = b;
+        fillBuf[dst + 3] = 255;
+      }
+    }
+
+    const fillPng = await sharp(fillBuf, {
+      raw: { width: fillW, height: eraseH, channels: 4 },
+    }).png().toBuffer();
+
+    workBuf = await sharp(imageBuffer)
+      .composite([{ input: fillPng, left: loc.x, top: eraseTop }])
+      .jpeg({ quality: 98, chromaSubsampling: "4:4:4" })
+      .toBuffer();
+
+    logger.info(
+      { spotSize, eraseTop, eraseH, sampleLeft, sampleW, fillW },
+      "swapQrCode: magenta erased — filled from left to right edge",
+    );
+  }
+
   // ── Size the replacement card ──────────────────────────────────────────────
   // Use the spec qrSize for this spot type so the card is always consistent,
   // regardless of how large Grok reproduced the magenta marker. Cap so the
@@ -202,7 +269,7 @@ export async function swapQrCode(
 
   // ── Composite real QR card directly onto ad + verify ──────────────────────
   try {
-    const compositedBuf: Buffer = await sharp(imageBuffer)
+    const compositedBuf: Buffer = await sharp(workBuf)
       .composite([{ input: cardWithQr, left: cardLeft, top: cardTop }])
       .jpeg({ quality: 98, chromaSubsampling: "4:4:4" })
       .toBuffer();
