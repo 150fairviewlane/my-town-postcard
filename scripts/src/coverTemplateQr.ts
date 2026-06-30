@@ -90,12 +90,10 @@ const TEMPLATE_OPS: Record<string, TemplateOp> = {
   "IMG_0747_1779162178190.png":
     { kind: "cover", x: 1350, y: 850, w: 142, h: 168 },
 
-  // At Your Service landscape: QR is at the very right edge of the native image
-  // (x≈1409–1527 in a 1536px frame) so a plain cover always appears near-clipped.
-  // Extend the canvas downward with the matching beige footer color and place the
-  // magenta marker in the new strip with a clear right margin.
+  // At Your Service landscape: box shifted ~50px left so the full magenta square
+  // is clearly visible within the image (right edge at x=1482, 54px clear margin)
   "IMG_0746_1779162178190.png":
-    { kind: "footer", footerH: 150, footerRgb: [232, 223, 216], qrSize: 130, qrMarginRight: 50 },
+    { kind: "cover", x: 1340, y: 818, w: 142, h: 168 },
 
   // Health & Wellness landscape: white placeholder card → cover with magenta
   "healthcare_wellness_landscape_1779162178190.png":
