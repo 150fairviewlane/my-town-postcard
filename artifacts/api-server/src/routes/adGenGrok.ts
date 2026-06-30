@@ -3268,7 +3268,8 @@ function onCategoryChange(){
     var ph = document.createElement('option'); ph.value=''; ph.textContent = '\u2014 Select Industry \u2014';
     sel.appendChild(ph);
     industries.forEach(function(ind){ var o=document.createElement('option'); o.value=ind; o.text=ind; sel.appendChild(o); });
-    setTimeout(function(){ sel.focus(); sel.click(); }, 50);
+    sel.focus();
+    try { sel.showPicker(); } catch(e) {}
   }
   onIndustryChange();
   applyTakenIndustries();
@@ -4415,7 +4416,8 @@ function onCategoryChange(){
     var ph = document.createElement('option'); ph.value=''; ph.textContent = '\u2014 Select Industry \u2014';
     sel.appendChild(ph);
     industries.forEach(function(ind){ var o=document.createElement('option'); o.value=ind; o.text=ind; sel.appendChild(o); });
-    setTimeout(function(){ sel.focus(); sel.click(); }, 50);
+    sel.focus();
+    try { sel.showPicker(); } catch(e) {}
   }
   onIndustryChange();
   applyTakenIndustries();
