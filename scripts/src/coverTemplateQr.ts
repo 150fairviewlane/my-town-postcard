@@ -108,8 +108,9 @@ const TEMPLATE_OPS: Record<string, TemplateOp> = {
   },
 
   // Health & Wellness landscape: white placeholder card → cover with magenta
+  // x shifted 7px left (1221→1214) so right edge lands exactly at image boundary (1536px)
   "healthcare_wellness_landscape_1779162178190.png":
-    { kind: "cover", x: 1221, y: 763, w: 322, h: 227 },
+    { kind: "cover", x: 1214, y: 763, w: 322, h: 227 },
 
   "image_1780946327957.png":
     { kind: "cover", x: 1072, y: 680, w: 152, h: 126 },
