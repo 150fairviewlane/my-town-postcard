@@ -6,6 +6,13 @@ import SpotProgressRing from "../components/SpotProgressRing";
 
 const BURGUNDY = "#991b1b";
 
+function rowColor(paidSpots) {
+  if (paidSpots >= 15) return "#dc2626";
+  if (paidSpots >= 12) return "#ea580c";
+  if (paidSpots >= 1)  return "#15803d";
+  return "#111";
+}
+
 function LoginForm({ onLogin }) {
   const [password, setPassword] = useState("localspot-admin-2025");
   const [error, setError] = useState(null);
@@ -205,17 +212,18 @@ function Overview({ token }) {
                       const fill = c.totalSpots ? Math.round(((c.paidSpots ?? 0) / c.totalSpots) * 100) : 0;
                       const pill = { active: ["#f0fdf4", "#15803d"], draft: ["#f3f4f6", "#374151"], completed: ["#fef2f2", BURGUNDY] };
                       const [bg, tc] = pill[c.status] ?? ["#f3f4f6", "#374151"];
+                      const rc = rowColor(c.paidSpots ?? 0);
                       return (
                         <tr key={c.id} style={{ borderTop: "1px solid #f3f4f6" }}>
-                          <td style={{ padding: "12px 14px", fontSize: 13, fontWeight: 700, color: "#111" }}>{c.name}</td>
-                          <td style={{ padding: "12px 14px", fontSize: 13, color: "#374151" }}>{c.territory}</td>
-                          <td style={{ padding: "12px 14px" }}>
+                          <td style={{ padding: "12px 14px", fontSize: 13, fontWeight: 700, color: rc }}>{c.name}</td>
+                          <td style={{ padding: "12px 14px", fontSize: 13, color: rc }}>{c.territory}</td>
+                          <td style={{ padding: "12px 14px", color: rc }}>
                             <span style={{ background: bg, color: tc, borderRadius: 999, padding: "3px 10px", fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5 }}>{c.status}</span>
                           </td>
-                          <td style={{ padding: "12px 14px", fontSize: 13, color: "#374151" }}>{c.mailDate ? new Date(c.mailDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}</td>
-                          <td style={{ padding: "12px 14px", fontSize: 13, fontWeight: 700, color: "#111" }}>${(c.totalRevenue / 100).toLocaleString()}</td>
-                          <td style={{ padding: "12px 14px", fontSize: 13, color: "#374151" }}>{c.totalSpots ? `${fill}%` : "—"}</td>
-                          <td style={{ padding: "8px 14px" }}>
+                          <td style={{ padding: "12px 14px", fontSize: 13, color: rc }}>{c.mailDate ? new Date(c.mailDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}</td>
+                          <td style={{ padding: "12px 14px", fontSize: 13, fontWeight: 700, color: rc }}>${(c.totalRevenue / 100).toLocaleString()}</td>
+                          <td style={{ padding: "12px 14px", fontSize: 13, color: rc }}>{c.totalSpots ? `${fill}%` : "—"}</td>
+                          <td style={{ padding: "8px 14px", color: rc }}>
                             {(c.status === "active" || c.status === "draft") ? (
                               <SpotProgressRing paidSpots={c.paidSpots ?? 0} size={44} />
                             ) : "—"}
