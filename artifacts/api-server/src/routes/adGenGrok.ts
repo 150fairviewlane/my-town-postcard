@@ -17,7 +17,7 @@ function getSharp(): Promise<typeof import("sharp")> {
 }
 import { buildAdPrompt } from "../lib/buildAdPrompt";
 import { getTemplateQrStyle, type SizeKey } from "../lib/compositeQr";
-import { swapQrCode } from "../lib/locateQrCode";
+import { swapQrCode, stampMagentaOverQr } from "../lib/locateQrCode";
 import { db, spotsTable } from "@workspace/db";
 import { eq, and, ne, sql as drizzleSql } from "drizzle-orm";
 
@@ -2039,6 +2039,17 @@ router.post("/grok-ad-generator/refine", async (req, res) => {
   const mime = match[1] as string;
   const imageBuf = Buffer.from(match[2]!, "base64");
 
+  // Cover any existing real QR code with a magenta rectangle before sending
+  // to Grok. Without this, Grok reproduces the scannable QR in the refined
+  // image and swapQrCode composites a second one on top (double-QR bug).
+  let imageBufForGrok: Buffer;
+  try {
+    imageBufForGrok = await stampMagentaOverQr(imageBuf);
+  } catch (err) {
+    req.log.warn({ err }, "refine: stampMagentaOverQr threw — sending original image to Grok");
+    imageBufForGrok = imageBuf;
+  }
+
   // Same aspect ratios + print-quality crop dims as the generate endpoint
   // (4:5 is unsupported by xAI; 3:4 is the closest; sharp crops to exact pixel dims)
   const SIZE_MAP: Record<string, { w: number; h: number; aspect: string }> = {
@@ -2062,7 +2073,7 @@ router.post("/grok-ad-generator/refine", async (req, res) => {
     model:        "grok-imagine-image-quality",
     prompt:       refinePrompt,
     n:            1,
-    images:       [{ type: "image_url", url: `data:${mime};base64,${imageBuf.toString("base64")}` }],
+    images:       [{ type: "image_url", url: `data:${mime};base64,${imageBufForGrok.toString("base64")}` }],
     aspect_ratio: dim.aspect,
     resolution:   "2k",
   };

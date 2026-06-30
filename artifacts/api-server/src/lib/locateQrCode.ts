@@ -49,6 +49,52 @@ export interface QrLocation {
   height: number;
 }
 
+// ── Pre-send QR cover ──────────────────────────────────────────────────────────
+
+/**
+ * Detect any scannable QR code in the image using jsQR and paint a solid
+ * magenta (#FF00FF) rectangle over its bounding box (with 10 px padding).
+ *
+ * Used by the /refine route: the previous generation already composited a real
+ * QR onto the ad; this converts it back to a magenta marker before sending the
+ * image to Grok so the normal swapQrCode post-processor runs exactly once.
+ *
+ * Returns the original buffer unchanged if no QR code is found.
+ */
+export async function stampMagentaOverQr(imageBuffer: Buffer): Promise<Buffer> {
+  const sharpMod = await (import("sharp") as Promise<any>);
+  const sharp    = (sharpMod.default ?? sharpMod) as typeof import("sharp");
+
+  const { data, info } = await sharp(imageBuffer)
+    .raw()
+    .ensureAlpha()
+    .toBuffer({ resolveWithObject: true });
+
+  const qr = jsqr(new Uint8ClampedArray(data), info.width, info.height);
+  if (!qr) return imageBuffer;
+
+  const { topLeftCorner: tl, topRightCorner: tr, bottomLeftCorner: bl, bottomRightCorner: br } = qr.location;
+
+  const PAD = 10;
+  const x1 = Math.max(0,           Math.floor(Math.min(tl.x, bl.x)) - PAD);
+  const y1 = Math.max(0,           Math.floor(Math.min(tl.y, tr.y)) - PAD);
+  const x2 = Math.min(info.width,  Math.ceil( Math.max(tr.x, br.x)) + PAD);
+  const y2 = Math.min(info.height, Math.ceil( Math.max(bl.y, br.y)) + PAD);
+  const w  = x2 - x1;
+  const h  = y2 - y1;
+
+  const magenta = await sharp({
+    create: { width: w, height: h, channels: 3, background: { r: 255, g: 0, b: 255 } },
+  }).png().toBuffer();
+
+  logger.info({ x1, y1, w, h }, "stampMagentaOverQr: QR detected — painting magenta cover before Grok refine");
+
+  return sharp(imageBuffer)
+    .composite([{ input: magenta, left: x1, top: y1 }])
+    .jpeg({ quality: 98, chromaSubsampling: "4:4:4" })
+    .toBuffer();
+}
+
 // ── Detection ──────────────────────────────────────────────────────────────────
 
 /**
