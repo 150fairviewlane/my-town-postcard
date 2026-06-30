@@ -88,9 +88,10 @@ const TEMPLATE_OPS: Record<string, TemplateOp> = {
   "IMG_0747_1779162178190.png":
     { kind: "cover", x: 1350, y: 850, w: 142, h: 168 },
 
-  // At Your Service landscape: QR in the lower-right footer strip
+  // At Your Service landscape: QR is in the lower-right footer; box starts 50px left
+  // so the full square is clearly visible (not near-clipped at the image edge)
   "IMG_0746_1779162178190.png":
-    { kind: "cover", x: 1405, y: 832, w: 126, h: 154 },
+    { kind: "cover", x: 1340, y: 828, w: 192, h: 162 },
 
   // Health & Wellness landscape: white placeholder card → cover with magenta
   "healthcare_wellness_landscape_1779162178190.png":
