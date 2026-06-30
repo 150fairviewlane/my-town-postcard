@@ -2475,20 +2475,25 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
       <div class="fgrid">
         <div class="field"><label>Business Name *</label><input type="text" id="bizName" placeholder="Mr. Biscuit's Cafe" oninput="onFormChange()"></div>
         <div class="field">
+          <label>Category</label>
+          <select id="category" onchange="onCategoryChange()">
+            <option value="">&mdash; Select Category &mdash;</option>
+            <option>Food &amp; Dining</option>
+            <option>Home Services</option>
+            <option>Auto Services</option>
+            <option>Health &amp; Wellness</option>
+            <option>Beauty &amp; Personal Care</option>
+            <option>Pet Services</option>
+            <option>Retail</option>
+            <option>Professional Services</option>
+            <option>Childcare &amp; Education</option>
+            <option>Entertainment/Events</option>
+          </select>
+        </div>
+        <div class="field">
           <label>Industry</label>
-          <select id="industry" onchange="onIndustryChange()">
-            <option value="">&mdash; Select &mdash;</option>
-            <option>Pizza Restaurant</option><option>Mexican Restaurant</option><option>Chinese Restaurant</option>
-            <option>Breakfast &amp; Cafe</option><option>Bar &amp; Grill</option><option>Italian Restaurant</option>
-            <option>Bakery</option><option>Coffee Shop</option><option>Dentist</option>
-            <option>Medical &amp; Healthcare</option><option>Chiropractor</option><option>Veterinarian</option>
-            <option>HVAC</option><option>Plumber</option><option>Electrician</option>
-            <option>Lawn &amp; Landscaping</option><option>Roofing</option><option>Painting</option>
-            <option>Cleaning Service</option><option>Pest Control</option><option>Real Estate</option>
-            <option>Insurance</option><option>Auto Repair</option><option>Salon &amp; Beauty</option>
-            <option>Barbershop</option><option>Gym &amp; Fitness</option><option>Pet Services</option>
-            <option>Financial Services</option><option>Daycare</option><option>Photography</option>
-            <option>Retail Shop</option><option>Other Service</option>
+          <select id="industry" onchange="onIndustryChange()" disabled>
+            <option value="">&mdash; Select Category First &mdash;</option>
           </select>
         </div>
         <div class="field"><label>Tagline / Slogan</label><input type="text" id="tagline" spellcheck="true" placeholder="From-Scratch Biscuits &amp; Boba!"></div>
@@ -2765,6 +2770,19 @@ var MENU_DEFAULTS = {
   'Daycare':             ['Full-Time Enrollment','Part-Time Available','Ages 6 Weeks\u20135 Years','Hot Meals Provided'],
   'Photography':         ['Family Portraits from $149','Event Photography','Headshots $99','Prints & Albums Available'],
   'Retail Shop':         ['New Arrivals Weekly','Gift Cards Available','Layaway & Special Orders','Call for Hours'],
+};
+
+var CATEGORY_INDUSTRIES = {
+  'Food & Dining':          ['Pizza Restaurant','Mexican Restaurant','Chinese Restaurant','Breakfast & Cafe','Bar & Grill','Italian Restaurant','Bakery','Coffee Shop'],
+  'Home Services':          ['HVAC','Plumber','Electrician','Lawn & Landscaping','Roofing','Painting','Cleaning Service','Pest Control'],
+  'Auto Services':          ['Auto Repair'],
+  'Health & Wellness':      ['Dentist','Medical & Healthcare','Chiropractor','Gym & Fitness'],
+  'Beauty & Personal Care': ['Salon & Beauty','Barbershop'],
+  'Pet Services':           ['Veterinarian','Pet Services'],
+  'Retail':                 ['Retail Shop'],
+  'Professional Services':  ['Real Estate','Insurance','Financial Services','Photography','Other Service'],
+  'Childcare & Education':  ['Daycare'],
+  'Entertainment/Events':   [],
 };
 
 // ── Preview + thumbnail gallery ────────────────────────────────────────────────
@@ -3099,6 +3117,25 @@ function onIndustryChange(){
   if(!_userEditedFields.has('offerFine')) document.getElementById('offerFine').value = op ? op[1] : '';
 }
 
+function onCategoryChange(){
+  var cat = document.getElementById('category').value;
+  var sel = document.getElementById('industry');
+  sel.innerHTML = '';
+  var industries = cat ? (CATEGORY_INDUSTRIES[cat] || []) : [];
+  if(!industries.length){
+    sel.disabled = true;
+    var ph = document.createElement('option'); ph.value=''; ph.textContent = cat ? '\u2014 None yet \u2014' : '\u2014 Select Category First \u2014';
+    sel.appendChild(ph);
+  } else {
+    sel.disabled = false;
+    var ph = document.createElement('option'); ph.value=''; ph.textContent = '\u2014 Select Industry \u2014';
+    sel.appendChild(ph);
+    industries.forEach(function(ind){ var o=document.createElement('option'); o.value=ind; o.text=ind; sel.appendChild(o); });
+  }
+  onIndustryChange();
+  applyTakenIndustries();
+}
+
 function renderMenuInputs(defs){
   var list = document.getElementById('menuList');
   var cap = getOrientation(_spotSize) === 'landscape' ? 3 : 4;
@@ -3252,9 +3289,12 @@ function showToast(msg){
   if(urlBiz){
     var el = document.getElementById('bizName'); if(el) el.value = urlBiz;
     if(urlIndustry){
-      var sel = document.getElementById('industry');
-      for(var i=0;i<sel.options.length;i++){
-        if(sel.options[i].text === urlIndustry){ sel.selectedIndex=i; break; }
+      var catKey = '';
+      Object.keys(CATEGORY_INDUSTRIES).forEach(function(c){ if(CATEGORY_INDUSTRIES[c].indexOf(urlIndustry) !== -1) catKey = c; });
+      if(catKey){
+        var catSel = document.getElementById('category'); if(catSel) catSel.value = catKey;
+        onCategoryChange();
+        var indSel = document.getElementById('industry'); if(indSel) indSel.value = urlIndustry;
       }
     }
     onIndustryChange();
@@ -3510,20 +3550,26 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
     <div>
       <div class="sec-label">Business Info</div>
       <div class="field"><label>Business Name *</label><input type="text" id="bizName" placeholder="Mr. Biscuit's Cafe" oninput="onFormChange()"></div>
-      <div class="field"><label>Industry</label>
-        <select id="industry" onchange="onIndustryChange()">
-          <option value="">&mdash; Select &mdash;</option>
-          <option>Pizza Restaurant</option><option>Mexican Restaurant</option><option>Chinese Restaurant</option>
-          <option>Breakfast &amp; Cafe</option><option>Bar &amp; Grill</option><option>Italian Restaurant</option>
-          <option>Bakery</option><option>Coffee Shop</option><option>Dentist</option>
-          <option>Medical &amp; Healthcare</option><option>Chiropractor</option><option>Veterinarian</option>
-          <option>HVAC</option><option>Plumber</option><option>Electrician</option>
-          <option>Lawn &amp; Landscaping</option><option>Roofing</option><option>Painting</option>
-          <option>Cleaning Service</option><option>Pest Control</option><option>Real Estate</option>
-          <option>Insurance</option><option>Auto Repair</option><option>Salon &amp; Beauty</option>
-          <option>Barbershop</option><option>Gym &amp; Fitness</option><option>Pet Services</option>
-          <option>Financial Services</option><option>Daycare</option><option>Photography</option>
-          <option>Retail Shop</option><option>Other Service</option>
+      <div class="field">
+        <label>Category</label>
+        <select id="category" onchange="onCategoryChange()">
+          <option value="">&mdash; Select Category &mdash;</option>
+          <option>Food &amp; Dining</option>
+          <option>Home Services</option>
+          <option>Auto Services</option>
+          <option>Health &amp; Wellness</option>
+          <option>Beauty &amp; Personal Care</option>
+          <option>Pet Services</option>
+          <option>Retail</option>
+          <option>Professional Services</option>
+          <option>Childcare &amp; Education</option>
+          <option>Entertainment/Events</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Industry</label>
+        <select id="industry" onchange="onIndustryChange()" disabled>
+          <option value="">&mdash; Select Category First &mdash;</option>
         </select>
       </div>
       <div class="field"><label>Tagline / Slogan</label><input type="text" id="tagline" spellcheck="true" placeholder="From-Scratch Biscuits &amp; Boba!"></div>
@@ -4079,6 +4125,19 @@ var MENU_DEFAULTS = {
   'Retail Shop':           ['New Arrivals Weekly','Gift Cards Available','Layaway & Special Orders','Call for Hours'],
 };
 
+var CATEGORY_INDUSTRIES = {
+  'Food & Dining':          ['Pizza Restaurant','Mexican Restaurant','Chinese Restaurant','Breakfast & Cafe','Bar & Grill','Italian Restaurant','Bakery','Coffee Shop'],
+  'Home Services':          ['HVAC','Plumber','Electrician','Lawn & Landscaping','Roofing','Painting','Cleaning Service','Pest Control'],
+  'Auto Services':          ['Auto Repair'],
+  'Health & Wellness':      ['Dentist','Medical & Healthcare','Chiropractor','Gym & Fitness'],
+  'Beauty & Personal Care': ['Salon & Beauty','Barbershop'],
+  'Pet Services':           ['Veterinarian','Pet Services'],
+  'Retail':                 ['Retail Shop'],
+  'Professional Services':  ['Real Estate','Insurance','Financial Services','Photography','Other Service'],
+  'Childcare & Education':  ['Daycare'],
+  'Entertainment/Events':   [],
+};
+
 function onIndustryChange(){
   var industry = document.getElementById('industry').value;
   if(industry && _takenCategories.indexOf(industry) !== -1){
@@ -4098,6 +4157,25 @@ function onIndustryChange(){
   var offerPair = OFFER_DEFAULTS[industry];
   document.getElementById('offer').value    = offerPair ? offerPair[0] : '';
   document.getElementById('offerFine').value = offerPair ? offerPair[1] : '';
+}
+
+function onCategoryChange(){
+  var cat = document.getElementById('category').value;
+  var sel = document.getElementById('industry');
+  sel.innerHTML = '';
+  var industries = cat ? (CATEGORY_INDUSTRIES[cat] || []) : [];
+  if(!industries.length){
+    sel.disabled = true;
+    var ph = document.createElement('option'); ph.value=''; ph.textContent = cat ? '\u2014 None yet \u2014' : '\u2014 Select Category First \u2014';
+    sel.appendChild(ph);
+  } else {
+    sel.disabled = false;
+    var ph = document.createElement('option'); ph.value=''; ph.textContent = '\u2014 Select Industry \u2014';
+    sel.appendChild(ph);
+    industries.forEach(function(ind){ var o=document.createElement('option'); o.value=ind; o.text=ind; sel.appendChild(o); });
+  }
+  onIndustryChange();
+  applyTakenIndustries();
 }
 
 // (tab system removed — library is always visible below the upload zone)
@@ -4459,10 +4537,13 @@ function showToast(msg){
   if(urlBiz){
     // Opened from the spot picker — pre-fill with provided params
     var el = document.getElementById('bizName'); if(el) el.value = urlBiz;
-    var selEl = document.getElementById('industry');
     if(urlIndustry){
-      for(var i=0;i<selEl.options.length;i++){
-        if(selEl.options[i].text === urlIndustry){ selEl.selectedIndex=i; break; }
+      var catKey = '';
+      Object.keys(CATEGORY_INDUSTRIES).forEach(function(c){ if(CATEGORY_INDUSTRIES[c].indexOf(urlIndustry) !== -1) catKey = c; });
+      if(catKey){
+        var catSel = document.getElementById('category'); if(catSel) catSel.value = catKey;
+        onCategoryChange();
+        var indSel = document.getElementById('industry'); if(indSel) indSel.value = urlIndustry;
       }
     }
     onIndustryChange();
