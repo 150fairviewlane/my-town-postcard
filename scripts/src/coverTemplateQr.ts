@@ -35,9 +35,11 @@ const CLEAN_COMMIT = "123665e91e5862f69f756288a24c35fada3e3935";
 // "cover"  → composite a magenta rect at (x,y,w,h) over the existing image
 // "footer" → extend canvas downward by footerH px (filled with footerRgb),
 //            then paint a qrSize×qrSize magenta square in the right side of
-//            the new strip, vertically centred, with a 20px right margin
+//            the new strip, vertically centred.
+//            qrMarginRight: px gap between magenta right edge and image right edge
+//            (default 20; increase when the native right edge is near the boundary)
 type CoverOp  = { kind: "cover";  x: number; y: number; w: number; h: number };
-type FooterOp = { kind: "footer"; footerH: number; footerRgb: [number,number,number]; qrSize: number };
+type FooterOp = { kind: "footer"; footerH: number; footerRgb: [number,number,number]; qrSize: number; qrMarginRight?: number };
 type TemplateOp = CoverOp | FooterOp;
 
 const TEMPLATE_OPS: Record<string, TemplateOp> = {
@@ -88,10 +90,12 @@ const TEMPLATE_OPS: Record<string, TemplateOp> = {
   "IMG_0747_1779162178190.png":
     { kind: "cover", x: 1350, y: 850, w: 142, h: 168 },
 
-  // At Your Service landscape: QR is in the lower-right footer; box starts 50px left
-  // so the full square is clearly visible (not near-clipped at the image edge)
+  // At Your Service landscape: QR is at the very right edge of the native image
+  // (x≈1409–1527 in a 1536px frame) so a plain cover always appears near-clipped.
+  // Extend the canvas downward with the matching beige footer color and place the
+  // magenta marker in the new strip with a clear right margin.
   "IMG_0746_1779162178190.png":
-    { kind: "cover", x: 1340, y: 828, w: 192, h: 162 },
+    { kind: "footer", footerH: 150, footerRgb: [232, 223, 216], qrSize: 130, qrMarginRight: 50 },
 
   // Health & Wellness landscape: white placeholder card → cover with magenta
   "healthcare_wellness_landscape_1779162178190.png":
@@ -142,8 +146,9 @@ async function applyFooter(imgBuffer: Buffer, op: FooterOp, destPath: string): P
     })
     .toBuffer();
 
-  // Magenta square: right-aligned (20px margin), vertically centred in new strip
-  const qrX = origW - op.qrSize - 20;
+  // Magenta square: right-aligned, vertically centred in new strip
+  const rightMargin = op.qrMarginRight ?? 20;
+  const qrX = origW - op.qrSize - rightMargin;
   const qrY = origH + Math.floor((op.footerH - op.qrSize) / 2);
   const magenta = await makeMagenta(op.qrSize, op.qrSize);
 
@@ -184,7 +189,8 @@ async function main() {
         await applyFooter(imgBuffer, op, destPath);
         const meta = await sharp(imgBuffer).metadata();
         const origW = meta.width!, origH = meta.height!;
-        const qrX = origW - op.qrSize - 20;
+        const rm = op.qrMarginRight ?? 20;
+        const qrX = origW - op.qrSize - rm;
         const qrY = origH + Math.floor((op.footerH - op.qrSize) / 2);
         console.log(`[footer] ${filename}\n  extend +${op.footerH}px (rgb${op.footerRgb}), magenta ${op.qrSize}px @ ${qrX},${qrY}  ✓\n`);
         footed++;
