@@ -1668,21 +1668,14 @@ boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
 
             {/* Ad preview -- natural pixel dimensions matching the actual print sizes */}
             {(() => {
-              // Natural pixel dimensions at 100px/inch, scaled to fit preview panel
-              // XL: 4"x5" portrait = 400x500 natural -> 360x450 preview
-              // L:  3"x4" portrait = 300x400 natural -> 270x360 preview
-              // M:  3"x2" landscape = 300x200 natural -> 300x200 preview
-              // S:  2"x2" square   = 200x200 natural -> 200x200 preview
-              const previewDims = {
-                XL: { w: 360, h: 450 },
-                L:  { w: 270, h: 360 },
-                M:  { w: 300, h: 200 },
-                S:  { w: 200, h: 200 },
-              };
-              const { w: pw, h: ph } = previewDims[sizeKey] || { w: 360, h: 450 };
-              // Natural template render dimensions
+              // Natural template render dimensions (100px/inch, scaled to fit preview panel)
               const naturalDims = { XL: { w: 400, h: 500 }, L: { w: 300, h: 400 }, M: { w: 300, h: 200 }, S: { w: 200, h: 200 } };
               const { w: nw, h: nh } = naturalDims[sizeKey] || { w: 400, h: 500 };
+              // Target preview widths — XL/L shrunk so Reserve button stays above the fold;
+              // height is always derived from the natural aspect ratio.
+              const previewWidths = { XL: 300, L: 225, M: 300, S: 200 };
+              const pw = previewWidths[sizeKey] ?? 300;
+              const ph = Math.round(pw * (nh / nw));
               const tScale = pw / nw;
               return (
                 <div style={{ position: "relative", width: pw, height: ph, borderRadius: 6, overflow: "hidden", boxShadow: "0 12px 48px rgba(0,0,0,0.6)", flexShrink: 0 }}>
