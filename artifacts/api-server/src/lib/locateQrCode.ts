@@ -138,24 +138,86 @@ export async function swapQrCode(
     "swapQrCode: magenta marker detected — compositing real QR at detected position",
   );
 
-  // ── Erase magenta — fill from left to right edge, body + footer ───────────
-  // Covers magenta Grok placed in the body just above the footer as well as the
-  // marker itself in the footer. For each row we average a narrow sample strip
-  // immediately left of the detected magenta and paint that colour rightward to
-  // the image edge, so the surrounding footer bar (and any body content) flows
-  // seamlessly through the erased area before the QR card is placed on top.
+  // ── Size the replacement card ──────────────────────────────────────────────
+  // Use the spec qrSize for this spot type so the card is always consistent,
+  // regardless of how large Grok reproduced the magenta marker. Cap so the
+  // card fits entirely within the footer (bottom 20% of the image).
+  const innerMargin = style.marginMultiplier ?? 1.0375;
+  const footerH     = Math.round(imgH * 0.20);  // footer = bottom 20%
+  const footerTop   = imgH - footerH;            // y-coord where footer begins
+  const maxCardSize = footerH - 6;               // 6 px bottom inset matches compositeQr.CARD_INSET
+
+  const specCardSize = Math.round(spec.qrSize * innerMargin);
+  const cardSize     = Math.min(specCardSize, maxCardSize);
+  const qrSize       = Math.max(Math.round(cardSize / innerMargin), 64);
+  const qrOffset     = Math.floor((cardSize - qrSize) / 2);
+
+  // Horizontal: centred on detected magenta centroid, clamped within image width.
+  const cx       = Math.round(loc.x + loc.width  / 2);
+  const cardLeft = Math.min(Math.max(0, Math.round(cx - cardSize / 2)), imgW - cardSize);
+
+  // Vertical: centred on detected centroid but card top must be ≥ footerTop
+  // so the card never encroaches into the body of the ad.
+  const cy         = Math.round(loc.y + loc.height / 2);
+  const cardTopRaw = Math.round(cy - cardSize / 2);
+  const cardTop    = Math.min(
+    Math.max(footerTop, cardTopRaw),  // never above the footer start
+    imgH - cardSize,                   // never below image bottom
+  );
+
+  // ── Pre-scan: detect any scannable QR Grok drew before we erase ───────────
+  // Grok sometimes draws a real QR code whose footprint extends well beyond the
+  // magenta marker bbox (or even into the body). jsQR gives us exact corners so
+  // we can widen the erase zone. Only used to EXTEND — never to narrow.
+  // Capped at 60% of imgW so a stray body QR can't destroy body content.
+  const MIN_ERASE_LEFT_FRAC = 0.60;
+  let grokQrBbox: { left: number; top: number } | null = null;
+  try {
+    const { data: prePx, info: preInfo } = await sharp(imageBuffer)
+      .raw()
+      .ensureAlpha()
+      .toBuffer({ resolveWithObject: true });
+    const grokQr = jsqr(new Uint8ClampedArray(prePx), preInfo.width, preInfo.height);
+    if (grokQr) {
+      const PAD = 14;
+      const { topLeftCorner: tl, topRightCorner: tr, bottomLeftCorner: bl } = grokQr.location;
+      grokQrBbox = {
+        left: Math.max(
+          Math.round(imgW * MIN_ERASE_LEFT_FRAC),
+          Math.max(0, Math.floor(Math.min(tl.x, bl.x)) - PAD),
+        ),
+        top: Math.max(0, Math.floor(Math.min(tl.y, tr.y)) - PAD),
+      };
+      logger.info(
+        { spotSize, grokQrBbox },
+        "swapQrCode: Grok-drawn scannable QR found — extending erase zone",
+      );
+    }
+  } catch (err) {
+    logger.warn(
+      { reason: err instanceof Error ? err.message : String(err) },
+      "swapQrCode: jsQR pre-scan threw — continuing without Grok QR bbox",
+    );
+  }
+
+  // ── Erase magenta + any Grok-drawn QR, fill from left to right edge ───────
+  // eraseLeft: always start from cardLeft (the card's own left edge) so there
+  // is zero gap between the fill zone and the card's solid fill. Extend further
+  // left if jsQR found Grok's QR sitting to the left of that.
+  // eraseTop: extend upward if Grok drew a QR above the detected magenta top.
   let workBuf = imageBuffer;
-  const ERASE_PAD  = 8;  // extra px above detected magenta top — catches body bleed
-  const SAMPLE_W   = 8;  // px strip width sampled for fill colour
+  const ERASE_PAD = 8;
+  const SAMPLE_W  = 8;
 
-  const eraseTop   = Math.max(0, loc.y - ERASE_PAD);
+  const eraseLeft  = Math.min(cardLeft, loc.x, grokQrBbox?.left ?? cardLeft);
+  const eraseTop   = Math.max(0, Math.min(loc.y - ERASE_PAD, grokQrBbox?.top ?? (loc.y - ERASE_PAD)));
   const eraseH     = imgH - eraseTop;
-  const sampleLeft = Math.max(0, loc.x - SAMPLE_W);
-  const sampleW    = loc.x - sampleLeft;   // ≤ SAMPLE_W; 0 when magenta is at left edge
+  const sampleLeft = Math.max(0, eraseLeft - SAMPLE_W);
+  const sampleW    = eraseLeft - sampleLeft;   // ≤ SAMPLE_W; 0 if eraseLeft is at image edge
 
-  if (sampleW > 0 && loc.x < imgW && eraseH > 0) {
-    const fillW  = imgW - loc.x;           // columns from magenta-left to image-right
-    const bandW  = sampleW + fillW;        // sample strip + fill zone, side by side
+  if (sampleW > 0 && eraseLeft < imgW && eraseH > 0) {
+    const fillW = imgW - eraseLeft;
+    const bandW = sampleW + fillW;
 
     // Extract the combined band (sample strip + fill zone) as raw RGBA.
     const { data: bandData } = await sharp(imageBuffer)
@@ -195,42 +257,15 @@ export async function swapQrCode(
     }).png().toBuffer();
 
     workBuf = await sharp(imageBuffer)
-      .composite([{ input: fillPng, left: loc.x, top: eraseTop }])
+      .composite([{ input: fillPng, left: eraseLeft, top: eraseTop }])
       .jpeg({ quality: 98, chromaSubsampling: "4:4:4" })
       .toBuffer();
 
     logger.info(
-      { spotSize, eraseTop, eraseH, sampleLeft, sampleW, fillW },
+      { spotSize, eraseLeft, eraseTop, eraseH, sampleLeft, sampleW, fillW, grokQrFound: !!grokQrBbox },
       "swapQrCode: magenta erased — filled from left to right edge",
     );
   }
-
-  // ── Size the replacement card ──────────────────────────────────────────────
-  // Use the spec qrSize for this spot type so the card is always consistent,
-  // regardless of how large Grok reproduced the magenta marker. Cap so the
-  // card fits entirely within the footer (bottom 20% of the image).
-  const innerMargin = style.marginMultiplier ?? 1.0375;
-  const footerH     = Math.round(imgH * 0.20);  // footer = bottom 20%
-  const footerTop   = imgH - footerH;            // y-coord where footer begins
-  const maxCardSize = footerH - 6;               // 6 px bottom inset matches compositeQr.CARD_INSET
-
-  const specCardSize = Math.round(spec.qrSize * innerMargin);
-  const cardSize     = Math.min(specCardSize, maxCardSize);
-  const qrSize       = Math.max(Math.round(cardSize / innerMargin), 64);
-  const qrOffset     = Math.floor((cardSize - qrSize) / 2);
-
-  // Horizontal: centred on detected magenta centroid, clamped within image width.
-  const cx       = Math.round(loc.x + loc.width  / 2);
-  const cardLeft = Math.min(Math.max(0, Math.round(cx - cardSize / 2)), imgW - cardSize);
-
-  // Vertical: centred on detected centroid but card top must be ≥ footerTop
-  // so the card never encroaches into the body of the ad.
-  const cy         = Math.round(loc.y + loc.height / 2);
-  const cardTopRaw = Math.round(cy - cardSize / 2);
-  const cardTop    = Math.min(
-    Math.max(footerTop, cardTopRaw),  // never above the footer start
-    imgH - cardSize,                   // never below image bottom
-  );
 
   // ── Build real QR PNG ──────────────────────────────────────────────────────
   const qrPng: Buffer = await QRCode.toBuffer(trackingUrl, {
