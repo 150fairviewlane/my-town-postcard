@@ -184,14 +184,16 @@ const DISC_RADIUS_MULTIPLIER = 1.875;
 // ── Card layout computed from QR spec ─────────────────────────────────────
 export interface CardLayout {
   /** Side length of the square card in pixels */
-  cardSize:  number;
-  cardLeft:  number;
-  cardTop:   number;
+  cardSize:     number;
+  cardLeft:     number;
+  cardTop:      number;
   /** QR origin in card-local coordinates (symmetric on all sides) */
-  qrOffset:  number;
+  qrOffset:     number;
   /** QR origin in full-image coordinates (for decode verify + bleed check) */
-  qrAbsLeft: number;
-  qrAbsTop:  number;
+  qrAbsLeft:    number;
+  qrAbsTop:     number;
+  /** Actual QR pixel size after footer-height cap (may be < spec.qrSize) */
+  qrSizeActual: number;
 }
 
 /**
@@ -201,13 +203,21 @@ export interface CardLayout {
  * square corners clear the inscribed circle's edge.
  */
 export function computeCardLayout(spec: QrSpec, style?: Pick<CardStyle, "marginMultiplier">): CardLayout {
-  const { qrSize, imgW, imgH } = spec;
+  const { qrSize: specQrSize, imgW, imgH } = spec;
   const multiplier = style?.marginMultiplier ?? CARD_MARGIN;
 
-  const cardSize = Math.round(qrSize * multiplier);
+  // Cap so the card stays entirely within the footer (bottom 20% of image).
+  // Subtracting CARD_INSET from the cap ensures cardTop = imgH - cardSize - CARD_INSET
+  // is always ≥ imgH - footerH (the footer's top edge).
+  const footerH  = Math.round(imgH * 0.20);
+  const maxCard  = footerH - CARD_INSET;
+  const cardSize = Math.min(Math.round(specQrSize * multiplier), maxCard);
+
+  // Recompute qrSize from the (possibly capped) cardSize so the QR fits the card.
+  const qrSizeActual = Math.max(Math.round(cardSize / multiplier), 64);
 
   // QR centered within the square card (equal margin all sides).
-  const qrOffset = Math.floor((cardSize - qrSize) / 2);
+  const qrOffset = Math.floor((cardSize - qrSizeActual) / 2);
 
   const cardLeft = imgW - cardSize - CARD_INSET;
   const cardTop  = imgH - cardSize - CARD_INSET;
@@ -215,8 +225,9 @@ export function computeCardLayout(spec: QrSpec, style?: Pick<CardStyle, "marginM
   return {
     cardSize, cardLeft, cardTop,
     qrOffset,
-    qrAbsLeft: cardLeft + qrOffset,
-    qrAbsTop:  cardTop  + qrOffset,
+    qrAbsLeft:    cardLeft + qrOffset,
+    qrAbsTop:     cardTop  + qrOffset,
+    qrSizeActual,
   };
 }
 
@@ -359,7 +370,7 @@ export async function compositeQrOnto(
   const qrPng: Buffer = await QRCode.toBuffer(trackingUrl, {
     errorCorrectionLevel: "H",
     type:   "png",
-    width:  spec.qrSize,
+    width:  layout.qrSizeActual,
     margin: 4,
     color:  { dark: "#000000", light: "#ffffff" },
   });
@@ -400,8 +411,8 @@ export async function compositeQrOnto(
     .extract({
       left:   layout.qrAbsLeft,
       top:    layout.qrAbsTop,
-      width:  spec.qrSize,
-      height: spec.qrSize,
+      width:  layout.qrSizeActual,
+      height: layout.qrSizeActual,
     })
     .raw()
     .ensureAlpha()

@@ -37,12 +37,8 @@ const MAG_B_MIN = 180;
 // Minimum matching pixels before we trust the detection
 const MIN_PIXEL_COUNT = 100;
 
-// Our real QR card is this multiple of the detected magenta marker size.
-// At 1.25× the card is 25% wider/taller than the magenta, giving comfortable
-// overlap even if Grok's reproduction has slight size variance.
-const CARD_MARGIN     = 1.25;
-const MAX_CARD_W_FRAC = 0.35;
-const MAX_CARD_H_FRAC = 0.30;
+// The detected magenta centroid positions the card; size comes from the spec,
+// not from the detected bbox — see swapQrCode sizing block.
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -143,21 +139,31 @@ export async function swapQrCode(
   );
 
   // ── Size the replacement card ──────────────────────────────────────────────
-  // Card is 1.25× the detected magenta so it fully covers the marker.
-  const rawSize = Math.max(loc.width, loc.height);
-  const maxCard = Math.min(
-    Math.round(imgW * MAX_CARD_W_FRAC),
-    Math.round(imgH * MAX_CARD_H_FRAC),
-  );
-  const cardSize = Math.min(Math.round(rawSize * CARD_MARGIN), maxCard);
-  const qrSize   = Math.max(Math.round(cardSize / (style.marginMultiplier ?? 1.0375)), 64);
-  const qrOffset = Math.floor((cardSize - qrSize) / 2);
+  // Use the spec qrSize for this spot type so the card is always consistent,
+  // regardless of how large Grok reproduced the magenta marker. Cap so the
+  // card fits entirely within the footer (bottom 20% of the image).
+  const innerMargin = style.marginMultiplier ?? 1.0375;
+  const footerH     = Math.round(imgH * 0.20);  // footer = bottom 20%
+  const footerTop   = imgH - footerH;            // y-coord where footer begins
+  const maxCardSize = footerH - 6;               // 6 px bottom inset matches compositeQr.CARD_INSET
 
-  // Centre card on detected marker centroid, clamped to image bounds
+  const specCardSize = Math.round(spec.qrSize * innerMargin);
+  const cardSize     = Math.min(specCardSize, maxCardSize);
+  const qrSize       = Math.max(Math.round(cardSize / innerMargin), 64);
+  const qrOffset     = Math.floor((cardSize - qrSize) / 2);
+
+  // Horizontal: centred on detected magenta centroid, clamped within image width.
   const cx       = Math.round(loc.x + loc.width  / 2);
-  const cy       = Math.round(loc.y + loc.height / 2);
   const cardLeft = Math.min(Math.max(0, Math.round(cx - cardSize / 2)), imgW - cardSize);
-  const cardTop  = Math.min(Math.max(0, Math.round(cy - cardSize / 2)), imgH - cardSize);
+
+  // Vertical: centred on detected centroid but card top must be ≥ footerTop
+  // so the card never encroaches into the body of the ad.
+  const cy         = Math.round(loc.y + loc.height / 2);
+  const cardTopRaw = Math.round(cy - cardSize / 2);
+  const cardTop    = Math.min(
+    Math.max(footerTop, cardTopRaw),  // never above the footer start
+    imgH - cardSize,                   // never below image bottom
+  );
 
   // ── Build real QR PNG ──────────────────────────────────────────────────────
   const qrPng: Buffer = await QRCode.toBuffer(trackingUrl, {
