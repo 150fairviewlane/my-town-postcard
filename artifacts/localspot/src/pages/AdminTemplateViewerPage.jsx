@@ -2,6 +2,10 @@ import { useState } from "react";
 import AdminShell from "../components/AdminShell";
 
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+// Cache-buster: changes every session so the browser never serves a stale
+// reference image (the server now sends no-store, but this defeats any
+// intermediate proxy or already-cached response from before that fix).
+const CB = Date.now();
 
 const TEMPLATES = [
   { key: "parchment-classic", label: "Parchment Classic",  portrait: "mr_biscuits_template_no_logo_1778806527327.png",          landscape: "parchment_classic_landscape_1779162178190.png" },
@@ -18,7 +22,7 @@ const TEMPLATES = [
 ];
 
 function imgUrl(filename) {
-  return `${BASE}/api/admin/template-image/${encodeURIComponent(filename)}`;
+  return `${BASE}/api/admin/template-image/${encodeURIComponent(filename)}?cb=${CB}`;
 }
 
 function Lightbox({ src, label, onClose }) {

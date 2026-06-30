@@ -514,7 +514,7 @@ router.get("/admin/template-image/:filename", (req, res): void => {
   }
   const isJpeg = /\.(jpe?g)$/i.test(filename);
   res.setHeader("Content-Type", isJpeg ? "image/jpeg" : "image/png");
-  res.setHeader("Cache-Control", "private, max-age=3600");
+  res.setHeader("Cache-Control", "no-store");
   fs.createReadStream(filePath).pipe(res);
 });
 
