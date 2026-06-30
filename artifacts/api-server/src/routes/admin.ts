@@ -1,5 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, sql } from "drizzle-orm";
+import * as fs from "fs";
+import * as path from "path";
 import { db, campaignsTable, spotsTable, ordersTable, adminActionsTable } from "@workspace/db";
 import {
   AdminLoginBody,
@@ -484,6 +486,36 @@ router.get("/admin/census/county-info", requireAdmin, async (req, res): Promise<
     ...(resolvedViaZip ? { resolvedFromZip: resolvedViaZip } : {}),
     ...(countyInfo === null ? { warning: "Census ACS API unavailable — county name not resolved" } : {}),
   });
+});
+
+// ── Template image viewer ──────────────────────────────────────────────────
+function findAdminWorkspaceRoot(): string {
+  let dir = process.cwd();
+  while (dir !== path.parse(dir).root) {
+    if (fs.existsSync(path.join(dir, "pnpm-workspace.yaml"))) return dir;
+    dir = path.dirname(dir);
+  }
+  return process.cwd();
+}
+const WORKSPACE_ROOT_ADMIN = findAdminWorkspaceRoot();
+
+const SAFE_FILENAME_RE = /^[a-zA-Z0-9._\-{}]+\.(png|jpe?g)$/i;
+
+router.get("/admin/template-image/:filename", (req, res): void => {
+  const { filename } = req.params;
+  if (!filename || !SAFE_FILENAME_RE.test(filename)) {
+    res.status(400).json({ error: "Invalid filename" });
+    return;
+  }
+  const filePath = path.join(WORKSPACE_ROOT_ADMIN, "attached_assets", filename);
+  if (!fs.existsSync(filePath)) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  const isJpeg = /\.(jpe?g)$/i.test(filename);
+  res.setHeader("Content-Type", isJpeg ? "image/jpeg" : "image/png");
+  res.setHeader("Cache-Control", "private, max-age=3600");
+  fs.createReadStream(filePath).pipe(res);
 });
 
 export default router;

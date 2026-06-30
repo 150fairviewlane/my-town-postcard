@@ -73,6 +73,8 @@ const DealerBlogArticlePage = lazy(() => import("./pages/DealerBlogArticlePage")
 // @ts-expect-error JSX module without types
 const AdminImageGenPage = lazy(() => import("./pages/AdminImageGenPage"));
 // @ts-expect-error JSX module without types
+const AdminTemplateViewerPage = lazy(() => import("./pages/AdminTemplateViewerPage"));
+// @ts-expect-error JSX module without types
 const AdminCreateCustomTerritoryPage = lazy(() => import("./pages/AdminCreateCustomTerritoryPage"));
 // @ts-expect-error JSX module without types
 const DiscoverLeadsPage = lazy(() => import("./pages/DiscoverLeadsPage"));
@@ -141,6 +143,7 @@ function Router() {
         <Route path="/admin/territories/detail" component={AdminDashboard} />
         <Route path="/admin/territories/custom" component={AdminCreateCustomTerritoryPage} />
         <Route path="/admin/territories" component={AdminTerritoriesPage} />
+        <Route path="/admin/templates" component={AdminTemplateViewerPage} />
         <Route path="/admin/image-gen" component={AdminImageGenPage} />
         <Route path="/admin/campaign/:id/print" component={AdminPrintPage} />
         <Route path="/admin/discover" component={DiscoverLeadsPage} />

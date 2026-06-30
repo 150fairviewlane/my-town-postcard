@@ -229,6 +229,7 @@ export default function AdminNav() {
           {toolsOpen && (
             <div style={{ paddingBottom: 4 }}>
               <NavLink href="/admin/ai-test" icon="🧪" label="AI Model Testing" />
+              <NavLink href="/admin/templates" icon="🗃" label="Template Images" />
               <NavLink href="/admin/image-gen" icon="🖼" label="Image Generator" />
               <NavLink href="/api/grok-ad-generator" icon="✦" label="Grok Ad Gen" external />
               <NavLink href="/api/admin/image-library" icon="📷" label="Image Library" external />
