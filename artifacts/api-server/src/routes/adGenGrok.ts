@@ -2474,6 +2474,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
       <div class="sec-label">Business Info</div>
       <div class="fgrid">
         <div class="field"><label>Business Name *</label><input type="text" id="bizName" placeholder="Mr. Biscuit's Cafe" oninput="onFormChange()"></div>
+        <div class="field"></div>
         <div class="field">
           <label>Category</label>
           <select id="category" onchange="onCategoryChange()">
@@ -2490,13 +2491,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
             <option>Entertainment/Events</option>
           </select>
         </div>
+        <div class="field"><label>Tagline / Slogan</label><input type="text" id="tagline" spellcheck="true" placeholder="From-Scratch Biscuits &amp; Boba!"></div>
         <div class="field">
           <label>Industry</label>
           <select id="industry" onchange="onIndustryChange()" disabled>
             <option value="">&mdash; Select Category First &mdash;</option>
           </select>
         </div>
-        <div class="field"><label>Tagline / Slogan</label><input type="text" id="tagline" spellcheck="true" placeholder="From-Scratch Biscuits &amp; Boba!"></div>
         <div class="field"><label>Phone</label><input type="text" id="phone" placeholder="(706) 754-0105"></div>
         <div class="field"><label>Street Address</label><input type="text" id="address" placeholder="596 W Louise St"></div>
         <div class="field"><label>Website / URL</label><input type="text" id="website" placeholder="mytownpostcard.com"></div>
@@ -3686,21 +3687,24 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
     <div>
       <div class="sec-label">Business Info</div>
       <div class="field"><label>Business Name *</label><input type="text" id="bizName" placeholder="Mr. Biscuit's Cafe" oninput="onFormChange()"></div>
-      <div class="field">
-        <label>Category</label>
-        <select id="category" onchange="onCategoryChange()">
-          <option value="">&mdash; Select Category &mdash;</option>
-          <option>Food &amp; Dining</option>
-          <option>Home Services</option>
-          <option>Auto Services</option>
-          <option>Health &amp; Wellness</option>
-          <option>Beauty &amp; Personal Care</option>
-          <option>Pet Services</option>
-          <option>Retail</option>
-          <option>Professional Services</option>
-          <option>Childcare &amp; Education</option>
-          <option>Entertainment/Events</option>
-        </select>
+      <div class="frow">
+        <div class="field">
+          <label>Category</label>
+          <select id="category" onchange="onCategoryChange()">
+            <option value="">&mdash; Select Category &mdash;</option>
+            <option>Food &amp; Dining</option>
+            <option>Home Services</option>
+            <option>Auto Services</option>
+            <option>Health &amp; Wellness</option>
+            <option>Beauty &amp; Personal Care</option>
+            <option>Pet Services</option>
+            <option>Retail</option>
+            <option>Professional Services</option>
+            <option>Childcare &amp; Education</option>
+            <option>Entertainment/Events</option>
+          </select>
+        </div>
+        <div class="field"><label>Tagline / Slogan</label><input type="text" id="tagline" spellcheck="true" placeholder="From-Scratch Biscuits &amp; Boba!"></div>
       </div>
       <div class="field">
         <label>Industry</label>
@@ -3708,7 +3712,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
           <option value="">&mdash; Select Category First &mdash;</option>
         </select>
       </div>
-      <div class="field"><label>Tagline / Slogan</label><input type="text" id="tagline" spellcheck="true" placeholder="From-Scratch Biscuits &amp; Boba!"></div>
       <div class="frow">
         <div class="field"><label>Phone *</label><input type="text" id="phone" placeholder="(706) 754-0105"></div>
         <div class="field"><label>City, State</label><input type="text" id="city" placeholder="Clarkesville, GA"></div>
