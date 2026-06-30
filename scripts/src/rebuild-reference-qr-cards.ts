@@ -119,9 +119,11 @@ async function main() {
     const eraseW    = imgW - eraseLeft;
     const eraseH    = imgH - eraseTop;
 
-    // Sample background colour just above the erase zone (footer background)
-    const sampleX = Math.max(0, Math.min(eraseLeft + 10, imgW - 21));
-    const sampleY = Math.max(0, eraseTop - 25);
+    // Sample background colour from the leftmost edge of the footer band so the
+    // sample is always far from the old stamp (which sits in the bottom-right
+    // corner). Using x=5 avoids any magenta bleed regardless of orientation.
+    const sampleX = 5;
+    const sampleY = Math.max(0, oldCardTop);
     const bgHex   = await sampleBgColor(srcBuf, sampleX, sampleY);
 
     // Erase: paint sampled colour over the old card + padding region
