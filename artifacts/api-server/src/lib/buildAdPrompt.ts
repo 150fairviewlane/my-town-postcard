@@ -72,34 +72,33 @@ export function getDefaultThemeIndex(industry: string): number {
 // ── Footer zone builder ──────────────────────────────────────────────────────
 
 export function buildFooterZone(phone: string, address: string, isLandscape = false): string {
-  const magentaNote =
-    `QR MARKER: The reference image has a solid bright magenta (#FF00FF) square ` +
-    `in the lower-right corner of the body (just above/overlapping the footer). ` +
-    `Reproduce this magenta square EXACTLY — same position, same size, pure #FF00FF colour. ` +
-    `This is a mandatory machine-readable element; do not omit, recolour, or obscure it.\n\n`;
+  // Right column is always the QR slot — same instruction for both orientations.
+  const qrSlot =
+    `solid magenta (#FF00FF) square anchored to the footer's bottom-right corner — ` +
+    `same size as reference image, no other element here`;
 
   if (isLandscape) {
     const hasAddr = address !== "(none)";
     return (
-      `FOOTER (full-width dark bar, 20% of card height): ` +
-      `THREE inline columns left to right — ` +
-      `LEFT: "${phone}" bold white, very large (the largest text in the footer); ` +
+      `FOOTER (full-width dark bar, 20% of card height) — THREE columns: ` +
+      `LEFT: "${phone}" bold white, very large; ` +
       `CENTER: ` + (hasAddr
-        ? `"${address}" bold white, large, split to 2 lines at the comma (street on line 1, city/state on line 2), ` +
-          `center-aligned within the center column — do not extend past 78% of the total footer width; `
+        ? `"${address}" bold white, large, street/city split to 2 lines — max 78% of footer width; `
         : `(centered placeholder); `) +
-      `Phone once, footer only.\n\n` +
-      magentaNote
+      `RIGHT (QR slot): ${qrSlot}. ` +
+      `Phone once, footer only.\n\n`
     );
   }
+
+  const hasAddr = address !== "(none)";
   return (
-    `FOOTER (full-width dark bar, 20% of card height): ` +
-    `"${phone}" bold white, very large, left-aligned (the largest text in the footer); ` +
-    (address !== "(none)"
-      ? `"${address}" bold white, large, directly below phone — left-aligned, must not extend past 75% of the footer width; `
-      : "") +
-    `Phone once, footer only.\n\n` +
-    magentaNote
+    `FOOTER (full-width dark bar, 20% of card height) — TWO columns: ` +
+    `LEFT (70%): "${phone}" bold white, very large; ` +
+    (hasAddr
+      ? `"${address}" bold white, large, stacked below — all text within left 70%; `
+      : ``) +
+    `RIGHT (30% — QR slot): ${qrSlot}. ` +
+    `Phone once, footer only.\n\n`
   );
 }
 
@@ -992,7 +991,7 @@ export function buildAdPrompt(
         ? `SPECIAL OFFER (dashed coupon box, lower area): offer text bold dark, fine print smaller below.\n\n`
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape) +
-      `RESERVED CORNER: No purple circle/dot-grid, coupon box, cream tile, or leaf sprig in reserved corner.\n\n`
+      `RESERVED CORNER: The bottom-right body area must NOT contain a muted purple circle or dot-grid accent, a dashed coupon box, a cream rounded-rect tile, or a sage green leaf sprig element. Those elements are correct elsewhere on the card but must never be recreated or bleed into this corner area.\n\n`
     )
     : templateKey === "sage-organic"
     ? (
@@ -1021,7 +1020,7 @@ export function buildAdPrompt(
         ? `COUPON (kraft paper/cardboard textured rectangle with dashed stitched border and scissors icon, lower-right): offer text bold dark, fine print smaller below.\n\n`
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape) +
-      `RESERVED CORNER: No kraft coupon, dark olive badge, or olive wave band in reserved corner.\n\n`
+      `RESERVED CORNER: The bottom-right body area must NOT contain a kraft paper dashed-stitch coupon rectangle, a dark olive circular icon badge, or a dark olive wave band element. Those elements are correct elsewhere on the card but must never be recreated or bleed into this corner area.\n\n`
     )
     : templateKey === "home-elegance"
     ? (
@@ -1046,7 +1045,7 @@ export function buildAdPrompt(
         ? `SPECIAL OFFER (dashed coupon box, lower area): offer text bold dark navy, large. Fine print smaller below.\n\n`
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape) +
-      `RESERVED CORNER — must not appear here: a solid navy rectangle, a rounded-rect service tile, or a circular dark navy icon badge.\n\n`
+      `RESERVED CORNER: The bottom-right body area must NOT contain a solid navy filled rectangle, a rounded-rect service tile, or a circular dark navy icon badge. Those elements belong in the SERVICE TILES and dark navy lower area but must never be recreated or bleed into this corner area.\n\n`
     )
     : templateKey === "surprise-me"
     ? (
@@ -1069,6 +1068,7 @@ export function buildAdPrompt(
         ? `  SPECIAL OFFER (own visually distinct coupon zone, clearly separated from services): offer text and fine print from BUSINESS DETAILS. No filler phrases.\n`
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape) +
+      `RESERVED CORNER: The bottom-right body area must NOT be crowded by coupon boxes, service list elements, or hero photo zones. Keep the lower-right corner of the content area clear — the footer's right column handles the QR slot.\n\n` +
       "QUALITY: ✗ flat bg | ✗ rectangular frames | ✗ text on bare color | ✗ filler in coupon. ✓ Three depth planes | ✓ cinematic edge blending | ✓ 300 DPI.\n\n"
     )
     : templateKey === "health-wellness"
@@ -1154,7 +1154,7 @@ export function buildAdPrompt(
         ? `COUPON (centered full-width zone in the body of the ad, between the service badges above and the dark footer bar below — NOT inside the footer bar itself): dashed-border rounded-rect, scissors ✂ icon, offer text bold dark burgundy inside box, fine print below. This zone sits entirely above the footer.\n\n`
         : "") +
       buildFooterZone(d.phone || "", fullAddress, isLandscape) +
-      `RESERVED CORNER: Must not contain coupon box, offer text, headline rounded-rect, or diamond ◆ separator — those belong in the body, not the corner.\n\n`
+      `RESERVED CORNER: The bottom-right body area must NOT contain a dashed-border coupon box or offer text, a rounded-rect headline zone with a thin burgundy border, or a diamond ◆ separator element. Those elements belong in the body above the footer but must never be recreated or bleed into this corner area.\n\n`
     )
     : (
       // Default: parchment-classic portrait
