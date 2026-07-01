@@ -413,6 +413,7 @@ router.post("/checkout/create-spot-session", async (req, res): Promise<void> => 
     return;
   }
 
+  console.log('[DEBUG] x-forwarded-host:', req.get('x-forwarded-host'), '| host:', req.get('host'), '| x-forwarded-proto:', req.get('x-forwarded-proto'));
   const origin = publicOrigin(req);
   const sizeLabel = `${spot.size.charAt(0).toUpperCase()}${spot.size.slice(1)} Postcard Ad`;
   const session = await stripe.checkout.sessions.create({
