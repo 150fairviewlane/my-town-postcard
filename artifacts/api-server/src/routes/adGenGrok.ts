@@ -2383,6 +2383,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .err-box.visible{display:block}
 .field-error{border-color:#ef4444 !important;box-shadow:0 0 0 3px rgba(239,68,68,.25) !important;animation:field-shake .35s ease}
 @keyframes field-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@keyframes ind-pulse{0%,100%{box-shadow:0 0 0 0 rgba(124,28,46,0)}50%{box-shadow:0 0 0 5px rgba(124,28,46,0.22)}}
+.ind-pulse{border-color:var(--burg) !important;background:#fff !important;animation:ind-pulse 1s ease-in-out 3}
 /* Right panel */
 .rpanel{background:#111827;display:flex;flex-direction:column;overflow:hidden}
 .rpanel-header{padding:14px 18px 12px;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.1)}
