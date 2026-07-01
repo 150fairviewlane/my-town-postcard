@@ -662,22 +662,7 @@ const handleComplete=async(formData,selOverride,sideOverride)=>{
     });
     setSel(null);
     localStorage.removeItem(PENDING_AD_KEY);
-    if(slug){
-      // Territory/dealer landing pages use hosted Stripe Checkout: create a
-      // session for the reserved spot and hand off to Stripe. On success the
-      // customer lands on /spot-confirmation which finalizes the sale.
-      const res=await fetch(`${import.meta.env.BASE_URL}api/checkout/create-spot-session`,{
-        method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({spotId:result.id,slug}),
-      });
-      const data=await res.json();
-      if(!res.ok||!data?.url){
-        throw new Error(data?.error||"Could not start checkout. Please try again.");
-      }
-      window.location.href=data.url;
-      return;
-    }
-    navigate(`/checkout/${result.id}`);
+    navigate(`/checkout/${result.id}${slug ? `?from=${encodeURIComponent(slug)}` : ""}`);
   }catch(err){
     console.error('[handleComplete] caught error:',err);
     setReserveError(err?.data?.error||err?.message||"Something went wrong. Please try again.");

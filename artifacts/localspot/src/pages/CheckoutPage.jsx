@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useParams, useLocation } from "wouter";
+import { useParams, useLocation, useSearch } from "wouter";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import {
@@ -132,7 +132,7 @@ function CheckoutForm({ spotId, clientSecret, amount, size, businessName, expire
       clearReservation(spotId);
       // Send the customer to the confirmation page that shows their
       // business name, spot size, and price paid.
-      navigate(`/confirmation/${spotId}`);
+      navigate(`/confirmation/${spotId}${fromSlug ? `?from=${encodeURIComponent(fromSlug)}` : ""}`);
     } catch (err) {
       const apiMsg =
         (err?.data && typeof err.data === "object" && err.data.error) ||
@@ -407,6 +407,8 @@ function SubscriptionRedirect({ spotId, size, planKey, onError }) {
 export default function CheckoutPage() {
   const { spotId } = useParams();
   const [, navigate] = useLocation();
+  const search = useSearch();
+  const fromSlug = new URLSearchParams(search).get("from") || "";
   const [intentData, setIntentData] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [stripeLoadError, setStripeLoadError] = useState(null);

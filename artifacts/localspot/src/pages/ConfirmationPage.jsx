@@ -1,4 +1,4 @@
-import { useLocation, useParams } from "wouter";
+import { useLocation, useParams, useSearch } from "wouter";
 import { useGetSpot } from "@workspace/api-client-react";
 
 const SIZE_LABELS = {
@@ -11,6 +11,8 @@ const SIZE_LABELS = {
 export default function ConfirmationPage() {
   const [, navigate] = useLocation();
   const { spotId } = useParams();
+  const search = useSearch();
+  const fromSlug = new URLSearchParams(search).get("from") || "";
   const numericId = spotId ? parseInt(spotId, 10) : NaN;
   const enabled = Number.isFinite(numericId);
 
@@ -112,10 +114,11 @@ export default function ConfirmationPage() {
             onClick={() => {
               const side = spot?.side || "front";
               const area = spot?.gridArea || "";
-              navigate(`/?side=${side}${area ? `&highlight=${area}` : ""}`);
+              const base = fromSlug ? `/${fromSlug}` : "";
+              navigate(`${base}?side=${side}${area ? `&highlight=${area}` : ""}`);
             }}
             style={{ background: "#991b1b", color: "#fff", border: "none", borderRadius: 10, padding: "13px 32px", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>
-            Back to Postcard
+            View My Ad on Postcard
           </button>
         </div>
       </div>
