@@ -310,6 +310,17 @@ router.get("/checkout/subscription-confirm", async (req, res): Promise<void> => 
     return;
   }
 
+  req.log.info({
+    sessionId,
+    mode: session.mode,
+    paymentStatus: session.payment_status,
+    customerType: typeof session.customer,
+    customer: typeof session.customer === "string" ? session.customer : JSON.stringify(session.customer),
+    hasSubscription: !!session.subscription,
+    subscriptionType: typeof session.subscription,
+    hasPaymentIntent: !!session.payment_intent,
+  }, "subscription-confirm session fields");
+
   const isPaid = session.payment_status === "paid" || session.payment_status === "no_payment_required";
   if (!isPaid) {
     res.status(202).json({
