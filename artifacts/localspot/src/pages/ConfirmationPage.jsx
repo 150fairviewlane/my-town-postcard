@@ -13,6 +13,9 @@ export default function ConfirmationPage() {
   const { spotId } = useParams();
   const search = useSearch();
   const fromSlug = new URLSearchParams(search).get("from") || "";
+  const cityName = fromSlug
+    ? fromSlug.split("-").slice(0, -1).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
+    : null;
   const numericId = spotId ? parseInt(spotId, 10) : NaN;
   const enabled = Number.isFinite(numericId);
 
@@ -35,8 +38,11 @@ export default function ConfirmationPage() {
             You're on the Postcard!
           </h1>
           <p style={{ color: "#374151", fontSize: 15, lineHeight: 1.6, marginBottom: 24 }}>
-            Your ad will appear on the next <strong>Habersham Community Mailer</strong>,
-            reaching <strong>5,000 homes</strong> across Clarksville, Cornelia, Demorest and Alto.
+            {cityName ? (
+              <>Your ad will appear on the next <strong>{cityName}</strong> postcard, reaching <strong>5,000 homes</strong>.</>
+            ) : (
+              <>Your ad will appear on the next <strong>Habersham Community Mailer</strong>, reaching <strong>5,000 homes</strong> across Clarksville, Cornelia, Demorest and Alto.</>
+            )}
           </p>
 
           {/* Order summary card — pulls live from the server so even on a
