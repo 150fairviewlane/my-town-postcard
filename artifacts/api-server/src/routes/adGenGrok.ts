@@ -3085,6 +3085,10 @@ async function generate(){
   if(_isGenerating || _variations.length >= 6) return;
   var biz = document.getElementById('bizName').value.trim();
   if(!biz){ showErr('Please enter a business name above.'); return; }
+  var _cat = document.getElementById('category').value;
+  if(!_cat){ showErr('Please select a Category before generating your ad.'); var _cEl=document.getElementById('category'); _cEl.scrollIntoView({behavior:'smooth',block:'center'}); _cEl.classList.add('field-error'); setTimeout(function(){ _cEl.classList.remove('field-error'); },2000); return; }
+  var _ind = document.getElementById('industry').value;
+  if(!_ind){ showErr('Please select an Industry before generating your ad.'); var _iEl=document.getElementById('industry'); _iEl.scrollIntoView({behavior:'smooth',block:'center'}); _iEl.classList.add('field-error'); setTimeout(function(){ _iEl.classList.remove('field-error'); },2000); return; }
   hideErr();
   _isGenerating = true;
   document.getElementById('genBtn').disabled = true;
@@ -4514,7 +4518,11 @@ function clearLogo(evt){
 
 async function generate(){
   var biz = document.getElementById('bizName').value.trim();
-  if(!biz){ alert('Please enter a business name.'); return; }
+  if(!biz){ showErr('Please enter a business name.'); return; }
+  var _cat = document.getElementById('category').value;
+  if(!_cat){ showErr('Please select a Category before generating your ad.'); var _cEl=document.getElementById('category'); _cEl.scrollIntoView({behavior:'smooth',block:'center'}); _cEl.classList.add('field-error'); setTimeout(function(){ _cEl.classList.remove('field-error'); },2000); return; }
+  var _ind = document.getElementById('industry').value;
+  if(!_ind){ showErr('Please select an Industry before generating your ad.'); var _iEl=document.getElementById('industry'); _iEl.scrollIntoView({behavior:'smooth',block:'center'}); _iEl.classList.add('field-error'); setTimeout(function(){ _iEl.classList.remove('field-error'); },2000); return; }
 
   hideResult(); hideErr();
   document.getElementById('genBtn').disabled = true;
