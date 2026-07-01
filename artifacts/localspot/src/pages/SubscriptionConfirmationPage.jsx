@@ -1,20 +1,26 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "wouter";
 
 export default function SubscriptionConfirmationPage() {
+  const [, navigate] = useLocation();
   const [status, setStatus] = useState("loading");
   const [details, setDetails] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
+  const [fromSlug, setFromSlug] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get("session_id");
+    const slug = params.get("from") || "";
+    if (slug) setFromSlug(slug);
     if (!sessionId) {
       setErrorMsg("No session ID found. Please contact support.");
       setStatus("error");
       return;
     }
 
-    fetch(`/api/checkout/subscription-confirm?session_id=${sessionId}`)
+    const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+    fetch(`${base}/api/checkout/subscription-confirm?session_id=${encodeURIComponent(sessionId)}`)
       .then((r) => r.json())
       .then((data) => {
         if (data?.success) {
@@ -92,12 +98,12 @@ export default function SubscriptionConfirmationPage() {
         </p>
 
 
-        <a
-          href="/"
-          style={{ display: "inline-block", background: "#7B1418", color: "#fff", fontWeight: 600, padding: "12px 28px", borderRadius: 8, textDecoration: "none", fontSize: 15 }}
+        <button
+          onClick={() => navigate(fromSlug ? `/${fromSlug}` : "/")}
+          style={{ display: "inline-block", background: "#7B1418", color: "#fff", fontWeight: 600, padding: "12px 28px", borderRadius: 8, border: "none", fontSize: 15, cursor: "pointer" }}
         >
-          ← View the Postcard
-        </a>
+          View My Ad on Postcard
+        </button>
       </div>
     </div>
   );

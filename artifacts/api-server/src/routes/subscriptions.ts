@@ -67,6 +67,27 @@ function getOrigin(req: Request): string {
 }
 
 /**
+ * Origin for Stripe success_url / cancel_url — must resolve to wherever the
+ * customer's browser actually is, NOT a configured production alias like APP_URL.
+ * Priority: X-Forwarded-Host (set by Replit's proxy for both dev and prod) →
+ * REPLIT_DOMAINS (injected per-deployment, absent in dev workspace) → Host header.
+ * APP_URL is intentionally excluded so a production alias never hijacks dev flows.
+ */
+function stripeReturnOrigin(req: Request): string {
+  const proto =
+    (req.get("x-forwarded-proto") ?? "").split(",")[0].trim() === "https" ||
+    req.protocol === "https"
+      ? "https"
+      : "http";
+  const xfh = req.get("x-forwarded-host");
+  if (xfh) return `${proto}://${xfh.split(",")[0].trim()}`;
+  const replitDomain = process.env.REPLIT_DOMAINS?.split(",")[0]?.trim();
+  if (replitDomain) return `https://${replitDomain}`;
+  const host = req.get("host") ?? `localhost:${process.env.PORT ?? "3000"}`;
+  return `${proto}://${host}`;
+}
+
+/**
  * POST /api/checkout/create-subscription-session
  * Body: { spotId: number, commitmentType: "6_issue" | "12_issue" }
  *
@@ -81,6 +102,7 @@ function getOrigin(req: Request): string {
 router.post("/checkout/create-subscription-session", async (req, res): Promise<void> => {
   const spotId = Number(req.body?.spotId);
   const commitmentType = parseCommitmentType(req.body?.commitmentType);
+  const fromSlug = typeof req.body?.fromSlug === "string" ? req.body.fromSlug.trim() : "";
   if (!Number.isFinite(spotId) || !commitmentType || commitmentType === "single") {
     res.status(400).json({ error: "spotId and a valid commitmentType (4_issue or 12_issue) are required" });
     return;
@@ -220,8 +242,8 @@ router.post("/checkout/create-subscription-session", async (req, res): Promise<v
       spotId: String(spot.id),
       commitmentType,
     },
-    success_url: `${origin}/subscription-confirmation?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${origin}/checkout/${spot.id}?cancelled=1`,
+    success_url: `${stripeReturnOrigin(req)}/subscription-confirmation?session_id={CHECKOUT_SESSION_ID}${fromSlug ? `&from=${encodeURIComponent(fromSlug)}` : ""}`,
+    cancel_url: `${stripeReturnOrigin(req)}/checkout/${spot.id}${fromSlug ? `?from=${encodeURIComponent(fromSlug)}` : ""}`,
   });
 
   req.log.info(

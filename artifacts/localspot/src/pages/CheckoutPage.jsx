@@ -347,7 +347,7 @@ function PlanSelector({ size, value, onChange }) {
   );
 }
 
-function SubscriptionRedirect({ spotId, size, planKey, onError }) {
+function SubscriptionRedirect({ spotId, size, planKey, onError, fromSlug }) {
   const [busy, setBusy] = useState(false);
   const monthly = monthlyCents(size, planKey);
   const total = totalCents(size, planKey);
@@ -359,7 +359,7 @@ function SubscriptionRedirect({ spotId, size, planKey, onError }) {
       const res = await fetch(`${base}/api/checkout/create-subscription-session`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ spotId: parseInt(spotId, 10), commitmentType: planKey }),
+        body: JSON.stringify({ spotId: parseInt(spotId, 10), commitmentType: planKey, ...(fromSlug ? { fromSlug } : {}) }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body?.error || `Server returned ${res.status}`);
@@ -542,6 +542,7 @@ export default function CheckoutPage() {
               size={intentData.size}
               planKey={selectedPlan}
               onError={(m) => setSubError(m)}
+              fromSlug={fromSlug}
             />
           )}
         </>
