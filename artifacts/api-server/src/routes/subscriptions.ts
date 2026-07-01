@@ -283,7 +283,12 @@ router.get("/checkout/subscription-confirm", async (req, res): Promise<void> => 
   const stripe = await getStripeClient();
   let session: any;
   try {
-    session = await stripe.checkout.sessions.retrieve(sessionId);
+    // Expand the subscription + its latest invoice + payment intent so we can
+    // extract payment references in subscription mode (session.payment_intent
+    // is null for subscription Checkout — the PI lives on the invoice).
+    session = await stripe.checkout.sessions.retrieve(sessionId, {
+      expand: ["subscription.latest_invoice.payment_intent"],
+    });
   } catch (err: any) {
     req.log.warn({ err: err?.message, sessionId }, "Could not retrieve subscription session");
     res.status(400).json({ error: "Could not verify checkout session." });
@@ -314,23 +319,56 @@ router.get("/checkout/subscription-confirm", async (req, res): Promise<void> => 
     return;
   }
 
-  const stripeCustomerId = typeof session.customer === "string" ? session.customer : session.customer?.id ?? null;
-  const paymentIntentId = typeof session.payment_intent === "string"
-    ? session.payment_intent
-    : (session.payment_intent as any)?.id ?? null;
-  if (!paymentIntentId || !stripeCustomerId) {
-    res.status(500).json({ error: "Stripe session missing payment intent or customer references." });
+  const stripeCustomerId = typeof session.customer === "string" ? session.customer : (session.customer as any)?.id ?? null;
+  if (!stripeCustomerId) {
+    res.status(500).json({ error: "Stripe session missing customer reference." });
     return;
   }
 
+  // For subscription-mode Checkout sessions, payment_intent is null on the session
+  // itself — the PaymentIntent lives on subscription.latest_invoice.payment_intent
+  // (expanded above). For one-time mode it's directly on session.payment_intent.
+  const rawPi = session.payment_intent ?? session.subscription?.latest_invoice?.payment_intent ?? null;
+  const paymentIntentId: string | null =
+    typeof rawPi === "string" ? rawPi : (rawPi as any)?.id ?? null;
+
+  // Use Stripe subscription ID as fallback paymentRef (e.g. free first month)
+  const rawSub = session.subscription;
+  const stripeSubscriptionId: string | null =
+    typeof rawSub === "string" ? rawSub : (rawSub as any)?.id ?? null;
+
+  const paymentRef = paymentIntentId ?? stripeSubscriptionId;
+  if (!paymentRef) {
+    res.status(500).json({ error: "Stripe session missing payment intent or subscription reference." });
+    return;
+  }
+
+  // Get payment method: prefer from the expanded PaymentIntent object, else
+  // retrieve it; final fallback is subscription.default_payment_method.
   let stripePaymentMethodId: string | null = null;
-  try {
-    const pi = await stripe.paymentIntents.retrieve(paymentIntentId);
-    stripePaymentMethodId = typeof pi.payment_method === "string"
-      ? pi.payment_method
-      : (pi.payment_method as any)?.id ?? null;
-  } catch (err: any) {
-    req.log.warn({ err: err?.message, paymentIntentId }, "Could not retrieve PaymentIntent for payment method");
+  const rawPm = (rawPi as any)?.payment_method ?? null;
+  if (rawPm) {
+    stripePaymentMethodId = typeof rawPm === "string" ? rawPm : (rawPm as any)?.id ?? null;
+  }
+  if (!stripePaymentMethodId && paymentIntentId) {
+    try {
+      const pi = await stripe.paymentIntents.retrieve(paymentIntentId);
+      stripePaymentMethodId = typeof pi.payment_method === "string"
+        ? pi.payment_method
+        : (pi.payment_method as any)?.id ?? null;
+    } catch (err: any) {
+      req.log.warn({ err: err?.message, paymentIntentId }, "Could not retrieve PaymentIntent for payment method");
+    }
+  }
+  if (!stripePaymentMethodId && stripeSubscriptionId) {
+    try {
+      const sub = await stripe.subscriptions.retrieve(stripeSubscriptionId);
+      stripePaymentMethodId = typeof sub.default_payment_method === "string"
+        ? sub.default_payment_method
+        : (sub.default_payment_method as any)?.id ?? null;
+    } catch (err: any) {
+      req.log.warn({ err: err?.message, stripeSubscriptionId }, "Could not retrieve subscription default payment method");
+    }
   }
   if (!stripePaymentMethodId) {
     res.status(500).json({ error: "Could not retrieve saved payment method from Stripe." });
@@ -342,7 +380,7 @@ router.get("/checkout/subscription-confirm", async (req, res): Promise<void> => 
     spotId: pending.initialSpotId,
     stripePaymentMethodId,
     stripeCustomerId,
-    paymentRef: paymentIntentId,
+    paymentRef: paymentRef,
     monthlyCents: pending.monthlyPriceCents,
     req,
   });
