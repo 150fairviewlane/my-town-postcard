@@ -179,6 +179,30 @@ export async function swapQrCode(
     return compositeQrOnto(imageBuffer, trackingUrl, spotSize, style);
   }
 
+  // ── Size / shape guard ──────────────────────────────────────────────────────
+  // A real QR placeholder should be a small, roughly-square marker.
+  // If Grok painted a large magenta area (e.g. a coloured background band)
+  // the bounding-box will be far larger than the expected card.
+  // Guard: detected region must be no wider/taller than 3× the spec qrSize,
+  // AND must have an aspect ratio between 0.25 and 4.
+  const MAX_MARKER_FACTOR = 3;
+  const maxMarkerDim = spec.qrSize * MAX_MARKER_FACTOR;
+  const detectedAspect = loc.width / Math.max(loc.height, 1);
+  if (loc.width > maxMarkerDim || loc.height > maxMarkerDim) {
+    logger.warn(
+      { spotSize, detected: loc, maxMarkerDim, specQrSize: spec.qrSize },
+      "swapQrCode: magenta region too large to be a QR marker — falling back to fixed-corner",
+    );
+    return compositeQrOnto(imageBuffer, trackingUrl, spotSize, style);
+  }
+  if (detectedAspect > 4 || detectedAspect < 0.25) {
+    logger.warn(
+      { spotSize, detected: loc, detectedAspect },
+      "swapQrCode: magenta region too non-square to be a QR marker — falling back to fixed-corner",
+    );
+    return compositeQrOnto(imageBuffer, trackingUrl, spotSize, style);
+  }
+
   logger.info(
     { spotSize, detected: loc },
     "swapQrCode: magenta marker detected — compositing real QR at detected position",
