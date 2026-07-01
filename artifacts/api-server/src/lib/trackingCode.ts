@@ -1,6 +1,9 @@
+import jsqr from "jsqr";
+import QRCode from "qrcode";
 import { eq } from "drizzle-orm";
 import { db, spotsTable, campaignsTable, type Spot } from "@workspace/db";
-import { compositeQrOnto, getTemplateQrStyle, type SizeKey } from "./compositeQr";
+import { compositeQrOnto, getTemplateQrStyle, QR_PLACEMENT, type SizeKey, type CardStyle } from "./compositeQr";
+import { logger } from "./logger";
 
 // Convert any string into a URL-safe lowercase slug. Strips accents, replaces
 // runs of non-alphanumerics with a single dash, trims leading/trailing dashes,
@@ -93,6 +96,119 @@ export async function ensureTrackingCode(spot: Spot): Promise<string> {
 }
 
 /**
+ * Detect the preview QR already embedded in `buf` with jsQR, then composite
+ * a new tracking QR (encoding `trackingUrl`) at the exact detected centre —
+ * no glow disc, no fixed-corner formula.
+ *
+ * Falls back to `compositeQrOnto` (fixed corner) only when jsQR cannot locate
+ * the preview QR. After compositing, verifies the final image with jsQR:
+ *   - No QR found   → logger.error (compositing failed entirely)
+ *   - Wrong URL     → logger.error (old QR still dominant — double-QR risk)
+ *   - Correct URL   → logger.info  (success)
+ * Both error paths fall back to `compositeQrOnto` so a usable ad is always saved.
+ */
+async function replacePreviewQr(
+  buf: Buffer,
+  trackingUrl: string,
+  sizeKey: SizeKey,
+  style: CardStyle,
+): Promise<Buffer> {
+  const sharpMod = await (import("sharp") as Promise<any>);
+  const sharp    = (sharpMod.default ?? sharpMod) as typeof import("sharp");
+
+  // ── 1. Detect the preview QR bounding box ──────────────────────────────────
+  const { data: rawPx, info } = await sharp(buf)
+    .raw().ensureAlpha().toBuffer({ resolveWithObject: true });
+  const detected = jsqr(new Uint8ClampedArray(rawPx), info.width, info.height);
+
+  if (!detected) {
+    logger.warn({ sizeKey }, "swapGrokQr: jsQR found no preview QR in stored image — falling back to fixed-corner");
+    return compositeQrOnto(buf, trackingUrl, sizeKey, style);
+  }
+
+  // ── 2. Derive card placement from detected centre ──────────────────────────
+  const tl = detected.location.topLeftCorner;
+  const br = detected.location.bottomRightCorner;
+  const cx = Math.round((tl.x + br.x) / 2);
+  const cy = Math.round((tl.y + br.y) / 2);
+
+  const spec        = QR_PLACEMENT[sizeKey] ?? QR_PLACEMENT.xl;
+  const innerMargin = style.marginMultiplier ?? 1.0375;
+  const cardSize    = Math.round(spec.qrSize * innerMargin);
+  const qrSize      = spec.qrSize;
+  const qrOffset    = Math.floor((cardSize - qrSize) / 2);
+  const cardLeft    = Math.min(Math.max(0, cx - Math.floor(cardSize / 2)), info.width  - cardSize);
+  const cardTop     = Math.min(Math.max(0, cy - Math.floor(cardSize / 2)), info.height - cardSize);
+
+  logger.info(
+    { sizeKey, cx, cy, cardLeft, cardTop, cardSize, qrSize, previewUrl: detected.data },
+    "swapGrokQr: preview QR detected — replacing at detected centre",
+  );
+
+  // ── 3. Build tracking QR + backing card (no glow disc — already baked in) ──
+  const qrPng: Buffer = await QRCode.toBuffer(trackingUrl, {
+    errorCorrectionLevel: "H",
+    type:   "png",
+    width:  qrSize,
+    margin: 4,
+    color:  { dark: "#000000", light: "#ffffff" },
+  });
+
+  const effectiveCornerRadius = style.circularCard ? Math.floor(cardSize / 2) : style.cornerRadius;
+  const sw          = style.borderWidth;
+  const hasBorder   = sw > 0;
+  const half        = hasBorder ? sw / 2 : 0;
+  const inset       = hasBorder ? sw : 0;
+  const strokeAttrs = hasBorder
+    ? ` stroke="${style.border}" stroke-width="${sw}"${style.dashPattern ? ` stroke-dasharray="${style.dashPattern.join(" ")}"` : ""}`
+    : "";
+  const cardSvg = Buffer.from(
+    `<svg width="${cardSize}" height="${cardSize}" xmlns="http://www.w3.org/2000/svg">` +
+    `<rect x="${half}" y="${half}" width="${cardSize - inset}" height="${cardSize - inset}" ` +
+    `rx="${effectiveCornerRadius}" ry="${effectiveCornerRadius}" fill="${style.fill}"${strokeAttrs}/>` +
+    `</svg>`,
+  );
+  const cardBase   = await sharp(cardSvg).png().toBuffer();
+  const cardWithQr = await sharp(cardBase)
+    .composite([{ input: qrPng, left: qrOffset, top: qrOffset }])
+    .png()
+    .toBuffer();
+
+  // ── 4. Composite at detected position ─────────────────────────────────────
+  const composited = await sharp(buf)
+    .composite([{ input: cardWithQr, left: cardLeft, top: cardTop }])
+    .jpeg({ quality: 98, chromaSubsampling: "4:4:4" })
+    .toBuffer();
+
+  // ── 5. Verify exactly one correct QR in the final image ───────────────────
+  const { data: verPx, info: verInfo } = await sharp(composited)
+    .raw().ensureAlpha().toBuffer({ resolveWithObject: true });
+  const verDecoded = jsqr(new Uint8ClampedArray(verPx), verInfo.width, verInfo.height);
+
+  if (!verDecoded) {
+    logger.error(
+      { sizeKey, cardLeft, cardTop, trackingUrl },
+      "swapGrokQr: post-composite QR count=0 — no QR readable in final image; falling back to fixed-corner",
+    );
+    return compositeQrOnto(buf, trackingUrl, sizeKey, style);
+  }
+
+  if (verDecoded.data !== trackingUrl) {
+    logger.error(
+      { sizeKey, cardLeft, cardTop, expected: trackingUrl, got: verDecoded.data },
+      "swapGrokQr: post-composite QR mismatch — old preview QR still dominant (double-QR risk); falling back to fixed-corner",
+    );
+    return compositeQrOnto(buf, trackingUrl, sizeKey, style);
+  }
+
+  logger.info(
+    { sizeKey, cardLeft, cardTop, cardSize },
+    "swapGrokQr: tracking QR composited and verified at detected position — single QR confirmed",
+  );
+  return composited;
+}
+
+/**
  * After a spot is marked paid and its tracking code is assigned, if the spot's
  * Grok-generated ad (stored as a data: URL in templateData.finishedAdUrl) still
  * carries a generic preview QR (pointing at the business website or the
@@ -145,7 +261,7 @@ export async function swapGrokQrInTemplateData(spotId: number): Promise<void> {
 
   const trackingUrl = `${(process.env.APP_URL ?? "https://mytownpostcard.com").replace(/\/$/, "")}/go/${spot.trackingCode}`;
   const buf         = Buffer.from(finishedAdUrl.split(",")[1] ?? "", "base64");
-  const composited  = await compositeQrOnto(buf, trackingUrl, sizeKey, qrStyle);
+  const composited  = await replacePreviewQr(buf, trackingUrl, sizeKey, qrStyle);
   const newDataUrl  = `data:image/jpeg;base64,${composited.toString("base64")}`;
 
   await db
