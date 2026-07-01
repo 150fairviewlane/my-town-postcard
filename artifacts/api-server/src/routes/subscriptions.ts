@@ -210,8 +210,13 @@ router.post("/checkout/create-subscription-session", async (req, res): Promise<v
   const session = await stripe.checkout.sessions.create({
     // Payment mode (not subscription): charge issue #1 now and save the card
     // for future off-session charges when subsequent issues go to print.
+    // customer_creation: "always" is required so Stripe creates a Customer
+    // object that session.customer returns post-checkout — without it,
+    // customer is null and setup_future_usage: "off_session" has nothing
+    // to attach the saved PaymentMethod to.
     mode: "payment",
     payment_method_types: ["card"],
+    customer_creation: "always",
     customer_email: spot.contactEmail,
     payment_intent_data: {
       setup_future_usage: "off_session",
@@ -309,17 +314,6 @@ router.get("/checkout/subscription-confirm", async (req, res): Promise<void> => 
     res.status(404).json({ error: "Subscription record not found." });
     return;
   }
-
-  req.log.info({
-    sessionId,
-    mode: session.mode,
-    paymentStatus: session.payment_status,
-    customerType: typeof session.customer,
-    customer: typeof session.customer === "string" ? session.customer : JSON.stringify(session.customer),
-    hasSubscription: !!session.subscription,
-    subscriptionType: typeof session.subscription,
-    hasPaymentIntent: !!session.payment_intent,
-  }, "subscription-confirm session fields");
 
   const isPaid = session.payment_status === "paid" || session.payment_status === "no_payment_required";
   if (!isPaid) {
