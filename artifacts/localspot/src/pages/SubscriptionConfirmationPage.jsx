@@ -87,8 +87,6 @@ export default function SubscriptionConfirmationPage() {
           <p style={{ fontWeight: 700, color: "#7B1418", marginBottom: 12, fontSize: 14, textTransform: "uppercase", letterSpacing: 0.5 }}>What happens next</p>
           <ul style={{ margin: 0, padding: 0, listStyle: "none", color: "#374151", fontSize: 14, lineHeight: 1.8 }}>
             <li>📧 A confirmation email is on its way to you</li>
-            <li>🎨 Our team will design your ad and send you a proof</li>
-            <li>✅ You approve the proof before anything goes to print</li>
             <li>📬 Your postcard mails to 5,000 local households</li>
           </ul>
         </div>
