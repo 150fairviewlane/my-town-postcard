@@ -2383,8 +2383,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .err-box.visible{display:block}
 .field-error{border-color:#ef4444 !important;box-shadow:0 0 0 3px rgba(239,68,68,.25) !important;animation:field-shake .35s ease}
 @keyframes field-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
-@keyframes ind-pulse{0%,100%{box-shadow:0 0 0 0 rgba(124,28,46,0)}50%{box-shadow:0 0 0 5px rgba(124,28,46,0.22)}}
-.ind-pulse{border-color:var(--burg) !important;background:#fff !important;animation:ind-pulse 1s ease-in-out 3}
+@keyframes industryPulse{0%{box-shadow:0 0 0 5px rgba(124,28,46,.28);border-color:var(--burg)}100%{box-shadow:none;border-color:var(--border)}}
+.industry-pulse{animation:industryPulse 1.3s ease-out forwards !important}
 /* Right panel */
 .rpanel{background:#111827;display:flex;flex-direction:column;overflow:hidden}
 .rpanel-header{padding:14px 18px 12px;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.1)}
@@ -3281,8 +3281,9 @@ function onCategoryChange(){
     var ph = document.createElement('option'); ph.value=''; ph.textContent = '\u2014 Select Industry \u2014';
     sel.appendChild(ph);
     industries.forEach(function(ind){ var o=document.createElement('option'); o.value=ind; o.text=ind; sel.appendChild(o); });
-    sel.size = Math.min(industries.length + 1, 8);
-    sel.focus();
+    sel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    sel.classList.add('industry-pulse');
+    setTimeout(function(){ sel.classList.remove('industry-pulse'); }, 1300);
   }
   onIndustryChange();
   applyTakenIndustries();
@@ -3627,6 +3628,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .err-box.visible{display:block}
 .field-error{border-color:#ef4444 !important;box-shadow:0 0 0 3px rgba(239,68,68,.25) !important;animation:field-shake .35s ease}
 @keyframes field-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@keyframes industryPulse{0%{box-shadow:0 0 0 5px rgba(124,28,46,.28);border-color:var(--burg)}100%{box-shadow:none;border-color:var(--border)}}
+.industry-pulse{animation:industryPulse 1.3s ease-out forwards !important}
 
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:#fff;padding:10px 22px;border-radius:30px;font-size:14px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,.3);transition:transform .3s cubic-bezier(.34,1.56,.64,1);z-index:999;pointer-events:none}
 .toast.show{transform:translateX(-50%) translateY(0)}
@@ -4431,8 +4434,9 @@ function onCategoryChange(){
     var ph = document.createElement('option'); ph.value=''; ph.textContent = '\u2014 Select Industry \u2014';
     sel.appendChild(ph);
     industries.forEach(function(ind){ var o=document.createElement('option'); o.value=ind; o.text=ind; sel.appendChild(o); });
-    sel.size = Math.min(industries.length + 1, 8);
-    sel.focus();
+    sel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    sel.classList.add('industry-pulse');
+    setTimeout(function(){ sel.classList.remove('industry-pulse'); }, 1300);
   }
   onIndustryChange();
   applyTakenIndustries();
