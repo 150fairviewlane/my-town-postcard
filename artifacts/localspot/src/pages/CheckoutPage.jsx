@@ -76,7 +76,7 @@ const SIZE_LABELS = {
   small: "Small",
 };
 
-function CheckoutForm({ spotId, clientSecret, amount, size, businessName, expiresAt }) {
+function CheckoutForm({ spotId, clientSecret, amount, size, businessName, expiresAt, fromSlug }) {
   const stripe = useStripe();
   const elements = useElements();
   const [, navigate] = useLocation();
@@ -534,6 +534,7 @@ export default function CheckoutPage() {
                 size={intentData.size}
                 businessName={intentData.businessName || "Your Business"}
                 expiresAt={expiresAt}
+                fromSlug={fromSlug}
               />
             </Elements>
           ) : (
