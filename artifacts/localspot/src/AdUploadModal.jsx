@@ -1,7 +1,19 @@
 import { useState, useRef } from "react";
 import { AD_SIZES } from "./AdGenerator";
-import { INDUSTRY_LIST } from "./industryAssets";
 import IndustryConflictDialog from "./components/IndustryConflictDialog";
+
+const CATEGORY_INDUSTRIES = {
+  'Food & Dining':          ['Pizza Restaurant','Mexican Restaurant','Chinese Restaurant','Breakfast & Cafe','Bar & Grill','Italian Restaurant','Bakery','Coffee Shop','BBQ Restaurant','Sub & Sandwich Shop','Ice Cream & Dessert Shop','Food Truck & Catering'],
+  'Home Services':          ['HVAC','Plumber','Electrician','Lawn & Landscaping','Roofing','Painting','Cleaning Service','Pest Control'],
+  'Auto Services':          ['Auto Repair','Tire Shop','Oil Change & Quick Lube','Car Wash & Detailing','Auto Body Shop','Window Tinting'],
+  'Health & Wellness':      ['Dentist','Medical & Healthcare','Chiropractor','Gym & Fitness'],
+  'Beauty & Personal Care': ['Salon & Beauty','Barbershop'],
+  'Pet Services':           ['Veterinarian','Pet Services'],
+  'Retail':                 ['Retail Shop','Liquor Store','Vape & Smoke Shop','Cell Phone Sales & Repair','Toy Store','Jewelry Store','Furniture Store','Pawn Shop','Thrift & Consignment','Florist','Garden Center & Nursery','Sporting Goods','Bike Shop','Gift Shop','Bookstore','Hardware Store'],
+  'Professional Services':  ['Real Estate','Insurance','Financial Services','Other Service','Law Firm','Accounting & Tax Prep','Mortgage Broker'],
+  'Childcare & Education':  ['Daycare','Tutoring Services','Dance & Music Lessons','Martial Arts Studio','Driving School'],
+  'Entertainment/Events':   ['Photography','Event Venue','Party & Equipment Rental','DJ & Entertainment Services'],
+};
 
 const inputStyle = {
   width: "100%", padding: "9px 12px", borderRadius: 7,
@@ -26,7 +38,7 @@ export default function AdUploadModal({ initialSize = "L", onComplete, onBack, i
   const previewDims = { XL: { w: 320, h: 400 }, L: { w: 240, h: 320 }, M: { w: 300, h: 200 }, S: { w: 200, h: 200 } };
   const { w: pw, h: ph } = previewDims[initialSize] || { w: 320, h: 400 };
 
-  const [form, setForm] = useState({ businessName: "", industry: "", email: "", phone: "", website: "" });
+  const [form, setForm] = useState({ businessName: "", category: "", industry: "", email: "", phone: "", website: "" });
   const [localPreviewUrl, setLocalPreviewUrl] = useState(null);
   const [cloudinaryUrl, setCloudinaryUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -42,6 +54,25 @@ export default function AdUploadModal({ initialSize = "L", onComplete, onBack, i
   const industryRef = useRef();
   const emailRef = useRef();
 
+  const categoryIndustries = form.category ? (CATEGORY_INDUSTRIES[form.category] || []) : [];
+
+  const handleCategoryChange = (e) => {
+    const cat = e.target.value;
+    setForm(d => ({ ...d, category: cat, industry: "" }));
+    if (industryError) setIndustryError(false);
+  };
+
+  const handleIndustryChange = (e) => {
+    const val = e.target.value;
+    if (val && takenCategories.includes(val)) {
+      setConflictIndustry(val);
+      e.target.value = form.industry;
+      return;
+    }
+    setForm(d => ({ ...d, industry: val }));
+    if (val) setIndustryError(false);
+  };
+
   const handleFile = async (e) => {
     const f = e.target.files[0];
     if (!f) return;
@@ -50,12 +81,10 @@ export default function AdUploadModal({ initialSize = "L", onComplete, onBack, i
     setUploadError(false);
     setCloudinaryUrl(null);
 
-    // Show local preview immediately
     const reader = new FileReader();
     reader.onload = ev => setLocalPreviewUrl(ev.target.result);
     reader.readAsDataURL(f);
 
-    // Upload to Cloudinary in the background
     setUploading(true);
     try {
       const url = await uploadToCloudinary(f);
@@ -90,7 +119,6 @@ export default function AdUploadModal({ initialSize = "L", onComplete, onBack, i
     }
     if (err) return;
 
-    // Prefer the hosted Cloudinary URL; fall back to base64 for unconfigured environments
     const finalAdUrl = cloudinaryUrl || localPreviewUrl;
 
     onComplete?.({
@@ -165,28 +193,40 @@ export default function AdUploadModal({ initialSize = "L", onComplete, onBack, i
                 />
               </div>
 
+              {/* Category → Industry cascade */}
               <div>
                 <label style={{ fontSize: 12, fontWeight: 700, color: industryError ? "#dc2626" : "#374151", display: "block", marginBottom: 3 }}>
-                  Business Category *
-                  {industryError && <span style={{ fontWeight: 400, marginLeft: 6, color: "#dc2626" }}>Required</span>}
+                  Business Type *
+                  {industryError && <span style={{ fontWeight: 400, marginLeft: 6, color: "#dc2626" }}>Select an industry</span>}
                 </label>
+                <select
+                  value={form.category}
+                  onChange={handleCategoryChange}
+                  style={{ ...inputStyle, marginBottom: 6, color: form.category ? "#111" : "#9ca3af" }}
+                >
+                  <option value="">— Select Category —</option>
+                  {Object.keys(CATEGORY_INDUSTRIES).map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
                 <select
                   ref={industryRef}
                   value={form.industry}
-                  onChange={e => {
-                    const val = e.target.value;
-                    if (val && takenCategories.includes(val)) {
-                      setConflictIndustry(val);
-                      e.target.value = form.industry;
-                      return;
-                    }
-                    setForm(d => ({ ...d, industry: val }));
-                    if (val) setIndustryError(false);
+                  onChange={handleIndustryChange}
+                  disabled={!form.category}
+                  style={{
+                    ...inputStyle,
+                    borderColor: industryError ? "#dc2626" : undefined,
+                    background: industryError ? "#fef2f2" : (!form.category ? "#f9fafb" : "#fff"),
+                    outline: industryError ? "2px solid #fca5a5" : undefined,
+                    color: form.industry ? "#111" : "#9ca3af",
+                    cursor: !form.category ? "not-allowed" : "pointer",
                   }}
-                  style={{ ...inputStyle, borderColor: industryError ? "#dc2626" : undefined, background: industryError ? "#fef2f2" : undefined, outline: industryError ? "2px solid #fca5a5" : undefined, color: form.industry ? "#111" : "#9ca3af" }}
                 >
-                  <option value="">Select your business type…</option>
-                  {INDUSTRY_LIST.map(ind => <option key={ind} value={ind}>{ind}</option>)}
+                  <option value="">{form.category ? "— Select Industry —" : "— Select Category First —"}</option>
+                  {categoryIndustries.map(ind => (
+                    <option key={ind} value={ind}>{ind}</option>
+                  ))}
                 </select>
               </div>
 
@@ -239,7 +279,6 @@ export default function AdUploadModal({ initialSize = "L", onComplete, onBack, i
 
             {hasAd ? (
               <>
-                {/* Preview with upload-status overlay */}
                 <div style={{ position: "relative", width: pw, height: ph, borderRadius: 6, overflow: "hidden", boxShadow: "0 12px 48px rgba(0,0,0,0.6)", flexShrink: 0, background: "#000" }}>
                   <img src={localPreviewUrl} alt="Your finished ad" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                   {uploading && (
@@ -329,4 +368,3 @@ export default function AdUploadModal({ initialSize = "L", onComplete, onBack, i
     </>
   );
 }
-
