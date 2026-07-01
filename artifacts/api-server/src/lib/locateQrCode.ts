@@ -40,6 +40,87 @@ const MIN_PIXEL_COUNT = 100;
 // The detected magenta centroid positions the card; size comes from the spec,
 // not from the detected bbox — see swapQrCode sizing block.
 
+// ── Bounded erase helper ────────────────────────────────────────────────────────
+/**
+ * Erase a detected magenta region with a single background colour derived by
+ * averaging a narrow sample strip just outside the bounding box.
+ *
+ * Deliberately uses ONE average colour (not per-row) to produce a solid
+ * rectangle fill — avoiding the horizontal-stripe artefact that happens when
+ * background hue shifts row-by-row across a tall erase zone.
+ *
+ * Called as a pre-pass when the size/shape guard rejects the detected marker
+ * so that compositeQrOnto (fixed-corner fallback) receives a clean image.
+ */
+async function eraseRegionBounded(
+  imageBuffer: Buffer,
+  loc: QrLocation,
+  imgW: number,
+  imgH: number,
+  sharp: typeof import("sharp"),
+): Promise<Buffer> {
+  const PAD       = 10;
+  const eraseLeft  = Math.max(0, loc.x - PAD);
+  const eraseTop   = Math.max(0, loc.y - PAD);
+  const eraseRight  = Math.min(imgW, loc.x + loc.width  + PAD);
+  const eraseBottom = Math.min(imgH, loc.y + loc.height + PAD);
+  const eraseW = eraseRight  - eraseLeft;
+  const eraseH = eraseBottom - eraseTop;
+  if (eraseW <= 0 || eraseH <= 0) return imageBuffer;
+
+  // Sample 8 px just to the LEFT of the erase zone (same rows).
+  // Fall back to 8 px just ABOVE if the box is flush against the left edge.
+  const SAMPLE = 8;
+  let sampleR = 0, sampleG = 0, sampleB = 0, sampleCount = 0;
+
+  const canSampleLeft = eraseLeft >= SAMPLE;
+  const sampleBuf: { data: Buffer } = canSampleLeft
+    ? await (sharp(imageBuffer)
+        .extract({ left: eraseLeft - SAMPLE, top: eraseTop, width: SAMPLE, height: eraseH })
+        .raw()
+        .ensureAlpha()
+        .toBuffer({ resolveWithObject: true }) as Promise<{ data: Buffer; info: import("sharp").OutputInfo }>)
+    : await (sharp(imageBuffer)
+        .extract({ left: eraseLeft, top: Math.max(0, eraseTop - SAMPLE), width: eraseW, height: SAMPLE })
+        .raw()
+        .ensureAlpha()
+        .toBuffer({ resolveWithObject: true }) as Promise<{ data: Buffer; info: import("sharp").OutputInfo }>);
+
+  const pixels = sampleBuf.data;
+  for (let i = 0; i < pixels.length; i += 4) {
+    // Skip pixels that are themselves magenta — sample strip might overlap marker.
+    if (pixels[i]! >= MAG_R_MIN && pixels[i + 1]! <= MAG_G_MAX && pixels[i + 2]! >= MAG_B_MIN) continue;
+    sampleR += pixels[i]!;
+    sampleG += pixels[i + 1]!;
+    sampleB += pixels[i + 2]!;
+    sampleCount++;
+  }
+
+  // If every sample pixel was magenta, we have no usable background — bail out.
+  if (sampleCount === 0) return imageBuffer;
+
+  const r = Math.round(sampleR / sampleCount);
+  const g = Math.round(sampleG / sampleCount);
+  const b = Math.round(sampleB / sampleCount);
+
+  const fillBuf = Buffer.alloc(eraseW * eraseH * 4);
+  for (let i = 0; i < eraseW * eraseH; i++) {
+    fillBuf[i * 4]     = r;
+    fillBuf[i * 4 + 1] = g;
+    fillBuf[i * 4 + 2] = b;
+    fillBuf[i * 4 + 3] = 255;
+  }
+
+  const fillPng = await sharp(fillBuf, {
+    raw: { width: eraseW, height: eraseH, channels: 4 },
+  }).png().toBuffer();
+
+  return sharp(imageBuffer)
+    .composite([{ input: fillPng, left: eraseLeft, top: eraseTop }])
+    .jpeg({ quality: 98, chromaSubsampling: "4:4:4" })
+    .toBuffer();
+}
+
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 export interface QrLocation {
@@ -191,16 +272,18 @@ export async function swapQrCode(
   if (loc.width > maxMarkerDim || loc.height > maxMarkerDim) {
     logger.warn(
       { spotSize, detected: loc, maxMarkerDim, specQrSize: spec.qrSize },
-      "swapQrCode: magenta region too large to be a QR marker — falling back to fixed-corner",
+      "swapQrCode: magenta region too large — erasing bbox then fixed-corner fallback",
     );
-    return compositeQrOnto(imageBuffer, trackingUrl, spotSize, style);
+    const cleanBuf = await eraseRegionBounded(imageBuffer, loc, imgW, imgH, sharp);
+    return compositeQrOnto(cleanBuf, trackingUrl, spotSize, style);
   }
   if (detectedAspect > 4 || detectedAspect < 0.25) {
     logger.warn(
       { spotSize, detected: loc, detectedAspect },
-      "swapQrCode: magenta region too non-square to be a QR marker — falling back to fixed-corner",
+      "swapQrCode: magenta region too non-square — erasing bbox then fixed-corner fallback",
     );
-    return compositeQrOnto(imageBuffer, trackingUrl, spotSize, style);
+    const cleanBuf = await eraseRegionBounded(imageBuffer, loc, imgW, imgH, sharp);
+    return compositeQrOnto(cleanBuf, trackingUrl, spotSize, style);
   }
 
   logger.info(
