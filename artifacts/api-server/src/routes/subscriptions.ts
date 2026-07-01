@@ -330,6 +330,26 @@ router.get("/checkout/subscription-confirm", async (req, res): Promise<void> => 
     return;
   }
 
+  // Fast path: webhook already activated the subscription before the customer
+  // was redirected back. Return success straight from the DB — no need to
+  // re-extract customer/payment references from the Stripe session.
+  if (pending.subscriptionStatus === "active") {
+    req.log.info(
+      { pendingRecordId: pending.id, spotId: pending.initialSpotId },
+      "subscription-confirm: webhook already activated — returning DB state",
+    );
+    res.json({
+      success: true,
+      subscriptionRecordId: pending.id,
+      spotId: pending.initialSpotId,
+      monthlyCents: pending.monthlyPriceCents,
+      totalCents: pending.totalCommitmentValueCents,
+      totalIssues: pending.commitmentTotalIssues,
+      commitmentType: pending.commitmentType,
+    });
+    return;
+  }
+
   const stripeCustomerId = typeof session.customer === "string" ? session.customer : (session.customer as any)?.id ?? null;
   if (!stripeCustomerId) {
     res.status(500).json({ error: "Stripe session missing customer reference." });
