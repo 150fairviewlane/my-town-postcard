@@ -2,9 +2,19 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { useIsMobile } from "../hooks/use-mobile";
 import { MailboxLogo } from "../components/MailboxLogo";
+import { DEALER_COMMISSION_RATE, SOLD_OUT_REVENUE_CENTS } from "@/lib/commission";
 
 const RED = "#7B1418";
 const GOLD = "#d4a017";
+
+// Derived from DEALER_COMMISSION_RATE and SOLD_OUT_REVENUE_CENTS — no hardcoded
+// percentages or dollar figures below. If the rate or spot prices change,
+// updating those two constants is sufficient.
+const commissionPct = Math.round(DEALER_COMMISSION_RATE * 100);
+// Round to nearest $100 for clean "~$X,XXX" display (e.g. $5,985 → $6,000; $1,795.50 → $1,800)
+const soldOutRevenueDollars = Math.round(SOLD_OUT_REVENUE_CENTS / 10000) * 100;
+const perPostcardDollars = Math.round(SOLD_OUT_REVENUE_CENTS * DEALER_COMMISSION_RATE / 10000) * 100;
+const monthlyDollars = perPostcardDollars * 4;
 
 const NAV_LINKS = [
   { label: "How It Works", href: "#how-it-works" },
@@ -169,7 +179,7 @@ function Hero() {
           {[
             "4 Postcard Territories",
             "20,000+ Households",
-            "Earn 35% of Revenue",
+            `Earn ${commissionPct}% of Revenue`,
             "Done-For-You Operations",
           ].map(b => (
             <div key={b} style={{ display: "flex", alignItems: "center", gap: 8,
@@ -210,7 +220,7 @@ function Hero() {
           borderRadius: 10, padding: "14px 20px",
           boxShadow: "0 8px 24px rgba(0,0,0,0.2)", fontFamily: "sans-serif",
         }}>
-          <div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1 }}>$2,100+</div>
+          <div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1 }}>${perPostcardDollars.toLocaleString()}+</div>
           <div style={{ fontSize: 12, fontWeight: 600, opacity: 0.95 }}>Per Sold-Out<br />Postcard</div>
         </div>
       </div>
@@ -226,8 +236,8 @@ function HowItWorks() {
       desc: "We assign you 4 distinct postcard zones (~5,000 homes each) clustered around your hometown. Exclusive — no other dealer can sell in your area." },
     { n: "3", icon: "📞", title: "Sell Local Ad Spots",
       desc: "Reach out to local businesses — restaurants, dentists, HVAC, realtors. Use our pricing, our designs, our mailing. You just close the deal." },
-    { n: "4", icon: "💰", title: "Earn ~$2,100 Per Postcard",
-      desc: "A sold-out postcard generates ~$6,000 in ad revenue. You keep 35% of that — about $2,100 — no need to track printing or mailing costs. Fill one card per territory per month and take home about $8,400." },
+    { n: "4", icon: "💰", title: `Earn ~$${perPostcardDollars.toLocaleString()} Per Postcard`,
+      desc: `A sold-out postcard generates ~$${soldOutRevenueDollars.toLocaleString()} in ad revenue. You keep ${commissionPct}% of that — about $${perPostcardDollars.toLocaleString()} — no need to track printing or mailing costs. Fill one card per territory per month and take home about $${monthlyDollars.toLocaleString()}.` },
   ];
   return (
     <section id="how-it-works" style={{ background: "#fff", padding: "80px 32px" }}>
@@ -237,7 +247,7 @@ function HowItWorks() {
         <p style={{ textAlign: "center", color: "#666", fontSize: 16, marginBottom: 56,
           maxWidth: 580, margin: "0 auto 56px", fontFamily: "sans-serif" }}>
           You bring the local relationships. We bring the system, the design,
-          the printing, and the mailing. You keep 35% of the revenue on every card.
+          the printing, and the mailing. You keep {commissionPct}% of the revenue on every card.
         </p>
         <div style={{ display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 32 }}>
@@ -296,7 +306,7 @@ const FAQ_ITEMS = [
   { q: "What does the $99/month subscription cover?",
     a: "Your monthly subscription covers your access to the entire dealer platform: your assigned territories stay locked to you, you get our online ordering portal, ad-design system, customer-facing checkout pages, payment processing, QR tracking, and a personal account manager. You sell ads; we do everything else." },
   { q: "How is commission calculated?",
-    a: "A sold-out postcard generates roughly $6,000 in ad revenue. You keep 35% of that revenue — about $2,100 per postcard — with no need to track printing, mailing, or fulfillment costs. With 4 territories running one postcard each per month, that's about $8,400/month in earning potential. Commissions are paid within 3 business days of the postcard's mail date." },
+    a: `A sold-out postcard generates roughly $${soldOutRevenueDollars.toLocaleString()} in ad revenue. You keep ${commissionPct}% of that revenue — about $${perPostcardDollars.toLocaleString()} per postcard — with no need to track printing, mailing, or fulfillment costs. With 4 territories running one postcard each per month, that's about $${monthlyDollars.toLocaleString()}/month in earning potential. Commissions are paid within 3 business days of the postcard's mail date.` },
   { q: "How exclusive are the territories?",
     a: "Fully exclusive. Once you're assigned a ZIP-code cluster, no other My Town Postcard dealer can be active in those ZIPs. If you cancel, the territories are released back to the pool after a 30-day grace period." },
   { q: "Do I have to provide my own designs or printer?",
