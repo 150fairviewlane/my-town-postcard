@@ -164,7 +164,20 @@ router.get("/territories/public", async (req, res): Promise<void> => {
       territoriesTable.centroidLng,
     );
 
-  const result = rows.map(r => {
+  // Deduplicate by campaign id: the fuzzy LIKE join on territories.name can
+  // match multiple territory rows for a single campaign (e.g. a campaign whose
+  // territory field contains both "Jefferson" the city and "Jefferson" the
+  // county name), producing duplicate map pins for the same slug. Keep only
+  // the first row per campaign — it already carries the best centroid match
+  // from the GROUP BY / JOIN ordering.
+  const seen = new Set<number>();
+  const dedupedRows = rows.filter(r => {
+    if (seen.has(r.id)) return false;
+    seen.add(r.id);
+    return true;
+  });
+
+  const result = dedupedRows.map(r => {
     // Use hub city name when cityList has exactly one entry (e.g. "Canton"),
     // otherwise fall back to the parent territory name (e.g. "White / Habersham Counties").
     const cities = (r.cityList ?? "").split(",").map((c: string) => c.trim()).filter(Boolean);
