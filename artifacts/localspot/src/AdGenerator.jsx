@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { INDUSTRIES, INDUSTRY_LIST } from "./industryAssets";
 import IndustryConflictDialog from "./components/IndustryConflictDialog";
+import { useEmailSuggestion, EmailSuggestionHint } from "./hooks/useEmailSuggestion.jsx";
 import { AdQRCode, InlineQRCode, hasQR, normalizeWebsite, generateSpotCode, PositionedQR } from "./qrUtils";
 import AdAssistant from "./AdAssistant";
 import { useRefineGrokAd } from "@workspace/api-client-react";
@@ -1284,6 +1285,7 @@ fieldWidths: {},
 const [selectedTemplate, setSelectedTemplate] = useState("photo-bold");
 const [emailError, setEmailError] = useState(false);
 const emailRef = useRef(null);
+const { suggestion: emailSuggestion, check: checkEmail, dismiss: dismissEmailSuggestion, clear: clearEmailSuggestion } = useEmailSuggestion();
 const [conflictIndustry, setConflictIndustry] = useState(null);
 
 // Grok-generated ad state (populated via postMessage from the Grok popup)
@@ -1433,9 +1435,15 @@ boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
               ref={emailRef}
               type="email"
               value={formData.email}
-              onChange={e => { setFormData(d => ({ ...d, email: e.target.value })); if (e.target.value.trim()) setEmailError(false); }}
+              onChange={e => { setFormData(d => ({ ...d, email: e.target.value })); if (e.target.value.trim()) setEmailError(false); clearEmailSuggestion(); }}
+              onBlur={e => checkEmail(e.target.value)}
               placeholder="you@yourbusiness.com"
               style={{ ...inputStyle, borderColor: emailError ? "#dc2626" : undefined, background: emailError ? "#fef2f2" : undefined, outline: emailError ? "2px solid #fca5a5" : undefined }}
+            />
+            <EmailSuggestionHint
+              suggestion={emailSuggestion}
+              onAccept={v => { setFormData(d => ({ ...d, email: v })); dismissEmailSuggestion(); }}
+              onDismiss={dismissEmailSuggestion}
             />
           </div>
 

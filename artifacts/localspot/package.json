@@ -86,6 +86,7 @@
   "dependencies": {
     "@stripe/react-stripe-js": "^6.3.0",
     "@stripe/stripe-js": "^9.3.1",
+    "@zootools/email-spell-checker": "^1.12.0",
     "leaflet": "^1.9.4",
     "react-leaflet": "^5.0.0"
   }

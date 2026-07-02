@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Link } from "wouter";
 import { Eye, EyeOff } from "lucide-react";
+import { useEmailSuggestion, EmailSuggestionHint } from "../hooks/useEmailSuggestion.jsx";
 
 const RED = "#7B1418";
 const GOLD = "#d4a017";
@@ -59,6 +60,7 @@ function PasswordStrengthIndicator({ password }) {
 
 export default function DealerSignup() {
   const [form, setForm] = useState({ name: "", email: "", phone: "", city: "", state: "", password: "", confirmPassword: "" });
+  const { suggestion: emailSuggestion, check: checkEmailTypo, dismiss: dismissEmailSuggestion, clear: clearEmailSuggestion } = useEmailSuggestion();
   const [error, setError] = useState(null);
   const [mismatch, setMismatch] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -183,7 +185,14 @@ export default function DealerSignup() {
               <label style={{ fontSize: 12.5, fontWeight: 600, color: "#374151",
                 display: "block", marginBottom: 4 }}>Email *</label>
               <input style={inputStyle} required type="email" value={form.email}
-                onChange={set("email")} placeholder="jane@example.com" />
+                onChange={e => { set("email")(e); clearEmailSuggestion(); }}
+                onBlur={e => checkEmailTypo(e.target.value)}
+                placeholder="jane@example.com" />
+              <EmailSuggestionHint
+                suggestion={emailSuggestion}
+                onAccept={v => { setForm(p => ({ ...p, email: v })); dismissEmailSuggestion(); }}
+                onDismiss={dismissEmailSuggestion}
+              />
             </div>
             <div>
               <label style={{ fontSize: 12.5, fontWeight: 600, color: "#374151",

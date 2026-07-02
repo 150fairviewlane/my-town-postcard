@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { AD_SIZES } from "./AdGenerator";
 import IndustryConflictDialog from "./components/IndustryConflictDialog";
+import { useEmailSuggestion, EmailSuggestionHint } from "./hooks/useEmailSuggestion.jsx";
 
 const CATEGORY_INDUSTRIES = {
   'Food & Dining':          ['Pizza Restaurant','Mexican Restaurant','Chinese Restaurant','Breakfast & Cafe','Bar & Grill','Italian Restaurant','Bakery','Coffee Shop','BBQ Restaurant','Sub & Sandwich Shop','Ice Cream & Dessert Shop','Food Truck & Catering'],
@@ -39,6 +40,7 @@ export default function AdUploadModal({ initialSize = "L", onComplete, onBack, i
   const { w: pw, h: ph } = previewDims[initialSize] || { w: 320, h: 400 };
 
   const [form, setForm] = useState({ businessName: "", category: "", industry: "", email: "", phone: "", website: "" });
+  const { suggestion: emailSuggestion, check: checkEmailTypo, dismiss: dismissEmailSuggestion, clear: clearEmailSuggestion } = useEmailSuggestion();
   const [localPreviewUrl, setLocalPreviewUrl] = useState(null);
   const [cloudinaryUrl, setCloudinaryUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -239,9 +241,15 @@ export default function AdUploadModal({ initialSize = "L", onComplete, onBack, i
                   ref={emailRef}
                   type="email"
                   value={form.email}
-                  onChange={e => { setForm(d => ({ ...d, email: e.target.value })); if (e.target.value.trim()) setEmailError(false); }}
+                  onChange={e => { setForm(d => ({ ...d, email: e.target.value })); if (e.target.value.trim()) setEmailError(false); clearEmailSuggestion(); }}
+                  onBlur={e => checkEmailTypo(e.target.value)}
                   placeholder="you@yourbusiness.com"
                   style={{ ...inputStyle, borderColor: emailError ? "#dc2626" : undefined, background: emailError ? "#fef2f2" : undefined, outline: emailError ? "2px solid #fca5a5" : undefined }}
+                />
+                <EmailSuggestionHint
+                  suggestion={emailSuggestion}
+                  onAccept={v => { setForm(d => ({ ...d, email: v })); dismissEmailSuggestion(); }}
+                  onDismiss={dismissEmailSuggestion}
                 />
               </div>
 
