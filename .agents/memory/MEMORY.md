@@ -14,3 +14,4 @@
 - [QR swap pipeline — jsQR detect-replace](qr-swap-jsqr.md) — reference images now have QR codes; jsQR locates Grok's copy; swapQrCode replaces it; compositeQrOnto is fallback only.
 - [Template image cleanup — magenta-erase margin](template-image-cleanup.md) — cleanTemplateQr.ts erases 200px above+600px left of magenta; too aggressive for landscape images (shorter), covering design content; use 50px above for landscape or target minY directly.
 - [Admin image serve — no auth for static assets](admin-image-serve-auth.md) — img tags cannot send Bearer tokens; static reference PNGs served by /api/admin/template-image/:filename must omit requireAdmin middleware.
+- [Stripe SDK version lag](stripe-sdk-version-lag.md) — Stripe docs lead their Node SDK; verify methods exist in installed types before using them.

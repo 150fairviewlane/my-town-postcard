@@ -35,7 +35,6 @@ import {
   sendDealerNewSubscriptionEmail,
 } from "../lib/emails";
 import { computeCommissionCents } from "../lib/commission";
-import { getCardOnlyPmcId } from "../lib/cardOnlyPmc";
 
 const router: IRouter = Router();
 
@@ -208,29 +207,18 @@ router.post("/checkout/create-subscription-session", async (req, res): Promise<v
   });
 
   const origin = getOrigin(req);
-  // Lazily create (once per process) a Stripe Payment Method Configuration
-  // that restricts this checkout to card only.  Using payment_method_configuration
-  // instead of payment_method_types gives per-session control without touching
-  // the account's global Dashboard settings.
-  // NOTE: payment_method_configuration and payment_method_types are mutually
-  // exclusive — do not add payment_method_types to this session.
-  const cardOnlyPmcId = await getCardOnlyPmcId(stripe);
 
   const session = await stripe.checkout.sessions.create({
-    // Payment mode (not subscription): charge issue #1 now and save the card
-    // for future off-session charges when subsequent issues go to print.
+    // Payment mode: charge issue #1 now and save the card for future
+    // off-session charges when subsequent issues go to print.
     // customer_creation: "always" is required so Stripe creates a Customer
     // object that session.customer returns post-checkout — without it,
     // customer is null and setup_future_usage: "off_session" has nothing
     // to attach the saved PaymentMethod to.
     mode: "payment",
-    // payment_method_configuration overrides the account's default PMC for
-    // this session only.  The card-only PMC was created with:
-    //   card: on, apple_pay: off, google_pay: off, link: off
-    // This deterministically removes Apple Pay, Google Pay, Link, and all
-    // other non-card payment options at the API level without requiring any
-    // Dashboard configuration changes.
-    payment_method_configuration: cardOnlyPmcId,
+    // Restrict to card-only — suppresses Apple Pay, Google Pay, and Link
+    // on the hosted Checkout page.
+    payment_method_types: ["card"],
     customer_creation: "always",
     customer_email: spot.contactEmail,
     payment_intent_data: {
