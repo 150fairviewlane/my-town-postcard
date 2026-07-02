@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and, inArray, sql } from "drizzle-orm";
-import { db, campaignsTable, dealersTable, spotsTable, territoriesTable } from "@workspace/db";
+import { db, campaignsTable, dealersTable, spotsTable } from "@workspace/db";
 import { GetActiveCampaignResponse } from "@workspace/api-zod";
 import { fetchScanCountsForSpotIds } from "../lib/scanCounts";
 import { findGazetteerCity } from "../lib/censusApi";
@@ -122,62 +122,56 @@ router.get("/campaigns/by-slug/:slug", async (req, res): Promise<void> => {
 // matches the campaign territory name — so the frontend can safely skip pins
 // for territories that have no centroid yet.
 router.get("/territories/public", async (req, res): Promise<void> => {
-  // Aggregate spot counts grouped by campaign in one query
-  const rows = await db
-    .select({
-      id:          campaignsTable.id,
-      territory:   campaignsTable.territory,
-      cityList:    campaignsTable.cityList,
-      slug:        campaignsTable.slug,
-      status:      campaignsTable.status,
-      isPublished: campaignsTable.isPublished,
-      pinLat:      campaignsTable.pinLat,
-      pinLng:      campaignsTable.pinLng,
-      centroidLat: territoriesTable.centroidLat,
-      centroidLng: territoriesTable.centroidLng,
-      paidSpots:   sql<number>`COUNT(${spotsTable.id}) FILTER (WHERE ${spotsTable.status} = 'paid')`,
-      totalSpots:  sql<number>`COUNT(${spotsTable.id})`,
-    })
-    .from(campaignsTable)
-    .leftJoin(
-      spotsTable,
-      eq(spotsTable.campaignId, campaignsTable.id),
-    )
-    .leftJoin(
-      territoriesTable,
-      sql`LOWER(${campaignsTable.territory}) LIKE '%' || LOWER(${territoriesTable.name}) || '%'`,
-    )
-    .where(
-      sql`(${campaignsTable.status} = 'active' OR ${campaignsTable.isPublished} = true)
-          AND ${campaignsTable.slug} IS NOT NULL`,
-    )
-    .groupBy(
-      campaignsTable.id,
-      campaignsTable.territory,
-      campaignsTable.cityList,
-      campaignsTable.slug,
-      campaignsTable.status,
-      campaignsTable.isPublished,
-      campaignsTable.pinLat,
-      campaignsTable.pinLng,
-      territoriesTable.centroidLat,
-      territoriesTable.centroidLng,
-    );
+  // Tiebreak rule: when the fuzzy LIKE matches multiple territory rows for one
+  // campaign, pick the longest name — longer name = more characters matched =
+  // more specific territory = correct centroid.  ORDER BY LENGTH(name) DESC
+  // inside a LATERAL guarantees exactly one territory row per campaign and
+  // makes the rule explicit at the SQL level (never left to Postgres ordering).
+  const { rows } = await db.execute<{
+    id: number;
+    territory: string | null;
+    cityList: string | null;
+    slug: string | null;
+    status: string;
+    isPublished: boolean;
+    pinLat: number | null;
+    pinLng: number | null;
+    centroidLat: number | null;
+    centroidLng: number | null;
+    paidSpots: string;
+    totalSpots: string;
+  }>(sql`
+    SELECT
+      c.id,
+      c.territory,
+      c.city_list        AS "cityList",
+      c.slug,
+      c.status,
+      c.is_published     AS "isPublished",
+      c.pin_lat          AS "pinLat",
+      c.pin_lng          AS "pinLng",
+      t.centroid_lat     AS "centroidLat",
+      t.centroid_lng     AS "centroidLng",
+      COUNT(s.id) FILTER (WHERE s.status = 'paid') AS "paidSpots",
+      COUNT(s.id)                                  AS "totalSpots"
+    FROM campaigns c
+    LEFT JOIN spots s ON s.campaign_id = c.id
+    LEFT JOIN LATERAL (
+      SELECT centroid_lat, centroid_lng
+      FROM territories ter
+      WHERE LOWER(c.territory) LIKE '%' || LOWER(ter.name) || '%'
+      ORDER BY LENGTH(ter.name) DESC
+      LIMIT 1
+    ) t ON true
+    WHERE (c.status = 'active' OR c.is_published = true)
+      AND c.slug IS NOT NULL
+    GROUP BY
+      c.id, c.territory, c.city_list, c.slug, c.status,
+      c.is_published, c.pin_lat, c.pin_lng,
+      t.centroid_lat, t.centroid_lng
+  `);
 
-  // Deduplicate by campaign id: the fuzzy LIKE join on territories.name can
-  // match multiple territory rows for a single campaign (e.g. a campaign whose
-  // territory field contains both "Jefferson" the city and "Jefferson" the
-  // county name), producing duplicate map pins for the same slug. Keep only
-  // the first row per campaign — it already carries the best centroid match
-  // from the GROUP BY / JOIN ordering.
-  const seen = new Set<number>();
-  const dedupedRows = rows.filter(r => {
-    if (seen.has(r.id)) return false;
-    seen.add(r.id);
-    return true;
-  });
-
-  const result = dedupedRows.map(r => {
+  const result = rows.map(r => {
     // Use hub city name when cityList has exactly one entry (e.g. "Canton"),
     // otherwise fall back to the parent territory name (e.g. "White / Habersham Counties").
     const cities = (r.cityList ?? "").split(",").map((c: string) => c.trim()).filter(Boolean);
@@ -229,23 +223,32 @@ router.get("/territories/public", async (req, res): Promise<void> => {
 // label = hub city when cityList has exactly one entry, else the territory name.
 // lat/lng come from the territories centroid JOIN (may be null for new entries).
 router.get("/campaigns/public-territories", async (req, res): Promise<void> => {
-  const rows = await db
-    .select({
-      slug:        campaignsTable.slug,
-      territory:   campaignsTable.territory,
-      cityList:    campaignsTable.cityList,
-      centroidLat: territoriesTable.centroidLat,
-      centroidLng: territoriesTable.centroidLng,
-    })
-    .from(campaignsTable)
-    .leftJoin(
-      territoriesTable,
-      sql`LOWER(${campaignsTable.territory}) LIKE '%' || LOWER(${territoriesTable.name}) || '%'`,
-    )
-    .where(
-      sql`${campaignsTable.isPublished} = true AND ${campaignsTable.slug} IS NOT NULL`,
-    )
-    .orderBy(campaignsTable.territory);
+  // Same tiebreak rule as /territories/public: LATERAL + ORDER BY LENGTH DESC
+  // picks the most specific territory match when multiple rows satisfy the LIKE.
+  const { rows } = await db.execute<{
+    slug: string | null;
+    territory: string | null;
+    cityList: string | null;
+    centroidLat: number | null;
+    centroidLng: number | null;
+  }>(sql`
+    SELECT
+      c.slug,
+      c.territory,
+      c.city_list    AS "cityList",
+      t.centroid_lat AS "centroidLat",
+      t.centroid_lng AS "centroidLng"
+    FROM campaigns c
+    LEFT JOIN LATERAL (
+      SELECT centroid_lat, centroid_lng
+      FROM territories ter
+      WHERE LOWER(c.territory) LIKE '%' || LOWER(ter.name) || '%'
+      ORDER BY LENGTH(ter.name) DESC
+      LIMIT 1
+    ) t ON true
+    WHERE c.is_published = true AND c.slug IS NOT NULL
+    ORDER BY c.territory
+  `);
 
   const territories = rows
     .filter(r => r.slug)
