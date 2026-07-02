@@ -272,24 +272,38 @@ function HowItWorks() {
 
 function WhatYouGet() {
   const bullets = [
-    { t: "4 exclusive postcard territories", d: "with a minimum of 20,000 households reachable across your assigned zones." },
-    { t: "Done-for-you ad design", d: "We handle every ad — your job is closing, not designing." },
-    { t: "Printing + USPS EDDM mailing", d: "We print, sort, and drop. You never touch a postcard." },
-    { t: "Online ordering platform", d: "Send a link, the customer pays online, you get the credit." },
-    { t: "QR scan tracking", d: "Every paid spot gets a QR code so customers see real ROI." },
-    { t: "Personal dealer account manager", d: "One human on our team is your direct line, every step." },
+    { icon: "🗺️", t: "4 exclusive postcard territories", d: "with a minimum of 20,000 households reachable across your assigned zones." },
+    { icon: "🎨", t: "Done-for-you ad design", d: "We handle every ad — your job is closing, not designing." },
+    { icon: "📬", t: "Printing + USPS EDDM mailing", d: "We print, sort, and drop. You never touch a postcard." },
+    { icon: "💻", t: "Online ordering platform", d: "Send a link, the customer pays online, you get the credit." },
+    { icon: "📱", t: "QR scan tracking", d: "Every paid spot gets a QR code so customers see real ROI." },
+    { icon: "🤝", t: "Personal dealer account manager", d: "One human on our team is your direct line, every step." },
   ];
   return (
     <section style={{ background: "#fafafa", padding: "80px 32px" }}>
-      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+      <div style={{ maxWidth: 960, margin: "0 auto" }}>
         <h2 style={{ textAlign: "center", fontSize: 32, fontWeight: 900, color: "#111",
-          fontFamily: "Georgia,serif", marginBottom: 12 }}>What You Get for $99/month</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 22 }}>
+          fontFamily: "Georgia,serif", marginBottom: 40 }}>What You Get for $99/month</h2>
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(3, 1fr)",
+          gap: 20,
+        }}>
           {bullets.map(item => (
-            <div key={item.t} style={{ background: "#fff", border: "1px solid #eee", borderRadius: 16,
-              padding: 22, boxShadow: "0 1px 8px rgba(0,0,0,0.04)" }}>
-              <div style={{ fontWeight: 800, color: RED, marginBottom: 8, fontFamily: "sans-serif" }}>{item.t}</div>
-              <div style={{ color: "#555", fontSize: 14, lineHeight: 1.6, fontFamily: "sans-serif" }}>{item.d}</div>
+            <div key={item.t} style={{
+              display: "flex", flexDirection: "column", alignItems: "center",
+              textAlign: "center",
+              background: "#fff",
+              border: `2px solid ${RED}22`,
+              borderRadius: 16,
+              padding: "28px 20px 24px",
+              boxShadow: "0 2px 12px rgba(0,0,0,0.05)",
+            }}>
+              <div style={{ fontSize: 32, marginBottom: 12, lineHeight: 1 }}>{item.icon}</div>
+              <div style={{ fontWeight: 800, color: RED, marginBottom: 8,
+                fontFamily: "sans-serif", fontSize: 15, lineHeight: 1.3 }}>{item.t}</div>
+              <div style={{ color: "#666", fontSize: 13.5, lineHeight: 1.6,
+                fontFamily: "sans-serif" }}>{item.d}</div>
             </div>
           ))}
         </div>
