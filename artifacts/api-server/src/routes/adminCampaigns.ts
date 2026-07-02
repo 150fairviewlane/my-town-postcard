@@ -5,6 +5,8 @@ import {
   campaignsTable,
   spotsTable,
   ordersTable,
+  spotSubscriptionsTable,
+  subscriptionIssueAssignmentsTable,
 } from "@workspace/db";
 import {
   CreateCampaignBody,
@@ -438,6 +440,72 @@ router.post("/admin/campaigns/:id/complete", requireAdmin, async (req, res): Pro
   });
 
   res.json(CompleteCampaignResponse.parse(detail));
+});
+
+// ─── POST /api/admin/campaigns/:id/reset-spots ────────────────────────────────
+// Resets all paid spots in a campaign back to available and removes their linked
+// orders, subscriptions, and issue assignments. The spot rows themselves are kept
+// so the campaign grid stays intact. Requires explicit confirmation in the body:
+//   { confirm: "RESET_PAID_SPOTS" }
+// Use for pre-launch data cleanup only.
+router.post("/admin/campaigns/:id/reset-spots", requireAdmin, async (req, res): Promise<void> => {
+  if (req.body?.confirm !== "RESET_PAID_SPOTS") {
+    res.status(400).json({ error: 'Body must include { confirm: "RESET_PAID_SPOTS" }' });
+    return;
+  }
+
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(rawId, 10);
+  if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid campaign id" }); return; }
+
+  const [campaign] = await db.select().from(campaignsTable).where(eq(campaignsTable.id, id));
+  if (!campaign) { res.status(404).json({ error: "Campaign not found" }); return; }
+
+  const paidSpots = await db
+    .select({ id: spotsTable.id })
+    .from(spotsTable)
+    .where(and(eq(spotsTable.campaignId, id), eq(spotsTable.status, "paid")));
+
+  const spotIds = paidSpots.map((s) => s.id);
+
+  if (spotIds.length === 0) {
+    res.json({ ok: true, campaignName: campaign.name, spotsReset: 0, ordersDeleted: 0, subscriptionsDeleted: 0 });
+    return;
+  }
+
+  const spotArr = sql.raw(`ARRAY[${spotIds.join(",")}]::int[]`);
+
+  // Delete child records first (FK order)
+  await db.execute(sql`DELETE FROM subscription_issue_assignments WHERE spot_id = ANY(${spotArr})`);
+  const { rowCount: subsDeleted } = await db.execute(sql`DELETE FROM spot_subscriptions WHERE initial_spot_id = ANY(${spotArr})`);
+  const { rowCount: ordersDeleted } = await db.execute(sql`DELETE FROM orders WHERE spot_id = ANY(${spotArr})`);
+  await db.execute(sql`DELETE FROM qr_scans WHERE spot_id = ANY(${spotArr})`);
+
+  // Reset spots to available, clearing all customer/ad data
+  await db.execute(sql`
+    UPDATE spots SET
+      status = 'available',
+      business_name = NULL,
+      business_category = NULL,
+      contact_email = NULL,
+      contact_phone = NULL,
+      website = NULL,
+      ad_file_url = NULL,
+      ad_status = NULL,
+      tracking_code = NULL,
+      expires_at = NULL,
+      template_data = NULL
+    WHERE id = ANY(${spotArr})
+  `);
+
+  req.log.info({ campaignId: id, spotsReset: spotIds.length }, "Paid spots reset to available");
+  res.json({
+    ok: true,
+    campaignName: campaign.name,
+    spotsReset: spotIds.length,
+    ordersDeleted: ordersDeleted ?? 0,
+    subscriptionsDeleted: subsDeleted ?? 0,
+  });
 });
 
 export default router;
