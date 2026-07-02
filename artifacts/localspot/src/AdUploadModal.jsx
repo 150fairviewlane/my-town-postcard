@@ -99,6 +99,7 @@ export default function AdUploadModal({ initialSize = "L", onComplete, onBack, i
   };
 
   const handleSubmit = () => {
+    if (form.email && !emailSuggestion) checkEmailTypo(form.email);
     let err = false;
     if (!form.businessName.trim()) {
       setNameError(true);

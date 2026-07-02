@@ -1789,6 +1789,7 @@ boxShadow: "0 40px 100px rgba(0,0,0,0.4)", fontFamily: "system-ui, sans-serif",
                   emailRef.current?.focus();
                   return;
                 }
+                if (!emailSuggestion) checkEmail(formData.email);
                 onComplete?.({ sizeKey, price: sizeInfo.price, template: selectedTemplate, ...formData });
               }}
               style={{

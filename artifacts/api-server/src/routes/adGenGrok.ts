@@ -2513,7 +2513,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
         <div class="field"><label>Street Address</label><input type="text" id="address" placeholder="596 W Louise St"></div>
         <div class="field"><label>Website / URL</label><input type="text" id="website" placeholder="mytownpostcard.com"></div>
         <div class="field"><label>City, State</label><input type="text" id="city" placeholder="Clarkesville, GA"></div>
-        <div class="field"><label>Contact Email <span style="font-weight:400;color:var(--ink-light)">(for order)</span></label><input type="email" id="email" placeholder="owner@mrbiscuitscafe.com" onblur="checkEmailTypo(this)"></div>
+        <div class="field"><label>Contact Email <span style="font-weight:400;color:var(--ink-light)">(for order)</span></label><input type="email" id="email" placeholder="owner@mrbiscuitscafe.com"></div>
         <div class="field"><label>Offer</label><input type="text" id="offer" spellcheck="true" placeholder="$1 OFF Any Biscuit"></div>
         <div class="field"><label>Fine Print</label><input type="text" id="offerFine" spellcheck="true" placeholder="1 per visit &middot; with this postcard"></div>
       </div>
@@ -3259,41 +3259,6 @@ function onFormChange(){
   }
 }
 
-function checkEmailTypo(input){
-  var email = input.value.trim();
-  var existing = document.getElementById('email-hint');
-  if(existing) existing.remove();
-  if(!email || email.indexOf('@') === -1) return;
-  var parts = email.split('@');
-  var domain = parts[parts.length - 1].toLowerCase();
-  var DOMAINS = ['gmail.com','yahoo.com','hotmail.com','outlook.com','icloud.com','aol.com','comcast.net','msn.com','live.com','me.com','mac.com','bellsouth.net','att.net','cox.net','sbcglobal.net'];
-  function lev(a, b){
-    if(!a.length) return b.length;
-    if(!b.length) return a.length;
-    var matrix = [];
-    for(var i=0;i<=b.length;i++) matrix[i]=[i];
-    for(var j=0;j<=a.length;j++) matrix[0][j]=j;
-    for(var i=1;i<=b.length;i++){
-      for(var j=1;j<=a.length;j++){
-        if(b.charAt(i-1)===a.charAt(j-1)) matrix[i][j]=matrix[i-1][j-1];
-        else matrix[i][j]=1+Math.min(matrix[i-1][j-1],matrix[i][j-1],matrix[i-1][j]);
-      }
-    }
-    return matrix[b.length][a.length];
-  }
-  var best=null, bestDist=Infinity;
-  for(var di=0;di<DOMAINS.length;di++){ var dist=lev(domain,DOMAINS[di]); if(dist<bestDist){ bestDist=dist; best=DOMAINS[di]; } }
-  if(bestDist===0 || bestDist>2) return;
-  var suggested = parts[0]+'@'+best;
-  var h = document.createElement('div');
-  h.id = 'email-hint';
-  h.style.cssText = 'font-size:12px;color:#6b7280;margin-top:4px;line-height:1.5';
-  h.innerHTML = 'Did you mean <a href="#" style="color:#2563eb;font-weight:600" id="email-hint-accept">'+suggested+'</a>? <a href="#" style="color:#9ca3af;font-size:11px;text-decoration:none" id="email-hint-dismiss">\u2715</a>';
-  input.parentNode.appendChild(h);
-  document.getElementById('email-hint-accept').onclick = function(e){ e.preventDefault(); input.value=suggested; h.remove(); };
-  document.getElementById('email-hint-dismiss').onclick = function(e){ e.preventDefault(); h.remove(); };
-}
-
 function onIndustryChange(){
   var industry = document.getElementById('industry').value;
   if(industry && _takenCategories.indexOf(industry) !== -1){ showTakenDialog(industry); return; }
@@ -3507,6 +3472,27 @@ function showToast(msg){
     if(el) el.addEventListener('input', function(){ _userEditedFields.add(fid); });
   });
 })();
+</script>
+<script type="module">
+import { run } from 'https://cdn.jsdelivr.net/npm/@zootools/email-spell-checker@1.12.0/+esm';
+var emailEl = document.getElementById('email');
+if (emailEl) {
+  emailEl.addEventListener('blur', function() {
+    var existing = document.getElementById('email-hint');
+    if (existing) existing.remove();
+    var email = emailEl.value.trim();
+    if (!email) return;
+    var result = run({ email: email });
+    if (!result) return;
+    var h = document.createElement('div');
+    h.id = 'email-hint';
+    h.style.cssText = 'font-size:12px;color:#6b7280;margin-top:4px;line-height:1.5';
+    h.innerHTML = 'Did you mean <strong style="color:#374151">' + result.full + '</strong>? <a href="#" style="color:#2563eb;font-weight:600" id="email-hint-fix">\u2192 Fix it</a> <a href="#" style="color:#9ca3af;font-size:11px;text-decoration:none" id="email-hint-dismiss">\u2715</a>';
+    emailEl.parentNode.appendChild(h);
+    document.getElementById('email-hint-fix').onclick = function(e) { e.preventDefault(); emailEl.value = result.full; h.remove(); };
+    document.getElementById('email-hint-dismiss').onclick = function(e) { e.preventDefault(); h.remove(); };
+  });
+}
 </script>
 </body>
 </html>`;
@@ -3775,7 +3761,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
       </div>
       <div class="field"><label>Street Address</label><input type="text" id="address" placeholder="596 W Louise St"></div>
       <div class="field"><label>Website / URL</label><input type="text" id="website" placeholder="mytownpostcard.com"></div>
-      <div class="field"><label>Contact Email <span style="font-weight:400;color:var(--ink-light)">(for reservation)</span></label><input type="email" id="email" placeholder="owner@mrbiscuitscafe.com" onblur="checkEmailTypo(this)"></div>
+      <div class="field"><label>Contact Email <span style="font-weight:400;color:var(--ink-light)">(for reservation)</span></label><input type="email" id="email" placeholder="owner@mrbiscuitscafe.com"></div>
     </div>
 
     <div>
@@ -4436,41 +4422,6 @@ var CATEGORY_INDUSTRIES = {
   'Entertainment/Events':   ['Photography','Event Venue','Party & Equipment Rental','DJ & Entertainment Services'],
 };
 
-function checkEmailTypo(input){
-  var email = input.value.trim();
-  var existing = document.getElementById('email-hint');
-  if(existing) existing.remove();
-  if(!email || email.indexOf('@') === -1) return;
-  var parts = email.split('@');
-  var domain = parts[parts.length - 1].toLowerCase();
-  var DOMAINS = ['gmail.com','yahoo.com','hotmail.com','outlook.com','icloud.com','aol.com','comcast.net','msn.com','live.com','me.com','mac.com','bellsouth.net','att.net','cox.net','sbcglobal.net'];
-  function lev(a, b){
-    if(!a.length) return b.length;
-    if(!b.length) return a.length;
-    var matrix = [];
-    for(var i=0;i<=b.length;i++) matrix[i]=[i];
-    for(var j=0;j<=a.length;j++) matrix[0][j]=j;
-    for(var i=1;i<=b.length;i++){
-      for(var j=1;j<=a.length;j++){
-        if(b.charAt(i-1)===a.charAt(j-1)) matrix[i][j]=matrix[i-1][j-1];
-        else matrix[i][j]=1+Math.min(matrix[i-1][j-1],matrix[i][j-1],matrix[i-1][j]);
-      }
-    }
-    return matrix[b.length][a.length];
-  }
-  var best=null, bestDist=Infinity;
-  for(var di=0;di<DOMAINS.length;di++){ var dist=lev(domain,DOMAINS[di]); if(dist<bestDist){ bestDist=dist; best=DOMAINS[di]; } }
-  if(bestDist===0 || bestDist>2) return;
-  var suggested = parts[0]+'@'+best;
-  var h = document.createElement('div');
-  h.id = 'email-hint';
-  h.style.cssText = 'font-size:12px;color:#6b7280;margin-top:4px;line-height:1.5';
-  h.innerHTML = 'Did you mean <a href="#" style="color:#2563eb;font-weight:600" id="email-hint-accept">'+suggested+'</a>? <a href="#" style="color:#9ca3af;font-size:11px;text-decoration:none" id="email-hint-dismiss">\u2715</a>';
-  input.parentNode.appendChild(h);
-  document.getElementById('email-hint-accept').onclick = function(e){ e.preventDefault(); input.value=suggested; h.remove(); };
-  document.getElementById('email-hint-dismiss').onclick = function(e){ e.preventDefault(); h.remove(); };
-}
-
 function onIndustryChange(){
   var industry = document.getElementById('industry').value;
   if(industry && _takenCategories.indexOf(industry) !== -1){
@@ -4913,5 +4864,26 @@ function showToast(msg){
     <button class="tc-btn secondary" onclick="goRequestOptions()">Request More Options &rarr;</button>
   </div>
 </div>
+<script type="module">
+import { run } from 'https://cdn.jsdelivr.net/npm/@zootools/email-spell-checker@1.12.0/+esm';
+var emailEl = document.getElementById('email');
+if (emailEl) {
+  emailEl.addEventListener('blur', function() {
+    var existing = document.getElementById('email-hint');
+    if (existing) existing.remove();
+    var email = emailEl.value.trim();
+    if (!email) return;
+    var result = run({ email: email });
+    if (!result) return;
+    var h = document.createElement('div');
+    h.id = 'email-hint';
+    h.style.cssText = 'font-size:12px;color:#6b7280;margin-top:4px;line-height:1.5';
+    h.innerHTML = 'Did you mean <strong style="color:#374151">' + result.full + '</strong>? <a href="#" style="color:#2563eb;font-weight:600" id="email-hint-fix">\u2192 Fix it</a> <a href="#" style="color:#9ca3af;font-size:11px;text-decoration:none" id="email-hint-dismiss">\u2715</a>';
+    emailEl.parentNode.appendChild(h);
+    document.getElementById('email-hint-fix').onclick = function(e) { e.preventDefault(); emailEl.value = result.full; h.remove(); };
+    document.getElementById('email-hint-dismiss').onclick = function(e) { e.preventDefault(); h.remove(); };
+  });
+}
+</script>
 </body>
 </html>`;

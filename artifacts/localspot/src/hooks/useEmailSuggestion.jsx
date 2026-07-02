@@ -23,7 +23,7 @@ export function EmailSuggestionHint({ suggestion, onAccept, onDismiss }) {
   if (!suggestion) return null;
   return (
     <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4, lineHeight: 1.5 }}>
-      Did you mean{" "}
+      Did you mean <strong style={{ color: "#374151" }}>{suggestion}</strong>?{" "}
       <button
         type="button"
         onClick={() => onAccept(suggestion)}
@@ -38,9 +38,9 @@ export function EmailSuggestionHint({ suggestion, onAccept, onDismiss }) {
           textDecoration: "underline",
         }}
       >
-        {suggestion}
+        → Fix it
       </button>
-      ?{" "}
+      {" "}
       <button
         type="button"
         onClick={onDismiss}

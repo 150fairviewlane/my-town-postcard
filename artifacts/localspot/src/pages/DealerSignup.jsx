@@ -81,6 +81,7 @@ export default function DealerSignup() {
     e.preventDefault();
     setError(null);
     setMismatch(false);
+    if (form.email && !emailSuggestion) checkEmailTypo(form.email);
 
     if (!form.name.trim() || !form.email.trim()) {
       setError("Please fill in your name and email.");
