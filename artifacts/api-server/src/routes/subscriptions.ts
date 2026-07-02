@@ -231,13 +231,6 @@ router.post("/checkout/create-subscription-session", async (req, res): Promise<v
     // other non-card payment options at the API level without requiring any
     // Dashboard configuration changes.
     payment_method_configuration: cardOnlyPmcId,
-    // Belt-and-suspenders: wallet_options.link.display "never" suppresses
-    // Link even if the PMC's link setting is somehow overridden at the
-    // account level.  Disabling Link also removes the "Save my information
-    // for faster checkout" checkbox and the phone number field it injects.
-    wallet_options: {
-      link: { display: "never" },
-    },
     customer_creation: "always",
     customer_email: spot.contactEmail,
     payment_intent_data: {
