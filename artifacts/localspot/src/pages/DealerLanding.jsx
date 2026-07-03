@@ -272,7 +272,7 @@ function HowItWorks() {
 
 function WhatYouGet() {
   const bullets = [
-    { icon: "🗺️", t: "4 exclusive postcard territories", d: "with a minimum of 20,000 households reachable across your assigned zones." },
+    { icon: "🗺️", t: "Unlimited postcard territories", d: "Start with 4 exclusive zones (~20,000 households). Keep filling postcards and keep adding — your $99/month covers as many territories as you can handle." },
     { icon: "🎨", t: "Done-for-you ad design", d: "We handle every ad — your job is closing, not designing." },
     { icon: "📬", t: "Printing + USPS EDDM mailing", d: "We print, sort, and drop. You never touch a postcard." },
     { icon: "💻", t: "Online ordering platform", d: "Send a link, the customer pays online, you get the credit." },
@@ -318,7 +318,7 @@ function Territories() {
 
 const FAQ_ITEMS = [
   { q: "What does the $99/month subscription cover?",
-    a: "Your monthly subscription covers your access to the entire dealer platform: your assigned territories stay locked to you, you get our online ordering portal, ad-design system, customer-facing checkout pages, payment processing, QR tracking, and a personal account manager. You sell ads; we do everything else." },
+    a: "Your monthly subscription covers your access to the entire dealer platform: your assigned territories stay locked to you, you can add more as you grow (no cap — keep filling postcards and keep expanding), you get our online ordering portal, ad-design system, customer-facing checkout pages, payment processing, QR tracking, and a personal account manager. You sell ads; we do everything else." },
   { q: "How is commission calculated?",
     a: `A sold-out postcard generates roughly $${soldOutRevenueDollars.toLocaleString()} in ad revenue. You keep ${commissionPct}% of that revenue — about $${perPostcardDollars.toLocaleString()} per postcard — with no need to track printing, mailing, or fulfillment costs. With 4 territories running one postcard each per month, that's about $${monthlyDollars.toLocaleString()}/month in earning potential. Commissions are paid within 3 business days of the postcard's mail date.` },
   { q: "How exclusive are the territories?",
@@ -334,7 +334,7 @@ const FAQ_ITEMS = [
   { q: "What does it cost the businesses I sell to?",
     a: "Spots range from $199 (Small) to $499 (Extra-Large). All include design, printing and mailing." },
   { q: "Can I get more than 4 territories?",
-    a: "Yes! As long as you're consistently filling up your existing territories, your $99/month subscription covers up to 8 territories at no extra charge. Once you've proven you can sell out a postcard in your current zones, just reach out to your account manager and we'll unlock additional territories for you." },
+    a: "Yes — and there's no hard cap. As long as you're consistently filling postcards in your existing territories, your $99/month covers as many as you can handle. Once you've proven you can sell out your current zones, just reach out to your account manager and we'll add more. The only limit is how many you can actively sell." },
   { q: "Is there a sales quota?",
     a: "No quotas. As long as you can hit our 12-spot minimum to mail a postcard at least once a year, you keep your territories. We'll work with you actively if you're not seeing traction." },
   { q: "When and how are commissions paid?",
