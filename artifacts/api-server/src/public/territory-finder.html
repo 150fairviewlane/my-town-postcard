@@ -657,7 +657,7 @@ async function initMap(){
       sel.appendChild(o);
     });
 
-  map = L.map('map', { zoomControl:true }).setView([39.5, -98.35], 4);
+  map = L.map('map', { zoomControl:false, scrollWheelZoom:false, touchZoom:false, doubleClickZoom:false, boxZoom:false }).setView([39.5, -98.35], 4);
   // Grey county pane sits below the default overlay pane (400) so territory
   // layers always intercept clicks on their own counties first.
   map.createPane('greyCountyPane');
@@ -759,7 +759,6 @@ async function loadAllTerritories(){
               `<div style="font-weight:700">${t.name}</div>` +
               `<div style="font-size:11px;color:#555">${mapStatus==='taken'?'Claimed':'Available'}</div>`,
               { sticky:true });
-            lyr.on('click', () => renderExisting(t, abbr));
           },
         }).addTo(map);
         backgroundLayers.push({ layer: bgLayer, status: mapStatus });
@@ -779,7 +778,6 @@ async function loadAllTerritories(){
             `<div style="font-weight:700">${t.name}</div>` +
             `<div style="font-size:11px;color:#555">${status==='taken'?'Claimed':'Available'}</div>`,
             { sticky:true });
-          lyr.on('click', () => renderExisting(t, abbr));
         },
       }).addTo(map);
       backgroundLayers.push({ layer: bgLayer, status });
@@ -849,12 +847,6 @@ async function addGreyCountyLayer(stateFips){
     style: countyStyle('none'),
     onEachFeature: (_, lyr) => {
       lyr.bindTooltip('No territory here yet', { sticky:true });
-      lyr.on('click', () => {
-        hideAllCards();
-        selectedClaim = null;
-        $('unavailBody').textContent = 'No territory here yet — search above to create one in your area.';
-        $('unavailCard').classList.add('visible');
-      });
     },
   }).addTo(map);
   searchLayers.push(layer);
