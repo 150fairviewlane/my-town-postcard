@@ -336,7 +336,7 @@ const FAQ_ITEMS = [
   { q: "Can I get more than 4 territories?",
     a: "Yes — and there's no hard cap. As long as you're consistently filling postcards in your existing territories, your $99/month covers as many as you can handle. Once you've proven you can sell out your current zones, just reach out to your account manager and we'll add more. The only limit is how many you can actively sell." },
   { q: "Is there a sales quota?",
-    a: "No quotas. As long as you can hit our 12-spot minimum to mail a postcard at least once a year, you keep your territories. We'll work with you actively if you're not seeing traction." },
+    a: "No quotas. As long as you can fill a postcard at least once a year, you remain a dealer. We'll work with you actively if you're not seeing traction." },
   { q: "When and how are commissions paid?",
     a: "Commissions are paid at the mail date. Once a postcard ships to USPS, your commission is calculated and paid within 3 business days. No waiting, no surprises." },
   { q: "Will I have to make ads?",
