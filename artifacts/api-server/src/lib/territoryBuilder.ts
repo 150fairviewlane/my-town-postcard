@@ -43,6 +43,13 @@ const HUB_MIN_BUSINESSES    = 25;    // min postcard-industry establishments wit
  * Tunable once real sales data is available.
  */
 const MIN_HUB_BUSINESS_COUNT = 100;
+// Upper bound on own-ZIP postcard-industry businesses for expansion candidates.
+// True metro cores (e.g. Atlanta at 15,529) are too large and geographically
+// sprawling to function as a single mailing-area hub for this product.
+// Applied only to expansion slots (zones 2-4): the seed city (zone 1) is pinned
+// before candidate filtering runs, so a user searching "Atlanta, GA" still gets
+// Atlanta as their primary city with smaller neighbors filling the remaining slots.
+const MAX_HUB_BUSINESS_COUNT = 10_000;
 // After Voronoi+cap, each hub's exclusive zone is naturally smaller than its full
 // 15mi circle (used in findCandidateHubs). Use a lower household floor here so that
 // legitimate coastal/island anchors (e.g. Hilton Head Island, 4 477 hh) pass while
@@ -523,18 +530,22 @@ export function selectHubsByCountyFill(
   targetCount: number = TARGET_HUB_COUNT
 ): CityHub[] {
   // Only eligible cities: must pass pre-Voronoi qualification, local density
-  // gate, AND the MIN_HUB_BUSINESS_COUNT own-ZIP business floor.
+  // gate, AND the MIN_HUB_BUSINESS_COUNT own-ZIP business floor, AND must not
+  // exceed MAX_HUB_BUSINESS_COUNT (excludes sprawling metro cores that are too
+  // large to function as a single mailing-area hub).
   // Using own-ZIP biz (getCityZipBusinessCount) keeps this consistent with the
   // county-fill sort order and avoids radius contamination from nearby cities.
   // When the home county exhausts cities that clear the floor the loop expands
   // to the next-nearest county rather than padding with below-threshold towns.
   // If fewer than targetCount viable cities exist within the search radius the
   // function returns fewer slots — dealers are not capped at a fixed count.
-  const eligible = candidates.filter(
-    c => c.qualifies &&
-         c.localBiz >= HUB_MIN_COUNTY_REP_BIZ &&
-         getCityZipBusinessCount(c.cityName, c.stateAbbr) >= MIN_HUB_BUSINESS_COUNT
-  );
+  const eligible = candidates.filter(c => {
+    const ownBiz = getCityZipBusinessCount(c.cityName, c.stateAbbr);
+    return c.qualifies &&
+           c.localBiz >= HUB_MIN_COUNTY_REP_BIZ &&
+           ownBiz >= MIN_HUB_BUSINESS_COUNT &&
+           ownBiz <= MAX_HUB_BUSINESS_COUNT;
+  });
 
   // Group by county, sort each county by nearbyBusinesses descending
   const byCounty = new Map<string, CityHub[]>();
@@ -1093,16 +1104,24 @@ async function getCountyTerritoryHubs(
     // to have at least one postcard-industry biz in its own USPS-labeled ZIPs.
     .filter(h => getCityZipBusinessCount(h.cityName, h.stateAbbr) >= COUNTY_MIN_OWN_ZIP_BIZ);
 
-  // Viability floor: keep only cities whose own-ZIP postcard-industry business
-  // count meets MIN_HUB_BUSINESS_COUNT.  Own-ZIP (getCityZipBusinessCount) is
-  // used here — NOT nearbyBusinesses — because the 10-mile radius metric is
-  // contaminated in dense rural clusters where every small town borrows its
-  // neighbours' ZIP codes (e.g. Mount Airy GA: 12 own-ZIP businesses but 359
-  // nearbyBusinesses because Cornelia and Clarkesville's ZIPs fall inside its
-  // 10-mile ring).
+  // Viability band: keep only expansion candidates (zones 2-4) whose own-ZIP
+  // postcard-industry business count falls within [MIN_HUB_BUSINESS_COUNT,
+  // MAX_HUB_BUSINESS_COUNT].
+  //   Lower floor: own-ZIP (getCityZipBusinessCount) rather than nearbyBusinesses,
+  //     which is contaminated in dense rural clusters (e.g. Mount Airy GA: 12
+  //     own-ZIP biz but 359 nearby because Cornelia/Clarkesville ZIPs fall in
+  //     its 10-mile ring).
+  //   Upper cap: true metro cores like Atlanta (15,529) are too geographically
+  //     sprawling to function as a single mailing-area hub; they score
+  //     deceptively well because log() compresses the business-count advantage.
+  //     The seed city (zone 1) is pinned separately (step 5 below) before this
+  //     filter runs, so searching "Atlanta, GA" still works correctly.
   // If the floor would wipe out the entire pool, fall back to all candidates
   // (but warn so the data gap is visible in logs).
-  let viablePool = allMapped.filter(h => getCityZipBusinessCount(h.cityName, h.stateAbbr) >= MIN_HUB_BUSINESS_COUNT);
+  let viablePool = allMapped.filter(h => {
+    const ownBiz = getCityZipBusinessCount(h.cityName, h.stateAbbr);
+    return ownBiz >= MIN_HUB_BUSINESS_COUNT && ownBiz <= MAX_HUB_BUSINESS_COUNT;
+  });
   if (viablePool.length === 0 && allMapped.length > 0) {
     logger.warn(
       {

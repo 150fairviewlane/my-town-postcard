@@ -1,0 +1,19 @@
+Add an upper bound to hub-city eligibility: candidates must have ownZipBiz between 100 (existing MIN_HUB_BUSINESS_COUNT floor) and 10,000. Cities above 10,000 businesses (true metro cores like Atlanta at 122,000) are too large and spread out to function as a single mailing-area hub for this product — exclude them entirely from candidate pools, don't just penalize them in scoring. This keeps large-but-workable suburbs like Marietta eligible while excluding sprawling metro cores.
+
+Add a named constant (e.g. MAX_HUB_BUSINESS_COUNT = 10000) rather than a hardcoded number, next to the existing MIN_HUB_BUSINESS_COUNT = 100.
+
+Important distinction: this ceiling should only apply to expansion candidates — cities the algorithm considers adding as slots 2, 3, or 4 around a searched location. It should NOT apply to the seed city itself (the city the user actually typed into the territory picker). If a user directly searches "Atlanta, GA," Atlanta should still be assignable as their territory's seed/primary city — the cap only exists to stop a huge metro core from being pulled in as an add-on to someone else's smaller search (e.g. Smyrna should never get Atlanta as a bonus slot, but a direct Atlanta search should still work normally).
+
+Before implementing, confirm: today, if a user searches "Atlanta, GA" directly, does it currently work correctly as a seed city (with 3 smaller neighboring cities filling the remaining slots), or does something else happen? Report this first, then implement the cap so it only restricts expansion-candidate selection, not seed-city selection.
+
+Apply this cap everywhere MIN_HUB_BUSINESS_COUNT is currently checked — both getCountyTerritoryHubs (the primary propose path) and selectHubsByCountyFill (mailing-areas endpoint + Voronoi repair), so the two paths stay consistent, while preserving the seed-city exception described above in both places.
+
+Before deploying, also investigate a data discrepancy: our internal ownZipBiz for Marietta, GA reported 5,030, but Google-sourced figures suggest something closer to 8,100 businesses. Check whether Marietta has multiple ZIP codes and whether all of them are being correctly credited via the centroid backfill fix implemented earlier today (the same class of issue that caused Holly Springs' undercount — a ZIP being mislabeled or missing from zip-county.csv and not properly backfilled from zip-centroids.csv). Report what you find — this matters because if mid-size cities are being undercounted the same way, it could affect which cities cluster near the new 10,000 ceiling.
+
+After both changes, re-run the simulation for:
+- Smyrna, GA — confirm Atlanta is now excluded, Marietta remains eligible, and report what fills the 4th slot
+- Fort Worth, TX — confirm no regression
+- Woodstock, GA — confirm no regression
+- Cornelia, GA — confirm no regression (should still show Cornelia, Clarkesville, Toccoa, Cleveland)
+
+Report all results before deploying anything live.
