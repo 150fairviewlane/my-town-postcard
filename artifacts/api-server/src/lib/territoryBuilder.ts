@@ -522,9 +522,18 @@ export function selectHubsByCountyFill(
   dealerCountyGeoid: string,
   targetCount: number = TARGET_HUB_COUNT
 ): CityHub[] {
-  // Only eligible cities: pass pre-Voronoi qualification AND local density gate
+  // Only eligible cities: must pass pre-Voronoi qualification, local density
+  // gate, AND the MIN_HUB_BUSINESS_COUNT own-ZIP business floor.
+  // Using own-ZIP biz (getCityZipBusinessCount) keeps this consistent with the
+  // county-fill sort order and avoids radius contamination from nearby cities.
+  // When the home county exhausts cities that clear the floor the loop expands
+  // to the next-nearest county rather than padding with below-threshold towns.
+  // If fewer than targetCount viable cities exist within the search radius the
+  // function returns fewer slots — dealers are not capped at a fixed count.
   const eligible = candidates.filter(
-    c => c.qualifies && c.localBiz >= HUB_MIN_COUNTY_REP_BIZ
+    c => c.qualifies &&
+         c.localBiz >= HUB_MIN_COUNTY_REP_BIZ &&
+         getCityZipBusinessCount(c.cityName, c.stateAbbr) >= MIN_HUB_BUSINESS_COUNT
   );
 
   // Group by county, sort each county by nearbyBusinesses descending
