@@ -1764,8 +1764,8 @@ export async function getTerritoryForLocation(
     return { type: "existing", territory: existing };
   }
 
-  // (B) Single AI-powered proposal — no radius ladder needed because hub
-  // selection is delegated to Claude Haiku, which knows geographic context.
+  // (B) Deterministic proposal via buildCityHubProposal → getCountyTerritoryHubs
+  // (proximity-weighted scoring + radius ladder) → Voronoi assignment.
   const best = await buildCityHubProposal(
     lat, lng, stateAbbr, stateFips, stateName,
     city, dealerState || stateAbbr
