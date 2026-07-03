@@ -83,6 +83,7 @@ function CheckoutForm({ spotId, clientSecret, amount, size, businessName, expire
   const [error, setError] = useState(null);
   const [processing, setProcessing] = useState(false);
   const [holdExpired, setHoldExpired] = useState(false);
+  const [termsAgreed, setTermsAgreed] = useState(false);
   const confirmMutation = useConfirmPayment();
 
   // When the 30-min hold lapses the server has already (or will shortly)
@@ -196,14 +197,35 @@ function CheckoutForm({ spotId, clientSecret, amount, size, businessName, expire
         </div>
       ) : (
         <>
+          <label style={{
+            display: "flex", alignItems: "flex-start", gap: 10,
+            marginBottom: 14, cursor: "pointer",
+            background: "#fafafa", border: "1px solid #e5e7eb",
+            borderRadius: 8, padding: "12px 14px",
+          }}>
+            <input
+              type="checkbox"
+              checked={termsAgreed}
+              onChange={e => setTermsAgreed(e.target.checked)}
+              style={{ marginTop: 2, flexShrink: 0, accentColor: "#991b1b", width: 15, height: 15 }}
+            />
+            <span style={{ fontSize: 11.5, color: "#374151", lineHeight: 1.55 }}>
+              <strong>I agree to the Advertising Terms of Service.</strong> By checking this box and
+              completing my payment, I certify that I own all submitted logos/trademarks and grant
+              My Town Postcard a license to print them. I approve the AI-generated ad preview as
+              final and understand that all sales are strictly non-refundable once processed.
+              Delivery is fulfilled via USPS EDDM, and My Town Postcard is not liable for postal
+              carrier delays.
+            </span>
+          </label>
           <button
             type="submit"
-            disabled={processing || !stripe}
+            disabled={processing || !stripe || !termsAgreed}
             style={{
               width: "100%", padding: 15, borderRadius: 12, border: "none",
-              background: processing ? "#d1d5db" : "#991b1b",
+              background: (processing || !termsAgreed) ? "#d1d5db" : "#991b1b",
               color: "#fff", fontSize: 16, fontWeight: 800,
-              cursor: processing ? "not-allowed" : "pointer",
+              cursor: (processing || !termsAgreed) ? "not-allowed" : "pointer",
             }}>
             {processing ? "Processing..." : `Pay $${(amount / 100).toFixed(2)}`}
           </button>
