@@ -989,16 +989,11 @@ export async function sendDealerWelcomeEmail(
        </ul>`
     : "";
 
-  const householdsHtml = info.zoneCount && info.zoneCount > 0
-    ? `<div style="margin-top:6px;font-size:13.5px;color:#555;">Reaching <strong>~${(info.zoneCount * 5000).toLocaleString()} households</strong> per mailing (${info.zoneCount} zone${info.zoneCount > 1 ? "s" : ""} × 5,000 via USPS EDDM).</div>`
-    : "";
-
   const territoryBlock = info.territoryName
     ? `<div style="background:#f9f5f0;border-left:4px solid #C9A84C;border-radius:4px;padding:14px 18px;margin:18px 0;">
         <div style="font-size:11px;font-weight:800;color:#C9A84C;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:4px;">Your Territory</div>
         <div style="font-size:18px;font-weight:900;color:#7B1418;font-family:Georgia,serif;">${escapeHtml(info.territoryName)}</div>
         ${citiesHtml}
-        ${householdsHtml}
         <div style="margin-top:8px;font-size:13px;color:#374151;">Your commission: <strong>${commissionPct}% of every ad sold</strong></div>
       </div>`
     : "";
@@ -1048,7 +1043,7 @@ export async function sendDealerWelcomeEmail(
           </ol>
 
           <div style="background:#fff8f0;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;margin:0 0 24px;font-size:13.5px;color:#92400e;">
-            🎯 <strong>Your goal:</strong> Sell out all 15 spots — dealers who fill their first postcard within 30 days see the strongest results.
+            🎯 <strong>First Goal:</strong> Sell out all 15 spots — dealers who fill their first postcard within 30 days see the strongest long-term results.
           </div>
 
           ${ctaHtml}
