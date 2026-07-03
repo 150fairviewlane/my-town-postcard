@@ -8,6 +8,7 @@ interface OrderInfo {
   spotPrice: number;
   spotId: number;
   orderId: number;
+  finishedAdUrl?: string | null;
 }
 
 let _resendLoader: Promise<{ Resend: new (key: string) => any }> | null = null;
@@ -767,6 +768,10 @@ export async function sendAdminNewOrder(order: OrderInfo): Promise<void> {
             <tr><td style="padding: 8px;"><strong>Order #</strong></td><td style="padding: 8px;">${order.orderId}</td></tr>
           </table>
           <p><a href="${APP_URL}/admin">View in Admin Dashboard →</a></p>
+          ${order.finishedAdUrl && !order.finishedAdUrl.startsWith("data:") ? `
+          <h3 style="margin-top: 32px;">Ad Preview</h3>
+          <img src="${order.finishedAdUrl}" alt="Ad preview" style="max-width: 100%; border: 1px solid #e5e7eb; border-radius: 4px;" />
+          ` : ""}
           ${emailFooter()}
         </div>
       `,

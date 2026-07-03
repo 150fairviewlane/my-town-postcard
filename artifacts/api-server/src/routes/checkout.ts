@@ -358,7 +358,10 @@ router.post("/checkout/confirm", async (req, res): Promise<void> => {
         industry: spot.businessCategory ?? null,
         finishedAdUrl,
       }),
-      sendAdminNewOrder(orderInfo),
+      sendAdminNewOrder({
+        ...orderInfo,
+        finishedAdUrl: finishedAdUrl ?? spot.adFileUrl ?? null,
+      }),
     ]);
   } catch (err) {
     logger.error({ err, orderId: order.id }, "Order emails failed — continuing");

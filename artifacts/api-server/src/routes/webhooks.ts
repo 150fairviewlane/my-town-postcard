@@ -643,7 +643,10 @@ export async function markSpotPaidAndNotify(
       industry: spot.businessCategory ?? null,
       finishedAdUrl,
     }),
-    sendAdminNewOrder(orderInfo),
+    sendAdminNewOrder({
+      ...orderInfo,
+      finishedAdUrl: finishedAdUrl ?? spot.adFileUrl ?? null,
+    }),
     ...(dealer
       ? [sendDealerNewSaleEmail({
           dealerEmail: dealer.email,
