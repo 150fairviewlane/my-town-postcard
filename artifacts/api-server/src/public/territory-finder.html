@@ -360,26 +360,19 @@ if(_sp.get('ref')==='signup'){
 <div class="modal-bg" id="modalBg">
   <div class="modal" style="max-height:90vh;overflow-y:auto">
 
-    <!-- PANEL 1: Contact info -->
-    <div id="infoPanelInner">
+    <!-- Single-panel: contact info + agreement + signature -->
+    <div>
       <div class="modal-title">Claim Your Territory</div>
       <div class="modal-sub">You're one step away from exclusive dealer rights in your area</div>
       <div class="modal-territory">
         <div class="modal-territory-name" id="modalTerritoryName"></div>
         <div class="modal-territory-counties" id="modalTerritoryCounties"></div>
       </div>
-      <div class="mfield"><label>Full Name *</label><input type="text" id="claimName" placeholder="Jane Smith"></div>
-      <div class="mfield"><label>Email *</label><input type="email" id="claimEmail" placeholder="jane@example.com"></div>
-      <div class="mfield"><label>Phone *</label><input type="tel" id="claimPhone" placeholder="(706) 555-0100"></div>
-      <div class="modal-actions">
-        <button class="modal-cancel" onclick="closeModal()">Cancel</button>
-        <button class="modal-submit" id="modalNextBtn" onclick="proceedToAgreement()">Continue →</button>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+        <div class="mfield" style="flex:1;min-width:130px;margin:0"><label>Full Name *</label><input type="text" id="claimName" placeholder="Jane Smith"></div>
+        <div class="mfield" style="flex:1;min-width:130px;margin:0"><label>Email *</label><input type="email" id="claimEmail" placeholder="jane@example.com"></div>
+        <div class="mfield" style="flex:1;min-width:130px;margin:0"><label>Phone *</label><input type="tel" id="claimPhone" placeholder="(706) 555-0100"></div>
       </div>
-    </div>
-
-    <!-- PANEL 2: Dealer Agreement + Signature -->
-    <div id="agrPanel" class="agr-panel">
-      <button class="agr-back" onclick="goBackToInfo()">← Back</button>
       <div class="modal-title" style="font-size:20px;margin-bottom:2px">Dealer Agreement</div>
       <div class="modal-sub" style="margin-bottom:10px">Claiming: <strong id="agrTerritoryName" style="color:var(--burg)"></strong></div>
       <div class="agr-scroll">
@@ -416,6 +409,7 @@ if(_sp.get('ref')==='signup'){
         <div class="agr-hint">Your typed name serves as your electronic signature</div>
       </div>
       <div class="modal-actions" style="margin-top:4px">
+        <button class="modal-cancel" onclick="closeModal()">Cancel</button>
         <button class="modal-submit" id="agrSubmitBtn" onclick="submitClaim()" disabled style="flex:1;opacity:.5;cursor:not-allowed">✦ I Agree &amp; Accept — $99/mo</button>
       </div>
       <div class="agr-esign-note">By clicking above, you electronically sign this Agreement per the U.S. E-SIGN Act.</div>
@@ -1151,12 +1145,18 @@ function showUnavail(msg){
 function openModal(name, sub){
   $('modalTerritoryName').textContent = name;
   $('modalTerritoryCounties').textContent = sub || '';
+  $('agrTerritoryName').textContent = name;
   // Pre-fill from query params
   const sp = new URLSearchParams(location.search);
   if(sp.get('name')  && !$('claimName').value)  $('claimName').value  = sp.get('name');
   if(sp.get('email') && !$('claimEmail').value) $('claimEmail').value = sp.get('email');
   if(sp.get('phone') && !$('claimPhone').value) $('claimPhone').value = sp.get('phone');
   $('modalBg').classList.add('visible');
+  // Auto-select draw on touch devices, type on desktop
+  const hasTouch = navigator.maxTouchPoints > 0;
+  switchSigTab(hasTouch ? 'draw' : 'type');
+  // Init canvas after modal is visible (needs layout dimensions)
+  setTimeout(initSigCanvas, 0);
 }
 
 function openExistingModal(){
@@ -1260,30 +1260,6 @@ let _sigHasStrokes = false;
 let _sigCtx = null;
 let _sigDrawing = false;
 
-function proceedToAgreement(){
-  const name  = $('claimName').value.trim();
-  const email = $('claimEmail').value.trim();
-  const phone = $('claimPhone').value.trim();
-  if(!name){ showToast('Enter your full name'); return; }
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)){ showToast('Enter a valid email address'); return; }
-  if(!phone){ showToast('Enter your phone number'); return; }
-
-  $('agrTerritoryName').textContent = $('modalTerritoryName').textContent;
-  $('infoPanelInner').classList.add('hidden');
-  $('agrPanel').classList.add('visible');
-
-  // Auto-select draw on touch devices, type on desktop
-  const hasTouch = navigator.maxTouchPoints > 0;
-  switchSigTab(hasTouch ? 'draw' : 'type');
-
-  // Init canvas after panel is visible (needs layout dimensions)
-  setTimeout(initSigCanvas, 0);
-}
-
-function goBackToInfo(){
-  $('agrPanel').classList.remove('visible');
-  $('infoPanelInner').classList.remove('hidden');
-}
 
 function switchSigTab(mode){
   _agrMode = mode;
