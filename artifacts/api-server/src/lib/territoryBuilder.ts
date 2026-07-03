@@ -535,7 +535,10 @@ export function selectHubsByCountyFill(
     byCounty.get(key)!.push(c);
   }
   for (const cities of byCounty.values()) {
-    cities.sort((a, b) => b.nearbyBusinesses - a.nearbyBusinesses);
+    cities.sort((a, b) =>
+      getCityZipBusinessCount(b.cityName, b.stateAbbr) -
+      getCityZipBusinessCount(a.cityName, a.stateAbbr)
+    );
   }
 
   const selected: CityHub[] = [];

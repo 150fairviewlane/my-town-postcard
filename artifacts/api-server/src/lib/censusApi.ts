@@ -682,6 +682,55 @@ function loadStaticData(): void {
       "Census: zip-centroids backfill failed — some metro ZIPs may lack county mapping");
   }
 
+  // ── 7c. Backfill cityZipBizMap from zip-centroids.csv USPS city names ─────────
+  // zip-county.csv has two gap categories that cause cityZipBizMap (built in
+  // step 7b) to misattribute or silently drop postcard-industry businesses:
+  //
+  //   A) ZIPs labelled "Zcta XXXXX" — Census ZCTA codes used as city names when
+  //      the Census geography doesn't map cleanly to a USPS delivery city. These
+  //      businesses are invisible because "zcta 30189" never matches any real city.
+  //      Example: ZIP 30189 (Woodstock GA) — 517 postcard businesses lost.
+  //
+  //   B) ZIPs entirely absent from zip-county.csv — common in dense US metros
+  //      where USPS assigns a big-city mailing label to suburban ZIPs that have no
+  //      Census ZCTA row.
+  //      Examples: ZIP 30009 (Alpharetta GA, 733 biz), 30046 (Lawrenceville GA, 579 biz).
+  //
+  // Fix: for each ZIP in zipCityMap (built from zip-centroids.csv, which always has
+  // the authoritative USPS city name), check whether its zip-county.csv entry is
+  // Zcta-labelled or missing. If so, credit its businesses to the USPS city.
+  //
+  // Intentionally NOT fixed: cities incorporated after their ZIP codes were
+  // designated (e.g. Holly Springs GA, incorporated 2012) whose commercial ZIPs are
+  // permanently labelled with a neighbouring city name in USPS data (Canton). Those
+  // are a USPS boundary issue — the ZBP entry under the neighbour city is the
+  // authoritative one and no override is appropriate.
+  try {
+    let bizBackfillCount = 0;
+    for (const [zip, uspsCity] of zipCityMap) {
+      if (!uspsCity) continue;
+      const centroidsEntry = zipFromCentroids.get(zip);
+      if (!centroidsEntry) continue;
+      const { stateAbbr } = centroidsEntry;
+
+      const rawEntry = zipCityRaw.get(zip);
+      const isZcta   = rawEntry?.cityLower.startsWith("zcta") ?? false;
+      const isMissing = !rawEntry;
+      if (!isZcta && !isMissing) continue; // already correctly attributed in step 7b
+
+      const biz = zipPostcardBizMap.get(zip) ?? 0;
+      if (biz <= 0) continue;
+
+      const key = `${stateAbbr}:${uspsCity.toLowerCase()}`;
+      cityZipBizMap.set(key, (cityZipBizMap.get(key) ?? 0) + biz);
+      bizBackfillCount++;
+    }
+    logger.info({ bizBackfillCount }, "Census: cityZipBizMap backfilled from zip-centroids.csv USPS city names");
+  } catch (err: unknown) {
+    logger.error({ err: err instanceof Error ? err.message : String(err) },
+      "Census: cityZipBizMap backfill failed — some cities may have understated ownZipBiz counts");
+  }
+
   // ── 8. gazetteer-places.txt ───────────────────────────────────────────────────
   // Census 2023 Gazetteer for Incorporated/CDP Places. Tab-delimited.
   // Columns (0-indexed): USPS[0], GEOID[1], ANSICODE[2], NAME[3], LSAD[4],
