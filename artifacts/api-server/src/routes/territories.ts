@@ -561,9 +561,12 @@ router.post("/territories/propose", async (req, res): Promise<void> => {
   if (result.type === "existing" && result.territory) {
     const t = result.territory as Record<string, any>;
     nearbyExisting = { id: t.id, name: t.name, status: t.status };
-    // Generate a fresh proposal (hubs are auto-adjusted away from the claimed area).
+    // Generate a fresh proposal. Skip the existing territory's own cities from
+    // the exclusion list so the proposal reflects the natural hubs for this
+    // area rather than falling back to cities 20+ miles away.
     const freshProposal = await buildCityHubProposal(
       loc.lat, loc.lng, stateAbbr, stateFips, stateName, city, stateAbbr,
+      undefined, t.id,
     );
     if (freshProposal.isViable) {
       proposalSource = freshProposal;

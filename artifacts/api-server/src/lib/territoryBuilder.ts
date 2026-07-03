@@ -916,11 +916,13 @@ function voronoiAssign(
 async function getClaimedHubCities(
   dealerLat: number,
   dealerLng: number,
-  stateAbbr: string
+  stateAbbr: string,
+  skipTerritoryId?: string
 ): Promise<string[]> {
   const CLAIMED_RADIUS_MI = 25;
   const rows = await db
     .select({
+      id: territoriesTable.id,
       centroidLat: territoriesTable.centroidLat,
       centroidLng: territoriesTable.centroidLng,
       zoneNote: territoriesTable.zoneNote,
@@ -933,6 +935,10 @@ async function getClaimedHubCities(
 
   const withDistance = rows
     .filter(r => r.centroidLat != null && r.centroidLng != null)
+    // When generating a fresh proposal adjacent to an existing territory, skip
+    // that territory's own cities so they remain eligible as candidates. Only
+    // exclude cities claimed by OTHER nearby territories (preventing overlap).
+    .filter(r => !skipTerritoryId || r.id !== skipTerritoryId)
     .map(r => ({
       ...r,
       dist: haversineDistanceMiles(dealerLat, dealerLng, r.centroidLat!, r.centroidLng!),
@@ -1233,9 +1239,10 @@ export async function buildCityHubProposal(
   stateName: string,
   city: string = "",
   dealerState: string = "",
-  searchRadius: number = TERRITORY_SEARCH_RADIUS
+  searchRadius: number = TERRITORY_SEARCH_RADIUS,
+  skipClaimedTerritoryId?: string
 ): Promise<TerritoryProposal> {
-  const excludedCities = await getClaimedHubCities(dealerLat, dealerLng, stateAbbr);
+  const excludedCities = await getClaimedHubCities(dealerLat, dealerLng, stateAbbr, skipClaimedTerritoryId);
   const { hubs: rawHubs, countyLabel, countyGeoids } = await getCountyTerritoryHubs(
     city, dealerState || stateAbbr, dealerLat, dealerLng, excludedCities
   );
