@@ -1,0 +1,73 @@
+MY TOWN POSTCARD, LLC
+INDEPENDENT DEALER AGREEMENT
+
+This Independent Dealer Agreement ("Agreement") is entered into as of the date of electronic acceptance below ("Effective Date"), by and between My Town Postcard, LLC, a limited liability company ("Company"), and the individual or entity completing the dealer sign-up process ("Dealer"). Company and Dealer may each be referred to as a "Party" and collectively as the "Parties."
+1. Independent Contractor Relationship
+1.1 Dealer is an independent contractor of Company, and nothing in this Agreement shall be construed to create an employer-employee relationship, partnership, joint venture, or agency relationship between the Parties.
+1.2 Dealer has sole discretion over the manner, means, and methods by which Dealer performs services under this Agreement, subject only to the territory and program guidelines described herein. Company does not control Dealer's work hours, schedule, or day-to-day methods.
+1.3 Dealer is not entitled to any employee benefits from Company, including but not limited to health insurance, retirement contributions, paid time off, unemployment insurance, or workers' compensation coverage.
+1.4 Dealer is solely responsible for all federal, state, and local taxes arising from compensation earned under this Agreement, including self-employment taxes. Company will not withhold taxes from commission payments.
+1.5 Dealer shall provide Company with a completed IRS Form W-9 (or equivalent) prior to receiving any commission payment. Company will issue an IRS Form 1099-NEC (or successor form) to Dealer for any calendar year in which total payments meet or exceed the applicable federal reporting threshold.
+1.6 Dealer is free to perform similar services for other businesses, including competitors, except as limited by Section 6 (Confidentiality) and Section 7 (Non-Solicitation) below.
+2. Territory Assignment
+2.1 Upon acceptance of this Agreement, Company will assign Dealer a territory consisting of approximately four (4) mailing areas/cities near Dealer's registered location ("Territory"), as shown in Dealer's dashboard.
+2.2 Territory assignment is non-exclusive and non-transferable unless otherwise agreed in writing by Company. Dealer has no ownership, equity, or permanent interest in any Territory.
+2.3 Company reserves the right to modify, reduce, expand, reassign, or revoke Dealer's Territory at any time, with or without cause, upon reasonable notice to Dealer (not less than fourteen (14) days except in cases of Dealer's breach of this Agreement, fraud, or misconduct, in which case Company may act immediately).
+2.4 Dealer acknowledges that Territory reassignment does not entitle Dealer to compensation for lost future opportunity, and Dealer's sole remedy is payment of commissions properly earned prior to reassignment.
+3. Commission Structure and Payment
+3.1 Dealer will earn a commission equal to the percentage set forth in Dealer's dashboard at the time of sale ("Commission Rate") of the revenue collected by Company for each paid advertisement placement Dealer generates within Dealer's Territory.
+3.2 The current Commission Rate is disclosed to Dealer during sign-up and in Dealer's dashboard. Company reserves the right to change the Commission Rate prospectively (i.e., for placements sold after the change takes effect) upon reasonable notice. Changes will not retroactively affect commissions already earned.
+3.3 Commissions are earned only upon Company's actual receipt of payment from the advertiser, and are subject to reversal if the underlying payment is refunded, charged back, or disputed.
+3.4 Company will pay earned commissions on the schedule described in Dealer's dashboard (e.g., monthly). Company reserves the right to reasonably adjust payment timing and method, including minimum payout thresholds.
+3.5 Dealer is solely responsible for any costs Dealer incurs in performing services under this Agreement (e.g., transportation, phone, marketing materials Dealer independently creates), unless otherwise agreed in writing.
+4. Dealer Responsibilities
+● Act honestly and accurately when representing Company's products, pricing, and services to prospective advertisers.
+● Not make representations, warranties, or promises on Company's behalf beyond what is published in Company's official materials.
+● Comply with all applicable laws in the conduct of dealer activities, including telemarketing, solicitation, and advertising laws applicable in Dealer's Territory.
+● Promptly report customer complaints, disputes, or any suspected fraud to Company.
+● Maintain the confidentiality obligations described in Section 6.
+5. Intellectual Property and Branding
+5.1 Company grants Dealer a limited, revocable, non-exclusive, non-transferable license to use Company's name, logo, and provided marketing materials solely for the purpose of promoting Company's advertising placements within Dealer's assigned Territory during the term of this Agreement.
+5.2 Dealer acquires no ownership interest in Company's trademarks, trade names, logos, website, software, or other intellectual property. Dealer may not modify Company-provided branding materials without prior written consent.
+5.3 Upon termination of this Agreement for any reason, Dealer shall immediately cease all use of Company's name, logo, branding, and marketing materials, and shall remove any such materials from public use (including websites, social media, business cards, and signage) within five (5) business days.
+5.4 Any goodwill arising from Dealer's use of Company's marks inures solely to the benefit of Company.
+6. Confidentiality
+6.1 During the course of this Agreement, Dealer may have access to confidential and proprietary information belonging to Company, including but not limited to pricing structures, commission rates, customer lists, territory data, business strategies, and dashboard/platform information ("Confidential Information").
+6.2 Dealer agrees to hold all Confidential Information in strict confidence, not to disclose it to any third party, and to use it solely for the purpose of performing services under this Agreement.
+6.3 This confidentiality obligation survives termination of this Agreement for a period of two (2) years, or indefinitely with respect to information that constitutes a trade secret under applicable law.
+6.4 Confidential Information does not include information that is or becomes publicly available through no fault of Dealer, or that Dealer can demonstrate was independently known prior to disclosure.
+7. Non-Solicitation
+7.1 During the term of this Agreement and for twelve (12) months after termination, Dealer agrees not to directly solicit advertisers Dealer identified or serviced through Company's platform to purchase competing local advertising products outside of Company's platform, using Confidential Information obtained through this Agreement.
+7.2 Dealer acknowledges that non-solicitation and non-compete provisions are subject to significant variation and limitation under state law (including outright unenforceability in some states, such as California). This provision is intended to apply only to the extent enforceable under the law of the state governing this Agreement, and shall be narrowed or severed as necessary to comply with applicable law.
+8. Term and Termination
+8.1 This Agreement begins on the Effective Date and continues until terminated by either Party.
+8.2 Either Party may terminate this Agreement at any time, for any reason or no reason, upon fourteen (14) days' written notice to the other Party.
+8.3 Company may terminate this Agreement immediately, without notice, if Dealer breaches this Agreement, engages in fraud or misrepresentation, violates applicable law, or brings Company into disrepute.
+8.4 Upon termination, Dealer shall be paid all commissions properly earned prior to the effective date of termination, subject to Section 3.3 (chargebacks/refunds), on Company's regular payment schedule. Dealer is not entitled to commissions on sales occurring after termination, or to any severance, notice pay, or other termination compensation.
+8.5 Sections 1.3, 1.4, 3.3, 5.3, 6, 7, 9, 10, 11, and 12 survive termination of this Agreement.
+9. Limitation of Liability and Indemnification
+9.1 COMPANY SHALL NOT BE LIABLE TO DEALER FOR ANY INDIRECT, INCIDENTAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING OUT OF OR RELATED TO THIS AGREEMENT, INCLUDING LOST PROFITS OR LOST BUSINESS OPPORTUNITY, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+9.2 Company's total liability to Dealer under this Agreement shall not exceed the total commissions paid to Dealer in the three (3) months preceding the claim.
+9.3 Dealer agrees to indemnify, defend, and hold harmless Company, its officers, employees, and affiliates from and against any claims, damages, losses, or expenses (including reasonable attorneys' fees) arising out of: (a) Dealer's breach of this Agreement; (b) Dealer's negligence, misconduct, or misrepresentation to a customer; (c) Dealer's violation of applicable law; or (d) any claim that Dealer is Company's employee rather than an independent contractor, to the extent such claim arises from Dealer's own conduct inconsistent with independent contractor status.
+9.4 Dealer is solely responsible for any personal injury or property damage Dealer causes or sustains while performing services under this Agreement. Company does not provide workers' compensation coverage to Dealer.
+10. Dispute Resolution and Governing Law
+10.1 This Agreement shall be governed by the laws of the State of Georgia without regard to its conflict of laws principles.
+11. Electronic Signature
+11.1 Dealer agrees that this Agreement may be executed electronically, and that Dealer's act of checking an acceptance box, clicking "I Agree," or otherwise affirmatively accepting this Agreement through Company's online dealer sign-up workflow constitutes a valid, binding electronic signature under the U.S. Electronic Signatures in Global and National Commerce Act (E-SIGN Act) and applicable state law.
+11.2 Company will retain a timestamped record of Dealer's acceptance, including the version of this Agreement accepted, for Company's records.
+12. General Provisions
+12.1 Entire Agreement. This Agreement, together with any documents referenced herein (including Company's published commission rates and dealer program guidelines as updated from time to time), constitutes the entire agreement between the Parties regarding its subject matter and supersedes all prior agreements or understandings, whether written or oral.
+12.2 Modification. Company may update the standard terms of this Agreement prospectively for all dealers, with notice provided via email or dashboard notification. Continued participation in the dealer program after such notice constitutes acceptance of the updated terms. Material changes affecting a specific Dealer's Commission Rate or Territory are governed by Sections 2 and 3.
+12.3 Assignment. Dealer may not assign this Agreement without Company's prior written consent. Company may assign this Agreement in connection with a merger, acquisition, or sale of substantially all its assets.
+12.4 Severability. If any provision of this Agreement is held unenforceable, the remaining provisions shall remain in full force and effect, and the unenforceable provision shall be modified to the minimum extent necessary to make it enforceable.
+12.5 No Waiver. Failure by either Party to enforce any provision of this Agreement shall not constitute a waiver of future enforcement of that or any other provision.
+12.6 Notices. Notices under this Agreement shall be sent to the email address on file in Dealer's account, or to Company's designated business contact email.
+
+Acceptance
+By checking the box below and clicking "I Agree and Accept" during dealer sign-up, Dealer acknowledges that Dealer has read, understood, and agrees to be bound by all terms of this Independent Dealer Agreement.
+ 
+Dealer Name: _______________________________
+Business Name (if applicable): _______________________________
+Email: _______________________________
+Territory Assigned: _______________________________
+Date of Acceptance: _______________________________ (auto-recorded by system)

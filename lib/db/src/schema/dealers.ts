@@ -53,6 +53,12 @@ export const dealersTable = pgTable(
     // (e.g. vincent@mytownpostcard.com → dealer's personal inbox). Nullable
     // until provisioned; unique so two dealers can't share an address.
     companyEmail: text("company_email"),
+    // E-SIGN record: timestamp of agreement acceptance, the signature payload
+    // ("typed:Jane Smith" or "draw:<base64 png>"), and the agreement version
+    // the dealer signed. All nullable for admin-created/legacy dealers.
+    agreementSignedAt: timestamp("agreement_signed_at", { withTimezone: true }),
+    agreementSigData: text("agreement_sig_data"),
+    agreementVersion: text("agreement_version"),
   },
   (t) => ({
     // Unique on email so a re-attempted signup with the same address surfaces

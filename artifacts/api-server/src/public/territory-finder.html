@@ -197,6 +197,28 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);min-height:100vh
 .modal-submit:disabled{opacity:.6;cursor:not-allowed}
 .modal-cancel{padding:11px 18px;background:var(--surface);color:var(--ink-mid);border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
 .modal-cancel:hover{border-color:var(--burg);color:var(--burg)}
+/* AGREEMENT PANEL */
+.info-panel.hidden{display:none}
+.agr-panel{display:none}
+.agr-panel.visible{display:block}
+.agr-scroll{max-height:220px;overflow-y:auto;border:1.5px solid var(--border);border-radius:7px;padding:11px 13px;font-size:11px;line-height:1.65;color:var(--ink-mid);background:var(--surface);margin-bottom:13px}
+.agr-scroll strong{color:var(--ink)}
+.agr-scroll p{margin-bottom:7px}
+.agr-sig-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-mid);margin-bottom:7px}
+.agr-tabs{display:flex;border:1.5px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:9px}
+.agr-tab{flex:1;padding:7px 10px;background:var(--surface);border:none;border-right:1.5px solid var(--border);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;color:var(--ink-mid);cursor:pointer;transition:all .15s}
+.agr-tab:last-child{border-right:none}
+.agr-tab.active{background:var(--burg);color:#fff}
+.agr-canvas-wrap{position:relative;border:1.5px solid var(--border);border-radius:7px;background:#fff;overflow:hidden;margin-bottom:3px}
+#sigCanvas{display:block;touch-action:none;cursor:crosshair;width:100%}
+.agr-canvas-clear{position:absolute;top:5px;right:7px;background:none;border:none;font-size:11px;color:var(--ink-light);cursor:pointer;font-weight:600;text-decoration:underline;padding:0}
+.agr-canvas-clear:hover{color:var(--burg)}
+.agr-type-input{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:7px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--ink);background:var(--surface);outline:none;transition:border-color .2s;margin-bottom:3px;box-sizing:border-box}
+.agr-type-input:focus{border-color:var(--burg);background:#fff}
+.agr-hint{font-size:10px;color:var(--ink-light);font-family:'Crimson Pro',serif;font-style:italic;margin-bottom:10px}
+.agr-back{background:none;border:none;color:var(--ink-light);font-size:12px;cursor:pointer;text-decoration:underline;padding:0 0 10px;display:block}
+.agr-back:hover{color:var(--burg)}
+.agr-esign-note{font-size:10px;color:var(--ink-light);text-align:center;margin-top:9px;font-family:'Crimson Pro',serif;font-style:italic}
 
 @media(max-width:768px){
   .layout{grid-template-columns:1fr;grid-template-rows:auto 1fr}
@@ -336,20 +358,69 @@ if(_sp.get('ref')==='signup'){
 
 <!-- CLAIM MODAL -->
 <div class="modal-bg" id="modalBg">
-  <div class="modal">
-    <div class="modal-title">Claim Your Territory</div>
-    <div class="modal-sub">You're one step away from exclusive dealer rights in your area</div>
-    <div class="modal-territory">
-      <div class="modal-territory-name" id="modalTerritoryName"></div>
-      <div class="modal-territory-counties" id="modalTerritoryCounties"></div>
+  <div class="modal" style="max-height:90vh;overflow-y:auto">
+
+    <!-- PANEL 1: Contact info -->
+    <div id="infoPanelInner">
+      <div class="modal-title">Claim Your Territory</div>
+      <div class="modal-sub">You're one step away from exclusive dealer rights in your area</div>
+      <div class="modal-territory">
+        <div class="modal-territory-name" id="modalTerritoryName"></div>
+        <div class="modal-territory-counties" id="modalTerritoryCounties"></div>
+      </div>
+      <div class="mfield"><label>Full Name *</label><input type="text" id="claimName" placeholder="Jane Smith"></div>
+      <div class="mfield"><label>Email *</label><input type="email" id="claimEmail" placeholder="jane@example.com"></div>
+      <div class="mfield"><label>Phone *</label><input type="tel" id="claimPhone" placeholder="(706) 555-0100"></div>
+      <div class="modal-actions">
+        <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+        <button class="modal-submit" id="modalNextBtn" onclick="proceedToAgreement()">Continue →</button>
+      </div>
     </div>
-    <div class="mfield"><label>Full Name *</label><input type="text" id="claimName" placeholder="Jane Smith"></div>
-    <div class="mfield"><label>Email *</label><input type="email" id="claimEmail" placeholder="jane@example.com"></div>
-    <div class="mfield"><label>Phone *</label><input type="tel" id="claimPhone" placeholder="(706) 555-0100"></div>
-    <div class="modal-actions">
-      <button class="modal-cancel" onclick="closeModal()">Cancel</button>
-      <button class="modal-submit" id="modalSubmitBtn" onclick="submitClaim()">✦ Claim It — $99/mo</button>
+
+    <!-- PANEL 2: Dealer Agreement + Signature -->
+    <div id="agrPanel" class="agr-panel">
+      <button class="agr-back" onclick="goBackToInfo()">← Back</button>
+      <div class="modal-title" style="font-size:20px;margin-bottom:2px">Dealer Agreement</div>
+      <div class="modal-sub" style="margin-bottom:10px">Claiming: <strong id="agrTerritoryName" style="color:var(--burg)"></strong></div>
+      <div class="agr-scroll">
+        <strong style="font-size:12px;display:block;margin-bottom:6px">MY TOWN POSTCARD, LLC — INDEPENDENT DEALER AGREEMENT</strong>
+        <p>This Agreement is entered into as of the date of electronic acceptance, by and between <strong>My Town Postcard, LLC</strong> ("Company") and the individual completing the dealer sign-up process ("Dealer").</p>
+        <p><strong>1. Independent Contractor.</strong> Dealer is an independent contractor, not an employee. Dealer has sole discretion over work methods, hours, and schedule. Dealer is not entitled to employee benefits. Dealer is solely responsible for all federal, state, and local taxes, including self-employment taxes. Dealer shall provide a completed IRS Form W-9 prior to receiving any commission payment; Company will issue IRS Form 1099-NEC for qualifying calendar years. Dealer is free to perform similar services for others, subject to Sections 6 and 7.</p>
+        <p><strong>2. Territory Assignment.</strong> Upon acceptance, Company assigns Dealer approximately four (4) mailing areas near Dealer's registered location. Territory assignment is non-exclusive and non-transferable unless agreed in writing. Dealer acquires no ownership or equity interest in any Territory. Company may modify, reduce, or revoke Territory upon 14 days' notice (or immediately upon Dealer breach, fraud, or misconduct). Dealer's sole remedy upon reassignment is payment of commissions properly earned before reassignment.</p>
+        <p><strong>3. Commission Structure and Payment.</strong> Dealer earns a commission equal to the Commission Rate shown in Dealer's dashboard, applied to revenue Company collects for each paid placement Dealer generates within Dealer's Territory. The current Commission Rate is disclosed during sign-up. Company may change the Rate prospectively with reasonable notice. Commissions are earned only upon Company's actual receipt of payment and are subject to reversal if refunded or charged back. Dealer is responsible for all costs Dealer incurs in performing services.</p>
+        <p><strong>4. Dealer Responsibilities.</strong> Dealer agrees to: act honestly when representing Company's products and pricing; not make representations beyond Company's official materials; comply with all applicable laws (including telemarketing and solicitation laws); promptly report customer complaints or suspected fraud; and maintain the confidentiality obligations in Section 6.</p>
+        <p><strong>5. Intellectual Property.</strong> Company grants Dealer a limited, revocable, non-exclusive license to use Company's name and branding solely to promote placements within Dealer's Territory. Dealer acquires no ownership interest in Company's trademarks, logos, website, or software. Upon termination, Dealer shall cease all use of Company branding within 5 business days. All goodwill inures solely to Company.</p>
+        <p><strong>6. Confidentiality.</strong> Dealer shall hold all Confidential Information (including pricing, commission rates, customer lists, territory data, and platform information) in strict confidence and not disclose it to any third party. This obligation survives termination for 2 years (indefinitely for trade secrets).</p>
+        <p><strong>7. Non-Solicitation.</strong> During the term and for 12 months after termination, Dealer agrees not to directly solicit advertisers identified through Company's platform to purchase competing products using Confidential Information. This provision applies only to the extent enforceable under applicable state law.</p>
+        <p><strong>8. Term and Termination.</strong> Either Party may terminate upon 14 days' written notice. Company may terminate immediately for breach, fraud, misrepresentation, or violation of law. Upon termination, Dealer is paid commissions properly earned before the effective termination date. Sections 1.3, 1.4, 3.3, 5.3, 6, 7, 9, 10, 11, and 12 survive termination.</p>
+        <p><strong>9. Limitation of Liability and Indemnification.</strong> COMPANY SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING LOST PROFITS. Company's total liability shall not exceed commissions paid to Dealer in the preceding 3 months. Dealer agrees to indemnify and hold harmless Company from claims arising from Dealer's breach, negligence, misrepresentation, or violation of law. Dealer is solely responsible for personal injury or property damage while performing services.</p>
+        <p><strong>10. Governing Law.</strong> This Agreement is governed by the laws of the State of Georgia without regard to conflict of laws principles.</p>
+        <p><strong>11. Electronic Signature.</strong> Dealer's act of signing or clicking "I Agree and Accept" through the online dealer sign-up workflow constitutes a valid, binding electronic signature under the U.S. E-SIGN Act and applicable state law. Company will retain a timestamped record of Dealer's acceptance and the version of this Agreement accepted.</p>
+        <p><strong>12. General Provisions.</strong> This Agreement constitutes the entire agreement between the Parties. Company may update terms prospectively with notice; continued participation constitutes acceptance. Dealer may not assign this Agreement without Company's consent. If any provision is held unenforceable, the remainder stays in force. Notices shall be sent to the email address on file in Dealer's account.</p>
+        <p style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><strong>Acceptance:</strong> By signing below and clicking "I Agree and Accept," Dealer acknowledges having read, understood, and agreed to be bound by all terms of this Independent Dealer Agreement, effective as of the date of electronic acceptance.</p>
+      </div>
+      <div class="agr-sig-label">Your Signature</div>
+      <div class="agr-tabs">
+        <button class="agr-tab active" id="tabDraw" onclick="switchSigTab('draw')">✍️ Draw</button>
+        <button class="agr-tab" id="tabType" onclick="switchSigTab('type')">⌨️ Type</button>
+      </div>
+      <div id="drawWrap">
+        <div class="agr-canvas-wrap">
+          <canvas id="sigCanvas" height="100"></canvas>
+          <button class="agr-canvas-clear" onclick="clearSigCanvas()">Clear</button>
+        </div>
+        <div class="agr-hint">Sign with your finger or mouse</div>
+      </div>
+      <div id="typeWrap" style="display:none">
+        <input class="agr-type-input" id="sigTyped" placeholder="Type your full legal name" oninput="updateAgrBtn()">
+        <div class="agr-hint">Your typed name serves as your electronic signature</div>
+      </div>
+      <div class="modal-actions" style="margin-top:4px">
+        <button class="modal-submit" id="agrSubmitBtn" onclick="submitClaim()" disabled style="flex:1;opacity:.5;cursor:not-allowed">✦ I Agree &amp; Accept — $99/mo</button>
+      </div>
+      <div class="agr-esign-note">By clicking above, you electronically sign this Agreement per the U.S. E-SIGN Act.</div>
     </div>
+
   </div>
 </div>
 
@@ -1119,12 +1190,26 @@ async function submitClaim(){
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)){ showToast('Enter a valid email address'); return; }
   if(!phone){ showToast('Enter your phone number'); return; }
 
+  // Capture agreement signature
+  let sigData = '';
+  if(_agrMode === 'draw'){
+    const canvas = $('sigCanvas');
+    sigData = 'draw:' + (canvas ? canvas.toDataURL('image/png') : '');
+  } else {
+    sigData = 'typed:' + (($('sigTyped') ? $('sigTyped').value : '') || '').trim();
+  }
+  const agrPayload = {
+    agreementSignedAt: new Date().toISOString(),
+    agreementSigData:  sigData,
+    agreementVersion:  'v1-2025-07',
+  };
+
   // Read the password that DealerSignup stored in sessionStorage (never in the URL).
   // Clear it immediately after reading — one-time use only.
   const pendingPassword = sessionStorage.getItem('_dealer_pw_pending') || undefined;
   sessionStorage.removeItem('_dealer_pw_pending');
 
-  const btn = $('modalSubmitBtn');
+  const btn = $('agrSubmitBtn');
   btn.disabled = true; btn.textContent = 'Redirecting…';
 
   try {
@@ -1135,6 +1220,7 @@ async function submitClaim(){
       body = {
         name, email, phone,
         ...(pendingPassword ? { password: pendingPassword } : {}),
+        ...agrPayload,
         proposal: {
           proposedName: p.proposedName,
           stateAbbr:    p.stateAbbr,
@@ -1154,7 +1240,8 @@ async function submitClaim(){
     } else {
       url = '/api/dealers';
       body = { name, email, phone, territoryId: selectedClaim.territoryId, territoryName: selectedClaim.name,
-               ...(pendingPassword ? { password: pendingPassword } : {}) };
+               ...(pendingPassword ? { password: pendingPassword } : {}),
+               ...agrPayload };
     }
 
     const res = await fetch(url, {
@@ -1165,15 +1252,124 @@ async function submitClaim(){
     const data = await res.json().catch(() => ({}));
     if(!res.ok || !data.checkoutUrl){
       showToast(data.error || 'Could not start checkout — please try again');
-      btn.disabled = false; btn.textContent = '✦ Claim It — $99/mo';
+      btn.disabled = false; btn.textContent = '✦ I Agree & Accept — $99/mo';
       return;
     }
     window.location.href = data.checkoutUrl;
   } catch(e){
     showToast('Something went wrong — please try again');
-    btn.disabled = false; btn.textContent = '✦ Claim It — $99/mo';
+    btn.disabled = false; btn.textContent = '✦ I Agree & Accept — $99/mo';
   }
 }
+
+// ── AGREEMENT / SIGNATURE ─────────────────────────────────────────────────────
+let _agrMode = 'draw';
+let _sigHasStrokes = false;
+let _sigCtx = null;
+let _sigDrawing = false;
+
+function proceedToAgreement(){
+  const name  = $('claimName').value.trim();
+  const email = $('claimEmail').value.trim();
+  const phone = $('claimPhone').value.trim();
+  if(!name){ showToast('Enter your full name'); return; }
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)){ showToast('Enter a valid email address'); return; }
+  if(!phone){ showToast('Enter your phone number'); return; }
+
+  $('agrTerritoryName').textContent = $('modalTerritoryName').textContent;
+  $('infoPanelInner').classList.add('hidden');
+  $('agrPanel').classList.add('visible');
+
+  // Auto-select draw on touch devices, type on desktop
+  const hasTouch = navigator.maxTouchPoints > 0;
+  switchSigTab(hasTouch ? 'draw' : 'type');
+
+  // Init canvas after panel is visible (needs layout dimensions)
+  setTimeout(initSigCanvas, 0);
+}
+
+function goBackToInfo(){
+  $('agrPanel').classList.remove('visible');
+  $('infoPanelInner').classList.remove('hidden');
+}
+
+function switchSigTab(mode){
+  _agrMode = mode;
+  $('tabDraw').classList.toggle('active', mode === 'draw');
+  $('tabType').classList.toggle('active', mode === 'type');
+  $('drawWrap').style.display = mode === 'draw' ? 'block' : 'none';
+  $('typeWrap').style.display = mode === 'type' ? 'block' : 'none';
+  if(mode === 'draw' && !_sigCtx) setTimeout(initSigCanvas, 0);
+  updateAgrBtn();
+}
+
+function initSigCanvas(){
+  const canvas = $('sigCanvas');
+  if(!canvas) return;
+  const wrap = canvas.parentElement;
+  canvas.width = wrap.clientWidth || 360;
+  _sigHasStrokes = false;
+  _sigCtx = canvas.getContext('2d');
+  _sigCtx.clearRect(0, 0, canvas.width, canvas.height);
+  _sigCtx.strokeStyle = '#1a1a2e';
+  _sigCtx.lineWidth = 2.2;
+  _sigCtx.lineCap = 'round';
+  _sigCtx.lineJoin = 'round';
+}
+
+function _sigPos(canvas, e){
+  const r = canvas.getBoundingClientRect();
+  const src = (e.touches && e.touches[0]) || e;
+  return {
+    x: (src.clientX - r.left) * (canvas.width  / r.width),
+    y: (src.clientY - r.top)  * (canvas.height / r.height),
+  };
+}
+
+function clearSigCanvas(){
+  if(!_sigCtx) return;
+  const canvas = $('sigCanvas');
+  _sigCtx.clearRect(0, 0, canvas.width, canvas.height);
+  _sigHasStrokes = false;
+  updateAgrBtn();
+}
+
+function updateAgrBtn(){
+  const btn = $('agrSubmitBtn');
+  if(!btn) return;
+  const ready = _agrMode === 'draw'
+    ? _sigHasStrokes
+    : ($('sigTyped') ? $('sigTyped').value.trim().length > 0 : false);
+  btn.disabled = !ready;
+  btn.style.opacity = ready ? '1' : '.5';
+  btn.style.cursor  = ready ? 'pointer' : 'not-allowed';
+}
+
+// Canvas pointer events (works for mouse + touch + stylus)
+document.addEventListener('DOMContentLoaded', function(){
+  const canvas = $('sigCanvas');
+  if(!canvas) return;
+  canvas.addEventListener('pointerdown', function(e){
+    e.preventDefault();
+    if(!_sigCtx) initSigCanvas();
+    _sigDrawing = true;
+    canvas.setPointerCapture(e.pointerId);
+    const p = _sigPos(canvas, e);
+    _sigCtx.beginPath();
+    _sigCtx.moveTo(p.x, p.y);
+  });
+  canvas.addEventListener('pointermove', function(e){
+    if(!_sigDrawing || !_sigCtx) return;
+    e.preventDefault();
+    const p = _sigPos(canvas, e);
+    _sigCtx.lineTo(p.x, p.y);
+    _sigCtx.stroke();
+    _sigHasStrokes = true;
+    updateAgrBtn();
+  });
+  canvas.addEventListener('pointerup',     function(){ _sigDrawing = false; });
+  canvas.addEventListener('pointercancel', function(){ _sigDrawing = false; });
+});
 
 // Close modal on backdrop click
 document.addEventListener('click', e => {

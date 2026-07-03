@@ -133,6 +133,12 @@ const LegacyTerritorySchema = z.object({
 
 // Accepts both the new county-based format (territoryId + territoryName) and
 // the legacy ZIP-cluster format (homeZip + territories[]) for backward compat.
+const AgreementFields = {
+  agreementSignedAt: z.string().optional(),
+  agreementSigData: z.string().max(300_000).optional(),
+  agreementVersion: z.string().max(30).optional(),
+};
+
 const CreateDealerBodySchema = z.union([
   z.object({
     name: z.string().trim().min(1).max(120),
@@ -142,6 +148,7 @@ const CreateDealerBodySchema = z.union([
     territoryName: z.string().min(1).max(200),
     password: z.string().min(8).max(128).optional(),
     confirmPassword: z.string().optional(),
+    ...AgreementFields,
   }),
   z.object({
     name: z.string().trim().min(1).max(120),
@@ -151,6 +158,7 @@ const CreateDealerBodySchema = z.union([
     territories: z.array(LegacyTerritorySchema).min(1).max(8),
     password: z.string().min(8).max(128).optional(),
     confirmPassword: z.string().optional(),
+    ...AgreementFields,
   }),
 ]);
 
@@ -243,6 +251,14 @@ router.post("/dealers", async (req, res): Promise<void> => {
 
   const { name, email, phone } = parsed.data;
   const rawPassword = (parsed.data as any).password as string | undefined;
+  const rawAgrSignedAt = (parsed.data as any).agreementSignedAt as string | undefined;
+  const rawAgrSigData  = (parsed.data as any).agreementSigData  as string | undefined;
+  const rawAgrVersion  = (parsed.data as any).agreementVersion  as string | undefined;
+  const agrDbFields = {
+    ...(rawAgrSignedAt ? { agreementSignedAt: new Date(rawAgrSignedAt) } : {}),
+    ...(rawAgrSigData  ? { agreementSigData:  rawAgrSigData }           : {}),
+    ...(rawAgrVersion  ? { agreementVersion:  rawAgrVersion }           : {}),
+  };
   if (rawPassword) {
     const complexityError = validatePasswordComplexity(rawPassword);
     if (complexityError) {
@@ -303,7 +319,7 @@ router.post("/dealers", async (req, res): Promise<void> => {
         txPortalToken = existing.portalToken ?? crypto.randomUUID();
         await tx
           .update(dealersTable)
-          .set({ name, phone: phone ?? null, homeZip, portalToken: txPortalToken })
+          .set({ name, phone: phone ?? null, homeZip, portalToken: txPortalToken, ...agrDbFields })
           .where(eq(dealersTable.id, txDealerId));
         // Release any pending territory linked to this dealer from a prior
         // signup attempt. This ensures that if the dealer picks a different
@@ -326,7 +342,7 @@ router.post("/dealers", async (req, res): Promise<void> => {
       } else {
         const [created] = await tx
           .insert(dealersTable)
-          .values({ name, email, phone: phone ?? null, homeZip, status: "pending_payment", ...(passwordHash ? { passwordHash } : {}) })
+          .values({ name, email, phone: phone ?? null, homeZip, status: "pending_payment", ...(passwordHash ? { passwordHash } : {}), ...agrDbFields })
           .returning({ id: dealersTable.id, portalToken: dealersTable.portalToken });
         txDealerId = created.id;
         txPortalToken = created.portalToken ?? crypto.randomUUID();
@@ -452,6 +468,7 @@ const ClaimProposalBodySchema = z.object({
   proposal:        ClaimProposalProposalSchema,
   password:        z.string().min(8).max(128).optional(),
   confirmPassword: z.string().optional(),
+  ...AgreementFields,
 });
 
 router.post("/dealers/claim-proposal", async (req, res): Promise<void> => {
@@ -479,6 +496,14 @@ router.post("/dealers/claim-proposal", async (req, res): Promise<void> => {
 
   const { name, email, phone, proposal } = parsed.data;
   const cpRawPassword = (parsed.data as any).password as string | undefined;
+  const cpRawAgrSignedAt = (parsed.data as any).agreementSignedAt as string | undefined;
+  const cpRawAgrSigData  = (parsed.data as any).agreementSigData  as string | undefined;
+  const cpRawAgrVersion  = (parsed.data as any).agreementVersion  as string | undefined;
+  const cpAgrDbFields = {
+    ...(cpRawAgrSignedAt ? { agreementSignedAt: new Date(cpRawAgrSignedAt) } : {}),
+    ...(cpRawAgrSigData  ? { agreementSigData:  cpRawAgrSigData }            : {}),
+    ...(cpRawAgrVersion  ? { agreementVersion:  cpRawAgrVersion }            : {}),
+  };
   if (cpRawPassword) {
     const complexityError = validatePasswordComplexity(cpRawPassword);
     if (complexityError) {
@@ -523,12 +548,12 @@ router.post("/dealers/claim-proposal", async (req, res): Promise<void> => {
       txPortalToken = existing.portalToken ?? crypto.randomUUID();
       await tx
         .update(dealersTable)
-        .set({ name, phone: phone ?? null, homeZip: proposal.zipCode ?? null, portalToken: txPortalToken, ...(cpPasswordHash ? { passwordHash: cpPasswordHash } : {}) })
+        .set({ name, phone: phone ?? null, homeZip: proposal.zipCode ?? null, portalToken: txPortalToken, ...(cpPasswordHash ? { passwordHash: cpPasswordHash } : {}), ...cpAgrDbFields })
         .where(eq(dealersTable.id, txDealerId));
     } else {
       const [created] = await tx
         .insert(dealersTable)
-        .values({ name, email, phone: phone ?? null, homeZip: proposal.zipCode ?? null, status: "pending_payment", ...(cpPasswordHash ? { passwordHash: cpPasswordHash } : {}) })
+        .values({ name, email, phone: phone ?? null, homeZip: proposal.zipCode ?? null, status: "pending_payment", ...(cpPasswordHash ? { passwordHash: cpPasswordHash } : {}), ...cpAgrDbFields })
         .returning({ id: dealersTable.id, portalToken: dealersTable.portalToken });
       txDealerId = created.id;
       txPortalToken = created.portalToken ?? crypto.randomUUID();
