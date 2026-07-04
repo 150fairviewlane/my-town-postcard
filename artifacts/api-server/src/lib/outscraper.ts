@@ -53,14 +53,26 @@ export async function searchBusinesses(
     throw new Error(`Outscraper API error ${resp.status}: ${text.slice(0, 400)}`);
   }
 
-  const data = (await resp.json()) as { status?: string; data?: unknown[][] };
+  const data = (await resp.json()) as { status?: string; data?: unknown };
 
   if (data.status && data.status !== "OK" && data.status !== "Success") {
     throw new Error(`Outscraper non-OK status: ${data.status}`);
   }
 
-  const results: Record<string, unknown>[] =
-    (Array.isArray(data?.data?.[0]) ? data.data![0] : []) as Record<string, unknown>[];
+  // Outscraper returns one of two shapes depending on endpoint/version:
+  //   Nested (async-style):  { data: [[result, result, ...]] }
+  //   Flat (sync):           { data: [result, result, ...] }
+  let results: Record<string, unknown>[] = [];
+  if (Array.isArray(data?.data)) {
+    const first = (data.data as unknown[])[0];
+    if (Array.isArray(first)) {
+      // nested: data[0] is the results array
+      results = first as Record<string, unknown>[];
+    } else if (first && typeof first === "object") {
+      // flat: data itself is the results array
+      results = data.data as Record<string, unknown>[];
+    }
+  }
 
   return results.map((r) => normalizeResult(r));
 }
