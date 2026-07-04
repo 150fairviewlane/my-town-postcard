@@ -272,17 +272,19 @@ async function processLogoAndContinue(
       }, logoResult.url).catch((err) => logger.error({ err, id }, "adminScraper: ad cascade failed"));
     }
   } else {
+    // Distinguish genuine rejection from API errors that need human review
+    const logoStatus = filterResult.needsReview ? "needs-review" : "unusable";
     await db
       .update(scrapedBusinessesTable)
       .set({
         logoUrl: logoResult.url,
         logoMethod: logoResult.method,
-        logoStatus: "unusable",
+        logoStatus,
         logoVisionNotes: filterResult.notes,
         updatedAt: new Date(),
       })
       .where(eq(scrapedBusinessesTable.id, id));
-    // No usable logo → still draft an email (without ad)
+    // Draft email regardless — logo can be re-checked manually later
     draftEmailForBusiness(id).catch((err) =>
       logger.error({ err, id }, "adminScraper: email draft (no-logo) cascade failed"),
     );

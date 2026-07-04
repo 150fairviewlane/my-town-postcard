@@ -15,7 +15,7 @@ export const scrapedBusinessesTable = pgTable("scraped_businesses", {
   logoUrl: text("logo_url"),
   logoMethod: text("logo_method"),
   logoStatus: text("logo_status", {
-    enum: ["pending", "usable", "unusable", "no-logo-found"],
+    enum: ["pending", "usable", "unusable", "no-logo-found", "needs-review"],
   }).notNull().default("pending"),
   logoVisionNotes: text("logo_vision_notes"),
   adImageUrl: text("ad_image_url"),

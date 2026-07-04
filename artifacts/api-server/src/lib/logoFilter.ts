@@ -1,9 +1,12 @@
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
+// Current xAI multimodal model (grok-2-vision-1212 was retired)
+const XAI_VISION_MODEL = "grok-4.3";
+
 export type FilterResult =
-  | { pass: true; dataUrl: string; notes: string }
-  | { pass: false; notes: string };
+  | { pass: true; notes: string }
+  | { pass: false; needsReview: boolean; notes: string };
 
 /** Download an image URL, returning its buffer and mime type. */
 async function downloadImage(url: string): Promise<{ buf: Buffer; mime: string } | null> {
@@ -57,11 +60,15 @@ async function checkDimensions(buf: Buffer): Promise<string | null> {
   return null;
 }
 
-/** Stage 2: xAI grok-2-vision-1212 logo quality check. Returns { pass, notes }. */
+/**
+ * Stage 2: xAI vision logo quality check.
+ * Passes the original image URL directly — no base64 encoding needed.
+ * Retries once on API/network errors before returning needsReview=true.
+ */
 async function visionCheck(
-  dataUrl: string,
+  imageUrl: string,
   apiKey: string,
-): Promise<{ pass: boolean; notes: string }> {
+): Promise<{ pass: boolean; needsReview: boolean; notes: string }> {
   const PROMPT =
     "You are a quality reviewer for a local print advertising company.\n" +
     "Examine this image carefully. Is it a clean, recognizable business logo " +
@@ -70,76 +77,98 @@ async function visionCheck(
     "Reply with exactly: PASS or FAIL\n" +
     "Then on the same line after a dash, give a brief reason (max 15 words).";
 
-  const body = {
-    model: "grok-2-vision-1212",
+  const body = JSON.stringify({
+    model: XAI_VISION_MODEL,
     messages: [
       {
         role: "user",
         content: [
-          { type: "image_url", image_url: { url: dataUrl } },
+          { type: "image_url", image_url: { url: imageUrl } },
           { type: "text", text: PROMPT },
         ],
       },
     ],
     max_tokens: 60,
     temperature: 0,
-  };
+  });
 
-  try {
-    const resp = await fetch("https://api.x.ai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-    if (!resp.ok) {
-      return { pass: false, notes: `Vision API error ${resp.status}` };
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const resp = await fetch("https://api.x.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body,
+      });
+
+      if (!resp.ok) {
+        const errText = await resp.text().catch(() => "");
+        if (attempt < 2) continue; // retry once
+        // Persistent API error — not a quality rejection, needs human review
+        return {
+          pass: false,
+          needsReview: true,
+          notes: `Vision API error ${resp.status}: ${errText.slice(0, 120)}`,
+        };
+      }
+
+      const data = (await resp.json()) as {
+        choices?: Array<{ message?: { content?: string } }>;
+      };
+      const text = data?.choices?.[0]?.message?.content?.trim() ?? "";
+      const pass = text.toUpperCase().startsWith("PASS");
+      const dashIdx = text.indexOf("-");
+      const notes = dashIdx >= 0 ? text.slice(dashIdx + 1).trim() : text.slice(4).trim();
+      return {
+        pass,
+        needsReview: false,
+        notes: notes || (pass ? "Looks good" : "Rejected by vision model"),
+      };
+    } catch (err) {
+      if (attempt < 2) continue; // retry once on network error
+      return {
+        pass: false,
+        needsReview: true,
+        notes: `Vision check failed: ${String(err).slice(0, 80)}`,
+      };
     }
-    const data = (await resp.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    const text = data?.choices?.[0]?.message?.content?.trim() ?? "";
-    const pass = text.toUpperCase().startsWith("PASS");
-    const dashIdx = text.indexOf("-");
-    const notes = dashIdx >= 0 ? text.slice(dashIdx + 1).trim() : text.slice(4).trim();
-    return { pass, notes: notes || (pass ? "Looks good" : "Rejected by vision model") };
-  } catch (err) {
-    return { pass: false, notes: `Vision check failed: ${String(err).slice(0, 80)}` };
   }
+
+  // Should be unreachable
+  return { pass: false, needsReview: true, notes: "Vision check: unexpected exit" };
 }
 
 /**
  * Filter a logo URL through Stage 1 (dimensions) and Stage 2 (vision).
  * Returns a FilterResult indicating pass/fail + notes.
+ * On vision API errors, returns needsReview=true rather than treating it as a rejection.
  */
 export async function filterLogo(logoUrl: string): Promise<FilterResult> {
   const apiKey = process.env.XAI_API_KEY;
 
   const downloaded = await downloadImage(logoUrl);
   if (!downloaded) {
-    return { pass: false, notes: "Could not download logo image" };
+    return { pass: false, needsReview: false, notes: "Could not download logo image" };
   }
 
-  const { buf, mime } = downloaded;
+  const { buf } = downloaded;
 
   const dimFail = await checkDimensions(buf);
   if (dimFail) {
-    return { pass: false, notes: dimFail };
+    return { pass: false, needsReview: false, notes: dimFail };
   }
-
-  const b64 = buf.toString("base64");
-  const safeMime = mime || "image/png";
-  const dataUrl = `data:${safeMime};base64,${b64}`;
 
   if (!apiKey) {
-    return { pass: true, dataUrl, notes: "Dimensions OK (vision check skipped — XAI_API_KEY not set)" };
+    return { pass: true, notes: "Dimensions OK (vision check skipped — XAI_API_KEY not set)" };
   }
 
-  const { pass, notes } = await visionCheck(dataUrl, apiKey);
+  // xAI rejects plain http:// image URLs — upgrade to https before calling vision API
+  const safeUrl = logoUrl.replace(/^http:\/\//i, "https://");
+  const { pass, needsReview, notes } = await visionCheck(safeUrl, apiKey);
   if (!pass) {
-    return { pass: false, notes };
+    return { pass: false, needsReview, notes };
   }
-  return { pass: true, dataUrl, notes };
+  return { pass: true, notes };
 }
