@@ -76,52 +76,106 @@ const SERVICE_MENU: Record<string, string[]> = {
   "painting":    ["Interior", "Exterior", "Cabinet Painting", "Staining"],
   "fence":       ["Wood Fences", "Vinyl Fences", "Gate Installation", "Repairs"],
   "flooring":    ["Hardwood", "Tile", "Carpet", "LVP"],
+  "pool":        ["Pool Cleaning", "Repairs", "Chemical Service", "Openings & Closings"],
+  "pressure":    ["Driveways", "Decks", "Siding", "Roofs"],
+  "junk":        ["Junk Removal", "Hauling", "Demo Cleanup", "Same-Day Service"],
+  "septic":      ["Pumping", "Inspections", "Repairs", "New Installs"],
+  "gutter":      ["Gutter Cleaning", "Leaf Guards", "Repairs", "New Installs"],
+  "window":      ["Window Cleaning", "Replacement", "Screen Repair", "Tinting"],
+  "garage":      ["Door Repair", "Opener Install", "Spring Replacement", "New Doors"],
+  "hardware":    ["Tools & Supplies", "Home Repair", "Custom Orders", "Rentals"],
   // Health & wellness
   "dental":      ["Cleanings", "Whitening", "Fillings", "Implants"],
   "health":      ["Consultations", "Preventive Care", "Lab Work", "Telehealth"],
   "medical":     ["Consultations", "Preventive Care", "Lab Work", "Telehealth"],
+  "urgent":      ["Walk-In Care", "Physicals", "Lab Work", "X-Rays"],
   "chiro":       ["Adjustments", "Spinal Decompression", "Massage", "Rehab"],
   "optom":       ["Eye Exams", "Contacts", "Glasses", "LASIK Consult"],
+  "therapy":     ["Individual Sessions", "Group Therapy", "Evaluations", "Telehealth"],
   "yoga":        ["Yoga Classes", "Pilates", "Meditation", "Workshops"],
   "spa":         ["Massages", "Facials", "Body Wraps", "Waxing"],
   "wellness":    ["Massages", "Skin Care", "Nutrition", "Holistic Care"],
   "gym":         ["Personal Training", "Group Classes", "Nutrition", "Memberships"],
+  "fitness":     ["Personal Training", "Group Classes", "Cardio", "Memberships"],
+  "massage":     ["Swedish Massage", "Deep Tissue", "Hot Stone", "Sports Massage"],
   // Food & beverage
   "restaurant":  ["Dine-In", "Takeout", "Catering", "Happy Hour"],
   "food":        ["Dine-In", "Takeout", "Catering", "Happy Hour"],
   "cafe":        ["Coffee", "Breakfast", "Lunch", "Pastries"],
+  "coffee":      ["Espresso Drinks", "Cold Brew", "Pastries", "Seasonal Specials"],
   "pizza":       ["Delivery", "Dine-In", "Catering", "Slice Deals"],
   "bakery":      ["Fresh Bread", "Custom Cakes", "Pastries", "Wholesale"],
+  "ice cream":   ["Soft Serve", "Hard Scoop", "Sundaes & Shakes", "Party Catering"],
+  "gelato":      ["Artisan Gelato", "Seasonal Flavors", "Cones & Cups", "Catering"],
+  "frozen":      ["Frozen Treats", "Custom Flavors", "Shakes & Floats", "Party Orders"],
+  "dessert":     ["Custom Cakes", "Ice Cream", "Pastries & Cookies", "Catering"],
+  "sandwich":    ["Made-to-Order Subs", "Breakfast", "Catering", "Daily Specials"],
+  "deli":        ["Custom Sandwiches", "Platters", "Catering", "Daily Specials"],
+  "diner":       ["Breakfast All Day", "Comfort Food", "Daily Specials", "Takeout"],
+  "brewery":     ["Craft Beer", "Tours & Tastings", "Private Events", "Growler Fills"],
+  "winery":      ["Wine Tastings", "Bottle Sales", "Private Events", "Wine Club"],
+  "distillery":  ["Spirits Tastings", "Bottle Sales", "Tours", "Private Events"],
+  "catering":    ["Corporate Events", "Weddings", "Drop-Off Service", "Custom Menus"],
+  "food truck":  ["Daily Specials", "Private Events", "Catering", "Takeout"],
+  // Hospitality
+  "inn":         ["Cozy Guest Rooms", "Full Breakfast", "Local Activities", "Event Hosting"],
+  "hotel":       ["Comfortable Rooms", "Free Breakfast", "Extended Stays", "Event Hosting"],
+  "motel":       ["Clean Rooms", "Free Wi-Fi", "Extended Stays", "Pet Friendly"],
+  "lodge":       ["Cabin Rentals", "Outdoor Activities", "Group Stays", "Local Guides"],
+  "bed":         ["Cozy Rooms", "Full Breakfast", "Local Tours", "Private Baths"],
+  "resort":      ["Rooms & Suites", "Pool & Spa", "Dining", "Private Events"],
+  "cabin":       ["Cabin Rentals", "Outdoor Activities", "Group Retreats", "Pet Friendly"],
+  "vacation":    ["Vacation Rentals", "Full-Home Stays", "Weekly Rates", "Local Concierge"],
+  "airbnb":      ["Short-Term Stays", "Full-Home Rental", "Local Recommendations", "Flexible Booking"],
   // Auto
   "auto":        ["Oil Change", "Brake Service", "Tires", "Diagnostics"],
   "mechanic":    ["Oil Change", "Brake Service", "Engine Repair", "Diagnostics"],
   "tow":         ["24/7 Towing", "Roadside Help", "Long Distance", "Lockout"],
   "car wash":    ["Full Detail", "Express Wash", "Interior Clean", "Waxing"],
+  "tire":        ["Tire Sales", "Balancing", "Rotation", "Flat Repair"],
+  "body shop":   ["Collision Repair", "Paint Matching", "Dent Removal", "Insurance Claims"],
+  "oil change":  ["Oil Change", "Fluid Check", "Filter Replacement", "Multi-Point Inspection"],
   // Professional services
   "law":         ["Free Consult", "Estate Planning", "Injury Claims", "Family Law"],
   "attorney":    ["Free Consult", "Estate Planning", "Injury Claims", "Family Law"],
   "account":     ["Tax Prep", "Bookkeeping", "Payroll", "Business Filing"],
   "insur":       ["Home Insurance", "Auto Insurance", "Life Insurance", "Business"],
   "real estate": ["Buy a Home", "Sell Your Home", "Rentals", "Free CMA"],
+  "mortgage":    ["Home Purchase Loans", "Refinancing", "Pre-Approval", "Free Consult"],
+  "financial":   ["Retirement Planning", "Investments", "Tax Strategy", "Free Consult"],
+  "notary":      ["Document Notarization", "Mobile Service", "Apostille", "Same-Day"],
   // Beauty
   "salon":       ["Haircuts", "Color", "Highlights", "Blowouts"],
   "barber":      ["Haircuts", "Fades", "Beard Trim", "Hot Shave"],
   "nail":        ["Manicure", "Pedicure", "Gel Nails", "Nail Art"],
   "tattoo":      ["Custom Tattoos", "Cover-Ups", "Piercings", "Consultations"],
+  "esthetic":    ["Facials", "Waxing", "Brow Shaping", "Skin Treatments"],
+  "lash":        ["Lash Extensions", "Lifts & Tints", "Fills", "Removal"],
+  "boutique":    ["Women's Clothing", "Accessories", "Gift Items", "Personal Styling"],
+  "jewelry":     ["Custom Jewelry", "Repairs", "Engraving", "Estate Buying"],
+  "apparel":     ["Men's & Women's", "Custom Orders", "Alterations", "Gift Cards"],
   // Other
   "pet":         ["Grooming", "Boarding", "Daycare", "Vet Services"],
   "vet":         ["Wellness Exams", "Vaccinations", "Surgery", "Dental Care"],
   "photo":       ["Portraits", "Events", "Headshots", "Weddings"],
   "wedding":     ["Photography", "Videography", "DJ", "Planning"],
+  "florist":     ["Fresh Arrangements", "Wedding Flowers", "Corporate Orders", "Delivery"],
   "tutor":       ["Math", "Reading", "SAT Prep", "Test Taking"],
   "child":       ["After School", "Summer Camp", "Tutoring", "Activities"],
+  "daycare":     ["Infant Care", "Toddler Programs", "After School", "Summer Camp"],
   "church":      ["Sunday Service", "Youth Group", "Community Events", "Missions"],
   "storage":     ["Climate Control", "Drive-Up Units", "24/7 Access", "Moving Supplies"],
   "moving":      ["Local Moves", "Long Distance", "Packing", "Storage"],
   "print":       ["Banners", "Business Cards", "Signs", "T-Shirts"],
+  "sign":        ["Banners", "Vehicle Wraps", "Indoor Signs", "Custom Orders"],
   "it":          ["Network Setup", "PC Repair", "Data Recovery", "Security"],
   "computer":    ["PC Repair", "Data Recovery", "Virus Removal", "Upgrades"],
+  "antique":     ["Antique Furniture", "Collectibles", "Appraisals", "Estate Buying"],
+  "gift":        ["Gift Baskets", "Custom Orders", "Local Artisan Goods", "Gift Cards"],
+  "supplement":  ["Vitamins & Supplements", "Protein & Recovery", "Nutrition Advice", "In-Store Pickup"],
 };
+
+const GENERIC_SERVICE_MENU = ["Quality Service", "Locally Owned", "Free Estimates", "Call Today"];
 
 function toServiceMenu(category: string | null, subtypes: string[]): string[] {
   if (category) {
@@ -131,7 +185,7 @@ function toServiceMenu(category: string | null, subtypes: string[]): string[] {
     }
   }
   // Fallback: first 3 subtypes, each truncated to ≤ 3 words, title-cased
-  return subtypes
+  const fromSubtypes = subtypes
     .slice(0, 3)
     .map((s) =>
       s
@@ -141,6 +195,8 @@ function toServiceMenu(category: string | null, subtypes: string[]): string[] {
         .join(" "),
     )
     .filter(Boolean);
+  // If subtypes produce fewer than 2 meaningful labels, use a safe generic set
+  return fromSubtypes.length >= 2 ? fromSubtypes : GENERIC_SERVICE_MENU;
 }
 
 function pickTemplate(category: string | null): string {
@@ -258,17 +314,25 @@ export async function generateAdForOutreach(
   // "Duct Cleaning", …) that fit the template's icon boxes.
   const menu = toServiceMenu(params.category, params.services ?? []);
 
+  // Build a safe, generic tagline — true for virtually any small business.
+  const industry = params.category ?? "Local Business";
+  const tagline = `Your Local ${industry} Experts`;
+
   const promptInput: AdPromptInput = {
     bizName:   params.bizName,
-    tagline:   "",
+    tagline,
     phone:     params.phone ?? "",
     city:      params.city,
     address:   params.address ?? "",
     website:   params.website ?? "",
-    industry:  params.category ?? "Local Business",
+    industry,
     menu,
-    offer:     "",
-    offerFine: "",
+    // Non-empty offer prevents the template's coupon/ticket-stub zone from
+    // being left instruction-free (which caused Grok to duplicate menu items
+    // into the coupon zone). "Call for Special Offers" is always true and
+    // never fabricates a discount the business never made.
+    offer:     "Call for Special Offers",
+    offerFine: "Ask about current promotions and seasonal deals",
     template:  templateKey,
     // Outreach images are generated at 3:4 aspect ratio → 900×1200 px ("l" slot)
     sizeKey:   "l",

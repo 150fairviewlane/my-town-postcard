@@ -91,12 +91,23 @@ export function buildFooterZone(phone: string, address: string, isLandscape = fa
   }
 
   const hasAddr = address !== "(none)";
+  // Split address into street line + city/state/zip line so long city names
+  // (e.g. "Clarkesville") don't overflow the 70% column at a large font size.
+  // Mirrors the landscape branch's explicit two-line split.
+  let addrLines = "";
+  if (hasAddr) {
+    const commaIdx = address.indexOf(",");
+    const streetLine   = commaIdx > -1 ? address.slice(0, commaIdx).trim() : address;
+    const cityStateLine = commaIdx > -1 ? address.slice(commaIdx + 1).trim() : "";
+    addrLines =
+      `"${streetLine}" bold white, medium, stacked below phone; ` +
+      (cityStateLine ? `"${cityStateLine}" white, small, stacked below — ` : "") +
+      `all address text within left 70%; `;
+  }
   return (
     `FOOTER (full-width dark bar, 20% of card height) — TWO columns: ` +
     `LEFT (70%): "${phone}" bold white, very large; ` +
-    (hasAddr
-      ? `"${address}" bold white, large, stacked below — all text within left 70%; `
-      : ``) +
+    addrLines +
     `RIGHT (30% — QR slot): ${qrSlot}. ` +
     `Phone once, footer only.\n\n`
   );

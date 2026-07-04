@@ -1,0 +1,12 @@
+The outreach ad pipeline is much improved (real QR codes, real logos, correct phone/address placement) but four test ads show two remaining distinct problems. I have screenshots for reference.
+
+Problem 1 — duplicated content across two template zones
+AJ House and Chicago's Pizza both show the identical text ("Dine-In, Takeout, Catering, Happy Hour") rendered twice in two different visual zones (once in a ticket/banner style zone, once in a chalkboard style zone). Investigate: does the affected template (looks like it could be a shared base template used for multiple restaurant businesses) have two distinct content slots that are meant to hold different information, but the prompt only supplies one generic "menu/services" field so Grok fills both zones with the same list? If so, either (a) tell Grok explicitly that each zone must contain different content and specify what belongs in each, or (b) if the template only needs one of these zones, adjust the prompt to instruct Grok to leave the redundant zone empty or remove it rather than duplicate.
+
+Problem 2 — empty content zones for certain business categories
+Southern Seasons Inn (a bed & breakfast/inn) and Scoops (an ice cream shop) both show checklist icons with no text next to them, and Southern Seasons Inn additionally has a fully empty black dashed content box. Check what toServiceMenu produced for these two businesses' categories/subtypes — my guess is neither "inn/hotel" nor "ice cream shop" match any keyword in the current map, and the fallback produced weak or empty output, causing Grok to render blank rather than guess at content. Confirm this, and if so, either expand the keyword map to cover more business categories (hospitality, dessert/ice cream, etc.) or improve the fallback so it never produces a fully empty result — even a generic 2-3 item fallback is better than blank icons.
+
+Problem 3 — text overflow
+Scoops' address is visibly cut off mid-word ("Clarkesv...") in the footer. Check whether there's a text-length constraint or auto-shrink rule missing for longer city names combined with longer street addresses in the footer zone.
+
+Report back your findings — what's actually driving the duplication and the blank zones — before implementing fixes.
