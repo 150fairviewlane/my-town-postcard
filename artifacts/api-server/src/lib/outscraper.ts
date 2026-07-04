@@ -55,7 +55,7 @@ export async function searchBusinesses(
 
   const data = (await resp.json()) as { status?: string; data?: unknown[][] };
 
-  if (data.status && data.status !== "OK") {
+  if (data.status && data.status !== "OK" && data.status !== "Success") {
     throw new Error(`Outscraper non-OK status: ${data.status}`);
   }
 
