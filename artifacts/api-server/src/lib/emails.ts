@@ -1460,3 +1460,144 @@ export async function sendCampaignSoldOutEmail(info: CampaignMilestoneEmailInfo)
     logger.error({ err, campaignId: info.campaignId }, "Failed to send sold-out milestone email");
   }
 }
+
+// =============================================================================
+// "Got Questions?" contact form emails
+// =============================================================================
+
+export interface ContactInquiryInfo {
+  first: string;
+  last: string;
+  biz: string;
+  email: string;
+  phone: string;
+  dealerEmail?: string | null;
+  territory?: string | null;
+}
+
+function contactInquiryTable(info: ContactInquiryInfo, territory?: string): string {
+  const rows: [string, string][] = [
+    ["Name", escapeHtml(`${info.first} ${info.last}`)],
+    ["Business", escapeHtml(info.biz)],
+    ["Email", escapeHtml(info.email)],
+    ["Phone", escapeHtml(info.phone)],
+  ];
+  if (territory) rows.push(["Source", `Territory – ${escapeHtml(territory)}`]);
+
+  return `
+    <table style="width: 100%; border-collapse: collapse; background: #f8fafc; border-radius: 8px; overflow: hidden; margin-top: 16px;">
+      ${rows.map(([label, val], i) => `
+        <tr>
+          <td style="padding: 10px 12px; color: #6b7280; font-size: 13px; width: 35%;${i > 0 ? " border-top: 1px solid #e5e7eb;" : ""}">${label}</td>
+          <td style="padding: 10px 12px; color: #111; font-size: 14px; font-weight: 600;${i > 0 ? " border-top: 1px solid #e5e7eb;" : ""}">${val}</td>
+        </tr>`).join("")}
+    </table>`;
+}
+
+export async function sendAdminContactInquiry(info: ContactInquiryInfo): Promise<void> {
+  const resend = await getResendClient();
+  if (!resend) return;
+
+  try {
+    const { error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: ADMIN_EMAIL,
+      subject: `📋 New inquiry: ${info.biz} (${info.first} ${info.last})`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
+          <h2 style="margin-top: 0; color: #111;">New "Got Questions?" Inquiry</h2>
+          <p style="color: #374151; font-size: 15px; line-height: 1.55;">
+            A visitor submitted the contact form on the My Town Postcard website.
+          </p>
+          ${contactInquiryTable(info, info.territory ?? undefined)}
+          <p style="margin-top: 24px; font-size: 14px; color: #374151;">
+            Follow up within 1 business day.
+          </p>
+          <p style="margin-top: 8px;"><a href="${APP_URL}/admin" style="color: #7B1418; font-weight: 600;">Open Admin Dashboard →</a></p>
+          ${emailFooter()}
+        </div>
+      `,
+    });
+    if (error) logger.error({ err: error, to: ADMIN_EMAIL, type: "admin-contact-inquiry" }, "Failed to send admin contact inquiry email");
+    else logger.info({ biz: info.biz, to: ADMIN_EMAIL, type: "admin-contact-inquiry" }, "Admin contact inquiry email sent");
+  } catch (err) {
+    logger.error({ err, to: ADMIN_EMAIL, type: "admin-contact-inquiry" }, "Failed to send admin contact inquiry email");
+  }
+}
+
+export async function sendDealerContactInquiry(info: ContactInquiryInfo): Promise<void> {
+  const resend = await getResendClient();
+  if (!resend || !info.dealerEmail) return;
+
+  try {
+    const { error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: info.dealerEmail,
+      subject: `📋 New inquiry on your territory: ${info.biz}`,
+      html: `
+        <div style="font-family: Georgia, serif; max-width: 620px; margin: 0 auto; padding: 32px; background: #f9fafb;">
+          <div style="background: #7B1418; padding: 18px 24px; border-radius: 8px 8px 0 0;">
+            <h1 style="color: #fff; margin: 0; font-size: 20px;">📮 My Town Postcard</h1>
+          </div>
+          <div style="background: #fff; border: 1px solid #e5e7eb; padding: 32px; border-radius: 0 0 8px 8px;">
+            <h2 style="color: #111; font-size: 22px; margin-top: 0;">New inquiry on your territory</h2>
+            <p style="color: #374151; font-size: 15px; line-height: 1.55;">
+              A business just submitted the "Got Questions?" form on your territory page. Here are their details — please follow up within 1 business day.
+            </p>
+            ${contactInquiryTable(info)}
+            <div style="background: #f0fdf4; border-left: 4px solid #16a34a; border-radius: 6px; padding: 14px 16px; margin: 24px 0;">
+              <p style="margin: 0; color: #14532d; font-size: 14px; line-height: 1.5;">
+                ✓ This lead has also been forwarded to the My Town Postcard admin team.
+              </p>
+            </div>
+            ${emailFooter()}
+          </div>
+        </div>
+      `,
+    });
+    if (error) logger.error({ err: error, to: info.dealerEmail, type: "dealer-contact-inquiry" }, "Failed to send dealer contact inquiry email");
+    else logger.info({ biz: info.biz, to: info.dealerEmail, type: "dealer-contact-inquiry" }, "Dealer contact inquiry email sent");
+  } catch (err) {
+    logger.error({ err, to: info.dealerEmail, type: "dealer-contact-inquiry" }, "Failed to send dealer contact inquiry email");
+  }
+}
+
+export async function sendContactAutoReply(info: ContactInquiryInfo): Promise<void> {
+  const resend = await getResendClient();
+  if (!resend || !info.email) return;
+
+  try {
+    const { error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: info.email,
+      subject: `We got your message — My Town Postcard`,
+      html: `
+        <div style="font-family: Georgia, serif; max-width: 620px; margin: 0 auto; padding: 32px; background: #f9fafb;">
+          <div style="background: #7B1418; padding: 18px 24px; border-radius: 8px 8px 0 0;">
+            <h1 style="color: #fff; margin: 0; font-size: 20px;">📮 My Town Postcard</h1>
+          </div>
+          <div style="background: #fff; border: 1px solid #e5e7eb; padding: 32px; border-radius: 0 0 8px 8px;">
+            <h2 style="color: #111; font-size: 22px; margin-top: 0;">Thanks, ${escapeHtml(info.first)}!</h2>
+            <p style="color: #374151; font-size: 15px; line-height: 1.65;">
+              We received your message about <strong>${escapeHtml(info.biz)}</strong> and appreciate you reaching out.
+              Someone from our team will follow up with you within <strong>1 business day</strong>.
+            </p>
+            <p style="color: #374151; font-size: 15px; line-height: 1.65;">
+              In the meantime, feel free to browse available ad spots or learn more about how the postcard works on our website.
+            </p>
+            <p style="text-align: center; margin: 28px 0;">
+              <a href="${APP_URL}" style="display: inline-block; background: #7B1418; color: #fff; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: bold; font-size: 15px;">
+                View Available Spots →
+              </a>
+            </p>
+            ${emailFooter()}
+          </div>
+        </div>
+      `,
+    });
+    if (error) logger.error({ err: error, to: info.email, type: "contact-auto-reply" }, "Failed to send contact auto-reply email");
+    else logger.info({ biz: info.biz, to: info.email, type: "contact-auto-reply" }, "Contact auto-reply email sent");
+  } catch (err) {
+    logger.error({ err, to: info.email, type: "contact-auto-reply" }, "Failed to send contact auto-reply email");
+  }
+}

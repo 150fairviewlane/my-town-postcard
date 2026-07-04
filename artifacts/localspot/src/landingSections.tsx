@@ -663,7 +663,13 @@ export function FAQSection({ copy = DEFAULT_COPY, placeName, dealerEmail }: { co
   );
 }
 
-export function ReserveForm() {
+export function ReserveForm({
+  dealerEmail,
+  territory,
+}: {
+  dealerEmail?: string | null;
+  territory?: string | null;
+} = {}) {
   const [form, setForm] = useState({ first: "", last: "", biz: "", email: "", phone: "" });
   const [sent, setSent] = useState(false);
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -674,7 +680,11 @@ export function ReserveForm() {
     try {
       await fetch(`${import.meta.env.BASE_URL}api/leads`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          ...(dealerEmail ? { dealerEmail } : {}),
+          ...(territory ? { territory } : {}),
+        }),
       });
     } catch {}
     setSent(true);
