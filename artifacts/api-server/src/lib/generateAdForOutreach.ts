@@ -177,6 +177,119 @@ const SERVICE_MENU: Record<string, string[]> = {
 
 const GENERIC_SERVICE_MENU = ["Quality Service", "Locally Owned", "Free Estimates", "Call Today"];
 
+/**
+ * Short, punchy slogans for the tagline zone(s) in the outreach ad.
+ * Must be ≤ 6 words so they read naturally as both an inline italic
+ * sub-heading (inside the red panel) and a parchment-banner headline.
+ */
+const CATEGORY_TAGLINE: Record<string, string> = {
+  // Food & beverage
+  "restaurant":  "Fresh Food, Made to Order",
+  "food":        "Fresh Food, Made to Order",
+  "pizza":       "Hot Pizza, Every Time",
+  "diner":       "Home Cooking at Its Best",
+  "cafe":        "Your Favorite Local Stop",
+  "coffee":      "Your Favorite Local Stop",
+  "bakery":      "Baked Fresh Every Morning",
+  "ice cream":   "Sweet Treats Worth Savoring",
+  "gelato":      "Sweet Treats Worth Savoring",
+  "frozen":      "Sweet Treats Worth Savoring",
+  "dessert":     "Sweet Treats Worth Savoring",
+  "sandwich":    "Made Fresh, Every Order",
+  "deli":        "Made Fresh, Every Order",
+  "bbq":         "Slow-Smoked, Worth the Wait",
+  "barbecue":    "Slow-Smoked, Worth the Wait",
+  "brewery":     "Craft Beer, Local Pride",
+  "winery":      "Uncork Something Special",
+  "distillery":  "Spirits Crafted with Care",
+  "catering":    "Events Made Delicious",
+  // Hospitality
+  "inn":         "Feel Right at Home",
+  "hotel":       "Feel Right at Home",
+  "motel":       "Comfortable Stays, Great Value",
+  "lodge":       "Adventure Starts Right Here",
+  "bed":         "Feel Right at Home",
+  "resort":      "Your Perfect Getaway",
+  "cabin":       "Escape to the Outdoors",
+  "vacation":    "Your Home Away From Home",
+  // Home services
+  "hvac":        "Quality Work, Done Right",
+  "plumbing":    "Quality Work, Done Right",
+  "electrician": "Quality Work, Done Right",
+  "roofing":     "Roofs Built to Last",
+  "landscaping": "Beautiful Yards, Happy Homes",
+  "lawn":        "Beautiful Yards, Happy Homes",
+  "cleaning":    "Spotless Homes, Happy Families",
+  "remodel":     "Spaces You'll Love to Live In",
+  "contractor":  "Built Right, Built to Last",
+  "pest":        "Pest-Free, Peace of Mind",
+  "painting":    "Fresh Look, Lasting Results",
+  "fence":       "Curb Appeal Starts Here",
+  "flooring":    "Beautiful Floors Underfoot",
+  "pool":        "Dive Into a Cleaner Pool",
+  "moving":      "Your Move, Made Easier",
+  // Health & wellness
+  "dental":      "Your Health, Our Priority",
+  "health":      "Your Health, Our Priority",
+  "medical":     "Your Health, Our Priority",
+  "urgent":      "Care When You Need It",
+  "chiro":       "Feel Better, Move Freely",
+  "therapy":     "Healing Starts Here",
+  "optom":       "See the World Clearly",
+  "yoga":        "Find Your Balance Here",
+  "spa":         "You Deserve to Feel Great",
+  "wellness":    "You Deserve to Feel Great",
+  "massage":     "Relax. Restore. Renew.",
+  "gym":         "Stronger Every Single Day",
+  "fitness":     "Stronger Every Single Day",
+  // Auto
+  "auto":        "Reliable Service You Can Trust",
+  "mechanic":    "Reliable Service You Can Trust",
+  "tow":         "Help Is on the Way",
+  "tire":        "Safe Roads Start Here",
+  // Professional services
+  "law":         "Trusted Local Professionals",
+  "attorney":    "Trusted Legal Professionals",
+  "account":     "Trusted Local Professionals",
+  "insur":       "Protection You Can Count On",
+  "real estate": "Home Is Where We Help",
+  "mortgage":    "Keys to Your Dream Home",
+  "financial":   "Your Future, Our Focus",
+  // Beauty
+  "salon":       "Look Good, Feel Amazing",
+  "barber":      "Sharp Cuts, Every Time",
+  "nail":        "Beautiful Nails, Every Visit",
+  "tattoo":      "Art That Lasts a Lifetime",
+  "boutique":    "Style That Speaks for You",
+  "jewelry":     "Crafted with Love and Care",
+  // Other
+  "pet":         "Tails Are Always Wagging",
+  "vet":         "Compassionate Care for Pets",
+  "photo":       "Moments Worth Remembering",
+  "wedding":     "Your Day, Perfectly Captured",
+  "florist":     "Fresh Flowers, Lasting Smiles",
+  "tutor":       "Learning Made to Click",
+  "child":       "Where Kids Love to Grow",
+  "daycare":     "Safe, Loved, and Learning",
+  "church":      "All Are Welcome Here",
+  "storage":     "Safe Storage, Total Peace of Mind",
+  "print":       "Print That Makes an Impression",
+  "it":          "Tech Solutions, Simply Done",
+  "computer":    "Tech Solutions, Simply Done",
+  "gift":        "The Perfect Gift, Every Time",
+  "antique":     "Treasures Waiting to Be Found",
+};
+
+function pickTagline(category: string | null, city: string): string {
+  if (category) {
+    const lower = category.toLowerCase();
+    for (const [kw, phrase] of Object.entries(CATEGORY_TAGLINE)) {
+      if (lower.includes(kw)) return phrase;
+    }
+  }
+  return `Proudly Serving ${city}`;
+}
+
 function toServiceMenu(category: string | null, subtypes: string[]): string[] {
   if (category) {
     const lower = category.toLowerCase();
@@ -314,9 +427,8 @@ export async function generateAdForOutreach(
   // "Duct Cleaning", …) that fit the template's icon boxes.
   const menu = toServiceMenu(params.category, params.services ?? []);
 
-  // Build a safe, generic tagline — true for virtually any small business.
   const industry = params.category ?? "Local Business";
-  const tagline = `Your Local ${industry} Experts`;
+  const tagline = pickTagline(params.category, params.city);
 
   const promptInput: AdPromptInput = {
     bizName:   params.bizName,
