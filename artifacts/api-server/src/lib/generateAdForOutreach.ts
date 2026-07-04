@@ -53,6 +53,96 @@ const CATEGORY_TEMPLATE: Record<string, string> = {
   "wellness":    "sage-organic",
 };
 
+/**
+ * Maps a business category to short, punchy service-box labels (≤ 3 words each).
+ *
+ * Outscraper `subtypes` are Google Maps category descriptors like
+ * "air conditioning contractor" — useful context but too long/generic for
+ * service boxes in the ad template. This helper returns a tailored list for
+ * known verticals and falls back to the first 3 subtypes (truncated to 3 words)
+ * for everything else.
+ */
+const SERVICE_MENU: Record<string, string[]> = {
+  // Home services
+  "hvac":        ["AC Repair", "Heating Service", "Duct Cleaning", "Tune-Ups"],
+  "plumbing":    ["Drain Cleaning", "Leak Repair", "Water Heater", "Repiping"],
+  "electrician": ["Panel Upgrades", "Wiring", "Outlets & Switches", "Inspections"],
+  "roofing":     ["Roof Repair", "New Roofs", "Inspections", "Gutters"],
+  "landscaping": ["Lawn Care", "Tree Service", "Mulching", "Design"],
+  "cleaning":    ["Deep Cleaning", "Move-In/Out", "Weekly Service", "Sanitizing"],
+  "remodel":     ["Kitchen Remodel", "Bath Remodel", "Flooring", "Painting"],
+  "contractor":  ["New Construction", "Additions", "Renovation", "Framing"],
+  "pest":        ["Termite Control", "Rodent Removal", "Mosquito Treatment", "Prevention"],
+  "painting":    ["Interior", "Exterior", "Cabinet Painting", "Staining"],
+  "fence":       ["Wood Fences", "Vinyl Fences", "Gate Installation", "Repairs"],
+  "flooring":    ["Hardwood", "Tile", "Carpet", "LVP"],
+  // Health & wellness
+  "dental":      ["Cleanings", "Whitening", "Fillings", "Implants"],
+  "health":      ["Consultations", "Preventive Care", "Lab Work", "Telehealth"],
+  "medical":     ["Consultations", "Preventive Care", "Lab Work", "Telehealth"],
+  "chiro":       ["Adjustments", "Spinal Decompression", "Massage", "Rehab"],
+  "optom":       ["Eye Exams", "Contacts", "Glasses", "LASIK Consult"],
+  "yoga":        ["Yoga Classes", "Pilates", "Meditation", "Workshops"],
+  "spa":         ["Massages", "Facials", "Body Wraps", "Waxing"],
+  "wellness":    ["Massages", "Skin Care", "Nutrition", "Holistic Care"],
+  "gym":         ["Personal Training", "Group Classes", "Nutrition", "Memberships"],
+  // Food & beverage
+  "restaurant":  ["Dine-In", "Takeout", "Catering", "Happy Hour"],
+  "food":        ["Dine-In", "Takeout", "Catering", "Happy Hour"],
+  "cafe":        ["Coffee", "Breakfast", "Lunch", "Pastries"],
+  "pizza":       ["Delivery", "Dine-In", "Catering", "Slice Deals"],
+  "bakery":      ["Fresh Bread", "Custom Cakes", "Pastries", "Wholesale"],
+  // Auto
+  "auto":        ["Oil Change", "Brake Service", "Tires", "Diagnostics"],
+  "mechanic":    ["Oil Change", "Brake Service", "Engine Repair", "Diagnostics"],
+  "tow":         ["24/7 Towing", "Roadside Help", "Long Distance", "Lockout"],
+  "car wash":    ["Full Detail", "Express Wash", "Interior Clean", "Waxing"],
+  // Professional services
+  "law":         ["Free Consult", "Estate Planning", "Injury Claims", "Family Law"],
+  "attorney":    ["Free Consult", "Estate Planning", "Injury Claims", "Family Law"],
+  "account":     ["Tax Prep", "Bookkeeping", "Payroll", "Business Filing"],
+  "insur":       ["Home Insurance", "Auto Insurance", "Life Insurance", "Business"],
+  "real estate": ["Buy a Home", "Sell Your Home", "Rentals", "Free CMA"],
+  // Beauty
+  "salon":       ["Haircuts", "Color", "Highlights", "Blowouts"],
+  "barber":      ["Haircuts", "Fades", "Beard Trim", "Hot Shave"],
+  "nail":        ["Manicure", "Pedicure", "Gel Nails", "Nail Art"],
+  "tattoo":      ["Custom Tattoos", "Cover-Ups", "Piercings", "Consultations"],
+  // Other
+  "pet":         ["Grooming", "Boarding", "Daycare", "Vet Services"],
+  "vet":         ["Wellness Exams", "Vaccinations", "Surgery", "Dental Care"],
+  "photo":       ["Portraits", "Events", "Headshots", "Weddings"],
+  "wedding":     ["Photography", "Videography", "DJ", "Planning"],
+  "tutor":       ["Math", "Reading", "SAT Prep", "Test Taking"],
+  "child":       ["After School", "Summer Camp", "Tutoring", "Activities"],
+  "church":      ["Sunday Service", "Youth Group", "Community Events", "Missions"],
+  "storage":     ["Climate Control", "Drive-Up Units", "24/7 Access", "Moving Supplies"],
+  "moving":      ["Local Moves", "Long Distance", "Packing", "Storage"],
+  "print":       ["Banners", "Business Cards", "Signs", "T-Shirts"],
+  "it":          ["Network Setup", "PC Repair", "Data Recovery", "Security"],
+  "computer":    ["PC Repair", "Data Recovery", "Virus Removal", "Upgrades"],
+};
+
+function toServiceMenu(category: string | null, subtypes: string[]): string[] {
+  if (category) {
+    const lower = category.toLowerCase();
+    for (const [kw, labels] of Object.entries(SERVICE_MENU)) {
+      if (lower.includes(kw)) return labels;
+    }
+  }
+  // Fallback: first 3 subtypes, each truncated to ≤ 3 words, title-cased
+  return subtypes
+    .slice(0, 3)
+    .map((s) =>
+      s
+        .split(/\s+/)
+        .slice(0, 3)
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(" "),
+    )
+    .filter(Boolean);
+}
+
 function pickTemplate(category: string | null): string {
   if (!category) return "parchment-classic";
   const lower = category.toLowerCase();
@@ -96,6 +186,12 @@ export interface OutreachAdParams {
   website: string | null;
   services?: string[];
   logoUrl?: string | null;
+  /**
+   * When true, uses grok-imagine-image-quality (same as the customer ad flow)
+   * for noticeably better layout fidelity. Costs more per image.
+   * Defaults to false — use the standard model for bulk outreach sweeps.
+   */
+  quality?: boolean;
 }
 
 export interface GeneratedAd {
@@ -157,9 +253,11 @@ export async function generateAdForOutreach(
   }
 
   // Build the structured prompt using the same function as the customer ad-generator.
-  // This gives us the per-template layout rules, the "phone EXACTLY ONCE in footer"
-  // guard, and the magenta QR placeholder instruction — all of which were missing
-  // from the old hand-written outreach prompt.
+  // toServiceMenu() maps the raw Outscraper subtypes (long category descriptors like
+  // "air conditioning contractor") to short punchy service-box labels ("AC Repair",
+  // "Duct Cleaning", …) that fit the template's icon boxes.
+  const menu = toServiceMenu(params.category, params.services ?? []);
+
   const promptInput: AdPromptInput = {
     bizName:   params.bizName,
     tagline:   "",
@@ -168,19 +266,26 @@ export async function generateAdForOutreach(
     address:   params.address ?? "",
     website:   params.website ?? "",
     industry:  params.category ?? "Local Business",
-    menu:      params.services?.slice(0, 6) ?? [],
+    menu,
     offer:     "",
     offerFine: "",
     template:  templateKey,
-    sizeKey:   "xl",
+    // Outreach images are generated at 3:4 aspect ratio → 900×1200 px ("l" slot)
+    sizeKey:   "l",
     photoUrl:  "",
     logoData:  logoIncluded ? (params.logoUrl ?? "") : "",
     generationIndex: 0,
   };
   const prompt = buildAdPrompt(promptInput, false, templateKey);
 
+  // quality=true → grok-imagine-image-quality (same tier as the customer ad flow,
+  // better layout fidelity, higher cost). Default false for bulk outreach sweeps.
+  const model = params.quality
+    ? "grok-imagine-image-quality"
+    : "grok-imagine-image";
+
   const reqBody: Record<string, unknown> = {
-    model: "grok-imagine-image",
+    model,
     prompt,
     n: 1,
     aspect_ratio: "3:4",
@@ -227,7 +332,7 @@ export async function generateAdForOutreach(
     imgBuf = Buffer.from(await imgResp.arrayBuffer());
   }
 
-  // Crop to exact portrait XL print dimensions (900×1200 px at 300 DPI)
+  // Resize to exact 900×1200 px (the "l" slot dimensions — 3"×4" at 300 DPI)
   let sharp: typeof import("sharp");
   try {
     sharp = (await import("sharp")).default as unknown as typeof import("sharp");
@@ -242,13 +347,17 @@ export async function generateAdForOutreach(
   // Composite a real scannable QR code over the magenta placeholder.
   // Target: business website (or fallback homepage). This is a sample ad shown
   // in the cold email — there is no tracking code yet (spot not purchased).
+  // Size key "l" matches the 900×1200 buffer — QR_PLACEMENT.l = { imgW:900, imgH:1200 }.
+  // Using "xl" here was the original bug: it expected a 1200×1500 image, causing
+  // sharp.extract() to extend past the image boundary and throw silently.
   const qrTarget = normalizeWebsite(params.website) ?? "https://mytownpostcard.com";
   const qrStyle  = getTemplateQrStyle(templateKey);
   try {
-    imgBuf = await swapQrCode(imgBuf, qrTarget, "xl", qrStyle);
-  } catch {
-    // swapQrCode failure is non-fatal — store the ad without a QR rather than
-    // failing the whole cascade (the magenta will be visible but the email still sends)
+    imgBuf = await swapQrCode(imgBuf, qrTarget, "l", qrStyle);
+  } catch (err) {
+    // Log so adError captures it; ad still saves without QR rather than failing the cascade
+    const msg = err instanceof Error ? err.message : String(err);
+    process.stderr.write(`[outreach] swapQrCode failed (${templateKey}): ${msg}\n`);
   }
 
   return {

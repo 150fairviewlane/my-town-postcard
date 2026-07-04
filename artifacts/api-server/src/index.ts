@@ -33,7 +33,7 @@ app.listen(port, (err) => {
   // so every restart makes the current names visible and stale names are caught early.
   logger.info({
     xaiImageEdits:       "grok-imagine-image-quality",   // adGenGrok.ts — customer ad generator
-    xaiImageOutreach:    "grok-imagine-image",            // generateAdForOutreach.ts — cold-email ads
+    xaiImageOutreach:    "grok-imagine-image (quality=false default) | grok-imagine-image-quality (quality=true)", // generateAdForOutreach.ts
     xaiVisionFilter:     "grok-4.3",                      // logoFilter.ts — logo quality/usability check
   }, "AI models in use");
 

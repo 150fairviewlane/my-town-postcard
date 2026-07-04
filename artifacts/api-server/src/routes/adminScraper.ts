@@ -807,7 +807,7 @@ async function runBatchLogos(jobId: string, businesses: typeof scrapedBusinesses
 // ── POST /api/admin/outreach/batch/ads ────────────────────────────────────────
 router.post("/admin/outreach/batch/ads", requireAdmin, async (req, res): Promise<void> => {
   if (!process.env.XAI_API_KEY) { res.status(503).json({ error: "XAI_API_KEY not configured" }); return; }
-  const { city, state, limit = 10 } = req.body as { city?: string; state?: string; limit?: number };
+  const { city, state, limit = 10, quality = false } = req.body as { city?: string; state?: string; limit?: number; quality?: boolean };
 
   // Ad generation no longer requires a usable logo — text-only fallback handles all cases
   const conditions: any[] = [eq(scrapedBusinessesTable.adStatus, "pending")];
@@ -822,20 +822,21 @@ router.post("/admin/outreach/batch/ads", requireAdmin, async (req, res): Promise
   jobs.get(jobId)!.total = pending.length;
   res.json({ ok: true, jobId, count: pending.length });
 
-  runBatchAds(jobId, pending).catch((err) => {
+  runBatchAds(jobId, pending, quality).catch((err) => {
     const j = jobs.get(jobId);
     if (j) { j.status = "failed"; j.error = String(err); j.completedAt = new Date(); }
     logger.error({ err, jobId }, "adminScraper: batch ads failed");
   });
 });
 
-async function runBatchAds(jobId: string, businesses: typeof scrapedBusinessesTable.$inferSelect[]): Promise<void> {
+async function runBatchAds(jobId: string, businesses: typeof scrapedBusinessesTable.$inferSelect[], quality: boolean): Promise<void> {
   const job = jobs.get(jobId)!;
   for (const biz of businesses) {
     const params: OutreachAdParams = {
       bizName: biz.businessName, category: biz.category, phone: biz.phone,
       address: biz.address, city: biz.city, state: biz.state, website: biz.website,
       services: (biz.subtypes as string[]) ?? [],
+      quality,
     };
     await generateAdAndContinue(biz.id, params);
     job.processed++;
