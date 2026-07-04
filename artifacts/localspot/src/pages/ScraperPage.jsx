@@ -49,7 +49,7 @@ function Spinner() {
 
 // ── Scrape Tab ─────────────────────────────────────────────────────────────────
 
-function ScrapeTab() {
+function ScrapeTab({ onJobDone }) {
   const [form, setForm] = useState({ category: "", city: "Clarkesville", state: "GA", limit: 50 });
   const [preview, setPreview] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -88,9 +88,12 @@ function ScrapeTab() {
       if (data.status === "done" || data.status === "failed") {
         clearInterval(pollRef.current);
         setBusy(false);
+        if (data.status === "done" && data.newCount > 0) {
+          onJobDone?.();
+        }
       }
     } catch { }
-  }, []);
+  }, [onJobDone]);
 
   const handleScrape = async (e) => {
     e.preventDefault();
@@ -856,7 +859,7 @@ export default function ScraperPage() {
           ))}
         </div>
 
-        {tab === 0 && <ScrapeTab />}
+        {tab === 0 && <ScrapeTab onJobDone={() => setTab(1)} />}
         {tab === 1 && <BusinessesTab />}
         {tab === 2 && <HistoryTab />}
         {tab === 3 && <JobsTab />}

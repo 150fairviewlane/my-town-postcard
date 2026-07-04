@@ -232,6 +232,10 @@ async function processLogoAndContinue(
       .update(scrapedBusinessesTable)
       .set({ logoStatus: "no-logo-found", logoVisionNotes: "No logo source found", updatedAt: new Date() })
       .where(eq(scrapedBusinessesTable.id, id));
+    // No logo at all → still draft an email (without ad)
+    draftEmailForBusiness(id).catch((err) =>
+      logger.error({ err, id }, "adminScraper: email draft (no-logo-found) cascade failed"),
+    );
     return;
   }
 
