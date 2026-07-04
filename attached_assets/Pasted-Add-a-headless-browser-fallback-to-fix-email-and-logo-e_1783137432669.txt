@@ -1,0 +1,16 @@
+Add a headless browser fallback to fix email and logo extraction on JavaScript-rendered websites (React/Vue/Vite SPAs, Wix, Squarespace) — these currently return an empty shell to our fetch()-based scraper because content is injected client-side after page load. This is confirmed to be losing both real email addresses (e.g. casabariachimexgrill.com has a visible email in the footer that our scraper never sees) and real logos, since logoExtractor.ts has the identical blind spot and falls back to low-quality Outscraper/Google Business Profile thumbnails instead.
+
+Scope:
+1. Install Playwright in the api-server package.
+2. Create lib/browserScraper.ts — launches a headless browser, visits the business's website, waits for the page to finish rendering, then extracts:
+   - Logo: the rendered <img> tags in the header/nav region (prefer largest image near the top of the page, not just elements with "logo" in the class/id, since JS frameworks often don't use that naming convention)
+   - Email: all mailto: links and visible email-pattern text in the fully rendered DOM
+3. Wire this in as a fallback, not a replacement: keep the existing fast fetch()-based approach as the first attempt for both email and logo extraction. Only invoke the headless browser when the fast approach finds nothing — this keeps plain HTML/WordPress sites fast and cheap, and reserves the heavier browser pass for sites that actually need it.
+4. Fix the existing domain.com junk-filter gap while you're in there (flagged separately as a known issue).
+5. Before writing the core logic, report back an estimate of the performance/resource cost of a headless browser visit per business (time per page, memory/CPU relative to a plain fetch() call) so I understand the tradeoff at batch scale (20 businesses vs. a future 100+ dealer-facing batch).
+
+Do NOT build the header-screenshot-to-vision-model enhancement yet — that's a possible future improvement, but first implement and test the DOM-based extraction (grabbing rendered <img> tags and mailto: links directly) and report how much it improves the logo-usable and email-found rates on the same 20-business test batch from tonight. Only consider adding the vision-screenshot approach afterward if there's still a meaningful gap.
+
+For batches larger than a handful of businesses, use a pool of browser pages/contexts rather than processing one business at a time sequentially, so this scales reasonably.
+
+Report your implementation plan and the performance estimate before writing code.
