@@ -29,6 +29,14 @@ app.listen(port, (err) => {
 
   logger.info({ port }, "Server listening");
 
+  // Audit log of every AI model name in use — bump these any time a model is changed,
+  // so every restart makes the current names visible and stale names are caught early.
+  logger.info({
+    xaiImageEdits:       "grok-imagine-image-quality",   // adGenGrok.ts — customer ad generator
+    xaiImageOutreach:    "grok-imagine-image",            // generateAdForOutreach.ts — cold-email ads
+    xaiVisionFilter:     "grok-4.3",                      // logoFilter.ts — logo quality/usability check
+  }, "AI models in use");
+
   // One-time idempotent data repair: remove spurious county claims caused by
   // the border-bleed bug fixed in Task #211 (getCountyTerritoryHubs). Safe on
   // every boot — the WHERE clause is a no-op once the row is already fixed.

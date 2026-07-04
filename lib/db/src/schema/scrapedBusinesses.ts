@@ -23,6 +23,7 @@ export const scrapedBusinessesTable = pgTable("scraped_businesses", {
   adStatus: text("ad_status", {
     enum: ["pending", "generated", "failed"],
   }).notNull().default("pending"),
+  adError: text("ad_error"),
   emailSubject: text("email_subject"),
   emailBodyHtml: text("email_body_html"),
   emailStatus: text("email_status", {

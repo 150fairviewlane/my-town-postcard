@@ -576,6 +576,12 @@ function BusinessRow({ biz, expanded, onToggle, onRefresh }) {
             </div>
           )}
 
+          {localBiz.adStatus === "failed" && localBiz.adError && (
+            <div style={{ fontSize: 12, color: "#991b1b", background: "#fee2e2", border: "1px solid #fecaca", borderRadius: 6, padding: "6px 10px", marginBottom: 8 }}>
+              <strong>Ad error:</strong> {localBiz.adError}
+            </div>
+          )}
+
           {/* Visual previews */}
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start", marginTop: 8 }}>
             {localBiz.logoUrl && localBiz.logoStatus === "usable" && (

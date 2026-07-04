@@ -15,3 +15,4 @@
 - [Template image cleanup — magenta-erase margin](template-image-cleanup.md) — cleanTemplateQr.ts erases 200px above+600px left of magenta; too aggressive for landscape images (shorter), covering design content; use 50px above for landscape or target minY directly.
 - [Admin image serve — no auth for static assets](admin-image-serve-auth.md) — img tags cannot send Bearer tokens; static reference PNGs served by /api/admin/template-image/:filename must omit requireAdmin middleware.
 - [Stripe SDK version lag](stripe-sdk-version-lag.md) — Stripe docs lead their Node SDK; verify methods exist in installed types before using them.
+- [Outreach pipeline — model safety and ad gate](outreach-pipeline-model-safety.md) — silent .catch() hid xAI deprecation for months; adError column now surfaces real failures; logo gate was untested assumption (removed); startup audit log lists all 3 model names.

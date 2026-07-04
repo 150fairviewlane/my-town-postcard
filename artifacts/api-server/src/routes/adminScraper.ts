@@ -233,48 +233,9 @@ async function processLogoAndContinue(
       .update(scrapedBusinessesTable)
       .set({ logoStatus: "no-logo-found", logoVisionNotes: "No logo source found", updatedAt: new Date() })
       .where(eq(scrapedBusinessesTable.id, id));
-    // No logo at all → still draft an email (without ad)
-    draftEmailForBusiness(id).catch((err) =>
-      logger.error({ err, id }, "adminScraper: email draft (no-logo-found) cascade failed"),
-    );
-    return;
-  }
-
-  const filterResult = await filterLogo(logoResult.url);
-
-  if (filterResult.pass) {
-    await db
-      .update(scrapedBusinessesTable)
-      .set({
-        logoUrl: logoResult.url,
-        logoMethod: logoResult.method,
-        logoStatus: "usable",
-        logoVisionNotes: filterResult.notes,
-        updatedAt: new Date(),
-      })
-      .where(eq(scrapedBusinessesTable.id, id));
-
-    // Auto-cascade: usable logo → generate ad (pass the resolved logo URL)
-    const [biz] = await db
-      .select()
-      .from(scrapedBusinessesTable)
-      .where(eq(scrapedBusinessesTable.id, id))
-      .limit(1);
-    if (biz) {
-      generateAdAndContinue(id, {
-        bizName: biz.businessName,
-        category: biz.category,
-        phone: biz.phone,
-        address: biz.address,
-        city: biz.city,
-        state: biz.state,
-        website: biz.website,
-        services: (biz.subtypes as string[]) ?? [],
-      }, logoResult.url).catch((err) => logger.error({ err, id }, "adminScraper: ad cascade failed"));
-    }
   } else {
-    // Distinguish genuine rejection from API errors that need human review
-    const logoStatus = filterResult.needsReview ? "needs-review" : "unusable";
+    const filterResult = await filterLogo(logoResult.url);
+    const logoStatus = filterResult.pass ? "usable" : (filterResult.needsReview ? "needs-review" : "unusable");
     await db
       .update(scrapedBusinessesTable)
       .set({
@@ -285,10 +246,27 @@ async function processLogoAndContinue(
         updatedAt: new Date(),
       })
       .where(eq(scrapedBusinessesTable.id, id));
-    // Draft email regardless — logo can be re-checked manually later
-    draftEmailForBusiness(id).catch((err) =>
-      logger.error({ err, id }, "adminScraper: email draft (no-logo) cascade failed"),
-    );
+  }
+
+  // Always attempt ad generation regardless of logo outcome —
+  // generateAdForOutreach falls back to text-only when no logo URL is provided.
+  const [biz] = await db
+    .select()
+    .from(scrapedBusinessesTable)
+    .where(eq(scrapedBusinessesTable.id, id))
+    .limit(1);
+  if (biz) {
+    const usableLogo = biz.logoStatus === "usable" ? biz.logoUrl : null;
+    generateAdAndContinue(id, {
+      bizName: biz.businessName,
+      category: biz.category,
+      phone: biz.phone,
+      address: biz.address,
+      city: biz.city,
+      state: biz.state,
+      website: biz.website,
+      services: (biz.subtypes as string[]) ?? [],
+    }, usableLogo).catch((err) => logger.error({ err, id }, "adminScraper: ad cascade failed"));
   }
 }
 
@@ -310,17 +288,18 @@ async function generateAdAndContinue(
     const result = await generateAdForOutreach({ ...params, logoUrl });
     await db
       .update(scrapedBusinessesTable)
-      .set({ adImageUrl: result.imageUrl, adTemplate: result.template, adStatus: "generated", updatedAt: new Date() })
+      .set({ adImageUrl: result.imageUrl, adTemplate: result.template, adStatus: "generated", adError: null, updatedAt: new Date() })
       .where(eq(scrapedBusinessesTable.id, id));
     // Auto-cascade: ad generated → draft email
     draftEmailForBusiness(id).catch((err) =>
       logger.error({ err, id }, "adminScraper: email draft cascade failed"),
     );
   } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
     logger.error({ err, id }, "adminScraper: ad generation failed");
     await db
       .update(scrapedBusinessesTable)
-      .set({ adStatus: "failed", updatedAt: new Date() })
+      .set({ adStatus: "failed", adError: errMsg.slice(0, 500), updatedAt: new Date() })
       .where(eq(scrapedBusinessesTable.id, id));
     // Still draft an email without the ad
     draftEmailForBusiness(id).catch((innerErr) =>
@@ -702,7 +681,7 @@ router.post("/admin/outreach/businesses/:id/ad", requireAdmin, async (req, res):
     .where(eq(scrapedBusinessesTable.id, id)).limit(1);
   if (!biz) { res.status(404).json({ error: "Not found" }); return; }
   await db.update(scrapedBusinessesTable)
-    .set({ adStatus: "pending", updatedAt: new Date() }).where(eq(scrapedBusinessesTable.id, id));
+    .set({ adStatus: "pending", adError: null, updatedAt: new Date() }).where(eq(scrapedBusinessesTable.id, id));
   res.json({ ok: true, message: "Ad generation started" });
   generateAdAndContinue(id, {
     bizName: biz.businessName, category: biz.category, phone: biz.phone,
@@ -830,17 +809,14 @@ router.post("/admin/outreach/batch/ads", requireAdmin, async (req, res): Promise
   if (!process.env.XAI_API_KEY) { res.status(503).json({ error: "XAI_API_KEY not configured" }); return; }
   const { city, state, limit = 10 } = req.body as { city?: string; state?: string; limit?: number };
 
-  // Must have usable logo before generating ad
-  const conditions: any[] = [
-    eq(scrapedBusinessesTable.adStatus, "pending"),
-    eq(scrapedBusinessesTable.logoStatus, "usable"),
-  ];
+  // Ad generation no longer requires a usable logo — text-only fallback handles all cases
+  const conditions: any[] = [eq(scrapedBusinessesTable.adStatus, "pending")];
   if (city) conditions.push(ilike(scrapedBusinessesTable.city, city));
   if (state) conditions.push(eq(scrapedBusinessesTable.state, state.toUpperCase()));
 
   const pending = await db.select().from(scrapedBusinessesTable)
     .where(and(...conditions)).limit(Math.min(Number(limit) || 10, 20));
-  if (pending.length === 0) { res.json({ ok: true, message: "No pending ads (requires usable logo)", count: 0 }); return; }
+  if (pending.length === 0) { res.json({ ok: true, message: "No pending ads", count: 0 }); return; }
 
   const jobId = newJob("ad", `Batch ads: ${pending.length} businesses`);
   jobs.get(jobId)!.total = pending.length;
