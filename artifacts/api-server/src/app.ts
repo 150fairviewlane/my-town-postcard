@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import redirectRouter from "./routes/redirect";
+import claimRouter from "./routes/claim";
 import territoryPagesRouter from "./routes/territoryPages";
 import { stripeWebhookHandler } from "./routes/webhooks";
 import { logger } from "./lib/logger";
@@ -54,6 +55,10 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 // codes are short and human-readable. Mount BEFORE the /api router so it
 // gets first crack at /go/:code.
 app.use(redirectRouter);
+
+// Cold-email engagement tracker — /claim/:businessId logs the click then
+// redirects to the spot picker. Also app-root mounted for clean URLs.
+app.use(claimRouter);
 
 // Territory manager HTML pages — served at canonical paths outside /api so
 // links are human-readable. Mounts /admin/territories and /dealer/claim-territory.

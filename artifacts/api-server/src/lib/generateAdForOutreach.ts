@@ -1,5 +1,8 @@
 import path from "node:path";
 import fs from "node:fs";
+import { buildAdPrompt, type AdPromptInput } from "./buildAdPrompt";
+import { swapQrCode } from "./locateQrCode";
+import { getTemplateQrStyle } from "./compositeQr";
 
 /** Walk up from cwd until we find pnpm-workspace.yaml. */
 function findWorkspaceRoot(): string {
@@ -102,8 +105,13 @@ export interface GeneratedAd {
 
 /**
  * Generate a sample postcard ad for a business, for use in cold-email outreach.
- * Uses xAI Grok Imagine with a template image for a high-quality result.
- * Returns a data URL (base64 PNG) for storage.
+ *
+ * Uses the same buildAdPrompt() used by the normal customer ad-generator so the
+ * structured layout rules (phone exactly once, QR slot in footer, etc.) are
+ * identical. After Grok returns the image, swapQrCode() detects the magenta
+ * placeholder and composites a real QR code pointing to the business's website.
+ *
+ * Returns a data URL (base64 JPEG) for storage.
  */
 export async function generateAdForOutreach(
   params: OutreachAdParams,
@@ -111,25 +119,25 @@ export async function generateAdForOutreach(
   const apiKey = process.env.XAI_API_KEY;
   if (!apiKey) throw new Error("XAI_API_KEY not configured");
 
+  const USER_AGENT =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+
   const templateKey = pickTemplate(params.category);
   const templateFile = TEMPLATE_PORTRAIT[templateKey] ?? TEMPLATE_PORTRAIT["parchment-classic"]!;
   const tmplPath = path.join(WORKSPACE_ROOT, "attached_assets", templateFile);
 
-  const USER_AGENT =
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
-
   let imageRefs: Array<{ type: "image_url"; url: string }> = [];
   if (fs.existsSync(tmplPath)) {
-    const buf = fs.readFileSync(tmplPath);
+    const buf  = fs.readFileSync(tmplPath);
     const mime = /\.jpe?g$/i.test(templateFile) ? "image/jpeg" : "image/png";
-    imageRefs = [{ type: "image_url", url: toDataUrl(buf, mime) }];
+    imageRefs  = [{ type: "image_url", url: toDataUrl(buf, mime) }];
   }
 
   // Include the business logo as a second image reference when available
   let logoIncluded = false;
   if (params.logoUrl) {
     try {
-      const ctrl = new AbortController();
+      const ctrl  = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 12_000);
       const logoResp = await fetch(params.logoUrl, {
         headers: { "User-Agent": USER_AGENT },
@@ -138,7 +146,7 @@ export async function generateAdForOutreach(
       });
       clearTimeout(timer);
       if (logoResp.ok) {
-        const logoBuf = Buffer.from(await logoResp.arrayBuffer());
+        const logoBuf  = Buffer.from(await logoResp.arrayBuffer());
         const logoMime = (logoResp.headers.get("content-type") ?? "image/png").split(";")[0]!.trim();
         imageRefs.push({ type: "image_url", url: toDataUrl(logoBuf, logoMime) });
         logoIncluded = true;
@@ -148,42 +156,37 @@ export async function generateAdForOutreach(
     }
   }
 
-  const { bizName, category, phone, address, city, state } = params;
-  const industry = category ?? "local business";
-  const fullAddr = [address, city, state].filter(Boolean).join(", ");
-  const servicesList =
-    params.services && params.services.length > 0
-      ? params.services.slice(0, 5).join(", ")
-      : industry;
+  // Build the structured prompt using the same function as the customer ad-generator.
+  // This gives us the per-template layout rules, the "phone EXACTLY ONCE in footer"
+  // guard, and the magenta QR placeholder instruction — all of which were missing
+  // from the old hand-written outreach prompt.
+  const promptInput: AdPromptInput = {
+    bizName:   params.bizName,
+    tagline:   "",
+    phone:     params.phone ?? "",
+    city:      params.city,
+    address:   params.address ?? "",
+    website:   params.website ?? "",
+    industry:  params.category ?? "Local Business",
+    menu:      params.services?.slice(0, 6) ?? [],
+    offer:     "",
+    offerFine: "",
+    template:  templateKey,
+    sizeKey:   "xl",
+    photoUrl:  "",
+    logoData:  logoIncluded ? (params.logoUrl ?? "") : "",
+    generationIndex: 0,
+  };
+  const prompt = buildAdPrompt(promptInput, false, templateKey);
 
-  const logoInstruction = logoIncluded
-    ? `IMAGE ${imageRefs.length} is the business logo — incorporate it prominently into the design.`
-    : "";
-
-  const prompt = imageRefs.length > (logoIncluded ? 1 : 0)
-    ? `IMAGE 1 is the template. ${logoInstruction} Create a professional postcard ad for:
-Business: ${bizName}
-Industry: ${industry}
-Services: ${servicesList}
-Phone: ${phone ?? "(not provided)"}
-Address: ${fullAddr}
-Modify the template to feature this business. Keep the overall layout and color scheme. Place the business name prominently. ${logoIncluded ? "Use the provided logo in the header/top area." : "Use photorealistic images appropriate for " + industry + "."} Add phone number in footer. Keep design clean and professional for residential direct mail.`
-    : `Create a professional full-color direct-mail postcard ad (portrait, 4x5 inches) for:
-Business: ${bizName}
-Industry: ${industry}
-Services: ${servicesList}
-Phone: ${phone ?? "(not provided)"}
-Address: ${fullAddr}
-Design a polished, print-ready postcard ad. Business name large and prominent. Include phone number. Warm, inviting colors. Professional photography-style imagery for ${industry}. This is a sample ad to show the business what their postcard could look like.`;
-
-  const body: Record<string, unknown> = {
+  const reqBody: Record<string, unknown> = {
     model: "grok-imagine-image",
     prompt,
     n: 1,
     aspect_ratio: "3:4",
   };
   if (imageRefs.length > 0) {
-    body["images"] = imageRefs;
+    reqBody["images"] = imageRefs;
   }
 
   const endpoint = imageRefs.length > 0
@@ -196,7 +199,7 @@ Design a polished, print-ready postcard ad. Business name large and prominent. I
       "Authorization": `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify(reqBody),
   });
 
   const respBody = await safeJson(resp);
@@ -214,23 +217,50 @@ Design a polished, print-ready postcard ad. Business name large and prominent. I
     throw new Error("xAI returned no image URL");
   }
 
+  // Download image → buffer so we can run the QR swap step
+  let imgBuf: Buffer;
   if (imageUrl.startsWith("data:")) {
-    return { imageUrl, template: templateKey };
+    imgBuf = Buffer.from(imageUrl.split(",")[1] ?? "", "base64");
+  } else {
+    const imgResp = await fetch(imageUrl);
+    if (!imgResp.ok) throw new Error(`Failed to fetch generated image: ${imgResp.status}`);
+    imgBuf = Buffer.from(await imgResp.arrayBuffer());
   }
 
-  const imgResp = await fetch(imageUrl);
-  if (!imgResp.ok) throw new Error(`Failed to fetch generated image: ${imgResp.status}`);
-  const imgBuf = Buffer.from(await imgResp.arrayBuffer());
-
+  // Crop to exact portrait XL print dimensions (900×1200 px at 300 DPI)
   let sharp: typeof import("sharp");
   try {
     sharp = (await import("sharp")).default as unknown as typeof import("sharp");
-    const cropped = await (sharp as unknown as (buf: Buffer) => import("sharp").Sharp)(imgBuf)
+    imgBuf = await (sharp as unknown as (buf: Buffer) => import("sharp").Sharp)(imgBuf)
       .resize(900, 1200, { fit: "cover", position: "centre" })
-      .png()
+      .jpeg({ quality: 98, chromaSubsampling: "4:4:4" })
       .toBuffer();
-    return { imageUrl: `data:image/png;base64,${cropped.toString("base64")}`, template: templateKey };
   } catch {
-    return { imageUrl: `data:image/png;base64,${imgBuf.toString("base64")}`, template: templateKey };
+    // sharp unavailable — continue with raw buffer; swapQrCode will handle it
   }
+
+  // Composite a real scannable QR code over the magenta placeholder.
+  // Target: business website (or fallback homepage). This is a sample ad shown
+  // in the cold email — there is no tracking code yet (spot not purchased).
+  const qrTarget = normalizeWebsite(params.website) ?? "https://mytownpostcard.com";
+  const qrStyle  = getTemplateQrStyle(templateKey);
+  try {
+    imgBuf = await swapQrCode(imgBuf, qrTarget, "xl", qrStyle);
+  } catch {
+    // swapQrCode failure is non-fatal — store the ad without a QR rather than
+    // failing the whole cascade (the magenta will be visible but the email still sends)
+  }
+
+  return {
+    imageUrl: `data:image/jpeg;base64,${imgBuf.toString("base64")}`,
+    template: templateKey,
+  };
+}
+
+function normalizeWebsite(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
 }

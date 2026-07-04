@@ -126,7 +126,7 @@ function buildEmailDraft(business: {
 
   const token = unsubToken(googleId);
   const unsubUrl = `${APP_URL}/api/outreach/unsubscribe?id=${encodeURIComponent(googleId)}&token=${encodeURIComponent(token)}`;
-  const spotUrl = `${APP_URL}/?utm_source=outreach&utm_medium=email&utm_campaign=cold`;
+  const claimUrl = `${APP_URL}/claim/${business.id}`;
   const phoneNote = phoneE ? ` — call us at ${phoneE}` : "";
   const industryLine = categoryE
     ? `As a ${categoryE.toLowerCase()} business in the ${cityE} area`
@@ -190,7 +190,7 @@ function buildEmailDraft(business: {
     </p>
 
     <div style="text-align:center;margin:28px 0;">
-      <a href="${spotUrl}" style="display:inline-block;padding:14px 32px;background:#7B1418;color:#fff;
+      <a href="${claimUrl}" style="display:inline-block;padding:14px 32px;background:#7B1418;color:#fff;
         font-weight:700;font-size:15px;border-radius:8px;text-decoration:none;">
         See Available Spots →
       </a>
@@ -205,7 +205,7 @@ function buildEmailDraft(business: {
         My Town Postcard · P.O. Box 123 · Clarkesville, GA 30523
       </div>
       <div>
-        <a href="${spotUrl}" style="color:#9ca3af;">Visit our site</a>
+        <a href="${APP_URL}" style="color:#9ca3af;">Visit our site</a>
         &nbsp;·&nbsp;
         <a href="${unsubUrl}" style="color:#9ca3af;">Unsubscribe</a>
       </div>
