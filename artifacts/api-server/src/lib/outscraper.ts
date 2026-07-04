@@ -27,7 +27,7 @@ export async function searchBusinesses(
 
   const url = new URL(`${BASE_URL}/maps/search-v3`);
   url.searchParams.set("query", query);
-  url.searchParams.set("limit", String(Math.min(limit, 100)));
+  url.searchParams.set("limit", String(Math.min(limit, 200)));
   url.searchParams.set("language", "en");
   url.searchParams.set("async", "false");
   url.searchParams.set("dropDuplicates", "true");

@@ -66,7 +66,7 @@ function ScrapeTab({ onJobDone }) {
     setPreviewLoading(true);
     try {
       const data = await apiFetch(
-        `/admin/outreach/preview?city=${encodeURIComponent(form.city)}&state=${encodeURIComponent(form.state)}&limit=${form.limit}`,
+        `/admin/outreach/preview?city=${encodeURIComponent(form.city)}&state=${encodeURIComponent(form.state)}&limit=${form.limit}&category=${encodeURIComponent(form.category)}`,
       );
       setPreview(data);
     } catch {
@@ -156,7 +156,10 @@ function ScrapeTab({ onJobDone }) {
             />
           </div>
           <div style={{ flex: 1 }}>
-            <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 4 }}>Limit</label>
+            <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 4 }}
+              title="How many net-new businesses to surface. The server auto-increments the Outscraper request to skip already-cached results.">
+              New to find
+            </label>
             <input style={inputStyle} type="number" min={1} max={100} value={form.limit} onChange={setField("limit")} />
           </div>
         </div>
@@ -172,12 +175,13 @@ function ScrapeTab({ onJobDone }) {
             "Checking cached records…"
           ) : preview ? (
             <>
-              📦 {preview.cached} cached (within {preview.cacheWindowDays} days) ·{" "}
-              ~{preview.estimatedNew} new from API ·{" "}
-              est. <strong>${preview.estimatedCostUsd}</strong> via Outscraper
+              📦 {preview.cached} already cached ·{" "}
+              requesting top <strong>{preview.outscraperLimit}</strong> from Outscraper
+              → ~<strong>{preview.desiredNew}</strong> net new ·{" "}
+              est. <strong>${preview.estimatedCostUsd}</strong>
             </>
           ) : (
-            `💡 Enter city/state to see cache preview · $${((Number(form.limit) / 1000) * 2.85).toFixed(3)} est. max`
+            `💡 Enter city/state to see cache preview`
           )}
         </div>
 
@@ -222,6 +226,24 @@ function ScrapeTab({ onJobDone }) {
               maxHeight: 140, overflowY: "auto",
             }}>
               {job.log.slice(-15).map((line, i) => <div key={i}>{line}</div>)}
+            </div>
+          )}
+          {job.status === "done" && job.ceiling && job.newCount === 0 && (
+            <div style={{
+              marginTop: 10, background: "#fef3c7", border: "1px solid #fbbf24",
+              borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#78350f",
+            }}>
+              <strong>⛔ Google result ceiling reached</strong> — Outscraper returned fewer
+              results than requested, and all were already cached. There are no new businesses
+              left for this category in this city. Try a different category or nearby city.
+            </div>
+          )}
+          {job.status === "done" && !job.ceiling && job.newCount === 0 && job.skippedDuplicates > 0 && (
+            <div style={{
+              marginTop: 10, background: "#f0f9ff", border: "1px solid #7dd3fc",
+              borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#075985",
+            }}>
+              All results already in your list (within {90}-day cache window). Try again in a few months or increase "New to find" to dig deeper.
             </div>
           )}
           {job.error && <div style={{ marginTop: 8, color: "#991b1b", fontSize: 13 }}>Error: {job.error}</div>}

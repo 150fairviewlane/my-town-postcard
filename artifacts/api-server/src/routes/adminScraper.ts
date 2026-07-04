@@ -64,6 +64,8 @@ interface JobRecord {
   error?: string;
   startedAt: Date;
   completedAt?: Date;
+  /** true when Google returned fewer results than requested — natural ceiling reached */
+  ceiling: boolean;
 }
 const jobs = new Map<string, JobRecord>();
 
@@ -80,6 +82,7 @@ function newJob(type: JobRecord["type"], label: string): string {
     withEmail: 0,
     log: [],
     startedAt: new Date(),
+    ceiling: false,
   });
   const completed = [...jobs.entries()]
     .filter(([, j]) => j.status !== "running")
@@ -336,28 +339,39 @@ async function draftEmailForBusiness(id: number): Promise<void> {
 
 // ── GET /api/admin/outreach/preview ───────────────────────────────────────────
 router.get("/admin/outreach/preview", requireAdmin, async (req, res): Promise<void> => {
-  const { city, state, limit = "50" } = req.query as Record<string, string>;
+  const { city, state, category = "", limit = "50" } = req.query as Record<string, string>;
   if (!city?.trim() || !state?.trim()) {
     res.status(400).json({ error: "city and state are required" });
     return;
   }
 
   const threshold = cacheThreshold();
+
+  // Count existing fresh records for this city + state, optionally filtered by
+  // the leading keyword of the category query (e.g. "HVAC" from "HVAC contractor").
+  const categoryKeyword = category.trim().split(/\s+/)[0] ?? "";
+  const conditions = [
+    ilike(scrapedBusinessesTable.city, city.trim()),
+    eq(scrapedBusinessesTable.state, state.trim().toUpperCase()),
+    gte(scrapedBusinessesTable.scrapedAt, threshold),
+  ] as const;
+  const categoryCondition = categoryKeyword
+    ? ilike(scrapedBusinessesTable.category, `%${categoryKeyword}%`)
+    : undefined;
+
   const [row] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(scrapedBusinessesTable)
-    .where(and(
-      ilike(scrapedBusinessesTable.city, city.trim()),
-      eq(scrapedBusinessesTable.state, state.trim().toUpperCase()),
-      gte(scrapedBusinessesTable.scrapedAt, threshold),
-    ));
+    .where(categoryCondition ? and(...conditions, categoryCondition) : and(...conditions));
 
   const cached = row?.count ?? 0;
-  const requestedLimit = Math.max(1, Number(limit) || 50);
-  const estimatedNew = Math.max(0, requestedLimit - cached);
-  const estimatedCostUsd = ((estimatedNew / 1000) * COST_PER_1K).toFixed(3);
+  const desiredNew = Math.max(1, Number(limit) || 50);
+  // With auto-increment: Outscraper is asked for (cached + desiredNew) so the
+  // dedup logic surfaces desiredNew net-new results from the tail of the ranked list.
+  const outscraperLimit = Math.min(cached + desiredNew, 200);
+  const estimatedCostUsd = ((outscraperLimit / 1000) * COST_PER_1K).toFixed(3);
 
-  res.json({ cached, estimatedNew, estimatedCostUsd, cacheWindowDays: CACHE_DAYS });
+  res.json({ cached, desiredNew, outscraperLimit, estimatedCostUsd, cacheWindowDays: CACHE_DAYS });
 });
 
 // ── GET /api/admin/outreach/businesses ────────────────────────────────────────
@@ -538,10 +552,10 @@ router.post("/admin/outreach/scrape", requireAdmin, async (req, res): Promise<vo
   }
 
   const query = `${category.trim()}, ${city.trim()}, ${state.trim().toUpperCase()}, US`;
-  const jobId = newJob("scrape", `${query} (limit ${limit})`);
+  const jobId = newJob("scrape", `${query} (want ${limit} new)`);
   res.json({ jobId, query });
 
-  runScrapeJob(jobId, query, city.trim(), state.trim().toUpperCase(), Number(limit) || 50)
+  runScrapeJob(jobId, query, city.trim(), state.trim().toUpperCase(), category.trim(), Number(limit) || 50)
     .catch((err) => {
       const job = jobs.get(jobId);
       if (job) { job.status = "failed"; job.error = String(err); job.completedAt = new Date(); }
@@ -550,14 +564,32 @@ router.post("/admin/outreach/scrape", requireAdmin, async (req, res): Promise<vo
 });
 
 async function runScrapeJob(
-  jobId: string, query: string, city: string, state: string, limit: number,
+  jobId: string, query: string, city: string, state: string, category: string, desiredNew: number,
 ): Promise<void> {
   const job = jobs.get(jobId)!;
-  jobAppend(jobId, `Searching Outscraper: "${query}"`);
+
+  // Auto-increment: count how many businesses for this city+category are already
+  // fresh in the 90-day cache, then ask Outscraper for (existing + desiredNew)
+  // so the dedup logic naturally surfaces only the tail (net-new results).
+  const categoryKeyword = category.split(/\s+/)[0] ?? category;
+  const [existingRow] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(scrapedBusinessesTable)
+    .where(and(
+      ilike(scrapedBusinessesTable.city, city),
+      eq(scrapedBusinessesTable.state, state),
+      ilike(scrapedBusinessesTable.category, `%${categoryKeyword}%`),
+      gte(scrapedBusinessesTable.scrapedAt, cacheThreshold()),
+    ));
+  const existingCount = existingRow?.count ?? 0;
+  const outscraperLimit = Math.min(existingCount + desiredNew, 200);
+
+  jobAppend(jobId, `Already cached: ${existingCount} → requesting top ${outscraperLimit} from Outscraper`);
+  jobAppend(jobId, `Searching: "${query}"`);
 
   let results;
   try {
-    results = await searchBusinesses(query, limit);
+    results = await searchBusinesses(query, outscraperLimit);
   } catch (err) {
     job.status = "failed"; job.error = String(err); job.completedAt = new Date();
     jobAppend(jobId, `❌ Outscraper error: ${String(err)}`);
@@ -565,7 +597,7 @@ async function runScrapeJob(
   }
 
   job.total = results.length;
-  jobAppend(jobId, `Found ${results.length} results`);
+  jobAppend(jobId, `Found ${results.length} results from Outscraper`);
 
   const threshold = cacheThreshold();
   let newCount = 0, skipped = 0, withEmail = 0;
@@ -652,9 +684,28 @@ async function runScrapeJob(
     }
   }
 
-  job.status = "done"; job.completedAt = new Date();
-  jobAppend(jobId, `✅ Done — ${newCount} new/updated, ${skipped} cached, ${withEmail} with email`);
-  logger.info({ jobId, newCount, skipped, withEmail }, "adminScraper: scrape job complete");
+  // Ceiling detection: Google returned fewer results than we requested AND no new
+  // businesses were found → the full result set has been exhausted for this
+  // category+city combination. Distinguish from the "all fresh in cache" case.
+  const hitCeiling =
+    results.length > 0 &&
+    results.length < outscraperLimit &&
+    newCount === 0;
+
+  job.ceiling = hitCeiling;
+  job.status = "done";
+  job.completedAt = new Date();
+
+  if (hitCeiling) {
+    jobAppend(
+      jobId,
+      `⚠️ Google ceiling reached — returned ${results.length} results (requested ${outscraperLimit}), all already cached. No new businesses remain for this category in this city.`,
+    );
+    logger.info({ jobId, results: results.length, outscraperLimit }, "adminScraper: ceiling reached");
+  } else {
+    jobAppend(jobId, `✅ Done — ${newCount} new/updated, ${skipped} cached, ${withEmail} with email`);
+    logger.info({ jobId, newCount, skipped, withEmail }, "adminScraper: scrape job complete");
+  }
 }
 
 // ── POST /api/admin/outreach/businesses/:id/logo ──────────────────────────────
