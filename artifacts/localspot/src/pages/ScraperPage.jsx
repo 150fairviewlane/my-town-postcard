@@ -403,8 +403,15 @@ function BusinessRow({ biz, expanded, onToggle, onRefresh }) {
   const [msg, setMsg] = useState(null);
   const [editEmail, setEditEmail] = useState(false);
   const [emailVal, setEmailVal] = useState(biz.email ?? "");
+  const [editDraft, setEditDraft] = useState(false);
+  const [draftSubject, setDraftSubject] = useState(biz.emailSubject ?? "");
+  const [draftBody, setDraftBody] = useState(biz.emailBodyHtml ?? "");
 
-  useEffect(() => { setLocalBiz(biz); }, [biz]);
+  useEffect(() => {
+    setLocalBiz(biz);
+    setDraftSubject(biz.emailSubject ?? "");
+    setDraftBody(biz.emailBodyHtml ?? "");
+  }, [biz]);
 
   const setOneBusy = (k, v) => setBusy((b) => ({ ...b, [k]: v }));
 
@@ -429,7 +436,7 @@ function BusinessRow({ biz, expanded, onToggle, onRefresh }) {
     if (!localBiz.email) { setMsg({ ok: false, text: "No email address" }); return; }
     if (localBiz.emailStatus !== "drafted") { setMsg({ ok: false, text: "Generate a draft first" }); return; }
     if (!window.confirm(`Send outreach email to ${localBiz.email}?\n\nThis will send a real email via Resend.`)) return;
-    action("send", `/admin/outreach/businesses/${localBiz.id}/send-email`);
+    action("send", `/admin/outreach/businesses/${localBiz.id}/send`);
   };
 
   const confirmDelete = async () => {
@@ -506,6 +513,59 @@ function BusinessRow({ biz, expanded, onToggle, onRefresh }) {
               {msg.ok ? "✅" : "❌"} {msg.text}
             </div>
           )}
+
+          {/* Inline draft editor */}
+          {localBiz.emailStatus === "drafted" || localBiz.emailStatus === "pending" ? (
+            editDraft ? (
+              <div style={{ marginBottom: 14, background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 8, padding: 14 }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#0369a1", marginBottom: 10 }}>✎ Edit Email Draft</div>
+                <div style={{ marginBottom: 8 }}>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>Subject</label>
+                  <input
+                    value={draftSubject}
+                    onChange={(e) => setDraftSubject(e.target.value)}
+                    style={{ width: "100%", padding: "7px 10px", borderRadius: 6, border: "1.5px solid #bae6fd", fontSize: 13, outline: "none", boxSizing: "border-box" }}
+                  />
+                </div>
+                <div style={{ marginBottom: 10 }}>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: "#374151", display: "block", marginBottom: 3 }}>
+                    Email Body HTML
+                    <span style={{ fontWeight: 400, color: "#9ca3af", marginLeft: 6 }}>(full HTML — will be sent as-is)</span>
+                  </label>
+                  <textarea
+                    value={draftBody}
+                    onChange={(e) => setDraftBody(e.target.value)}
+                    rows={10}
+                    style={{ width: "100%", padding: "7px 10px", borderRadius: 6, border: "1.5px solid #bae6fd", fontSize: 12, fontFamily: "monospace", outline: "none", resize: "vertical", boxSizing: "border-box" }}
+                  />
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <ActionBtn label="💾 Save Draft" busy={busy.saveDraft} primary onClick={async () => {
+                    setOneBusy("saveDraft", true); setMsg(null);
+                    try {
+                      const updated = await apiFetch(`/admin/outreach/businesses/${localBiz.id}`, {
+                        method: "PATCH",
+                        body: JSON.stringify({ emailSubject: draftSubject, emailBodyHtml: draftBody }),
+                      });
+                      setLocalBiz(updated);
+                      setEditDraft(false);
+                      setMsg({ ok: true, text: "Draft saved" });
+                    } catch (err) {
+                      setMsg({ ok: false, text: err.message });
+                    } finally { setOneBusy("saveDraft", false); }
+                  }} />
+                  <ActionBtn label="Cancel" busy={false} onClick={() => setEditDraft(false)} />
+                </div>
+              </div>
+            ) : localBiz.emailSubject ? (
+              <div style={{ marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 12, color: "#374151", fontStyle: "italic" }}>
+                  Subject: <strong>{localBiz.emailSubject}</strong>
+                </span>
+                <ActionBtn label="✎ Edit Draft" busy={false} onClick={() => setEditDraft(true)} />
+              </div>
+            ) : null
+          ) : null}
 
           {localBiz.logoVisionNotes && (
             <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 8, fontStyle: "italic" }}>

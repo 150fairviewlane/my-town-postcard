@@ -37,10 +37,10 @@ function requireAdmin(req: any, res: any, next: any): void {
   }
 }
 
-function unsubToken(id: number): string {
+function unsubToken(googleId: string): string {
   return crypto
     .createHmac("sha256", UNSUB_SECRET)
-    .update(String(id))
+    .update(googleId)
     .digest("hex")
     .slice(0, 24);
 }
@@ -97,6 +97,7 @@ function jobAppend(jobId: string, msg: string): void {
 // ── Email draft builder ────────────────────────────────────────────────────────
 function buildEmailDraft(business: {
   id: number;
+  googleId: string;
   businessName: string;
   city: string;
   state: string;
@@ -105,9 +106,9 @@ function buildEmailDraft(business: {
   website: string | null;
   adImageUrl: string | null;
 }): { subject: string; bodyHtml: string } {
-  const { id, businessName, city, state, category, phone, adImageUrl } = business;
-  const token = unsubToken(id);
-  const unsubUrl = `${APP_URL}/api/outreach/unsubscribe?id=${id}&token=${token}`;
+  const { googleId, businessName, city, state, category, phone, adImageUrl } = business;
+  const token = unsubToken(googleId);
+  const unsubUrl = `${APP_URL}/api/outreach/unsubscribe?id=${encodeURIComponent(googleId)}&token=${token}`;
   const spotUrl = `${APP_URL}/?utm_source=outreach&utm_medium=email&utm_campaign=cold`;
   const phoneNote = phone ? ` — call us at ${phone}` : "";
   const industryLine = category
@@ -231,7 +232,7 @@ async function processLogoAndContinue(
       })
       .where(eq(scrapedBusinessesTable.id, id));
 
-    // Auto-cascade: usable logo → generate ad
+    // Auto-cascade: usable logo → generate ad (pass the resolved logo URL)
     const [biz] = await db
       .select()
       .from(scrapedBusinessesTable)
@@ -247,7 +248,7 @@ async function processLogoAndContinue(
         state: biz.state,
         website: biz.website,
         services: (biz.subtypes as string[]) ?? [],
-      }).catch((err) => logger.error({ err, id }, "adminScraper: ad cascade failed"));
+      }, logoResult.url).catch((err) => logger.error({ err, id }, "adminScraper: ad cascade failed"));
     }
   } else {
     await db
@@ -267,7 +268,11 @@ async function processLogoAndContinue(
   }
 }
 
-async function generateAdAndContinue(id: number, params: OutreachAdParams): Promise<void> {
+async function generateAdAndContinue(
+  id: number,
+  params: OutreachAdParams,
+  logoUrl?: string | null,
+): Promise<void> {
   if (!process.env.XAI_API_KEY) {
     logger.warn({ id }, "adminScraper: XAI_API_KEY not set, skipping ad generation");
     // Still draft an email without ad
@@ -278,7 +283,7 @@ async function generateAdAndContinue(id: number, params: OutreachAdParams): Prom
   }
 
   try {
-    const result = await generateAdForOutreach(params);
+    const result = await generateAdForOutreach({ ...params, logoUrl });
     await db
       .update(scrapedBusinessesTable)
       .set({ adImageUrl: result.imageUrl, adTemplate: result.template, adStatus: "generated", updatedAt: new Date() })
@@ -310,6 +315,7 @@ async function draftEmailForBusiness(id: number): Promise<void> {
 
   const { subject, bodyHtml } = buildEmailDraft({
     id: biz.id,
+    googleId: biz.googleId,
     businessName: biz.businessName,
     city: biz.city,
     state: biz.state,
@@ -637,7 +643,7 @@ router.post("/admin/outreach/businesses/:id/email-draft", requireAdmin, async (r
   if (!biz) { res.status(404).json({ error: "Not found" }); return; }
 
   const { subject, bodyHtml } = buildEmailDraft({
-    id: biz.id, businessName: biz.businessName, city: biz.city, state: biz.state,
+    id: biz.id, googleId: biz.googleId, businessName: biz.businessName, city: biz.city, state: biz.state,
     category: biz.category, phone: biz.phone, website: biz.website, adImageUrl: biz.adImageUrl,
   });
   const [updated] = await db.update(scrapedBusinessesTable)
@@ -646,8 +652,8 @@ router.post("/admin/outreach/businesses/:id/email-draft", requireAdmin, async (r
   res.json({ ok: true, subject, business: updated });
 });
 
-// ── POST /api/admin/outreach/businesses/:id/send-email ────────────────────────
-router.post("/admin/outreach/businesses/:id/send-email", requireAdmin, async (req, res): Promise<void> => {
+// ── POST /api/admin/outreach/businesses/:id/send ──────────────────────────────
+router.post("/admin/outreach/businesses/:id/send", requireAdmin, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
 
@@ -843,18 +849,18 @@ router.get("/outreach/ad-image/:id", async (req, res): Promise<void> => {
 });
 
 // ── Public: GET /api/outreach/unsubscribe ─────────────────────────────────────
+// id parameter is the google_id (unique business identifier per spec)
 router.get("/outreach/unsubscribe", async (req, res): Promise<void> => {
-  const { id, token } = req.query as Record<string, string>;
-  const numId = Number(id);
-  if (!numId || !token) { res.status(400).send("Invalid unsubscribe link."); return; }
+  const { id: googleId, token } = req.query as Record<string, string>;
+  if (!googleId?.trim() || !token?.trim()) { res.status(400).send("Invalid unsubscribe link."); return; }
 
-  const expected = unsubToken(numId);
+  const expected = unsubToken(googleId);
   if (token !== expected) { res.status(400).send("Invalid or expired unsubscribe token."); return; }
 
   await db.update(scrapedBusinessesTable)
     .set({ emailStatus: "opted-out", updatedAt: new Date() })
     .where(and(
-      eq(scrapedBusinessesTable.id, numId),
+      eq(scrapedBusinessesTable.googleId, googleId),
       or(
         eq(scrapedBusinessesTable.emailStatus, "sent"),
         eq(scrapedBusinessesTable.emailStatus, "drafted"),

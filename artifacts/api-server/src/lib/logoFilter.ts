@@ -47,11 +47,11 @@ async function checkDimensions(buf: Buffer): Promise<string | null> {
   }
 
   const { width = 0, height = 0 } = meta;
-  if (width < 80 || height < 80) {
-    return `Too small (${width}×${height}px — minimum 80×80)`;
+  if (width < 100 || height < 100) {
+    return `Too small (${width}×${height}px — minimum 100×100)`;
   }
   const ratio = width / height;
-  if (ratio > 6 || ratio < 0.17) {
+  if (ratio > 4 || ratio < 0.25) {
     return `Extreme aspect ratio (${ratio.toFixed(2)}:1) — likely a banner not a logo`;
   }
   return null;

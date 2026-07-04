@@ -115,11 +115,11 @@ export async function extractLogo(
       const jsonLd = extractJsonLdLogo(html, normalizedBase);
       if (jsonLd) return { url: jsonLd, method: "json-ld" };
 
-      const logo = extractLogoImg(html, normalizedBase);
-      if (logo) return { url: logo, method: "img-tag" };
-
       const og = extractOgImage(html, normalizedBase);
       if (og) return { url: og, method: "og-image" };
+
+      const logo = extractLogoImg(html, normalizedBase);
+      if (logo) return { url: logo, method: "img-tag" };
 
       const fav = extractFavicon(html, normalizedBase);
       if (fav) return { url: fav, method: "favicon" };

@@ -92,6 +92,7 @@ export interface OutreachAdParams {
   state: string;
   website: string | null;
   services?: string[];
+  logoUrl?: string | null;
 }
 
 export interface GeneratedAd {
@@ -114,11 +115,37 @@ export async function generateAdForOutreach(
   const templateFile = TEMPLATE_PORTRAIT[templateKey] ?? TEMPLATE_PORTRAIT["parchment-classic"]!;
   const tmplPath = path.join(WORKSPACE_ROOT, "attached_assets", templateFile);
 
+  const USER_AGENT =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+
   let imageRefs: Array<{ type: "image_url"; url: string }> = [];
   if (fs.existsSync(tmplPath)) {
     const buf = fs.readFileSync(tmplPath);
     const mime = /\.jpe?g$/i.test(templateFile) ? "image/jpeg" : "image/png";
     imageRefs = [{ type: "image_url", url: toDataUrl(buf, mime) }];
+  }
+
+  // Include the business logo as a second image reference when available
+  let logoIncluded = false;
+  if (params.logoUrl) {
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 12_000);
+      const logoResp = await fetch(params.logoUrl, {
+        headers: { "User-Agent": USER_AGENT },
+        signal: ctrl.signal,
+        redirect: "follow",
+      });
+      clearTimeout(timer);
+      if (logoResp.ok) {
+        const logoBuf = Buffer.from(await logoResp.arrayBuffer());
+        const logoMime = (logoResp.headers.get("content-type") ?? "image/png").split(";")[0]!.trim();
+        imageRefs.push({ type: "image_url", url: toDataUrl(logoBuf, logoMime) });
+        logoIncluded = true;
+      }
+    } catch {
+      // logo download failed — proceed without it
+    }
   }
 
   const { bizName, category, phone, address, city, state } = params;
@@ -129,14 +156,18 @@ export async function generateAdForOutreach(
       ? params.services.slice(0, 5).join(", ")
       : industry;
 
-  const prompt = imageRefs.length > 0
-    ? `IMAGE 1 is the template. Create a professional postcard ad for:
+  const logoInstruction = logoIncluded
+    ? `IMAGE ${imageRefs.length} is the business logo — incorporate it prominently into the design.`
+    : "";
+
+  const prompt = imageRefs.length > (logoIncluded ? 1 : 0)
+    ? `IMAGE 1 is the template. ${logoInstruction} Create a professional postcard ad for:
 Business: ${bizName}
 Industry: ${industry}
 Services: ${servicesList}
 Phone: ${phone ?? "(not provided)"}
 Address: ${fullAddr}
-Modify the template to feature this business. Keep the overall layout and color scheme. Place the business name prominently. Use photorealistic images appropriate for ${industry}. Add phone number in footer. Keep design clean and professional for residential direct mail.`
+Modify the template to feature this business. Keep the overall layout and color scheme. Place the business name prominently. ${logoIncluded ? "Use the provided logo in the header/top area." : "Use photorealistic images appropriate for " + industry + "."} Add phone number in footer. Keep design clean and professional for residential direct mail.`
     : `Create a professional full-color direct-mail postcard ad (portrait, 4x5 inches) for:
 Business: ${bizName}
 Industry: ${industry}
