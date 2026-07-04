@@ -1,9 +1,11 @@
+import { browserScrape } from "./browserScraper.js";
+
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
 export interface LogoResult {
   url: string;
-  method: "json-ld" | "og-image" | "img-tag" | "favicon" | "outscraper";
+  method: "json-ld" | "og-image" | "img-tag" | "favicon" | "outscraper" | "browser";
 }
 
 async function fetchHtml(url: string): Promise<string | null> {
@@ -102,7 +104,9 @@ function extractFavicon(html: string, base: string): string | null {
 
 /**
  * Try to find a logo for the given business website.
- * Falls back to the Outscraper-provided logo URL.
+ * Fast path: json-ld → og-image → img-tag → favicon → outscraper URL.
+ * Headless browser fallback: used when all fast-path strategies return null,
+ * to handle JS-rendered sites (React SPAs, Wix, Squarespace).
  */
 export async function extractLogo(
   website: string | null,
@@ -124,6 +128,10 @@ export async function extractLogo(
       const fav = extractFavicon(html, normalizedBase);
       if (fav) return { url: fav, method: "favicon" };
     }
+
+    // Headless browser fallback — for JS-rendered sites that return empty HTML shells
+    const browserResult = await browserScrape(normalizedBase);
+    if (browserResult.logoUrl) return { url: browserResult.logoUrl, method: "browser" };
   }
 
   if (outscraperLogoUrl) {

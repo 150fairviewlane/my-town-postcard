@@ -8,6 +8,7 @@ import { extractLogo } from "../lib/logoExtractor.js";
 import { filterLogo } from "../lib/logoFilter.js";
 import { generateAdForOutreach, type OutreachAdParams } from "../lib/generateAdForOutreach.js";
 import { findEmailOnWebsite } from "../lib/emailScraper.js";
+import { warmBrowser, closeBrowser } from "../lib/browserScraper.js";
 import { logger } from "../lib/logger.js";
 
 const router: IRouter = Router();
@@ -760,11 +761,18 @@ router.post("/admin/outreach/batch/logos", requireAdmin, async (req, res): Promi
 
 async function runBatchLogos(jobId: string, businesses: typeof scrapedBusinessesTable.$inferSelect[]): Promise<void> {
   const job = jobs.get(jobId)!;
-  for (const biz of businesses) {
-    await processLogoAndContinue(biz.id, biz.website, biz.logoUrl);
-    job.processed++;
-    job.newCount++;
-    jobAppend(jobId, `✓ "${biz.businessName}"`);
+  // Pre-warm the headless browser once before the loop — avoids a cold-start
+  // penalty on every business that needs the JS-render fallback.
+  await warmBrowser();
+  try {
+    for (const biz of businesses) {
+      await processLogoAndContinue(biz.id, biz.website, biz.logoUrl);
+      job.processed++;
+      job.newCount++;
+      jobAppend(jobId, `✓ "${biz.businessName}"`);
+    }
+  } finally {
+    await closeBrowser();
   }
   job.status = "done"; job.completedAt = new Date();
   jobAppend(jobId, `✅ Batch logos done — ${businesses.length} processed`);

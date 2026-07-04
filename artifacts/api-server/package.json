@@ -35,6 +35,7 @@
     "pdfkit": "^0.19.1",
     "pino": "^9",
     "pino-http": "^10",
+    "playwright-core": "^1.61.1",
     "qrcode": "^1.5.4",
     "resend": "^6.12.2",
     "sharp": "^0.34.5",
