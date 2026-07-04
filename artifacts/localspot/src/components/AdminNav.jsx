@@ -205,6 +205,7 @@ export default function AdminNav() {
         <NavSection label="Sales" />
         <NavLink href="/admin/outreach" icon="📞" label="Outreach Tracker" />
         <NavLink href="/admin/discover" icon="🔍" label="Discover Leads" />
+        <NavLink href="/admin/scraper" icon="🤖" label="Business Scraper" />
 
         <NavSection label="Analytics" />
         <NavLink href="/admin/scans" icon="📊" label="Scan Analytics" />

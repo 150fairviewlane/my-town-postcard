@@ -28,6 +28,7 @@ import adminImageGenRouter from "./adminImageGen";
 import pdfDownloadRouter from "./pdfDownload";
 import adminPaidCustomersRouter from "./adminPaidCustomers";
 import adminQaRouter from "./adminQa";
+import adminScraperRouter from "./adminScraper";
 
 const router: IRouter = Router();
 
@@ -60,5 +61,6 @@ router.use(adminImageGenRouter);
 router.use(pdfDownloadRouter);
 router.use(adminPaidCustomersRouter);
 router.use(adminQaRouter);
+router.use(adminScraperRouter);
 
 export default router;

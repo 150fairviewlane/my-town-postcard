@@ -79,6 +79,8 @@ const AdminCreateCustomTerritoryPage = lazy(() => import("./pages/AdminCreateCus
 // @ts-expect-error JSX module without types
 const DiscoverLeadsPage = lazy(() => import("./pages/DiscoverLeadsPage"));
 // @ts-expect-error JSX module without types
+const ScraperPage = lazy(() => import("./pages/ScraperPage"));
+// @ts-expect-error JSX module without types
 const AdminOverviewPage = lazy(() => import("./pages/AdminOverviewPage"));
 // @ts-expect-error JSX module without types
 const AdminTerritoriesPage = lazy(() => import("./pages/AdminTerritoriesPage"));
@@ -147,6 +149,7 @@ function Router() {
         <Route path="/admin/image-gen" component={AdminImageGenPage} />
         <Route path="/admin/campaign/:id/print" component={AdminPrintPage} />
         <Route path="/admin/discover" component={DiscoverLeadsPage} />
+        <Route path="/admin/scraper" component={ScraperPage} />
         <Route path="/admin/outreach" component={OutreachPage} />
         <Route path="/admin/scans" component={ScanAnalyticsPage} />
         <Route path="/admin/dealers/:id" component={AdminDealerDetailPage} />
