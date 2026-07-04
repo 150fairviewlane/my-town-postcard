@@ -595,11 +595,16 @@ function BusinessRow({ biz, expanded, onToggle, onRefresh }) {
                   EMAIL DRAFT
                   {localBiz.emailSubject && <span style={{ fontWeight: 400, marginLeft: 6 }}>— {localBiz.emailSubject}</span>}
                 </div>
-                <div style={{
-                  border: "1px solid #e5e7eb", borderRadius: 6, overflow: "hidden",
-                  maxHeight: 320, overflowY: "auto",
-                }}
-                  dangerouslySetInnerHTML={{ __html: localBiz.emailBodyHtml }} />
+                {/* sandboxed iframe prevents scripts in admin-edited HTML from reaching parent */}
+                <iframe
+                  sandbox="allow-same-origin"
+                  srcDoc={localBiz.emailBodyHtml}
+                  title="Email draft preview"
+                  style={{
+                    border: "1px solid #e5e7eb", borderRadius: 6,
+                    width: "100%", height: 320, display: "block",
+                  }}
+                />
               </div>
             )}
           </div>
