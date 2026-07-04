@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, index } from "drizzle-orm/pg-core";
 
 export const scrapedBusinessesTable = pgTable("scraped_businesses", {
   id: serial("id").primaryKey(),
@@ -11,7 +11,7 @@ export const scrapedBusinessesTable = pgTable("scraped_businesses", {
   website: text("website"),
   email: text("email"),
   category: text("category"),
-  subtypes: json("subtypes").$type<string[]>().default([]),
+  subtypes: text("subtypes").array().notNull().default([]),
   logoUrl: text("logo_url"),
   logoMethod: text("logo_method"),
   logoStatus: text("logo_status", {
@@ -30,7 +30,12 @@ export const scrapedBusinessesTable = pgTable("scraped_businesses", {
   }).notNull().default("pending"),
   scrapedAt: timestamp("scraped_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => ({
+  cityStateScrapedAtIdx: index("sb_city_state_scraped_at_idx").on(table.city, table.state, table.scrapedAt),
+  logoStatusIdx: index("sb_logo_status_idx").on(table.logoStatus),
+  adStatusIdx: index("sb_ad_status_idx").on(table.adStatus),
+  emailStatusIdx: index("sb_email_status_idx").on(table.emailStatus),
+}));
 
 export type ScrapedBusiness = typeof scrapedBusinessesTable.$inferSelect;
 export type InsertScrapedBusiness = typeof scrapedBusinessesTable.$inferInsert;

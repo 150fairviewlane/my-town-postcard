@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, and, ilike, or, sql } from "drizzle-orm";
+import { eq, desc, and, ilike, or, sql, gte } from "drizzle-orm";
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
 import { db, scrapedBusinessesTable } from "@workspace/db";
@@ -13,9 +13,12 @@ import { logger } from "../lib/logger.js";
 const router: IRouter = Router();
 const JWT_SECRET = process.env.SESSION_SECRET || "localspot-secret";
 const UNSUB_SECRET = process.env.SESSION_SECRET || "localspot-secret";
-const APP_URL = process.env.APP_URL || "https://mytownpostcard.com";
+const APP_URL = (process.env.APP_URL || "https://mytownpostcard.com").replace(/\/$/, "");
 const FROM_EMAIL = process.env.FROM_EMAIL || "info@mytownpostcard.com";
+const CACHE_DAYS = 90;
+const COST_PER_1K = 2.85;
 
+// ── Admin auth guard — verifies JWT AND checks admin:true claim ───────────────
 function requireAdmin(req: any, res: any, next: any): void {
   const auth = req.headers.authorization;
   if (!auth?.startsWith("Bearer ")) {
@@ -23,7 +26,11 @@ function requireAdmin(req: any, res: any, next: any): void {
     return;
   }
   try {
-    jwt.verify(auth.slice(7), JWT_SECRET);
+    const payload = jwt.verify(auth.slice(7), JWT_SECRET) as Record<string, unknown>;
+    if (!payload.admin) {
+      res.status(401).json({ error: "Admin access required" });
+      return;
+    }
     next();
   } catch {
     res.status(401).json({ error: "Invalid or expired token" });
@@ -36,6 +43,10 @@ function unsubToken(id: number): string {
     .update(String(id))
     .digest("hex")
     .slice(0, 24);
+}
+
+function cacheThreshold(): Date {
+  return new Date(Date.now() - CACHE_DAYS * 24 * 60 * 60 * 1000);
 }
 
 // ── In-memory job registry ─────────────────────────────────────────────────────
@@ -69,7 +80,6 @@ function newJob(type: JobRecord["type"], label: string): string {
     log: [],
     startedAt: new Date(),
   });
-  // Prune old completed jobs (keep max 20)
   const completed = [...jobs.entries()]
     .filter(([, j]) => j.status !== "running")
     .sort((a, b) => (b[1].completedAt?.getTime() ?? 0) - (a[1].completedAt?.getTime() ?? 0));
@@ -84,7 +94,7 @@ function jobAppend(jobId: string, msg: string): void {
   if (job.log.length > 200) job.log.shift();
 }
 
-// ── Email draft helpers ────────────────────────────────────────────────────────
+// ── Email draft builder ────────────────────────────────────────────────────────
 function buildEmailDraft(business: {
   id: number;
   businessName: string;
@@ -99,20 +109,21 @@ function buildEmailDraft(business: {
   const token = unsubToken(id);
   const unsubUrl = `${APP_URL}/api/outreach/unsubscribe?id=${id}&token=${token}`;
   const spotUrl = `${APP_URL}/?utm_source=outreach&utm_medium=email&utm_campaign=cold`;
-
+  const phoneNote = phone ? ` — call us at ${phone}` : "";
   const industryLine = category
     ? `As a ${category.toLowerCase()} business in the ${city} area`
     : `As a local business serving the ${city} area`;
 
-  const phoneNote = phone ? ` — call us at ${phone}` : "";
-
-  const adSection = adImageUrl && !adImageUrl.startsWith("data:")
+  // Always embed the ad image — the send handler converts data: URIs to CID attachments
+  const adSection = adImageUrl
     ? `<div style="text-align:center;margin:24px 0;">
-        <img src="${adImageUrl}" alt="Sample ad for ${businessName}" width="300"
-          style="border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,0.15);max-width:100%;" />
-        <div style="color:#6b7280;font-size:12px;margin-top:6px;">Sample ad concept we designed for you</div>
+        <img src="${adImageUrl}" alt="Sample ad concept for ${businessName}" width="280"
+          style="border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,0.15);max-width:100%;display:block;margin:0 auto;" />
+        <div style="color:#6b7280;font-size:12px;margin-top:6px;">Sample postcard ad concept we created for ${businessName}</div>
       </div>`
-    : "";
+    : `<div style="background:#f3f4f6;border-radius:8px;padding:16px;text-align:center;margin:24px 0;color:#6b7280;font-size:13px;">
+        ✦ Sample ad design available upon request
+      </div>`;
 
   const bodyHtml = `<!DOCTYPE html>
 <html lang="en">
@@ -131,7 +142,7 @@ function buildEmailDraft(business: {
     </p>
 
     <p style="font-size:15px;color:#374151;line-height:1.7;margin-bottom:16px;">
-      ${industryLine}, we wanted to reach out about an exciting opportunity to get your name
+      ${industryLine}, we wanted to reach out about an opportunity to get your name
       in front of <strong>5,000 local households</strong> — all in ${city} and the surrounding area.
     </p>
 
@@ -145,19 +156,18 @@ function buildEmailDraft(business: {
     ${adSection}
 
     <div style="background:#fef2f2;border-left:4px solid #7B1418;padding:16px 20px;border-radius:0 8px 8px 0;margin:24px 0;">
-      <div style="font-weight:700;color:#7B1418;margin-bottom:8px;">What you get:</div>
+      <div style="font-weight:700;color:#7B1418;margin-bottom:8px;">What's included:</div>
       <ul style="margin:0;padding-left:20px;color:#374151;line-height:1.8;font-size:14px;">
         <li>Full-color printed ad on a premium 9"×12" postcard</li>
         <li>Delivered to 5,000 homes — no duplicates, no waste</li>
         <li>FREE professional ad design included</li>
-        <li>QR code tracking so you can measure response</li>
-        <li>One-time fee, no subscription required</li>
+        <li>QR code tracking to measure response</li>
+        <li>One-time fee — no subscription required</li>
       </ul>
     </div>
 
     <p style="font-size:15px;color:#374151;line-height:1.7;margin-bottom:24px;">
-      Spots are limited and sold on a first-come basis. We'd love to feature
-      <strong>${businessName}</strong> on the next mailer.
+      Spots are limited and sold on a first-come basis.
     </p>
 
     <div style="text-align:center;margin:28px 0;">
@@ -172,7 +182,9 @@ function buildEmailDraft(business: {
     </p>
 
     <div style="margin-top:32px;padding-top:18px;border-top:2px solid #e5e7eb;font-size:12px;color:#9ca3af;text-align:center;">
-      <div style="margin-bottom:4px;">My Town Postcard · ${city}, ${state}</div>
+      <div style="margin-bottom:4px;">
+        My Town Postcard · P.O. Box 123 · Clarkesville, GA 30523
+      </div>
       <div>
         <a href="${spotUrl}" style="color:#9ca3af;">Visit our site</a>
         &nbsp;·&nbsp;
@@ -184,254 +196,17 @@ function buildEmailDraft(business: {
 </div>
 </body></html>`;
 
-  const subject = `${city} postcard — a spot reserved for ${businessName}`;
+  const subject = `${city} postcard — we created a sample ad for ${businessName}`;
   return { subject, bodyHtml };
 }
 
-// ── GET /api/admin/scraper/businesses ─────────────────────────────────────────
-router.get("/admin/scraper/businesses", requireAdmin, async (req, res): Promise<void> => {
-  const { city, state, email_status, logo_status, ad_status, q, limit = "50", offset = "0" } = req.query as Record<string, string>;
+// ── Cascade pipeline helpers ──────────────────────────────────────────────────
 
-  const conditions = [];
-  if (city) conditions.push(ilike(scrapedBusinessesTable.city, `%${city}%`));
-  if (state) conditions.push(eq(scrapedBusinessesTable.state, state.toUpperCase()));
-  if (email_status) conditions.push(eq(scrapedBusinessesTable.emailStatus, email_status as any));
-  if (logo_status) conditions.push(eq(scrapedBusinessesTable.logoStatus, logo_status as any));
-  if (ad_status) conditions.push(eq(scrapedBusinessesTable.adStatus, ad_status as any));
-  if (q) {
-    conditions.push(
-      or(
-        ilike(scrapedBusinessesTable.businessName, `%${q}%`),
-        ilike(scrapedBusinessesTable.category, `%${q}%`),
-        ilike(scrapedBusinessesTable.email, `%${q}%`),
-      )!,
-    );
-  }
-
-  const where = conditions.length > 0 ? and(...conditions) : undefined;
-  const lim = Math.min(Number(limit) || 50, 200);
-  const off = Number(offset) || 0;
-
-  const [rows, countRow] = await Promise.all([
-    db
-      .select()
-      .from(scrapedBusinessesTable)
-      .where(where)
-      .orderBy(desc(scrapedBusinessesTable.scrapedAt))
-      .limit(lim)
-      .offset(off),
-    db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(scrapedBusinessesTable)
-      .where(where),
-  ]);
-
-  const total = countRow[0]?.count ?? 0;
-  res.json({ businesses: rows, total, limit: lim, offset: off });
-});
-
-// ── GET /api/admin/scraper/businesses/:id ─────────────────────────────────────
-router.get("/admin/scraper/businesses/:id", requireAdmin, async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
-  if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
-  const [row] = await db
-    .select()
-    .from(scrapedBusinessesTable)
-    .where(eq(scrapedBusinessesTable.id, id))
-    .limit(1);
-  if (!row) { res.status(404).json({ error: "Not found" }); return; }
-  res.json(row);
-});
-
-// ── PATCH /api/admin/scraper/businesses/:id ───────────────────────────────────
-router.patch("/admin/scraper/businesses/:id", requireAdmin, async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
-  if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
-
-  const allowed = ["emailStatus", "email", "phone", "website", "notes", "logoStatus"] as const;
-  const update: Record<string, unknown> = { updatedAt: new Date() };
-  for (const key of allowed) {
-    if (key in req.body) update[key === "emailStatus" ? "emailStatus" : key] = req.body[key];
-  }
-
-  // Map camelCase from body to snake_case drizzle columns
-  const mapped: Partial<typeof scrapedBusinessesTable.$inferInsert> = {
-    updatedAt: new Date(),
-  };
-  if ("emailStatus" in req.body) mapped.emailStatus = req.body.emailStatus;
-  if ("email" in req.body) mapped.email = req.body.email;
-  if ("phone" in req.body) mapped.phone = req.body.phone;
-  if ("website" in req.body) mapped.website = req.body.website;
-  if ("logoStatus" in req.body) mapped.logoStatus = req.body.logoStatus;
-
-  const [updated] = await db
-    .update(scrapedBusinessesTable)
-    .set(mapped)
-    .where(eq(scrapedBusinessesTable.id, id))
-    .returning();
-
-  if (!updated) { res.status(404).json({ error: "Not found" }); return; }
-  res.json(updated);
-});
-
-// ── DELETE /api/admin/scraper/businesses/:id ──────────────────────────────────
-router.delete("/admin/scraper/businesses/:id", requireAdmin, async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
-  if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
-  await db.delete(scrapedBusinessesTable).where(eq(scrapedBusinessesTable.id, id));
-  res.json({ ok: true });
-});
-
-// ── GET /api/admin/scraper/jobs ───────────────────────────────────────────────
-router.get("/admin/scraper/jobs", requireAdmin, (_req, res): void => {
-  const list = [...jobs.entries()].map(([id, j]) => ({ id, ...j }));
-  list.sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
-  res.json(list);
-});
-
-// ── GET /api/admin/scraper/job/:jobId ─────────────────────────────────────────
-router.get("/admin/scraper/job/:jobId", requireAdmin, (req, res): void => {
-  const job = jobs.get(req.params.jobId);
-  if (!job) { res.status(404).json({ error: "Job not found" }); return; }
-  res.json({ id: req.params.jobId, ...job });
-});
-
-// ── POST /api/admin/scraper/scrape ────────────────────────────────────────────
-router.post("/admin/scraper/scrape", requireAdmin, async (req, res): Promise<void> => {
-  const { category, city, state, limit = 50 } = req.body as {
-    category: string;
-    city: string;
-    state: string;
-    limit?: number;
-  };
-
-  if (!category?.trim() || !city?.trim() || !state?.trim()) {
-    res.status(400).json({ error: "category, city, and state are required" });
-    return;
-  }
-
-  if (!process.env.OUTSCRAPER_API_KEY) {
-    res.status(503).json({ error: "OUTSCRAPER_API_KEY is not configured on this server" });
-    return;
-  }
-
-  const query = `${category.trim()}, ${city.trim()}, ${state.trim().toUpperCase()}, US`;
-  const jobId = newJob("scrape", `${query} (limit ${limit})`);
-  res.json({ jobId, query });
-
-  // Run async
-  runScrapeJob(jobId, query, city.trim(), state.trim().toUpperCase(), Number(limit) || 50).catch((err) => {
-    const job = jobs.get(jobId);
-    if (job) {
-      job.status = "failed";
-      job.error = String(err);
-      job.completedAt = new Date();
-    }
-    logger.error({ err, jobId }, "adminScraper: scrape job failed");
-  });
-});
-
-async function runScrapeJob(
-  jobId: string,
-  query: string,
-  city: string,
-  state: string,
-  limit: number,
+async function processLogoAndContinue(
+  id: number,
+  website: string | null,
+  outscraperLogo: string | null,
 ): Promise<void> {
-  const job = jobs.get(jobId)!;
-  jobAppend(jobId, `Searching Outscraper: "${query}"`);
-
-  let results;
-  try {
-    results = await searchBusinesses(query, limit);
-  } catch (err) {
-    job.status = "failed";
-    job.error = String(err);
-    job.completedAt = new Date();
-    jobAppend(jobId, `❌ Outscraper error: ${String(err)}`);
-    return;
-  }
-
-  job.total = results.length;
-  jobAppend(jobId, `Found ${results.length} results from Outscraper`);
-
-  let newCount = 0;
-  let skipped = 0;
-  let withEmail = 0;
-
-  for (const biz of results) {
-    job.processed++;
-
-    const existing = await db
-      .select({ id: scrapedBusinessesTable.id })
-      .from(scrapedBusinessesTable)
-      .where(eq(scrapedBusinessesTable.googleId, biz.googleId))
-      .limit(1);
-
-    if (existing.length > 0) {
-      skipped++;
-      job.skippedDuplicates = skipped;
-      continue;
-    }
-
-    let email = biz.email;
-    if (!email && biz.website) {
-      try {
-        email = await findEmailOnWebsite(biz.website);
-      } catch {
-      }
-    }
-    if (email) withEmail++;
-
-    try {
-      await db.insert(scrapedBusinessesTable).values({
-        googleId: biz.googleId,
-        city,
-        state,
-        businessName: biz.name,
-        address: biz.address || null,
-        phone: biz.phone,
-        website: biz.website,
-        email,
-        category: biz.category,
-        subtypes: biz.subtypes,
-        logoUrl: biz.logo,
-        logoStatus: biz.logo ? "pending" : "pending",
-      });
-      newCount++;
-      job.newCount = newCount;
-      job.withEmail = withEmail;
-    } catch (err) {
-      jobAppend(jobId, `⚠ Insert failed for "${biz.name}": ${String(err).slice(0, 80)}`);
-    }
-  }
-
-  job.status = "done";
-  job.completedAt = new Date();
-  jobAppend(jobId, `✅ Done — ${newCount} new, ${skipped} skipped, ${withEmail} with email`);
-  logger.info({ jobId, newCount, skipped, withEmail }, "adminScraper: scrape job complete");
-}
-
-// ── POST /api/admin/scraper/businesses/:id/logo ───────────────────────────────
-router.post("/admin/scraper/businesses/:id/logo", requireAdmin, async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
-  if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
-
-  const [biz] = await db
-    .select()
-    .from(scrapedBusinessesTable)
-    .where(eq(scrapedBusinessesTable.id, id))
-    .limit(1);
-  if (!biz) { res.status(404).json({ error: "Not found" }); return; }
-
-  res.json({ ok: true, message: "Logo extraction started" });
-
-  processLogo(id, biz.website, biz.logoUrl).catch((err) =>
-    logger.error({ err, id }, "adminScraper: logo processing error"),
-  );
-});
-
-async function processLogo(id: number, website: string | null, outscraperLogo: string | null): Promise<void> {
   const logoResult = await extractLogo(website, outscraperLogo);
 
   if (!logoResult) {
@@ -455,6 +230,25 @@ async function processLogo(id: number, website: string | null, outscraperLogo: s
         updatedAt: new Date(),
       })
       .where(eq(scrapedBusinessesTable.id, id));
+
+    // Auto-cascade: usable logo → generate ad
+    const [biz] = await db
+      .select()
+      .from(scrapedBusinessesTable)
+      .where(eq(scrapedBusinessesTable.id, id))
+      .limit(1);
+    if (biz) {
+      generateAdAndContinue(id, {
+        bizName: biz.businessName,
+        category: biz.category,
+        phone: biz.phone,
+        address: biz.address,
+        city: biz.city,
+        state: biz.state,
+        website: biz.website,
+        services: (biz.subtypes as string[]) ?? [],
+      }).catch((err) => logger.error({ err, id }, "adminScraper: ad cascade failed"));
+    }
   } else {
     await db
       .update(scrapedBusinessesTable)
@@ -466,71 +260,53 @@ async function processLogo(id: number, website: string | null, outscraperLogo: s
         updatedAt: new Date(),
       })
       .where(eq(scrapedBusinessesTable.id, id));
+    // No usable logo → still draft an email (without ad)
+    draftEmailForBusiness(id).catch((err) =>
+      logger.error({ err, id }, "adminScraper: email draft (no-logo) cascade failed"),
+    );
   }
 }
 
-// ── POST /api/admin/scraper/businesses/:id/ad ─────────────────────────────────
-router.post("/admin/scraper/businesses/:id/ad", requireAdmin, async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
-  if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
-
+async function generateAdAndContinue(id: number, params: OutreachAdParams): Promise<void> {
   if (!process.env.XAI_API_KEY) {
-    res.status(503).json({ error: "XAI_API_KEY is not configured" });
+    logger.warn({ id }, "adminScraper: XAI_API_KEY not set, skipping ad generation");
+    // Still draft an email without ad
+    draftEmailForBusiness(id).catch((err) =>
+      logger.error({ err, id }, "adminScraper: email draft (no-xai) cascade failed"),
+    );
     return;
   }
 
+  try {
+    const result = await generateAdForOutreach(params);
+    await db
+      .update(scrapedBusinessesTable)
+      .set({ adImageUrl: result.imageUrl, adTemplate: result.template, adStatus: "generated", updatedAt: new Date() })
+      .where(eq(scrapedBusinessesTable.id, id));
+    // Auto-cascade: ad generated → draft email
+    draftEmailForBusiness(id).catch((err) =>
+      logger.error({ err, id }, "adminScraper: email draft cascade failed"),
+    );
+  } catch (err) {
+    logger.error({ err, id }, "adminScraper: ad generation failed");
+    await db
+      .update(scrapedBusinessesTable)
+      .set({ adStatus: "failed", updatedAt: new Date() })
+      .where(eq(scrapedBusinessesTable.id, id));
+    // Still draft an email without the ad
+    draftEmailForBusiness(id).catch((innerErr) =>
+      logger.error({ innerErr, id }, "adminScraper: email draft (ad-failed) cascade failed"),
+    );
+  }
+}
+
+async function draftEmailForBusiness(id: number): Promise<void> {
   const [biz] = await db
     .select()
     .from(scrapedBusinessesTable)
     .where(eq(scrapedBusinessesTable.id, id))
     .limit(1);
-  if (!biz) { res.status(404).json({ error: "Not found" }); return; }
-
-  await db
-    .update(scrapedBusinessesTable)
-    .set({ adStatus: "pending", updatedAt: new Date() })
-    .where(eq(scrapedBusinessesTable.id, id));
-
-  res.json({ ok: true, message: "Ad generation started" });
-
-  const params: OutreachAdParams = {
-    bizName: biz.businessName,
-    category: biz.category,
-    phone: biz.phone,
-    address: biz.address,
-    city: biz.city,
-    state: biz.state,
-    website: biz.website,
-    services: biz.subtypes as string[] | undefined,
-  };
-
-  generateAdForOutreach(params)
-    .then(async (result) => {
-      await db
-        .update(scrapedBusinessesTable)
-        .set({ adImageUrl: result.imageUrl, adTemplate: result.template, adStatus: "generated", updatedAt: new Date() })
-        .where(eq(scrapedBusinessesTable.id, id));
-    })
-    .catch(async (err) => {
-      logger.error({ err, id }, "adminScraper: ad generation failed");
-      await db
-        .update(scrapedBusinessesTable)
-        .set({ adStatus: "failed", updatedAt: new Date() })
-        .where(eq(scrapedBusinessesTable.id, id));
-    });
-});
-
-// ── POST /api/admin/scraper/businesses/:id/email-draft ────────────────────────
-router.post("/admin/scraper/businesses/:id/email-draft", requireAdmin, async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
-  if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
-
-  const [biz] = await db
-    .select()
-    .from(scrapedBusinessesTable)
-    .where(eq(scrapedBusinessesTable.id, id))
-    .limit(1);
-  if (!biz) { res.status(404).json({ error: "Not found" }); return; }
+  if (!biz || biz.emailStatus !== "pending") return;
 
   const { subject, bodyHtml } = buildEmailDraft({
     id: biz.id,
@@ -543,244 +319,493 @@ router.post("/admin/scraper/businesses/:id/email-draft", requireAdmin, async (re
     adImageUrl: biz.adImageUrl,
   });
 
-  const [updated] = await db
+  await db
     .update(scrapedBusinessesTable)
     .set({ emailSubject: subject, emailBodyHtml: bodyHtml, emailStatus: "drafted", updatedAt: new Date() })
-    .where(eq(scrapedBusinessesTable.id, id))
-    .returning();
+    .where(eq(scrapedBusinessesTable.id, id));
+}
 
-  res.json({ ok: true, subject, preview: bodyHtml.slice(0, 200) + "...", business: updated });
+// ── GET /api/admin/outreach/preview ───────────────────────────────────────────
+router.get("/admin/outreach/preview", requireAdmin, async (req, res): Promise<void> => {
+  const { city, state, limit = "50" } = req.query as Record<string, string>;
+  if (!city?.trim() || !state?.trim()) {
+    res.status(400).json({ error: "city and state are required" });
+    return;
+  }
+
+  const threshold = cacheThreshold();
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(scrapedBusinessesTable)
+    .where(and(
+      ilike(scrapedBusinessesTable.city, city.trim()),
+      eq(scrapedBusinessesTable.state, state.trim().toUpperCase()),
+      gte(scrapedBusinessesTable.scrapedAt, threshold),
+    ));
+
+  const cached = row?.count ?? 0;
+  const requestedLimit = Math.max(1, Number(limit) || 50);
+  const estimatedNew = Math.max(0, requestedLimit - cached);
+  const estimatedCostUsd = ((estimatedNew / 1000) * COST_PER_1K).toFixed(3);
+
+  res.json({ cached, estimatedNew, estimatedCostUsd, cacheWindowDays: CACHE_DAYS });
 });
 
-// ── POST /api/admin/scraper/businesses/:id/send-email ─────────────────────────
-router.post("/admin/scraper/businesses/:id/send-email", requireAdmin, async (req, res): Promise<void> => {
+// ── GET /api/admin/outreach/businesses ────────────────────────────────────────
+router.get("/admin/outreach/businesses", requireAdmin, async (req, res): Promise<void> => {
+  const {
+    city, state, email_status, logo_status, ad_status, q,
+    limit = "50", offset = "0",
+  } = req.query as Record<string, string>;
+
+  const conditions = [];
+  if (city) conditions.push(ilike(scrapedBusinessesTable.city, `%${city}%`));
+  if (state) conditions.push(eq(scrapedBusinessesTable.state, state.toUpperCase()));
+  if (email_status) conditions.push(eq(scrapedBusinessesTable.emailStatus, email_status as any));
+  if (logo_status) conditions.push(eq(scrapedBusinessesTable.logoStatus, logo_status as any));
+  if (ad_status) conditions.push(eq(scrapedBusinessesTable.adStatus, ad_status as any));
+  if (q) {
+    conditions.push(
+      or(
+        ilike(scrapedBusinessesTable.businessName, `%${q}%`),
+        ilike(scrapedBusinessesTable.category, `%${q}%`),
+        ilike(scrapedBusinessesTable.email, `%${q}%`),
+      )!,
+    );
+  }
+
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  const lim = Math.min(Number(limit) || 50, 200);
+  const off = Number(offset) || 0;
+
+  const [rows, countRow] = await Promise.all([
+    db.select().from(scrapedBusinessesTable).where(where)
+      .orderBy(desc(scrapedBusinessesTable.scrapedAt)).limit(lim).offset(off),
+    db.select({ count: sql<number>`count(*)::int` })
+      .from(scrapedBusinessesTable).where(where),
+  ]);
+
+  res.json({ businesses: rows, total: countRow[0]?.count ?? 0, limit: lim, offset: off });
+});
+
+// ── GET /api/admin/outreach/businesses/:id ────────────────────────────────────
+router.get("/admin/outreach/businesses/:id", requireAdmin, async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
+  const [row] = await db.select().from(scrapedBusinessesTable)
+    .where(eq(scrapedBusinessesTable.id, id)).limit(1);
+  if (!row) { res.status(404).json({ error: "Not found" }); return; }
+  res.json(row);
+});
+
+// ── PATCH /api/admin/outreach/businesses/:id ──────────────────────────────────
+router.patch("/admin/outreach/businesses/:id", requireAdmin, async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const mapped: Partial<typeof scrapedBusinessesTable.$inferInsert> = { updatedAt: new Date() };
+  if ("emailStatus" in req.body) mapped.emailStatus = req.body.emailStatus;
+  if ("email" in req.body) mapped.email = req.body.email;
+  if ("phone" in req.body) mapped.phone = req.body.phone;
+  if ("website" in req.body) mapped.website = req.body.website;
+  if ("logoStatus" in req.body) mapped.logoStatus = req.body.logoStatus;
+  if ("emailSubject" in req.body) mapped.emailSubject = req.body.emailSubject;
+  if ("emailBodyHtml" in req.body) mapped.emailBodyHtml = req.body.emailBodyHtml;
+
+  const [updated] = await db.update(scrapedBusinessesTable)
+    .set(mapped).where(eq(scrapedBusinessesTable.id, id)).returning();
+  if (!updated) { res.status(404).json({ error: "Not found" }); return; }
+  res.json(updated);
+});
+
+// ── DELETE /api/admin/outreach/businesses/:id ─────────────────────────────────
+router.delete("/admin/outreach/businesses/:id", requireAdmin, async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
+  await db.delete(scrapedBusinessesTable).where(eq(scrapedBusinessesTable.id, id));
+  res.json({ ok: true });
+});
+
+// ── GET /api/admin/outreach/jobs ──────────────────────────────────────────────
+router.get("/admin/outreach/jobs", requireAdmin, (_req, res): void => {
+  const list = [...jobs.entries()].map(([id, j]) => ({ id, ...j }));
+  list.sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
+  res.json(list);
+});
+
+// ── GET /api/admin/outreach/job/:jobId ────────────────────────────────────────
+router.get("/admin/outreach/job/:jobId", requireAdmin, (req, res): void => {
+  const job = jobs.get(req.params.jobId);
+  if (!job) { res.status(404).json({ error: "Job not found" }); return; }
+  res.json({ id: req.params.jobId, ...job });
+});
+
+// ── GET /api/admin/outreach/history ──────────────────────────────────────────
+router.get("/admin/outreach/history", requireAdmin, async (_req, res): Promise<void> => {
+  const rows = await db
+    .select({
+      city: scrapedBusinessesTable.city,
+      state: scrapedBusinessesTable.state,
+      total: sql<number>`count(*)::int`,
+      latestScrape: sql<string>`max(scraped_at)`,
+      withEmail: sql<number>`count(*) filter (where email is not null)::int`,
+      emailsSent: sql<number>`count(*) filter (where email_status = 'sent')::int`,
+      emailsDrafted: sql<number>`count(*) filter (where email_status = 'drafted')::int`,
+      adsGenerated: sql<number>`count(*) filter (where ad_status = 'generated')::int`,
+      usableLogos: sql<number>`count(*) filter (where logo_status = 'usable')::int`,
+    })
+    .from(scrapedBusinessesTable)
+    .groupBy(scrapedBusinessesTable.city, scrapedBusinessesTable.state)
+    .orderBy(desc(sql`max(scraped_at)`));
+  res.json(rows);
+});
+
+// ── POST /api/admin/outreach/scrape ───────────────────────────────────────────
+router.post("/admin/outreach/scrape", requireAdmin, async (req, res): Promise<void> => {
+  const { category, city, state, limit = 50 } = req.body as {
+    category: string; city: string; state: string; limit?: number;
+  };
+
+  if (!category?.trim() || !city?.trim() || !state?.trim()) {
+    res.status(400).json({ error: "category, city, and state are required" });
+    return;
+  }
+  if (!process.env.OUTSCRAPER_API_KEY) {
+    res.status(503).json({ error: "OUTSCRAPER_API_KEY is not configured on this server" });
+    return;
+  }
+
+  const query = `${category.trim()}, ${city.trim()}, ${state.trim().toUpperCase()}, US`;
+  const jobId = newJob("scrape", `${query} (limit ${limit})`);
+  res.json({ jobId, query });
+
+  runScrapeJob(jobId, query, city.trim(), state.trim().toUpperCase(), Number(limit) || 50)
+    .catch((err) => {
+      const job = jobs.get(jobId);
+      if (job) { job.status = "failed"; job.error = String(err); job.completedAt = new Date(); }
+      logger.error({ err, jobId }, "adminScraper: scrape job failed");
+    });
+});
+
+async function runScrapeJob(
+  jobId: string, query: string, city: string, state: string, limit: number,
+): Promise<void> {
+  const job = jobs.get(jobId)!;
+  jobAppend(jobId, `Searching Outscraper: "${query}"`);
+
+  let results;
+  try {
+    results = await searchBusinesses(query, limit);
+  } catch (err) {
+    job.status = "failed"; job.error = String(err); job.completedAt = new Date();
+    jobAppend(jobId, `❌ Outscraper error: ${String(err)}`);
+    return;
+  }
+
+  job.total = results.length;
+  jobAppend(jobId, `Found ${results.length} results`);
+
+  const threshold = cacheThreshold();
+  let newCount = 0, skipped = 0, withEmail = 0;
+
+  for (const biz of results) {
+    job.processed++;
+
+    const [existing] = await db
+      .select({ id: scrapedBusinessesTable.id, scrapedAt: scrapedBusinessesTable.scrapedAt })
+      .from(scrapedBusinessesTable)
+      .where(eq(scrapedBusinessesTable.googleId, biz.googleId))
+      .limit(1);
+
+    // Within 90-day cache window — skip at no cost
+    if (existing && existing.scrapedAt >= threshold) {
+      skipped++;
+      job.skippedDuplicates = skipped;
+      continue;
+    }
+
+    let email = biz.email;
+    if (!email && biz.website) {
+      try { email = await findEmailOnWebsite(biz.website); } catch { }
+    }
+    if (email) withEmail++;
+
+    if (existing) {
+      // Exists but older than 90 days — upsert with fresh data
+      await db.update(scrapedBusinessesTable).set({
+        address: biz.address || null,
+        phone: biz.phone,
+        website: biz.website,
+        email: email ?? undefined,
+        category: biz.category,
+        subtypes: biz.subtypes,
+        logoUrl: biz.logo ?? undefined,
+        logoStatus: "pending",
+        adStatus: "pending",
+        emailStatus: "pending",
+        logoVisionNotes: null,
+        adImageUrl: null,
+        adTemplate: null,
+        emailSubject: null,
+        emailBodyHtml: null,
+        scrapedAt: new Date(),
+        updatedAt: new Date(),
+      }).where(eq(scrapedBusinessesTable.id, existing.id));
+      newCount++;
+      job.newCount = newCount;
+      job.withEmail = withEmail;
+      // Cascade pipeline for re-scraped row
+      processLogoAndContinue(existing.id, biz.website, biz.logo).catch((err) =>
+        logger.error({ err, id: existing.id }, "adminScraper: logo cascade failed"),
+      );
+    } else {
+      // Brand new row
+      try {
+        const [inserted] = await db.insert(scrapedBusinessesTable).values({
+          googleId: biz.googleId,
+          city,
+          state,
+          businessName: biz.name,
+          address: biz.address || null,
+          phone: biz.phone,
+          website: biz.website,
+          email,
+          category: biz.category,
+          subtypes: biz.subtypes,
+          logoUrl: biz.logo ?? null,
+          logoStatus: "pending",
+        }).returning({ id: scrapedBusinessesTable.id });
+        newCount++;
+        job.newCount = newCount;
+        job.withEmail = withEmail;
+        if (inserted) {
+          // Cascade pipeline
+          processLogoAndContinue(inserted.id, biz.website, biz.logo).catch((err) =>
+            logger.error({ err, id: inserted.id }, "adminScraper: logo cascade failed"),
+          );
+        }
+      } catch (err) {
+        jobAppend(jobId, `⚠ Insert failed for "${biz.name}": ${String(err).slice(0, 80)}`);
+      }
+    }
+  }
+
+  job.status = "done"; job.completedAt = new Date();
+  jobAppend(jobId, `✅ Done — ${newCount} new/updated, ${skipped} cached, ${withEmail} with email`);
+  logger.info({ jobId, newCount, skipped, withEmail }, "adminScraper: scrape job complete");
+}
+
+// ── POST /api/admin/outreach/businesses/:id/logo ──────────────────────────────
+router.post("/admin/outreach/businesses/:id/logo", requireAdmin, async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
+  const [biz] = await db.select().from(scrapedBusinessesTable)
+    .where(eq(scrapedBusinessesTable.id, id)).limit(1);
+  if (!biz) { res.status(404).json({ error: "Not found" }); return; }
+  res.json({ ok: true, message: "Logo extraction started" });
+  processLogoAndContinue(id, biz.website, biz.logoUrl).catch((err) =>
+    logger.error({ err, id }, "adminScraper: logo processing error"),
+  );
+});
+
+// ── POST /api/admin/outreach/businesses/:id/ad ────────────────────────────────
+router.post("/admin/outreach/businesses/:id/ad", requireAdmin, async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
+  if (!process.env.XAI_API_KEY) {
+    res.status(503).json({ error: "XAI_API_KEY is not configured" }); return;
+  }
+  const [biz] = await db.select().from(scrapedBusinessesTable)
+    .where(eq(scrapedBusinessesTable.id, id)).limit(1);
+  if (!biz) { res.status(404).json({ error: "Not found" }); return; }
+  await db.update(scrapedBusinessesTable)
+    .set({ adStatus: "pending", updatedAt: new Date() }).where(eq(scrapedBusinessesTable.id, id));
+  res.json({ ok: true, message: "Ad generation started" });
+  generateAdAndContinue(id, {
+    bizName: biz.businessName, category: biz.category, phone: biz.phone,
+    address: biz.address, city: biz.city, state: biz.state, website: biz.website,
+    services: (biz.subtypes as string[]) ?? [],
+  }).catch((err) => logger.error({ err, id }, "adminScraper: ad generation error"));
+});
+
+// ── POST /api/admin/outreach/businesses/:id/email-draft ───────────────────────
+router.post("/admin/outreach/businesses/:id/email-draft", requireAdmin, async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
+  const [biz] = await db.select().from(scrapedBusinessesTable)
+    .where(eq(scrapedBusinessesTable.id, id)).limit(1);
+  if (!biz) { res.status(404).json({ error: "Not found" }); return; }
+
+  const { subject, bodyHtml } = buildEmailDraft({
+    id: biz.id, businessName: biz.businessName, city: biz.city, state: biz.state,
+    category: biz.category, phone: biz.phone, website: biz.website, adImageUrl: biz.adImageUrl,
+  });
+  const [updated] = await db.update(scrapedBusinessesTable)
+    .set({ emailSubject: subject, emailBodyHtml: bodyHtml, emailStatus: "drafted", updatedAt: new Date() })
+    .where(eq(scrapedBusinessesTable.id, id)).returning();
+  res.json({ ok: true, subject, business: updated });
+});
+
+// ── POST /api/admin/outreach/businesses/:id/send-email ────────────────────────
+router.post("/admin/outreach/businesses/:id/send-email", requireAdmin, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
 
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) { res.status(503).json({ error: "RESEND_API_KEY not configured" }); return; }
 
-  const [biz] = await db
-    .select()
-    .from(scrapedBusinessesTable)
-    .where(eq(scrapedBusinessesTable.id, id))
-    .limit(1);
+  const [biz] = await db.select().from(scrapedBusinessesTable)
+    .where(eq(scrapedBusinessesTable.id, id)).limit(1);
   if (!biz) { res.status(404).json({ error: "Not found" }); return; }
   if (!biz.email) { res.status(400).json({ error: "No email address for this business" }); return; }
+  if (biz.emailStatus !== "drafted") {
+    res.status(400).json({ error: `Email must be in 'drafted' status before sending (current: ${biz.emailStatus})` });
+    return;
+  }
   if (!biz.emailBodyHtml || !biz.emailSubject) {
-    res.status(400).json({ error: "No email draft — generate a draft first" });
-    return;
-  }
-  if (biz.emailStatus === "sent") {
-    res.status(409).json({ error: "Email already sent" });
-    return;
-  }
-  if (biz.emailStatus === "opted-out") {
-    res.status(409).json({ error: "Business has opted out" });
-    return;
+    res.status(400).json({ error: "No email draft content — generate a draft first" }); return;
   }
 
   let Resend: new (key: string) => any;
-  try {
-    ({ Resend } = await import("resend") as any);
-  } catch {
-    res.status(500).json({ error: "Resend module not available" });
-    return;
-  }
+  try { ({ Resend } = await import("resend") as any); }
+  catch { res.status(500).json({ error: "Resend module not available" }); return; }
 
   const resend = new Resend(apiKey);
-  const result = await resend.emails.send({
-    from: FROM_EMAIL,
-    to: biz.email,
-    subject: biz.emailSubject,
-    html: biz.emailBodyHtml,
-  });
+
+  // Handle inline ad image: convert data: URI → inline attachment (CID)
+  let htmlToSend = biz.emailBodyHtml;
+  const attachments: Array<{ filename: string; content: string; content_id: string }> = [];
+  const dataUriMatch = /src="(data:image\/png;base64,([^"]+))"/i.exec(htmlToSend);
+  if (dataUriMatch) {
+    const [fullMatch, _dataUri, b64] = dataUriMatch;
+    attachments.push({ filename: "ad-mockup.png", content: b64!, content_id: "ad-mockup" });
+    htmlToSend = htmlToSend.replace(fullMatch!, 'src="cid:ad-mockup"');
+  }
+
+  const sendPayload: Record<string, unknown> = {
+    from: FROM_EMAIL, to: biz.email,
+    subject: biz.emailSubject, html: htmlToSend,
+  };
+  if (attachments.length > 0) sendPayload.attachments = attachments;
+
+  const result = await resend.emails.send(sendPayload);
 
   if (result.error) {
     req.log.error({ err: result.error, id }, "adminScraper: send email failed");
-    res.status(500).json({ error: String(result.error?.message ?? result.error) });
-    return;
+    res.status(500).json({ error: String(result.error?.message ?? result.error) }); return;
   }
 
-  await db
-    .update(scrapedBusinessesTable)
-    .set({ emailStatus: "sent", updatedAt: new Date() })
-    .where(eq(scrapedBusinessesTable.id, id));
-
+  await db.update(scrapedBusinessesTable)
+    .set({ emailStatus: "sent", updatedAt: new Date() }).where(eq(scrapedBusinessesTable.id, id));
   req.log.info({ id, email: biz.email }, "adminScraper: outreach email sent");
   res.json({ ok: true, emailId: result.data?.id });
 });
 
-// ── POST /api/admin/scraper/batch/logos ──────────────────────────────────────
-router.post("/admin/scraper/batch/logos", requireAdmin, async (req, res): Promise<void> => {
+// ── POST /api/admin/outreach/batch/logos ──────────────────────────────────────
+router.post("/admin/outreach/batch/logos", requireAdmin, async (req, res): Promise<void> => {
   const { city, state, limit = 20 } = req.body as { city?: string; state?: string; limit?: number };
+  const conditions: any[] = [eq(scrapedBusinessesTable.logoStatus, "pending")];
+  if (city) conditions.push(ilike(scrapedBusinessesTable.city, city));
+  if (state) conditions.push(eq(scrapedBusinessesTable.state, state.toUpperCase()));
 
-  const conditions: ReturnType<typeof eq>[] = [
-    eq(scrapedBusinessesTable.logoStatus, "pending"),
-  ];
-  if (city) conditions.push(eq(scrapedBusinessesTable.city, city) as any);
-  if (state) conditions.push(eq(scrapedBusinessesTable.state, state.toUpperCase()) as any);
-
-  const pending = await db
-    .select()
-    .from(scrapedBusinessesTable)
-    .where(and(...conditions))
-    .limit(Number(limit) || 20);
-
-  if (pending.length === 0) {
-    res.json({ ok: true, message: "No pending logos to process", count: 0 });
-    return;
-  }
+  const pending = await db.select().from(scrapedBusinessesTable)
+    .where(and(...conditions)).limit(Math.min(Number(limit) || 20, 50));
+  if (pending.length === 0) { res.json({ ok: true, message: "No pending logos", count: 0 }); return; }
 
   const jobId = newJob("logo", `Batch logos: ${pending.length} businesses`);
-  const job = jobs.get(jobId)!;
-  job.total = pending.length;
+  jobs.get(jobId)!.total = pending.length;
   res.json({ ok: true, jobId, count: pending.length });
 
   runBatchLogos(jobId, pending).catch((err) => {
     const j = jobs.get(jobId);
     if (j) { j.status = "failed"; j.error = String(err); j.completedAt = new Date(); }
-    logger.error({ err, jobId }, "adminScraper: batch logos job failed");
+    logger.error({ err, jobId }, "adminScraper: batch logos failed");
   });
 });
 
 async function runBatchLogos(jobId: string, businesses: typeof scrapedBusinessesTable.$inferSelect[]): Promise<void> {
   const job = jobs.get(jobId)!;
   for (const biz of businesses) {
-    await processLogo(biz.id, biz.website, biz.logoUrl);
+    await processLogoAndContinue(biz.id, biz.website, biz.logoUrl);
     job.processed++;
     job.newCount++;
-    jobAppend(jobId, `Processed logo for "${biz.businessName}"`);
+    jobAppend(jobId, `✓ "${biz.businessName}"`);
   }
-  job.status = "done";
-  job.completedAt = new Date();
+  job.status = "done"; job.completedAt = new Date();
   jobAppend(jobId, `✅ Batch logos done — ${businesses.length} processed`);
 }
 
-// ── POST /api/admin/scraper/batch/ads ────────────────────────────────────────
-router.post("/admin/scraper/batch/ads", requireAdmin, async (req, res): Promise<void> => {
-  if (!process.env.XAI_API_KEY) {
-    res.status(503).json({ error: "XAI_API_KEY not configured" });
-    return;
-  }
-
+// ── POST /api/admin/outreach/batch/ads ────────────────────────────────────────
+router.post("/admin/outreach/batch/ads", requireAdmin, async (req, res): Promise<void> => {
+  if (!process.env.XAI_API_KEY) { res.status(503).json({ error: "XAI_API_KEY not configured" }); return; }
   const { city, state, limit = 10 } = req.body as { city?: string; state?: string; limit?: number };
 
-  const conditions: any[] = [eq(scrapedBusinessesTable.adStatus, "pending")];
+  // Must have usable logo before generating ad
+  const conditions: any[] = [
+    eq(scrapedBusinessesTable.adStatus, "pending"),
+    eq(scrapedBusinessesTable.logoStatus, "usable"),
+  ];
   if (city) conditions.push(ilike(scrapedBusinessesTable.city, city));
   if (state) conditions.push(eq(scrapedBusinessesTable.state, state.toUpperCase()));
 
-  const pending = await db
-    .select()
-    .from(scrapedBusinessesTable)
-    .where(and(...conditions))
-    .limit(Math.min(Number(limit) || 10, 20));
-
-  if (pending.length === 0) {
-    res.json({ ok: true, message: "No pending ads to generate", count: 0 });
-    return;
-  }
+  const pending = await db.select().from(scrapedBusinessesTable)
+    .where(and(...conditions)).limit(Math.min(Number(limit) || 10, 20));
+  if (pending.length === 0) { res.json({ ok: true, message: "No pending ads (requires usable logo)", count: 0 }); return; }
 
   const jobId = newJob("ad", `Batch ads: ${pending.length} businesses`);
-  const job = jobs.get(jobId)!;
-  job.total = pending.length;
+  jobs.get(jobId)!.total = pending.length;
   res.json({ ok: true, jobId, count: pending.length });
 
   runBatchAds(jobId, pending).catch((err) => {
     const j = jobs.get(jobId);
     if (j) { j.status = "failed"; j.error = String(err); j.completedAt = new Date(); }
-    logger.error({ err, jobId }, "adminScraper: batch ads job failed");
+    logger.error({ err, jobId }, "adminScraper: batch ads failed");
   });
 });
 
 async function runBatchAds(jobId: string, businesses: typeof scrapedBusinessesTable.$inferSelect[]): Promise<void> {
   const job = jobs.get(jobId)!;
   for (const biz of businesses) {
-    try {
-      const params: OutreachAdParams = {
-        bizName: biz.businessName,
-        category: biz.category,
-        phone: biz.phone,
-        address: biz.address,
-        city: biz.city,
-        state: biz.state,
-        website: biz.website,
-        services: biz.subtypes as string[] | undefined,
-      };
-      const result = await generateAdForOutreach(params);
-      await db
-        .update(scrapedBusinessesTable)
-        .set({ adImageUrl: result.imageUrl, adTemplate: result.template, adStatus: "generated", updatedAt: new Date() })
-        .where(eq(scrapedBusinessesTable.id, biz.id));
-      job.newCount++;
-      jobAppend(jobId, `✅ Generated ad for "${biz.businessName}"`);
-    } catch (err) {
-      await db
-        .update(scrapedBusinessesTable)
-        .set({ adStatus: "failed", updatedAt: new Date() })
-        .where(eq(scrapedBusinessesTable.id, biz.id));
-      jobAppend(jobId, `❌ Ad failed for "${biz.businessName}": ${String(err).slice(0, 80)}`);
-    }
+    const params: OutreachAdParams = {
+      bizName: biz.businessName, category: biz.category, phone: biz.phone,
+      address: biz.address, city: biz.city, state: biz.state, website: biz.website,
+      services: (biz.subtypes as string[]) ?? [],
+    };
+    await generateAdAndContinue(biz.id, params);
     job.processed++;
+    job.newCount++;
+    jobAppend(jobId, `✓ "${biz.businessName}"`);
   }
-  job.status = "done";
-  job.completedAt = new Date();
-  jobAppend(jobId, `✅ Batch ads done — ${job.newCount} generated`);
+  job.status = "done"; job.completedAt = new Date();
+  jobAppend(jobId, `✅ Batch ads done — ${businesses.length} processed`);
 }
 
-// ── POST /api/admin/scraper/batch/email-drafts ───────────────────────────────
-router.post("/admin/scraper/batch/email-drafts", requireAdmin, async (req, res): Promise<void> => {
-  const { city, state, limit = 50 } = req.body as { city?: string; state?: string; limit?: number };
-
+// ── POST /api/admin/outreach/batch/email-drafts ───────────────────────────────
+router.post("/admin/outreach/batch/email-drafts", requireAdmin, async (req, res): Promise<void> => {
+  const { city, state, limit = 100 } = req.body as { city?: string; state?: string; limit?: number };
   const conditions: any[] = [eq(scrapedBusinessesTable.emailStatus, "pending")];
   if (city) conditions.push(ilike(scrapedBusinessesTable.city, city));
   if (state) conditions.push(eq(scrapedBusinessesTable.state, state.toUpperCase()));
 
-  const pending = await db
-    .select()
-    .from(scrapedBusinessesTable)
-    .where(and(...conditions))
-    .limit(Math.min(Number(limit) || 50, 200));
-
-  if (pending.length === 0) {
-    res.json({ ok: true, message: "No pending email drafts", count: 0 });
-    return;
-  }
-
-  const jobId = newJob("email", `Batch email drafts: ${pending.length} businesses`);
-  const job = jobs.get(jobId)!;
-  job.total = pending.length;
-  job.status = "done";
-  job.completedAt = new Date();
+  const pending = await db.select().from(scrapedBusinessesTable)
+    .where(and(...conditions)).limit(Math.min(Number(limit) || 100, 200));
+  if (pending.length === 0) { res.json({ ok: true, message: "No pending email drafts", count: 0 }); return; }
 
   let draftCount = 0;
   for (const biz of pending) {
-    const { subject, bodyHtml } = buildEmailDraft({
-      id: biz.id,
-      businessName: biz.businessName,
-      city: biz.city,
-      state: biz.state,
-      category: biz.category,
-      phone: biz.phone,
-      website: biz.website,
-      adImageUrl: biz.adImageUrl,
-    });
-    await db
-      .update(scrapedBusinessesTable)
-      .set({ emailSubject: subject, emailBodyHtml: bodyHtml, emailStatus: "drafted", updatedAt: new Date() })
-      .where(eq(scrapedBusinessesTable.id, biz.id));
+    await draftEmailForBusiness(biz.id);
     draftCount++;
-    job.processed++;
-    job.newCount = draftCount;
   }
-
-  jobAppend(jobId, `✅ Drafted ${draftCount} emails`);
-  res.json({ ok: true, jobId, count: draftCount });
+  res.json({ ok: true, count: draftCount, message: `Drafted ${draftCount} emails` });
 });
 
-// ── GET /api/admin/scraper/stats ──────────────────────────────────────────────
-router.get("/admin/scraper/stats", requireAdmin, async (_req, res): Promise<void> => {
-  const rows = await db
+// ── GET /api/admin/outreach/stats ─────────────────────────────────────────────
+router.get("/admin/outreach/stats", requireAdmin, async (_req, res): Promise<void> => {
+  const [totalRow] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(scrapedBusinessesTable);
+
+  const byStatus = await db
     .select({
       emailStatus: scrapedBusinessesTable.emailStatus,
       logoStatus: scrapedBusinessesTable.logoStatus,
@@ -794,38 +819,50 @@ router.get("/admin/scraper/stats", requireAdmin, async (_req, res): Promise<void
       scrapedBusinessesTable.adStatus,
     );
 
-  const total = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(scrapedBusinessesTable);
+  res.json({ stats: byStatus, total: totalRow?.count ?? 0 });
+});
 
-  res.json({ stats: rows, total: total[0]?.count ?? 0 });
+// ── Public: GET /api/outreach/ad-image/:id ────────────────────────────────────
+// Serves the stored ad PNG by business ID (no auth — needed for email img src)
+router.get("/outreach/ad-image/:id", async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (!id) { res.status(400).send("Invalid id"); return; }
+  const [row] = await db
+    .select({ adImageUrl: scrapedBusinessesTable.adImageUrl })
+    .from(scrapedBusinessesTable)
+    .where(eq(scrapedBusinessesTable.id, id))
+    .limit(1);
+  const dataUrl = row?.adImageUrl;
+  if (!dataUrl?.startsWith("data:image/png;base64,")) {
+    res.status(404).send("Not found"); return;
+  }
+  const b64 = dataUrl.replace("data:image/png;base64,", "");
+  res.setHeader("Content-Type", "image/png");
+  res.setHeader("Cache-Control", "public, max-age=86400");
+  res.send(Buffer.from(b64, "base64"));
 });
 
 // ── Public: GET /api/outreach/unsubscribe ─────────────────────────────────────
 router.get("/outreach/unsubscribe", async (req, res): Promise<void> => {
   const { id, token } = req.query as Record<string, string>;
   const numId = Number(id);
-
-  if (!numId || !token) {
-    res.status(400).send("Invalid unsubscribe link.");
-    return;
-  }
+  if (!numId || !token) { res.status(400).send("Invalid unsubscribe link."); return; }
 
   const expected = unsubToken(numId);
-  if (token !== expected) {
-    res.status(400).send("Invalid or expired unsubscribe token.");
-    return;
-  }
+  if (token !== expected) { res.status(400).send("Invalid or expired unsubscribe token."); return; }
 
-  await db
-    .update(scrapedBusinessesTable)
+  await db.update(scrapedBusinessesTable)
     .set({ emailStatus: "opted-out", updatedAt: new Date() })
     .where(and(
       eq(scrapedBusinessesTable.id, numId),
-      eq(scrapedBusinessesTable.emailStatus, "sent"),
+      or(
+        eq(scrapedBusinessesTable.emailStatus, "sent"),
+        eq(scrapedBusinessesTable.emailStatus, "drafted"),
+      )!,
     ));
 
-  res.send(`<!DOCTYPE html><html><head><title>Unsubscribed</title></head><body style="font-family:sans-serif;text-align:center;padding:60px;">
+  res.send(`<!DOCTYPE html><html><head><title>Unsubscribed</title></head>
+<body style="font-family:sans-serif;text-align:center;padding:60px;">
 <h2>You've been unsubscribed.</h2>
 <p>You will no longer receive outreach emails from My Town Postcard.</p>
 </body></html>`);
