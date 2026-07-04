@@ -395,3 +395,33 @@ id = "hnxPZvUkXZBZAlaSOh5SL"
 uri = "file://artifacts/api-server/tmp_crops_v2.jpg"
 type = "image"
 title = "Corner crops — BEFORE (style.fill glow, 2.0×) vs AFTER (warm-gold #F4A800, 1.1×)"
+
+[[outputs]]
+id = "ANPhV2ncU_HsNS3NY92nc"
+uri = "file://.local/logos/farmacia.png"
+type = "image"
+title = "Farmacia Trattoria — favicon/sketch (REJECTED)"
+
+[[outputs]]
+id = "d4OLb-sS6ze1jMO0PC-6n"
+uri = "file://.local/logos/biggdaddys.jpg"
+type = "image"
+title = "Bigg Daddys — photo of restaurant building (REJECTED)"
+
+[[outputs]]
+id = "lM1hKSjMhWUa-sX9Mg9Kl"
+uri = "file://.local/logos/way2baked.webp"
+type = "image"
+title = "Way2Baked — app icon / low-quality capture (REJECTED)"
+
+[[outputs]]
+id = "nNGqR2bs9Xqu1MIiAA4w1"
+uri = "file://.local/logos/bsg.webp"
+type = "image"
+title = "BSG Cafe — dark-on-black logo, invisible on print (REJECTED)"
+
+[[outputs]]
+id = "6t1MoKb5l_5Gh1F4LHdFx"
+uri = "file://.local/logos/fenders.png"
+type = "image"
+title = "Fenders Diner — blank/broken image (REJECTED)"
