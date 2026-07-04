@@ -18,8 +18,6 @@ const monthlyDollars = perPostcardDollars * 4;
 
 const NAV_LINKS = [
   { label: "How It Works", href: "#how-it-works" },
-  { label: "Earnings", href: "#earnings" },
-  { label: "Territories", href: "#territories" },
   { label: "FAQ", href: "#faq" },
 ];
 
