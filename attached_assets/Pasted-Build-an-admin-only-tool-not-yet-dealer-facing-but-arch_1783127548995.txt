@@ -1,0 +1,77 @@
+Build an admin-only tool (not yet dealer-facing, but architected so it can be extended to dealers later) that scrapes local businesses, extracts their logos, auto-generates an ad mockup, and drafts a cold outreach email — end to end, for my review before anything sends.
+
+## Part 1: Business scraping (Outscraper)
+
+Location: a new section on the admin page, accessible only to me (admin auth, not dealer auth).
+
+UI:
+- Input fields for City and State
+- A "Scrape" button
+- A results table showing business name, address, website, email, industry category, logo status, ad status, and scrape date
+- A running history view showing what's already been scraped for each city
+
+Industry targeting: filter results to these categories only (map to whatever category/NAICS taxonomy Outscraper's API uses):
+1. Home services (HVAC, plumbing, roofing, pest control, landscaping)
+2. Restaurants / food service
+3. Real estate agents/brokers
+4. Dental / medical / chiropractic
+5. Automotive (repair shops, dealerships)
+6. Health & wellness (gyms, spas, salons)
+7. Insurance agents
+8. Legal services
+9. Retail / local boutiques
+10. Home improvement / contractors
+
+Batching: process in batches of 100 businesses per Outscraper API call, not all at once.
+
+Caching / no-repeat scraping — critical: before calling Outscraper for a business, check a persistent DB table (e.g. `scraped_businesses`) keyed by business name + address or Outscraper's place ID. Only call Outscraper for businesses not already cached, or where the cached record is older than 90 days. Every successful scrape gets written to this table with a timestamp so re-running a city search later doesn't re-pay for businesses we already have.
+
+Before running a paid scrape, show me how many businesses in this city/industry mix are already cached (free) versus how many require a new paid Outscraper call, so I can see cost impact before confirming.
+
+Confirm Outscraper's current API documentation and pricing for the needed endpoints (business search + email enrichment) before implementing, and report back what fields/categories are actually available so we can accurately map the 10 industries above to their taxonomy.
+
+## Part 2: Logo extraction
+
+For each scraped business with a website, attempt to extract a usable logo image using this fallback chain, in order, stopping at the first success:
+1. Structured data — check for an "Organization" schema (JSON-LD) on the page declaring a `logo` field
+2. Open Graph image tag (`og:image`)
+3. `<img>` tags in the page header with "logo" in the class name, ID, or alt text
+4. Apple touch icon / high-res favicon as a last resort
+
+If no website exists or none of the above succeed, fall back to Outscraper's `logo` field from the Google Maps result (the business's Google Business Profile photo), understanding this is lower quality/reliability.
+
+Store the extracted image (or note that none was found) against the business record, along with which method succeeded.
+
+## Part 3: Logo suitability filter
+
+Before using an extracted image in an ad, run it through a two-stage filter:
+
+Stage 1 — fast pre-filter (no AI call, reject obvious non-candidates):
+- Minimum resolution threshold (reject anything too small/likely to look blurry when scaled)
+- File type signal (PNG with transparency is a positive signal; plain JPG is a weaker signal)
+- Reject extreme aspect ratios (very wide/short images are likely banners, not logos)
+
+Stage 2 — vision-model judgment for anything passing Stage 1: send the image to a vision-capable model (use whichever we already have set up — GPT-4o vision or Grok vision, consistent with the QR-detection pipeline) and ask it to judge: is this a company logo suitable for placement in an advertisement? Consider whether it's a graphic/wordmark rather than a photograph, whether the background is clean or transparent, whether resolution is sufficient, and whether it plausibly represents the business by name.
+
+Mark each business's logo status as: usable, unusable, or no-logo-found. Only businesses with a usable logo proceed to ad generation automatically; others should be flagged for manual review rather than silently skipped.
+
+## Part 4: Auto-generate the ad
+
+For businesses with a usable logo, feed the logo, business name, industry category, and address into our existing ad generation pipeline (the same one used for AdGenV7/SMART_HTML ad creation) to produce a mockup ad using an appropriate template for their industry. Store the generated ad image against the business record.
+
+## Part 5: Draft the cold outreach email
+
+For businesses with a completed ad mockup, draft a cold outreach email (don't send automatically) that:
+- Attaches or embeds the ad mockup image
+- Frames it clearly as a sample/preview made for them to consider (e.g. "Here's a preview of what your ad could look like on our local postcard — no obligation"), not as something already published or agreed to
+- Includes basic info about My Town Postcard, the mailing area their business is in, and a clear call to action to learn more or claim the spot
+- Includes a working unsubscribe/opt-out mechanism and our real business address, consistent with CAN-SPAM requirements for commercial email
+- Is queued for my review, not sent automatically — I want to approve or edit each email before it goes out, at least for this first version
+
+## Reporting
+
+Before writing any code, report back your implementation plan, including:
+- The exact DB schema for the caching table and how logo/ad/email status will be tracked per business
+- Confirmation of Outscraper's current API/pricing for the endpoints needed
+- Which vision model will be used for the suitability check and estimated cost per image
+- How the existing ad generation pipeline will be invoked programmatically for this batch use case
