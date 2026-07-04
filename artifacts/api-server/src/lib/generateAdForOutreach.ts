@@ -177,7 +177,7 @@ Address: ${fullAddr}
 Design a polished, print-ready postcard ad. Business name large and prominent. Include phone number. Warm, inviting colors. Professional photography-style imagery for ${industry}. This is a sample ad to show the business what their postcard could look like.`;
 
   const body: Record<string, unknown> = {
-    model: "grok-2-image-1212",
+    model: "grok-imagine-image",
     prompt,
     n: 1,
     aspect_ratio: "3:4",
