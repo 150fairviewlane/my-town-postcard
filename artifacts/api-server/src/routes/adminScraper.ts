@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, and, ilike, or, sql, gte } from "drizzle-orm";
+import { eq, desc, and, ilike, or, sql, gte, isNull } from "drizzle-orm";
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
 import { db, scrapedBusinessesTable } from "@workspace/db";
@@ -416,6 +416,53 @@ router.get("/admin/outreach/businesses", requireAdmin, async (req, res): Promise
   ]);
 
   res.json({ businesses: rows, total: countRow[0]?.count ?? 0, limit: lim, offset: off });
+});
+
+// ── GET /api/admin/outreach/no-website ────────────────────────────────────────
+// Returns all scraped businesses where website IS NULL.
+// ?city=  ?state=  filter by location.
+// ?format=csv  returns a downloadable CSV instead of JSON.
+router.get("/admin/outreach/no-website", requireAdmin, async (req, res): Promise<void> => {
+  const { city, state, format } = req.query as { city?: string; state?: string; format?: string };
+
+  const conditions = [isNull(scrapedBusinessesTable.website)];
+  if (city) conditions.push(ilike(scrapedBusinessesTable.city, `%${city}%`));
+  if (state) conditions.push(eq(scrapedBusinessesTable.state, state.toUpperCase()));
+
+  const rows = await db.select({
+    id:           scrapedBusinessesTable.id,
+    businessName: scrapedBusinessesTable.businessName,
+    address:      scrapedBusinessesTable.address,
+    phone:        scrapedBusinessesTable.phone,
+    category:     scrapedBusinessesTable.category,
+    subtypes:     scrapedBusinessesTable.subtypes,
+    city:         scrapedBusinessesTable.city,
+    state:        scrapedBusinessesTable.state,
+    scrapedAt:    scrapedBusinessesTable.scrapedAt,
+  }).from(scrapedBusinessesTable)
+    .where(and(...conditions))
+    .orderBy(desc(scrapedBusinessesTable.scrapedAt));
+
+  if (format === "csv") {
+    const esc = (v: string | null | undefined): string =>
+      v == null ? "" : `"${String(v).replace(/"/g, '""')}"`;
+    const header = "Business Name,Address,Phone,Category,City,State,Scraped Date";
+    const lines = rows.map((r) => [
+      esc(r.businessName),
+      esc(r.address),
+      esc(r.phone),
+      esc(r.category),
+      esc(r.city),
+      esc(r.state),
+      esc(r.scrapedAt ? new Date(r.scrapedAt).toLocaleDateString("en-US") : null),
+    ].join(","));
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="no-website-businesses.csv"`);
+    res.send([header, ...lines].join("\r\n"));
+    return;
+  }
+
+  res.json({ businesses: rows, total: rows.length });
 });
 
 // ── GET /api/admin/outreach/businesses/:id ────────────────────────────────────

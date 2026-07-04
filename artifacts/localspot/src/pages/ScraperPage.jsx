@@ -16,7 +16,7 @@ async function apiFetch(path, opts = {}) {
   return data;
 }
 
-const TABS = ["🔍 Scrape", "🏢 Businesses", "📋 History", "📊 Jobs"];
+const TABS = ["🔍 Scrape", "🏢 Businesses", "📋 History", "📊 Jobs", "🌐 No Website"];
 
 const STATUS_COLORS = {
   pending:          { bg: "#f3f4f6", color: "#6b7280" },
@@ -788,6 +788,173 @@ function JobsTab() {
   );
 }
 
+// ── No Website Tab ─────────────────────────────────────────────────────────────
+
+function NoWebsiteTab() {
+  const [businesses, setBusinesses] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [filters, setFilters] = useState({ city: "", state: "" });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [downloading, setDownloading] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true); setError(null);
+    try {
+      const params = new URLSearchParams();
+      if (filters.city) params.set("city", filters.city);
+      if (filters.state) params.set("state", filters.state);
+      const data = await apiFetch(`/admin/outreach/no-website?${params}`);
+      setBusinesses(data.businesses ?? []);
+      setTotal(data.total ?? 0);
+    } catch (err) { setError(err.message); }
+    finally { setLoading(false); }
+  }, [filters]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const downloadCsv = async () => {
+    setDownloading(true);
+    try {
+      const params = new URLSearchParams({ format: "csv" });
+      if (filters.city) params.set("city", filters.city);
+      if (filters.state) params.set("state", filters.state);
+      const resp = await fetch(api(`/admin/outreach/no-website?${params}`), { headers: authHeaders() });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "no-website-businesses.csv";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) { alert("CSV download failed: " + err.message); }
+    finally { setDownloading(false); }
+  };
+
+  const filterInputStyle = {
+    padding: "6px 10px", borderRadius: 6, border: "1.5px solid #e5e7eb",
+    fontSize: 13, outline: "none", fontFamily: "system-ui,sans-serif",
+  };
+  const thStyle = { padding: "8px 12px", textAlign: "left", fontSize: 12, fontWeight: 700, color: "#9ca3af", borderBottom: "1px solid #e5e7eb", whiteSpace: "nowrap" };
+  const tdStyle = { padding: "10px 12px", fontSize: 13, color: "#374151", borderBottom: "1px solid #f3f4f6", verticalAlign: "top" };
+
+  return (
+    <div>
+      <div style={{ marginBottom: 16 }}>
+        <h3 style={{ margin: "0 0 4px", fontSize: 17, fontWeight: 800 }}>Businesses Without a Website</h3>
+        <p style={{ margin: "0 0 16px", color: "#6b7280", fontSize: 14 }}>
+          Businesses found via Outscraper with no website on record — potential leads for a future website-building product.
+          Signal is captured automatically whenever you scrape; no schema change needed.
+        </p>
+
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <input
+            style={{ ...filterInputStyle, width: 130 }}
+            placeholder="City"
+            value={filters.city}
+            onChange={(e) => setFilters((f) => ({ ...f, city: e.target.value }))}
+          />
+          <input
+            style={{ ...filterInputStyle, width: 55 }}
+            placeholder="ST"
+            value={filters.state}
+            onChange={(e) => setFilters((f) => ({ ...f, state: e.target.value.toUpperCase() }))}
+            maxLength={2}
+          />
+          <button
+            onClick={load}
+            style={{ padding: "6px 14px", borderRadius: 6, border: "none", background: "#991b1b", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+          >
+            Filter
+          </button>
+          <span style={{ fontSize: 13, color: "#9ca3af" }}>
+            {loading ? "Loading…" : `${total} business${total === 1 ? "" : "es"}`}
+          </span>
+          <button
+            onClick={downloadCsv}
+            disabled={downloading || total === 0}
+            style={{
+              marginLeft: "auto", padding: "6px 14px", borderRadius: 6,
+              border: "1.5px solid #e5e7eb", background: downloading || total === 0 ? "#f3f4f6" : "#fff",
+              color: downloading || total === 0 ? "#9ca3af" : "#374151",
+              fontSize: 13, fontWeight: 600, cursor: downloading || total === 0 ? "not-allowed" : "pointer",
+            }}
+          >
+            {downloading ? "Downloading…" : "⬇ Download CSV"}
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div style={{ background: "#fee2e2", borderRadius: 8, padding: "10px 14px", color: "#991b1b", fontSize: 13, marginBottom: 12 }}>
+          ❌ {error}
+        </div>
+      )}
+
+      {!loading && businesses.length === 0 && (
+        <div style={{ color: "#9ca3af", padding: 40, textAlign: "center", background: "#f9fafb", borderRadius: 12 }}>
+          {total === 0
+            ? "No businesses without a website found. Try scraping a city first."
+            : "No results match your filters."}
+        </div>
+      )}
+
+      {businesses.length > 0 && (
+        <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ background: "#f9fafb" }}>
+                <th style={thStyle}>Business Name</th>
+                <th style={thStyle}>Category</th>
+                <th style={thStyle}>Phone</th>
+                <th style={thStyle}>Address</th>
+                <th style={thStyle}>City</th>
+                <th style={thStyle}>Scraped</th>
+              </tr>
+            </thead>
+            <tbody>
+              {businesses.map((biz, i) => (
+                <tr key={biz.id} style={{ background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
+                  <td style={{ ...tdStyle, fontWeight: 700, maxWidth: 200 }}>{biz.businessName}</td>
+                  <td style={{ ...tdStyle, color: "#6b7280", maxWidth: 160 }}>
+                    {biz.category ?? "—"}
+                    {Array.isArray(biz.subtypes) && biz.subtypes.length > 0 && (
+                      <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>
+                        {biz.subtypes.slice(0, 3).join(", ")}
+                      </div>
+                    )}
+                  </td>
+                  <td style={{ ...tdStyle, whiteSpace: "nowrap" }}>
+                    {biz.phone
+                      ? <a href={`tel:${biz.phone}`} style={{ color: "#2563eb", textDecoration: "none" }}>{biz.phone}</a>
+                      : <span style={{ color: "#d1d5db" }}>—</span>}
+                  </td>
+                  <td style={{ ...tdStyle, color: "#6b7280", fontSize: 12 }}>{biz.address ?? "—"}</td>
+                  <td style={{ ...tdStyle, whiteSpace: "nowrap" }}>{biz.city}, {biz.state}</td>
+                  <td style={{ ...tdStyle, color: "#9ca3af", whiteSpace: "nowrap", fontSize: 12 }}>
+                    {biz.scrapedAt
+                      ? new Date(biz.scrapedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                      : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {businesses.length > 0 && (
+        <div style={{ marginTop: 12, fontSize: 12, color: "#9ca3af" }}>
+          ℹ️ This list grows automatically as you scrape more cities. Download CSV anytime to export for future use.
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Stats Bar ──────────────────────────────────────────────────────────────────
 
 function StatsBar() {
@@ -863,6 +1030,7 @@ export default function ScraperPage() {
         {tab === 1 && <BusinessesTab />}
         {tab === 2 && <HistoryTab />}
         {tab === 3 && <JobsTab />}
+        {tab === 4 && <NoWebsiteTab />}
       </div>
 
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
