@@ -38,9 +38,30 @@ function pickEmail(candidates: string[]): string | null {
   return null;
 }
 
-// ── Singleton browser ─────────────────────────────────────────────────────────
+// ── Singleton browser + 3-page concurrency gate ───────────────────────────────
 
 let browser: Browser | null = null;
+
+// Semaphore: at most PAGE_LIMIT pages open simultaneously across all callers.
+const PAGE_LIMIT = 3;
+let activePages = 0;
+const waitQueue: Array<() => void> = [];
+
+function acquirePage(): Promise<void> {
+  if (activePages < PAGE_LIMIT) {
+    activePages++;
+    return Promise.resolve();
+  }
+  return new Promise<void>((resolve) => {
+    waitQueue.push(() => { activePages++; resolve(); });
+  });
+}
+
+function releasePage(): void {
+  activePages--;
+  const next = waitQueue.shift();
+  if (next) next();
+}
 
 export async function warmBrowser(): Promise<void> {
   if (!browser) {
@@ -81,6 +102,8 @@ export async function browserScrape(rawUrl: string): Promise<BrowserScrapeResult
 
   if (!browser) await warmBrowser();
 
+  // Respect the 3-page concurrency limit before opening a new tab
+  await acquirePage();
   const page = await browser!.newPage();
   try {
     await page.setExtraHTTPHeaders({
@@ -155,5 +178,6 @@ export async function browserScrape(rawUrl: string): Promise<BrowserScrapeResult
     return { logoUrl: null, email: null };
   } finally {
     await page.close().catch(() => {});
+    releasePage();
   }
 }

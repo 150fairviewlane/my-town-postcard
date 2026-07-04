@@ -104,9 +104,9 @@ function extractFavicon(html: string, base: string): string | null {
 
 /**
  * Try to find a logo for the given business website.
- * Fast path: json-ld → og-image → img-tag → favicon → outscraper URL.
- * Headless browser fallback: used when all fast-path strategies return null,
- * to handle JS-rendered sites (React SPAs, Wix, Squarespace).
+ * Strategy order: json-ld → og-image → img-tag → favicon → outscraper URL →
+ * headless browser (JS-rendered sites only, last resort).
+ * Outscraper is tried before launching a browser to keep the fast path fast.
  */
 export async function extractLogo(
   website: string | null,
@@ -129,14 +129,18 @@ export async function extractLogo(
       if (fav) return { url: fav, method: "favicon" };
     }
 
-    // Headless browser fallback — for JS-rendered sites that return empty HTML shells
+    // Outscraper URL is tried before the headless browser — it's free and instant
+    if (outscraperLogoUrl) return { url: outscraperLogoUrl, method: "outscraper" };
+
+    // Last resort: headless browser for JS-rendered sites (React SPAs, Wix, Squarespace)
+    // that return empty HTML shells to fetch().
     const browserResult = await browserScrape(normalizedBase);
     if (browserResult.logoUrl) return { url: browserResult.logoUrl, method: "browser" };
+
+    return null;
   }
 
-  if (outscraperLogoUrl) {
-    return { url: outscraperLogoUrl, method: "outscraper" };
-  }
-
+  // No website — only Outscraper can help
+  if (outscraperLogoUrl) return { url: outscraperLogoUrl, method: "outscraper" };
   return null;
 }
