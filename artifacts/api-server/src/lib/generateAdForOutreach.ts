@@ -583,7 +583,7 @@ async function compositeEmailPanel(adBuf: Buffer): Promise<Buffer> {
     throw new Error(`Right-panel asset not found: ${panelFile}`);
   }
 
-  // Scale the right panel to exactly match the ad height
+  // Scale the right panel to exactly match the full canvas height
   const panelMeta = await (sharpFile(panelPath) as unknown as import("sharp").Sharp).metadata();
   const panelNativeH = panelMeta.height ?? adH;
   const panelNativeW = panelMeta.width ?? 942;
@@ -593,16 +593,45 @@ async function compositeEmailPanel(adBuf: Buffer): Promise<Buffer> {
     .png()
     .toBuffer();
 
-  // Step 1: build the full-size composite as a raw PNG buffer.
-  // extend() avoids the blank-canvas + composite approach that triggers
-  // sharp 0.34's "same dimensions or smaller" guard when input right-edges
-  // land exactly on the canvas boundary.
-  // NOTE: sharp reorders pipeline steps internally (resize executes before
-  // extend/composite regardless of call order), so resize MUST be a separate
-  // sharp invocation applied to the already-composited buffer.
-  const fullBuf = await (sharpMod(adBuf) as unknown as import("sharp").Sharp)
-    .extend({ right: scaledPanelW, background: { r: 240, g: 240, b: 240 } })
-    .composite([{ input: scaledPanelBuf, left: adW, top: 0 }])
+  // Scale the ad to 80% of the canvas height so it appears as a floating card
+  // (with breathing room on all four sides) rather than filling the full height.
+  // The yellow arrow on the right panel then visually "points" to where this
+  // floating ad would land on the shared postcard — matching the original
+  // reference image intent.
+  const AD_SCALE    = 0.80;
+  const scaledAdH   = Math.round(adH * AD_SCALE);          // e.g. 960 px
+  const scaledAdW   = Math.round(adW * AD_SCALE);          // e.g. 720 px
+  const scaledAdBuf = await (sharpMod(adBuf) as unknown as import("sharp").Sharp)
+    .resize(scaledAdW, scaledAdH, { fit: "fill" })
+    .png()
+    .toBuffer();
+
+  // Left panel: gray background sampled from the right panel's ambient color
+  // so both halves share the same tone. Ad is centered with equal margins.
+  const SIDE_MARGIN  = 80;
+  const leftPanelW   = scaledAdW + SIDE_MARGIN * 2;         // e.g. 880 px
+  const adLeft       = SIDE_MARGIN;
+  const adTop        = Math.round((adH - scaledAdH) / 2);   // e.g. 120 px top & bottom
+  // Warm neutral gray that matches the right panel's ambient background tone
+  // (sampled from the right panel PNG at x=60, mid-height).
+  const BG = { r: 209, g: 203, b: 189 };
+
+  // Step 1a: build the left panel (gray canvas + centered ad)
+  // NOTE: sharp reorders pipeline steps — resize runs before composite —
+  // so each compositing step is a separate sharp invocation.
+  const leftPanelBuf = await (sharpMod as unknown as (opts: {
+    create: { width: number; height: number; channels: 3; background: typeof BG };
+  }) => import("sharp").Sharp)({
+    create: { width: leftPanelW, height: adH, channels: 3, background: BG },
+  })
+    .composite([{ input: scaledAdBuf, left: adLeft, top: adTop }])
+    .png()
+    .toBuffer();
+
+  // Step 1b: extend the left panel rightward and overlay the right panel
+  const fullBuf = await (sharpMod(leftPanelBuf) as unknown as import("sharp").Sharp)
+    .extend({ right: scaledPanelW, background: BG })
+    .composite([{ input: scaledPanelBuf, left: leftPanelW, top: 0 }])
     .png()
     .toBuffer();
 
