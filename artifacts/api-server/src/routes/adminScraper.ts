@@ -184,7 +184,6 @@ function buildEmailDraft(business: {
         <li>Delivered to 5,000 homes — no duplicates, no waste</li>
         <li>FREE professional ad design included</li>
         <li>QR code tracking to measure response</li>
-        <li>One-time fee — no subscription required</li>
       </ul>
     </div>
 
@@ -195,7 +194,7 @@ function buildEmailDraft(business: {
     <div style="text-align:center;margin:28px 0;">
       <a href="${claimUrl}" style="display:inline-block;padding:14px 32px;background:#7B1418;color:#fff;
         font-weight:700;font-size:15px;border-radius:8px;text-decoration:none;">
-        See Available Spots →
+        See Available Spots and Pricing →
       </a>
     </div>
 
