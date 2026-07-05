@@ -251,14 +251,19 @@ async function processLogoAndContinue(
       .where(eq(scrapedBusinessesTable.id, id));
   }
 
-  // Always attempt ad generation regardless of logo outcome —
-  // generateAdForOutreach falls back to text-only when no logo URL is provided.
+  // Only generate an ad if the business has an email address on file.
+  // Ads exist solely to attach to outreach emails; generating one for a
+  // business we can't email is wasted GPU time and storage.
   const [biz] = await db
     .select()
     .from(scrapedBusinessesTable)
     .where(eq(scrapedBusinessesTable.id, id))
     .limit(1);
   if (biz) {
+    if (!biz.email) {
+      logger.info({ id, name: biz.businessName }, "adminScraper: skipping ad gen — no email on file");
+      return;
+    }
     const usableLogo = biz.logoStatus === "usable" ? biz.logoUrl : null;
     generateAdAndContinue(id, {
       bizName: biz.businessName,
@@ -317,7 +322,13 @@ async function draftEmailForBusiness(id: number): Promise<void> {
     .from(scrapedBusinessesTable)
     .where(eq(scrapedBusinessesTable.id, id))
     .limit(1);
-  if (!biz || biz.emailStatus !== "pending") return;
+  // Allow cascade to (re)draft when status is "pending" (never drafted) or
+  // "drafted" (drafted previously but without a completed ad — e.g., the ad
+  // generation failed on the first attempt and the fallback drafted a no-ad
+  // email; now that the ad is ready, refresh the draft to include it).
+  // Skip "queued", "sent", and "opted-out" — those are terminal / in-flight.
+  if (!biz || !biz.email) return;
+  if (biz.emailStatus !== "pending" && biz.emailStatus !== "drafted") return;
 
   const { subject, bodyHtml } = buildEmailDraft({
     id: biz.id,
@@ -731,6 +742,9 @@ router.post("/admin/outreach/businesses/:id/ad", requireAdmin, async (req, res):
   const [biz] = await db.select().from(scrapedBusinessesTable)
     .where(eq(scrapedBusinessesTable.id, id)).limit(1);
   if (!biz) { res.status(404).json({ error: "Not found" }); return; }
+  if (!biz.email) {
+    res.status(400).json({ error: "Cannot generate ad: no email address on file for this business" }); return;
+  }
   await db.update(scrapedBusinessesTable)
     .set({ adStatus: "pending", adError: null, updatedAt: new Date() }).where(eq(scrapedBusinessesTable.id, id));
   res.json({ ok: true, message: "Ad generation started" });
