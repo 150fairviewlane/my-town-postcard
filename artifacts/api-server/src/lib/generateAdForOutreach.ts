@@ -536,10 +536,76 @@ export async function generateAdForOutreach(
     process.stderr.write(`[outreach] swapQrCode failed (${templateKey}): ${msg}\n`);
   }
 
+  // Composite the ad with the "Your Ad on Our Next Shared Postcard" right panel
+  // to create the two-panel email image. Falls back gracefully to the standalone
+  // ad if the panel asset is missing or sharp fails.
+  try {
+    imgBuf = await compositeEmailPanel(imgBuf);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    process.stderr.write(`[outreach] compositeEmailPanel failed: ${msg}\n`);
+  }
+
   return {
     imageUrl: `data:image/jpeg;base64,${imgBuf.toString("base64")}`,
     template: templateKey,
   };
+}
+
+/**
+ * Composites the generated ad buffer with the fixed "Your Ad on Our Next
+ * Shared Postcard" right-panel asset, producing a two-panel email image.
+ *
+ * The right-panel assets (outreach_right_panel_portrait.png /
+ * outreach_right_panel_landscape.png) were extracted from the reference
+ * template with the left slot (AJ House) removed — no AJ House content
+ * exists anywhere in those files.
+ *
+ * Portrait ad (w ≤ h): uses the portrait panel (942×1200).
+ * Landscape ad (w > h): uses the landscape panel (942×900).
+ */
+async function compositeEmailPanel(adBuf: Buffer): Promise<Buffer> {
+  const sharpMod = (await import("sharp")).default as unknown as (buf: Buffer) => import("sharp").Sharp;
+  const sharpFile = (await import("sharp")).default as unknown as (p: string) => import("sharp").Sharp;
+
+  // Detect ad orientation from buffer metadata
+  const adMeta = await (sharpMod(adBuf) as unknown as import("sharp").Sharp).metadata();
+  const adW = adMeta.width ?? 900;
+  const adH = adMeta.height ?? 1200;
+  const isPortrait = adH >= adW;
+
+  const panelFile = isPortrait
+    ? "outreach_right_panel_portrait.png"
+    : "outreach_right_panel_landscape.png";
+  const panelPath = path.join(WORKSPACE_ROOT, "attached_assets", panelFile);
+
+  if (!fs.existsSync(panelPath)) {
+    throw new Error(`Right-panel asset not found: ${panelFile}`);
+  }
+
+  // Scale the right panel to exactly match the ad height
+  const panelMeta = await (sharpFile(panelPath) as unknown as import("sharp").Sharp).metadata();
+  const panelNativeH = panelMeta.height ?? adH;
+  const panelNativeW = panelMeta.width ?? 942;
+  const scaledPanelW = Math.round(panelNativeW * adH / panelNativeH);
+  const scaledPanelBuf = await (sharpFile(panelPath) as unknown as import("sharp").Sharp)
+    .resize(scaledPanelW, adH, { fit: "fill" })
+    .png()
+    .toBuffer();
+
+  // Build composite canvas: ad on left, right panel on right
+  const totalW = adW + scaledPanelW;
+  const composite = await (sharpMod as unknown as (opts: { create: { width: number; height: number; channels: 4; background: { r: number; g: number; b: number; alpha: number } } }) => import("sharp").Sharp)({
+    create: { width: totalW, height: adH, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } },
+  })
+    .composite([
+      { input: adBuf,         left: 0,   top: 0 },
+      { input: scaledPanelBuf, left: adW, top: 0 },
+    ])
+    .jpeg({ quality: 92, chromaSubsampling: "4:4:4" })
+    .toBuffer();
+
+  return composite;
 }
 
 function normalizeWebsite(url: string | null | undefined): string | null {

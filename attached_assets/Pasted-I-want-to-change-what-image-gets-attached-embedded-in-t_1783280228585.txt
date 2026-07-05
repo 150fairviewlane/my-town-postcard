@@ -1,0 +1,16 @@
+I want to change what image gets attached/embedded in the cold outreach emails. Instead of just the standalone generated ad, I want a two-panel composite image, matching the reference template I'm providing:
+
+- LEFT panel: the business's actual generated outreach ad (the same image currently produced by generateAdForOutreach.ts)
+- RIGHT panel: the exact static image I've already provided — the "Your Ad on Our Next Shared Postcard" headline, yellow arrow, and the real blurred 9x12 postcard image we actually produce. This is not a mockup to be generated — it's a fixed asset to be used as-is, unmodified.
+
+This composite image (not just the standalone ad) should be what gets attached/embedded in the drafted cold outreach email.
+
+IMPORTANT — before doing anything else: the reference image I provided has "AJ House" as the placeholder left-panel ad. Remove AJ House from the reference template entirely and save a clean version with the left panel empty/blank, before wiring this into the pipeline. AJ House is a real business's real ad — I do not want any chance of it ever appearing as a fallback or default image sent to anyone, including (especially) a competitor of AJ House. Confirm the AJ House content has been fully stripped from whatever asset gets saved and reused before this goes live.
+
+Before implementing, confirm:
+
+1. Since the right panel is a fixed, already-provided static image (not something to generate), confirm you have what you need from the file I've attached to extract/save just the right-panel portion as a standalone reusable asset, with the left panel (currently AJ House) removed/blanked.
+
+2. Where should this compositing happen — server-side using our existing image compositing infrastructure (e.g. the same sharp-based approach used for QR code compositing), producing a single final PNG/JPG per business that gets stored and attached to the drafted email?
+
+Report back your plan before implementing, including how the left-side ad (which varies in aspect ratio/size depending on portrait vs landscape template) will be resized/positioned to fit cleanly into the left panel slot without distortion or awkward cropping, and explicit confirmation that AJ House's content will not appear anywhere in the final reusable template asset.
