@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, and, ilike, or, sql, gte, isNull } from "drizzle-orm";
+import { eq, desc, and, ilike, or, sql, gte, isNull, isNotNull } from "drizzle-orm";
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
 import { db, scrapedBusinessesTable } from "@workspace/db";
@@ -861,7 +861,10 @@ router.post("/admin/outreach/batch/ads", requireAdmin, async (req, res): Promise
   const { city, state, limit = 10, quality = false } = req.body as { city?: string; state?: string; limit?: number; quality?: boolean };
 
   // Ad generation no longer requires a usable logo — text-only fallback handles all cases
-  const conditions: any[] = [eq(scrapedBusinessesTable.adStatus, "pending")];
+  const conditions: any[] = [
+    eq(scrapedBusinessesTable.adStatus, "pending"),
+    isNotNull(scrapedBusinessesTable.email),
+  ];
   if (city) conditions.push(ilike(scrapedBusinessesTable.city, city));
   if (state) conditions.push(eq(scrapedBusinessesTable.state, state.toUpperCase()));
 
