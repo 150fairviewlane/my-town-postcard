@@ -1,8 +1,8 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, and, ilike, or, sql, gte, isNull, isNotNull } from "drizzle-orm";
+import { eq, desc, and, ilike, or, sql, gte, isNull, isNotNull, inArray } from "drizzle-orm";
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
-import { db, scrapedBusinessesTable } from "@workspace/db";
+import { db, scrapedBusinessesTable, outreachEmailClicksTable } from "@workspace/db";
 import { searchBusinesses } from "../lib/outscraper.js";
 import { extractLogo } from "../lib/logoExtractor.js";
 import { filterLogo } from "../lib/logoFilter.js";
@@ -129,7 +129,10 @@ function buildEmailDraft(business: {
 
   const token = unsubToken(googleId);
   const unsubUrl = `${APP_URL}/api/outreach/unsubscribe?id=${encodeURIComponent(googleId)}&token=${encodeURIComponent(token)}`;
-  const claimUrl = `${APP_URL}/claim/${business.id}`;
+  // Click-tracking redirect — records who clicked and when, then sends them to
+  // the spot picker. claimUrl kept as the final redirect destination.
+  const claimUrl = `${APP_URL}/`;
+  const trackUrl = `${APP_URL}/api/outreach/click/${business.id}`;
   const phoneNote = phoneE ? ` — call us at ${phoneE}` : "";
   const industryLine = categoryE
     ? `As a ${categoryE.toLowerCase()} business in the ${cityE} area`
@@ -192,7 +195,7 @@ function buildEmailDraft(business: {
     </p>
 
     <div style="text-align:center;margin:28px 0;">
-      <a href="${claimUrl}" style="display:inline-block;padding:14px 32px;background:#7B1418;color:#fff;
+      <a href="${trackUrl}" style="display:inline-block;padding:14px 32px;background:#7B1418;color:#fff;
         font-weight:700;font-size:15px;border-radius:8px;text-decoration:none;">
         See Available Spots and Pricing →
       </a>
@@ -347,6 +350,26 @@ async function draftEmailForBusiness(id: number): Promise<void> {
     .where(eq(scrapedBusinessesTable.id, id));
 }
 
+// ── GET /api/outreach/click/:businessId  (PUBLIC — no auth) ───────────────────
+// Records the email-button click, then redirects to the spot picker.
+// Deliberately fire-and-forget on the DB write so a slow insert never delays
+// the redirect the business owner sees.
+router.get("/outreach/click/:businessId", async (req, res): Promise<void> => {
+  const businessId = Number(req.params.businessId);
+  if (businessId) {
+    const ip = (
+      (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() ??
+      req.ip ??
+      null
+    );
+    const ua = (req.headers["user-agent"] as string | undefined) ?? null;
+    db.insert(outreachEmailClicksTable)
+      .values({ businessId, ipAddress: ip, userAgent: ua })
+      .catch((err) => logger.error({ err, businessId }, "outreach: click insert failed"));
+  }
+  res.redirect(302, `${APP_URL}/`);
+});
+
 // ── GET /api/admin/outreach/preview ───────────────────────────────────────────
 router.get("/admin/outreach/preview", requireAdmin, async (req, res): Promise<void> => {
   const { city, state, category = "", limit = "50" } = req.query as Record<string, string>;
@@ -418,7 +441,26 @@ router.get("/admin/outreach/businesses", requireAdmin, async (req, res): Promise
       .from(scrapedBusinessesTable).where(where),
   ]);
 
-  res.json({ businesses: rows, total: countRow[0]?.count ?? 0, limit: lim, offset: off });
+  // Attach per-business click counts in a single aggregate query.
+  const ids = rows.map((r) => r.id);
+  const clickAggs = ids.length > 0
+    ? await db.select({
+        businessId:   outreachEmailClicksTable.businessId,
+        clickCount:    sql<number>`count(*)::int`,
+        lastClickedAt: sql<string | null>`max(${outreachEmailClicksTable.clickedAt})`,
+      })
+        .from(outreachEmailClicksTable)
+        .where(inArray(outreachEmailClicksTable.businessId, ids))
+        .groupBy(outreachEmailClicksTable.businessId)
+    : [];
+  const clickMap = new Map(clickAggs.map((r) => [r.businessId, r]));
+  const businesses = rows.map((r) => ({
+    ...r,
+    clickCount:    clickMap.get(r.id)?.clickCount    ?? 0,
+    lastClickedAt: clickMap.get(r.id)?.lastClickedAt ?? null,
+  }));
+
+  res.json({ businesses, total: countRow[0]?.count ?? 0, limit: lim, offset: off });
 });
 
 // ── GET /api/admin/outreach/no-website ────────────────────────────────────────
@@ -472,10 +514,15 @@ router.get("/admin/outreach/no-website", requireAdmin, async (req, res): Promise
 router.get("/admin/outreach/businesses/:id", requireAdmin, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
-  const [row] = await db.select().from(scrapedBusinessesTable)
-    .where(eq(scrapedBusinessesTable.id, id)).limit(1);
+  const [[row], [clickAgg]] = await Promise.all([
+    db.select().from(scrapedBusinessesTable).where(eq(scrapedBusinessesTable.id, id)).limit(1),
+    db.select({
+      clickCount:    sql<number>`count(*)::int`,
+      lastClickedAt: sql<string | null>`max(${outreachEmailClicksTable.clickedAt})`,
+    }).from(outreachEmailClicksTable).where(eq(outreachEmailClicksTable.businessId, id)),
+  ]);
   if (!row) { res.status(404).json({ error: "Not found" }); return; }
-  res.json(row);
+  res.json({ ...row, clickCount: clickAgg?.clickCount ?? 0, lastClickedAt: clickAgg?.lastClickedAt ?? null });
 });
 
 // ── PATCH /api/admin/outreach/businesses/:id ──────────────────────────────────

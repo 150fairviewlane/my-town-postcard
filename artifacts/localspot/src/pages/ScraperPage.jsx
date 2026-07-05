@@ -488,6 +488,9 @@ function BusinessRow({ biz, expanded, onToggle, onRefresh }) {
         <div style={{ flex: "0 0 80px" }}><StatusBadge value={localBiz.logoStatus} /></div>
         <div style={{ flex: "0 0 80px" }}><StatusBadge value={localBiz.adStatus} /></div>
         <div style={{ flex: "0 0 80px" }}><StatusBadge value={localBiz.emailStatus} /></div>
+        <div style={{ flex: "0 0 64px", fontSize: 12, color: (localBiz.clickCount ?? 0) > 0 ? "#7B1418" : "#d1d5db", fontWeight: (localBiz.clickCount ?? 0) > 0 ? 700 : 400, textAlign: "center" }}>
+          {(localBiz.clickCount ?? 0) > 0 ? `👆 ${localBiz.clickCount}` : "—"}
+        </div>
         <div style={{ marginLeft: "auto", fontSize: 12, color: "#9ca3af" }}>
           {localBiz.email ? "📧" : ""} {expanded ? "▲" : "▼"}
         </div>
@@ -500,6 +503,14 @@ function BusinessRow({ biz, expanded, onToggle, onRefresh }) {
             {localBiz.website && <Detail label="Website" value={localBiz.website} link />}
             {localBiz.address && <Detail label="Address" value={localBiz.address} />}
             {localBiz.logoMethod && <Detail label="Logo source" value={localBiz.logoMethod} />}
+            <Detail
+              label="Email clicks"
+              value={
+                (localBiz.clickCount ?? 0) > 0
+                  ? `${localBiz.clickCount} click${localBiz.clickCount === 1 ? "" : "s"}${localBiz.lastClickedAt ? ` — last ${new Date(localBiz.lastClickedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}` : ""}`
+                  : "No clicks yet"
+              }
+            />
           </div>
 
           {/* Email address editor */}

@@ -11,4 +11,5 @@ export * from "./subscriptionIssueAssignments";
 export * from "./stripeWebhookEvents";
 export * from "./territories";
 export * from "./scrapedBusinesses";
+export * from "./outreachEmailClicks";
 export * from "./businessClaimEvents";
