@@ -593,16 +593,26 @@ async function compositeEmailPanel(adBuf: Buffer): Promise<Buffer> {
     .png()
     .toBuffer();
 
-  // Build composite canvas: ad on left, right panel on right
-  const totalW = adW + scaledPanelW;
-  const composite = await (sharpMod as unknown as (opts: { create: { width: number; height: number; channels: 4; background: { r: number; g: number; b: number; alpha: number } } }) => import("sharp").Sharp)({
-    create: { width: totalW, height: adH, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } },
-  })
-    .composite([
-      { input: adBuf,         left: 0,   top: 0 },
-      { input: scaledPanelBuf, left: adW, top: 0 },
-    ])
-    .jpeg({ quality: 92, chromaSubsampling: "4:4:4" })
+  // Step 1: build the full-size composite as a raw PNG buffer.
+  // extend() avoids the blank-canvas + composite approach that triggers
+  // sharp 0.34's "same dimensions or smaller" guard when input right-edges
+  // land exactly on the canvas boundary.
+  // NOTE: sharp reorders pipeline steps internally (resize executes before
+  // extend/composite regardless of call order), so resize MUST be a separate
+  // sharp invocation applied to the already-composited buffer.
+  const fullBuf = await (sharpMod(adBuf) as unknown as import("sharp").Sharp)
+    .extend({ right: scaledPanelW, background: { r: 240, g: 240, b: 240 } })
+    .composite([{ input: scaledPanelBuf, left: adW, top: 0 }])
+    .png()
+    .toBuffer();
+
+  // Step 2: resize the composite to ≈2× the email display cap (560 px) = 1120 px.
+  // Anything wider adds file weight with no visible sharpness benefit since
+  // email clients never render it larger than 560 px.
+  const TARGET_WIDTH = 1120;
+  const composite = await (sharpMod(fullBuf) as unknown as import("sharp").Sharp)
+    .resize({ width: TARGET_WIDTH })
+    .jpeg({ quality: 82, chromaSubsampling: "4:4:4" })
     .toBuffer();
 
   return composite;
