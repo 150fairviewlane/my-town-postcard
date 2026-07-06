@@ -112,8 +112,7 @@ export default function ConfirmationPage() {
           </div>
 
           <p style={{ color: "#6b7280", fontSize: 13, marginBottom: 20 }}>
-            A receipt has been emailed to {spot?.contactEmail || "you"}. Watch for next-step
-            instructions about uploading or designing your ad.
+            A receipt has been emailed to {spot?.contactEmail || "you"}.
           </p>
 
           <button
