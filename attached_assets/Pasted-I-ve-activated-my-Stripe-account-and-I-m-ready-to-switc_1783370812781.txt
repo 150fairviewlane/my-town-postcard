@@ -1,0 +1,15 @@
+I've activated my Stripe account and I'm ready to switch from test/sandbox mode to live mode. I have my live API keys ready (publishable and secret). Please help me make this switch carefully — this touches real payments, so confirm each step before moving to the next.
+
+1. First, find every place Stripe keys are referenced in the codebase. Confirm they're all read from environment secrets (not hardcoded anywhere) — if you find any hardcoded test key, flag it clearly before proceeding, since that would need a code change rather than just a secret swap.
+
+2. Show me exactly which environment secret names currently hold the test keys (e.g. STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY, or whatever the actual names are in this project) so I know exactly what to update. I will paste in the live key values myself — don't ask me to paste them into chat.
+
+3. Check whether any Stripe product/price IDs are hardcoded or stored in config/database that reference test-mode objects (e.g. the Quarterly/12-Month subscription prices, single-issue spot prices). Since Stripe treats test and live mode as entirely separate, these need live-mode equivalents. Report what needs to be recreated and where those IDs are referenced in code so we can update them together.
+
+4. Check the webhook endpoint configuration — confirm where the webhook signing secret is stored, and let me know I'll need to create a new live-mode webhook endpoint in my Stripe dashboard and get its separate live signing secret to replace the test one.
+
+5. After I've updated the environment secrets (keys, webhook secret) and we've recreated live-mode prices, do a full sweep confirming: no test-mode keys, price IDs, or webhook secrets remain referenced anywhere in the active code path for checkout, subscriptions, or webhooks.
+
+6. Do NOT restart/redeploy with live keys until I've explicitly confirmed I've entered the new secret values and created the live-mode prices and webhook.
+
+Report back your findings for steps 1-4 first before we proceed to actually updating anything.
