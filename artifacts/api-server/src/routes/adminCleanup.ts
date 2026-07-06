@@ -28,18 +28,89 @@ function requireAdmin(req: any, res: any, next: any): void {
   }
 }
 
+/**
+ * GET /api/admin/cleanup/backup-paid-spots
+ *
+ * Returns a full JSON snapshot of every row that the reset endpoint would
+ * touch: paid spots, their orders, QR scans, subscriptions, and issue
+ * assignments. Save this response before calling the reset endpoint.
+ */
+router.get(
+  "/admin/cleanup/backup-paid-spots",
+  requireAdmin,
+  async (_req, res): Promise<void> => {
+    const paidSpots = await db
+      .select()
+      .from(spotsTable)
+      .where(eq(spotsTable.status, "paid"));
+
+    if (paidSpots.length === 0) {
+      res.json({ message: "No paid spots found.", snapshot: {} });
+      return;
+    }
+
+    const paidSpotIds = paidSpots.map((s) => s.id);
+
+    const [orders, qrScans, subscriptions, issueAssignments] =
+      await Promise.all([
+        db
+          .select()
+          .from(ordersTable)
+          .where(inArray(ordersTable.spotId, paidSpotIds)),
+        db
+          .select()
+          .from(qrScansTable)
+          .where(inArray(qrScansTable.spotId, paidSpotIds)),
+        db
+          .select()
+          .from(spotSubscriptionsTable)
+          .where(inArray(spotSubscriptionsTable.initialSpotId, paidSpotIds)),
+        db
+          .select()
+          .from(subscriptionIssueAssignmentsTable)
+          .where(
+            inArray(
+              subscriptionIssueAssignmentsTable.subscriptionId,
+              db
+                .select({ id: spotSubscriptionsTable.id })
+                .from(spotSubscriptionsTable)
+                .where(
+                  inArray(spotSubscriptionsTable.initialSpotId, paidSpotIds),
+                ),
+            ),
+          ),
+      ]);
+
+    res.json({
+      snapshotAt: new Date().toISOString(),
+      counts: {
+        spots: paidSpots.length,
+        orders: orders.length,
+        qrScans: qrScans.length,
+        spotSubscriptions: subscriptions.length,
+        subscriptionIssueAssignments: issueAssignments.length,
+      },
+      snapshot: {
+        spots: paidSpots,
+        orders,
+        qrScans,
+        spotSubscriptions: subscriptions,
+        subscriptionIssueAssignments: issueAssignments,
+      },
+    });
+  },
+);
+
 const CONFIRM_CODE = "CLEAR_ALL_PAID_SPOTS";
 
 /**
  * POST /api/admin/cleanup/reset-paid-spots
  *
- * One-time endpoint to reset every paid spot to available status and purge
- * all associated orders, QR scans, and subscriptions. Protected by admin JWT
- * and a required confirmation code in the request body.
+ * Resets every paid spot to available and purges all associated orders,
+ * QR scans, subscriptions, and issue assignments. Requires admin JWT and
+ * the confirmation code in the request body.
  *
  * Body: { "confirm": "CLEAR_ALL_PAID_SPOTS" }
- *
- * Returns a full audit report of what was deleted / updated.
  */
 router.post(
   "/admin/cleanup/reset-paid-spots",
@@ -60,7 +131,7 @@ router.post(
       .where(eq(spotsTable.status, "paid"));
 
     if (paidSpots.length === 0) {
-      res.json({ message: "No paid spots found — nothing to do.", deleted: {}, updated: 0 });
+      res.json({ message: "No paid spots found — nothing to do.", deleted: {}, spotsReset: 0 });
       return;
     }
 
