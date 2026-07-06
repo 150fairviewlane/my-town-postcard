@@ -30,6 +30,7 @@ import pdfDownloadRouter from "./pdfDownload";
 import adminPaidCustomersRouter from "./adminPaidCustomers";
 import adminQaRouter from "./adminQa";
 import adminScraperRouter from "./adminScraper";
+import adminCleanupRouter from "./adminCleanup";
 
 const router: IRouter = Router();
 
@@ -64,5 +65,6 @@ router.use(pdfDownloadRouter);
 router.use(adminPaidCustomersRouter);
 router.use(adminQaRouter);
 router.use(adminScraperRouter);
+router.use(adminCleanupRouter);
 
 export default router;
