@@ -810,7 +810,7 @@ export function Footer({ copy = DEFAULT_COPY }: { copy?: LandingCopy }) {
       <div style={{ maxWidth: 1100, margin: "32px auto 0", borderTop: "1px solid #7B1418",
         paddingTop: 20, textAlign: "center" }}>
         <span style={{ fontSize: 12, color: "#9ca3af", fontFamily: "sans-serif" }}>
-          © 2025 My Town Postcard · mytownpostcard.com
+          © 2026 My Town Postcard · mytownpostcard.com
         </span>
       </div>
     </footer>
