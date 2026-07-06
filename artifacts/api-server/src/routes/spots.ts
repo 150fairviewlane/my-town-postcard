@@ -45,18 +45,27 @@ router.get("/spots/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const [spot] = await db
-    .select()
+  const [row] = await db
+    .select({
+      spot: spotsTable,
+      campaignTerritory: campaignsTable.territory,
+      campaignCityList: campaignsTable.cityList,
+    })
     .from(spotsTable)
+    .leftJoin(campaignsTable, eq(campaignsTable.id, spotsTable.campaignId))
     .where(eq(spotsTable.id, params.data.id));
 
-  if (!spot) {
+  if (!row) {
     res.status(404).json({ error: "Spot not found" });
     return;
   }
 
-  const scanCount = await fetchScanCountForSpot(spot.id);
-  res.json(GetSpotResponse.parse(serializeSpot(spot, scanCount)));
+  const scanCount = await fetchScanCountForSpot(row.spot.id);
+  res.json(GetSpotResponse.parse({
+    ...serializeSpot(row.spot, scanCount),
+    campaignTerritory: row.campaignTerritory ?? null,
+    campaignCityList: row.campaignCityList ?? null,
+  }));
 });
 
 router.post("/spots/:id/reserve", async (req, res): Promise<void> => {

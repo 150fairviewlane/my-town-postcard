@@ -38,11 +38,14 @@ export default function ConfirmationPage() {
             You're on the Postcard!
           </h1>
           <p style={{ color: "#374151", fontSize: 15, lineHeight: 1.6, marginBottom: 24 }}>
-            {cityName ? (
-              <>Your ad will appear on the next <strong>{cityName}</strong> postcard, reaching <strong>5,000 homes</strong>.</>
-            ) : (
-              <>Your ad will appear on the next <strong>Habersham Community Mailer</strong>, reaching <strong>5,000 homes</strong> across Clarksville, Cornelia, Demorest and Alto.</>
-            )}
+            {(() => {
+              const territory = cityName
+                || spot?.campaignCityList?.split(",")[0]?.trim()
+                || spot?.campaignTerritory?.split(",")[0]?.trim();
+              return territory
+                ? <>Your ad will appear on the next <strong>{territory}</strong> postcard, reaching <strong>5,000 homes</strong>.</>
+                : <>Your ad will appear on the next postcard, reaching <strong>5,000 homes</strong>.</>;
+            })()}
           </p>
 
           {/* Order summary card — pulls live from the server so even on a

@@ -113,6 +113,10 @@ export interface Spot {
   /** @nullable */
   expiresAt?: string | null;
   createdAt: string;
+  /** @nullable */
+  campaignTerritory?: string | null;
+  /** @nullable */
+  campaignCityList?: string | null;
 }
 
 export type CampaignWithSpots = Campaign & {

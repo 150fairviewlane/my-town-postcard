@@ -65,6 +65,8 @@ export const GetActiveCampaignResponse = zod
           scanCount: zod.number().optional(),
           expiresAt: zod.string().nullish(),
           createdAt: zod.string(),
+          campaignTerritory: zod.string().nullish(),
+          campaignCityList: zod.string().nullish(),
         }),
       ),
     }),
@@ -125,6 +127,8 @@ export const GetCampaignBySlugResponse = zod
           scanCount: zod.number().optional(),
           expiresAt: zod.string().nullish(),
           createdAt: zod.string(),
+          campaignTerritory: zod.string().nullish(),
+          campaignCityList: zod.string().nullish(),
         }),
       ),
     }),
@@ -165,6 +169,8 @@ export const GetSpotResponse = zod.object({
   scanCount: zod.number().optional(),
   expiresAt: zod.string().nullish(),
   createdAt: zod.string(),
+  campaignTerritory: zod.string().nullish(),
+  campaignCityList: zod.string().nullish(),
 });
 
 /**
@@ -204,6 +210,8 @@ export const ReserveSpotResponse = zod.object({
   scanCount: zod.number().optional(),
   expiresAt: zod.string().nullish(),
   createdAt: zod.string(),
+  campaignTerritory: zod.string().nullish(),
+  campaignCityList: zod.string().nullish(),
 });
 
 /**
@@ -267,6 +275,8 @@ export const UploadAdResponse = zod.object({
   scanCount: zod.number().optional(),
   expiresAt: zod.string().nullish(),
   createdAt: zod.string(),
+  campaignTerritory: zod.string().nullish(),
+  campaignCityList: zod.string().nullish(),
 });
 
 /**
@@ -330,6 +340,8 @@ export const GetAdminCampaignResponse = zod.object({
         scanCount: zod.number().optional(),
         expiresAt: zod.string().nullish(),
         createdAt: zod.string(),
+        campaignTerritory: zod.string().nullish(),
+        campaignCityList: zod.string().nullish(),
       })
       .and(
         zod.object({
@@ -481,6 +493,8 @@ export const CreateCampaignResponse = zod
           scanCount: zod.number().optional(),
           expiresAt: zod.string().nullish(),
           createdAt: zod.string(),
+          campaignTerritory: zod.string().nullish(),
+          campaignCityList: zod.string().nullish(),
         })
         .and(
           zod.object({
@@ -554,6 +568,8 @@ export const GetAdminCampaignByIdResponse = zod
           scanCount: zod.number().optional(),
           expiresAt: zod.string().nullish(),
           createdAt: zod.string(),
+          campaignTerritory: zod.string().nullish(),
+          campaignCityList: zod.string().nullish(),
         })
         .and(
           zod.object({
@@ -627,6 +643,8 @@ export const ActivateCampaignResponse = zod
           scanCount: zod.number().optional(),
           expiresAt: zod.string().nullish(),
           createdAt: zod.string(),
+          campaignTerritory: zod.string().nullish(),
+          campaignCityList: zod.string().nullish(),
         })
         .and(
           zod.object({
@@ -700,6 +718,8 @@ export const CompleteCampaignResponse = zod
           scanCount: zod.number().optional(),
           expiresAt: zod.string().nullish(),
           createdAt: zod.string(),
+          campaignTerritory: zod.string().nullish(),
+          campaignCityList: zod.string().nullish(),
         })
         .and(
           zod.object({
@@ -901,6 +921,8 @@ export const ApproveAdResponse = zod.object({
   scanCount: zod.number().optional(),
   expiresAt: zod.string().nullish(),
   createdAt: zod.string(),
+  campaignTerritory: zod.string().nullish(),
+  campaignCityList: zod.string().nullish(),
 });
 
 /**

@@ -1044,6 +1044,10 @@ components:
           type: ["string", "null"]
         createdAt:
           type: string
+        campaignTerritory:
+          type: ["string", "null"]
+        campaignCityList:
+          type: ["string", "null"]
       required:
         - id
         - campaignId
