@@ -39,8 +39,29 @@ router.get(
   "/admin/cleanup/backup-paid-spots",
   requireAdmin,
   async (_req, res): Promise<void> => {
+    // Exclude templateData (base64 ad images) — can be many MB per spot and
+    // would push the response past the proxy size limit. Everything needed to
+    // restore business contact info and orders is included.
     const paidSpots = await db
-      .select()
+      .select({
+        id: spotsTable.id,
+        campaignId: spotsTable.campaignId,
+        side: spotsTable.side,
+        size: spotsTable.size,
+        gridArea: spotsTable.gridArea,
+        price: spotsTable.price,
+        status: spotsTable.status,
+        businessName: spotsTable.businessName,
+        businessCategory: spotsTable.businessCategory,
+        contactEmail: spotsTable.contactEmail,
+        contactPhone: spotsTable.contactPhone,
+        website: spotsTable.website,
+        adFileUrl: spotsTable.adFileUrl,
+        adStatus: spotsTable.adStatus,
+        trackingCode: spotsTable.trackingCode,
+        expiresAt: spotsTable.expiresAt,
+        hasTemplateData: spotsTable.templateData,
+      })
       .from(spotsTable)
       .where(eq(spotsTable.status, "paid"));
 
@@ -81,17 +102,24 @@ router.get(
           ),
       ]);
 
+    // Convert hasTemplateData column value to a simple boolean so the
+    // response stays small (templateData can be many MB of base64 per spot).
+    const spotsForBackup = paidSpots.map((s) => ({
+      ...s,
+      hasTemplateData: s.hasTemplateData != null && s.hasTemplateData !== "",
+    }));
+
     res.json({
       snapshotAt: new Date().toISOString(),
       counts: {
-        spots: paidSpots.length,
+        spots: spotsForBackup.length,
         orders: orders.length,
         qrScans: qrScans.length,
         spotSubscriptions: subscriptions.length,
         subscriptionIssueAssignments: issueAssignments.length,
       },
       snapshot: {
-        spots: paidSpots,
+        spots: spotsForBackup,
         orders,
         qrScans,
         spotSubscriptions: subscriptions,
