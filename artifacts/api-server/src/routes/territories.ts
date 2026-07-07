@@ -1,11 +1,11 @@
 import { Router, type IRouter } from "express";
-import { eq, and, sql as rawSql } from "drizzle-orm";
+import { eq, and, sql as rawSql, inArray } from "drizzle-orm";
 import { z } from "zod/v4";
 import jwt from "jsonwebtoken";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
-import { db, territoriesTable, dealerTerritoryClaimsTable, territoryZipAssignmentsTable, territoryProposalsTable } from "@workspace/db";
+import { db, territoriesTable, dealerTerritoryClaimsTable, territoryZipAssignmentsTable, territoryProposalsTable, dealersTable, campaignsTable, spotsTable } from "@workspace/db";
 import { ensureDealerLandingPage } from "../lib/dealerLandingPage";
 import {
   getTerritoryForLocation,
@@ -305,6 +305,205 @@ router.delete("/territories/:id", requireAdmin, async (req, res): Promise<void> 
   await db.delete(territoriesTable).where(eq(territoriesTable.id, req.params.id));
   req.log.info({ id: req.params.id }, "Territory deleted");
   res.json({ ok: true });
+});
+
+// ─── GET /api/admin/territories/list ─────────────────────────────────────────
+// Returns all territories with dealer info + paid/reserved spot counts for the
+// admin Release Territory UI. Protected by requireAdmin.
+router.get("/admin/territories/list", requireAdmin, async (req, res): Promise<void> => {
+  try {
+    const rows = await db
+      .select({
+        id:           territoriesTable.id,
+        name:         territoriesTable.name,
+        state:        territoriesTable.state,
+        status:       territoriesTable.status,
+        counties:     territoriesTable.counties,
+        zoneNote:     territoriesTable.zoneNote,
+        households:   territoriesTable.households,
+        dealerId:     territoriesTable.dealerId,
+        dealerName:   dealersTable.name,
+        dealerEmail:  dealersTable.email,
+        dealerStatus: dealersTable.status,
+        paidSpotCount: rawSql<number>`
+          COALESCE((
+            SELECT COUNT(*)::int FROM spots s
+            JOIN campaigns c ON c.id = s.campaign_id
+            WHERE c.dealer_id = ${territoriesTable.dealerId}
+              AND s.status = 'paid'
+          ), 0)`.as("paid_spot_count"),
+        reservedSpotCount: rawSql<number>`
+          COALESCE((
+            SELECT COUNT(*)::int FROM spots s
+            JOIN campaigns c ON c.id = s.campaign_id
+            WHERE c.dealer_id = ${territoriesTable.dealerId}
+              AND s.status = 'reserved'
+          ), 0)`.as("reserved_spot_count"),
+        campaignCount: rawSql<number>`
+          COALESCE((
+            SELECT COUNT(*)::int FROM campaigns c
+            WHERE c.dealer_id = ${territoriesTable.dealerId}
+          ), 0)`.as("campaign_count"),
+      })
+      .from(territoriesTable)
+      .leftJoin(dealersTable, eq(dealersTable.id, territoriesTable.dealerId))
+      .orderBy(
+        rawSql`CASE ${territoriesTable.status}
+          WHEN 'taken'     THEN 0
+          WHEN 'pending'   THEN 1
+          WHEN 'proposed'  THEN 2
+          WHEN 'available' THEN 3
+          ELSE 4 END`,
+        territoriesTable.id,
+      );
+    res.json(rows);
+  } catch (err: any) {
+    req.log.error({ err: err?.message }, "GET /admin/territories/list failed");
+    res.status(500).json({ error: "Failed to fetch territory list" });
+  }
+});
+
+// ─── POST /api/admin/territories/:id/release ─────────────────────────────────
+// Atomically releases a territory back to "available":
+//   1. Blocks if the territory has any paid spots (409 with blocking spot list).
+//   2. Resets reserved spots (clears PII fields).
+//   3. Cancels all dealer_territory_claims for this territory.
+//   4. Unpublishes + unlinks the dealer's campaigns.
+//   5. Sets territory status → available, dealer_id → null.
+// Protected by requireAdmin.
+router.post("/admin/territories/:id/release", requireAdmin, async (req, res): Promise<void> => {
+  const { id } = req.params;
+
+  const [territory] = await db
+    .select()
+    .from(territoriesTable)
+    .where(eq(territoriesTable.id, id));
+
+  if (!territory) {
+    res.status(404).json({ error: "Territory not found" });
+    return;
+  }
+  if (territory.status === "available") {
+    res.status(400).json({ error: "Territory is already available" });
+    return;
+  }
+
+  const formerDealerId = territory.dealerId;
+
+  // Find all campaigns belonging to this dealer (if any)
+  const dealerCampaigns = formerDealerId
+    ? await db
+        .select({ id: campaignsTable.id, slug: campaignsTable.slug, name: campaignsTable.name })
+        .from(campaignsTable)
+        .where(eq(campaignsTable.dealerId, formerDealerId))
+    : [];
+
+  const campaignIds = dealerCampaigns.map(c => c.id);
+
+  // Check for paid spots across all dealer campaigns — hard block if any exist
+  const paidSpots = campaignIds.length > 0
+    ? await db
+        .select({
+          id:           spotsTable.id,
+          businessName: spotsTable.businessName,
+          contactEmail: spotsTable.contactEmail,
+          price:        spotsTable.price,
+          campaignId:   spotsTable.campaignId,
+        })
+        .from(spotsTable)
+        .where(and(
+          inArray(spotsTable.campaignId, campaignIds),
+          eq(spotsTable.status, "paid"),
+        ))
+    : [];
+
+  if (paidSpots.length > 0) {
+    res.status(409).json({
+      error: "Territory has paid spots and cannot be released. Resolve these spots first.",
+      blockingSpots: paidSpots.map(s => ({
+        spotId:       s.id,
+        businessName: s.businessName ?? "(no name)",
+        contactEmail: s.contactEmail ?? "(no email)",
+        price:        s.price,
+        campaignId:   s.campaignId,
+      })),
+    });
+    return;
+  }
+
+  // Count reserved spots for the response summary
+  const reservedSpots = campaignIds.length > 0
+    ? await db
+        .select({ id: spotsTable.id })
+        .from(spotsTable)
+        .where(and(
+          inArray(spotsTable.campaignId, campaignIds),
+          eq(spotsTable.status, "reserved"),
+        ))
+    : [];
+
+  // Run the full release atomically
+  let claimsCancelled = 0;
+  let campaignsUnpublished = 0;
+  let spotsReset = 0;
+
+  await db.transaction(async tx => {
+    // 1. Reset reserved spots — clear PII + status back to available
+    if (reservedSpots.length > 0) {
+      const reservedIds = reservedSpots.map(s => s.id);
+      await tx
+        .update(spotsTable)
+        .set({
+          status:           "available",
+          businessName:     null,
+          businessCategory: null,
+          contactEmail:     null,
+          contactPhone:     null,
+          website:          null,
+          expiresAt:        null,
+        })
+        .where(inArray(spotsTable.id, reservedIds));
+      spotsReset = reservedIds.length;
+    }
+
+    // 2. Cancel all claims on this territory
+    const cancelledClaims = await tx
+      .update(dealerTerritoryClaimsTable)
+      .set({ status: "cancelled" })
+      .where(eq(dealerTerritoryClaimsTable.territoryId, id))
+      .returning({ id: dealerTerritoryClaimsTable.id });
+    claimsCancelled = cancelledClaims.length;
+
+    // 3. Unpublish + unlink the dealer's campaigns
+    if (campaignIds.length > 0) {
+      await tx
+        .update(campaignsTable)
+        .set({ isPublished: false, dealerId: null })
+        .where(inArray(campaignsTable.id, campaignIds));
+      campaignsUnpublished = campaignIds.length;
+    }
+
+    // 4. Release the territory itself
+    await tx
+      .update(territoriesTable)
+      .set({ status: "available", dealerId: null })
+      .where(eq(territoriesTable.id, id));
+  });
+
+  req.log.info(
+    { territoryId: id, formerDealerId, claimsCancelled, campaignsUnpublished, spotsReset },
+    "Territory released",
+  );
+
+  res.json({
+    ok: true,
+    summary: {
+      territoryId:         id,
+      claimsCancelled,
+      campaignsUnpublished,
+      spotsReset,
+    },
+  });
 });
 
 // ─── POST /api/territory-claims ───────────────────────────────────────────────

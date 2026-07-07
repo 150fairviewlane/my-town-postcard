@@ -1,99 +1,214 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link, useLocation } from "wouter";
 import AdminShell from "../components/AdminShell";
 
 const BURGUNDY = "#991b1b";
 
-const STATUS_COLORS = {
-  available:  { bg: "#f0fdf4", color: "#15803d" },
-  reserved:   { bg: "#fffbeb", color: "#92400e" },
-  sold:       { bg: "#fef2f2", color: BURGUNDY },
-  pending:    { bg: "#eff6ff", color: "#1d4ed8" },
-  active:     { bg: "#f0fdf4", color: "#15803d" },
-  draft:      { bg: "#f3f4f6", color: "#374151" },
-  completed:  { bg: "#fef2f2", color: BURGUNDY },
+const STATUS_META = {
+  available: { bg: "#f0fdf4", color: "#15803d", label: "Available" },
+  pending:   { bg: "#eff6ff", color: "#1d4ed8", label: "Pending"   },
+  taken:     { bg: "#fef2f2", color: BURGUNDY,  label: "Taken"     },
+  proposed:  { bg: "#fffbeb", color: "#92400e", label: "Proposed"  },
 };
 
 function StatusPill({ status }) {
-  const s = STATUS_COLORS[status] ?? { bg: "#f3f4f6", color: "#374151" };
+  const s = STATUS_META[status] ?? { bg: "#f3f4f6", color: "#374151", label: status ?? "Unknown" };
   return (
     <span style={{
       background: s.bg, color: s.color, borderRadius: 999,
       padding: "3px 10px", fontSize: 11, fontWeight: 800,
-      textTransform: "uppercase", letterSpacing: 0.5,
+      textTransform: "uppercase", letterSpacing: 0.5, whiteSpace: "nowrap",
     }}>
-      {status ?? "unknown"}
+      {s.label}
     </span>
   );
 }
 
-function matchesTerritoryNameExact(campaignTerritory, territoryName) {
-  if (!campaignTerritory || !territoryName) return false;
-  return campaignTerritory.toLowerCase().trim() === territoryName.toLowerCase().trim();
+function ReleaseModal({ territory, onConfirm, onCancel, releasing }) {
+  const hasReserved = (territory.reservedSpotCount ?? 0) > 0;
+  const claimsCount = territory._claimsCount ?? "all";
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      zIndex: 1000, padding: 16,
+    }}>
+      <div style={{
+        background: "#fff", borderRadius: 14, padding: "28px 28px 24px",
+        maxWidth: 460, width: "100%", boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
+      }}>
+        <div style={{ fontWeight: 900, fontSize: 18, color: "#111", marginBottom: 6 }}>
+          Release Territory?
+        </div>
+        <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 20 }}>
+          This will permanently unlink <strong style={{ color: "#111" }}>{territory.name}</strong> from its current dealer and reset it to available.
+        </div>
+
+        <div style={{
+          background: "#f9fafb", border: "1px solid #e5e7eb",
+          borderRadius: 10, padding: "14px 16px", marginBottom: 20,
+          display: "flex", flexDirection: "column", gap: 8,
+        }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: "#6b7280", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>
+            What will be cleared
+          </div>
+          {territory.dealerName && (
+            <div style={{ fontSize: 13, color: "#374151", display: "flex", gap: 8, alignItems: "flex-start" }}>
+              <span style={{ color: "#9ca3af", flexShrink: 0 }}>Dealer</span>
+              <span style={{ fontWeight: 600 }}>{territory.dealerName}</span>
+              <span style={{ color: "#9ca3af", fontSize: 11 }}>({territory.dealerEmail})</span>
+            </div>
+          )}
+          <div style={{ fontSize: 13, color: "#374151", display: "flex", gap: 8 }}>
+            <span style={{ color: "#9ca3af", flexShrink: 0 }}>Claims</span>
+            <span>All pending/active claims on this territory will be <strong>cancelled</strong></span>
+          </div>
+          <div style={{ fontSize: 13, color: "#374151", display: "flex", gap: 8 }}>
+            <span style={{ color: "#9ca3af", flexShrink: 0 }}>Campaigns</span>
+            <span>{territory.campaignCount > 0 ? `${territory.campaignCount} dealer campaign${territory.campaignCount !== 1 ? "s" : ""} will be <strong>unpublished</strong>` : "No campaigns linked"}</span>
+          </div>
+          {hasReserved && (
+            <div style={{ fontSize: 13, color: "#92400e", display: "flex", gap: 8 }}>
+              <span style={{ flexShrink: 0 }}>⚠️</span>
+              <span><strong>{territory.reservedSpotCount}</strong> reserved spot{territory.reservedSpotCount !== 1 ? "s" : ""} will have customer info cleared and be reset to available</span>
+            </div>
+          )}
+        </div>
+
+        <div style={{
+          background: "#fef2f2", border: "1px solid #fecaca",
+          borderRadius: 8, padding: "10px 14px", marginBottom: 22,
+          fontSize: 12, color: BURGUNDY, fontWeight: 600,
+        }}>
+          This action cannot be undone. The territory will immediately appear as claimable for new dealers.
+        </div>
+
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+          <button
+            onClick={onCancel}
+            disabled={releasing}
+            style={{
+              padding: "9px 18px", borderRadius: 8, border: "1.5px solid #e5e7eb",
+              background: "#fff", fontSize: 13, fontWeight: 700,
+              color: "#374151", cursor: releasing ? "default" : "pointer",
+              opacity: releasing ? 0.5 : 1,
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={releasing}
+            style={{
+              padding: "9px 20px", borderRadius: 8, border: "none",
+              background: BURGUNDY, color: "#fff", fontSize: 13,
+              fontWeight: 800, cursor: releasing ? "default" : "pointer",
+              opacity: releasing ? 0.5 : 1,
+              minWidth: 140,
+            }}
+          >
+            {releasing ? "Releasing…" : "Confirm Release"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function TerritoriesContent({ token }) {
   const [territories, setTerritories] = useState([]);
-  const [campaigns, setCampaigns] = useState([]);
-  const [dealerMap, setDealerMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
+  const [releasing, setReleasing] = useState(false);
+  const [confirmTarget, setConfirmTarget] = useState(null);
+  const [toast, setToast] = useState(null);
 
   const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
   const auth = { Authorization: `Bearer ${token}` };
 
-  useEffect(() => {
-    Promise.all([
-      fetch(`${base}/api/territories`).then(r => r.json()),
-      fetch(`${base}/api/admin/campaigns`, { headers: auth }).then(r => r.json()),
-      fetch(`${base}/api/admin/dealers`, { headers: auth }).then(r => r.json()),
-    ])
-      .then(([tData, cData, dData]) => {
-        setTerritories(Array.isArray(tData) ? tData : []);
-        setCampaigns(Array.isArray(cData.campaigns) ? cData.campaigns : []);
-        const dealers = Array.isArray(dData.dealers) ? dData.dealers : [];
-        const map = {};
-        dealers.forEach(d => { map[d.id] = d; });
-        setDealerMap(map);
+  const loadTerritories = useCallback(() => {
+    setLoading(true);
+    fetch(`${base}/api/admin/territories/list`, { headers: auth })
+      .then(r => r.json())
+      .then(data => {
+        setTerritories(Array.isArray(data) ? data : []);
+        setError(null);
       })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [base, token]);
+
+  useEffect(() => { loadTerritories(); }, [loadTerritories]);
+
+  const showToast = (msg, isError = false) => {
+    setToast({ msg, isError });
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  async function handleRelease() {
+    if (!confirmTarget || releasing) return;
+    setReleasing(true);
+    try {
+      const res = await fetch(`${base}/api/admin/territories/${encodeURIComponent(confirmTarget.id)}/release`, {
+        method: "POST",
+        headers: { ...auth, "Content-Type": "application/json" },
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        showToast(json.error ?? "Release failed", true);
+      } else {
+        const s = json.summary;
+        showToast(`✓ ${confirmTarget.name} released. ${s.campaignsUnpublished} campaign${s.campaignsUnpublished !== 1 ? "s" : ""} unpublished, ${s.claimsCancelled} claim${s.claimsCancelled !== 1 ? "s" : ""} cancelled${s.spotsReset > 0 ? `, ${s.spotsReset} spot${s.spotsReset !== 1 ? "s" : ""} reset` : ""}.`);
+        loadTerritories();
+      }
+    } catch (e) {
+      showToast(String(e), true);
+    } finally {
+      setReleasing(false);
+      setConfirmTarget(null);
+    }
+  }
 
   const filtered = territories.filter(t => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
-    const dealer = t.dealerId ? dealerMap[t.dealerId] : null;
     return (
       (t.name ?? "").toLowerCase().includes(q) ||
       (t.state ?? "").toLowerCase().includes(q) ||
       (t.id ?? "").toLowerCase().includes(q) ||
-      (dealer?.name ?? "").toLowerCase().includes(q)
+      (t.dealerName ?? "").toLowerCase().includes(q) ||
+      (t.dealerEmail ?? "").toLowerCase().includes(q)
     );
   });
 
-  function getCampaignsForTerritory(territory) {
-    // Prefer dealer-ID match: if both the territory and the campaign have a
-    // dealerId, use that as the authoritative link. This avoids false positives
-    // when two territory names share a word (e.g. "Cherokee" ↔ "Cherokee County").
-    if (territory.dealerId) {
-      const byDealer = campaigns.filter(c => c.dealerId === territory.dealerId);
-      if (byDealer.length > 0) return byDealer;
-    }
-    // Fall back to exact (case-insensitive) name equality only — no substring.
-    return campaigns.filter(c => matchesTerritoryNameExact(c.territory, territory.name));
-  }
-
-  function getPrimaryDetailHref(territory) {
-    const tCampaigns = getCampaignsForTerritory(territory);
-    if (tCampaigns.length === 0) return null;
-    const active = tCampaigns.find(c => c.status === "active") ?? tCampaigns[0];
-    return `/admin/territories/detail?id=${active.id}`;
-  }
-
   return (
     <div style={{ padding: "32px 32px 48px" }}>
+      {/* Toast */}
+      {toast && (
+        <div style={{
+          position: "fixed", bottom: 24, right: 24, zIndex: 2000,
+          background: toast.isError ? BURGUNDY : "#065f46",
+          color: "#fff", borderRadius: 10, padding: "12px 20px",
+          fontSize: 13, fontWeight: 600, maxWidth: 420,
+          boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
+        }}>
+          {toast.msg}
+        </div>
+      )}
+
+      {/* Confirm modal */}
+      {confirmTarget && (
+        <ReleaseModal
+          territory={confirmTarget}
+          onConfirm={handleRelease}
+          onCancel={() => !releasing && setConfirmTarget(null)}
+          releasing={releasing}
+        />
+      )}
+
+      {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28, flexWrap: "wrap", gap: 14 }}>
         <div>
           <div style={{ fontWeight: 900, fontSize: 26, color: "#111", fontFamily: "Georgia, serif" }}>Territories</div>
@@ -157,88 +272,126 @@ function TerritoriesContent({ token }) {
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead style={{ background: "#f9fafb" }}>
                   <tr>
-                    {["Name", "State", "Status", "Dealer", "Campaigns", "Actions"].map(h => (
-                      <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "#6b7280", letterSpacing: 0.5, textTransform: "uppercase" }}>{h}</th>
+                    {["Territory", "State", "Status", "Dealer", "Counties", "Spots", "Actions"].map(h => (
+                      <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "#6b7280", letterSpacing: 0.5, textTransform: "uppercase", whiteSpace: "nowrap" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map(t => {
-                    const tCampaigns = getCampaignsForTerritory(t);
-                    const dealer = t.dealerId ? dealerMap[t.dealerId] : null;
-                    const primaryHref = getPrimaryDetailHref(t);
+                    const isClaimed = t.status === "taken" || t.status === "pending";
+                    const hasPaidSpots = (t.paidSpotCount ?? 0) > 0;
+                    const hasReservedSpots = (t.reservedSpotCount ?? 0) > 0;
+
                     return (
                       <tr key={t.id} style={{ borderTop: "1px solid #f3f4f6" }}>
-                        <td style={{ padding: "12px 14px", fontSize: 13, fontWeight: 700, color: "#111" }}>
-                          {primaryHref ? (
-                            <Link
-                              href={primaryHref}
-                              style={{ color: BURGUNDY, textDecoration: "none", fontWeight: 700 }}
-                            >
-                              {t.name}
-                            </Link>
-                          ) : (
-                            t.name
-                          )}
+                        {/* Name */}
+                        <td style={{ padding: "12px 14px", fontSize: 13 }}>
+                          <div style={{ fontWeight: 700, color: "#111" }}>{t.name}</div>
+                          <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>{t.id}</div>
                         </td>
+
+                        {/* State */}
                         <td style={{ padding: "12px 14px", fontSize: 13, color: "#374151" }}>{t.state ?? "—"}</td>
+
+                        {/* Status */}
                         <td style={{ padding: "12px 14px" }}>
                           <StatusPill status={t.status} />
                         </td>
-                        <td style={{ padding: "12px 14px", fontSize: 13, color: "#374151" }}>
-                          {dealer ? (
-                            <span style={{ fontWeight: 600 }}>{dealer.name}</span>
-                          ) : (
-                            <span style={{ color: "#d1d5db" }}>—</span>
-                          )}
-                        </td>
-                        <td style={{ padding: "12px 14px", fontSize: 12, color: "#374151" }}>
-                          {tCampaigns.length === 0 ? (
-                            <span style={{ color: "#d1d5db" }}>—</span>
-                          ) : (
-                            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                              {tCampaigns.map(c => (
-                                <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                  <span style={{
-                                    background: c.status === "active" ? "#f0fdf4" : c.status === "completed" ? "#fef2f2" : "#f3f4f6",
-                                    color: c.status === "active" ? "#15803d" : c.status === "completed" ? BURGUNDY : "#374151",
-                                    borderRadius: 999, padding: "2px 7px", fontSize: 10, fontWeight: 800, textTransform: "uppercase",
-                                  }}>{c.status}</span>
-                                  <span style={{ fontSize: 11, color: "#6b7280", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
-                                </div>
-                              ))}
+
+                        {/* Dealer */}
+                        <td style={{ padding: "12px 14px", fontSize: 13, color: "#374151", maxWidth: 160 }}>
+                          {t.dealerName ? (
+                            <div>
+                              <div style={{ fontWeight: 600 }}>{t.dealerName}</div>
+                              <div style={{ fontSize: 11, color: "#9ca3af", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.dealerEmail}</div>
                             </div>
+                          ) : (
+                            <span style={{ color: "#d1d5db" }}>—</span>
                           )}
                         </td>
+
+                        {/* Counties */}
+                        <td style={{ padding: "12px 14px", fontSize: 12, color: "#6b7280", maxWidth: 160 }}>
+                          {Array.isArray(t.counties) && t.counties.length > 0 ? (
+                            <div style={{ lineHeight: 1.5 }}>{t.counties.join(", ")}</div>
+                          ) : (
+                            <span style={{ color: "#d1d5db" }}>—</span>
+                          )}
+                        </td>
+
+                        {/* Spot counts */}
+                        <td style={{ padding: "12px 14px", fontSize: 12, whiteSpace: "nowrap" }}>
+                          {isClaimed ? (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                              {hasPaidSpots && (
+                                <span style={{ color: BURGUNDY, fontWeight: 700 }}>
+                                  {t.paidSpotCount} paid
+                                </span>
+                              )}
+                              {hasReservedSpots && (
+                                <span style={{ color: "#92400e" }}>
+                                  {t.reservedSpotCount} reserved
+                                </span>
+                              )}
+                              {!hasPaidSpots && !hasReservedSpots && (
+                                <span style={{ color: "#d1d5db" }}>all clear</span>
+                              )}
+                            </div>
+                          ) : (
+                            <span style={{ color: "#d1d5db" }}>—</span>
+                          )}
+                        </td>
+
+                        {/* Actions */}
                         <td style={{ padding: "12px 14px" }}>
-                          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                            {t.slug && (
-                              <a
-                                href={`/${t.slug}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{
-                                  fontSize: 11, fontWeight: 700, color: "#1d4ed8",
-                                  background: "#eff6ff", border: "1px solid #bfdbfe",
-                                  borderRadius: 6, padding: "3px 9px", textDecoration: "none",
-                                }}
-                              >
-                                View Page ↗
-                              </a>
-                            )}
-                            {tCampaigns.map(c => (
+                          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                            {/* View Spot Tables link */}
+                            {t.campaignCount > 0 && (
                               <Link
-                                key={c.id}
-                                href={`/admin/territories/detail?id=${c.id}`}
+                                href={`/admin/territories/detail?dealerId=${t.dealerId}`}
                                 style={{
                                   fontSize: 11, fontWeight: 700, color: BURGUNDY,
                                   background: "#fef2f2", border: `1px solid #fecaca`,
-                                  borderRadius: 6, padding: "3px 9px", textDecoration: "none",
+                                  borderRadius: 6, padding: "4px 9px", textDecoration: "none",
+                                  whiteSpace: "nowrap",
                                 }}
                               >
-                                View Spot Table →
+                                Spot Tables →
                               </Link>
-                            ))}
+                            )}
+
+                            {/* Release button — only for claimed territories */}
+                            {isClaimed && (
+                              hasPaidSpots ? (
+                                <span
+                                  title={`Cannot release: ${t.paidSpotCount} paid spot${t.paidSpotCount !== 1 ? "s" : ""} must be resolved first`}
+                                  style={{
+                                    fontSize: 11, fontWeight: 700,
+                                    color: "#92400e", background: "#fffbeb",
+                                    border: "1px solid #fde68a",
+                                    borderRadius: 6, padding: "4px 9px",
+                                    whiteSpace: "nowrap", cursor: "not-allowed",
+                                    display: "inline-flex", alignItems: "center", gap: 4,
+                                  }}
+                                >
+                                  ⛔ Has paid spots
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={() => setConfirmTarget(t)}
+                                  style={{
+                                    fontSize: 11, fontWeight: 700,
+                                    color: "#374151", background: "#f3f4f6",
+                                    border: "1px solid #d1d5db",
+                                    borderRadius: 6, padding: "4px 9px",
+                                    cursor: "pointer", whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  Release Territory
+                                </button>
+                              )
+                            )}
                           </div>
                         </td>
                       </tr>
