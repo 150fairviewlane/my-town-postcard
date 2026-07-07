@@ -39,7 +39,7 @@ import {
   sendAdminNewDealerEmail,
   sendAdminDealerCancelledEmail,
 } from "../lib/emails";
-import { provisionDealerEmail } from "../lib/cloudflareEmailRouting";
+import { provisionDealerEmail, isCloudflareConfigured } from "../lib/cloudflareEmailRouting";
 import { logger } from "../lib/logger";
 import {
   hashPassword,
@@ -1838,6 +1838,49 @@ router.get("/admin/audit-log", requireAdmin, async (_req, res): Promise<void> =>
       createdAt: toIso(r.createdAt),
     })),
   });
+});
+
+// ─── POST /api/admin/dealers/backfill-emails ──────────────────────────────────
+// One-shot backfill: provisions @mytownpostcard.com forwarding addresses for all
+// active dealers that don't yet have a company_email.
+//
+// Special case: dealers whose personal email is already @mytownpostcard.com are
+// skipped from Cloudflare provisioning (loop risk) and have their company_email
+// set directly to their existing address instead.
+router.post("/admin/dealers/backfill-emails", requireAdmin, async (req, res): Promise<void> => {
+  const pending = await db
+    .select({ id: dealersTable.id, name: dealersTable.name, email: dealersTable.email, companyEmail: dealersTable.companyEmail })
+    .from(dealersTable)
+    .where(eq(dealersTable.status, "active"));
+
+  const results: Array<{ id: number; name: string; action: string; companyEmail: string | null; error?: string }> = [];
+
+  for (const dealer of pending) {
+    if (dealer.companyEmail) {
+      results.push({ id: dealer.id, name: dealer.name, action: "already_set", companyEmail: dealer.companyEmail });
+      continue;
+    }
+
+    // Dealers whose personal email is already on our domain: skip Cloudflare (loop
+    // risk) and just record their existing address directly.
+    if (dealer.email.toLowerCase().endsWith("@mytownpostcard.com")) {
+      await db.update(dealersTable).set({ companyEmail: dealer.email }).where(eq(dealersTable.id, dealer.id));
+      results.push({ id: dealer.id, name: dealer.name, action: "set_direct", companyEmail: dealer.email });
+      continue;
+    }
+
+    const provisioned = await provisionDealerEmail(dealer);
+    if (provisioned) {
+      results.push({ id: dealer.id, name: dealer.name, action: "provisioned", companyEmail: provisioned });
+    } else if (!isCloudflareConfigured()) {
+      results.push({ id: dealer.id, name: dealer.name, action: "cf_not_configured", companyEmail: null, error: "Cloudflare secrets not set" });
+    } else {
+      results.push({ id: dealer.id, name: dealer.name, action: "pending_verification", companyEmail: null, error: "Verification email sent to dealer's inbox — re-run backfill after they click the Cloudflare link" });
+    }
+  }
+
+  req.log.info({ results }, "admin: backfill-emails complete");
+  res.json({ ok: true, results });
 });
 
 export default router;

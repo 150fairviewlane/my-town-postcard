@@ -67,20 +67,35 @@ export async function pickAvailableLocalPart(dealerName: string): Promise<string
   return null;
 }
 
-async function ensureDestinationAddress(personalEmail: string): Promise<void> {
+/**
+ * Ensures personalEmail exists as a Cloudflare destination address.
+ * Returns true only when the address is already verified — meaning a routing
+ * rule can safely be created pointing to it.
+ * Returns false when the address was just created (verification email sent, not
+ * yet clicked) or already exists but is still pending verification. The caller
+ * must not create the routing rule until this returns true.
+ */
+async function ensureDestinationAddress(personalEmail: string): Promise<boolean> {
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID!;
-  const listUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/email-routing/addresses`;
+  const listUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/email/routing/addresses`;
 
   const listRes = await fetch(listUrl, { headers: cfHeaders() });
   if (!listRes.ok) {
     logger.warn({ status: listRes.status }, "CF: listing destination addresses failed");
-    return;
+    return false;
   }
-  const listData = (await listRes.json()) as { result?: Array<{ email: string }> };
-  const existing = (listData.result ?? []).some(
+  const listData = (await listRes.json()) as { result?: Array<{ email: string; status?: string }> };
+  const existing = (listData.result ?? []).find(
     (a) => a.email.toLowerCase() === personalEmail.toLowerCase(),
   );
-  if (existing) return;
+
+  if (existing) {
+    const verified = existing.status === "verified";
+    if (!verified) {
+      logger.warn({ personalEmail, cfStatus: existing.status }, "CF: destination address exists but not yet verified — routing rule will be skipped until dealer clicks verification link");
+    }
+    return verified;
+  }
 
   const createRes = await fetch(listUrl, {
     method: "POST",
@@ -94,13 +109,14 @@ async function ensureDestinationAddress(personalEmail: string): Promise<void> {
       "CF: creating destination address failed (verification email may not be sent)",
     );
   } else {
-    logger.info({ personalEmail }, "CF: destination address created — verification email sent");
+    logger.info({ personalEmail }, "CF: destination address created — verification email sent; routing rule will be created on next provisioning attempt after dealer verifies");
   }
+  return false; // just created — not verified yet
 }
 
 async function createRoutingRule(localPart: string, personalEmail: string): Promise<void> {
   const zoneId = process.env.CLOUDFLARE_ZONE_ID!;
-  const url = `https://api.cloudflare.com/client/v4/zones/${zoneId}/email-routing/rules`;
+  const url = `https://api.cloudflare.com/client/v4/zones/${zoneId}/email/routing/rules`;
   const body = {
     name: `${localPart}@${DOMAIN}`,
     enabled: true,
@@ -138,7 +154,16 @@ export async function provisionDealerEmail(
   const companyEmail = `${localPart}@${DOMAIN}`;
 
   try {
-    await ensureDestinationAddress(dealer.email);
+    const verified = await ensureDestinationAddress(dealer.email);
+    if (!verified) {
+      // Destination address was just created or is still pending verification.
+      // Return null so the caller knows provisioning is incomplete. The next
+      // call to provisionDealerEmail (e.g. via backfill after the dealer clicks
+      // the Cloudflare verification link) will find the address verified and
+      // complete the routing rule + DB update.
+      logger.info({ dealerId: dealer.id, dealerEmail: dealer.email }, "CF: provisioning deferred — destination address not yet verified");
+      return null;
+    }
     await createRoutingRule(localPart, dealer.email);
 
     const { eq } = await import("drizzle-orm");
