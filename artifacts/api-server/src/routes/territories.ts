@@ -18,6 +18,7 @@ import {
   computeHubZipFootprint,
   checkZipFootprintConflict,
   findExistingTerritoryWithinMiles,
+  proposalCountiesOverlapTerritory,
 } from "../lib/territoryBuilder";
 import {
   getCountyGeoidsByShortNames,
@@ -1007,19 +1008,25 @@ router.post("/admin/territories/custom", requireAdmin, async (req, res): Promise
   const conflicts: ConflictEntry[] = [];
 
   // a) ZIP footprint overlap with TAKEN territories
+  // Apply the same county-membership guard used in the dealer claim webhook:
+  // neighboring-county ZIP bleed (e.g. Habersham territory's 15-mile radius
+  // reaching into White County) must NOT block a genuinely separate county.
   const zipConflictId = await checkZipFootprintConflict(resolved);
   if (zipConflictId) {
     const [cTerr] = await db
-      .select({ id: territoriesTable.id, name: territoriesTable.name, status: territoriesTable.status })
+      .select({ id: territoriesTable.id, name: territoriesTable.name, status: territoriesTable.status, counties: territoriesTable.counties })
       .from(territoriesTable)
       .where(eq(territoriesTable.id, zipConflictId));
     if (cTerr) {
-      conflicts.push({
-        source: "ZIP footprint overlap",
-        territoryId: cTerr.id,
-        territoryName: cTerr.name,
-        territoryStatus: cTerr.status,
-      });
+      const sharesCounty = proposalCountiesOverlapTerritory(countyNames, cTerr as Record<string, unknown>);
+      if (sharesCounty) {
+        conflicts.push({
+          source: "ZIP footprint overlap",
+          territoryId: cTerr.id,
+          territoryName: cTerr.name,
+          territoryStatus: cTerr.status,
+        });
+      }
     }
   }
 
