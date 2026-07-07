@@ -116,6 +116,61 @@ function ReleaseModal({ territory, onConfirm, onCancel, releasing }) {
   );
 }
 
+function DeleteModal({ territory, onConfirm, onCancel, deleting }) {
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      zIndex: 1000, padding: 16,
+    }}>
+      <div style={{
+        background: "#fff", borderRadius: 14, padding: "28px 28px 24px",
+        maxWidth: 440, width: "100%", boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
+      }}>
+        <div style={{ fontWeight: 900, fontSize: 18, color: "#111", marginBottom: 6 }}>
+          Delete Territory?
+        </div>
+        <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 20 }}>
+          Permanently remove <strong style={{ color: "#111" }}>{territory.name}</strong> ({territory.id}) from the system. This also deletes its ZIP footprint.
+        </div>
+        <div style={{
+          background: "#fef2f2", border: "1px solid #fecaca",
+          borderRadius: 8, padding: "10px 14px", marginBottom: 22,
+          fontSize: 12, color: BURGUNDY, fontWeight: 600,
+        }}>
+          This action cannot be undone.
+        </div>
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+          <button
+            onClick={onCancel}
+            disabled={deleting}
+            style={{
+              padding: "9px 18px", borderRadius: 8, border: "1.5px solid #e5e7eb",
+              background: "#fff", fontSize: 13, fontWeight: 700,
+              color: "#374151", cursor: deleting ? "default" : "pointer",
+              opacity: deleting ? 0.5 : 1,
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={deleting}
+            style={{
+              padding: "9px 20px", borderRadius: 8, border: "none",
+              background: BURGUNDY, color: "#fff", fontSize: 13,
+              fontWeight: 800, cursor: deleting ? "default" : "pointer",
+              opacity: deleting ? 0.5 : 1, minWidth: 120,
+            }}
+          >
+            {deleting ? "Deleting…" : "Delete"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TerritoriesContent({ token }) {
   const [territories, setTerritories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -123,6 +178,8 @@ function TerritoriesContent({ token }) {
   const [search, setSearch] = useState("");
   const [releasing, setReleasing] = useState(false);
   const [confirmTarget, setConfirmTarget] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [toast, setToast] = useState(null);
 
   const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
@@ -146,6 +203,29 @@ function TerritoriesContent({ token }) {
     setToast({ msg, isError });
     setTimeout(() => setToast(null), 4000);
   };
+
+  async function handleDelete() {
+    if (!deleteTarget || deleting) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`${base}/api/territories/${encodeURIComponent(deleteTarget.id)}`, {
+        method: "DELETE",
+        headers: auth,
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        showToast(json.error ?? "Delete failed", true);
+      } else {
+        showToast(`✓ ${deleteTarget.name} deleted.`);
+        loadTerritories();
+      }
+    } catch (e) {
+      showToast(String(e), true);
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
+    }
+  }
 
   async function handleRelease() {
     if (!confirmTarget || releasing) return;
@@ -198,13 +278,23 @@ function TerritoriesContent({ token }) {
         </div>
       )}
 
-      {/* Confirm modal */}
+      {/* Release confirm modal */}
       {confirmTarget && (
         <ReleaseModal
           territory={confirmTarget}
           onConfirm={handleRelease}
           onCancel={() => !releasing && setConfirmTarget(null)}
           releasing={releasing}
+        />
+      )}
+
+      {/* Delete confirm modal */}
+      {deleteTarget && (
+        <DeleteModal
+          territory={deleteTarget}
+          onConfirm={handleDelete}
+          onCancel={() => !deleting && setDeleteTarget(null)}
+          deleting={deleting}
         />
       )}
 
@@ -359,6 +449,22 @@ function TerritoriesContent({ token }) {
                               >
                                 Spot Tables →
                               </Link>
+                            )}
+
+                            {/* Delete button — only for available territories */}
+                            {t.status === "available" && (
+                              <button
+                                onClick={() => setDeleteTarget(t)}
+                                style={{
+                                  fontSize: 11, fontWeight: 700,
+                                  color: BURGUNDY, background: "#fef2f2",
+                                  border: `1px solid #fecaca`,
+                                  borderRadius: 6, padding: "4px 9px",
+                                  cursor: "pointer", whiteSpace: "nowrap",
+                                }}
+                              >
+                                Delete
+                              </button>
                             )}
 
                             {/* Release button — only for claimed territories */}
