@@ -418,18 +418,21 @@ function BusinessesTab() {
       <div style={{ display: "flex", gap: 10, padding: "4px 14px", fontSize: 11, fontWeight: 700, color: "#9ca3af", marginBottom: 2 }}>
         <span style={{ flex: "0 0 190px" }}>Business</span>
         <span style={{ flex: "0 0 90px" }}>Location</span>
-        <span style={{ flex: "0 0 120px" }}>Category</span>
-        <span style={{ flex: "0 0 80px" }}>Logo</span>
-        <span style={{ flex: "0 0 80px" }}>Ad</span>
-        <span style={{ flex: "0 0 80px" }}>Email</span>
-        <span style={{ flex: "0 0 110px" }}>Contact Status</span>
+        <span style={{ flex: "0 0 110px" }}>Category</span>
+        <span style={{ flex: "0 0 70px" }}>Logo</span>
+        <span style={{ flex: "0 0 70px" }}>Ad</span>
+        <span style={{ flex: "0 0 70px" }}>Email</span>
+        <span style={{ flex: "0 0 110px" }}>
+          <SortHeader label="Contact Status" field="contact_status" sortBy={sortBy} onSort={handleSort} />
+        </span>
+        <span style={{ flex: "0 0 60px" }}>Facebook</span>
         <span style={{ flex: "0 0 90px" }}>
           <SortHeader label="Next Follow-up" field="next_follow_up_at" sortBy={sortBy} onSort={handleSort} />
         </span>
         <span style={{ flex: "0 0 90px" }}>
           <SortHeader label="Last Contacted" field="last_contacted_at" sortBy={sortBy} onSort={handleSort} />
         </span>
-        <span style={{ flex: "0 0 64px", textAlign: "center" }}>Clicks</span>
+        <span style={{ flex: "0 0 54px", textAlign: "center" }}>Clicks</span>
       </div>
 
       {error && <div style={{ background: "#fee2e2", borderRadius: 8, padding: "10px 14px", color: "#991b1b", fontSize: 13, marginBottom: 12 }}>❌ {error}</div>}
@@ -543,12 +546,12 @@ function BusinessRow({ biz, expanded, onToggle, onRefresh }) {
           {localBiz.businessName}
         </div>
         <div onClick={onToggle} style={{ flex: "0 0 90px", fontSize: 12, color: "#6b7280", cursor: "pointer" }}>{localBiz.city}, {localBiz.state}</div>
-        <div onClick={onToggle} style={{ flex: "0 0 120px", fontSize: 12, color: "#6b7280", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: "pointer" }}>
+        <div onClick={onToggle} style={{ flex: "0 0 110px", fontSize: 12, color: "#6b7280", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: "pointer" }}>
           {localBiz.category ?? "—"}
         </div>
-        <div onClick={onToggle} style={{ flex: "0 0 80px", cursor: "pointer" }}><StatusBadge value={localBiz.logoStatus} /></div>
-        <div onClick={onToggle} style={{ flex: "0 0 80px", cursor: "pointer" }}><StatusBadge value={localBiz.adStatus} /></div>
-        <div onClick={onToggle} style={{ flex: "0 0 80px", cursor: "pointer" }}><StatusBadge value={localBiz.emailStatus} /></div>
+        <div onClick={onToggle} style={{ flex: "0 0 70px", cursor: "pointer" }}><StatusBadge value={localBiz.logoStatus} /></div>
+        <div onClick={onToggle} style={{ flex: "0 0 70px", cursor: "pointer" }}><StatusBadge value={localBiz.adStatus} /></div>
+        <div onClick={onToggle} style={{ flex: "0 0 70px", cursor: "pointer" }}><StatusBadge value={localBiz.emailStatus} /></div>
         {/* Inline Contact Status select — stops propagation so clicks don't toggle expand */}
         <div style={{ flex: "0 0 110px" }} onClick={(e) => e.stopPropagation()}>
           <select
@@ -578,13 +581,29 @@ function BusinessRow({ biz, expanded, onToggle, onRefresh }) {
             <option value="not_interested">Not Interested</option>
           </select>
         </div>
+        {/* Facebook link column */}
+        <div style={{ flex: "0 0 60px", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+          {localBiz.facebookUrl ? (
+            <a
+              href={localBiz.facebookUrl.startsWith("http") ? localBiz.facebookUrl : `https://${localBiz.facebookUrl}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={localBiz.facebookUrl}
+              style={{ fontSize: 15, textDecoration: "none" }}
+            >
+              👤
+            </a>
+          ) : (
+            <span style={{ fontSize: 12, color: "#e5e7eb" }}>—</span>
+          )}
+        </div>
         <div onClick={onToggle} style={{ flex: "0 0 90px", fontSize: 11, color: "#6b7280", cursor: "pointer" }}>
           {localBiz.nextFollowUpAt ? new Date(localBiz.nextFollowUpAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}
         </div>
         <div onClick={onToggle} style={{ flex: "0 0 90px", fontSize: 11, color: "#6b7280", cursor: "pointer" }}>
           {localBiz.lastContactedAt ? new Date(localBiz.lastContactedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}
         </div>
-        <div onClick={onToggle} style={{ flex: "0 0 64px", fontSize: 12, color: (localBiz.clickCount ?? 0) > 0 ? "#7B1418" : "#d1d5db", fontWeight: (localBiz.clickCount ?? 0) > 0 ? 700 : 400, textAlign: "center", cursor: "pointer" }}>
+        <div onClick={onToggle} style={{ flex: "0 0 54px", fontSize: 12, color: (localBiz.clickCount ?? 0) > 0 ? "#7B1418" : "#d1d5db", fontWeight: (localBiz.clickCount ?? 0) > 0 ? 700 : 400, textAlign: "center", cursor: "pointer" }}>
           {(localBiz.clickCount ?? 0) > 0 ? `👆 ${localBiz.clickCount}` : "—"}
         </div>
         <div onClick={onToggle} style={{ marginLeft: "auto", fontSize: 12, color: "#9ca3af", cursor: "pointer" }}>

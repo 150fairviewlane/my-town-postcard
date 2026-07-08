@@ -465,6 +465,7 @@ router.get("/admin/outreach/businesses", requireAdmin, async (req, res): Promise
   const orderByClause =
     sort_by === "next_follow_up_at" ? asc(scrapedBusinessesTable.nextFollowUpAt) :
     sort_by === "last_contacted_at" ? desc(scrapedBusinessesTable.lastContactedAt) :
+    sort_by === "contact_status" ? asc(scrapedBusinessesTable.contactStatus) :
     desc(scrapedBusinessesTable.scrapedAt);
 
   const [rows, countRow] = await Promise.all([
