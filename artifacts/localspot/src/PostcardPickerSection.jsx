@@ -491,6 +491,9 @@ const BACK_GRID_MAP  = { bxl1:"bxl", bxl2:"bxl2", bxl3:"bxl3", bm1:"bm1", bm2:"b
 // immediately (via ad-image endpoint), then fires a background regen to
 // produce a full-quality single-panel ad and swaps it in when ready.
 function ClaimSection({businessId,scrollTargetId}){
+  // `visible` is only set true after a successful preview fetch — so invalid
+  // or opted-out IDs silently fall back to the normal picker page.
+  const [visible,setVisible]=useState(false);
   const [preview,setPreview]=useState(null);
   const base=(import.meta.env.BASE_URL||"/").replace(/\/$/,"");
   const [adSrc,setAdSrc]=useState(`${base}/api/outreach/ad-image/${businessId}`);
@@ -500,10 +503,20 @@ function ClaimSection({businessId,scrollTargetId}){
   useEffect(()=>{
     if(!businessId)return;
     let cancelled=false;
+    // Fetch preview metadata first. Only show the banner on success (200).
     fetch(`${base}/api/outreach/claim-preview/${businessId}`)
-      .then(r=>r.ok?r.json():null)
-      .then(d=>{if(!cancelled&&d)setPreview(d);})
-      .catch(()=>{});
+      .then(r=>{
+        if(!r.ok)return null; // 404 / any error → stay hidden
+        return r.json();
+      })
+      .then(d=>{
+        if(cancelled||!d)return;
+        setPreview(d);
+        setVisible(true); // show banner only after confirmed valid business
+      })
+      .catch(()=>{}); // network error → stay hidden
+
+    // Fire background regen independently; swap image when ready.
     fetch(`${base}/api/outreach/claim-regenerate/${businessId}`,{method:"POST"})
       .then(r=>r.ok?r.json():null)
       .then(d=>{
@@ -516,12 +529,12 @@ function ClaimSection({businessId,scrollTargetId}){
   },[businessId,base]);
 
   useEffect(()=>{
-    if(!preview||!scrollTargetId)return;
+    if(!visible||!scrollTargetId)return;
     const el=document.getElementById(scrollTargetId);
     if(el)setTimeout(()=>el.scrollIntoView({behavior:"smooth",block:"start"}),400);
-  },[preview,scrollTargetId]);
+  },[visible,scrollTargetId]);
 
-  if(dismissed||!businessId)return null;
+  if(!visible||dismissed||!businessId)return null;
   const bizName=preview?.businessName||"your business";
   const city=preview?.city||"";
 

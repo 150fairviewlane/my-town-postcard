@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
 import { eq, and, isNull } from "drizzle-orm";
-import { db, spotsTable, ordersTable, campaignsTable, businessClaimEventsTable } from "@workspace/db";
-import { getCachedAd } from "../lib/claimRegenCache.js";
+import { db, spotsTable, ordersTable, campaignsTable, businessClaimEventsTable, scrapedBusinessesTable } from "@workspace/db";
+import { getCachedAd, setCachedAd } from "../lib/claimRegenCache.js";
+import { generateAdForOutreach } from "../lib/generateAdForOutreach.js";
 import {
   CreatePaymentIntentBody,
   CreatePaymentIntentResponse,
@@ -324,13 +325,46 @@ router.post("/checkout/confirm", async (req, res): Promise<void> => {
 
   // Inject claim fast-lane single-panel ad into templateData before QR swap.
   // Must happen BEFORE swapGrokQrInTemplateData so the QR can be composited
-  // onto the freshly injected ad. Reads from the server-side in-memory cache
-  // populated by POST /api/outreach/claim-regenerate/:businessId.
+  // onto the freshly injected ad.
+  // Cache hit → instant. Cache miss (expired or slow browser) → regenerate
+  // from DB so late purchases still get templateData populated.
   const claimIdStr = intent.metadata?.claimBusinessId;
   const claimBizIdConfirm = claimIdStr ? parseInt(String(claimIdStr), 10) : NaN;
   if (Number.isFinite(claimBizIdConfirm) && claimBizIdConfirm > 0) {
     try {
-      const claimEntry = getCachedAd(claimBizIdConfirm);
+      let claimEntry = getCachedAd(claimBizIdConfirm);
+      if (!claimEntry) {
+        // Cache miss — regenerate the single-panel ad synchronously so the
+        // spot gets templateData even when the cache expired.
+        const [bizRow] = await db
+          .select({
+            businessName: scrapedBusinessesTable.businessName,
+            city: scrapedBusinessesTable.city,
+            state: scrapedBusinessesTable.state,
+            category: scrapedBusinessesTable.category,
+            phone: scrapedBusinessesTable.phone,
+            website: scrapedBusinessesTable.website,
+          })
+          .from(scrapedBusinessesTable)
+          .where(eq(scrapedBusinessesTable.id, claimBizIdConfirm))
+          .limit(1);
+        if (bizRow) {
+          const regen = await generateAdForOutreach({
+            bizName: bizRow.businessName,
+            category: bizRow.category ?? null,
+            phone: bizRow.phone ?? null,
+            address: null,
+            city: bizRow.city,
+            state: bizRow.state,
+            website: bizRow.website ?? null,
+            skipComposite: true,
+            quality: true,
+          });
+          setCachedAd(claimBizIdConfirm, regen.imageUrl, regen.template, "l");
+          claimEntry = getCachedAd(claimBizIdConfirm);
+          req.log.info({ spotId: body.data.spotId, claimBizId: claimBizIdConfirm }, "Claim ad regenerated (cache miss) at confirmation");
+        }
+      }
       if (claimEntry) {
         const td = JSON.stringify({
           finishedAdUrl: claimEntry.dataUrl,

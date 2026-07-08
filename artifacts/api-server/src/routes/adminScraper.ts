@@ -1072,6 +1072,8 @@ router.get("/outreach/claim-preview/:businessId", async (req, res): Promise<void
       city: scrapedBusinessesTable.city,
       state: scrapedBusinessesTable.state,
       category: scrapedBusinessesTable.category,
+      phone: scrapedBusinessesTable.phone,
+      website: scrapedBusinessesTable.website,
       adImageUrl: scrapedBusinessesTable.adImageUrl,
       emailStatus: scrapedBusinessesTable.emailStatus,
     })
@@ -1079,8 +1081,9 @@ router.get("/outreach/claim-preview/:businessId", async (req, res): Promise<void
     .where(eq(scrapedBusinessesTable.id, businessId))
     .limit(1);
 
-  if (!row) { res.status(404).json({ error: "Not found" }); return; }
-  if (row.emailStatus === "opted-out") { res.status(403).json({ error: "Opted out" }); return; }
+  // Return 404 for both non-existent and opted-out records — avoids
+  // disclosing opted-out status to callers.
+  if (!row || row.emailStatus === "opted-out") { res.status(404).json({ error: "Not found" }); return; }
 
   res.json({
     businessId: row.id,
@@ -1088,6 +1091,8 @@ router.get("/outreach/claim-preview/:businessId", async (req, res): Promise<void
     city: row.city,
     state: row.state,
     category: row.category ?? null,
+    phone: row.phone ?? null,
+    website: row.website ?? null,
     adImageUrl: row.adImageUrl ?? null,
   });
 });
@@ -1098,6 +1103,24 @@ router.get("/outreach/claim-preview/:businessId", async (req, res): Promise<void
 router.post("/outreach/claim-regenerate/:businessId", async (req, res): Promise<void> => {
   const businessId = Number(req.params.businessId);
   if (!businessId) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  // Existence + opt-out validation comes FIRST — before cache or rate limits.
+  // Both missing and opted-out return 404 (avoids enrollment disclosure).
+  const [row] = await db
+    .select({
+      businessName: scrapedBusinessesTable.businessName,
+      city: scrapedBusinessesTable.city,
+      state: scrapedBusinessesTable.state,
+      category: scrapedBusinessesTable.category,
+      phone: scrapedBusinessesTable.phone,
+      website: scrapedBusinessesTable.website,
+      emailStatus: scrapedBusinessesTable.emailStatus,
+    })
+    .from(scrapedBusinessesTable)
+    .where(eq(scrapedBusinessesTable.id, businessId))
+    .limit(1);
+
+  if (!row || row.emailStatus === "opted-out") { res.status(404).json({ error: "Not found" }); return; }
 
   // Return cached ad immediately — no Grok call needed.
   const cached = getCachedAd(businessId);
@@ -1116,23 +1139,6 @@ router.post("/outreach/claim-regenerate/:businessId", async (req, res): Promise<
     res.status(429).json({ error: "Daily regeneration limit reached. Please try again tomorrow." });
     return;
   }
-
-  const [row] = await db
-    .select({
-      businessName: scrapedBusinessesTable.businessName,
-      city: scrapedBusinessesTable.city,
-      state: scrapedBusinessesTable.state,
-      category: scrapedBusinessesTable.category,
-      phone: scrapedBusinessesTable.phone,
-      website: scrapedBusinessesTable.website,
-      emailStatus: scrapedBusinessesTable.emailStatus,
-    })
-    .from(scrapedBusinessesTable)
-    .where(eq(scrapedBusinessesTable.id, businessId))
-    .limit(1);
-
-  if (!row) { res.status(404).json({ error: "Not found" }); return; }
-  if (row.emailStatus === "opted-out") { res.status(403).json({ error: "Opted out" }); return; }
 
   try {
     const adParams: OutreachAdParams = {
