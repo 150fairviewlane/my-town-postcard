@@ -845,13 +845,21 @@ router.post("/admin/outreach/businesses/:id/send", requireAdmin, async (req, res
 
   const resend = new Resend(apiKey);
 
-  // Handle inline ad image: convert data: URI → inline attachment (CID)
+  // Handle inline ad image: convert data: URI → inline attachment (CID).
+  // Real email clients (Gmail, Outlook, Apple Mail) don't render base64 data:
+  // URIs at all — they show a broken-image placeholder — even though it
+  // renders fine in the admin preview (a plain browser tab). The generated
+  // ad mockups are stored as JPEG data URIs (see generateAdForOutreach.ts),
+  // so the mime type in this regex must match what's actually produced —
+  // this previously only matched image/png and silently never fired for the
+  // JPEG images we actually generate, leaving the raw base64 in the HTML.
   let htmlToSend = biz.emailBodyHtml;
   const attachments: Array<{ filename: string; content: string; content_id: string }> = [];
-  const dataUriMatch = /src="(data:image\/png;base64,([^"]+))"/i.exec(htmlToSend);
+  const dataUriMatch = /src="(data:image\/(png|jpe?g|webp);base64,([^"]+))"/i.exec(htmlToSend);
   if (dataUriMatch) {
-    const [fullMatch, _dataUri, b64] = dataUriMatch;
-    attachments.push({ filename: "ad-mockup.png", content: b64!, content_id: "ad-mockup" });
+    const [fullMatch, _dataUri, ext, b64] = dataUriMatch;
+    const safeExt = ext!.toLowerCase() === "jpg" ? "jpeg" : ext!.toLowerCase();
+    attachments.push({ filename: `ad-mockup.${safeExt}`, content: b64!, content_id: "ad-mockup" });
     htmlToSend = htmlToSend.replace(fullMatch!, 'src="cid:ad-mockup"');
   }
 
