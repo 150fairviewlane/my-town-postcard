@@ -119,12 +119,11 @@ function buildEmailDraft(business: {
   website: string | null;
   adImageUrl: string | null;
 }): { subject: string; bodyHtml: string } {
-  const { googleId, businessName, city, state, category, phone, adImageUrl } = business;
+  const { googleId, businessName, city, state, category, adImageUrl } = business;
   // Escape all external/scraped fields before HTML interpolation
   const bizName = escapeHtml(businessName);
   const cityE = escapeHtml(city);
   const stateE = escapeHtml(state);
-  const phoneE = phone ? escapeHtml(phone) : null;
   const categoryE = category ? escapeHtml(category) : null;
 
   const token = unsubToken(googleId);
@@ -133,7 +132,12 @@ function buildEmailDraft(business: {
   // the spot picker. claimUrl kept as the final redirect destination.
   const claimUrl = `${APP_URL}/`;
   const trackUrl = `${APP_URL}/api/outreach/click/${business.id}`;
-  const phoneNote = phoneE ? ` — call us at ${phoneE}` : "";
+  // NOTE: this previously read `business.phone` — the SCRAPED recipient's own
+  // phone number — telling them to "call us" at their own business line. We
+  // don't currently advertise a My Town Postcard phone number, so direct
+  // inquiries to our site + inbox instead. See root-cause report to user.
+  const contactSite = APP_URL.replace(/^https?:\/\//, "");
+  const contactNote = ` or visit ${contactSite}`;
   const industryLine = categoryE
     ? `As a ${categoryE.toLowerCase()} business in the ${cityE} area`
     : `As a local business serving the ${cityE} area`;
@@ -146,32 +150,48 @@ function buildEmailDraft(business: {
           style="border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,0.15);max-width:100%;display:block;margin:0 auto;" />
         <div style="color:#6b7280;font-size:12px;margin-top:6px;">Sample postcard ad concept we created for ${bizName}</div>
       </div>`
-    : `<div style="background:#f3f4f6;border-radius:8px;padding:16px;text-align:center;margin:24px 0;color:#6b7280;font-size:13px;">
+    : `<div style="background:#f3f4f6;background-color:#f3f4f6;border-radius:8px;padding:16px;text-align:center;margin:24px 0;color:#6b7280;font-size:13px;">
         &#x2736; Sample ad design available upon request
       </div>`;
 
   const bodyHtml = `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f9fafb;font-family:system-ui,sans-serif;">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light only">
+<style>
+  :root { color-scheme: light only; supported-color-schemes: light only; }
+  @media (prefers-color-scheme: dark) {
+    body, .ltp-bg { background:#f9fafb !important; }
+    .ltp-card { background:#fff !important; }
+    .ltp-text-dark { color:#111 !important; }
+    .ltp-text-body { color:#374151 !important; }
+    .ltp-text-muted { color:#6b7280 !important; }
+    .ltp-text-faint { color:#9ca3af !important; }
+    .ltp-brand { color:#7B1418 !important; }
+  }
+</style>
+</head>
+<body class="ltp-bg" style="margin:0;padding:0;background:#f9fafb;background-color:#f9fafb;font-family:system-ui,sans-serif;">
 <div style="max-width:580px;margin:0 auto;padding:32px 16px;">
-  <div style="background:#fff;border-radius:12px;padding:36px 32px;box-shadow:0 2px 8px rgba(0,0,0,0.07);">
+  <div class="ltp-card" style="background:#fff;background-color:#fff;border-radius:12px;padding:36px 32px;box-shadow:0 2px 8px rgba(0,0,0,0.07);">
 
-    <div style="font-family:Georgia,serif;font-size:22px;font-weight:900;color:#7B1418;margin-bottom:4px;">
+    <div class="ltp-brand" style="font-family:Georgia,serif;font-size:22px;font-weight:900;color:#7B1418;margin-bottom:4px;">
       &#x1F4EE; My Town Postcard
     </div>
-    <div style="font-size:13px;color:#9ca3af;margin-bottom:28px;">Reaching 5,000 ${cityE}, ${stateE} homes</div>
+    <div class="ltp-text-faint" style="font-size:13px;color:#9ca3af;margin-bottom:28px;">Reaching 5,000 ${cityE}, ${stateE} homes</div>
 
-    <p style="font-size:16px;color:#111;line-height:1.6;margin-bottom:16px;">
+    <p class="ltp-text-dark" style="font-size:16px;color:#111;line-height:1.6;margin-bottom:16px;">
       Hi <strong>${bizName}</strong> team,
     </p>
 
-    <p style="font-size:15px;color:#374151;line-height:1.7;margin-bottom:16px;">
+    <p class="ltp-text-body" style="font-size:15px;color:#374151;line-height:1.7;margin-bottom:16px;">
       ${industryLine}, we wanted to reach out about an opportunity to get your name
       in front of <strong>5,000 local households</strong> — all in ${cityE} and the surrounding area.
     </p>
 
-    <p style="font-size:15px;color:#374151;line-height:1.7;margin-bottom:16px;">
+    <p class="ltp-text-body" style="font-size:15px;color:#374151;line-height:1.7;margin-bottom:16px;">
       We're putting together a <strong>co-op postcard mailer</strong> sent directly to 5,000 homes
       via USPS Every Door Direct Mail® (EDDM). You only pay for one advertising spot —
       no list purchase, no per-address fees — just a single flat price for your ad on a
@@ -180,9 +200,9 @@ function buildEmailDraft(business: {
 
     ${adSection}
 
-    <div style="background:#fef2f2;border-left:4px solid #7B1418;padding:16px 20px;border-radius:0 8px 8px 0;margin:24px 0;">
-      <div style="font-weight:700;color:#7B1418;margin-bottom:8px;">What's included:</div>
-      <ul style="margin:0;padding-left:20px;color:#374151;line-height:1.8;font-size:14px;">
+    <div style="background:#fef2f2;background-color:#fef2f2;border-left:4px solid #7B1418;padding:16px 20px;border-radius:0 8px 8px 0;margin:24px 0;">
+      <div class="ltp-brand" style="font-weight:700;color:#7B1418;margin-bottom:8px;">What's included:</div>
+      <ul class="ltp-text-body" style="margin:0;padding-left:20px;color:#374151;line-height:1.8;font-size:14px;">
         <li>Full-color printed ad on a premium 9"×12" postcard</li>
         <li>Delivered to 5,000 homes — no duplicates, no waste</li>
         <li>FREE professional ad design included</li>
@@ -190,23 +210,23 @@ function buildEmailDraft(business: {
       </ul>
     </div>
 
-    <p style="font-size:15px;color:#374151;line-height:1.7;margin-bottom:24px;">
+    <p class="ltp-text-body" style="font-size:15px;color:#374151;line-height:1.7;margin-bottom:24px;">
       Spots are limited and sold on a first-come basis.
     </p>
 
     <div style="text-align:center;margin:28px 0;">
-      <a href="${trackUrl}" style="display:inline-block;padding:14px 32px;background:#7B1418;color:#fff;
+      <a href="${trackUrl}" style="display:inline-block;padding:14px 32px;background:#7B1418;background-color:#7B1418;color:#fff;
         font-weight:700;font-size:15px;border-radius:8px;text-decoration:none;">
         See Available Spots and Pricing →
       </a>
     </div>
 
-    <p style="font-size:14px;color:#6b7280;line-height:1.6;margin-top:24px;">
-      Questions? Reply to this email or give us a call${phoneNote}.
+    <p class="ltp-text-muted" style="font-size:14px;color:#6b7280;line-height:1.6;margin-top:24px;">
+      Questions? Reply to this email${contactNote}.
     </p>
 
     <div style="margin-top:32px;padding-top:18px;border-top:2px solid #e5e7eb;font-size:12px;color:#9ca3af;text-align:center;">
-      <div style="margin-bottom:4px;">
+      <div class="ltp-text-faint" style="margin-bottom:4px;color:#9ca3af;">
         My Town Postcard · P.O. Box 123 · Clarkesville, GA 30523
       </div>
       <div>

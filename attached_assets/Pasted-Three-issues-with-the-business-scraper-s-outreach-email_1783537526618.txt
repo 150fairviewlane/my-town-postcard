@@ -1,0 +1,18 @@
+Three issues with the business scraper's outreach email tool — the draft looks correct in the admin tool preview, but breaks in three specific ways once it actually reaches a recipient's inbox.
+
+1. Wrong phone number in the footer
+The email footer currently shows the scraped business's own phone number. Since we're not currently advertising a My Town Postcard phone number, inquiries should be directed to our website instead (not a phone number at all, or a generic contact method — confirm what we actually want to show: website URL only, or a website + separate business email).
+
+Investigate: is the footer template pulling the wrong field (e.g. reusing business.phone from the ad-generation data instead of a distinct "our contact info" value)? Find where the footer content is set and fix the field mapping.
+
+2. Ad image shows in admin preview but appears as a broken placeholder for the actual recipient
+My guess: this isn't a file-size issue — it's likely that the ad image is embedded as a base64 data URI, which renders fine in a browser (like the admin tool preview) but most real-world email clients (Gmail, Outlook, Apple Mail) don't render inline base64 images at all and show a broken placeholder instead, regardless of size.
+
+Investigate: how is the image currently embedded in the outgoing email (base64 data URI vs. a real hosted image URL vs. CID/inline attachment)? Confirm the actual cause before fixing. If it is a base64 embedding issue, the fix is either (a) upload the generated composite image somewhere it gets a real public URL and reference that URL in the email, or (b) attach the image as a CID inline attachment (a standard email technique for embedding images that don't rely on a public URL) — recommend which approach fits our existing infrastructure (we already generate/store these images somewhere for the admin preview) before implementing.
+
+3. Brand colors are shifting — burgundy appears peachy-pink, white background appears black
+My guess: this is a dark-mode email client auto-inversion issue. Several email clients (Apple Mail, Outlook dark mode, Gmail dark mode) automatically invert/remap colors in HTML email that doesn't explicitly declare its own color scheme, assuming the email was designed only for light mode.
+
+Investigate: does the email HTML currently include a color-scheme meta tag or explicit inline styles guarding against automatic dark-mode remapping (e.g. <meta name="color-scheme" content="light only">, forced background-color and color declarations with sufficient specificity, avoiding relying on transparent/default backgrounds)? Confirm this is actually what's happening (check the email HTML source, not just how it looks) before applying a fix, and report which email client(s) this was tested/observed in if known.
+
+For all three: report back what you find as the actual root cause for each before making changes, since my guesses above may not match what's actually in the code.
