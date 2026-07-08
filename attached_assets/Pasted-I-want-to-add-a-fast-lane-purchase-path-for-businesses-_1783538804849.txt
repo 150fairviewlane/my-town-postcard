@@ -1,0 +1,25 @@
+I want to add a "fast lane" purchase path for businesses who received a cold outreach email with their scraper-generated ad mockup, so they can buy a spot using that ad directly — without going through the normal ad generator.
+
+Feature description:
+
+1. Add a new button, "I Love My Ad - Sign Me Up!", placed above the existing "See Available Spots and Pricing" button on the city/territory landing page — but only shown when the visitor arrived via their specific outreach link (the /claim/<businessId> tracked redirect built earlier). For a normal visitor with no claim context, nothing changes — they see the site exactly as today.
+
+2. Clicking this button takes the visitor to a page/section on that same city's landing page showing: their own scraper-generated ad (the actual ad content, not the two-panel "Your Ad on Our Next Shared Postcard" email composite — just their ad) and the normal ad-spot picker for that city, so they can choose an available spot.
+
+3. Selecting a spot in this flow should skip the ad generator entirely (they already approved this ad via the cold email) and go directly to the payment/checkout step, using their existing generated ad as the ad content for that spot.
+
+4. Everything from checkout onward (payment, confirmation, QR code, tracking, email receipt) should be identical to a normal ad purchase — no shortcuts or differences downstream of payment.
+
+Before building, please investigate and report back on these specific integration points — this touches several systems built earlier and I want to confirm the right approach before code changes:
+
+A. How does /claim/<businessId> currently redirect to the city page? Does it pass any identifying parameter (like a businessId or claim token) in the URL that the city landing page could read to know "this visitor came from their own outreach ad" and conditionally show the new button? If not, what's needed to add that.
+
+B. Trace the normal purchase flow from spot selection to payment: where does a customer currently get routed into the ad generator after picking a spot, and what's the actual hook point where we could instead inject "use this pre-existing ad" and skip straight to checkout? Report the exact files/functions involved.
+
+C. Is the scraper-generated ad stored in a form that can be reused directly as a spot's ad content, or does it need reprocessing first? Specifically:
+   - The stored image includes the two-panel email composite (generated ad + "Your Ad on Our Next Shared Postcard" panel) — confirm whether the original single ad (before compositing) is still available separately, since only that should go to print.
+   - Confirm what model/quality tier was used to generate it (the outreach pipeline can use either grok-imagine-image or the quality tier) — recommend whether it should be regenerated at full quality now that the business is actually about to purchase and print, versus using the as-is version.
+
+D. Confirm how the QR code gets finalized: the scraper ad's QR currently points to the outreach-tracking /claim/<businessId> link, not a real purchase tracking code. Does routing this purchase through the normal post-payment webhook/confirmation flow (the same trackingCode.ts logic that swaps QR codes for every other purchase) correctly re-swap this ad's QR to the real /go/<slug> tracking URL automatically, or does this fast-lane path need special handling to make sure that swap still happens?
+
+Report your findings on A-D before writing any code, so we can confirm the right implementation approach together.
