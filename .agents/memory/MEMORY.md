@@ -16,3 +16,5 @@
 - [Admin image serve — no auth for static assets](admin-image-serve-auth.md) — img tags cannot send Bearer tokens; static reference PNGs served by /api/admin/template-image/:filename must omit requireAdmin middleware.
 - [Stripe SDK version lag](stripe-sdk-version-lag.md) — Stripe docs lead their Node SDK; verify methods exist in installed types before using them.
 - [Outreach pipeline — model safety and ad gate](outreach-pipeline-model-safety.md) — silent .catch() hid xAI deprecation for months; adError column now surfaces real failures; logo gate was untested assumption (removed); startup audit log lists all 3 model names.
+- [100dvh section below a sticky header](100dvh-below-sticky-header.md) — a `100dvh` section with `overflow:hidden` clips its own bottom content if an in-flow sticky header sits above it; subtract the header height.
+- [visualViewport pinch-zoom vs ResizeObserver](visualviewport-pinch-zoom.md) — native pinch-zoom fires ResizeObserver ticks too; check `visualViewport.scale` and skip layout recompute mid-gesture or your own resize logic fights the zoom.

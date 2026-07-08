@@ -350,18 +350,43 @@ export default function TerritoryLandingPage({ params }: { params: { slug: strin
   }, [campaign]);
 
   // Scroll to the ad picker (#book) when the URL contains a hash and the page is fully rendered.
+  //
+  // A single fixed-delay scroll isn't enough: the picker inside #book runs its own
+  // independent campaign fetch + ResizeObserver-driven sizing pass, which can settle
+  // after this page's own campaign has loaded and after we've already scrolled. That
+  // late layout shift used to push the viewport down onto the next section (Pricing)
+  // right after landing correctly on the picker. So we re-correct the scroll position
+  // every time #book resizes, for a short settle window after mount.
   useEffect(() => {
     if (isLoading || isError || !campaign) return;
     const hash = window.location.hash;
-    if (hash) {
-      const id = hash.replace("#", "");
-      const el = document.getElementById(id);
-      if (el) {
-        setTimeout(() => {
-          el.scrollIntoView({ behavior: "smooth", block: "start" });
-        }, 150);
-      }
-    }
+    if (!hash) return;
+    const id = hash.replace("#", "");
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    let cancelled = false;
+    let settleTimer: ReturnType<typeof setTimeout> | null = null;
+    const start = Date.now();
+    const scrollToTarget = () => {
+      if (cancelled) return;
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+
+    const ro = new ResizeObserver(() => {
+      if (cancelled || Date.now() - start > 2500) return;
+      if (settleTimer) clearTimeout(settleTimer);
+      settleTimer = setTimeout(scrollToTarget, 60);
+    });
+    ro.observe(el);
+
+    const initialTimer = setTimeout(scrollToTarget, 150);
+    return () => {
+      cancelled = true;
+      clearTimeout(initialTimer);
+      if (settleTimer) clearTimeout(settleTimer);
+      ro.disconnect();
+    };
   }, [isLoading, isError, campaign]);
 
   const copy = campaign ? buildCopy(campaign) : null;

@@ -739,6 +739,15 @@ useEffect(()=>()=>{if(grokListenerRef.current)window.removeEventListener('messag
 
 useEffect(()=>{
 function upd(){
+  // Skip our own container-width-driven layout recompute while the user is actively
+  // pinch-zoomed in (visualViewport.scale != 1). Native pinch zoom is a purely visual
+  // transform — it doesn't change CSS layout box sizes — but iOS/Android still fire
+  // ResizeObserver/visualViewport 'resize' ticks during the gesture. Recomputing our
+  // own `scale` state on those ticks used to fight the native zoom and made the picker
+  // visibly shrink instead of magnify. Real layout changes (orientation change, browser
+  // chrome show/hide) happen with visualViewport.scale back at 1, so those still recompute.
+  const vv=window.visualViewport;
+  if(vv&&Math.abs(vv.scale-1)>0.05)return;
   if(ref.current) setScale(ref.current.offsetWidth/W);
   if(containerRef.current) setContainerSize({w:containerRef.current.clientWidth,h:containerRef.current.clientHeight});
 }
@@ -746,7 +755,8 @@ upd();
 const ro=new ResizeObserver(upd);
 if(ref.current) ro.observe(ref.current);
 if(containerRef.current) ro.observe(containerRef.current);
-return()=>ro.disconnect();
+window.visualViewport?.addEventListener('resize',upd);
+return()=>{ro.disconnect();window.visualViewport?.removeEventListener('resize',upd);};
 },[]);
 
 const spots=side==="front"?FRONT:BACK;
@@ -761,19 +771,9 @@ const totF=7;
 const totB=8;
 
 return(<div style={{fontFamily:"sans-serif"}}>
-<style>{`@media (max-width: 768px) and (orientation: portrait) { .rotate-prompt { display: flex !important; } .postcard-section { display: none !important; } } @media (min-width: 769px), (orientation: landscape) { .rotate-prompt { display: none !important; } .postcard-section { display: flex !important; } }`}</style>
+<style>{`.postcard-section{display:flex}@media (max-width: 480px){.postcard-section{padding:6px 8px 8px !important}.postcard-title{font-size:17px !important}.postcard-subtitle{font-size:13px !important}.postcard-toggle-btn{padding:6px 14px !important;font-size:13px !important}.postcard-container{padding:2px 8px 6px !important}}`}</style>
 
-<div className="rotate-prompt" style={{display:"none",position:"fixed",inset:0,background:"#0f172a",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:999,gap:24,padding:32}}>
-  <div style={{fontSize:64,animation:"spin 2s linear infinite"}}>
-    <style>{`@keyframes spin{0%{transform:rotate(0deg)}50%{transform:rotate(90deg)}100%{transform:rotate(90deg)}}`}</style>
-    🔄
-  </div>
-  <div style={{color:"#fff",fontWeight:900,fontSize:22,fontFamily:"Georgia,serif",textAlign:"center"}}>Please rotate your device</div>
-  <div style={{color:"rgba(255,255,255,0.6)",fontSize:14,textAlign:"center",maxWidth:280,lineHeight:1.6}}>The postcard picker is designed for landscape view. Rotate your phone sideways for the best experience.</div>
-  <div style={{color:"rgba(255,255,255,0.3)",fontSize:40,marginTop:8}}>🔄</div>
-</div>
-
-<div className="postcard-section" style={{display:"flex",width:"100%",fontFamily:"sans-serif",background:"transparent",flexDirection:"column",boxSizing:"border-box",height:"100dvh",padding:"8px 20px 8px",overflow:"hidden"}}>
+<div className="postcard-section" style={{display:"flex",width:"100%",fontFamily:"sans-serif",background:"transparent",flexDirection:"column",boxSizing:"border-box",height:"calc(100dvh - var(--navbar-h, 72px))",padding:"8px 20px 8px",overflow:"hidden"}}>
   {pendingGrokAd&&(
     <div style={{background:"#1a2744",color:"#fff",borderRadius:8,padding:"8px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0,gap:12,marginBottom:6}}>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -800,21 +800,21 @@ return(<div style={{fontFamily:"sans-serif"}}>
     );
   })()}
   <div style={{textAlign:"center",marginBottom:2,flexShrink:0}}>
-    <div style={{fontSize:22,fontWeight:900,color:"#111",fontFamily:"Georgia,serif",letterSpacing:-0.3}}>Reserve Your Spot on {(campaign?.cityList?.split(",")[0]?.trim() || campaign?.territory || "Clarkesville").replace(/Counties\b/g, "County")}'s Postcard</div>
-    <div style={{fontSize:16,color:"#64748b",marginTop:1}}>Click any <span style={{color:"#16a34a",fontWeight:700}}>green spot</span> below to claim yours</div>
+    <div className="postcard-title" style={{fontSize:22,fontWeight:900,color:"#111",fontFamily:"Georgia,serif",letterSpacing:-0.3}}>Reserve Your Spot on {(campaign?.cityList?.split(",")[0]?.trim() || campaign?.territory || "Clarkesville").replace(/Counties\b/g, "County")}'s Postcard</div>
+    <div className="postcard-subtitle" style={{fontSize:16,color:"#64748b",marginTop:1}}>Click any <span style={{color:"#16a34a",fontWeight:700}}>green spot</span> below to claim yours</div>
   </div>
   <div style={{display:"flex",justifyContent:"center",marginBottom:2,flexShrink:0}}>
     <div style={{background:"#fff",borderRadius:12,padding:4,display:"flex",gap:3,boxShadow:"0 1px 8px rgba(0,0,0,0.1)"}}>
       {[{id:"front",l:"Front Side",sold:soldF,tot:totF},{id:"back",l:"Back Side",sold:soldB,tot:totB}].map(s=>(
-        <button key={s.id} onClick={()=>setSide(s.id)} style={{padding:"7px 22px",borderRadius:9,border:"none",cursor:"pointer",background:side===s.id?"linear-gradient(135deg,#991b1b,#7f1d1d)":"transparent",color:side===s.id?"#fff":"#64748b",fontWeight:700,fontSize:15,transition:"all 0.18s",lineHeight:1.3}}>
+        <button key={s.id} className="postcard-toggle-btn" onClick={()=>setSide(s.id)} style={{padding:"7px 22px",borderRadius:9,border:"none",cursor:"pointer",background:side===s.id?"linear-gradient(135deg,#991b1b,#7f1d1d)":"transparent",color:side===s.id?"#fff":"#64748b",fontWeight:700,fontSize:15,transition:"all 0.18s",lineHeight:1.3}}>
           {s.l}<br/>
           <span style={{fontSize:12,fontWeight:400,opacity:0.8}}>{s.sold} of {s.tot} sold</span>
         </button>
       ))}
     </div>
   </div>
-  <div ref={containerRef} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",minHeight:0,padding:"4px 20px 8px"}}>
-    <div ref={ref} style={{width:(containerSize.w>0&&containerSize.h>0)?`${Math.round(Math.min(containerSize.w-40,(containerSize.h-12)*12/9))}px`:"100%",maxWidth:(containerSize.w>0&&containerSize.h>0)?"none":"calc((100dvh - 160px) * 12 / 9)"}}>
+  <div ref={containerRef} className="postcard-container" style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",minHeight:0,padding:"4px 20px 8px"}}>
+    <div ref={ref} style={{width:(containerSize.w>0&&containerSize.h>0)?`${Math.round(Math.min(containerSize.w-20,(containerSize.h-12)*12/9))}px`:"100%",maxWidth:(containerSize.w>0&&containerSize.h>0)?"none":"calc((100dvh - 160px) * 12 / 9)"}}>
       <div style={{position:"relative",width:"100%",paddingBottom:"75%",background:"#c8c8c8",borderRadius:6,boxShadow:"0 0 0 7px #c8c8c8, 0 0 0 8.5px #a8a8a8, 0 16px 48px rgba(0,0,0,0.28), 0 4px 12px rgba(0,0,0,0.14)"}}>
         <div style={{position:"absolute",inset:0,overflow:"hidden",borderRadius:5,background:"#c8c8c8"}}>
           {spots.map(spot=>{

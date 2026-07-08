@@ -1,0 +1,13 @@
+The mobile experience for the ad picker needs several changes. Right now the site forces users to rotate their phone to landscape to get a bigger picker, and even then it's too small. I want the picker to just work well on mobile without any rotation requirement. Five specific changes:
+
+1. Remove the requirement/prompt to rotate the phone to landscape. The picker should be fully usable in portrait mode by default — no "please rotate your device" messaging or behavior.
+
+2. When a user taps a city on the landing page map, the city page should open scrolled/anchored directly to the ad picker section, not the pricing section (which is what happens today). Find where that navigation/scroll-target logic lives and fix the anchor.
+
+3. On mobile portrait, the ad picker should fill the available screen — not be a small embedded element on an otherwise normal-scrolling page. Investigate the current layout (container sizing, viewport units, any fixed dimensions) and make it take up the full usable viewport height/width on phone screens.
+
+4. If a user does rotate to landscape, the picker should also fill the screen in that orientation — same principle as #3, just for the other orientation.
+
+5. There's a real bug: when a user tries to pinch-zoom in on the picker on mobile, it currently gets smaller instead of larger. Before fixing, investigate the root cause — check the viewport meta tag (e.g. is there a maximum-scale or user-scalable=no restriction interfering with native pinch zoom), whether the picker is rendered as SVG/canvas with a fixed viewBox that a custom zoom control is manipulating incorrectly, and whether there's competing zoom logic (native browser zoom vs. a custom in-app zoom control) fighting each other. Report what's actually causing the inverse-zoom behavior before implementing a fix, since this sounds like it could be two zoom mechanisms conflicting rather than a simple CSS issue.
+
+Report back your findings on all five items — especially the root cause of #5 and the current layout structure behind #3/#4 — before making changes, so we can confirm the right approach for a picker component that's presumably used across many city pages.

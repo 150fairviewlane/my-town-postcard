@@ -98,6 +98,17 @@ export function NavBar() {
     return () => obs.disconnect();
   }, []);
 
+  // The header always occupies its own flow height (72px mobile / 92px desktop)
+  // above #book, whether it's currently "sticky" or "relative" — sticky elements
+  // still reserve their normal-flow slot. The picker sizes itself to 100dvh
+  // internally, which — left unaccounted for — overshoots the true remaining
+  // viewport space by exactly this header height and clips its own bottom rows
+  // (its wrapper uses overflow:hidden). Publish the header height as a CSS var
+  // so the picker can size itself to `calc(100dvh - navbar height)` instead.
+  useEffect(() => {
+    document.documentElement.style.setProperty("--navbar-h", isMobile ? "72px" : "92px");
+  }, [isMobile]);
+
   const handleNav = (id: string) => {
     setMenuOpen(false);
     setTimeout(() => scrollTo(id), 50);
