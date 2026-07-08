@@ -641,8 +641,11 @@ export async function markSpotPaidAndNotify(
         });
         await db.update(spotsTable).set({ templateData: td }).where(eq(spotsTable.id, spotId));
         logger.info({ spotId, claimBusinessId }, "Claim ad injected into templateData via webhook");
-        db.insert(businessClaimEventsTable).values({ businessId: claimBusinessId })
-          .catch((err: any) => logger.warn({ err: err?.message, claimBusinessId }, "claim event insert failed"));
+        db.insert(businessClaimEventsTable).values({
+          businessId: claimBusinessId,
+          spotId,
+          orderId: order?.id ?? null,
+        }).catch((err: any) => logger.warn({ err: err?.message, claimBusinessId }, "claim event insert failed"));
       }
     } catch (claimErr: any) {
       logger.warn({ err: claimErr?.message, claimBusinessId }, "claim templateData injection failed — non-critical");

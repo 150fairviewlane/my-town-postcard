@@ -373,9 +373,11 @@ router.post("/checkout/confirm", async (req, res): Promise<void> => {
         });
         await db.update(spotsTable).set({ templateData: td }).where(eq(spotsTable.id, body.data.spotId));
         req.log.info({ spotId: body.data.spotId, claimBizId: claimBizIdConfirm }, "Claim ad injected into templateData");
-        // Record the engagement event — fire-and-forget
+        // Record the engagement event with spot + order linkage — fire-and-forget
         db.insert(businessClaimEventsTable).values({
           businessId: claimBizIdConfirm,
+          spotId: body.data.spotId,
+          orderId: order?.id ?? null,
           ipAddress: ((req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() ?? req.ip ?? null),
           userAgent: (req.headers["user-agent"] as string | undefined) ?? null,
           referrer: (req.headers["referer"] as string | undefined) ?? null,

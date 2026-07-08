@@ -1075,6 +1075,7 @@ router.get("/outreach/claim-preview/:businessId", async (req, res): Promise<void
       phone: scrapedBusinessesTable.phone,
       website: scrapedBusinessesTable.website,
       adImageUrl: scrapedBusinessesTable.adImageUrl,
+      adTemplate: scrapedBusinessesTable.adTemplate,
       emailStatus: scrapedBusinessesTable.emailStatus,
     })
     .from(scrapedBusinessesTable)
@@ -1094,6 +1095,7 @@ router.get("/outreach/claim-preview/:businessId", async (req, res): Promise<void
     phone: row.phone ?? null,
     website: row.website ?? null,
     adImageUrl: row.adImageUrl ?? null,
+    adTemplate: row.adTemplate ?? null,
   });
 });
 
