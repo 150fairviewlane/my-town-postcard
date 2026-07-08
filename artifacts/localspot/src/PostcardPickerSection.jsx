@@ -486,11 +486,78 @@ return(<ScaledCell spot={spot} scale={scale}>{spot.size==="XL"&&<AdXL d={d} tmpl
 const FRONT_GRID_MAP = { xl1:"mb", xl2:"dn", xl3:"re", l1:"l1", l2:"l2", l3:"l3", l4:"l4" };
 const BACK_GRID_MAP  = { bxl1:"bxl", bxl2:"bxl2", bxl3:"bxl3", bm1:"bm1", bm2:"bm2", bm3:"bm3", bm4:"bm4", bs1:"bs1" };
 
+// ── Claim fast-lane banner ─────────────────────────────────────────────────────
+// Shown when ?claim=<businessId> is in the URL. Renders the composite ad
+// immediately (via ad-image endpoint), then fires a background regen to
+// produce a full-quality single-panel ad and swaps it in when ready.
+function ClaimSection({businessId,scrollTargetId}){
+  const [preview,setPreview]=useState(null);
+  const base=(import.meta.env.BASE_URL||"/").replace(/\/$/,"");
+  const [adSrc,setAdSrc]=useState(`${base}/api/outreach/ad-image/${businessId}`);
+  const [regenStatus,setRegenStatus]=useState("loading");
+  const [dismissed,setDismissed]=useState(false);
+
+  useEffect(()=>{
+    if(!businessId)return;
+    let cancelled=false;
+    fetch(`${base}/api/outreach/claim-preview/${businessId}`)
+      .then(r=>r.ok?r.json():null)
+      .then(d=>{if(!cancelled&&d)setPreview(d);})
+      .catch(()=>{});
+    fetch(`${base}/api/outreach/claim-regenerate/${businessId}`,{method:"POST"})
+      .then(r=>r.ok?r.json():null)
+      .then(d=>{
+        if(cancelled)return;
+        if(d?.dataUrl){setAdSrc(d.dataUrl);setRegenStatus("done");}
+        else setRegenStatus("error");
+      })
+      .catch(()=>{if(!cancelled)setRegenStatus("error");});
+    return()=>{cancelled=true;};
+  },[businessId,base]);
+
+  useEffect(()=>{
+    if(!preview||!scrollTargetId)return;
+    const el=document.getElementById(scrollTargetId);
+    if(el)setTimeout(()=>el.scrollIntoView({behavior:"smooth",block:"start"}),400);
+  },[preview,scrollTargetId]);
+
+  if(dismissed||!businessId)return null;
+  const bizName=preview?.businessName||"your business";
+  const city=preview?.city||"";
+
+  return(
+    <div style={{background:"linear-gradient(135deg,#fff9f0,#fff3e0)",border:"2px solid #C9A84C",borderRadius:12,padding:"20px 20px 16px",marginBottom:12,flexShrink:0,position:"relative"}}>
+      <button onClick={()=>setDismissed(true)} aria-label="Dismiss" style={{position:"absolute",top:8,right:10,background:"none",border:"none",fontSize:18,color:"#9ca3af",cursor:"pointer",lineHeight:1}}>×</button>
+      <div style={{display:"flex",gap:16,alignItems:"flex-start",flexWrap:"wrap"}}>
+        <div style={{flex:"0 0 auto",maxWidth:200,minWidth:120}}>
+          <img src={adSrc} alt={`Sample ad for ${bizName}`}
+            style={{width:"100%",borderRadius:8,boxShadow:"0 2px 12px rgba(0,0,0,0.18)",display:"block"}}
+            onError={e=>{e.currentTarget.style.display="none";}}/>
+          {regenStatus==="loading"&&<div style={{fontSize:11,color:"#6b7280",textAlign:"center",marginTop:4}}>⏳ Upgrading quality…</div>}
+          {regenStatus==="done"&&<div style={{fontSize:11,color:"#16a34a",textAlign:"center",marginTop:4,fontWeight:700}}>✓ Full quality ready</div>}
+        </div>
+        <div style={{flex:"1 1 160px"}}>
+          <div style={{fontFamily:"Georgia,serif",fontSize:17,fontWeight:900,color:"#7B1418",marginBottom:6,lineHeight:1.3}}>
+            We created this ad for {bizName}!
+          </div>
+          <p style={{fontSize:13,color:"#374151",lineHeight:1.6,margin:"0 0 10px"}}>
+            {city?`Your ${city} neighbors will see this on 5,000 local postcards. `:"Your neighbors will see this on 5,000 local postcards. "}
+            Pick an open spot below to claim yours.
+          </p>
+          <div style={{fontSize:12,color:"#9ca3af"}}>↓ Choose your spot below</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PostcardPicker({slug}={}){
 const search=useSearch();
 const params=new URLSearchParams(search);
 const initialSide=params.get("side")==="back"?"back":"front";
 const highlightArea=params.get("highlight")||null;
+const claimParam=params.get("claim");
+const claimBusinessId=claimParam?parseInt(claimParam,10):null;
 const [side,setSide]=useState(initialSide);
 const [scale,setScale]=useState(0.5);
 const [hov,setHov]=useState(null);
@@ -662,7 +729,11 @@ const handleComplete=async(formData,selOverride,sideOverride)=>{
     });
     setSel(null);
     localStorage.removeItem(PENDING_AD_KEY);
-    navigate(`/checkout/${result.id}${slug ? `?from=${encodeURIComponent(slug)}` : ""}`);
+    const qsParts=[];
+    if(slug)qsParts.push(`from=${encodeURIComponent(slug)}`);
+    if(claimBusinessId&&Number.isFinite(claimBusinessId))qsParts.push(`claimId=${claimBusinessId}`);
+    navigate(`/checkout/${result.id}${qsParts.length?`?${qsParts.join("&")}`:""}`);
+
   }catch(err){
     console.error('[handleComplete] caught error:',err);
     setReserveError(err?.data?.error||err?.message||"Something went wrong. Please try again.");
@@ -774,6 +845,9 @@ return(<div style={{fontFamily:"sans-serif"}}>
 <style>{`.postcard-section{display:flex}@media (max-width: 480px){.postcard-section{padding:6px 8px 8px !important}.postcard-title{font-size:17px !important}.postcard-subtitle{font-size:13px !important}.postcard-toggle-btn{padding:6px 14px !important;font-size:13px !important}.postcard-container{padding:2px 8px 6px !important}}`}</style>
 
 <div className="postcard-section" style={{display:"flex",width:"100%",fontFamily:"sans-serif",background:"transparent",flexDirection:"column",boxSizing:"border-box",height:"calc(100dvh - var(--navbar-h, 72px))",padding:"8px 20px 8px",overflow:"hidden"}}>
+  {claimBusinessId&&Number.isFinite(claimBusinessId)&&(
+    <ClaimSection businessId={claimBusinessId} scrollTargetId="book"/>
+  )}
   {pendingGrokAd&&(
     <div style={{background:"#1a2744",color:"#fff",borderRadius:8,padding:"8px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0,gap:12,marginBottom:6}}>
       <div style={{display:"flex",alignItems:"center",gap:10}}>

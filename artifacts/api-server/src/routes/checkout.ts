@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, and, isNull } from "drizzle-orm";
-import { db, spotsTable, ordersTable, campaignsTable } from "@workspace/db";
+import { db, spotsTable, ordersTable, campaignsTable, businessClaimEventsTable } from "@workspace/db";
+import { getCachedAd } from "../lib/claimRegenCache.js";
 import {
   CreatePaymentIntentBody,
   CreatePaymentIntentResponse,
@@ -105,6 +106,21 @@ router.post("/checkout/create-payment-intent", async (req, res): Promise<void> =
   // reloads, or tab refreshes. A new reservation (different expiresAt)
   // produces a fresh intent. We hash to keep keys ≤ 255 chars even for
   // edge cases.
+  // Read optional claimBusinessId from the request body (sent by the claim
+  // fast-lane checkout flow). Zod strips unknown fields from body.data, so we
+  // read req.body directly. This is stored in PI metadata so the confirm
+  // handler and webhook can inject the cached single-panel ad into templateData.
+  const rawClaimId = req.body?.claimBusinessId;
+  const claimBizId = rawClaimId !== undefined ? parseInt(String(rawClaimId), 10) : NaN;
+  const hasClaimId = Number.isFinite(claimBizId) && claimBizId > 0;
+
+  const piMetadata: Record<string, string> = {
+    spotId: String(spot.id),
+    businessName: spot.businessName ?? "",
+    businessCategory: spot.businessCategory ?? "",
+  };
+  if (hasClaimId) piMetadata.claimBusinessId = String(claimBizId);
+
   const reservationFingerprint = `${spot.id}-${spot.expiresAt?.getTime() ?? "noexp"}-${spot.price}`;
   const paymentIntent = await stripe.paymentIntents.create(
     {
@@ -114,11 +130,7 @@ router.post("/checkout/create-payment-intent", async (req, res): Promise<void> =
       // collects card details, and leaving this empty would let Stripe
       // negotiate other methods (e.g. Link, Cash App) that need extra UI.
       payment_method_types: ["card"],
-      metadata: {
-        spotId: String(spot.id),
-        businessName: spot.businessName ?? "",
-        businessCategory: spot.businessCategory ?? "",
-      },
+      metadata: piMetadata,
     },
     { idempotencyKey: `pi-spot-${reservationFingerprint}` },
   );
@@ -308,6 +320,36 @@ router.post("/checkout/confirm", async (req, res): Promise<void> => {
     req.log.info({ spotId: spot.id, trackingCode: code }, "Tracking code ensured for paid spot");
   } catch (err) {
     req.log.error({ err, spotId: spot.id }, "Failed to assign tracking code — continuing");
+  }
+
+  // Inject claim fast-lane single-panel ad into templateData before QR swap.
+  // Must happen BEFORE swapGrokQrInTemplateData so the QR can be composited
+  // onto the freshly injected ad. Reads from the server-side in-memory cache
+  // populated by POST /api/outreach/claim-regenerate/:businessId.
+  const claimIdStr = intent.metadata?.claimBusinessId;
+  const claimBizIdConfirm = claimIdStr ? parseInt(String(claimIdStr), 10) : NaN;
+  if (Number.isFinite(claimBizIdConfirm) && claimBizIdConfirm > 0) {
+    try {
+      const claimEntry = getCachedAd(claimBizIdConfirm);
+      if (claimEntry) {
+        const td = JSON.stringify({
+          finishedAdUrl: claimEntry.dataUrl,
+          template: claimEntry.template,
+          sizeKey: claimEntry.sizeKey,
+        });
+        await db.update(spotsTable).set({ templateData: td }).where(eq(spotsTable.id, body.data.spotId));
+        req.log.info({ spotId: body.data.spotId, claimBizId: claimBizIdConfirm }, "Claim ad injected into templateData");
+        // Record the engagement event — fire-and-forget
+        db.insert(businessClaimEventsTable).values({
+          businessId: claimBizIdConfirm,
+          ipAddress: ((req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() ?? req.ip ?? null),
+          userAgent: (req.headers["user-agent"] as string | undefined) ?? null,
+          referrer: (req.headers["referer"] as string | undefined) ?? null,
+        }).catch((err: any) => req.log.warn({ err: err?.message, claimBizId: claimBizIdConfirm }, "claim event insert failed"));
+      }
+    } catch (claimErr: any) {
+      req.log.warn({ err: claimErr?.message, claimBizId: claimBizIdConfirm }, "claim templateData injection failed — non-critical");
+    }
   }
 
   // Swap the generic preview QR in any Grok-generated ad stored in

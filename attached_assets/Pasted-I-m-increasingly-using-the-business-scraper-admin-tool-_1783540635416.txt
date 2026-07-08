@@ -1,0 +1,20 @@
+I'm increasingly using the business scraper admin tool as a lightweight CRM to track outreach to scraped businesses. I want to add several fields and capabilities to support that.
+
+1. Notes field
+Add a free-text notes field per business, editable directly in the admin scraper UI (e.g. a text area in the business detail view or an inline-editable cell in the table). This should let me log communication history — calls made, conversations had, follow-up context — per business. Auto-save on blur or a simple "Save Note" button, whichever fits the existing UI patterns in this tool.
+
+2. Contact status / pipeline stage
+Add a status field per business with a small set of stages, e.g.: Not Contacted → Emailed → Replied → Interested → Converted → Not Interested. Show this as a dropdown/selector in the business table, and make the table filterable/sortable by status so I can see "who's still Not Contacted" or "who's Interested" at a glance.
+
+3. Last contacted / next follow-up dates
+Add two date fields: last_contacted_at (can auto-update when an outreach email is sent, or be manually set) and next_follow_up_at (manually set by me). Show both in the table, and make the table sortable by next_follow_up_at so I can see who's due for a follow-up.
+
+4. Facebook Page URL
+Check whether Outscraper's business search response includes a Facebook Page URL field for businesses that have one (many local businesses list a Facebook Page even without a standalone website). If available, capture and store it during scraping, add a new column to the results table, and display it in the admin UI as a clickable link that opens the business's Facebook Page in a new tab. If Outscraper doesn't return this natively, check if there's a way to request it (e.g. a specific field parameter) or if it would require an additional lookup — report what's actually available before implementing.
+
+Note: this Facebook Page URL field is for manual reference only — I will NOT be automating any messaging through Facebook Messenger. This is purely a convenience link so I (or a dealer) can quickly click through and manually message a business that has a Facebook Page but no website.
+
+5. Activity timeline (nice-to-have, lower priority than 1-4)
+If reasonably easy given the existing schema, show a simple chronological view per business combining: notes added, status changes, outreach email sent/clicked (we already track this via outreachEmailClicksTable), and claim events (businessClaimEventsTable) if the fast-lane purchase feature has landed by the time this is built. This is a nice-to-have — don't over-invest in it if it adds significant complexity; a simple table/list is fine, no need for a polished visual timeline.
+
+Report back what Outscraper actually returns for Facebook Page URLs before implementing item 4, and confirm your planned schema changes for items 1-3 before building.

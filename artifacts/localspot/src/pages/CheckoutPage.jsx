@@ -430,7 +430,10 @@ export default function CheckoutPage() {
   const { spotId } = useParams();
   const [, navigate] = useLocation();
   const search = useSearch();
-  const fromSlug = new URLSearchParams(search).get("from") || "";
+  const searchParams = new URLSearchParams(search);
+  const fromSlug = searchParams.get("from") || "";
+  const claimIdParam = searchParams.get("claimId");
+  const claimBusinessId = claimIdParam ? parseInt(claimIdParam, 10) : null;
   const [intentData, setIntentData] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [stripeLoadError, setStripeLoadError] = useState(null);
@@ -471,7 +474,7 @@ export default function CheckoutPage() {
     (async () => {
       try {
         const result = await createIntentMutation.mutateAsync({
-          data: { spotId: parseInt(spotId) },
+          data: { spotId: parseInt(spotId), ...(claimBusinessId && Number.isFinite(claimBusinessId) ? { claimBusinessId } : {}) },
         });
         if (!cancelled) setIntentData(result);
       } catch (err) {

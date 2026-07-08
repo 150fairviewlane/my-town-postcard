@@ -361,6 +361,12 @@ export interface OutreachAdParams {
    * Defaults to false — use the standard model for bulk outreach sweeps.
    */
   quality?: boolean;
+  /**
+   * When true, skips the two-panel compositeEmailPanel step and returns the
+   * single-panel ad directly. Use for "claim" fast-lane regeneration where
+   * the ad is stored as a print-quality single panel in templateData.
+   */
+  skipComposite?: boolean;
 }
 
 export interface GeneratedAd {
@@ -537,13 +543,15 @@ export async function generateAdForOutreach(
   }
 
   // Composite the ad with the "Your Ad on Our Next Shared Postcard" right panel
-  // to create the two-panel email image. Falls back gracefully to the standalone
-  // ad if the panel asset is missing or sharp fails.
-  try {
-    imgBuf = await compositeEmailPanel(imgBuf);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    process.stderr.write(`[outreach] compositeEmailPanel failed: ${msg}\n`);
+  // to create the two-panel email image. Skipped when skipComposite is true
+  // (claim fast-lane path stores single-panel ad in spot.templateData).
+  if (!params.skipComposite) {
+    try {
+      imgBuf = await compositeEmailPanel(imgBuf);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      process.stderr.write(`[outreach] compositeEmailPanel failed: ${msg}\n`);
+    }
   }
 
   return {

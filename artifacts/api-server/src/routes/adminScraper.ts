@@ -2,7 +2,8 @@ import { Router, type IRouter } from "express";
 import { eq, desc, and, ilike, or, sql, gte, isNull, isNotNull, inArray } from "drizzle-orm";
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
-import { db, scrapedBusinessesTable, outreachEmailClicksTable } from "@workspace/db";
+import { db, scrapedBusinessesTable, outreachEmailClicksTable, businessClaimEventsTable } from "@workspace/db";
+import { getCachedAd, setCachedAd, checkAndIncrementIpLimit, checkAndIncrementGlobalCap } from "../lib/claimRegenCache.js";
 import { searchBusinesses } from "../lib/outscraper.js";
 import { extractLogo } from "../lib/logoExtractor.js";
 import { filterLogo } from "../lib/logoFilter.js";
@@ -128,9 +129,9 @@ function buildEmailDraft(business: {
 
   const token = unsubToken(googleId);
   const unsubUrl = `${APP_URL}/api/outreach/unsubscribe?id=${encodeURIComponent(googleId)}&token=${encodeURIComponent(token)}`;
-  // Click-tracking redirect — records who clicked and when, then sends them to
-  // the spot picker. claimUrl kept as the final redirect destination.
-  const claimUrl = `${APP_URL}/`;
+  // Primary "I Love My Ad" CTA — goes directly to the territory picker with
+  // the business ID pre-loaded so the claim section auto-expands.
+  const claimUrl = `${APP_URL}/?claim=${business.id}`;
   const trackUrl = `${APP_URL}/api/outreach/click/${business.id}`;
   // NOTE: this previously read `business.phone` — the SCRAPED recipient's own
   // phone number — telling them to "call us" at their own business line. We
@@ -214,10 +215,16 @@ function buildEmailDraft(business: {
       Spots are limited and sold on a first-come basis.
     </p>
 
-    <div style="text-align:center;margin:28px 0;">
-      <a href="${trackUrl}" style="display:inline-block;padding:14px 32px;background:#7B1418;background-color:#7B1418;color:#fff;
-        font-weight:700;font-size:15px;border-radius:8px;text-decoration:none;">
-        See Available Spots and Pricing →
+    <div style="text-align:center;margin:32px 0 12px;">
+      <a href="${claimUrl}" style="display:inline-block;padding:16px 36px;background:#7B1418;background-color:#7B1418;color:#fff;
+        font-weight:800;font-size:16px;border-radius:8px;text-decoration:none;letter-spacing:0.2px;">
+        &#x2713; I Love My Ad &#x2014; Sign Me Up!
+      </a>
+    </div>
+    <div style="text-align:center;margin:0 0 28px;">
+      <a href="${trackUrl}" style="display:inline-block;padding:10px 24px;color:#6b7280;
+        font-weight:600;font-size:14px;text-decoration:underline;">
+        Browse available spots and pricing →
       </a>
     </div>
 
@@ -1032,7 +1039,8 @@ router.get("/admin/outreach/stats", requireAdmin, async (_req, res): Promise<voi
 });
 
 // ── Public: GET /api/outreach/ad-image/:id ────────────────────────────────────
-// Serves the stored ad PNG by business ID (no auth — needed for email img src)
+// Serves the stored ad image (PNG or JPEG) by business ID — no auth required,
+// needed for <img> tags in emails and the claim section.
 router.get("/outreach/ad-image/:id", async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (!id) { res.status(400).send("Invalid id"); return; }
@@ -1042,13 +1050,109 @@ router.get("/outreach/ad-image/:id", async (req, res): Promise<void> => {
     .where(eq(scrapedBusinessesTable.id, id))
     .limit(1);
   const dataUrl = row?.adImageUrl;
-  if (!dataUrl?.startsWith("data:image/png;base64,")) {
-    res.status(404).send("Not found"); return;
-  }
-  const b64 = dataUrl.replace("data:image/png;base64,", "");
-  res.setHeader("Content-Type", "image/png");
+  if (!dataUrl?.startsWith("data:image/")) { res.status(404).send("Not found"); return; }
+  const match = dataUrl.match(/^data:(image\/[a-z+]+);base64,(.+)$/);
+  if (!match) { res.status(404).send("Not found"); return; }
+  res.setHeader("Content-Type", match[1]);
   res.setHeader("Cache-Control", "public, max-age=86400");
-  res.send(Buffer.from(b64, "base64"));
+  res.send(Buffer.from(match[2], "base64"));
+});
+
+// ── Public: GET /api/outreach/claim-preview/:businessId ───────────────────────
+// Returns business info + composite ad for the fast-lane claim section.
+// No auth — opened when the business clicks "I Love My Ad" in the email.
+router.get("/outreach/claim-preview/:businessId", async (req, res): Promise<void> => {
+  const businessId = Number(req.params.businessId);
+  if (!businessId) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const [row] = await db
+    .select({
+      id: scrapedBusinessesTable.id,
+      businessName: scrapedBusinessesTable.businessName,
+      city: scrapedBusinessesTable.city,
+      state: scrapedBusinessesTable.state,
+      category: scrapedBusinessesTable.category,
+      adImageUrl: scrapedBusinessesTable.adImageUrl,
+      emailStatus: scrapedBusinessesTable.emailStatus,
+    })
+    .from(scrapedBusinessesTable)
+    .where(eq(scrapedBusinessesTable.id, businessId))
+    .limit(1);
+
+  if (!row) { res.status(404).json({ error: "Not found" }); return; }
+  if (row.emailStatus === "opted-out") { res.status(403).json({ error: "Opted out" }); return; }
+
+  res.json({
+    businessId: row.id,
+    businessName: row.businessName,
+    city: row.city,
+    state: row.state,
+    category: row.category ?? null,
+    adImageUrl: row.adImageUrl ?? null,
+  });
+});
+
+// ── Public: POST /api/outreach/claim-regenerate/:businessId ───────────────────
+// Generates (or returns cached) a single-panel print-quality ad for the claim
+// fast-lane. Rate-limited per-IP (10/hr) and globally (200/day).
+router.post("/outreach/claim-regenerate/:businessId", async (req, res): Promise<void> => {
+  const businessId = Number(req.params.businessId);
+  if (!businessId) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  // Return cached ad immediately — no Grok call needed.
+  const cached = getCachedAd(businessId);
+  if (cached) {
+    res.json({ dataUrl: cached.dataUrl, template: cached.template, sizeKey: cached.sizeKey, cached: true });
+    return;
+  }
+
+  // Abuse protection: per-IP and global rate limits.
+  const ip = ((req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() ?? req.ip ?? "unknown");
+  if (!checkAndIncrementIpLimit(ip)) {
+    res.status(429).json({ error: "Rate limit exceeded. Please try again in an hour." });
+    return;
+  }
+  if (!checkAndIncrementGlobalCap()) {
+    res.status(429).json({ error: "Daily regeneration limit reached. Please try again tomorrow." });
+    return;
+  }
+
+  const [row] = await db
+    .select({
+      businessName: scrapedBusinessesTable.businessName,
+      city: scrapedBusinessesTable.city,
+      state: scrapedBusinessesTable.state,
+      category: scrapedBusinessesTable.category,
+      phone: scrapedBusinessesTable.phone,
+      website: scrapedBusinessesTable.website,
+      emailStatus: scrapedBusinessesTable.emailStatus,
+    })
+    .from(scrapedBusinessesTable)
+    .where(eq(scrapedBusinessesTable.id, businessId))
+    .limit(1);
+
+  if (!row) { res.status(404).json({ error: "Not found" }); return; }
+  if (row.emailStatus === "opted-out") { res.status(403).json({ error: "Opted out" }); return; }
+
+  try {
+    const adParams: OutreachAdParams = {
+      bizName: row.businessName,
+      category: row.category ?? null,
+      phone: row.phone ?? null,
+      address: null,
+      city: row.city,
+      state: row.state,
+      website: row.website ?? null,
+      skipComposite: true,
+      quality: true,
+    };
+    const result = await generateAdForOutreach(adParams);
+    setCachedAd(businessId, result.imageUrl, result.template, "l");
+    res.json({ dataUrl: result.imageUrl, template: result.template, sizeKey: "l", cached: false });
+  } catch (err: any) {
+    logger.error({ err: err?.message, businessId }, "claim-regenerate: generateAdForOutreach failed");
+    res.status(500).json({ error: "Ad generation failed. Please try again." });
+  }
 });
 
 // ── Public: GET /api/outreach/unsubscribe ─────────────────────────────────────

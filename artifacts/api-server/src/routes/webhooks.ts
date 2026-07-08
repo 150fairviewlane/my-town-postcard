@@ -1,6 +1,7 @@
 import { type Request, type Response } from "express";
 import { eq, and, isNull, sql } from "drizzle-orm";
-import { db, spotsTable, ordersTable, campaignsTable, spotSubscriptionsTable, dealersTable } from "@workspace/db";
+import { db, spotsTable, ordersTable, campaignsTable, spotSubscriptionsTable, dealersTable, businessClaimEventsTable } from "@workspace/db";
+import { getCachedAd } from "../lib/claimRegenCache.js";
 import { sendAdProofEmail, sendAdminNewOrder, sendDealerNewSaleEmail } from "../lib/emails";
 import { computeCommissionCents } from "../lib/commission";
 import { ensureTrackingCode, swapGrokQrInTemplateData } from "../lib/trackingCode";
@@ -416,11 +417,17 @@ async function handlePaymentIntentSucceeded(
     );
     return;
   }
+  // Propagate claim businessId from PI metadata so markSpotPaidAndNotify can
+  // inject the cached single-panel ad into templateData before the QR swap.
+  const claimBizIdStr = intent.metadata?.claimBusinessId;
+  const claimBizId = claimBizIdStr ? parseInt(String(claimBizIdStr), 10) : NaN;
+  const claimBusinessId = Number.isFinite(claimBizId) && claimBizId > 0 ? claimBizId : undefined;
   await markSpotPaidAndNotify(
     spotId,
     intent.id,
     typeof intent.amount === "number" ? intent.amount : null,
     req,
+    claimBusinessId,
   );
 }
 
@@ -437,6 +444,7 @@ export async function markSpotPaidAndNotify(
   paymentRef: string,
   amountCentsFromEvent: number | null,
   req: Request,
+  claimBusinessId?: number,
 ): Promise<void> {
   // Idempotency: if we already recorded an order for this payment reference,
   // we're done. Stripe retries webhooks, and the synchronous /checkout/confirm
@@ -584,6 +592,27 @@ export async function markSpotPaidAndNotify(
     req.log.info({ spotId, trackingCode: code }, "Tracking code ensured for paid spot");
   } catch (err) {
     req.log.error({ err, spotId }, "Failed to assign tracking code — continuing");
+  }
+
+  // Inject claim fast-lane single-panel ad into templateData before QR swap.
+  // Reads from the server-side cache written by claim-regenerate endpoint.
+  if (claimBusinessId) {
+    try {
+      const claimEntry = getCachedAd(claimBusinessId);
+      if (claimEntry) {
+        const td = JSON.stringify({
+          finishedAdUrl: claimEntry.dataUrl,
+          template: claimEntry.template,
+          sizeKey: claimEntry.sizeKey,
+        });
+        await db.update(spotsTable).set({ templateData: td }).where(eq(spotsTable.id, spotId));
+        logger.info({ spotId, claimBusinessId }, "Claim ad injected into templateData via webhook");
+        db.insert(businessClaimEventsTable).values({ businessId: claimBusinessId })
+          .catch((err: any) => logger.warn({ err: err?.message, claimBusinessId }, "claim event insert failed"));
+      }
+    } catch (claimErr: any) {
+      logger.warn({ err: claimErr?.message, claimBusinessId }, "claim templateData injection failed — non-critical");
+    }
   }
 
   // Swap the generic preview QR in any Grok-generated ad stored in
