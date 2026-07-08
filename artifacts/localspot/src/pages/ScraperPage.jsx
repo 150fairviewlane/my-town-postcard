@@ -29,6 +29,13 @@ const STATUS_COLORS = {
   queued:           { bg: "#ede9fe", color: "#6d28d9" },
   sent:             { bg: "#dcfce7", color: "#15803d" },
   "opted-out":      { bg: "#f3f4f6", color: "#6b7280" },
+  // CRM contact statuses
+  not_contacted:    { bg: "#f3f4f6", color: "#6b7280" },
+  emailed:          { bg: "#dbeafe", color: "#1d4ed8" },
+  replied:          { bg: "#ede9fe", color: "#6d28d9" },
+  interested:       { bg: "#fef9c3", color: "#92400e" },
+  converted:        { bg: "#dcfce7", color: "#15803d" },
+  not_interested:   { bg: "#fee2e2", color: "#991b1b" },
 };
 
 function StatusBadge({ value }) {
@@ -304,30 +311,54 @@ function BulkButton({ label, endpoint, payload, title }) {
 
 // ── Businesses Tab ─────────────────────────────────────────────────────────────
 
+function SortHeader({ label, field, sortBy, onSort }) {
+  const active = sortBy === field;
+  return (
+    <span
+      onClick={() => onSort(active ? "" : field)}
+      style={{ cursor: "pointer", userSelect: "none", display: "inline-flex", alignItems: "center", gap: 3 }}
+      title={`Sort by ${label}`}
+    >
+      {label}
+      <span style={{ fontSize: 10, color: active ? "#991b1b" : "#d1d5db" }}>
+        {field === "last_contacted_at" ? "▼" : "▲"}
+      </span>
+    </span>
+  );
+}
+
 function BusinessesTab() {
   const [businesses, setBusinesses] = useState([]);
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
-  const [filters, setFilters] = useState({ city: "", state: "", email_status: "", logo_status: "", ad_status: "", q: "" });
+  const [filters, setFilters] = useState({ city: "", state: "", email_status: "", logo_status: "", ad_status: "", contact_status: "", q: "" });
+  const [sortBy, setSortBy] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [expanded, setExpanded] = useState(null);
   const LIMIT = 25;
 
-  const load = useCallback(async (newOffset = 0) => {
+  const load = useCallback(async (newOffset = 0, overrideSortBy) => {
     setLoading(true); setError(null);
     try {
       const params = new URLSearchParams({ limit: String(LIMIT), offset: String(newOffset) });
       Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v); });
+      const sb = overrideSortBy !== undefined ? overrideSortBy : sortBy;
+      if (sb) params.set("sort_by", sb);
       const data = await apiFetch(`/admin/outreach/businesses?${params}`);
       setBusinesses(data.businesses ?? []);
       setTotal(data.total ?? 0);
       setOffset(newOffset);
     } catch (err) { setError(err.message); }
     finally { setLoading(false); }
-  }, [filters]);
+  }, [filters, sortBy]);
 
   useEffect(() => { load(0); }, [load]);
+
+  const handleSort = (field) => {
+    setSortBy(field);
+    load(0, field);
+  };
 
   const filterInputStyle = {
     padding: "6px 10px", borderRadius: 6, border: "1.5px solid #e5e7eb",
@@ -364,6 +395,16 @@ function BusinessesTab() {
           <option value="sent">sent</option>
           <option value="opted-out">opted-out</option>
         </select>
+        <select style={filterInputStyle} value={filters.contact_status}
+          onChange={(e) => setFilters((f) => ({ ...f, contact_status: e.target.value }))}>
+          <option value="">Status: all</option>
+          <option value="not_contacted">Not Contacted</option>
+          <option value="emailed">Emailed</option>
+          <option value="replied">Replied</option>
+          <option value="interested">Interested</option>
+          <option value="converted">Converted</option>
+          <option value="not_interested">Not Interested</option>
+        </select>
         <input style={{ ...filterInputStyle, width: 150 }} placeholder="Search…" value={filters.q}
           onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))} />
         <button onClick={() => load(0)} style={{
@@ -371,6 +412,24 @@ function BusinessesTab() {
           background: "#991b1b", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer",
         }}>Filter</button>
         <span style={{ fontSize: 13, color: "#9ca3af", marginLeft: "auto" }}>{total} total</span>
+      </div>
+
+      {/* Column sort headers */}
+      <div style={{ display: "flex", gap: 10, padding: "4px 14px", fontSize: 11, fontWeight: 700, color: "#9ca3af", marginBottom: 2 }}>
+        <span style={{ flex: "0 0 190px" }}>Business</span>
+        <span style={{ flex: "0 0 90px" }}>Location</span>
+        <span style={{ flex: "0 0 120px" }}>Category</span>
+        <span style={{ flex: "0 0 80px" }}>Logo</span>
+        <span style={{ flex: "0 0 80px" }}>Ad</span>
+        <span style={{ flex: "0 0 80px" }}>Email</span>
+        <span style={{ flex: "0 0 110px" }}>Contact Status</span>
+        <span style={{ flex: "0 0 90px" }}>
+          <SortHeader label="Next Follow-up" field="next_follow_up_at" sortBy={sortBy} onSort={handleSort} />
+        </span>
+        <span style={{ flex: "0 0 90px" }}>
+          <SortHeader label="Last Contacted" field="last_contacted_at" sortBy={sortBy} onSort={handleSort} />
+        </span>
+        <span style={{ flex: "0 0 64px", textAlign: "center" }}>Clicks</span>
       </div>
 
       {error && <div style={{ background: "#fee2e2", borderRadius: 8, padding: "10px 14px", color: "#991b1b", fontSize: 13, marginBottom: 12 }}>❌ {error}</div>}
@@ -431,11 +490,13 @@ function BusinessRow({ biz, expanded, onToggle, onRefresh }) {
   const [editDraft, setEditDraft] = useState(false);
   const [draftSubject, setDraftSubject] = useState(biz.emailSubject ?? "");
   const [draftBody, setDraftBody] = useState(biz.emailBodyHtml ?? "");
+  const [localNotes, setLocalNotes] = useState(biz.notes ?? "");
 
   useEffect(() => {
     setLocalBiz(biz);
     setDraftSubject(biz.emailSubject ?? "");
     setDraftBody(biz.emailBodyHtml ?? "");
+    setLocalNotes(biz.notes ?? "");
   }, [biz]);
 
   const setOneBusy = (k, v) => setBusy((b) => ({ ...b, [k]: v }));
@@ -474,24 +535,59 @@ function BusinessRow({ biz, expanded, onToggle, onRefresh }) {
 
   return (
     <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, overflow: "hidden" }}>
-      <div onClick={onToggle} style={{
+      <div style={{
         display: "flex", alignItems: "center", gap: 10, padding: "10px 14px",
-        cursor: "pointer", background: expanded ? "#fef2f2" : "#fff",
+        background: expanded ? "#fef2f2" : "#fff",
       }}>
-        <div style={{ flex: "0 0 190px", fontWeight: 700, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <div onClick={onToggle} style={{ flex: "0 0 190px", fontWeight: 700, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: "pointer" }}>
           {localBiz.businessName}
         </div>
-        <div style={{ flex: "0 0 90px", fontSize: 12, color: "#6b7280" }}>{localBiz.city}, {localBiz.state}</div>
-        <div style={{ flex: "0 0 120px", fontSize: 12, color: "#6b7280", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <div onClick={onToggle} style={{ flex: "0 0 90px", fontSize: 12, color: "#6b7280", cursor: "pointer" }}>{localBiz.city}, {localBiz.state}</div>
+        <div onClick={onToggle} style={{ flex: "0 0 120px", fontSize: 12, color: "#6b7280", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: "pointer" }}>
           {localBiz.category ?? "—"}
         </div>
-        <div style={{ flex: "0 0 80px" }}><StatusBadge value={localBiz.logoStatus} /></div>
-        <div style={{ flex: "0 0 80px" }}><StatusBadge value={localBiz.adStatus} /></div>
-        <div style={{ flex: "0 0 80px" }}><StatusBadge value={localBiz.emailStatus} /></div>
-        <div style={{ flex: "0 0 64px", fontSize: 12, color: (localBiz.clickCount ?? 0) > 0 ? "#7B1418" : "#d1d5db", fontWeight: (localBiz.clickCount ?? 0) > 0 ? 700 : 400, textAlign: "center" }}>
+        <div onClick={onToggle} style={{ flex: "0 0 80px", cursor: "pointer" }}><StatusBadge value={localBiz.logoStatus} /></div>
+        <div onClick={onToggle} style={{ flex: "0 0 80px", cursor: "pointer" }}><StatusBadge value={localBiz.adStatus} /></div>
+        <div onClick={onToggle} style={{ flex: "0 0 80px", cursor: "pointer" }}><StatusBadge value={localBiz.emailStatus} /></div>
+        {/* Inline Contact Status select — stops propagation so clicks don't toggle expand */}
+        <div style={{ flex: "0 0 110px" }} onClick={(e) => e.stopPropagation()}>
+          <select
+            value={localBiz.contactStatus ?? "not_contacted"}
+            onChange={async (e) => {
+              const contactStatus = e.target.value;
+              setLocalBiz((b) => ({ ...b, contactStatus }));
+              try {
+                const updated = await apiFetch(`/admin/outreach/businesses/${localBiz.id}`, {
+                  method: "PATCH", body: JSON.stringify({ contactStatus }),
+                });
+                setLocalBiz(updated);
+              } catch (err) { setMsg({ ok: false, text: err.message }); }
+            }}
+            style={{
+              padding: "3px 6px", borderRadius: 6, border: "1.5px solid #e5e7eb",
+              fontSize: 12, fontWeight: 600, outline: "none", width: "100%",
+              background: STATUS_COLORS[localBiz.contactStatus ?? "not_contacted"]?.bg ?? "#f3f4f6",
+              color: STATUS_COLORS[localBiz.contactStatus ?? "not_contacted"]?.color ?? "#6b7280",
+            }}
+          >
+            <option value="not_contacted">Not Contacted</option>
+            <option value="emailed">Emailed</option>
+            <option value="replied">Replied</option>
+            <option value="interested">Interested</option>
+            <option value="converted">Converted</option>
+            <option value="not_interested">Not Interested</option>
+          </select>
+        </div>
+        <div onClick={onToggle} style={{ flex: "0 0 90px", fontSize: 11, color: "#6b7280", cursor: "pointer" }}>
+          {localBiz.nextFollowUpAt ? new Date(localBiz.nextFollowUpAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}
+        </div>
+        <div onClick={onToggle} style={{ flex: "0 0 90px", fontSize: 11, color: "#6b7280", cursor: "pointer" }}>
+          {localBiz.lastContactedAt ? new Date(localBiz.lastContactedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}
+        </div>
+        <div onClick={onToggle} style={{ flex: "0 0 64px", fontSize: 12, color: (localBiz.clickCount ?? 0) > 0 ? "#7B1418" : "#d1d5db", fontWeight: (localBiz.clickCount ?? 0) > 0 ? 700 : 400, textAlign: "center", cursor: "pointer" }}>
           {(localBiz.clickCount ?? 0) > 0 ? `👆 ${localBiz.clickCount}` : "—"}
         </div>
-        <div style={{ marginLeft: "auto", fontSize: 12, color: "#9ca3af" }}>
+        <div onClick={onToggle} style={{ marginLeft: "auto", fontSize: 12, color: "#9ca3af", cursor: "pointer" }}>
           {localBiz.email ? "📧" : ""} {expanded ? "▲" : "▼"}
         </div>
       </div>
@@ -501,6 +597,7 @@ function BusinessRow({ biz, expanded, onToggle, onRefresh }) {
           <div style={{ display: "flex", gap: 20, flexWrap: "wrap", marginBottom: 14 }}>
             {localBiz.phone && <Detail label="Phone" value={localBiz.phone} />}
             {localBiz.website && <Detail label="Website" value={localBiz.website} link />}
+            {localBiz.facebookUrl && <Detail label="Facebook" value={localBiz.facebookUrl} link />}
             {localBiz.address && <Detail label="Address" value={localBiz.address} />}
             {localBiz.logoMethod && <Detail label="Logo source" value={localBiz.logoMethod} />}
             <Detail
@@ -510,6 +607,71 @@ function BusinessRow({ biz, expanded, onToggle, onRefresh }) {
                   ? `${localBiz.clickCount} click${localBiz.clickCount === 1 ? "" : "s"}${localBiz.lastClickedAt ? ` — last ${new Date(localBiz.lastClickedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}` : ""}`
                   : "No clicks yet"
               }
+            />
+          </div>
+
+          {/* CRM fields: date pickers */}
+          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 14 }}>
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", display: "block", marginBottom: 3 }}>Last Contacted</label>
+              <input
+                type="date"
+                value={localBiz.lastContactedAt ? new Date(localBiz.lastContactedAt).toISOString().slice(0, 10) : ""}
+                onChange={async (e) => {
+                  const lastContactedAt = e.target.value || null;
+                  setLocalBiz((b) => ({ ...b, lastContactedAt }));
+                  try {
+                    const updated = await apiFetch(`/admin/outreach/businesses/${localBiz.id}`, {
+                      method: "PATCH", body: JSON.stringify({ lastContactedAt }),
+                    });
+                    setLocalBiz(updated);
+                  } catch (err) { setMsg({ ok: false, text: err.message }); }
+                }}
+                style={{ padding: "5px 8px", borderRadius: 6, border: "1.5px solid #e5e7eb", fontSize: 13, outline: "none" }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", display: "block", marginBottom: 3 }}>Next Follow-up</label>
+              <input
+                type="date"
+                value={localBiz.nextFollowUpAt ? new Date(localBiz.nextFollowUpAt).toISOString().slice(0, 10) : ""}
+                onChange={async (e) => {
+                  const nextFollowUpAt = e.target.value || null;
+                  setLocalBiz((b) => ({ ...b, nextFollowUpAt }));
+                  try {
+                    const updated = await apiFetch(`/admin/outreach/businesses/${localBiz.id}`, {
+                      method: "PATCH", body: JSON.stringify({ nextFollowUpAt }),
+                    });
+                    setLocalBiz(updated);
+                  } catch (err) { setMsg({ ok: false, text: err.message }); }
+                }}
+                style={{ padding: "5px 8px", borderRadius: 6, border: "1.5px solid #e5e7eb", fontSize: 13, outline: "none" }}
+              />
+            </div>
+          </div>
+
+          {/* Notes textarea — auto-saves on blur */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", display: "block", marginBottom: 4 }}>Notes</label>
+            <textarea
+              value={localNotes}
+              onChange={(e) => setLocalNotes(e.target.value)}
+              onBlur={async () => {
+                if (localNotes === (localBiz.notes ?? "")) return;
+                try {
+                  const updated = await apiFetch(`/admin/outreach/businesses/${localBiz.id}`, {
+                    method: "PATCH", body: JSON.stringify({ notes: localNotes }),
+                  });
+                  setLocalBiz(updated);
+                } catch (err) { setMsg({ ok: false, text: err.message }); }
+              }}
+              rows={3}
+              placeholder="Log calls, conversations, follow-up context…"
+              style={{
+                width: "100%", padding: "7px 10px", borderRadius: 6,
+                border: "1.5px solid #e5e7eb", fontSize: 13, outline: "none",
+                resize: "vertical", fontFamily: "system-ui,sans-serif", boxSizing: "border-box",
+              }}
             />
           </div>
 

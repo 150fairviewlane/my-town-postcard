@@ -10,6 +10,7 @@ export interface OutscraperBusiness {
   category: string | null;
   subtypes: string[];
   logo: string | null;
+  facebookUrl: string | null;
 }
 
 function getApiKey(): string {
@@ -100,6 +101,7 @@ function normalizeResult(r: Record<string, unknown>): OutscraperBusiness {
     category: (r["type"] as string | null | undefined) ?? (r["category"] as string | null | undefined) ?? null,
     subtypes,
     logo: (r["logo"] as string | null | undefined) ?? null,
+    facebookUrl: (r["site_facebook"] as string | null | undefined) ?? null,
   };
 }
 

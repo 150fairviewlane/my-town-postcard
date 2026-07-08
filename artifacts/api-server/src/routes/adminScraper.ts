@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, and, ilike, or, sql, gte, isNull, isNotNull, inArray } from "drizzle-orm";
+import { eq, desc, asc, and, ilike, or, sql, gte, isNull, isNotNull, inArray } from "drizzle-orm";
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
 import { db, scrapedBusinessesTable, outreachEmailClicksTable, businessClaimEventsTable } from "@workspace/db";
@@ -437,8 +437,8 @@ router.get("/admin/outreach/preview", requireAdmin, async (req, res): Promise<vo
 // ── GET /api/admin/outreach/businesses ────────────────────────────────────────
 router.get("/admin/outreach/businesses", requireAdmin, async (req, res): Promise<void> => {
   const {
-    city, state, email_status, logo_status, ad_status, q,
-    limit = "50", offset = "0",
+    city, state, email_status, logo_status, ad_status, contact_status, q,
+    limit = "50", offset = "0", sort_by = "",
   } = req.query as Record<string, string>;
 
   const conditions = [];
@@ -447,6 +447,7 @@ router.get("/admin/outreach/businesses", requireAdmin, async (req, res): Promise
   if (email_status) conditions.push(eq(scrapedBusinessesTable.emailStatus, email_status as any));
   if (logo_status) conditions.push(eq(scrapedBusinessesTable.logoStatus, logo_status as any));
   if (ad_status) conditions.push(eq(scrapedBusinessesTable.adStatus, ad_status as any));
+  if (contact_status) conditions.push(eq(scrapedBusinessesTable.contactStatus, contact_status as any));
   if (q) {
     conditions.push(
       or(
@@ -461,9 +462,14 @@ router.get("/admin/outreach/businesses", requireAdmin, async (req, res): Promise
   const lim = Math.min(Number(limit) || 50, 200);
   const off = Number(offset) || 0;
 
+  const orderByClause =
+    sort_by === "next_follow_up_at" ? asc(scrapedBusinessesTable.nextFollowUpAt) :
+    sort_by === "last_contacted_at" ? desc(scrapedBusinessesTable.lastContactedAt) :
+    desc(scrapedBusinessesTable.scrapedAt);
+
   const [rows, countRow] = await Promise.all([
     db.select().from(scrapedBusinessesTable).where(where)
-      .orderBy(desc(scrapedBusinessesTable.scrapedAt)).limit(lim).offset(off),
+      .orderBy(orderByClause).limit(lim).offset(off),
     db.select({ count: sql<number>`count(*)::int` })
       .from(scrapedBusinessesTable).where(where),
   ]);
@@ -558,7 +564,13 @@ router.patch("/admin/outreach/businesses/:id", requireAdmin, async (req, res): P
   if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
 
   const mapped: Partial<typeof scrapedBusinessesTable.$inferInsert> = { updatedAt: new Date() };
-  if ("emailStatus" in req.body) mapped.emailStatus = req.body.emailStatus;
+  if ("emailStatus" in req.body) {
+    mapped.emailStatus = req.body.emailStatus;
+    // Auto-set lastContactedAt when marking as sent (unless the caller also provides it)
+    if (req.body.emailStatus === "sent" && !("lastContactedAt" in req.body)) {
+      mapped.lastContactedAt = new Date();
+    }
+  }
   if ("email" in req.body) mapped.email = req.body.email;
   if ("phone" in req.body) mapped.phone = req.body.phone;
   if ("website" in req.body) mapped.website = req.body.website;
@@ -571,6 +583,16 @@ router.patch("/admin/outreach/businesses/:id", requireAdmin, async (req, res): P
       .replace(/<script[\s\S]*?<\/script>/gi, "")
       .replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, "");
   }
+  // CRM fields
+  if ("notes" in req.body) mapped.notes = req.body.notes ? String(req.body.notes) : null;
+  if ("contactStatus" in req.body) mapped.contactStatus = req.body.contactStatus;
+  if ("lastContactedAt" in req.body) {
+    mapped.lastContactedAt = req.body.lastContactedAt ? new Date(req.body.lastContactedAt) : null;
+  }
+  if ("nextFollowUpAt" in req.body) {
+    mapped.nextFollowUpAt = req.body.nextFollowUpAt ? new Date(req.body.nextFollowUpAt) : null;
+  }
+  if ("facebookUrl" in req.body) mapped.facebookUrl = req.body.facebookUrl ? String(req.body.facebookUrl) : null;
 
   const [updated] = await db.update(scrapedBusinessesTable)
     .set(mapped).where(eq(scrapedBusinessesTable.id, id)).returning();
@@ -718,6 +740,7 @@ async function runScrapeJob(
         category: biz.category,
         subtypes: biz.subtypes,
         logoUrl: biz.logo ?? undefined,
+        facebookUrl: biz.facebookUrl ?? undefined,
         logoStatus: "pending",
         adStatus: "pending",
         emailStatus: "pending",
@@ -751,6 +774,7 @@ async function runScrapeJob(
           category: biz.category,
           subtypes: biz.subtypes,
           logoUrl: biz.logo ?? null,
+          facebookUrl: biz.facebookUrl ?? null,
           logoStatus: "pending",
         }).returning({ id: scrapedBusinessesTable.id });
         newCount++;

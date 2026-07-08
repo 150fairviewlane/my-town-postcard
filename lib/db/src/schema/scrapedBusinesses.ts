@@ -29,6 +29,14 @@ export const scrapedBusinessesTable = pgTable("scraped_businesses", {
   emailStatus: text("email_status", {
     enum: ["pending", "drafted", "queued", "sent", "opted-out"],
   }).notNull().default("pending"),
+  // CRM fields
+  notes: text("notes"),
+  contactStatus: text("contact_status", {
+    enum: ["not_contacted", "emailed", "replied", "interested", "converted", "not_interested"],
+  }).notNull().default("not_contacted"),
+  lastContactedAt: timestamp("last_contacted_at", { withTimezone: true }),
+  nextFollowUpAt: timestamp("next_follow_up_at", { withTimezone: true }),
+  facebookUrl: text("facebook_url"),
   scrapedAt: timestamp("scraped_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
@@ -36,6 +44,8 @@ export const scrapedBusinessesTable = pgTable("scraped_businesses", {
   logoStatusIdx: index("sb_logo_status_idx").on(table.logoStatus),
   adStatusIdx: index("sb_ad_status_idx").on(table.adStatus),
   emailStatusIdx: index("sb_email_status_idx").on(table.emailStatus),
+  contactStatusIdx: index("sb_contact_status_idx").on(table.contactStatus),
+  nextFollowUpAtIdx: index("sb_next_follow_up_at_idx").on(table.nextFollowUpAt),
 }));
 
 export type ScrapedBusiness = typeof scrapedBusinessesTable.$inferSelect;
